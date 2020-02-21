@@ -1,0 +1,30 @@
+{
+  "name": "@seasketch/api",
+  "version": "0.0.0",
+  "description": "SeaSketch GraphQL API",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/services#readme",
+  "license": "BSD-3-Clause",
+  "main": "src/index.ts",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/services.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/services/issues"
+  },
+  "dependencies": {
+    "@graphile-contrib/pg-simplify-inflector": "^5.0.0-beta.1",
+    "postgraphile": "^4.5.5"
+  }
+}

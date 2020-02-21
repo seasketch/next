@@ -1,0 +1,27 @@
+{
+  "name": "@seasketch/db",
+  "version": "0.0.0",
+  "description": "SeaSketch database schema, migrations, and tests",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/services",
+  "license": "BSD-3-Clause",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/services.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1",
+    "watch": "graphile-migrate watch",
+    "commit": "graphile-migrate commit",
+    "uncommit": "graphile-migrate uncommit",
+    "reset": "graphile-migrate reset",
+    "status": "graphile-migrate status"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/services/issues"
+  },
+  "devDependencies": {
+    "graphile-migrate": "0.0.18"
+  }
+}

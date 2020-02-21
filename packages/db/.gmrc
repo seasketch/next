@@ -1,0 +1,9 @@
+{
+  "databaseOwner": "postgres",
+  "pgSettings": {
+    "search_path": "app_public,app_private,app_hidden,public"
+  },
+  "connectionString": "postgres://postgres:password@localhost:54320/seasketch",
+  "shadowConnectionString": "postgres://postgres:password@localhost:54320/seasketchshadow",
+  "rootConnectionString": "postgres://postgres:password@localhost:54320/template1"
+}
