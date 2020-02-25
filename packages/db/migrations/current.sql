@@ -69,6 +69,12 @@ GRANT SELECT ON TABLE projects TO anon;
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 
 -- seasketch_superusers should be able to see and modify all projects
+create policy select_projects_superuser on projects for SELECT to seasketch_superuser
+  using (true);
+
+create policy select_projects_superuser on projects for UPDATE to seasketch_superuser
+  using (true);
+
 -- anons should only be able to see public projects
 create policy select_projects_anon on projects for select to anon
   using (is_private is false and deleted_at is NULL);
@@ -92,7 +98,7 @@ $$
 LANGUAGE sql
 STABLE;
 
-GRANT EXECUTE ON function projects_url(projects) TO anon;
+GRANT EXECUTE ON function projects_url(projects) TO anon, seasketch_superuser, seasketch_user;
 
 COMMENT ON COLUMN projects.is_private IS E'Whether the project is visible to non-admins. Projects that are private can be thought of as in a staging state before the admin has chosen to invite end-users.';
 
