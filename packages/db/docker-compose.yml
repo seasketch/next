@@ -6,3 +6,5 @@ services:
     - "54320:5432"
     environment:
       POSTGRES_PASSWORD: password
+    volumes:
+      - ./init_dockerdb.sql:/docker-entrypoint-initdb.d/init_dockerdb.sql

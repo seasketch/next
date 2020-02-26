@@ -25,7 +25,7 @@ interface PGSettings {
 app.use(
   postgraphile(
     process.env.DATABASE_URL ||
-      "postgres://graphile_root:password@localhost:54320/seasketch",
+      "postgres://graphile:password@localhost:54320/seasketch",
     "public",
     {
       ownerConnectionString:
