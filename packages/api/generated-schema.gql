@@ -154,6 +154,8 @@ type Project implements Node {
     """The method to use when ordering `ProjectMember`."""
     orderBy: [ProjectMembersOrderBy!] = [NATURAL]
   ): ProjectMembersConnection!
+
+  """Will resolve to {subdomain}.seasketch.org and cannot be changed"""
   subdomain: String!
   url: String
 }
@@ -178,6 +180,8 @@ input ProjectCondition {
 """An input for mutations affecting `Project`"""
 input ProjectInput {
   name: String!
+
+  """Will resolve to {subdomain}.seasketch.org and cannot be changed"""
   subdomain: String!
 }
 
@@ -416,6 +420,8 @@ input UpdateProjectBySubdomainInput {
   An object where the defined keys will be set on the `Project` being updated.
   """
   patch: ProjectPatch!
+
+  """Will resolve to {subdomain}.seasketch.org and cannot be changed"""
   subdomain: String!
 }
 

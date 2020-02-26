@@ -140,6 +140,8 @@ COMMENT ON COLUMN projects.deleted_at IS E'@omit';
 
 COMMENT ON COLUMN projects.deleted_by IS E'@omit';
 
+COMMENT ON COLUMN projects.subdomain IS E'Will resolve to {subdomain}.seasketch.org and cannot be changed';
+
 COMMENT ON COLUMN projects.default_locale IS E'@omit';
 
 CREATE TABLE public.groups (
