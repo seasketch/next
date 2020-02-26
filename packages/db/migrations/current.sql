@@ -142,12 +142,14 @@ COMMENT ON COLUMN projects.deleted_by IS E'@omit';
 
 COMMENT ON COLUMN projects.default_locale IS E'@omit';
 
-CREATE TABLE GROUPS (
+CREATE TABLE public.groups (
   project_id integer REFERENCES projects (id) ON DELETE CASCADE,
   name text NOT NULL CHECK (char_length(name) > 1) UNIQUE
 );
 
 COMMENT ON TABLE GROUPS IS E'@simpleCollections only';
+
+CREATE INDEX groups_project_id ON public.groups (project_id);
 
 CREATE TABLE project_members (
   user_id integer NOT NULL REFERENCES app_private.users (id) ON DELETE CASCADE,
@@ -155,6 +157,8 @@ CREATE TABLE project_members (
   is_admin boolean DEFAULT FALSE
   -- invitation_id integer REFERENCES invitations (id) ON DELETE SET NULL
 );
+
+CREATE INDEX project_members_project_id ON project_members (project_id);
 
 -- grants to anon apply to everyone
 GRANT SELECT ON project_members TO anon;

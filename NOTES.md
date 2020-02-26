@@ -10,8 +10,13 @@
       * x set default plugins, database connection, and such
     * x write unit tests for project access control
     * x Create basic user accounts schema and RLS
-    * filter out unnecessary mutations, queries, etc. work on formatting of the graphql schema
+    * x filter out unnecessary mutations, queries, etc. work on formatting of the graphql schema
+    * x make some scheme to simulate role, project_id, user_id, and email_verified in graphiql
+    * automate creation of graphile role in docker-compose
     * project insert test cases
+      * only allow certain fields
+      * no anons
+      * must have an account with a verified email address
     * project "deletion" function
     * user groups schema
       * and functions to manage group membership
