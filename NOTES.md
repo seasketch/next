@@ -8,6 +8,16 @@
     * x create basic api app
       * x set expectations for current_setting
       * x set default plugins, database connection, and such
-    * write unit tests for project access control
-    * Create basic user accounts schema and RLS
-    * filter out unnecessary mutations, queries, etc
+    * x write unit tests for project access control
+    * x Create basic user accounts schema and RLS
+    * filter out unnecessary mutations, queries, etc. work on formatting of the graphql schema
+    * project insert test cases
+    * project "deletion" function
+    * user groups schema
+      * and functions to manage group membership
+    * project "members" schema
+    * project invite schema
+    * user profiles
+    * user notification preferences
+    * user PII sharing and GDPR compliance
+    * 

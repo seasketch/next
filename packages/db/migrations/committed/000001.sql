@@ -1,5 +1,5 @@
 --! Previous: -
---! Hash: sha1:08260c2c6d14c3a0cb8355b7fe48659a666d91f8
+--! Hash: sha1:43a96a1194284f95b9f9a4e3a623285942b1d68f
 
 DO $$
 BEGIN
@@ -38,6 +38,8 @@ END
 $$;
 
 GRANT anon, seasketch_user, seasketch_superuser, seasketch_admin TO postgres;
+
+GRANT anon, seasketch_user, seasketch_superuser, seasketch_admin TO graphile_root;
 
 GRANT anon, seasketch_user, seasketch_admin TO seasketch_superuser;
 
