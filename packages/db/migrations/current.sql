@@ -1,41 +1,22 @@
+-- DROP all the things so that current.sql can be re-run idempotently
 DROP FUNCTION IF EXISTS projects_url (projects projects);
 
-DROP TABLE IF EXISTS projects;
+DROP POLICY IF EXISTS update_projects_superuser ON projects;
+
+DROP POLICY IF EXISTS select_projects_superuser ON projects;
+
+DROP TABLE IF EXISTS projects, app_private.users, GROUPS, project_members;
 
 DROP TABLE IF EXISTS supported_locales;
 
-DROP OWNED BY seasketch_superuser;
+DROP SCHEMA IF EXISTS app_private;
 
-DROP OWNED BY anon;
+-- Done dropping things
+ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON functions FROM PUBLIC;
 
-DROP OWNED BY seasketch_user;
+CREATE SCHEMA app_private;
 
-DROP ROLE IF EXISTS seasketch_superuser;
-
-DROP ROLE IF EXISTS anon;
-
-DROP ROLE IF EXISTS seasketch_user;
-
-DROP SCHEMA IF EXISTS private;
-
-CREATE SCHEMA private;
-
-CREATE ROLE anon;
-
-CREATE ROLE seasketch_user;
-
-CREATE ROLE seasketch_superuser;
-
-GRANT anon TO postgres;
-
-GRANT seasketch_user TO postgres;
-
-GRANT seasketch_superuser TO postgres;
-
-ALTER DEFAULT privileges REVOKE EXECUTE ON functions FROM public;
-
-GRANT usage ON SCHEMA public TO seasketch_user, seasketch_superuser, anon;
-
+-- GRANT usage ON SCHEMA public TO seasketch_user, seasketch_superuser, anon;
 CREATE TABLE supported_locales (
   code varchar(8) NOT NULL PRIMARY KEY,
   label text NOT NULL
@@ -50,42 +31,66 @@ COMMENT ON TABLE supported_locales IS E'@simpleCollections only\n@omit update,de
 
 CREATE TABLE projects (
   id serial PRIMARY KEY,
-  name text NOT NULL,
+  NAME text NOT NULL,
   description text,
   legacy_id text UNIQUE,
   subdomain varchar(16) NOT NULL UNIQUE,
-  is_private boolean DEFAULT TRUE,
+  is_published boolean DEFAULT FALSE,
   logo_url text CHECK (logo_url::text ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text),
   logo_link text CHECK (logo_link::text ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text),
   is_featured boolean DEFAULT FALSE,
   default_locale varchar(8) REFERENCES supported_locales (code) ON DELETE SET NULL DEFAULT 'en',
-  deleted_at timestamp with time zone
-  -- deleted_by integer references users(id)
+  is_deleted boolean DEFAULT FALSE,
+  deleted_at timestamp WITH time zone -- deleted_by integer references users(id)
 );
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE projects TO seasketch_superuser;
+GRANT SELECT, INSERT, UPDATE ON TABLE projects TO seasketch_superuser;
+
 GRANT SELECT ON TABLE projects TO anon;
 
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 
--- seasketch_superusers should be able to see and modify all projects
-create policy select_projects_superuser on projects for SELECT to seasketch_superuser
-  using (true);
+CREATE TABLE app_private.users (
+  id serial PRIMARY KEY,
+  email text UNIQUE
+);
 
-create policy select_projects_superuser on projects for UPDATE to seasketch_superuser
-  using (true);
+CREATE TABLE GROUPS (
+  project_id integer REFERENCES projects (id) ON DELETE CASCADE,
+  NAME text NOT NULL CHECK (char_length(NAME) > 1) UNIQUE
+);
+
+COMMENT ON TABLE GROUPS IS E'@simpleCollections only';
+
+CREATE TABLE project_members (
+  id serial PRIMARY KEY,
+  user_id integer REFERENCES app_private.users (id) ON DELETE CASCADE,
+  project_id integer REFERENCES projects (id) ON DELETE CASCADE,
+  is_admin boolean DEFAULT FALSE
+);
+
+GRANT SELECT ON project_members TO anon;
+
+-- seasketch_superusers should be able to see and modify all projects
+CREATE POLICY select_projects_superuser ON projects FOR SELECT TO seasketch_superuser USING (TRUE);
+
+CREATE POLICY update_projects_superuser ON projects FOR UPDATE TO seasketch_superuser USING (TRUE);
 
 -- anons should only be able to see public projects
-create policy select_projects_anon on projects for select to anon
-  using (is_private is false and deleted_at is NULL);
+CREATE POLICY select_projects_unpriviledged ON projects FOR SELECT TO anon USING (is_published IS TRUE
+  AND deleted_at IS NULL);
 
 -- seasketch_users who have an admin role on the project should be able to see and update projects
-
-
+CREATE POLICY select_projects_admin ON projects FOR SELECT TO seasketch_admin USING (id = nullif (current_setting('session.project_id', TRUE), '')::integer
+  AND is_deleted = FALSE);
 
 CREATE INDEX project_subdomains ON projects (subdomain);
 
 CREATE INDEX project_ids ON projects (id);
+
+CREATE INDEX project_is_published ON projects (is_published);
+
+CREATE INDEX project_is_deleted ON projects (is_deleted);
 
 CREATE INDEX project_is_features ON projects (is_featured);
 
@@ -95,12 +100,12 @@ CREATE FUNCTION projects_url (p projects)
   SELECT
     'https://' || p.subdomain || '.seasketch.org'
 $$
-LANGUAGE sql
+LANGUAGE SQL
 STABLE;
 
-GRANT EXECUTE ON function projects_url(projects) TO anon, seasketch_superuser, seasketch_user;
+GRANT EXECUTE ON FUNCTION projects_url (projects) TO anon;
 
-COMMENT ON COLUMN projects.is_private IS E'Whether the project is visible to non-admins. Projects that are private can be thought of as in a staging state before the admin has chosen to invite end-users.';
+COMMENT ON COLUMN projects.is_published IS E'Whether the project is visible to non-admins. Projects that are unpublished can be thought of as in a staging state before the admin has chosen to invite end-users.';
 
 COMMENT ON COLUMN projects.legacy_id IS E'MongoDB ObjectId from previous database';
 
