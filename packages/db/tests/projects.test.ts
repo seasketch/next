@@ -1,15 +1,15 @@
 import { sql, createPool } from "slonik";
 
-const pool = createPool("postgres://postgres:password@localhost:54320/test");
+const pool = createPool("postgres://postgres:password@localhost:54321/test");
 const roles = [
   "seasketch_admin",
   "anon",
   "seasketch_user",
-  "seasketch_superuser"
+  "seasketch_superuser",
 ];
 
 test("Anonymous and unpriviledged users can only see published projects", async () => {
-  await pool.transaction(async conn => {
+  await pool.transaction(async (conn) => {
     await conn.any(
       sql`INSERT INTO projects (name, subdomain, is_published) values ('test1', 'test1', false)`
     );
@@ -33,7 +33,7 @@ test("Anonymous and unpriviledged users can only see published projects", async 
 });
 
 test("Project admins can access unpublished projects they administer (but not those they don't own)", async () => {
-  await pool.transaction(async conn => {
+  await pool.transaction(async (conn) => {
     const unpublished = await conn.one(
       sql`INSERT INTO projects (name, subdomain, is_published) values ('unpublished-1', 'unpublished1', false) returning *`
     );
@@ -50,16 +50,16 @@ test("Project admins can access unpublished projects they administer (but not th
     );
     const projects = await conn.many(sql`select id, name from projects`);
     expect(projects.length).toBe(2);
-    const unp = projects.find(p => p.id === unpublished.id);
+    const unp = projects.find((p) => p.id === unpublished.id);
     expect(unp).not.toBeNull();
-    const pub = projects.find(p => p.id === published.id);
+    const pub = projects.find((p) => p.id === published.id);
     expect(pub).not.toBeNull();
     await conn.any(sql`ROLLBACK`);
   });
 });
 
 test("Superusers can access all projects", async () => {
-  await pool.transaction(async conn => {
+  await pool.transaction(async (conn) => {
     await conn.one(
       sql`INSERT INTO projects (name, subdomain, is_published) values ('unpublished-3', 'unpublished3', false) returning *`
     );
@@ -77,7 +77,7 @@ test("Superusers can access all projects", async () => {
 });
 
 test("Anonymous users cannot modify projects", async () => {
-  await pool.transaction(async conn => {
+  await pool.transaction(async (conn) => {
     const project = await conn.one(
       sql`INSERT INTO projects (name, subdomain, is_published) values ('published', 'published', true) returning *`
     );
@@ -94,7 +94,7 @@ test("Anonymous users cannot modify projects", async () => {
 });
 
 test("Unpriviledged users cannot modify projects", async () => {
-  await pool.transaction(async conn => {
+  await pool.transaction(async (conn) => {
     const project = await conn.one(
       sql`INSERT INTO projects (name, subdomain, is_published) values ('published', 'published', true) returning *`
     );
@@ -112,7 +112,7 @@ test("Unpriviledged users cannot modify projects", async () => {
 
 test("Project admins can update projects", async () => {
   expect.assertions(1);
-  await pool.transaction(async conn => {
+  await pool.transaction(async (conn) => {
     const project = await conn.one(
       sql`INSERT INTO projects (name, subdomain, is_published) values ('published', 'published', true) returning *`
     );
@@ -134,7 +134,7 @@ test("Project admins can update projects", async () => {
 
 test("Superusers can update projects", async () => {
   expect.assertions(1);
-  await pool.transaction(async conn => {
+  await pool.transaction(async (conn) => {
     const project = await conn.one(
       sql`INSERT INTO projects (name, subdomain, is_published) values ('published', 'published', true) returning *`
     );
@@ -156,7 +156,7 @@ test("id, subdomain and legacy_id cannot be modified by anyone", async () => {
   const props = ["id", "subdomain", "legacy_id"];
   for (const role of roles) {
     for (const prop of props) {
-      await pool.transaction(async conn => {
+      await pool.transaction(async (conn) => {
         const project = await conn.one(
           sql`INSERT INTO projects (name, subdomain, is_published) values ('published', 'published', true) returning *`
         );
@@ -196,8 +196,8 @@ test("id, subdomain and legacy_id cannot be modified by anyone", async () => {
 
 test("is_featured can only be modified by superusers", async () => {
   expect.assertions(4);
-  for (const role of roles.filter(r => r !== "seasketch_superuser")) {
-    await pool.transaction(async conn => {
+  for (const role of roles.filter((r) => r !== "seasketch_superuser")) {
+    await pool.transaction(async (conn) => {
       const project = await conn.one(
         sql`INSERT INTO projects (name, subdomain, is_published) values ('published', 'published', true) returning *`
       );
@@ -227,7 +227,7 @@ test("is_featured can only be modified by superusers", async () => {
       await conn.any(sql`ROLLBACK`);
     });
   }
-  await pool.transaction(async conn => {
+  await pool.transaction(async (conn) => {
     const project = await conn.one(
       sql`INSERT INTO projects (name, subdomain, is_published) values ('published', 'published', true) returning *`
     );
@@ -246,7 +246,7 @@ test("is_featured can only be modified by superusers", async () => {
 test("Nobody can entirely delete projects from the db", async () => {
   expect.assertions(4);
   for (const role of roles) {
-    await pool.transaction(async conn => {
+    await pool.transaction(async (conn) => {
       const project = await conn.one(
         sql`INSERT INTO projects (name, subdomain, is_published) values ('published', 'published', true) returning *`
       );
@@ -284,7 +284,7 @@ test("Nobody can entirely delete projects from the db", async () => {
 test('"Deleted" projects are not visible to any users', async () => {
   expect.assertions(4);
   for (const role of roles) {
-    await pool.transaction(async conn => {
+    await pool.transaction(async (conn) => {
       const project = await conn.one(
         sql`INSERT INTO projects (name, subdomain, is_published, is_deleted) values ('published', 'published', true, true) returning *`
       );

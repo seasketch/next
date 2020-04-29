@@ -12,7 +12,8 @@
     * x Create basic user accounts schema and RLS
     * x filter out unnecessary mutations, queries, etc. work on formatting of the graphql schema
     * x make some scheme to simulate role, project_id, user_id, and email_verified in graphiql
-    * automate creation of graphile role in docker-compose
+    * x automate creation of graphile role in docker-compose
+    * more project properties like extent
     * project insert test cases
       * only allow certain fields
       * no anons
