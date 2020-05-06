@@ -1,5 +1,5 @@
 --! Previous: -
---! Hash: sha1:cfee84a7dfd615b554b60c60957ee1477d4f442a
+--! Hash: sha1:e72e8d4d74c4bf4a81f37ba0fa4cde6833541002
 
 DO $$
 BEGIN
@@ -21,15 +21,6 @@ $$;
 
 DO $$
 BEGIN
-  CREATE ROLE seasketch_admin;
-EXCEPTION
-  WHEN DUPLICATE_OBJECT THEN
-    RAISE NOTICE 'not creating role seasketch_admin -- it already exists';
-END
-$$;
-
-DO $$
-BEGIN
   CREATE ROLE seasketch_superuser;
 EXCEPTION
   WHEN DUPLICATE_OBJECT THEN
@@ -37,13 +28,10 @@ EXCEPTION
 END
 $$;
 
-GRANT anon, seasketch_user, seasketch_superuser, seasketch_admin TO postgres;
+GRANT anon, seasketch_user, seasketch_superuser TO postgres;
 
-GRANT anon, seasketch_user, seasketch_superuser, seasketch_admin TO graphile;
+GRANT anon, seasketch_user, seasketch_superuser TO graphile;
 
-GRANT anon, seasketch_user, seasketch_admin TO seasketch_superuser;
-
-GRANT anon, seasketch_user TO seasketch_admin;
+GRANT anon, seasketch_user TO seasketch_superuser;
 
 GRANT anon TO seasketch_user;
-
