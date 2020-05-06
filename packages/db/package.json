@@ -18,7 +18,8 @@
     "uncommit": "dotenv graphile-migrate uncommit",
     "reset": "dotenv graphile-migrate reset",
     "status": "dotenv graphile-migrate status",
-    "psql": ". .env && psql $DATABASE_URL"
+    "psql": "docker exec -it seasketch_db psql -U postgres seasketch",
+    "schema": "docker exec seasketch_db pg_dump --no-sync --schema-only --no-owner --exclude-schema=graphile_migrate --exclude-schema=postgraphile_watch -U postgres seasketch > ./schema.sql"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
