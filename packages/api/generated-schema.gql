@@ -1,6 +1,12 @@
 """A location in a connection that can be used for resuming pagination."""
 scalar Cursor
 
+"""
+A point in time as described by the [ISO
+8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
+"""
+scalar Datetime
+
 scalar Email
 
 """User groups designated by the project administrators"""
@@ -214,6 +220,7 @@ enum ProjectsOrderBy {
 
 """The root query type which gives access points into the data universe."""
 type Query implements Node {
+  currentProject: Project
   group(id: Int!): Group
 
   """Reads a single `Group` using its globally unique `ID`."""
@@ -221,6 +228,7 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Group`."""
     nodeId: ID!
   ): Group
+  me: User
 
   """Fetches an object given its globally unique `ID`."""
   node(
@@ -292,12 +300,13 @@ enum SortByDirection {
 
 type User implements Node {
   id: Int!
-  isAdmin(projectId: Int): Boolean
+  isAdmin(project: Int): Boolean
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  onboarded: Datetime
 
   """Reads a single `Profile` that is related to this `User`."""
   profile: Profile

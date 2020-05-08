@@ -11,8 +11,7 @@ import {
   getPGSessionSettings,
   IncomingRequest,
 } from "./auth";
-
-require("dotenv").config();
+import pool from "./pool";
 
 const app = express();
 
@@ -24,7 +23,6 @@ app.get("/auth-helper", (req, res) => {
 });
 
 app.get("/auth_config.json", (req, res) => {
-  console.log(req.headers);
   res.contentType("json");
   res.send(
     JSON.stringify({
@@ -62,7 +60,7 @@ app.use(
 );
 
 app.use(
-  postgraphile(process.env.DATABASE_URL, "public", {
+  postgraphile(pool, "public", {
     ownerConnectionString: process.env.OWNER_DATABASE_URL,
     watchPg: true,
     graphiql: true,
