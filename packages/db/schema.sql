@@ -46,6 +46,16 @@ CREATE DOMAIN public.email AS public.citext
 
 
 --
+-- Name: participant_sort_by; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.participant_sort_by AS ENUM (
+    'NAME',
+    'EMAIL'
+);
+
+
+--
 -- Name: project_access_control_setting; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -56,9 +66,135 @@ CREATE TYPE public.project_access_control_setting AS ENUM (
 );
 
 
+--
+-- Name: sort_by_direction; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.sort_by_direction AS ENUM (
+    'ASC',
+    'DESC'
+);
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: project_groups; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_groups (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    name text,
+    CONSTRAINT namechk CHECK ((char_length(name) <= 32))
+);
+
+
+--
+-- Name: TABLE project_groups; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_groups IS '@name groups
+@omit all,filter
+@simpleCollections only
+User groups designated by the project administrators';
+
+
+--
+-- Name: project_groups_member_count(public.project_groups); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_groups_member_count(g public.project_groups) RETURNS integer
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT
+    COALESCE((
+      SELECT
+        count(*)::int FROM project_group_members
+    WHERE
+      group_id = g.id), 0)
+$$;
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id integer NOT NULL,
+    legacy_id text,
+    email text,
+    sub text,
+    accepted_privacy_policy boolean DEFAULT false,
+    registered_at timestamp with time zone DEFAULT timezone('utc'::text, now())
+);
+
+
+--
+-- Name: TABLE users; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.users IS '@omit all';
+
+
+--
+-- Name: COLUMN users.legacy_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.legacy_id IS 'Legacy SeaSketch MongoDB ObjectId, if applicable';
+
+
+--
+-- Name: COLUMN users.sub; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.sub IS 'From auth provider jwt token (Auth0)';
+
+
+--
+-- Name: project_groups_members(public.project_groups, public.participant_sort_by, public.sort_by_direction); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_groups_members(g public.project_groups, order_by public.participant_sort_by DEFAULT 'NAME'::public.participant_sort_by, direction public.sort_by_direction DEFAULT 'ASC'::public.sort_by_direction) RETURNS SETOF public.users
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT
+    users.*
+  FROM
+    users
+    INNER JOIN project_group_members ON (project_group_members.user_id = users.id)
+    INNER JOIN user_profiles ON (user_profiles.user_id = users.id)
+  WHERE
+    project_group_members.group_id = g.id
+  ORDER BY
+    CASE WHEN direction = 'ASC' THEN
+      CASE order_by
+      WHEN 'NAME' THEN
+        user_profiles.fullname
+      WHEN 'EMAIL' THEN
+        user_profiles.email
+      END
+    END ASC,
+    CASE WHEN direction = 'DESC' THEN
+      CASE order_by
+      WHEN 'NAME' THEN
+        user_profiles.fullname
+      WHEN 'EMAIL' THEN
+        user_profiles.email
+      END
+    END DESC
+$$;
+
+
+--
+-- Name: FUNCTION project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction) IS '@name members
+@simpleCollections only';
+
 
 --
 -- Name: projects; Type: TABLE; Schema: public; Owner: -
@@ -139,6 +275,72 @@ COMMENT ON COLUMN public.projects.deleted_at IS '@omit';
 
 
 --
+-- Name: projects_participant_count(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_participant_count(p public.projects) RETURNS integer
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT
+    COALESCE((
+      SELECT
+        count(*)::int FROM project_participants
+    WHERE
+      project_id = p.id), 0)
+$$;
+
+
+--
+-- Name: FUNCTION projects_participant_count(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_participant_count(p public.projects) IS 'Count of all users who have opted into participating in the project, sharing their profile with project administrators.';
+
+
+--
+-- Name: projects_participants(public.projects, public.participant_sort_by, public.sort_by_direction); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_participants(p public.projects, order_by public.participant_sort_by DEFAULT 'NAME'::public.participant_sort_by, direction public.sort_by_direction DEFAULT 'ASC'::public.sort_by_direction) RETURNS SETOF public.users
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT
+    users.*
+  FROM
+    users
+    INNER JOIN project_participants ON (project_participants.user_id = users.id)
+    INNER JOIN user_profiles ON (user_profiles.user_id = users.id)
+  WHERE
+    project_participants.project_id = p.id
+  ORDER BY
+    CASE WHEN direction = 'ASC' THEN
+      CASE order_by
+      WHEN 'NAME' THEN
+        user_profiles.fullname
+      WHEN 'EMAIL' THEN
+        user_profiles.email
+      END
+    END ASC,
+    CASE WHEN direction = 'DESC' THEN
+      CASE order_by
+      WHEN 'NAME' THEN
+        user_profiles.fullname
+      WHEN 'EMAIL' THEN
+        user_profiles.email
+      END
+    END DESC
+$$;
+
+
+--
+-- Name: FUNCTION projects_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) IS '@simpleCollections only
+All users who have opted into participating in the project, sharing their profile with project administrators.';
+
+
+--
 -- Name: projects_url(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -148,6 +350,76 @@ CREATE FUNCTION public.projects_url(p public.projects) RETURNS text
   SELECT
     'https://seasketch.org/' || p.slug || '/'
 $$;
+
+
+--
+-- Name: users_is_admin(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_is_admin(u public.users, project_id integer) RETURNS boolean
+    LANGUAGE plpgsql STABLE
+    AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT
+      user_id
+    FROM
+      project_participants
+    WHERE
+      project_participants.user_id = u.id
+      AND project_participants.is_admin = TRUE
+      AND project_participants.project_id = project_id);
+END
+$$;
+
+
+--
+-- Name: project_group_members; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_group_members (
+    group_id integer NOT NULL,
+    user_id integer NOT NULL
+);
+
+
+--
+-- Name: TABLE project_group_members; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_group_members IS '@omit';
+
+
+--
+-- Name: project_groups_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_groups ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.project_groups_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: project_participants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_participants (
+    user_id integer NOT NULL,
+    project_id integer NOT NULL,
+    is_admin boolean DEFAULT false
+);
+
+
+--
+-- Name: TABLE project_participants; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_participants IS '@omit';
 
 
 --
@@ -169,7 +441,6 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 --
 
 CREATE TABLE public.user_profiles (
-    id integer NOT NULL,
     user_id integer NOT NULL,
     fullname text,
     nickname text,
@@ -182,45 +453,12 @@ CREATE TABLE public.user_profiles (
 
 
 --
--- Name: user_profiles_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: TABLE user_profiles; Type: COMMENT; Schema: public; Owner: -
 --
 
-ALTER TABLE public.user_profiles ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.user_profiles_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
--- Name: users; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.users (
-    id integer NOT NULL,
-    legacy_id text,
-    email text,
-    sub text,
-    accepted_privacy_policy boolean DEFAULT false,
-    registered_at timestamp with time zone DEFAULT timezone('utc'::text, now())
-);
-
-
---
--- Name: COLUMN users.legacy_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.users.legacy_id IS 'Legacy SeaSketch MongoDB ObjectId, if applicable';
-
-
---
--- Name: COLUMN users.sub; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.users.sub IS 'From auth provider jwt token (Auth0)';
+COMMENT ON TABLE public.user_profiles IS '@omit all
+@name profile
+Personal information that users have contributed. Note that access to PII must be handle carefully to respect sharing preferences';
 
 
 --
@@ -235,6 +473,30 @@ ALTER TABLE public.users ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- Name: project_group_members project_group_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_group_members
+    ADD CONSTRAINT project_group_members_pkey PRIMARY KEY (group_id, user_id);
+
+
+--
+-- Name: project_groups project_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_groups
+    ADD CONSTRAINT project_groups_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_participants project_participants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_participants
+    ADD CONSTRAINT project_participants_pkey PRIMARY KEY (user_id, project_id);
 
 
 --
@@ -259,14 +521,6 @@ ALTER TABLE ONLY public.projects
 
 ALTER TABLE ONLY public.projects
     ADD CONSTRAINT projects_slug_key UNIQUE (slug);
-
-
---
--- Name: user_profiles user_profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_profiles
-    ADD CONSTRAINT user_profiles_pkey PRIMARY KEY (id);
 
 
 --
@@ -317,6 +571,27 @@ CREATE INDEX project_access_control ON public.projects USING btree (access_contr
 
 
 --
+-- Name: project_group_members_group_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_group_members_group_id ON public.project_group_members USING btree (group_id);
+
+
+--
+-- Name: project_group_members_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_group_members_user_id ON public.project_group_members USING btree (user_id);
+
+
+--
+-- Name: project_groups_project_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_groups_project_id ON public.project_groups USING btree (project_id);
+
+
+--
 -- Name: project_ids; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -338,10 +613,38 @@ CREATE INDEX project_is_featured ON public.projects USING btree (is_featured);
 
 
 --
+-- Name: project_participants_is_admin; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_participants_is_admin ON public.project_participants USING btree (is_admin);
+
+
+--
+-- Name: project_participants_project_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_participants_project_id ON public.project_participants USING btree (project_id);
+
+
+--
+-- Name: project_participants_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_participants_user_id ON public.project_participants USING btree (user_id);
+
+
+--
 -- Name: project_slugs; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX project_slugs ON public.projects USING btree (slug);
+
+
+--
+-- Name: user_profiles_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX user_profiles_user_id_idx ON public.user_profiles USING btree (user_id);
 
 
 --
@@ -352,11 +655,58 @@ CREATE INDEX users_sub ON public.users USING btree (sub);
 
 
 --
+-- Name: project_group_members project_group_members_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_group_members
+    ADD CONSTRAINT project_group_members_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.project_groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_group_members project_group_members_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_group_members
+    ADD CONSTRAINT project_group_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_groups project_groups_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_groups
+    ADD CONSTRAINT project_groups_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_participants project_participants_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_participants
+    ADD CONSTRAINT project_participants_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_participants project_participants_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_participants
+    ADD CONSTRAINT project_participants_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: user_profiles user_profiles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.user_profiles
     ADD CONSTRAINT user_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: CONSTRAINT user_profiles_user_id_fkey ON user_profiles; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT user_profiles_user_id_fkey ON public.user_profiles IS '@omit many';
 
 
 --
@@ -545,10 +895,56 @@ REVOKE ALL ON FUNCTION public.citext_smaller(public.citext, public.citext) FROM 
 
 
 --
+-- Name: TABLE project_groups; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.project_groups TO seasketch_user;
+
+
+--
+-- Name: FUNCTION project_groups_member_count(g public.project_groups); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_groups_member_count(g public.project_groups) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_groups_member_count(g public.project_groups) TO seasketch_user;
+
+
+--
+-- Name: COLUMN users.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.users TO anon;
+
+
+--
+-- Name: FUNCTION project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction) TO seasketch_user;
+
+
+--
 -- Name: TABLE projects; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT SELECT ON TABLE public.projects TO anon;
+
+
+--
+-- Name: FUNCTION projects_participant_count(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_participant_count(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_participant_count(p public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) TO seasketch_user;
 
 
 --
@@ -707,6 +1103,14 @@ REVOKE ALL ON FUNCTION public.translate(public.citext, public.citext, text) FROM
 
 
 --
+-- Name: FUNCTION users_is_admin(u public.users, project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_is_admin(u public.users, project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_is_admin(u public.users, project_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION max(public.citext); Type: ACL; Schema: public; Owner: -
 --
 
@@ -721,17 +1125,24 @@ REVOKE ALL ON FUNCTION public.min(public.citext) FROM PUBLIC;
 
 
 --
+-- Name: TABLE project_group_members; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.project_group_members TO seasketch_user;
+
+
+--
+-- Name: TABLE project_participants; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
+
+
+--
 -- Name: TABLE user_profiles; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT SELECT ON TABLE public.user_profiles TO anon;
-
-
---
--- Name: COLUMN users.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.users TO anon;
 
 
 --

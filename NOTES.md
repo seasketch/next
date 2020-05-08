@@ -13,11 +13,11 @@
     * x filter out unnecessary mutations, queries, etc. work on formatting of the graphql schema
     * x make some scheme to simulate role, project_id, user_id, and email_verified in graphiql
     * x automate creation of graphile role in docker-compose
-    * more project properties like extent
     * project insert test cases
-      * only allow certain fields
+      * only allow certain fields (use function)
       * no anons
       * must have an account with a verified email address
+      * or be a superuser
     * project "deletion" function
     * user groups schema
       * and functions to manage group membership
@@ -26,4 +26,22 @@
     * user profiles
     * user notification preferences
     * user PII sharing and GDPR compliance
-    * 
+    * more project properties like extent
+
+
+
+
+{
+  currentProject {
+    basemaps {
+      name
+      thumbnail
+    }
+    tableOfContents {
+      tableOfContentsNodes {
+        ...
+      }
+    }
+    
+  }
+}

@@ -1,76 +1,45 @@
-"""All input for the create `Project` mutation."""
-input CreateProjectInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """The `Project` to be created by this mutation."""
-  project: ProjectInput!
-}
-
-"""The output of our create `Project` mutation."""
-type CreateProjectPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """The `Project` that was created by this mutation."""
-  project: Project
-
-  """An edge for our `Project`. May be used by Relay 1."""
-  projectEdge(
-    """The method to use when ordering `Project`."""
-    orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ProjectsEdge
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
 """A location in a connection that can be used for resuming pagination."""
 scalar Cursor
 
-"""
-The root mutation type which contains root level fields which mutate data.
-"""
-type Mutation {
-  """Creates a single `Project`."""
-  createProject(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateProjectInput!
-  ): CreateProjectPayload
+scalar Email
 
-  """Updates a single `Project` using a unique key and a patch."""
-  updateProject(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateProjectInput!
-  ): UpdateProjectPayload
+"""User groups designated by the project administrators"""
+type Group implements Node {
+  id: Int!
+  memberCount: Int
 
-  """Updates a single `Project` using its globally unique id and a patch."""
-  updateProjectByNodeId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateProjectByNodeIdInput!
-  ): UpdateProjectPayload
+  """Reads and enables pagination through a set of `User`."""
+  members(
+    direction: SortByDirection
 
-  """Updates a single `Project` using a unique key and a patch."""
-  updateProjectBySubdomain(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateProjectBySubdomainInput!
-  ): UpdateProjectPayload
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    orderBy: ParticipantSortBy
+  ): [User]
+  name: String
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `Project` that is related to this `Group`."""
+  project: Project
+  projectId: Int!
+}
+
+"""Methods to use when ordering `Group`."""
+enum GroupsOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
 }
 
 """An object with a globally unique `ID`."""
@@ -96,19 +65,48 @@ type PageInfo {
   startCursor: Cursor
 }
 
+enum ParticipantSortBy {
+  EMAIL
+  NAME
+}
+
+"""
+Personal information that users have contributed. Note that access to PII must
+be handle carefully to respect sharing preferences
+"""
+type Profile {
+  affiliations: String
+  bio: String
+  email: Email
+  fullname: String
+  nickname: String
+  picture: String
+
+  """Reads a single `User` that is related to this `Profile`."""
+  user: User
+  userId: Int!
+}
+
 type Project implements Node {
-  defaultLocale: SupportedLocale
+  accessControl: ProjectAccessControlSetting
   description: String
+
+  """Reads and enables pagination through a set of `Group`."""
+  groups(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `Group`."""
+    orderBy: [GroupsOrderBy!]
+  ): [Group!]!
   id: Int!
 
   """Featured projects may be given prominent placement on the homepage."""
   isFeatured: Boolean
-
-  """
-  Whether the project is visible to non-admins. Projects that are unpublished
-  can be thought of as in a staging state before the admin has chosen to invite end-users.
-  """
-  isPublished: Boolean
+  isListed: Boolean
 
   """
   If a logoUrl is provided, it will link to this url in a new window if provided.
@@ -126,141 +124,51 @@ type Project implements Node {
   """
   nodeId: ID!
 
-  """Reads and enables pagination through a set of `ProjectMember`."""
-  projectMembersConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
+  """
+  Count of all users who have opted into participating in the project, sharing their profile with project administrators.
+  """
+  participantCount: Int
 
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: ProjectMemberCondition
+  """
+  All users who have opted into participating in the project, sharing their profile with project administrators.
+  """
+  participants(
+    direction: SortByDirection
 
     """Only read the first `n` values of the set."""
     first: Int
 
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
+    """Skip the first `n` values."""
     offset: Int
+    orderBy: ParticipantSortBy
+  ): [User]
 
-    """The method to use when ordering `ProjectMember`."""
-    orderBy: [ProjectMembersOrderBy!] = [NATURAL]
-  ): ProjectMembersConnection!
-
-  """Will resolve to {subdomain}.seasketch.org and cannot be changed"""
-  subdomain: String!
+  """Will resolve to https://seasketch.org/{slug}/ and cannot be changed"""
+  slug: String!
   url: String
+}
+
+enum ProjectAccessControlSetting {
+  ADMINS_ONLY
+  INVITE_ONLY
+  PUBLIC
 }
 
 """
 A condition to be used against `Project` object types. All fields are tested for equality and combined with a logical ‘and.’
 """
 input ProjectCondition {
+  """Checks for equality with the object’s `accessControl` field."""
+  accessControl: ProjectAccessControlSetting
+
   """Checks for equality with the object’s `id` field."""
   id: Int
 
   """Checks for equality with the object’s `isFeatured` field."""
   isFeatured: Boolean
 
-  """Checks for equality with the object’s `isPublished` field."""
-  isPublished: Boolean
-
-  """Checks for equality with the object’s `subdomain` field."""
-  subdomain: String
-}
-
-"""An input for mutations affecting `Project`"""
-input ProjectInput {
-  name: String!
-
-  """Will resolve to {subdomain}.seasketch.org and cannot be changed"""
-  subdomain: String!
-}
-
-type ProjectMember {
-  isAdmin: Boolean
-
-  """Reads a single `Project` that is related to this `ProjectMember`."""
-  project: Project
-  projectId: Int!
-  userId: Int!
-}
-
-"""
-A condition to be used against `ProjectMember` object types. All fields are
-tested for equality and combined with a logical ‘and.’
-"""
-input ProjectMemberCondition {
-  """Checks for equality with the object’s `projectId` field."""
-  projectId: Int
-}
-
-"""A connection to a list of `ProjectMember` values."""
-type ProjectMembersConnection {
-  """
-  A list of edges which contains the `ProjectMember` and cursor to aid in pagination.
-  """
-  edges: [ProjectMembersEdge!]!
-
-  """A list of `ProjectMember` objects."""
-  nodes: [ProjectMember]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """The count of *all* `ProjectMember` you could get from the connection."""
-  totalCount: Int!
-}
-
-"""A `ProjectMember` edge in the connection."""
-type ProjectMembersEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `ProjectMember` at the end of the edge."""
-  node: ProjectMember
-}
-
-"""Methods to use when ordering `ProjectMember`."""
-enum ProjectMembersOrderBy {
-  NATURAL
-  PROJECT_ID_ASC
-  PROJECT_ID_DESC
-}
-
-"""
-Represents an update to a `Project`. Fields that are set will be updated.
-"""
-input ProjectPatch {
-  description: String
-
-  """Featured projects may be given prominent placement on the homepage."""
-  isFeatured: Boolean
-
-  """
-  Whether the project is visible to non-admins. Projects that are unpublished
-  can be thought of as in a staging state before the admin has chosen to invite end-users.
-  """
-  isPublished: Boolean
-
-  """
-  If a logoUrl is provided, it will link to this url in a new window if provided.
-  """
-  logoLink: String
-
-  """
-  URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels
-  """
-  logoUrl: String
-  name: String
+  """Checks for equality with the object’s `slug` field."""
+  slug: String
 }
 
 """A connection to a list of `Project` values."""
@@ -291,21 +199,29 @@ type ProjectsEdge {
 
 """Methods to use when ordering `Project`."""
 enum ProjectsOrderBy {
+  ACCESS_CONTROL_ASC
+  ACCESS_CONTROL_DESC
   ID_ASC
   ID_DESC
   IS_FEATURED_ASC
   IS_FEATURED_DESC
-  IS_PUBLISHED_ASC
-  IS_PUBLISHED_DESC
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
-  SUBDOMAIN_ASC
-  SUBDOMAIN_DESC
+  SLUG_ASC
+  SLUG_DESC
 }
 
 """The root query type which gives access points into the data universe."""
 type Query implements Node {
+  group(id: Int!): Group
+
+  """Reads a single `Group` using its globally unique `ID`."""
+  groupByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Group`."""
+    nodeId: ID!
+  ): Group
+
   """Fetches an object given its globally unique `ID`."""
   node(
     """The globally unique `ID`."""
@@ -316,6 +232,7 @@ type Query implements Node {
   The root query type must be a `Node` to work well with Relay 1 mutations. This just resolves to `query`.
   """
   nodeId: ID!
+  profileByUserId(userId: Int!): Profile
   project(id: Int!): Project
 
   """Reads a single `Project` using its globally unique `ID`."""
@@ -323,7 +240,7 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Project`."""
     nodeId: ID!
   ): Project
-  projectBySubdomain(subdomain: String!): Project
+  projectBySlug(slug: String!): Project
 
   """Reads and enables pagination through a set of `Project`."""
   projectsConnection(
@@ -359,106 +276,29 @@ type Query implements Node {
   which can only query top level fields if they are in a particular form.
   """
   query: Query!
-  supportedLocale(code: String!): SupportedLocale
+  user(id: Int!): User
 
-  """Reads a single `SupportedLocale` using its globally unique `ID`."""
-  supportedLocaleByNodeId(
-    """
-    The globally unique `ID` to be used in selecting a single `SupportedLocale`.
-    """
+  """Reads a single `User` using its globally unique `ID`."""
+  userByNodeId(
+    """The globally unique `ID` to be used in selecting a single `User`."""
     nodeId: ID!
-  ): SupportedLocale
-
-  """Reads a set of `SupportedLocale`."""
-  supportedLocales(
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-  ): [SupportedLocale!]
+  ): User
 }
 
-type SupportedLocale implements Node {
-  code: String!
-  label: String!
+enum SortByDirection {
+  ASC
+  DESC
+}
+
+type User implements Node {
+  id: Int!
+  isAdmin(projectId: Int): Boolean
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
-}
 
-"""All input for the `updateProjectByNodeId` mutation."""
-input UpdateProjectByNodeIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  The globally unique `ID` which will identify a single `Project` to be updated.
-  """
-  nodeId: ID!
-
-  """
-  An object where the defined keys will be set on the `Project` being updated.
-  """
-  patch: ProjectPatch!
-}
-
-"""All input for the `updateProjectBySubdomain` mutation."""
-input UpdateProjectBySubdomainInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  An object where the defined keys will be set on the `Project` being updated.
-  """
-  patch: ProjectPatch!
-
-  """Will resolve to {subdomain}.seasketch.org and cannot be changed"""
-  subdomain: String!
-}
-
-"""All input for the `updateProject` mutation."""
-input UpdateProjectInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  id: Int!
-
-  """
-  An object where the defined keys will be set on the `Project` being updated.
-  """
-  patch: ProjectPatch!
-}
-
-"""The output of our update `Project` mutation."""
-type UpdateProjectPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """The `Project` that was updated by this mutation."""
-  project: Project
-
-  """An edge for our `Project`. May be used by Relay 1."""
-  projectEdge(
-    """The method to use when ordering `Project`."""
-    orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ProjectsEdge
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
+  """Reads a single `Profile` that is related to this `User`."""
+  profile: Profile
 }
