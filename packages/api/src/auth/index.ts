@@ -35,7 +35,7 @@ export async function getPGSessionSettings(req: IncomingRequest) {
     let role: Role = "anon";
     if ((req.user.permissions || []).indexOf("superuser") !== -1) {
       role = "seasketch_superuser";
-    } else if (projectId && userId) {
+    } else if (userId) {
       role = "seasketch_user";
     }
     return {
@@ -53,7 +53,7 @@ export async function getPGSessionSettings(req: IncomingRequest) {
 }
 
 function getSlug(headers: IncomingHttpHeaders) {
-  let slug: string;
+  let slug: string | null = null;
   if (headers["x-ss-slug"]) {
     slug = Array.isArray(headers["x-ss-slug"])
       ? headers["x-ss-slug"][0]
@@ -61,22 +61,27 @@ function getSlug(headers: IncomingHttpHeaders) {
   } else if (headers["referer"]) {
     const url = new URL(headers["referer"]);
     slug = url.pathname.split("/")[0];
-  } else {
-    throw new Error("No referer or x-ss-slug header found");
   }
   return slug;
 }
 
 // TODO: cache these getters ( but be sure to expire them appropriately )
 
-async function getProjectIdFromHeaders(slug: string): Promise<number> {
-  const results = await pool.query(`select id from projects where slug = $1`, [
-    slug,
-  ]);
-  if (results.rowCount === 0) {
-    throw new Error(`Session error. Unknown project ${slug}`);
+async function getProjectIdFromHeaders(
+  slug: string | null
+): Promise<number | undefined> {
+  if (slug) {
+    const results = await pool.query(
+      `select id from projects where slug = $1`,
+      [slug]
+    );
+    if (results.rowCount === 0) {
+      throw new Error(`Session error. Unknown project ${slug}`);
+    } else {
+      return results.rows[0].id;
+    }
   } else {
-    return results.rows[0].id;
+    return;
   }
 }
 

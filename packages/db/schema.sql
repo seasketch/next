@@ -81,122 +81,6 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: project_groups; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.project_groups (
-    id integer NOT NULL,
-    project_id integer NOT NULL,
-    name text,
-    CONSTRAINT namechk CHECK ((char_length(name) <= 32))
-);
-
-
---
--- Name: TABLE project_groups; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.project_groups IS '@name groups
-@omit all,filter
-@simpleCollections only
-User groups designated by the project administrators';
-
-
---
--- Name: project_groups_member_count(public.project_groups); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.project_groups_member_count(g public.project_groups) RETURNS integer
-    LANGUAGE sql STABLE
-    AS $$
-  SELECT
-    COALESCE((
-      SELECT
-        count(*)::int FROM project_group_members
-    WHERE
-      group_id = g.id), 0)
-$$;
-
-
---
--- Name: users; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.users (
-    id integer NOT NULL,
-    legacy_id text,
-    email text,
-    sub text,
-    accepted_privacy_policy boolean DEFAULT false,
-    registered_at timestamp with time zone DEFAULT timezone('utc'::text, now())
-);
-
-
---
--- Name: TABLE users; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.users IS '@omit all';
-
-
---
--- Name: COLUMN users.legacy_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.users.legacy_id IS 'Legacy SeaSketch MongoDB ObjectId, if applicable';
-
-
---
--- Name: COLUMN users.sub; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.users.sub IS 'From auth provider jwt token (Auth0)';
-
-
---
--- Name: project_groups_members(public.project_groups, public.participant_sort_by, public.sort_by_direction); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.project_groups_members(g public.project_groups, order_by public.participant_sort_by DEFAULT 'NAME'::public.participant_sort_by, direction public.sort_by_direction DEFAULT 'ASC'::public.sort_by_direction) RETURNS SETOF public.users
-    LANGUAGE sql STABLE
-    AS $$
-  SELECT
-    users.*
-  FROM
-    users
-    INNER JOIN project_group_members ON (project_group_members.user_id = users.id)
-    INNER JOIN user_profiles ON (user_profiles.user_id = users.id)
-  WHERE
-    project_group_members.group_id = g.id
-  ORDER BY
-    CASE WHEN direction = 'ASC' THEN
-      CASE order_by
-      WHEN 'NAME' THEN
-        user_profiles.fullname
-      WHEN 'EMAIL' THEN
-        user_profiles.email
-      END
-    END ASC,
-    CASE WHEN direction = 'DESC' THEN
-      CASE order_by
-      WHEN 'NAME' THEN
-        user_profiles.fullname
-      WHEN 'EMAIL' THEN
-        user_profiles.email
-      END
-    END DESC
-$$;
-
-
---
--- Name: FUNCTION project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction) IS '@name members
-@simpleCollections only';
-
-
---
 -- Name: projects; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -213,6 +97,7 @@ CREATE TABLE public.projects (
     is_featured boolean DEFAULT false,
     is_deleted boolean DEFAULT false,
     deleted_at timestamp with time zone,
+    CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT projects_logo_link_check CHECK ((logo_link ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT projects_logo_url_check CHECK ((logo_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
 );
@@ -272,6 +157,333 @@ COMMENT ON COLUMN public.projects.is_deleted IS '@omit';
 --
 
 COMMENT ON COLUMN public.projects.deleted_at IS '@omit';
+
+
+--
+-- Name: create_project(text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_project(name text, slug text, OUT project public.projects) RETURNS public.projects
+    LANGUAGE plpgsql STRICT SECURITY DEFINER
+    AS $$
+  begin
+    if current_setting('session.email_verified', true) = 'true' then
+      insert into projects (name, slug, is_listed) 
+        values (name, slug, false) returning * into project;
+      insert into project_participants (
+        user_id, 
+        project_id, 
+        is_admin, 
+        approved, 
+        share_profile
+      ) values (
+        current_setting('session.user_id', true)::int, 
+        project.id, 
+        true, 
+        true, 
+        true
+      );
+    else
+      raise exception 'Email must be verified to create a project';
+    end if;
+  end
+$$;
+
+
+--
+-- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_project(name text, slug text, OUT project public.projects) IS 'Users with verified emails can create new projects by choosing a unique name and url slug. This project will be unlisted with admin_only access and the user will be automatically added to the list of admins.';
+
+
+--
+-- Name: current_project(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.current_project() RETURNS public.projects
+    LANGUAGE sql STABLE
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  SELECT
+    *
+  FROM
+    projects
+  WHERE
+    id = nullif (current_setting('session.project_id', TRUE), '')::integer
+$$;
+
+
+--
+-- Name: delete_project(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.delete_project(project_id integer, OUT project public.projects) RETURNS public.projects
+    LANGUAGE plpgsql STRICT SECURITY DEFINER
+    AS $$
+  begin
+    if is_superuser() or is_admin(project_id, current_setting('session.user_id', true)::int) then
+      update projects set deleted_at = now(), is_deleted = true where projects.id = project_id returning * into project;
+    else
+      raise exception 'You do not administer this project';
+    end if;
+  end
+$$;
+
+
+--
+-- Name: get_or_create_user_by_sub(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_or_create_user_by_sub(_sub text, OUT user_id integer) RETURNS integer
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  WITH ins AS (
+INSERT INTO users (sub)
+      VALUES (_sub)
+    ON CONFLICT (sub)
+      DO NOTHING
+    RETURNING
+      users.id)
+    SELECT
+      id
+    FROM
+      ins
+    UNION ALL
+    SELECT
+      users.id
+    FROM
+      users
+    WHERE
+      sub = _sub
+    LIMIT 1
+$$;
+
+
+--
+-- Name: FUNCTION get_or_create_user_by_sub(_sub text, OUT user_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_or_create_user_by_sub(_sub text, OUT user_id integer) IS '@omit
+Incoming users from Auth0 need to be represented in our database. This function runs whenever a user with an unrecognized token calls the api.';
+
+
+--
+-- Name: get_project_id(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_project_id(slug text) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  SELECT
+    id
+  FROM
+    projects
+  WHERE
+    projects.slug = slug
+  LIMIT 1;
+
+$$;
+
+
+--
+-- Name: FUNCTION get_project_id(slug text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_project_id(slug text) IS '@omit
+Enables app to determine current project from url slug or x-ss-slug header';
+
+
+--
+-- Name: is_admin(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_admin(_project_id integer, _user_id integer) RETURNS boolean
+    LANGUAGE sql
+    AS $$
+    select exists (
+      select 
+        1 
+      from 
+        project_participants 
+      where 
+        project_participants.user_id = _user_id and 
+        project_participants.project_id = _project_id and 
+        project_participants.is_admin = true
+    );
+$$;
+
+
+--
+-- Name: is_ss_admin(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_ss_admin(project_id integer, user_id integer) RETURNS boolean
+    LANGUAGE sql
+    AS $$
+  select exists (
+    select 
+      1 
+    from 
+      project_participants 
+    where 
+      project_participants.user_id = user_id and 
+      project_participants.project_id = project_id and 
+      project_participants.is_admin = true
+  );
+$$;
+
+
+--
+-- Name: is_superuser(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_superuser() RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select 'seasketch_superuser' = current_setting('role', true);
+$$;
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id integer NOT NULL,
+    legacy_id text,
+    sub text,
+    registered_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+    onboarded timestamp with time zone
+);
+
+
+--
+-- Name: TABLE users; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.users IS '@omit all';
+
+
+--
+-- Name: COLUMN users.legacy_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.legacy_id IS '@omit';
+
+
+--
+-- Name: COLUMN users.sub; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.sub IS '@omit';
+
+
+--
+-- Name: COLUMN users.registered_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.registered_at IS '@omit';
+
+
+--
+-- Name: me(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.me() RETURNS public.users
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  SELECT
+    *
+  FROM
+    users
+  WHERE
+    id = nullif (current_setting('session.user_id', TRUE), '')::integer
+$$;
+
+
+--
+-- Name: project_groups; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_groups (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    name text,
+    CONSTRAINT namechk CHECK ((char_length(name) <= 32))
+);
+
+
+--
+-- Name: TABLE project_groups; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_groups IS '@name groups
+@omit all,filter
+@simpleCollections only
+User groups designated by the project administrators';
+
+
+--
+-- Name: project_groups_member_count(public.project_groups); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_groups_member_count(g public.project_groups) RETURNS integer
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT
+    COALESCE((
+      SELECT
+        count(*)::int FROM project_group_members
+    WHERE
+      group_id = g.id), 0)
+$$;
+
+
+--
+-- Name: project_groups_members(public.project_groups, public.participant_sort_by, public.sort_by_direction); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_groups_members(g public.project_groups, order_by public.participant_sort_by DEFAULT 'NAME'::public.participant_sort_by, direction public.sort_by_direction DEFAULT 'ASC'::public.sort_by_direction) RETURNS SETOF public.users
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT
+    users.*
+  FROM
+    users
+    INNER JOIN project_group_members ON (project_group_members.user_id = users.id)
+    INNER JOIN user_profiles ON (user_profiles.user_id = users.id)
+  WHERE
+    project_group_members.group_id = g.id
+  ORDER BY
+    CASE WHEN direction = 'ASC' THEN
+      CASE order_by
+      WHEN 'NAME' THEN
+        user_profiles.fullname
+      WHEN 'EMAIL' THEN
+        user_profiles.email
+      END
+    END ASC,
+    CASE WHEN direction = 'DESC' THEN
+      CASE order_by
+      WHEN 'NAME' THEN
+        user_profiles.fullname
+      WHEN 'EMAIL' THEN
+        user_profiles.email
+      END
+    END DESC
+$$;
+
+
+--
+-- Name: FUNCTION project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction) IS '@name members
+@simpleCollections only';
 
 
 --
@@ -356,7 +568,7 @@ $$;
 -- Name: users_is_admin(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.users_is_admin(u public.users, project_id integer) RETURNS boolean
+CREATE FUNCTION public.users_is_admin(u public.users, project integer) RETURNS boolean
     LANGUAGE plpgsql STABLE
     AS $$
 BEGIN
@@ -368,7 +580,28 @@ BEGIN
     WHERE
       project_participants.user_id = u.id
       AND project_participants.is_admin = TRUE
-      AND project_participants.project_id = project_id);
+      AND project_participants.project_id = project);
+END
+$$;
+
+
+--
+-- Name: users_is_approved(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_is_approved(u public.users, project integer) RETURNS boolean
+    LANGUAGE plpgsql STABLE
+    AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT
+      user_id
+    FROM
+      project_participants
+    WHERE
+      project_participants.user_id = u.id
+      AND project_participants.approved = TRUE
+      AND project_participants.project_id = project);
 END
 $$;
 
@@ -411,7 +644,10 @@ ALTER TABLE public.project_groups ALTER COLUMN id ADD GENERATED BY DEFAULT AS ID
 CREATE TABLE public.project_participants (
     user_id integer NOT NULL,
     project_id integer NOT NULL,
-    is_admin boolean DEFAULT false
+    is_admin boolean DEFAULT false,
+    approved boolean DEFAULT false NOT NULL,
+    requested_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+    share_profile boolean DEFAULT false NOT NULL
 );
 
 
@@ -420,6 +656,20 @@ CREATE TABLE public.project_participants (
 --
 
 COMMENT ON TABLE public.project_participants IS '@omit';
+
+
+--
+-- Name: COLUMN project_participants.approved; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project_participants.approved IS 'Approval status for projects with access set to invite_only';
+
+
+--
+-- Name: COLUMN project_participants.share_profile; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project_participants.share_profile IS 'Whether user profile can be shared with project administrators, and other users if participating in the forum.';
 
 
 --
@@ -532,14 +782,6 @@ ALTER TABLE ONLY public.user_profiles
 
 
 --
--- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.users
-    ADD CONSTRAINT users_email_key UNIQUE (email);
-
-
---
 -- Name: users users_legacy_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -641,6 +883,20 @@ CREATE INDEX project_slugs ON public.projects USING btree (slug);
 
 
 --
+-- Name: INDEX project_slugs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON INDEX public.project_slugs IS '@omit update';
+
+
+--
+-- Name: INDEX projects_slug_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON INDEX public.projects_slug_key IS '@omit update';
+
+
+--
 -- Name: user_profiles_user_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -724,6 +980,51 @@ CREATE EVENT TRIGGER postgraphile_watch_ddl ON ddl_command_end
 
 CREATE EVENT TRIGGER postgraphile_watch_drop ON sql_drop
    EXECUTE FUNCTION postgraphile_watch.notify_watchers_drop();
+
+
+--
+-- Name: projects admin_update_projects; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY admin_update_projects ON public.projects FOR UPDATE TO seasketch_user USING ((EXISTS ( SELECT projects.id
+   FROM public.project_participants
+  WHERE ((project_participants.user_id = (current_setting('session.user_id'::text, true))::integer) AND (project_participants.project_id = projects.id) AND (project_participants.is_admin = true)))));
+
+
+--
+-- Name: projects anon_projects_select_listed; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY anon_projects_select_listed ON public.projects FOR SELECT TO anon USING (((is_listed = true) AND (is_deleted = false)));
+
+
+--
+-- Name: projects; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: projects seasketch_user_select_projects; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY seasketch_user_select_projects ON public.projects FOR SELECT TO seasketch_user USING (((is_deleted = false) AND ((is_listed = true) OR (EXISTS ( SELECT projects.id
+   FROM public.project_participants
+  WHERE ((project_participants.user_id = (current_setting('session.user_id'::text, true))::integer) AND (project_participants.project_id = projects.id) AND ((project_participants.approved = true) OR (project_participants.is_admin = true))))))));
+
+
+--
+-- Name: projects superuser_projects_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY superuser_projects_select ON public.projects FOR SELECT TO seasketch_superuser USING ((is_deleted = false));
+
+
+--
+-- Name: projects superuser_update_projects; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY superuser_update_projects ON public.projects FOR UPDATE TO seasketch_superuser USING (true);
 
 
 --
@@ -895,6 +1196,151 @@ REVOKE ALL ON FUNCTION public.citext_smaller(public.citext, public.citext) FROM 
 
 
 --
+-- Name: TABLE projects; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.name; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(name) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.description; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(description) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.access_control; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.is_listed; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.logo_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.logo_link; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.is_featured; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
+
+
+--
+-- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_project(name text, slug text, OUT project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_project(name text, slug text, OUT project public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION current_project(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.current_project() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.current_project() TO anon;
+
+
+--
+-- Name: FUNCTION delete_project(project_id integer, OUT project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.delete_project(project_id integer, OUT project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.delete_project(project_id integer, OUT project public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION get_or_create_user_by_sub(_sub text, OUT user_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, OUT user_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, OUT user_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_project_id(slug text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_project_id(slug text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_project_id(slug text) TO anon;
+
+
+--
+-- Name: FUNCTION is_admin(_project_id integer, _user_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.is_admin(_project_id integer, _user_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION is_ss_admin(project_id integer, user_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.is_ss_admin(project_id integer, user_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION is_superuser(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.is_superuser() FROM PUBLIC;
+
+
+--
+-- Name: TABLE users; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.users TO seasketch_user;
+
+
+--
+-- Name: COLUMN users.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.users TO anon;
+
+
+--
+-- Name: FUNCTION me(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.me() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.me() TO anon;
+
+
+--
 -- Name: TABLE project_groups; Type: ACL; Schema: public; Owner: -
 --
 
@@ -910,25 +1356,11 @@ GRANT ALL ON FUNCTION public.project_groups_member_count(g public.project_groups
 
 
 --
--- Name: COLUMN users.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.users TO anon;
-
-
---
 -- Name: FUNCTION project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.project_groups_members(g public.project_groups, order_by public.participant_sort_by, direction public.sort_by_direction) TO seasketch_user;
-
-
---
--- Name: TABLE projects; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.projects TO anon;
 
 
 --
@@ -1103,11 +1535,19 @@ REVOKE ALL ON FUNCTION public.translate(public.citext, public.citext, text) FROM
 
 
 --
--- Name: FUNCTION users_is_admin(u public.users, project_id integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION users_is_admin(u public.users, project integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.users_is_admin(u public.users, project_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.users_is_admin(u public.users, project_id integer) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.users_is_admin(u public.users, project integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_is_admin(u public.users, project integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION users_is_approved(u public.users, project integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_is_approved(u public.users, project integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_is_approved(u public.users, project integer) TO seasketch_user;
 
 
 --

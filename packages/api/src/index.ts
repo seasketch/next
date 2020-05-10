@@ -65,6 +65,12 @@ app.use(
     watchPg: true,
     graphiql: true,
     enhanceGraphiql: true,
+    allowExplain: (req) => {
+      if (process.env.NODE_ENV !== "production") {
+        return true;
+      }
+      return false;
+    },
     ignoreRBAC: false,
     ignoreIndexes: false,
     pgSettings: (req): Promise<PGSessionSettings> =>

@@ -1,3 +1,35 @@
+"""All input for the `createProject` mutation."""
+input CreateProjectInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  name: String!
+  slug: String!
+}
+
+"""The output of our `createProject` mutation."""
+type CreateProjectPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  project: Project
+
+  """An edge for our `Project`. May be used by Relay 1."""
+  projectEdge(
+    """The method to use when ordering `Project`."""
+    orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ProjectsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """A location in a connection that can be used for resuming pagination."""
 scalar Cursor
 
@@ -6,6 +38,37 @@ A point in time as described by the [ISO
 8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
 """
 scalar Datetime
+
+"""All input for the `deleteProject` mutation."""
+input DeleteProjectInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int!
+}
+
+"""The output of our `deleteProject` mutation."""
+type DeleteProjectPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  project: Project
+
+  """An edge for our `Project`. May be used by Relay 1."""
+  projectEdge(
+    """The method to use when ordering `Project`."""
+    orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ProjectsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
 
 scalar Email
 
@@ -46,6 +109,53 @@ enum GroupsOrderBy {
   PRIMARY_KEY_DESC
   PROJECT_ID_ASC
   PROJECT_ID_DESC
+}
+
+"""
+The root mutation type which contains root level fields which mutate data.
+"""
+type Mutation {
+  """
+  Users with verified emails can create new projects by choosing a unique name
+  and url slug. This project will be unlisted with admin_only access and the
+  user will be automatically added to the list of admins.
+  """
+  createProject(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateProjectInput!
+  ): CreateProjectPayload
+  deleteProject(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteProjectInput!
+  ): DeleteProjectPayload
+
+  """Updates a single `Project` using a unique key and a patch."""
+  updateProject(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateProjectInput!
+  ): UpdateProjectPayload
+
+  """Updates a single `Project` using its globally unique id and a patch."""
+  updateProjectByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateProjectByNodeIdInput!
+  ): UpdateProjectPayload
+
+  """Updates a single `Project` using a unique key and a patch."""
+  updateProjectBySlug(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateProjectBySlugInput!
+  ): UpdateProjectPayload
 }
 
 """An object with a globally unique `ID`."""
@@ -177,6 +287,29 @@ input ProjectCondition {
   slug: String
 }
 
+"""
+Represents an update to a `Project`. Fields that are set will be updated.
+"""
+input ProjectPatch {
+  accessControl: ProjectAccessControlSetting
+  description: String
+
+  """Featured projects may be given prominent placement on the homepage."""
+  isFeatured: Boolean
+  isListed: Boolean
+
+  """
+  If a logoUrl is provided, it will link to this url in a new window if provided.
+  """
+  logoLink: String
+
+  """
+  URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels
+  """
+  logoUrl: String
+  name: String
+}
+
 """A connection to a list of `Project` values."""
 type ProjectsConnection {
   """
@@ -298,9 +431,84 @@ enum SortByDirection {
   DESC
 }
 
+"""All input for the `updateProjectByNodeId` mutation."""
+input UpdateProjectByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Project` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `Project` being updated.
+  """
+  patch: ProjectPatch!
+}
+
+"""All input for the `updateProjectBySlug` mutation."""
+input UpdateProjectBySlugInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `Project` being updated.
+  """
+  patch: ProjectPatch!
+
+  """Will resolve to https://seasketch.org/{slug}/ and cannot be changed"""
+  slug: String!
+}
+
+"""All input for the `updateProject` mutation."""
+input UpdateProjectInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `Project` being updated.
+  """
+  patch: ProjectPatch!
+}
+
+"""The output of our update `Project` mutation."""
+type UpdateProjectPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Project` that was updated by this mutation."""
+  project: Project
+
+  """An edge for our `Project`. May be used by Relay 1."""
+  projectEdge(
+    """The method to use when ordering `Project`."""
+    orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ProjectsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 type User implements Node {
   id: Int!
   isAdmin(project: Int): Boolean
+  isApproved(project: Int): Boolean
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
