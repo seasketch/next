@@ -56,6 +56,17 @@ CREATE TYPE public.participant_sort_by AS ENUM (
 
 
 --
+-- Name: participation_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.participation_status AS ENUM (
+    'none',
+    'participant',
+    'pending_approval'
+);
+
+
+--
 -- Name: project_access_control_setting; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -74,6 +85,73 @@ CREATE TYPE public.sort_by_direction AS ENUM (
     'ASC',
     'DESC'
 );
+
+
+--
+-- Name: add_user_to_group(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.add_user_to_group("groupId" integer, "userId" integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    Declare
+      pid int;
+    BEGIN
+      select project_id into pid from project_groups where id = "groupId";
+      IF session_is_admin(pid) or session_is_superuser() THEN
+        insert into project_group_members (group_id, user_id) values ("groupId", "userId");
+      ELSE
+        raise exception 'You must be a project administrator';
+      END IF;
+    END
+  $$;
+
+
+--
+-- Name: FUNCTION add_user_to_group("groupId" integer, "userId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.add_user_to_group("groupId" integer, "userId" integer) IS 'Add the given user to a group. Must be an administrator of the project.';
+
+
+--
+-- Name: approve_participant(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.approve_participant("projectId" integer, "userId" integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    BEGIN
+      IF session_is_admin("projectId") or session_is_superuser() THEN
+        update project_participants set approved = true where user_id = "userId" and project_id = "projectId";
+      ELSE
+        raise exception 'You must be a project administrator';
+      END IF;
+    END
+  $$;
+
+
+--
+-- Name: FUNCTION approve_participant("projectId" integer, "userId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.approve_participant("projectId" integer, "userId" integer) IS 'For invite_only projects. Approve access request by a user. Must be an administrator of the project.';
+
+
+--
+-- Name: auto_create_profile(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.auto_create_profile() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  INSERT INTO
+    user_profiles(user_id)
+    VALUES(new.id);
+      RETURN new;
+END;
+$$;
 
 
 SET default_tablespace = '';
@@ -232,6 +310,13 @@ $$;
 
 
 --
+-- Name: FUNCTION delete_project(project_id integer, OUT project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.delete_project(project_id integer, OUT project public.projects) IS 'Marks project as deleted. Will remain in database but not accessible to anyone. Function can only be accessed by project administrators.';
+
+
+--
 -- Name: get_or_create_user_by_sub(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -297,6 +382,34 @@ Enables app to determine current project from url slug or x-ss-slug header';
 
 
 --
+-- Name: grant_admin_access(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.grant_admin_access("projectId" integer, "userId" integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    BEGIN
+      IF session_is_admin("projectId") or session_is_superuser() THEN
+        IF exists(select 1 from project_participants where user_id = "userId" and project_id = "projectId" and share_profile = true) THEN
+          update project_participants set is_admin = true where user_id = "userId" and project_id = "projectId";
+        ELSE
+          raise exception 'User must join the project and share their user profile first.';
+        END IF;
+      ELSE
+        raise exception 'You must be a project administrator';
+      END IF;
+    END
+  $$;
+
+
+--
+-- Name: FUNCTION grant_admin_access("projectId" integer, "userId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.grant_admin_access("projectId" integer, "userId" integer) IS 'Give a user admin access to a project. User must have already joined the project and shared their user profile.';
+
+
+--
 -- Name: is_admin(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -314,6 +427,13 @@ CREATE FUNCTION public.is_admin(_project_id integer, _user_id integer) RETURNS b
         project_participants.is_admin = true
     );
 $$;
+
+
+--
+-- Name: FUNCTION is_admin(_project_id integer, _user_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.is_admin(_project_id integer, _user_id integer) IS '@omit';
 
 
 --
@@ -345,6 +465,42 @@ CREATE FUNCTION public.is_superuser() RETURNS boolean
     AS $$
   select 'seasketch_superuser' = current_setting('role', true);
 $$;
+
+
+--
+-- Name: join_project(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.join_project(project_id integer) RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    insert into project_participants (user_id, project_id, share_profile) values (current_setting('session.user_id', true)::integer, project_id, true) on conflict on constraint project_participants_pkey do update set share_profile = true;
+  $$;
+
+
+--
+-- Name: FUNCTION join_project(project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.join_project(project_id integer) IS 'Adds current user to the list of participants for a project, sharing their profile with administrators. Their profile will also be shared in public or group discussion forum posts.';
+
+
+--
+-- Name: leave_project(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.leave_project(project_id integer) RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    insert into project_participants (user_id, project_id, share_profile) values (current_setting('session.user_id', true)::integer, project_id, false) on conflict on constraint project_participants_pkey do update set share_profile = false;
+  $$;
+
+
+--
+-- Name: FUNCTION leave_project(project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.leave_project(project_id integer) IS 'Approve a user for use of an invite_only project.';
 
 
 --
@@ -389,6 +545,13 @@ COMMENT ON COLUMN public.users.registered_at IS '@omit';
 
 
 --
+-- Name: COLUMN users.onboarded; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.onboarded IS 'Indicates whether the user has seen post-registration information. Mostly a tool for the client UI to use if needed.';
+
+
+--
 -- Name: me(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -403,6 +566,30 @@ CREATE FUNCTION public.me() RETURNS public.users
   WHERE
     id = nullif (current_setting('session.user_id', TRUE), '')::integer
 $$;
+
+
+--
+-- Name: onboarded(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.onboarded() RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+  IF current_setting('session.user_id', true)::int > 0 THEN
+    update public.users set onboarded = now() where users.id = current_setting('session.user_id', true)::int;
+  else
+    raise exception 'session.user_id must be set';
+  end if;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION onboarded(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.onboarded() IS 'Mark that the user represented in the current session has been shown post-user-registration content.';
 
 
 --
@@ -565,6 +752,80 @@ $$;
 
 
 --
+-- Name: remove_user_from_group(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.remove_user_from_group("groupId" integer, "userId" integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    Declare
+      pid int;
+    BEGIN
+      select project_id into pid from project_groups where id = "groupId";
+      IF session_is_admin(pid) or session_is_superuser() THEN
+        delete from project_group_members where group_id = "groupId" and user_id = "userId";
+      ELSE
+        raise exception 'You must be a project administrator';
+      END IF;
+    END
+  $$;
+
+
+--
+-- Name: FUNCTION remove_user_from_group("groupId" integer, "userId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.remove_user_from_group("groupId" integer, "userId" integer) IS 'Remove the given user from a group. Must be an administrator of the project.';
+
+
+--
+-- Name: session_is_admin(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.session_is_admin("projectId" integer) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select is_admin("projectId", current_setting('session.user_id', true)::integer);
+$$;
+
+
+--
+-- Name: FUNCTION session_is_admin("projectId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.session_is_admin("projectId" integer) IS '@omit';
+
+
+--
+-- Name: session_is_superuser(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.session_is_superuser() RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select is_superuser();
+$$;
+
+
+--
+-- Name: FUNCTION session_is_superuser(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.session_is_superuser() IS '@omit';
+
+
+--
+-- Name: session_is_superuser(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.session_is_superuser("projectId" integer) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select is_superuser();
+$$;
+
+
+--
 -- Name: users_is_admin(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -603,6 +864,47 @@ BEGIN
       AND project_participants.approved = TRUE
       AND project_participants.project_id = project);
 END
+$$;
+
+
+--
+-- Name: users_participation_status(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_participation_status(u public.users, "projectId" integer) RETURNS public.participation_status
+    LANGUAGE sql STABLE
+    AS $$
+  select case when exists(
+    select 
+      1 
+    from 
+      project_participants 
+    where 
+      project_participants.user_id = u.id and 
+      project_participants.project_id = "projectId"
+  ) then 
+    case when exists(
+      select
+        project_participants.approved,
+        projects.access_control
+      from 
+        project_participants
+      inner join
+        projects
+      on
+        project_participants.project_id = projects.id
+      where
+        project_participants.user_id = u.id and
+        project_participants.project_id = "projectId" and
+        (project_participants.approved = true or access_control = 'public')
+    ) then 
+      'participant'::participation_status
+    else
+      'pending_approval'::participation_status
+    end
+  else
+    'none'::participation_status
+  end
 $$;
 
 
@@ -739,6 +1041,14 @@ ALTER TABLE ONLY public.project_group_members
 
 ALTER TABLE ONLY public.project_groups
     ADD CONSTRAINT project_groups_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_groups project_groups_unique_name_project_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_groups
+    ADD CONSTRAINT project_groups_unique_name_project_id UNIQUE (project_id, name);
 
 
 --
@@ -911,6 +1221,13 @@ CREATE INDEX users_sub ON public.users USING btree (sub);
 
 
 --
+-- Name: users trig_auto_create_profile; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trig_auto_create_profile AFTER INSERT ON public.users FOR EACH ROW EXECUTE FUNCTION public.auto_create_profile();
+
+
+--
 -- Name: project_group_members project_group_members_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -999,6 +1316,25 @@ CREATE POLICY anon_projects_select_listed ON public.projects FOR SELECT TO anon 
 
 
 --
+-- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_groups ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: project_groups project_groups_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY project_groups_admin ON public.project_groups USING (public.session_is_admin(project_id)) WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: project_participants; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_participants ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: projects; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1014,6 +1350,24 @@ CREATE POLICY seasketch_user_select_projects ON public.projects FOR SELECT TO se
 
 
 --
+-- Name: project_participants select_project_participants; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY select_project_participants ON public.project_participants USING ((((current_setting('session.user_id'::text, true))::integer = user_id) OR public.session_is_admin(project_id) OR public.session_is_superuser()));
+
+
+--
+-- Name: user_profiles select_user_profile; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY select_user_profile ON public.user_profiles FOR SELECT TO seasketch_user USING (((user_id = (NULLIF(current_setting('session.user_id'::text, true), ''::text))::integer) OR (EXISTS ( SELECT 1
+   FROM public.project_participants
+  WHERE ((project_participants.user_id = user_profiles.user_id) AND (project_participants.share_profile = true) AND (project_participants.project_id IN ( SELECT project_participants_1.project_id
+           FROM public.project_participants project_participants_1
+          WHERE ((project_participants_1.user_id = (current_setting('session.user_id'::text, true))::integer) AND (project_participants_1.is_admin = true)))))))));
+
+
+--
 -- Name: projects superuser_projects_select; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1026,6 +1380,26 @@ CREATE POLICY superuser_projects_select ON public.projects FOR SELECT TO seasket
 
 CREATE POLICY superuser_update_projects ON public.projects FOR UPDATE TO seasketch_superuser USING (true);
 
+
+--
+-- Name: user_profiles user_profile_read; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_profile_read ON public.user_profiles FOR SELECT USING ((user_id = (current_setting('session.user_id'::text, true))::integer));
+
+
+--
+-- Name: user_profiles user_profile_update; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY user_profile_update ON public.user_profiles FOR UPDATE USING ((user_id = (current_setting('session.user_id'::text, true))::integer));
+
+
+--
+-- Name: user_profiles; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: FUNCTION citextin(cstring); Type: ACL; Schema: public; Owner: -
@@ -1060,6 +1434,29 @@ REVOKE ALL ON FUNCTION public.citextsend(public.citext) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.texticregexeq(public.citext, public.citext) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION add_user_to_group("groupId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.add_user_to_group("groupId" integer, "userId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.add_user_to_group("groupId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION approve_participant("projectId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.approve_participant("projectId" integer, "userId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.approve_participant("projectId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION auto_create_profile(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.auto_create_profile() FROM PUBLIC;
 
 
 --
@@ -1298,10 +1695,19 @@ GRANT ALL ON FUNCTION public.get_project_id(slug text) TO anon;
 
 
 --
+-- Name: FUNCTION grant_admin_access("projectId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.grant_admin_access("projectId" integer, "userId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.grant_admin_access("projectId" integer, "userId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION is_admin(_project_id integer, _user_id integer); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.is_admin(_project_id integer, _user_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.is_admin(_project_id integer, _user_id integer) TO seasketch_user;
 
 
 --
@@ -1316,6 +1722,22 @@ REVOKE ALL ON FUNCTION public.is_ss_admin(project_id integer, user_id integer) F
 --
 
 REVOKE ALL ON FUNCTION public.is_superuser() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION join_project(project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.join_project(project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.join_project(project_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION leave_project(project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.leave_project(project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.leave_project(project_id integer) TO seasketch_user;
 
 
 --
@@ -1341,10 +1763,18 @@ GRANT ALL ON FUNCTION public.me() TO anon;
 
 
 --
+-- Name: FUNCTION onboarded(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.onboarded() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.onboarded() TO seasketch_user;
+
+
+--
 -- Name: TABLE project_groups; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT ON TABLE public.project_groups TO seasketch_user;
+GRANT ALL ON TABLE public.project_groups TO seasketch_user;
 
 
 --
@@ -1458,10 +1888,41 @@ REVOKE ALL ON FUNCTION public.regexp_split_to_table(public.citext, public.citext
 
 
 --
+-- Name: FUNCTION remove_user_from_group("groupId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.remove_user_from_group("groupId" integer, "userId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.remove_user_from_group("groupId" integer, "userId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION replace(public.citext, public.citext, public.citext); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.replace(public.citext, public.citext, public.citext) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION session_is_admin("projectId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.session_is_admin("projectId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.session_is_admin("projectId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION session_is_superuser(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.session_is_superuser() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.session_is_superuser() TO seasketch_user;
+
+
+--
+-- Name: FUNCTION session_is_superuser("projectId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.session_is_superuser("projectId" integer) FROM PUBLIC;
 
 
 --
@@ -1551,6 +2012,14 @@ GRANT ALL ON FUNCTION public.users_is_approved(u public.users, project integer) 
 
 
 --
+-- Name: FUNCTION users_participation_status(u public.users, "projectId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_participation_status(u public.users, "projectId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_participation_status(u public.users, "projectId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION max(public.citext); Type: ACL; Schema: public; Owner: -
 --
 
@@ -1583,6 +2052,7 @@ GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
 --
 
 GRANT SELECT ON TABLE public.user_profiles TO anon;
+GRANT UPDATE ON TABLE public.user_profiles TO seasketch_user;
 
 
 --

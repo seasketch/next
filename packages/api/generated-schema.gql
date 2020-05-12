@@ -1,3 +1,85 @@
+"""All input for the `addUserToGroup` mutation."""
+input AddUserToGroupInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupId: Int
+  userId: Int
+}
+
+"""The output of our `addUserToGroup` mutation."""
+type AddUserToGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `approveParticipant` mutation."""
+input ApproveParticipantInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+  userId: Int
+}
+
+"""The output of our `approveParticipant` mutation."""
+type ApproveParticipantPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the create `Group` mutation."""
+input CreateGroupInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `Group` to be created by this mutation."""
+  group: GroupInput!
+}
+
+"""The output of our create `Group` mutation."""
+type CreateGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Group` that was created by this mutation."""
+  group: Group
+
+  """Reads a single `Project` that is related to this `Group`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `createProject` mutation."""
 input CreateProjectInput {
   """
@@ -39,6 +121,62 @@ A point in time as described by the [ISO
 """
 scalar Datetime
 
+"""All input for the `deleteGroupByNodeId` mutation."""
+input DeleteGroupByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Group` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteGroupByProjectIdAndName` mutation."""
+input DeleteGroupByProjectIdAndNameInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  name: String!
+  projectId: Int!
+}
+
+"""All input for the `deleteGroup` mutation."""
+input DeleteGroupInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `Group` mutation."""
+type DeleteGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedProjectGroupNodeId: ID
+
+  """The `Group` that was deleted by this mutation."""
+  group: Group
+
+  """Reads a single `Project` that is related to this `Group`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `deleteProject` mutation."""
 input DeleteProjectInput {
   """
@@ -72,6 +210,31 @@ type DeleteProjectPayload {
 
 scalar Email
 
+"""All input for the `grantAdminAccess` mutation."""
+input GrantAdminAccessInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+  userId: Int
+}
+
+"""The output of our `grantAdminAccess` mutation."""
+type GrantAdminAccessPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """User groups designated by the project administrators"""
 type Group implements Node {
   id: Int!
@@ -100,6 +263,22 @@ type Group implements Node {
   projectId: Int!
 }
 
+"""An input for mutations affecting `Group`"""
+input GroupInput {
+  id: Int
+  name: String
+  projectId: Int!
+}
+
+"""
+Represents an update to a `Group`. Fields that are set will be updated.
+"""
+input GroupPatch {
+  id: Int
+  name: String
+  projectId: Int
+}
+
 """Methods to use when ordering `Group`."""
 enum GroupsOrderBy {
   ID_ASC
@@ -111,10 +290,86 @@ enum GroupsOrderBy {
   PROJECT_ID_DESC
 }
 
+"""All input for the `joinProject` mutation."""
+input JoinProjectInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+}
+
+"""The output of our `joinProject` mutation."""
+type JoinProjectPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `leaveProject` mutation."""
+input LeaveProjectInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+}
+
+"""The output of our `leaveProject` mutation."""
+type LeaveProjectPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """
 The root mutation type which contains root level fields which mutate data.
 """
 type Mutation {
+  """
+  Add the given user to a group. Must be an administrator of the project.
+  """
+  addUserToGroup(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: AddUserToGroupInput!
+  ): AddUserToGroupPayload
+
+  """
+  For invite_only projects. Approve access request by a user. Must be an administrator of the project.
+  """
+  approveParticipant(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ApproveParticipantInput!
+  ): ApproveParticipantPayload
+
+  """Creates a single `Group`."""
+  createGroup(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateGroupInput!
+  ): CreateGroupPayload
+
   """
   Users with verified emails can create new projects by choosing a unique name
   and url slug. This project will be unlisted with admin_only access and the
@@ -126,12 +381,123 @@ type Mutation {
     """
     input: CreateProjectInput!
   ): CreateProjectPayload
+
+  """Deletes a single `Group` using a unique key."""
+  deleteGroup(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteGroupInput!
+  ): DeleteGroupPayload
+
+  """Deletes a single `Group` using its globally unique id."""
+  deleteGroupByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteGroupByNodeIdInput!
+  ): DeleteGroupPayload
+
+  """Deletes a single `Group` using a unique key."""
+  deleteGroupByProjectIdAndName(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteGroupByProjectIdAndNameInput!
+  ): DeleteGroupPayload
+
+  """
+  Marks project as deleted. Will remain in database but not accessible to
+  anyone. Function can only be accessed by project administrators.
+  """
   deleteProject(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
     input: DeleteProjectInput!
   ): DeleteProjectPayload
+
+  """
+  Give a user admin access to a project. User must have already joined the project and shared their user profile.
+  """
+  grantAdminAccess(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: GrantAdminAccessInput!
+  ): GrantAdminAccessPayload
+
+  """
+  Adds current user to the list of participants for a project, sharing their
+  profile with administrators. Their profile will also be shared in public or
+  group discussion forum posts.
+  """
+  joinProject(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: JoinProjectInput!
+  ): JoinProjectPayload
+
+  """Approve a user for use of an invite_only project."""
+  leaveProject(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: LeaveProjectInput!
+  ): LeaveProjectPayload
+
+  """
+  Mark that the user represented in the current session has been shown post-user-registration content.
+  """
+  onboarded(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: OnboardedInput!
+  ): OnboardedPayload
+
+  """
+  Remove the given user from a group. Must be an administrator of the project.
+  """
+  removeUserFromGroup(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: RemoveUserFromGroupInput!
+  ): RemoveUserFromGroupPayload
+
+  """Updates a single `Group` using a unique key and a patch."""
+  updateGroup(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateGroupInput!
+  ): UpdateGroupPayload
+
+  """Updates a single `Group` using its globally unique id and a patch."""
+  updateGroupByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateGroupByNodeIdInput!
+  ): UpdateGroupPayload
+
+  """Updates a single `Group` using a unique key and a patch."""
+  updateGroupByProjectIdAndName(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateGroupByProjectIdAndNameInput!
+  ): UpdateGroupPayload
+
+  """Updates a single `Profile` using a unique key and a patch."""
+  updateProfileByUserId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateProfileByUserIdInput!
+  ): UpdateProfilePayload
 
   """Updates a single `Project` using a unique key and a patch."""
   updateProject(
@@ -166,6 +532,29 @@ interface Node {
   nodeId: ID!
 }
 
+"""All input for the `onboarded` mutation."""
+input OnboardedInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+}
+
+"""The output of our `onboarded` mutation."""
+type OnboardedPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """Information about pagination in a connection."""
 type PageInfo {
   """When paginating forwards, the cursor to continue."""
@@ -186,6 +575,12 @@ enum ParticipantSortBy {
   NAME
 }
 
+enum ParticipationStatus {
+  NONE
+  PARTICIPANT
+  PENDING_APPROVAL
+}
+
 """
 Personal information that users have contributed. Note that access to PII must
 be handle carefully to respect sharing preferences
@@ -201,6 +596,35 @@ type Profile {
   """Reads a single `User` that is related to this `Profile`."""
   user: User
   userId: Int!
+}
+
+"""
+Represents an update to a `Profile`. Fields that are set will be updated.
+"""
+input ProfilePatch {
+  affiliations: String
+  bio: String
+  email: Email
+  fullname: String
+  nickname: String
+  picture: String
+  userId: Int
+}
+
+"""A `Profile` edge in the connection."""
+type ProfilesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `Profile` at the end of the edge."""
+  node: Profile
+}
+
+"""Methods to use when ordering `Profile`."""
+enum ProfilesOrderBy {
+  NATURAL
+  USER_ID_ASC
+  USER_ID_DESC
 }
 
 type Project implements Node {
@@ -361,6 +785,7 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Group`."""
     nodeId: ID!
   ): Group
+  groupByProjectIdAndName(name: String!, projectId: Int!): Group
   me: User
 
   """Fetches an object given its globally unique `ID`."""
@@ -426,9 +851,145 @@ type Query implements Node {
   ): User
 }
 
+"""All input for the `removeUserFromGroup` mutation."""
+input RemoveUserFromGroupInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupId: Int
+  userId: Int
+}
+
+"""The output of our `removeUserFromGroup` mutation."""
+type RemoveUserFromGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 enum SortByDirection {
   ASC
   DESC
+}
+
+"""All input for the `updateGroupByNodeId` mutation."""
+input UpdateGroupByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Group` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `Group` being updated.
+  """
+  patch: GroupPatch!
+}
+
+"""All input for the `updateGroupByProjectIdAndName` mutation."""
+input UpdateGroupByProjectIdAndNameInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  name: String!
+
+  """
+  An object where the defined keys will be set on the `Group` being updated.
+  """
+  patch: GroupPatch!
+  projectId: Int!
+}
+
+"""All input for the `updateGroup` mutation."""
+input UpdateGroupInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `Group` being updated.
+  """
+  patch: GroupPatch!
+}
+
+"""The output of our update `Group` mutation."""
+type UpdateGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Group` that was updated by this mutation."""
+  group: Group
+
+  """Reads a single `Project` that is related to this `Group`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateProfileByUserId` mutation."""
+input UpdateProfileByUserIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `Profile` being updated.
+  """
+  patch: ProfilePatch!
+  userId: Int!
+}
+
+"""The output of our update `Profile` mutation."""
+type UpdateProfilePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Profile` that was updated by this mutation."""
+  profile: Profile
+
+  """An edge for our `Profile`. May be used by Relay 1."""
+  profileEdge(
+    """The method to use when ordering `Profile`."""
+    orderBy: [ProfilesOrderBy!] = [NATURAL]
+  ): ProfilesEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `User` that is related to this `Profile`."""
+  user: User
 }
 
 """All input for the `updateProjectByNodeId` mutation."""
@@ -514,7 +1075,12 @@ type User implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """
+  Indicates whether the user has seen post-registration information. Mostly a tool for the client UI to use if needed.
+  """
   onboarded: Datetime
+  participationStatus(projectId: Int): ParticipationStatus
 
   """Reads a single `Profile` that is related to this `User`."""
   profile: Profile
