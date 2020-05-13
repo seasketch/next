@@ -38,6 +38,17 @@ COMMENT ON EXTENSION citext IS 'data type for case-insensitive character strings
 
 
 --
+-- Name: access_control_list_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.access_control_list_type AS ENUM (
+    'public',
+    'admins_only',
+    'group'
+);
+
+
+--
 -- Name: email; Type: DOMAIN; Schema: public; Owner: -
 --
 
@@ -87,6 +98,105 @@ CREATE TYPE public.sort_by_direction AS ENUM (
 );
 
 
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: access_control_lists; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.access_control_lists (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    type public.access_control_list_type DEFAULT 'public'::public.access_control_list_type NOT NULL,
+    forum_id integer,
+    CONSTRAINT access_control_list_has_related_model CHECK ((((forum_id IS NOT NULL))::integer = 1))
+);
+
+
+--
+-- Name: TABLE access_control_lists; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.access_control_lists IS '@omit all,many
+@name acl';
+
+
+--
+-- Name: COLUMN access_control_lists.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.access_control_lists.project_id IS '@omit';
+
+
+--
+-- Name: project_groups; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_groups (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    name text,
+    CONSTRAINT namechk CHECK ((char_length(name) <= 32))
+);
+
+
+--
+-- Name: TABLE project_groups; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_groups IS '@name groups
+@omit all,filter
+@simpleCollections only
+User groups designated by the project administrators';
+
+
+--
+-- Name: access_control_lists_groups(public.access_control_lists); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.access_control_lists_groups(acl public.access_control_lists) RETURNS SETOF public.project_groups
+    LANGUAGE sql STABLE
+    AS $$
+    select * from project_groups where id in (select group_id from access_control_list_groups where access_control_list_id = acl.id)
+  $$;
+
+
+--
+-- Name: FUNCTION access_control_lists_groups(acl public.access_control_lists); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.access_control_lists_groups(acl public.access_control_lists) IS '@simpleCollections only';
+
+
+--
+-- Name: add_group_to_acl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    DECLARE
+      pid int;
+    BEGIN
+      select project_id into pid from access_control_lists where id = "aclId";
+      if session_is_admin(pid) then
+        insert into access_control_list_groups (access_control_list_id, group_id) values ("aclId", "groupId");
+      else
+        raise exception 'Must be an administrator';
+      end if;
+    END
+  $$;
+
+
+--
+-- Name: FUNCTION add_group_to_acl("aclId" integer, "groupId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) IS 'Add a group to a given access control list. Must be an administrator.';
+
+
 --
 -- Name: add_user_to_group(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -112,6 +222,26 @@ CREATE FUNCTION public.add_user_to_group("groupId" integer, "userId" integer) RE
 --
 
 COMMENT ON FUNCTION public.add_user_to_group("groupId" integer, "userId" integer) IS 'Add the given user to a group. Must be an administrator of the project.';
+
+
+--
+-- Name: addgrouptoacl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.addgrouptoacl("aclId" integer, "groupId" integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    DECLARE
+      project_id int;
+    BEGIN
+      select project_id into project_id from access_control_lists where id = "aclId";
+      if session_is_admin(project_id) then
+        insert into access_control_lists_groups (access_control_list_id, group_id) values ("aclId", "groupId");
+      else
+        raise exception 'Must be an administrator';
+      end if;
+    END
+  $$;
 
 
 --
@@ -154,9 +284,21 @@ END;
 $$;
 
 
-SET default_tablespace = '';
+--
+-- Name: create_forum_acl(); Type: FUNCTION; Schema: public; Owner: -
+--
 
-SET default_table_access_method = heap;
+CREATE FUNCTION public.create_forum_acl() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+  INSERT INTO
+    access_control_lists(project_id, forum_id, type)
+    VALUES(new.project_id, new.id, 'public'::access_control_list_type);
+      RETURN new;
+END;
+$$;
+
 
 --
 -- Name: projects; Type: TABLE; Schema: public; Owner: -
@@ -468,6 +610,24 @@ $$;
 
 
 --
+-- Name: it_me(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.it_me("userId" integer) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+  select nullif(current_setting('session.user_id', TRUE), '')::integer = "userId";
+$$;
+
+
+--
+-- Name: FUNCTION it_me("userId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.it_me("userId" integer) IS '@omit';
+
+
+--
 -- Name: join_project(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -590,28 +750,6 @@ $$;
 --
 
 COMMENT ON FUNCTION public.onboarded() IS 'Mark that the user represented in the current session has been shown post-user-registration content.';
-
-
---
--- Name: project_groups; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.project_groups (
-    id integer NOT NULL,
-    project_id integer NOT NULL,
-    name text,
-    CONSTRAINT namechk CHECK ((char_length(name) <= 32))
-);
-
-
---
--- Name: TABLE project_groups; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.project_groups IS '@name groups
-@omit all,filter
-@simpleCollections only
-User groups designated by the project administrators';
 
 
 --
@@ -752,6 +890,33 @@ $$;
 
 
 --
+-- Name: remove_group_from_acl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.remove_group_from_acl("aclId" integer, "groupId" integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    DECLARE
+      pid int;
+    BEGIN
+      select project_id into pid from access_control_lists where id = "aclId";
+      if session_is_admin(pid) then
+        delete from access_control_list_groups where access_control_list_id = "aclId" and group_id = "groupId";
+      else
+        raise exception 'Must be an administrator';
+      end if;
+    END
+  $$;
+
+
+--
+-- Name: FUNCTION remove_group_from_acl("aclId" integer, "groupId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.remove_group_from_acl("aclId" integer, "groupId" integer) IS 'Remove a group from a given access control list. Must be an administrator.';
+
+
+--
 -- Name: remove_user_from_group(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -785,7 +950,7 @@ COMMENT ON FUNCTION public.remove_user_from_group("groupId" integer, "userId" in
 CREATE FUNCTION public.session_is_admin("projectId" integer) RETURNS boolean
     LANGUAGE sql SECURITY DEFINER
     AS $$
-    select is_admin("projectId", current_setting('session.user_id', true)::integer);
+    select session_is_superuser() or is_admin("projectId", nullif(current_setting('session.user_id', TRUE), '')::integer);
 $$;
 
 
@@ -823,6 +988,38 @@ CREATE FUNCTION public.session_is_superuser("projectId" integer) RETURNS boolean
     AS $$
     select is_superuser();
 $$;
+
+
+--
+-- Name: session_on_acl(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.session_on_acl(acl_id integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    with acl as (
+      select type, project_id from access_control_lists where id = acl_id
+    )
+    select exists(select 1 from acl where type = 'public') or
+    session_is_admin((select project_id from access_control_lists where id = acl_id)) or
+    (
+      exists(select 1 from acl where type = 'group') and 
+      current_setting('session.user_id', TRUE) != '' and 
+      exists (
+        select 1 from access_control_list_groups 
+          where access_control_list_id = acl_id and group_id in (
+            select group_id from project_group_members where user_id = nullif(current_setting('session.user_id', TRUE), '')::integer
+          )
+      )
+    )
+  $$;
+
+
+--
+-- Name: FUNCTION session_on_acl(acl_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.session_on_acl(acl_id integer) IS '@omit';
 
 
 --
@@ -906,6 +1103,62 @@ CREATE FUNCTION public.users_participation_status(u public.users, "projectId" in
     'none'::participation_status
   end
 $$;
+
+
+--
+-- Name: access_control_list_groups; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.access_control_list_groups (
+    access_control_list_id integer NOT NULL,
+    group_id integer NOT NULL
+);
+
+
+--
+-- Name: TABLE access_control_list_groups; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.access_control_list_groups IS '@omit';
+
+
+--
+-- Name: access_control_lists_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.access_control_lists ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.access_control_lists_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: forums; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.forums (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: forums_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.forums ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.forums_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
 
 
 --
@@ -1028,6 +1281,38 @@ ALTER TABLE public.users ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 
 --
+-- Name: access_control_list_groups access_control_list_groups_access_control_list_id_group_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_list_groups
+    ADD CONSTRAINT access_control_list_groups_access_control_list_id_group_id_key UNIQUE (access_control_list_id, group_id);
+
+
+--
+-- Name: access_control_lists access_control_lists_forum_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_forum_id_key UNIQUE (forum_id);
+
+
+--
+-- Name: access_control_lists access_control_lists_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: forums forums_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.forums
+    ADD CONSTRAINT forums_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: project_group_members project_group_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1113,6 +1398,41 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_sub_key UNIQUE (sub);
+
+
+--
+-- Name: access_control_list_groups_access_control_list_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX access_control_list_groups_access_control_list_id_idx ON public.access_control_list_groups USING btree (access_control_list_id);
+
+
+--
+-- Name: access_control_list_groups_group_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX access_control_list_groups_group_id_idx ON public.access_control_list_groups USING btree (group_id);
+
+
+--
+-- Name: access_control_lists_forum_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_forum_id_idx ON public.access_control_lists USING btree (forum_id) WHERE (forum_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX access_control_lists_project_id_idx ON public.access_control_lists USING btree (project_id);
+
+
+--
+-- Name: forums_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX forums_project_id_idx ON public.forums USING btree (project_id);
 
 
 --
@@ -1228,6 +1548,53 @@ CREATE TRIGGER trig_auto_create_profile AFTER INSERT ON public.users FOR EACH RO
 
 
 --
+-- Name: forums trig_create_forum_acl; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trig_create_forum_acl AFTER INSERT ON public.forums FOR EACH ROW EXECUTE FUNCTION public.create_forum_acl();
+
+
+--
+-- Name: access_control_list_groups access_control_list_groups_access_control_list_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_list_groups
+    ADD CONSTRAINT access_control_list_groups_access_control_list_id_fkey FOREIGN KEY (access_control_list_id) REFERENCES public.access_control_lists(id) ON DELETE CASCADE;
+
+
+--
+-- Name: access_control_list_groups access_control_list_groups_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_list_groups
+    ADD CONSTRAINT access_control_list_groups_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.project_groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: access_control_lists access_control_lists_forum_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_forum_id_fkey FOREIGN KEY (forum_id) REFERENCES public.forums(id) ON DELETE CASCADE;
+
+
+--
+-- Name: access_control_lists access_control_lists_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: forums forums_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.forums
+    ADD CONSTRAINT forums_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
 -- Name: project_group_members project_group_members_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1314,6 +1681,28 @@ CREATE POLICY admin_update_projects ON public.projects FOR UPDATE TO seasketch_u
 
 CREATE POLICY anon_projects_select_listed ON public.projects FOR SELECT TO anon USING (((is_listed = true) AND (is_deleted = false)));
 
+
+--
+-- Name: forums forum_access_admins; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY forum_access_admins ON public.forums TO seasketch_user USING (public.session_is_admin(project_id)) WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: forums forum_access_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY forum_access_select ON public.forums FOR SELECT TO anon USING (public.session_on_acl(( SELECT access_control_lists.id
+   FROM public.access_control_lists
+  WHERE (access_control_lists.forum_id = forums.id))));
+
+
+--
+-- Name: forums; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.forums ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
@@ -1437,11 +1826,62 @@ REVOKE ALL ON FUNCTION public.texticregexeq(public.citext, public.citext) FROM P
 
 
 --
+-- Name: COLUMN access_control_lists.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.access_control_lists TO seasketch_user;
+
+
+--
+-- Name: COLUMN access_control_lists.type; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(type),UPDATE(type) ON TABLE public.access_control_lists TO seasketch_user;
+
+
+--
+-- Name: COLUMN access_control_lists.forum_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(forum_id) ON TABLE public.access_control_lists TO seasketch_user;
+
+
+--
+-- Name: TABLE project_groups; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.project_groups TO seasketch_user;
+
+
+--
+-- Name: FUNCTION access_control_lists_groups(acl public.access_control_lists); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.access_control_lists_groups(acl public.access_control_lists) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.access_control_lists_groups(acl public.access_control_lists) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION add_group_to_acl("aclId" integer, "groupId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION add_user_to_group("groupId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.add_user_to_group("groupId" integer, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.add_user_to_group("groupId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION addgrouptoacl("aclId" integer, "groupId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.addgrouptoacl("aclId" integer, "groupId" integer) FROM PUBLIC;
 
 
 --
@@ -1593,6 +2033,13 @@ REVOKE ALL ON FUNCTION public.citext_smaller(public.citext, public.citext) FROM 
 
 
 --
+-- Name: FUNCTION create_forum_acl(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_forum_acl() FROM PUBLIC;
+
+
+--
 -- Name: TABLE projects; Type: ACL; Schema: public; Owner: -
 --
 
@@ -1725,6 +2172,14 @@ REVOKE ALL ON FUNCTION public.is_superuser() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION it_me("userId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.it_me("userId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.it_me("userId" integer) TO anon;
+
+
+--
 -- Name: FUNCTION join_project(project_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -1768,13 +2223,6 @@ GRANT ALL ON FUNCTION public.me() TO anon;
 
 REVOKE ALL ON FUNCTION public.onboarded() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.onboarded() TO seasketch_user;
-
-
---
--- Name: TABLE project_groups; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.project_groups TO seasketch_user;
 
 
 --
@@ -1888,6 +2336,14 @@ REVOKE ALL ON FUNCTION public.regexp_split_to_table(public.citext, public.citext
 
 
 --
+-- Name: FUNCTION remove_group_from_acl("aclId" integer, "groupId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.remove_group_from_acl("aclId" integer, "groupId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.remove_group_from_acl("aclId" integer, "groupId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION remove_user_from_group("groupId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -1923,6 +2379,14 @@ GRANT ALL ON FUNCTION public.session_is_superuser() TO seasketch_user;
 --
 
 REVOKE ALL ON FUNCTION public.session_is_superuser("projectId" integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION session_on_acl(acl_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.session_on_acl(acl_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.session_on_acl(acl_id integer) TO anon;
 
 
 --
@@ -2031,6 +2495,21 @@ REVOKE ALL ON FUNCTION public.max(public.citext) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.min(public.citext) FROM PUBLIC;
+
+
+--
+-- Name: TABLE access_control_list_groups; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.access_control_list_groups TO seasketch_user;
+
+
+--
+-- Name: TABLE forums; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.forums TO anon;
+GRANT ALL ON TABLE public.forums TO seasketch_user;
 
 
 --

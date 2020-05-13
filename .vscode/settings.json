@@ -18,7 +18,7 @@
   },
   "[sql]": {
     "editor.formatOnSave": false,
-    "editor.defaultFormatter": "bradymholt.pgformatter",
+    "editor.defaultFormatter": "mtxr.sqltools",
   },
   "files.exclude": {
     "**/dist/**": true

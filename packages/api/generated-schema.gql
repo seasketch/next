@@ -1,3 +1,62 @@
+enum AccessControlListType {
+  ADMINS_ONLY
+  GROUP
+  PUBLIC
+}
+
+type Acl implements Node {
+  """Reads a single `Forum` that is related to this `Acl`."""
+  forum: Forum
+  forumId: Int
+
+  """Reads and enables pagination through a set of `Group`."""
+  groups(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Group]
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  type: AccessControlListType!
+}
+
+"""Represents an update to a `Acl`. Fields that are set will be updated."""
+input AclPatch {
+  type: AccessControlListType
+}
+
+"""All input for the `addGroupToAcl` mutation."""
+input AddGroupToAclInput {
+  aclId: Int
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupId: Int
+}
+
+"""The output of our `addGroupToAcl` mutation."""
+type AddGroupToAclPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `addUserToGroup` mutation."""
 input AddUserToGroupInput {
   """
@@ -41,6 +100,44 @@ type ApproveParticipantPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the create `Forum` mutation."""
+input CreateForumInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `Forum` to be created by this mutation."""
+  forum: ForumInput!
+}
+
+"""The output of our create `Forum` mutation."""
+type CreateForumPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Forum` that was created by this mutation."""
+  forum: Forum
+
+  """An edge for our `Forum`. May be used by Relay 1."""
+  forumEdge(
+    """The method to use when ordering `Forum`."""
+    orderBy: [ForumsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ForumsEdge
+
+  """Reads a single `Project` that is related to this `Forum`."""
+  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -120,6 +217,57 @@ A point in time as described by the [ISO
 8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
 """
 scalar Datetime
+
+"""All input for the `deleteForumByNodeId` mutation."""
+input DeleteForumByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Forum` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteForum` mutation."""
+input DeleteForumInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `Forum` mutation."""
+type DeleteForumPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedForumNodeId: ID
+
+  """The `Forum` that was deleted by this mutation."""
+  forum: Forum
+
+  """An edge for our `Forum`. May be used by Relay 1."""
+  forumEdge(
+    """The method to use when ordering `Forum`."""
+    orderBy: [ForumsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ForumsEdge
+
+  """Reads a single `Project` that is related to this `Forum`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
 
 """All input for the `deleteGroupByNodeId` mutation."""
 input DeleteGroupByNodeIdInput {
@@ -209,6 +357,86 @@ type DeleteProjectPayload {
 }
 
 scalar Email
+
+type Forum implements Node {
+  """Reads a single `Acl` that is related to this `Forum`."""
+  acl: Acl
+  id: Int!
+  name: String!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `Project` that is related to this `Forum`."""
+  project: Project
+  projectId: Int!
+}
+
+"""
+A condition to be used against `Forum` object types. All fields are tested for equality and combined with a logical ‘and.’
+"""
+input ForumCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+}
+
+"""An input for mutations affecting `Forum`"""
+input ForumInput {
+  id: Int
+  name: String!
+  projectId: Int!
+}
+
+"""
+Represents an update to a `Forum`. Fields that are set will be updated.
+"""
+input ForumPatch {
+  id: Int
+  name: String
+  projectId: Int
+}
+
+"""A connection to a list of `Forum` values."""
+type ForumsConnection {
+  """
+  A list of edges which contains the `Forum` and cursor to aid in pagination.
+  """
+  edges: [ForumsEdge!]!
+
+  """A list of `Forum` objects."""
+  nodes: [Forum]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `Forum` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `Forum` edge in the connection."""
+type ForumsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `Forum` at the end of the edge."""
+  node: Forum
+}
+
+"""Methods to use when ordering `Forum`."""
+enum ForumsOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+}
 
 """All input for the `grantAdminAccess` mutation."""
 input GrantAdminAccessInput {
@@ -342,6 +570,14 @@ type LeaveProjectPayload {
 The root mutation type which contains root level fields which mutate data.
 """
 type Mutation {
+  """Add a group to a given access control list. Must be an administrator."""
+  addGroupToAcl(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: AddGroupToAclInput!
+  ): AddGroupToAclPayload
+
   """
   Add the given user to a group. Must be an administrator of the project.
   """
@@ -362,6 +598,14 @@ type Mutation {
     input: ApproveParticipantInput!
   ): ApproveParticipantPayload
 
+  """Creates a single `Forum`."""
+  createForum(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateForumInput!
+  ): CreateForumPayload
+
   """Creates a single `Group`."""
   createGroup(
     """
@@ -381,6 +625,22 @@ type Mutation {
     """
     input: CreateProjectInput!
   ): CreateProjectPayload
+
+  """Deletes a single `Forum` using a unique key."""
+  deleteForum(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteForumInput!
+  ): DeleteForumPayload
+
+  """Deletes a single `Forum` using its globally unique id."""
+  deleteForumByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteForumByNodeIdInput!
+  ): DeleteForumPayload
 
   """Deletes a single `Group` using a unique key."""
   deleteGroup(
@@ -458,6 +718,16 @@ type Mutation {
   ): OnboardedPayload
 
   """
+  Remove a group from a given access control list. Must be an administrator.
+  """
+  removeGroupFromAcl(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: RemoveGroupFromAclInput!
+  ): RemoveGroupFromAclPayload
+
+  """
   Remove the given user from a group. Must be an administrator of the project.
   """
   removeUserFromGroup(
@@ -466,6 +736,46 @@ type Mutation {
     """
     input: RemoveUserFromGroupInput!
   ): RemoveUserFromGroupPayload
+
+  """Updates a single `Acl` using a unique key and a patch."""
+  updateAcl(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateAclInput!
+  ): UpdateAclPayload
+
+  """Updates a single `Acl` using a unique key and a patch."""
+  updateAclByForumId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateAclByForumIdInput!
+  ): UpdateAclPayload
+
+  """Updates a single `Acl` using its globally unique id and a patch."""
+  updateAclByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateAclByNodeIdInput!
+  ): UpdateAclPayload
+
+  """Updates a single `Forum` using a unique key and a patch."""
+  updateForum(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateForumInput!
+  ): UpdateForumPayload
+
+  """Updates a single `Forum` using its globally unique id and a patch."""
+  updateForumByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateForumByNodeIdInput!
+  ): UpdateForumPayload
 
   """Updates a single `Group` using a unique key and a patch."""
   updateGroup(
@@ -631,6 +941,35 @@ type Project implements Node {
   accessControl: ProjectAccessControlSetting
   description: String
 
+  """Reads and enables pagination through a set of `Forum`."""
+  forumsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ForumCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `Forum`."""
+    orderBy: [ForumsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ForumsConnection!
+
   """Reads and enables pagination through a set of `Group`."""
   groups(
     """Only read the first `n` values of the set."""
@@ -777,7 +1116,51 @@ enum ProjectsOrderBy {
 
 """The root query type which gives access points into the data universe."""
 type Query implements Node {
+  acl(id: Int!): Acl
+  aclByForumId(forumId: Int!): Acl
+
+  """Reads a single `Acl` using its globally unique `ID`."""
+  aclByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Acl`."""
+    nodeId: ID!
+  ): Acl
   currentProject: Project
+  forum(id: Int!): Forum
+
+  """Reads a single `Forum` using its globally unique `ID`."""
+  forumByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Forum`."""
+    nodeId: ID!
+  ): Forum
+
+  """Reads and enables pagination through a set of `Forum`."""
+  forumsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ForumCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `Forum`."""
+    orderBy: [ForumsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ForumsConnection
   group(id: Int!): Group
 
   """Reads a single `Group` using its globally unique `ID`."""
@@ -851,6 +1234,32 @@ type Query implements Node {
   ): User
 }
 
+"""All input for the `removeGroupFromAcl` mutation."""
+input RemoveGroupFromAclInput {
+  aclId: Int
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupId: Int
+}
+
+"""The output of our `removeGroupFromAcl` mutation."""
+type RemoveGroupFromAclPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `removeUserFromGroup` mutation."""
 input RemoveUserFromGroupInput {
   """
@@ -879,6 +1288,135 @@ type RemoveUserFromGroupPayload {
 enum SortByDirection {
   ASC
   DESC
+}
+
+"""All input for the `updateAclByForumId` mutation."""
+input UpdateAclByForumIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  forumId: Int!
+
+  """
+  An object where the defined keys will be set on the `Acl` being updated.
+  """
+  patch: AclPatch!
+}
+
+"""All input for the `updateAclByNodeId` mutation."""
+input UpdateAclByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Acl` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `Acl` being updated.
+  """
+  patch: AclPatch!
+}
+
+"""All input for the `updateAcl` mutation."""
+input UpdateAclInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `Acl` being updated.
+  """
+  patch: AclPatch!
+}
+
+"""The output of our update `Acl` mutation."""
+type UpdateAclPayload {
+  """The `Acl` that was updated by this mutation."""
+  acl: Acl
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Forum` that is related to this `Acl`."""
+  forum: Forum
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateForumByNodeId` mutation."""
+input UpdateForumByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Forum` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `Forum` being updated.
+  """
+  patch: ForumPatch!
+}
+
+"""All input for the `updateForum` mutation."""
+input UpdateForumInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `Forum` being updated.
+  """
+  patch: ForumPatch!
+}
+
+"""The output of our update `Forum` mutation."""
+type UpdateForumPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Forum` that was updated by this mutation."""
+  forum: Forum
+
+  """An edge for our `Forum`. May be used by Relay 1."""
+  forumEdge(
+    """The method to use when ordering `Forum`."""
+    orderBy: [ForumsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ForumsEdge
+
+  """Reads a single `Project` that is related to this `Forum`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """All input for the `updateGroupByNodeId` mutation."""
