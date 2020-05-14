@@ -6,6 +6,7 @@
   "homepage": "https://github.com/seasketch/next#readme",
   "license": "BSD-3-Clause",
   "main": "src/index.ts",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/seasketch/next.git"
