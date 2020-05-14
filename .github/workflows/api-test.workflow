@@ -1,8 +1,8 @@
 name: GraphQL API Server Tests
-on:
-  push:
-    paths:
-        - 'packages/api/**/*'
+on: [push]
+  # push:
+  #   paths:
+  #       - 'packages/api/**/*'
 jobs:
   test:
     name: Unit Tests
