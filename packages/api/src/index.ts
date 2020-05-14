@@ -2,63 +2,79 @@ import express from "express";
 import { postgraphile } from "postgraphile";
 import PgSimplifyInflectorPlugin from "@graphile-contrib/pg-simplify-inflector";
 import compression from "compression";
-import jwt from "jsonwebtoken";
-require("dotenv").config();
+import path from "path";
+import jwt from "express-jwt";
+import jwks from "jwks-rsa";
+import authConfig from "./authConfig.json";
+import {
+  PGSessionSettings,
+  getPGSessionSettings,
+  IncomingRequest,
+} from "./auth";
+import pool from "./pool";
 
 const app = express();
 
 app.use(compression());
 
-type Role =
-  | "anon"
-  | "seasketch_user"
-  | "seasketch_admin"
-  | "seasketch_superuser";
+app.get("/auth-helper", (req, res) => {
+  res.header({ "Content-Type": "text/html" });
+  res.sendFile(path.join(__dirname, "..", "src", "authHelper.html"));
+});
 
-interface PGSettings {
-  role: Role;
-  "session.project_id"?: number;
-  "session.email_verified": boolean;
-  "session.user_id"?: number;
-  [key: string]: any;
-}
+app.get("/auth_config.json", (req, res) => {
+  res.contentType("json");
+  res.send(
+    JSON.stringify({
+      ...authConfig,
+      audience: process.env.JWT_AUD,
+    })
+  );
+});
+
+const jwtCheck = jwt({
+  secret: jwks.expressJwtSecret({
+    cache: true,
+    rateLimit: true,
+    jwksRequestsPerMinute: 5,
+    jwksUri: process.env.JWKS_URI!,
+  }),
+  audience: process.env.JWT_AUD,
+  issuer: process.env.JWT_ISS,
+  algorithms: ["RS256"],
+});
+
+app.use(jwtCheck);
 
 app.use(
-  postgraphile(process.env.DATABASE_URL, "public", {
+  (
+    err: Error | null,
+    req: express.Request,
+    res: express.Response,
+    next: () => void
+  ) => {
+    if (err?.name === "UnauthorizedError") {
+      next();
+    }
+  }
+);
+
+app.use(
+  postgraphile(pool, "public", {
     ownerConnectionString: process.env.OWNER_DATABASE_URL,
     watchPg: true,
     graphiql: true,
     enhanceGraphiql: true,
+    allowExplain: (req) => {
+      if (process.env.NODE_ENV !== "production") {
+        return true;
+      }
+      return false;
+    },
     ignoreRBAC: false,
     ignoreIndexes: false,
-    pgSettings: (req): PGSettings => {
-      // TODO: This decodes any jwt and trusts it's claims for development.
-      // Implement Auth0 integration for production use.
-      const defaults = {
-        statement_timeout: "1000",
-        role: "anon",
-        "session.email_verified": false,
-      } as PGSettings;
-      if (req.headers["authorization"]) {
-        const decoded = jwt.decode(req.headers["authorization"].split(" ")[1], {
-          json: true,
-        });
-        if (decoded) {
-          return {
-            ...defaults,
-            role: decoded.role || "anon",
-            "session.project_id": parseInt(decoded.project_id),
-            "session.email_verified": !!decoded.email_verified,
-            "session.user_id": parseInt(decoded.sub),
-          };
-        } else {
-          return defaults;
-        }
-      } else {
-        // return defaults;
-        return defaults;
-      }
-    },
+    pgSettings: (req): Promise<PGSessionSettings> =>
+      getPGSessionSettings(req as IncomingRequest),
     appendPlugins: [PgSimplifyInflectorPlugin],
     graphileBuildOptions: {
       pgOmitListSuffix: true,

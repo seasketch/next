@@ -20,7 +20,7 @@ To quickly connect to the local db without typing long connection details, run `
 
 For more detail refer to the [graphile-migrate](https://github.com/graphile/migrate) documentation. Basic steps are as follows:
 
-  1. Add new migrations to current.sql
+  1. Add new migrations to current.sql. [They must be idempotent!](https://github.com/graphile/migrate#idempotency)
   2. Run `npm run watch` to see changes in your development database (make sure to run `docker-compose up -d`)
   3. Write jest unit tests in `tests/` and ensure they pass
   4. When ready to commit to master, merge changes and then run `npm run commit` on master. graphile-migrate is [not good at merging committed migrations](https://github.com/graphile/migrate#collaboration), so don't add many commits to a long-running feature branch.

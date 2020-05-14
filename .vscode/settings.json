@@ -17,8 +17,8 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[sql]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "bradymholt.pgformatter",
+    "editor.formatOnSave": false,
+    "editor.defaultFormatter": "mtxr.sqltools",
   },
   "files.exclude": {
     "**/dist/**": true
