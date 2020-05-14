@@ -552,6 +552,24 @@ COMMENT ON FUNCTION public.grant_admin_access("projectId" integer, "userId" inte
 
 
 --
+-- Name: has_session(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.has_session() RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select nullif(current_setting('session.user_id', TRUE), '')::integer is not null
+  $$;
+
+
+--
+-- Name: FUNCTION has_session(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.has_session() IS '@omit';
+
+
+--
 -- Name: is_admin(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -959,6 +977,33 @@ $$;
 --
 
 COMMENT ON FUNCTION public.session_is_admin("projectId" integer) IS '@omit';
+
+
+--
+-- Name: session_is_approved_participant(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.session_is_approved_participant(pid integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select has_session() and EXISTS (
+      SELECT 
+        1
+      FROM
+        project_participants
+      WHERE (
+        it_me(project_participants.user_id) and
+        project_participants.project_id = pid
+      ) AND project_participants.approved = TRUE
+    )
+  $$;
+
+
+--
+-- Name: FUNCTION session_is_approved_participant(pid integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.session_is_approved_participant(pid integer) IS '@omit';
 
 
 --
@@ -1667,22 +1712,6 @@ CREATE EVENT TRIGGER postgraphile_watch_drop ON sql_drop
 
 
 --
--- Name: projects admin_update_projects; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY admin_update_projects ON public.projects FOR UPDATE TO seasketch_user USING ((EXISTS ( SELECT projects.id
-   FROM public.project_participants
-  WHERE ((project_participants.user_id = (current_setting('session.user_id'::text, true))::integer) AND (project_participants.project_id = projects.id) AND (project_participants.is_admin = true)))));
-
-
---
--- Name: projects anon_projects_select_listed; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY anon_projects_select_listed ON public.projects FOR SELECT TO anon USING (((is_listed = true) AND (is_deleted = false)));
-
-
---
 -- Name: forums forum_access_admins; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1730,58 +1759,40 @@ ALTER TABLE public.project_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: projects seasketch_user_select_projects; Type: POLICY; Schema: public; Owner: -
+-- Name: projects projects_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY seasketch_user_select_projects ON public.projects FOR SELECT TO seasketch_user USING (((is_deleted = false) AND ((is_listed = true) OR (EXISTS ( SELECT projects.id
-   FROM public.project_participants
-  WHERE ((project_participants.user_id = (current_setting('session.user_id'::text, true))::integer) AND (project_participants.project_id = projects.id) AND ((project_participants.approved = true) OR (project_participants.is_admin = true))))))));
+CREATE POLICY projects_select ON public.projects FOR SELECT TO anon USING (((is_deleted = false) AND ((is_listed = true) OR (access_control = 'public'::public.project_access_control_setting) OR (public.session_is_admin(id) OR ((access_control = 'invite_only'::public.project_access_control_setting) AND public.session_is_approved_participant(id))))));
+
+
+--
+-- Name: projects projects_update; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY projects_update ON public.projects FOR UPDATE TO seasketch_user USING (public.session_is_admin(id)) WITH CHECK (public.session_is_admin(id));
 
 
 --
 -- Name: project_participants select_project_participants; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY select_project_participants ON public.project_participants USING ((((current_setting('session.user_id'::text, true))::integer = user_id) OR public.session_is_admin(project_id) OR public.session_is_superuser()));
+CREATE POLICY select_project_participants ON public.project_participants USING ((public.it_me(user_id) OR public.session_is_admin(project_id)));
 
 
 --
 -- Name: user_profiles select_user_profile; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY select_user_profile ON public.user_profiles FOR SELECT TO seasketch_user USING (((user_id = (NULLIF(current_setting('session.user_id'::text, true), ''::text))::integer) OR (EXISTS ( SELECT 1
+CREATE POLICY select_user_profile ON public.user_profiles FOR SELECT TO seasketch_user USING ((public.it_me(user_id) OR (EXISTS ( SELECT 1
    FROM public.project_participants
-  WHERE ((project_participants.user_id = user_profiles.user_id) AND (project_participants.share_profile = true) AND (project_participants.project_id IN ( SELECT project_participants_1.project_id
-           FROM public.project_participants project_participants_1
-          WHERE ((project_participants_1.user_id = (current_setting('session.user_id'::text, true))::integer) AND (project_participants_1.is_admin = true)))))))));
-
-
---
--- Name: projects superuser_projects_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY superuser_projects_select ON public.projects FOR SELECT TO seasketch_superuser USING ((is_deleted = false));
-
-
---
--- Name: projects superuser_update_projects; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY superuser_update_projects ON public.projects FOR UPDATE TO seasketch_superuser USING (true);
-
-
---
--- Name: user_profiles user_profile_read; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY user_profile_read ON public.user_profiles FOR SELECT USING ((user_id = (current_setting('session.user_id'::text, true))::integer));
+  WHERE ((project_participants.user_id = user_profiles.user_id) AND (project_participants.share_profile = true) AND public.session_is_admin(project_participants.project_id))))));
 
 
 --
 -- Name: user_profiles user_profile_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY user_profile_update ON public.user_profiles FOR UPDATE USING ((user_id = (current_setting('session.user_id'::text, true))::integer));
+CREATE POLICY user_profile_update ON public.user_profiles FOR UPDATE USING (public.it_me(user_id)) WITH CHECK (public.it_me(user_id));
 
 
 --
@@ -2150,6 +2161,14 @@ GRANT ALL ON FUNCTION public.grant_admin_access("projectId" integer, "userId" in
 
 
 --
+-- Name: FUNCTION has_session(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.has_session() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.has_session() TO anon;
+
+
+--
 -- Name: FUNCTION is_admin(_project_id integer, _user_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -2364,6 +2383,15 @@ REVOKE ALL ON FUNCTION public.replace(public.citext, public.citext, public.citex
 
 REVOKE ALL ON FUNCTION public.session_is_admin("projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.session_is_admin("projectId" integer) TO seasketch_user;
+GRANT ALL ON FUNCTION public.session_is_admin("projectId" integer) TO anon;
+
+
+--
+-- Name: FUNCTION session_is_approved_participant(pid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.session_is_approved_participant(pid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.session_is_approved_participant(pid integer) TO anon;
 
 
 --
