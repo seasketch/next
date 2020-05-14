@@ -1,6 +1,7 @@
-import { sql, createPool } from "slonik";
+import { sql } from "slonik";
+import { createPool } from "./pool";
 
-const pool = createPool("postgres://postgres:password@localhost:54321/test");
+const pool = createPool("test");
 
 describe("current user access", () => {
   test("'me' is null when anonymous", async () => {

@@ -1,12 +1,13 @@
-import { sql, createPool } from "slonik";
+import { sql } from "slonik";
 import {
   createProject,
   createUser,
   createSession,
   addParticipant,
 } from "./helpers";
+import { createPool } from "./pool";
 
-const pool = createPool("postgres://postgres:password@localhost:54321/test");
+const pool = createPool("test");
 
 test("Profiles are automatically added to user accounts on creation", async () => {
   await pool.transaction(async (conn) => {

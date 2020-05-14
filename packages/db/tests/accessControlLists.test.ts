@@ -1,4 +1,4 @@
-import { sql, createPool } from "slonik";
+import { sql } from "slonik";
 import {
   createSession,
   createUser,
@@ -6,8 +6,9 @@ import {
   addParticipant,
   clearSession,
 } from "./helpers";
+import { createPool } from "./pool";
 
-const pool = createPool("postgres://postgres:password@localhost:54321/test");
+const pool = createPool("test");
 
 describe("Admins can edit access control lists", () => {
   test("updating type", async () => {

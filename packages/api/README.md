@@ -1,5 +1,7 @@
 # SeaSketch Next API Server
 
+![packages/api](https://github.com/seasketch/next/workflows/packages/api/badge.svg)
+
 GraphQL server implemented using [postgraphile](https://www.graphile.org/postgraphile/).
 
 ## Getting started

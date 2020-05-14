@@ -1,12 +1,13 @@
-import { sql, createPool } from "slonik";
+import { sql } from "slonik";
 import {
   createSession,
   createUser,
   createProject,
   addParticipant,
 } from "./helpers";
+import { createPool } from "./pool";
 
-const pool = createPool("postgres://postgres:password@localhost:54321/test");
+const pool = createPool("test");
 
 describe("Group lists", () => {
   test("admins can create and list their project's groups", async () => {

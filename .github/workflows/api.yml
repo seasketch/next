@@ -1,11 +1,11 @@
-name: GraphQL API Server Tests
-on: [push]
-  # push:
-  #   paths:
-  #       - 'packages/api/**/*'
+name: packages/api
+on: 
+  push:
+    paths:
+      - 'packages/api/*'  
 jobs:
   test:
-    name: Unit Tests
+    name: GraphQL API Server Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

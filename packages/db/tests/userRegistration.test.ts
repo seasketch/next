@@ -1,6 +1,7 @@
-import { sql, createPool } from "slonik";
+import { sql } from "slonik";
+import { createPool } from "./pool";
 
-const pool = createPool("postgres://postgres:password@localhost:54321/test");
+const pool = createPool("test");
 
 describe("get_or_create_user_by_sub", () => {
   test("Unrecognized subs from auth0 are automatically registered", async () => {

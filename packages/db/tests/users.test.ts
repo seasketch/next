@@ -1,4 +1,5 @@
-import { sql, createPool } from "slonik";
+import { sql } from "slonik";
+import { createPool } from "./pool";
 import {
   createUser,
   createProject,
@@ -7,7 +8,7 @@ import {
   clearSession,
 } from "./helpers";
 
-const pool = createPool("postgres://postgres:password@localhost:54321/test");
+const pool = createPool("test");
 
 describe("User lists", () => {
   // TODO: check in graphql schema. This is not enforced at the db level

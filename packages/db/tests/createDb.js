@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const { Client } = require("pg");
-const template1 = "postgres://postgres:password@localhost:54321/template1";
+const { DATABASE_URL } = require("./pool");
+const template1 = DATABASE_URL + "template1";
 const client = new Client(template1);
 const { migrate, reset, watch } = require("graphile-migrate");
 

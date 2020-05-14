@@ -1,5 +1,7 @@
 # SeaSketch Next Database
 
+![packages/db](https://github.com/seasketch/next/workflows/packages/db/badge.svg)
+
 This package contains all database schema migrations and unit tests. Migrations are handled by [graphile-migrate](https://github.com/graphile/migrate).
 
 ## Installation for local development
