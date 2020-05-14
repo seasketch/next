@@ -33,17 +33,17 @@
     "express-jwt": "^5.3.3",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.8.0",
-    "nodemon": "^2.0.3",
+    "nodemon": "^2.0.4",
     "pgmock2": "^2.0.2",
     "postgraphile": "^4.7.0",
-    "ts-node": "^8.9.1",
-    "typescript": "^3.8.3"
+    "ts-node": "^8.10.1",
+    "typescript": "^3.9.2"
   },
   "devDependencies": {
     "@babel/core": "^7.9.6",
     "@babel/preset-env": "^7.9.6",
     "@babel/preset-typescript": "^7.9.0",
-    "@types/jest": "^25.2.1",
+    "@types/jest": "^25.2.2",
     "jest": "^26.0.1"
   },
   "jest": {
