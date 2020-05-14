@@ -34,3 +34,7 @@ Complex data migrations are not explicitly handled by the framework we are using
 ## Production migrations
 
 TBD workflow will likely involve a GitHub Actions based continuous deployment system that runs migrations automatically when tests on master pass.
+
+## Authentication and Security
+
+SeaSketch Next uses Auth0 to authenticate users and postgres' built-in roles and RLS policies for access control. More details can be found in [the AUTHORIZATION documentation](AUTHORIZATION.md).
