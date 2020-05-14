@@ -2,13 +2,13 @@
 
 This project consists of multiple packages in a monorepo configuration.
 
-### [packages/db](./tree/master/packages/db)
+### [packages/db](./packages/db)
 
 Database schema and migrations.
 
 ![packages/db](https://github.com/seasketch/next/workflows/packages/db/badge.svg)
 
-### [packages/api](./tree/master/packages/db)
+### [packages/api](./packages/db)
 
 GraphQL API server based on Postgraphile. 
 
