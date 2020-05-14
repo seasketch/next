@@ -1,6 +1,6 @@
 {
   "name": "@seasketch/db",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "SeaSketch database schema, migrations, and tests",
   "author": "Chad Burt <chad@underbluewaters.net>",
   "homepage": "https://github.com/seasketch/next",
@@ -38,6 +38,5 @@
     "shortid": "^2.2.15",
     "slonik": "^22.4.4",
     "typescript": "^3.8.3"
-  },
-  "devDependencies": {}
+  }
 }
