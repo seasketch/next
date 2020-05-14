@@ -8,7 +8,7 @@ Database schema and migrations.
 
 ![packages/db](https://github.com/seasketch/next/workflows/packages/db/badge.svg)
 
-### [packages/api](./packages/db)
+### [packages/api](./packages/api)
 
 GraphQL API server based on Postgraphile. 
 
