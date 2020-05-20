@@ -82,6 +82,32 @@ type AddUserToGroupPayload {
   query: Query
 }
 
+"""All input for the `addValidChildSketchClass` mutation."""
+input AddValidChildSketchClassInput {
+  child: Int
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  parent: Int
+}
+
+"""The output of our `addValidChildSketchClass` mutation."""
+type AddValidChildSketchClassPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `approveParticipant` mutation."""
 input ApproveParticipantInput {
   """
@@ -106,6 +132,13 @@ type ApproveParticipantPayload {
   """
   query: Query
 }
+
+"""
+A signed eight-byte integer. The upper big integer values are greater than the
+max value for a JavaScript number. Therefore all big integers will be output as
+strings and not numbers.
+"""
+scalar BigInt
 
 """All input for the create `Forum` mutation."""
 input CreateForumInput {
@@ -207,6 +240,129 @@ type CreateProjectPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+"""All input for the create `SketchClass` mutation."""
+input CreateSketchClassInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `SketchClass` to be created by this mutation."""
+  sketchClass: SketchClassInput!
+}
+
+"""The output of our create `SketchClass` mutation."""
+type CreateSketchClassPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Project` that is related to this `SketchClass`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `SketchClass` that was created by this mutation."""
+  sketchClass: SketchClass
+
+  """An edge for our `SketchClass`. May be used by Relay 1."""
+  sketchClassEdge(
+    """The method to use when ordering `SketchClass`."""
+    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchClassesEdge
+}
+
+"""All input for the create `SketchFolder` mutation."""
+input CreateSketchFolderInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `SketchFolder` to be created by this mutation."""
+  sketchFolder: SketchFolderInput!
+}
+
+"""The output of our create `SketchFolder` mutation."""
+type CreateSketchFolderPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `SketchFolder` that was created by this mutation."""
+  sketchFolder: SketchFolder
+
+  """An edge for our `SketchFolder`. May be used by Relay 1."""
+  sketchFolderEdge(
+    """The method to use when ordering `SketchFolder`."""
+    orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchFoldersEdge
+
+  """Reads a single `User` that is related to this `SketchFolder`."""
+  user: User
+}
+
+"""All input for the create `Sketch` mutation."""
+input CreateSketchInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `Sketch` to be created by this mutation."""
+  sketch: SketchInput!
+}
+
+"""The output of our create `Sketch` mutation."""
+type CreateSketchPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Sketch` that is related to this `Sketch`."""
+  collection: Sketch
+
+  """Reads a single `Sketch` that is related to this `Sketch`."""
+  copiedFrom: Sketch
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `Sketch` that was created by this mutation."""
+  sketch: Sketch
+
+  """Reads a single `SketchClass` that is related to this `Sketch`."""
+  sketchClass: SketchClass
+
+  """An edge for our `Sketch`. May be used by Relay 1."""
+  sketchEdge(
+    """The method to use when ordering `Sketch`."""
+    orderBy: [SketchesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchesEdge
+
+  """Reads a single `User` that is related to this `Sketch`."""
+  user: User
 }
 
 """A location in a connection that can be used for resuming pagination."""
@@ -354,6 +510,168 @@ type DeleteProjectPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+"""All input for the `deleteSketchByNodeId` mutation."""
+input DeleteSketchByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Sketch` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteSketchClassByNodeId` mutation."""
+input DeleteSketchClassByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `SketchClass` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteSketchClass` mutation."""
+input DeleteSketchClassInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `SketchClass` mutation."""
+type DeleteSketchClassPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedSketchClassNodeId: ID
+
+  """Reads a single `Project` that is related to this `SketchClass`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `SketchClass` that was deleted by this mutation."""
+  sketchClass: SketchClass
+
+  """An edge for our `SketchClass`. May be used by Relay 1."""
+  sketchClassEdge(
+    """The method to use when ordering `SketchClass`."""
+    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchClassesEdge
+}
+
+"""All input for the `deleteSketchFolderByNodeId` mutation."""
+input DeleteSketchFolderByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `SketchFolder` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteSketchFolder` mutation."""
+input DeleteSketchFolderInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `SketchFolder` mutation."""
+type DeleteSketchFolderPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedSketchFolderNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `SketchFolder` that was deleted by this mutation."""
+  sketchFolder: SketchFolder
+
+  """An edge for our `SketchFolder`. May be used by Relay 1."""
+  sketchFolderEdge(
+    """The method to use when ordering `SketchFolder`."""
+    orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchFoldersEdge
+
+  """Reads a single `User` that is related to this `SketchFolder`."""
+  user: User
+}
+
+"""All input for the `deleteSketch` mutation."""
+input DeleteSketchInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `Sketch` mutation."""
+type DeleteSketchPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Sketch` that is related to this `Sketch`."""
+  collection: Sketch
+
+  """Reads a single `Sketch` that is related to this `Sketch`."""
+  copiedFrom: Sketch
+  deletedSketchNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `Sketch` that was deleted by this mutation."""
+  sketch: Sketch
+
+  """Reads a single `SketchClass` that is related to this `Sketch`."""
+  sketchClass: SketchClass
+
+  """An edge for our `Sketch`. May be used by Relay 1."""
+  sketchEdge(
+    """The method to use when ordering `Sketch`."""
+    orderBy: [SketchesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchesEdge
+
+  """Reads a single `User` that is related to this `Sketch`."""
+  user: User
 }
 
 scalar Email
@@ -587,6 +905,12 @@ type Mutation {
     """
     input: AddUserToGroupInput!
   ): AddUserToGroupPayload
+  addValidChildSketchClass(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: AddValidChildSketchClassInput!
+  ): AddValidChildSketchClassPayload
 
   """
   For invite_only projects. Approve access request by a user. Must be an administrator of the project.
@@ -625,6 +949,30 @@ type Mutation {
     """
     input: CreateProjectInput!
   ): CreateProjectPayload
+
+  """Creates a single `Sketch`."""
+  createSketch(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSketchInput!
+  ): CreateSketchPayload
+
+  """Creates a single `SketchClass`."""
+  createSketchClass(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSketchClassInput!
+  ): CreateSketchClassPayload
+
+  """Creates a single `SketchFolder`."""
+  createSketchFolder(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSketchFolderInput!
+  ): CreateSketchFolderPayload
 
   """Deletes a single `Forum` using a unique key."""
   deleteForum(
@@ -676,6 +1024,54 @@ type Mutation {
     """
     input: DeleteProjectInput!
   ): DeleteProjectPayload
+
+  """Deletes a single `Sketch` using a unique key."""
+  deleteSketch(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSketchInput!
+  ): DeleteSketchPayload
+
+  """Deletes a single `Sketch` using its globally unique id."""
+  deleteSketchByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSketchByNodeIdInput!
+  ): DeleteSketchPayload
+
+  """Deletes a single `SketchClass` using a unique key."""
+  deleteSketchClass(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSketchClassInput!
+  ): DeleteSketchClassPayload
+
+  """Deletes a single `SketchClass` using its globally unique id."""
+  deleteSketchClassByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSketchClassByNodeIdInput!
+  ): DeleteSketchClassPayload
+
+  """Deletes a single `SketchFolder` using a unique key."""
+  deleteSketchFolder(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSketchFolderInput!
+  ): DeleteSketchFolderPayload
+
+  """Deletes a single `SketchFolder` using its globally unique id."""
+  deleteSketchFolderByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSketchFolderByNodeIdInput!
+  ): DeleteSketchFolderPayload
 
   """
   Give a user admin access to a project. User must have already joined the project and shared their user profile.
@@ -736,6 +1132,12 @@ type Mutation {
     """
     input: RemoveUserFromGroupInput!
   ): RemoveUserFromGroupPayload
+  removeValidChildSketchClass(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: RemoveValidChildSketchClassInput!
+  ): RemoveValidChildSketchClassPayload
 
   """Updates a single `Acl` using a unique key and a patch."""
   updateAcl(
@@ -832,6 +1234,58 @@ type Mutation {
     """
     input: UpdateProjectBySlugInput!
   ): UpdateProjectPayload
+
+  """Updates a single `Sketch` using a unique key and a patch."""
+  updateSketch(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSketchInput!
+  ): UpdateSketchPayload
+
+  """Updates a single `Sketch` using its globally unique id and a patch."""
+  updateSketchByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSketchByNodeIdInput!
+  ): UpdateSketchPayload
+
+  """Updates a single `SketchClass` using a unique key and a patch."""
+  updateSketchClass(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSketchClassInput!
+  ): UpdateSketchClassPayload
+
+  """
+  Updates a single `SketchClass` using its globally unique id and a patch.
+  """
+  updateSketchClassByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSketchClassByNodeIdInput!
+  ): UpdateSketchClassPayload
+
+  """Updates a single `SketchFolder` using a unique key and a patch."""
+  updateSketchFolder(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSketchFolderInput!
+  ): UpdateSketchFolderPayload
+
+  """
+  Updates a single `SketchFolder` using its globally unique id and a patch.
+  """
+  updateSketchFolderByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSketchFolderByNodeIdInput!
+  ): UpdateSketchFolderPayload
 }
 
 """An object with a globally unique `ID`."""
@@ -996,6 +1450,30 @@ type Project implements Node {
   URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels
   """
   logoUrl: String
+
+  """
+  List of all folders created by this user
+  
+  """
+  myFolders(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [SketchFolder]
+
+  """
+  A list of all sketches for this project and the current user session
+  
+  """
+  mySketches(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Sketch]
   name: String!
 
   """
@@ -1021,6 +1499,23 @@ type Project implements Node {
     offset: Int
     orderBy: ParticipantSortBy
   ): [User]
+
+  """Reads and enables pagination through a set of `SketchClass`."""
+  sketchClasses(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SketchClassCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `SketchClass`."""
+    orderBy: [SketchClassesOrderBy!]
+  ): [SketchClass!]!
 
   """Will resolve to https://seasketch.org/{slug}/ and cannot be changed"""
   slug: String!
@@ -1124,6 +1619,8 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Acl`."""
     nodeId: ID!
   ): Acl
+  canDigitize(scid: Int): Boolean
+  createBbox(geom: String): [Float]
   currentProject: Project
   forum(id: Int!): Forum
 
@@ -1170,6 +1667,26 @@ type Query implements Node {
   ): Group
   groupByProjectIdAndName(name: String!, projectId: Int!): Group
   me: User
+
+  """Reads and enables pagination through a set of `SketchFolder`."""
+  myFolders(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    projectId: Int
+  ): [SketchFolder]
+
+  """Reads and enables pagination through a set of `Sketch`."""
+  mySketches(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    projectId: Int
+  ): [Sketch]
 
   """Fetches an object given its globally unique `ID`."""
   node(
@@ -1225,6 +1742,60 @@ type Query implements Node {
   which can only query top level fields if they are in a particular form.
   """
   query: Query!
+  sketch(id: Int!): Sketch
+
+  """Reads a single `Sketch` using its globally unique `ID`."""
+  sketchByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Sketch`."""
+    nodeId: ID!
+  ): Sketch
+  sketchClass(id: Int!): SketchClass
+
+  """Reads a single `SketchClass` using its globally unique `ID`."""
+  sketchClassByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `SketchClass`.
+    """
+    nodeId: ID!
+  ): SketchClass
+
+  """Reads and enables pagination through a set of `Sketch`."""
+  sketchesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SketchCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `Sketch`."""
+    orderBy: [SketchesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchesConnection
+  sketchFolder(id: Int!): SketchFolder
+
+  """Reads a single `SketchFolder` using its globally unique `ID`."""
+  sketchFolderByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `SketchFolder`.
+    """
+    nodeId: ID!
+  ): SketchFolder
   user(id: Int!): User
 
   """Reads a single `User` using its globally unique `ID`."""
@@ -1283,6 +1854,428 @@ type RemoveUserFromGroupPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+"""All input for the `removeValidChildSketchClass` mutation."""
+input RemoveValidChildSketchClassInput {
+  child: Int
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  parent: Int
+}
+
+"""The output of our `removeValidChildSketchClass` mutation."""
+type RemoveValidChildSketchClassPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+type Sketch implements Node {
+  bbox: [Float]
+
+  """Reads a single `Sketch` that is related to this `Sketch`."""
+  collection: Sketch
+  collectionId: Int
+
+  """Reads a single `Sketch` that is related to this `Sketch`."""
+  copiedFrom: Sketch
+  copyOf: Int
+  folderId: Int
+  geom: String
+  id: Int!
+  name: String!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  numVertices: Int
+
+  """Reads a single `SketchClass` that is related to this `Sketch`."""
+  sketchClass: SketchClass
+  sketchClassId: Int!
+
+  """Reads a single `User` that is related to this `Sketch`."""
+  user: User
+  userGeom: String
+  userId: Int!
+}
+
+"""
+Sketch Classes act as a schema for sketches drawn by users.
+
+"""
+type SketchClass implements Node {
+  """
+  If set to try, a geometry_type of POLYGON would allow for both POLYGONs and
+  MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still
+  digitize single features. Note that this feature should be used seldomly,
+  since for planning purposes it is unlikely to have non-contiguous zones.
+  
+  """
+  allowMulti: Boolean!
+
+  """
+  Whether the user is allowed to digitize sketches of this type. Digitizing is
+  controlled by admins via access control lists, and archived sketch classes can
+  only be digitized by admins.
+  
+  """
+  canDigitize: Boolean
+
+  """
+  Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.
+  
+  """
+  geometryType: SketchGeometryType!
+  geoprocessingClientName: String
+  geoprocessingClientUrl: String
+  geoprocessingProjectUrl: String
+  id: Int!
+
+  """
+  If set to true, (non-admin) users should not be able to digitize new features
+  using this sketch class, but they should still be able to access the sketch
+  class in order to render existing sketches of this type.
+  
+  """
+  isArchived: Boolean!
+
+  """
+  If set to true, show as an option in the digitizing tools. If set to false,
+  this sketch class may be solely for survey responses.
+  
+  """
+  isMyPlansOption: Boolean!
+
+  """
+  Style used to render sketches of this type.
+  
+  """
+  mapboxGlStyle: String
+  name: String!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `Project` that is related to this `SketchClass`."""
+  project: Project
+  projectId: Int!
+
+  """Number of sketches created with this sketch class"""
+  sketchCount: BigInt
+
+  """Reads and enables pagination through a set of `SketchClass`."""
+  validChildren(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [SketchClass]
+}
+
+"""
+A condition to be used against `SketchClass` object types. All fields are tested
+for equality and combined with a logical ‘and.’
+"""
+input SketchClassCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+}
+
+"""A `SketchClass` edge in the connection."""
+type SketchClassesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `SketchClass` at the end of the edge."""
+  node: SketchClass
+}
+
+"""Methods to use when ordering `SketchClass`."""
+enum SketchClassesOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+}
+
+"""An input for mutations affecting `SketchClass`"""
+input SketchClassInput {
+  """
+  If set to try, a geometry_type of POLYGON would allow for both POLYGONs and
+  MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still
+  digitize single features. Note that this feature should be used seldomly,
+  since for planning purposes it is unlikely to have non-contiguous zones.
+  
+  """
+  allowMulti: Boolean
+
+  """
+  Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.
+  
+  """
+  geometryType: SketchGeometryType
+  geoprocessingClientName: String
+  geoprocessingClientUrl: String
+  geoprocessingProjectUrl: String
+  id: Int
+
+  """
+  If set to true, (non-admin) users should not be able to digitize new features
+  using this sketch class, but they should still be able to access the sketch
+  class in order to render existing sketches of this type.
+  
+  """
+  isArchived: Boolean
+
+  """
+  If set to true, show as an option in the digitizing tools. If set to false,
+  this sketch class may be solely for survey responses.
+  
+  """
+  isMyPlansOption: Boolean
+
+  """
+  Style used to render sketches of this type.
+  
+  """
+  mapboxGlStyle: String
+  name: String!
+  projectId: Int!
+}
+
+"""
+Represents an update to a `SketchClass`. Fields that are set will be updated.
+"""
+input SketchClassPatch {
+  """
+  If set to try, a geometry_type of POLYGON would allow for both POLYGONs and
+  MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still
+  digitize single features. Note that this feature should be used seldomly,
+  since for planning purposes it is unlikely to have non-contiguous zones.
+  
+  """
+  allowMulti: Boolean
+  geoprocessingClientName: String
+  geoprocessingClientUrl: String
+  geoprocessingProjectUrl: String
+
+  """
+  If set to true, (non-admin) users should not be able to digitize new features
+  using this sketch class, but they should still be able to access the sketch
+  class in order to render existing sketches of this type.
+  
+  """
+  isArchived: Boolean
+
+  """
+  Style used to render sketches of this type.
+  
+  """
+  mapboxGlStyle: String
+  name: String
+}
+
+"""
+A condition to be used against `Sketch` object types. All fields are tested for equality and combined with a logical ‘and.’
+"""
+input SketchCondition {
+  """Checks for equality with the object’s `collectionId` field."""
+  collectionId: Int
+
+  """Checks for equality with the object’s `copyOf` field."""
+  copyOf: Int
+
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `sketchClassId` field."""
+  sketchClassId: Int
+
+  """Checks for equality with the object’s `userId` field."""
+  userId: Int
+}
+
+"""A connection to a list of `Sketch` values."""
+type SketchesConnection {
+  """
+  A list of edges which contains the `Sketch` and cursor to aid in pagination.
+  """
+  edges: [SketchesEdge!]!
+
+  """A list of `Sketch` objects."""
+  nodes: [Sketch]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `Sketch` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `Sketch` edge in the connection."""
+type SketchesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `Sketch` at the end of the edge."""
+  node: Sketch
+}
+
+"""Methods to use when ordering `Sketch`."""
+enum SketchesOrderBy {
+  COLLECTION_ID_ASC
+  COLLECTION_ID_DESC
+  COPY_OF_ASC
+  COPY_OF_DESC
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  SKETCH_CLASS_ID_ASC
+  SKETCH_CLASS_ID_DESC
+  USER_ID_ASC
+  USER_ID_DESC
+}
+
+type SketchFolder implements Node {
+  collectionId: Int
+  folderId: Int
+  id: Int!
+  name: String!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  projectId: Int!
+
+  """Reads a single `User` that is related to this `SketchFolder`."""
+  user: User
+  userId: Int!
+}
+
+"""
+A condition to be used against `SketchFolder` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input SketchFolderCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `userId` field."""
+  userId: Int
+}
+
+"""An input for mutations affecting `SketchFolder`"""
+input SketchFolderInput {
+  collectionId: Int
+  folderId: Int
+  id: Int
+  name: String!
+  projectId: Int!
+  userId: Int!
+}
+
+"""
+Represents an update to a `SketchFolder`. Fields that are set will be updated.
+"""
+input SketchFolderPatch {
+  collectionId: Int
+  folderId: Int
+  id: Int
+  name: String
+  projectId: Int
+  userId: Int
+}
+
+"""A connection to a list of `SketchFolder` values."""
+type SketchFoldersConnection {
+  """
+  A list of edges which contains the `SketchFolder` and cursor to aid in pagination.
+  """
+  edges: [SketchFoldersEdge!]!
+
+  """A list of `SketchFolder` objects."""
+  nodes: [SketchFolder]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `SketchFolder` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `SketchFolder` edge in the connection."""
+type SketchFoldersEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `SketchFolder` at the end of the edge."""
+  node: SketchFolder
+}
+
+"""Methods to use when ordering `SketchFolder`."""
+enum SketchFoldersOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  USER_ID_ASC
+  USER_ID_DESC
+}
+
+enum SketchGeometryType {
+  COLLECTION
+  LINESTRING
+  POINT
+  POLYGON
+}
+
+"""An input for mutations affecting `Sketch`"""
+input SketchInput {
+  collectionId: Int
+  folderId: Int
+  geom: String
+  id: Int
+  name: String!
+  sketchClassId: Int!
+  userGeom: String
+  userId: Int!
+}
+
+"""
+Represents an update to a `Sketch`. Fields that are set will be updated.
+"""
+input SketchPatch {
+  collectionId: Int
+  geom: String
+  name: String
+  userGeom: String
 }
 
 enum SortByDirection {
@@ -1604,6 +2597,195 @@ type UpdateProjectPayload {
   query: Query
 }
 
+"""All input for the `updateSketchByNodeId` mutation."""
+input UpdateSketchByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Sketch` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `Sketch` being updated.
+  """
+  patch: SketchPatch!
+}
+
+"""All input for the `updateSketchClassByNodeId` mutation."""
+input UpdateSketchClassByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `SketchClass` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `SketchClass` being updated.
+  """
+  patch: SketchClassPatch!
+}
+
+"""All input for the `updateSketchClass` mutation."""
+input UpdateSketchClassInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `SketchClass` being updated.
+  """
+  patch: SketchClassPatch!
+}
+
+"""The output of our update `SketchClass` mutation."""
+type UpdateSketchClassPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Project` that is related to this `SketchClass`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `SketchClass` that was updated by this mutation."""
+  sketchClass: SketchClass
+
+  """An edge for our `SketchClass`. May be used by Relay 1."""
+  sketchClassEdge(
+    """The method to use when ordering `SketchClass`."""
+    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchClassesEdge
+}
+
+"""All input for the `updateSketchFolderByNodeId` mutation."""
+input UpdateSketchFolderByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `SketchFolder` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `SketchFolder` being updated.
+  """
+  patch: SketchFolderPatch!
+}
+
+"""All input for the `updateSketchFolder` mutation."""
+input UpdateSketchFolderInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `SketchFolder` being updated.
+  """
+  patch: SketchFolderPatch!
+}
+
+"""The output of our update `SketchFolder` mutation."""
+type UpdateSketchFolderPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `SketchFolder` that was updated by this mutation."""
+  sketchFolder: SketchFolder
+
+  """An edge for our `SketchFolder`. May be used by Relay 1."""
+  sketchFolderEdge(
+    """The method to use when ordering `SketchFolder`."""
+    orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchFoldersEdge
+
+  """Reads a single `User` that is related to this `SketchFolder`."""
+  user: User
+}
+
+"""All input for the `updateSketch` mutation."""
+input UpdateSketchInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `Sketch` being updated.
+  """
+  patch: SketchPatch!
+}
+
+"""The output of our update `Sketch` mutation."""
+type UpdateSketchPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Sketch` that is related to this `Sketch`."""
+  collection: Sketch
+
+  """Reads a single `Sketch` that is related to this `Sketch`."""
+  copiedFrom: Sketch
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `Sketch` that was updated by this mutation."""
+  sketch: Sketch
+
+  """Reads a single `SketchClass` that is related to this `Sketch`."""
+  sketchClass: SketchClass
+
+  """An edge for our `Sketch`. May be used by Relay 1."""
+  sketchEdge(
+    """The method to use when ordering `Sketch`."""
+    orderBy: [SketchesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchesEdge
+
+  """Reads a single `User` that is related to this `Sketch`."""
+  user: User
+}
+
 type User implements Node {
   id: Int!
   isAdmin(project: Int): Boolean
@@ -1622,4 +2804,33 @@ type User implements Node {
 
   """Reads a single `Profile` that is related to this `User`."""
   profile: Profile
+
+  """Reads and enables pagination through a set of `SketchFolder`."""
+  sketchFoldersConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SketchFolderCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `SketchFolder`."""
+    orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchFoldersConnection!
 }

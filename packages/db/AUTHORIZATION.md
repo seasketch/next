@@ -35,6 +35,10 @@ Returns true if session variables have been set for a logged-in user. Will retur
 
 Identifies whether the given user_id is the same user as the session. Useful for enforcing policies on user-owned resources.
 
+#### `session_has_project_access(project_id int)`
+
+Returns true if the user has *any* access to the given project. Good for `select` policies.
+
 #### `session_is_admin(project_id int)`
 
 Whether the current user should be able to access admin functions of the given project. Note that this will also return true if the session is a superuser.
@@ -86,21 +90,7 @@ alter table uploaded_documents enable row level security;
 
 drop policy if exists uploaded_documents_access on uploaded_documents;
 create policy uploaded_documents_access on uploaded_documents 
-  for select to anon using (
-    -- `using` will be checked whenever selecting these documents
-    -- Here we give access if the project is public, if the session is an admin,
-    -- or if the session belongs to an approved participant
-    exists(
-      select
-        1
-      from 
-        projects 
-      where 
-        projects.project_id = project_id and 
-        access_control = 'public'
-    ) or 
-    session_is_admin(project_id) or 
-    session_is_approved_participant(project_id)
+  for select to anon using (session_has_project_access(project_id)
   );
 
 drop policy if exists uploaded_documents_admin on uploaded_documents;
