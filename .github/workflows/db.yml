@@ -35,4 +35,12 @@ jobs:
         env:
           TEST_DB: postgres://postgres:password@localhost:5432/
         run: | 
-          npm test
+          npx jest --ci --reporters=default --reporters=jest-junit
+      - uses: IgnusG/jest-report-action@v{ current version }
+        if: always()
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+          run-name: test
+          working-directory: ./packages/db
+          check-name: DB Unit Tests
+
