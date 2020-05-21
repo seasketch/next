@@ -1,4 +1,4 @@
-name: packages/api
+name: Server Tests
 on: 
   push:
     paths:
