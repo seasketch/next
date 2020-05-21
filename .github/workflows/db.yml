@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'packages/db/*'
+      - '.github/workflows/db.yml'
 jobs:
   test:
     name: Database Schema Unit Tests
