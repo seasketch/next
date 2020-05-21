@@ -1,11 +1,35 @@
-name: packages/db
+name: packages/api
 on: 
   push:
     paths:
+      - '.github/workflows/server.yml'
+      - 'packages/api/*'  
       - 'packages/db/*'
-      - '.github/workflows/db.yml'
 jobs:
-  test:
+  api:
+    name: GraphQL API Server Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12'
+      - name: Install dependencies
+        working-directory: ./packages/api
+        run: | 
+          npm install
+      - name: Run Tests
+        working-directory: ./packages/api
+        run: | 
+          npx jest --ci --reporters=default --reporters=jest-junit
+      - uses: IgnusG/jest-report-action@v2.3.1
+        if: always()
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: ./packages/api
+          check-name: API Test Output
+          run-name: api
+  db:
     name: Database Schema Unit Tests
     runs-on: ubuntu-latest
     services:
@@ -42,4 +66,4 @@ jobs:
           access-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: ./packages/db
           check-name: DB Test Output
-
+          run-name: db
