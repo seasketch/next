@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        build: packages/db/Dockerfile
+        image: underbluewaters/seasketch_db_base
         ports:
           - "5432:5432"
         env:
