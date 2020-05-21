@@ -41,4 +41,5 @@ jobs:
         with:
           access-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: ./packages/db
+          check-name: DB Test Output
 
