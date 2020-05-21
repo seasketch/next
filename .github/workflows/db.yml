@@ -40,7 +40,5 @@ jobs:
         if: always()
         with:
           access-token: ${{ secrets.GITHUB_TOKEN }}
-          run-name: test
           working-directory: ./packages/db
-          check-name: DB Unit Tests
 
