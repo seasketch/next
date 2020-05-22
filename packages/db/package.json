@@ -33,16 +33,16 @@
     "@babel/core": "^7.9.6",
     "@babel/preset-env": "^7.9.6",
     "@babel/preset-typescript": "^7.9.0",
-    "@types/jest": "^25.2.2",
+    "@types/jest": "^25.2.3",
     "@types/shortid": "0.0.29",
     "@types/slonik": "^22.1.2",
     "babel-jest": "^26.0.1",
     "dotenv-cli": "^3.1.0",
-    "graphile-migrate": "^0.3.0",
+    "graphile-migrate": "^0.3.1",
     "jest": "^26.0.1",
     "jest-junit": "^10.0.0",
     "shortid": "^2.2.15",
-    "slonik": "^22.4.8",
-    "typescript": "^3.9.2"
+    "slonik": "^22.4.9",
+    "typescript": "^3.9.3"
   }
 }
