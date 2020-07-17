@@ -5,7 +5,7 @@
   "author": "Chad Burt <chad@underbluewaters.net>",
   "homepage": "https://github.com/seasketch/next#readme",
   "license": "BSD-3-Clause",
-  "main": "src/index.ts",
+  "main": "dist/src/index.js",
   "private": true,
   "repository": {
     "type": "git",
@@ -13,10 +13,24 @@
   },
   "scripts": {
     "test": "jest",
-    "start": "node dist/index.js",
-    "debug": "nodemon --inspect dist/index.js",
-    "watch": "nodemon dist/index.js",
-    "build": "tsc -b"
+    "start": "node dist/src/server.js",
+    "debug": "nodemon --inspect dist/src/server.js",
+    "watch": "nodemon dist/src/server.js",
+    "build": "tsc -b",
+    "db:migrate": "dotenv graphile-migrate migrate",
+    "db:watch": "dotenv graphile-migrate watch",
+    "db:commit": "dotenv graphile-migrate commit",
+    "db:uncommit": "dotenv graphile-migrate uncommit",
+    "db:reset": "dotenv graphile-migrate reset",
+    "db:status": "dotenv graphile-migrate status",
+    "db:shell": "docker exec -it seasketch_db psql -U postgres seasketch",
+    "db:start": "docker-compose up -d",
+    "db:stop": "docker-compose stop",
+    "db:down": "docker-compose down",
+    "db:schema": "docker exec seasketch_db pg_dump --no-sync --schema-only --no-owner --exclude-schema=graphile_migrate --exclude-schema=postgraphile_watch -U postgres seasketch > ./schema.sql",
+    "services:rotatekeys": "node dist/src/scripts/rotatekeys.js",
+    "services:send-project-invites": "node dist/src/scripts/sendProjectInvites.js",
+    "services:send-survey-invites": "node dist/src/scripts/sendSurveyInvites.js"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
@@ -27,34 +41,56 @@
     "titleTemplate": "{title}"
   },
   "dependencies": {
+    "@types/redis": "^2.8.25",
+    "auth0": "^2.27.0",
+    "jsonwebtoken": "^8.5.1",
+    "jwks-rsa": "^1.8.0",
+    "ms": "^2.1.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.10.5",
+    "@babel/preset-env": "^7.10.4",
+    "@babel/preset-typescript": "^7.10.4",
     "@graphile-contrib/pg-many-to-many": "^1.0.0-beta.13",
     "@graphile-contrib/pg-order-by-related": "^1.0.0-beta.6",
     "@graphile-contrib/pg-simplify-inflector": "^6.0.0",
+    "@graphile/postgis": "^0.1.0",
+    "@types/auth0": "^2.20.5",
     "@types/compression": "^1.7.0",
-    "@types/pg": "^7.14.3",
+    "@types/jest": "^25.2.3",
+    "@types/jsonwebtoken": "^8.5.0",
+    "@types/ms": "^0.7.31",
+    "@types/node-rsa": "^1.0.0",
+    "@types/pg": "^7.14.4",
+    "@types/shortid": "0.0.29",
+    "@types/slonik": "^22.1.2",
+    "aws-sdk": "^2.713.0",
     "compression": "^1.7.4",
     "dotenv": "^8.2.0",
+    "dotenv-cli": "^3.2.0",
     "express": "^4.17.1",
-    "express-jwt": "^5.3.3",
-    "jest-junit": "^10.0.0",
-    "jsonwebtoken": "^8.5.1",
-    "jwks-rsa": "^1.8.0",
+    "express-jwt": "^6.0.0",
+    "graphile-migrate": "^0.3.1",
+    "jest": "^26.1.0",
+    "jest-junit": "^11.0.1",
+    "jest-serial-runner": "^1.1.0",
+    "mockdate": "^3.0.2",
+    "node-rsa": "^1.0.8",
     "nodemon": "^2.0.4",
     "pgmock2": "^2.0.2",
     "postgraphile": "^4.7.0",
-    "ts-node": "^8.10.1",
-    "typescript": "^3.9.2"
+    "redis": "^3.0.2",
+    "shortid": "^2.2.15",
+    "slonik": "^22.4.11",
+    "slonik-sql-tag-raw": "^1.0.2",
+    "typescript": "^3.9.6"
   },
-  "devDependencies": {
-    "@babel/core": "^7.9.6",
-    "@babel/preset-env": "^7.9.6",
-    "@babel/preset-typescript": "^7.9.0",
-    "@types/jest": "^25.2.2",
-    "jest": "^26.0.1"
+  "peerDependencies": {
+    "aws-sdk": "^2.713.0"
   },
   "jest": {
     "roots": [
-      "src/"
+      "tests/"
     ]
   }
 }

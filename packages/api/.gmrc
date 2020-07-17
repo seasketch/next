@@ -1,0 +1,14 @@
+{
+  "databaseOwner": "postgres",
+  "connectionString": "postgres://postgres:password@localhost:54321/seasketch",
+  "pgSettings": {
+    "search_path": "private,public"
+  },
+  "afterAllMigrations": [
+    {
+      "_": "command",
+      "shadow": true,
+      "command": "echo 'after' && if [ \"$IN_TESTS\" != \"1\" ]; then npm run db:schema && npm run services:genkeys; fi"
+    }
+  ]
+}

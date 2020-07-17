@@ -4,12 +4,29 @@ enum AccessControlListType {
   PUBLIC
 }
 
+"""
+Access Control Lists can be associated with SketchClasses, Forums, and 
+potentially other application resources to allow admins to control access based
+on admin privileges or group membership. The behavior of the system is primarily
+driven by the `type` and `groups` settings.
+
+The [AUTHORIZATION.md file](https://github.com/seasketch/next/blob/master/packages/db/AUTHORIZATION.md#content-managed-by-an-access-control-list)
+details how ACL functionality was added to the Forums type, and can be used as a
+template to add ACL features to new types if needed.
+
+"""
 type Acl implements Node {
   """Reads a single `Forum` that is related to this `Acl`."""
   forum: Forum
   forumId: Int
 
-  """Reads and enables pagination through a set of `Group`."""
+  """
+  
+  If set and `type` is GROUP, the resource will only be available to these groups.
+  
+  Use `addGroupToAcl()`/`removeGroupFromAcl()` mutations to edit these permissions.
+  
+  """
   groups(
     """Only read the first `n` values of the set."""
     first: Int
@@ -23,11 +40,18 @@ type Acl implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """Reads a single `SketchClass` that is related to this `Acl`."""
+  sketchClass: SketchClass
+  sketchClassId: Int
+
+  """Control whether access control is PUBLIC, ADMINS_ONLY, or GROUP"""
   type: AccessControlListType!
 }
 
 """Represents an update to a `Acl`. Fields that are set will be updated."""
 input AclPatch {
+  """Control whether access control is PUBLIC, ADMINS_ONLY, or GROUP"""
   type: AccessControlListType
 }
 
@@ -140,6 +164,244 @@ strings and not numbers.
 """
 scalar BigInt
 
+"""All input for the `confirmOnboarded` mutation."""
+input ConfirmOnboardedInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+}
+
+"""The output of our `confirmOnboarded` mutation."""
+type ConfirmOnboardedPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  user: User
+
+  """An edge for our `User`. May be used by Relay 1."""
+  userEdge(
+    """The method to use when ordering `User`."""
+    orderBy: [UsersOrderBy!] = [PRIMARY_KEY_ASC]
+  ): UsersEdge
+}
+
+"""All input for the `confirmProjectInviteWithSurveyToken` mutation."""
+input ConfirmProjectInviteWithSurveyTokenInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+}
+
+"""The output of our `confirmProjectInviteWithSurveyToken` mutation."""
+type ConfirmProjectInviteWithSurveyTokenPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  integer: Int
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `confirmProjectInviteWithVerifiedEmail` mutation."""
+input ConfirmProjectInviteWithVerifiedEmailInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+}
+
+"""The output of our `confirmProjectInviteWithVerifiedEmail` mutation."""
+type ConfirmProjectInviteWithVerifiedEmailPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  integer: Int
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the create `FormConditionalRenderingRule` mutation."""
+input CreateFormConditionalRenderingRuleInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `FormConditionalRenderingRule` to be created by this mutation."""
+  formConditionalRenderingRule: FormConditionalRenderingRuleInput!
+}
+
+"""The output of our create `FormConditionalRenderingRule` mutation."""
+type CreateFormConditionalRenderingRulePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `FormField` that is related to this `FormConditionalRenderingRule`.
+  """
+  field: FormField
+
+  """The `FormConditionalRenderingRule` that was created by this mutation."""
+  formConditionalRenderingRule: FormConditionalRenderingRule
+
+  """
+  An edge for our `FormConditionalRenderingRule`. May be used by Relay 1.
+  """
+  formConditionalRenderingRuleEdge(
+    """The method to use when ordering `FormConditionalRenderingRule`."""
+    orderBy: [FormConditionalRenderingRulesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormConditionalRenderingRulesEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the create `FormField` mutation."""
+input CreateFormFieldInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `FormField` to be created by this mutation."""
+  formField: FormFieldInput!
+}
+
+"""The output of our create `FormField` mutation."""
+type CreateFormFieldPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Form` that is related to this `FormField`."""
+  form: Form
+
+  """The `FormField` that was created by this mutation."""
+  formField: FormField
+
+  """An edge for our `FormField`. May be used by Relay 1."""
+  formFieldEdge(
+    """The method to use when ordering `FormField`."""
+    orderBy: [FormFieldsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormFieldsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `createFormTemplateFromSketchClass` mutation."""
+input CreateFormTemplateFromSketchClassInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  sketchClassId: Int
+  templateName: String
+  templateType: FormTemplateType
+}
+
+"""The output of our `createFormTemplateFromSketchClass` mutation."""
+type CreateFormTemplateFromSketchClassPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  form: Form
+
+  """An edge for our `Form`. May be used by Relay 1."""
+  formEdge(
+    """The method to use when ordering `Form`."""
+    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `SketchClass` that is related to this `Form`."""
+  sketchClass: SketchClass
+
+  """Reads a single `Survey` that is related to this `Form`."""
+  survey: Survey
+}
+
+"""All input for the `createFormTemplateFromSurvey` mutation."""
+input CreateFormTemplateFromSurveyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  surveyId: Int
+  templateName: String
+  templateType: FormTemplateType
+}
+
+"""The output of our `createFormTemplateFromSurvey` mutation."""
+type CreateFormTemplateFromSurveyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  form: Form
+
+  """An edge for our `Form`. May be used by Relay 1."""
+  formEdge(
+    """The method to use when ordering `Form`."""
+    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `SketchClass` that is related to this `Form`."""
+  sketchClass: SketchClass
+
+  """Reads a single `Survey` that is related to this `Form`."""
+  survey: Survey
+}
+
 """All input for the create `Forum` mutation."""
 input CreateForumInput {
   """
@@ -219,6 +481,76 @@ input CreateProjectInput {
   clientMutationId: String
   name: String!
   slug: String!
+}
+
+"""All input for the create `ProjectInviteGroup` mutation."""
+input CreateProjectInviteGroupInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `ProjectInviteGroup` to be created by this mutation."""
+  projectInviteGroup: ProjectInviteGroupInput!
+}
+
+"""The output of our create `ProjectInviteGroup` mutation."""
+type CreateProjectInviteGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `ProjectInviteGroup` that was created by this mutation."""
+  projectInviteGroup: ProjectInviteGroup
+
+  """An edge for our `ProjectInviteGroup`. May be used by Relay 1."""
+  projectInviteGroupEdge(
+    """The method to use when ordering `ProjectInviteGroup`."""
+    orderBy: [ProjectInviteGroupsOrderBy!] = [NATURAL]
+  ): ProjectInviteGroupsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `createProjectInvites` mutation."""
+input CreateProjectInvitesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """List of group **names** (not ids)"""
+  groupNames: [String]
+  makeAdmin: Boolean
+  projectId: Int
+
+  """List of emails (required) and fullnames"""
+  projectInviteOptions: [ProjectInviteOptionInput]
+
+  """If set to true, emails will be QUEUED for sending immediately"""
+  sendEmailNow: Boolean
+}
+
+"""The output of our `createProjectInvites` mutation."""
+type CreateProjectInvitesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  projectInvites: [ProjectInvite]
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """The output of our `createProject` mutation."""
@@ -313,9 +645,6 @@ type CreateSketchFolderPayload {
     """The method to use when ordering `SketchFolder`."""
     orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
   ): SketchFoldersEdge
-
-  """Reads a single `User` that is related to this `SketchFolder`."""
-  user: User
 }
 
 """All input for the create `Sketch` mutation."""
@@ -355,14 +684,139 @@ type CreateSketchPayload {
   """Reads a single `SketchClass` that is related to this `Sketch`."""
   sketchClass: SketchClass
 
-  """An edge for our `Sketch`. May be used by Relay 1."""
-  sketchEdge(
-    """The method to use when ordering `Sketch`."""
-    orderBy: [SketchesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): SketchesEdge
-
   """Reads a single `User` that is related to this `Sketch`."""
   user: User
+}
+
+"""All input for the create `Survey` mutation."""
+input CreateSurveyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `Survey` to be created by this mutation."""
+  survey: SurveyInput!
+}
+
+"""All input for the create `SurveyInvitedGroup` mutation."""
+input CreateSurveyInvitedGroupInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `SurveyInvitedGroup` to be created by this mutation."""
+  surveyInvitedGroup: SurveyInvitedGroupInput!
+}
+
+"""The output of our create `SurveyInvitedGroup` mutation."""
+type CreateSurveyInvitedGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyInvitedGroup`."""
+  survey: Survey
+
+  """The `SurveyInvitedGroup` that was created by this mutation."""
+  surveyInvitedGroup: SurveyInvitedGroup
+}
+
+"""All input for the `createSurveyInvites` mutation."""
+input CreateSurveyInvitesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupNames: [String]
+  includeProjectInvite: Boolean
+  makeAdmin: Boolean
+  surveyId: Int
+  surveyInviteOptions: [SurveyInviteOptionsInput]
+}
+
+"""The output of our `createSurveyInvites` mutation."""
+type CreateSurveyInvitesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  surveyInvites: [SurveyInvite]
+}
+
+"""The output of our create `Survey` mutation."""
+type CreateSurveyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Project` that is related to this `Survey`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `Survey` that was created by this mutation."""
+  survey: Survey
+}
+
+"""All input for the create `SurveyResponse` mutation."""
+input CreateSurveyResponseInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `SurveyResponse` to be created by this mutation."""
+  surveyResponse: SurveyResponseInput!
+}
+
+"""The output of our create `SurveyResponse` mutation."""
+type CreateSurveyResponsePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyResponse`."""
+  survey: Survey
+
+  """The `SurveyResponse` that was created by this mutation."""
+  surveyResponse: SurveyResponse
+
+  """An edge for our `SurveyResponse`. May be used by Relay 1."""
+  surveyResponseEdge(
+    """The method to use when ordering `SurveyResponse`."""
+    orderBy: [SurveyResponsesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyResponsesEdge
 }
 
 """A location in a connection that can be used for resuming pagination."""
@@ -373,6 +827,192 @@ A point in time as described by the [ISO
 8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
 """
 scalar Datetime
+
+"""All input for the `deleteFormByNodeId` mutation."""
+input DeleteFormByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Form` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteFormBySketchClassId` mutation."""
+input DeleteFormBySketchClassIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """Related *SketchClass*"""
+  sketchClassId: Int!
+}
+
+"""All input for the `deleteFormBySurveyId` mutation."""
+input DeleteFormBySurveyIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """Related *Survey*"""
+  surveyId: Int!
+}
+
+"""
+All input for the `deleteFormConditionalRenderingRuleByNodeId` mutation.
+"""
+input DeleteFormConditionalRenderingRuleByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `FormConditionalRenderingRule` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteFormConditionalRenderingRule` mutation."""
+input DeleteFormConditionalRenderingRuleInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `FormConditionalRenderingRule` mutation."""
+type DeleteFormConditionalRenderingRulePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedFormConditionalRenderingRuleNodeId: ID
+
+  """
+  Reads a single `FormField` that is related to this `FormConditionalRenderingRule`.
+  """
+  field: FormField
+
+  """The `FormConditionalRenderingRule` that was deleted by this mutation."""
+  formConditionalRenderingRule: FormConditionalRenderingRule
+
+  """
+  An edge for our `FormConditionalRenderingRule`. May be used by Relay 1.
+  """
+  formConditionalRenderingRuleEdge(
+    """The method to use when ordering `FormConditionalRenderingRule`."""
+    orderBy: [FormConditionalRenderingRulesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormConditionalRenderingRulesEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `deleteFormFieldByNodeId` mutation."""
+input DeleteFormFieldByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `FormField` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteFormField` mutation."""
+input DeleteFormFieldInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `FormField` mutation."""
+type DeleteFormFieldPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedFormFieldNodeId: ID
+
+  """Reads a single `Form` that is related to this `FormField`."""
+  form: Form
+
+  """The `FormField` that was deleted by this mutation."""
+  formField: FormField
+
+  """An edge for our `FormField`. May be used by Relay 1."""
+  formFieldEdge(
+    """The method to use when ordering `FormField`."""
+    orderBy: [FormFieldsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormFieldsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `deleteForm` mutation."""
+input DeleteFormInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `Form` mutation."""
+type DeleteFormPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedFormNodeId: ID
+
+  """The `Form` that was deleted by this mutation."""
+  form: Form
+
+  """An edge for our `Form`. May be used by Relay 1."""
+  formEdge(
+    """The method to use when ordering `Form`."""
+    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `SketchClass` that is related to this `Form`."""
+  sketchClass: SketchClass
+
+  """Reads a single `Survey` that is related to this `Form`."""
+  survey: Survey
+}
 
 """All input for the `deleteForumByNodeId` mutation."""
 input DeleteForumByNodeIdInput {
@@ -446,6 +1086,8 @@ input DeleteGroupByProjectIdAndNameInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+
+  """Label for the group."""
   name: String!
   projectId: Int!
 }
@@ -489,6 +1131,98 @@ input DeleteProjectInput {
   """
   clientMutationId: String
   projectId: Int!
+}
+
+"""All input for the `deleteProjectInviteByEmailAndProjectId` mutation."""
+input DeleteProjectInviteByEmailAndProjectIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """Specified by admin when invite was created."""
+  email: Email!
+  projectId: Int!
+}
+
+"""All input for the `deleteProjectInviteByNodeId` mutation."""
+input DeleteProjectInviteByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `ProjectInvite` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""
+All input for the `deleteProjectInviteGroupByInviteIdAndGroupId` mutation.
+"""
+input DeleteProjectInviteGroupByInviteIdAndGroupIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupId: Int!
+  inviteId: Int!
+}
+
+"""The output of our delete `ProjectInviteGroup` mutation."""
+type DeleteProjectInviteGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedProjectInviteGroupNodeId: ID
+
+  """The `ProjectInviteGroup` that was deleted by this mutation."""
+  projectInviteGroup: ProjectInviteGroup
+
+  """An edge for our `ProjectInviteGroup`. May be used by Relay 1."""
+  projectInviteGroupEdge(
+    """The method to use when ordering `ProjectInviteGroup`."""
+    orderBy: [ProjectInviteGroupsOrderBy!] = [NATURAL]
+  ): ProjectInviteGroupsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `deleteProjectInvite` mutation."""
+input DeleteProjectInviteInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `ProjectInvite` mutation."""
+type DeleteProjectInvitePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedProjectInviteNodeId: ID
+
+  """The `ProjectInvite` that was deleted by this mutation."""
+  projectInvite: ProjectInvite
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """The output of our `deleteProject` mutation."""
@@ -623,9 +1357,6 @@ type DeleteSketchFolderPayload {
     """The method to use when ordering `SketchFolder`."""
     orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
   ): SketchFoldersEdge
-
-  """Reads a single `User` that is related to this `SketchFolder`."""
-  user: User
 }
 
 """All input for the `deleteSketch` mutation."""
@@ -664,17 +1395,834 @@ type DeleteSketchPayload {
   """Reads a single `SketchClass` that is related to this `Sketch`."""
   sketchClass: SketchClass
 
-  """An edge for our `Sketch`. May be used by Relay 1."""
-  sketchEdge(
-    """The method to use when ordering `Sketch`."""
-    orderBy: [SketchesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): SketchesEdge
-
   """Reads a single `User` that is related to this `Sketch`."""
   user: User
 }
 
+"""All input for the `deleteSurveyByNodeId` mutation."""
+input DeleteSurveyByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Survey` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteSurvey` mutation."""
+input DeleteSurveyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""All input for the `deleteSurveyInviteByEmailAndSurveyId` mutation."""
+input DeleteSurveyInviteByEmailAndSurveyIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  email: Email!
+  surveyId: Int!
+}
+
+"""All input for the `deleteSurveyInviteByEmail` mutation."""
+input DeleteSurveyInviteByEmailInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  email: Email!
+}
+
+"""All input for the `deleteSurveyInviteByNodeId` mutation."""
+input DeleteSurveyInviteByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `SurveyInvite` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""
+All input for the `deleteSurveyInvitedGroupBySurveyIdAndGroupId` mutation.
+"""
+input DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupId: Int!
+  surveyId: Int!
+}
+
+"""The output of our delete `SurveyInvitedGroup` mutation."""
+type DeleteSurveyInvitedGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedSurveyInvitedGroupNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyInvitedGroup`."""
+  survey: Survey
+
+  """The `SurveyInvitedGroup` that was deleted by this mutation."""
+  surveyInvitedGroup: SurveyInvitedGroup
+}
+
+"""All input for the `deleteSurveyInvite` mutation."""
+input DeleteSurveyInviteInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `SurveyInvite` mutation."""
+type DeleteSurveyInvitePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedSurveyInviteNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyInvite`."""
+  survey: Survey
+
+  """The `SurveyInvite` that was deleted by this mutation."""
+  surveyInvite: SurveyInvite
+
+  """An edge for our `SurveyInvite`. May be used by Relay 1."""
+  surveyInviteEdge(
+    """The method to use when ordering `SurveyInvite`."""
+    orderBy: [SurveyInvitesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyInvitesEdge
+}
+
+"""The output of our delete `Survey` mutation."""
+type DeleteSurveyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedSurveyNodeId: ID
+
+  """Reads a single `Project` that is related to this `Survey`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `Survey` that was deleted by this mutation."""
+  survey: Survey
+}
+
+"""All input for the `deleteSurveyResponseByNodeId` mutation."""
+input DeleteSurveyResponseByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `SurveyResponse` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteSurveyResponse` mutation."""
+input DeleteSurveyResponseInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `SurveyResponse` mutation."""
+type DeleteSurveyResponsePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedSurveyResponseNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyResponse`."""
+  survey: Survey
+
+  """The `SurveyResponse` that was deleted by this mutation."""
+  surveyResponse: SurveyResponse
+
+  """An edge for our `SurveyResponse`. May be used by Relay 1."""
+  surveyResponseEdge(
+    """The method to use when ordering `SurveyResponse`."""
+    orderBy: [SurveyResponsesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyResponsesEdge
+}
+
 scalar Email
+
+"""
+Email notification preferences can be read and set by the current user session.
+These settings cannot be accessed by other users or SeaSketch project admins.
+
+"""
+type EmailNotificationPreference {
+  """
+  Email used when registering the account in Auth0. This email cannot be
+  updated through the API, though it may be possible to do so manually by
+  SeaSketch developers.
+  
+  This is the email by which users will recieve transactional emails like
+  project and survey invites, and email notifications.
+  """
+  canonicalEmail: String
+
+  """
+  How often users should be notified of SeaSketch project activity.
+  
+  """
+  frequency: EmailSummaryFrequency!
+
+  """
+  If set, users should receive realtime notifications of responses to discussion
+  forum threads for which they are a participant.
+  
+  """
+  notifyOnReply: Boolean!
+
+  """
+  If selected, users should receive absolutely no email from SeaSketch. Invite 
+  emails should not be sent and their status should be set to UNSUBSCRIBED.
+  
+  """
+  unsubscribeAll: Boolean!
+
+  """
+  Reads a single `User` that is related to this `EmailNotificationPreference`.
+  """
+  user: User
+  userId: Int!
+}
+
+"""
+A condition to be used against `EmailNotificationPreference` object types. All
+fields are tested for equality and combined with a logical ‘and.’
+"""
+input EmailNotificationPreferenceCondition {
+  """Checks for equality with the object’s `userId` field."""
+  userId: Int
+}
+
+"""
+Represents an update to a `EmailNotificationPreference`. Fields that are set will be updated.
+"""
+input EmailNotificationPreferencePatch {
+  """
+  How often users should be notified of SeaSketch project activity.
+  
+  """
+  frequency: EmailSummaryFrequency
+
+  """
+  If set, users should receive realtime notifications of responses to discussion
+  forum threads for which they are a participant.
+  
+  """
+  notifyOnReply: Boolean
+
+  """
+  If selected, users should receive absolutely no email from SeaSketch. Invite 
+  emails should not be sent and their status should be set to UNSUBSCRIBED.
+  
+  """
+  unsubscribeAll: Boolean
+  userId: Int
+}
+
+"""A connection to a list of `EmailNotificationPreference` values."""
+type EmailNotificationPreferencesConnection {
+  """
+  A list of edges which contains the `EmailNotificationPreference` and cursor to aid in pagination.
+  """
+  edges: [EmailNotificationPreferencesEdge!]!
+
+  """A list of `EmailNotificationPreference` objects."""
+  nodes: [EmailNotificationPreference]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `EmailNotificationPreference` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `EmailNotificationPreference` edge in the connection."""
+type EmailNotificationPreferencesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `EmailNotificationPreference` at the end of the edge."""
+  node: EmailNotificationPreference
+}
+
+"""Methods to use when ordering `EmailNotificationPreference`."""
+enum EmailNotificationPreferencesOrderBy {
+  NATURAL
+  USER_ID_ASC
+  USER_ID_DESC
+}
+
+enum EmailStatus {
+  """
+  Emails may be bounced due to a full inbox, misconfigured mail server, or other
+  reasons. See [AWS SES documentation](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/monitor-using-event-publishing.html#event-publishing-terminology).
+  """
+  BOUNCED
+
+  """
+  User has reported SeaSketch as sending Spam in this or another project.
+  SeaSketch will no longer send emails to this user in any project.
+  """
+  COMPLAINT
+
+  """Delivered to the user's mail server"""
+  DELIVERED
+
+  """
+  SeaSketch application error when sending invite emails. Refer to email status
+  """
+  ERROR
+
+  """
+  Admin has sent the invite, but the mail delivery subsystem has not yet sent the invite
+  """
+  QUEUED
+
+  """
+  Invite email has been sent but not yet delivered to the user's mail server
+  """
+  SENT
+
+  """
+  
+  The user has unsubscribed from all emails originating from SeaSketch.
+  
+  If this happens SeaSketch will not be able to send any invitations to the user.
+      
+  """
+  UNSUBSCRIBED
+}
+
+enum EmailSummaryFrequency {
+  DAILY
+  NEVER
+  WEEKLY
+}
+
+enum FieldRuleOperator {
+  """String contains value"""
+  CONTAINS
+  EQUAL
+  GREATER_THAN
+
+  """Empty string input or no choice selection"""
+  IS_BLANK
+
+  """Predicate field value is less than specified value"""
+  LESS_THAN
+  NOT_EQUAL
+}
+
+"""
+Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
+Forms are used to add attributes to spatial features. In Surveys, Forms are used
+in support of gathering response data.
+
+Forms have any number of *FormFields* ordered by a `position` field, and form 
+contents may be hidden depending on the evaluation of *FormConditionalRenderingRules*.
+
+Forms typically belong to either a *Survey* or *SketchClass* exclusively. Some
+Forms may be designated as a template, in which case they belong to neither. 
+Only superusers can create form templates, and clients should provide templates
+as an option when creating new forms.
+
+"""
+type Form implements Node {
+  """List of all FormFields in this form."""
+  formFields(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: FormFieldCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `FormField`."""
+    orderBy: [FormFieldsOrderBy!]
+  ): [FormField!]!
+  id: Int!
+
+  """
+  SeaSetch superusers can create template forms than can be used when creating 
+  SketchClasses or Surveys. These templates can be created using the 
+  `createFormTemplateFromSketchClass` and `createFormTemplateFromSurvey` 
+  mutations. Template forms can be listed with the root-level `templateForms` 
+  query.
+  
+  """
+  isTemplate: Boolean!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `SketchClass` that is related to this `Form`."""
+  sketchClass: SketchClass
+
+  """Related *SketchClass*"""
+  sketchClassId: Int
+
+  """Reads a single `Survey` that is related to this `Form`."""
+  survey: Survey
+
+  """Related *Survey*"""
+  surveyId: Int
+
+  """Chosen by superusers upon template creation"""
+  templateName: String
+
+  """Indicates which features should use this form as a template"""
+  templateType: FormTemplateType
+}
+
+"""
+A condition to be used against `Form` object types. All fields are tested for equality and combined with a logical ‘and.’
+"""
+input FormCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `isTemplate` field."""
+  isTemplate: Boolean
+
+  """Checks for equality with the object’s `sketchClassId` field."""
+  sketchClassId: Int
+
+  """Checks for equality with the object’s `surveyId` field."""
+  surveyId: Int
+}
+
+"""
+If any rendering rules are set, at least one rule must evaluate true for the 
+field to be displayed to users. isRequired rules on *FormFields* should not be
+enforced for fields that are hidden by a rule.
+
+An example of a rule would be:
+
+SHOW fieldB if fieldA GREATER_THAN 5
+
+"""
+type FormConditionalRenderingRule implements Node {
+  """
+  Reads a single `FormField` that is related to this `FormConditionalRenderingRule`.
+  """
+  field: FormField
+
+  """Field that will be hidden unless the rule evaluates true"""
+  fieldId: Int!
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Comparison operation"""
+  operator: FieldRuleOperator!
+
+  """Field that is evaluated"""
+  predicateFieldId: Int!
+
+  """Value that predicate_field.value is compared to"""
+  value: String
+}
+
+"""
+A condition to be used against `FormConditionalRenderingRule` object types. All
+fields are tested for equality and combined with a logical ‘and.’
+"""
+input FormConditionalRenderingRuleCondition {
+  """Checks for equality with the object’s `fieldId` field."""
+  fieldId: Int
+
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+}
+
+"""An input for mutations affecting `FormConditionalRenderingRule`"""
+input FormConditionalRenderingRuleInput {
+  """Field that will be hidden unless the rule evaluates true"""
+  fieldId: Int!
+  id: Int
+
+  """Comparison operation"""
+  operator: FieldRuleOperator
+
+  """Field that is evaluated"""
+  predicateFieldId: Int!
+
+  """Value that predicate_field.value is compared to"""
+  value: String
+}
+
+"""
+Represents an update to a `FormConditionalRenderingRule`. Fields that are set will be updated.
+"""
+input FormConditionalRenderingRulePatch {
+  """Field that will be hidden unless the rule evaluates true"""
+  fieldId: Int
+
+  """Comparison operation"""
+  operator: FieldRuleOperator
+
+  """Field that is evaluated"""
+  predicateFieldId: Int
+
+  """Value that predicate_field.value is compared to"""
+  value: String
+}
+
+"""A `FormConditionalRenderingRule` edge in the connection."""
+type FormConditionalRenderingRulesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `FormConditionalRenderingRule` at the end of the edge."""
+  node: FormConditionalRenderingRule
+}
+
+"""Methods to use when ordering `FormConditionalRenderingRule`."""
+enum FormConditionalRenderingRulesOrderBy {
+  FIELD_ID_ASC
+  FIELD_ID_DESC
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+"""
+*FormFields* represent input fields in a form. Records contain fields to support
+generic functionality like name, description, position, and isRequired. They 
+also have a JSON `componentSettings` field that can have custom data to support
+a particular input type, indicated by the `type` field.
+
+Project administrators have full control over managing form fields through
+graphile-generated CRUD mutations.
+
+"""
+type FormField implements Node {
+  """
+  Type-specific configuration. For example, a Choice field might have a list of valid choices.
+  """
+  componentSettings: JSON!
+
+  """Set of rules that determine the visibility of this field."""
+  conditionalRenderingRules(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: FormConditionalRenderingRuleCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `FormConditionalRenderingRule`."""
+    orderBy: [FormConditionalRenderingRulesOrderBy!]
+  ): [FormConditionalRenderingRule!]!
+
+  """Question description. Max length 500 characters"""
+  description: String
+
+  """
+  Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports
+  """
+  exportId: String!
+
+  """Reads a single `Form` that is related to this `FormField`."""
+  form: Form
+
+  """Form this field belongs to."""
+  formId: Int!
+  id: Int!
+
+  """Users must provide input for these fields before submission."""
+  isRequired: Boolean!
+
+  """Question label"""
+  name: String!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """
+  Determines order of field display. Clients should display fields in ascending 
+  order. Cannot be changed individually. Use `setFormFieldOrder()` mutation to 
+  update.
+  
+  """
+  position: Int!
+
+  """
+  Indicates the input type. Each input type has a client-side component
+  implementation with custom configuration properties stored in
+  `componentSettings`.
+  """
+  type: FormFieldType!
+}
+
+"""
+A condition to be used against `FormField` object types. All fields are tested
+for equality and combined with a logical ‘and.’
+"""
+input FormFieldCondition {
+  """Checks for equality with the object’s `formId` field."""
+  formId: Int
+
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+}
+
+"""An input for mutations affecting `FormField`"""
+input FormFieldInput {
+  """
+  Type-specific configuration. For example, a Choice field might have a list of valid choices.
+  """
+  componentSettings: JSON
+
+  """Question description. Max length 500 characters"""
+  description: String
+
+  """
+  Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports
+  """
+  exportId: String!
+
+  """Form this field belongs to."""
+  formId: Int!
+  id: Int
+
+  """Users must provide input for these fields before submission."""
+  isRequired: Boolean
+
+  """Question label"""
+  name: String!
+
+  """
+  Determines order of field display. Clients should display fields in ascending 
+  order. Cannot be changed individually. Use `setFormFieldOrder()` mutation to 
+  update.
+  
+  """
+  position: Int
+
+  """
+  Indicates the input type. Each input type has a client-side component
+  implementation with custom configuration properties stored in
+  `componentSettings`.
+  """
+  type: FormFieldType!
+}
+
+"""
+Represents an update to a `FormField`. Fields that are set will be updated.
+"""
+input FormFieldPatch {
+  """
+  Type-specific configuration. For example, a Choice field might have a list of valid choices.
+  """
+  componentSettings: JSON
+
+  """Question description. Max length 500 characters"""
+  description: String
+
+  """
+  Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports
+  """
+  exportId: String
+
+  """Users must provide input for these fields before submission."""
+  isRequired: Boolean
+
+  """Question label"""
+  name: String
+
+  """
+  Determines order of field display. Clients should display fields in ascending 
+  order. Cannot be changed individually. Use `setFormFieldOrder()` mutation to 
+  update.
+  
+  """
+  position: Int
+
+  """
+  Indicates the input type. Each input type has a client-side component
+  implementation with custom configuration properties stored in
+  `componentSettings`.
+  """
+  type: FormFieldType
+}
+
+"""A `FormField` edge in the connection."""
+type FormFieldsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `FormField` at the end of the edge."""
+  node: FormField
+}
+
+"""Methods to use when ordering `FormField`."""
+enum FormFieldsOrderBy {
+  FORM_ID_ASC
+  FORM_ID_DESC
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+"""
+
+FormField input types. Each type will need a custom client-side component. 
+This list will expand as the application supports new types. New types can be 
+added by using the command: 
+
+`alter type form_field_type add value 'NEW_TYPE';`
+
+"""
+enum FormFieldType {
+  """Non-input type field. Used to insert headers into a form"""
+  SECTION
+
+  """HTML select field. May support multiple choices"""
+  SELECT
+
+  """HTML textarea field"""
+  TEXTAREA
+
+  """The simplest input type, a plain html `<input type="text" />`"""
+  TEXTINPUT
+}
+
+"""A connection to a list of `Form` values."""
+type FormsConnection {
+  """
+  A list of edges which contains the `Form` and cursor to aid in pagination.
+  """
+  edges: [FormsEdge!]!
+
+  """A list of `Form` objects."""
+  nodes: [Form]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `Form` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `Form` edge in the connection."""
+type FormsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `Form` at the end of the edge."""
+  node: Form
+}
+
+"""Methods to use when ordering `Form`."""
+enum FormsOrderBy {
+  ID_ASC
+  ID_DESC
+  IS_TEMPLATE_ASC
+  IS_TEMPLATE_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  SKETCH_CLASS_ID_ASC
+  SKETCH_CLASS_ID_DESC
+  SURVEY_ID_ASC
+  SURVEY_ID_DESC
+}
+
+"""Indicates which features should use the form as a template"""
+enum FormTemplateType {
+  """Template should only be listed for *SketchClasses*."""
+  SKETCHES
+
+  """Template should only be listed for *Surveys*."""
+  SURVEYS
+
+  """Template should be an option for both types."""
+  SURVEYS_AND_SKETCHES
+}
 
 type Forum implements Node {
   """Reads a single `Acl` that is related to this `Forum`."""
@@ -756,6 +2304,270 @@ enum ForumsOrderBy {
   PROJECT_ID_DESC
 }
 
+"""All geography XY types implement this interface"""
+interface GeographyGeometry {
+  """Converts the object to GeoJSON"""
+  geojson: GeoJSON
+
+  """Spatial reference identifier (SRID)"""
+  srid: Int!
+}
+
+"""All geography types implement this interface"""
+interface GeographyInterface {
+  """Converts the object to GeoJSON"""
+  geojson: GeoJSON
+
+  """Spatial reference identifier (SRID)"""
+  srid: Int!
+}
+
+type GeographyLineString implements GeographyGeometry & GeographyInterface {
+  geojson: GeoJSON
+  points: [GeographyPoint]
+  srid: Int!
+}
+
+type GeographyPoint implements GeographyGeometry & GeographyInterface {
+  geojson: GeoJSON
+  latitude: Float!
+  longitude: Float!
+  srid: Int!
+}
+
+type GeographyPolygon implements GeographyGeometry & GeographyInterface {
+  exterior: GeographyLineString
+  geojson: GeoJSON
+  interiors: [GeographyLineString]
+  srid: Int!
+}
+
+"""
+The `GeoJSON` scalar type represents GeoJSON values as specified by[RFC 7946](https://tools.ietf.org/html/rfc7946).
+"""
+scalar GeoJSON
+
+"""All geometry XY types implement this interface"""
+interface GeometryGeometry {
+  """Converts the object to GeoJSON"""
+  geojson: GeoJSON
+
+  """Spatial reference identifier (SRID)"""
+  srid: Int!
+}
+
+type GeometryGeometryCollection implements GeometryGeometry & GeometryInterface {
+  geojson: GeoJSON
+  geometries: [GeometryGeometry]
+  srid: Int!
+}
+
+type GeometryGeometryCollectionM implements GeometryGeometryM & GeometryInterface {
+  geojson: GeoJSON
+  geometries: [GeometryGeometryM]
+  srid: Int!
+}
+
+type GeometryGeometryCollectionZ implements GeometryGeometryZ & GeometryInterface {
+  geojson: GeoJSON
+  geometries: [GeometryGeometryZ]
+  srid: Int!
+}
+
+type GeometryGeometryCollectionZM implements GeometryGeometryZM & GeometryInterface {
+  geojson: GeoJSON
+  geometries: [GeometryGeometryZM]
+  srid: Int!
+}
+
+"""All geometry XYM types implement this interface"""
+interface GeometryGeometryM {
+  """Converts the object to GeoJSON"""
+  geojson: GeoJSON
+
+  """Spatial reference identifier (SRID)"""
+  srid: Int!
+}
+
+"""All geometry XYZ types implement this interface"""
+interface GeometryGeometryZ {
+  """Converts the object to GeoJSON"""
+  geojson: GeoJSON
+
+  """Spatial reference identifier (SRID)"""
+  srid: Int!
+}
+
+"""All geometry XYZM types implement this interface"""
+interface GeometryGeometryZM {
+  """Converts the object to GeoJSON"""
+  geojson: GeoJSON
+
+  """Spatial reference identifier (SRID)"""
+  srid: Int!
+}
+
+"""All geometry types implement this interface"""
+interface GeometryInterface {
+  """Converts the object to GeoJSON"""
+  geojson: GeoJSON
+
+  """Spatial reference identifier (SRID)"""
+  srid: Int!
+}
+
+type GeometryLineString implements GeometryGeometry & GeometryInterface {
+  geojson: GeoJSON
+  points: [GeometryPoint]
+  srid: Int!
+}
+
+type GeometryLineStringM implements GeometryGeometryM & GeometryInterface {
+  geojson: GeoJSON
+  points: [GeometryPointM]
+  srid: Int!
+}
+
+type GeometryLineStringZ implements GeometryGeometryZ & GeometryInterface {
+  geojson: GeoJSON
+  points: [GeometryPointZ]
+  srid: Int!
+}
+
+type GeometryLineStringZM implements GeometryGeometryZM & GeometryInterface {
+  geojson: GeoJSON
+  points: [GeometryPointZM]
+  srid: Int!
+}
+
+type GeometryMultiLineString implements GeometryGeometry & GeometryInterface {
+  geojson: GeoJSON
+  lines: [GeometryLineString]
+  srid: Int!
+}
+
+type GeometryMultiLineStringM implements GeometryGeometryM & GeometryInterface {
+  geojson: GeoJSON
+  lines: [GeometryLineStringM]
+  srid: Int!
+}
+
+type GeometryMultiLineStringZ implements GeometryGeometryZ & GeometryInterface {
+  geojson: GeoJSON
+  lines: [GeometryLineStringZ]
+  srid: Int!
+}
+
+type GeometryMultiLineStringZM implements GeometryGeometryZM & GeometryInterface {
+  geojson: GeoJSON
+  lines: [GeometryLineStringZM]
+  srid: Int!
+}
+
+type GeometryMultiPoint implements GeometryGeometry & GeometryInterface {
+  geojson: GeoJSON
+  points: [GeometryPoint]
+  srid: Int!
+}
+
+type GeometryMultiPointM implements GeometryGeometryM & GeometryInterface {
+  geojson: GeoJSON
+  points: [GeometryPointM]
+  srid: Int!
+}
+
+type GeometryMultiPointZ implements GeometryGeometryZ & GeometryInterface {
+  geojson: GeoJSON
+  points: [GeometryPointZ]
+  srid: Int!
+}
+
+type GeometryMultiPointZM implements GeometryGeometryZM & GeometryInterface {
+  geojson: GeoJSON
+  points: [GeometryPointZM]
+  srid: Int!
+}
+
+type GeometryMultiPolygon implements GeometryGeometry & GeometryInterface {
+  geojson: GeoJSON
+  polygons: [GeometryPolygon]
+  srid: Int!
+}
+
+type GeometryMultiPolygonM implements GeometryGeometryM & GeometryInterface {
+  geojson: GeoJSON
+  polygons: [GeometryPolygonM]
+  srid: Int!
+}
+
+type GeometryMultiPolygonZ implements GeometryGeometryZ & GeometryInterface {
+  geojson: GeoJSON
+  polygons: [GeometryPolygonZ]
+  srid: Int!
+}
+
+type GeometryMultiPolygonZM implements GeometryGeometryZM & GeometryInterface {
+  geojson: GeoJSON
+  polygons: [GeometryPolygonZM]
+  srid: Int!
+}
+
+type GeometryPoint implements GeometryGeometry & GeometryInterface {
+  geojson: GeoJSON
+  srid: Int!
+  x: Float!
+  y: Float!
+}
+
+type GeometryPointM implements GeometryGeometryM & GeometryInterface {
+  geojson: GeoJSON
+  srid: Int!
+  x: Float!
+  y: Float!
+}
+
+type GeometryPointZ implements GeometryGeometryZ & GeometryInterface {
+  geojson: GeoJSON
+  srid: Int!
+  x: Float!
+  y: Float!
+}
+
+type GeometryPointZM implements GeometryGeometryZM & GeometryInterface {
+  geojson: GeoJSON
+  srid: Int!
+  x: Float!
+  y: Float!
+}
+
+type GeometryPolygon implements GeometryGeometry & GeometryInterface {
+  exterior: GeometryLineString
+  geojson: GeoJSON
+  interiors: [GeometryLineString]
+  srid: Int!
+}
+
+type GeometryPolygonM implements GeometryGeometryM & GeometryInterface {
+  exterior: GeometryLineStringM
+  geojson: GeoJSON
+  interiors: [GeometryLineStringM]
+  srid: Int!
+}
+
+type GeometryPolygonZ implements GeometryGeometryZ & GeometryInterface {
+  exterior: GeometryLineStringZ
+  geojson: GeoJSON
+  interiors: [GeometryLineStringZ]
+  srid: Int!
+}
+
+type GeometryPolygonZM implements GeometryGeometryZM & GeometryInterface {
+  exterior: GeometryLineStringZM
+  geojson: GeoJSON
+  interiors: [GeometryLineStringZM]
+  srid: Int!
+}
+
 """All input for the `grantAdminAccess` mutation."""
 input GrantAdminAccessInput {
   """
@@ -781,12 +2593,20 @@ type GrantAdminAccessPayload {
   query: Query
 }
 
-"""User groups designated by the project administrators"""
+"""
+User groups designated by the project administrators. User groups can be used to
+assign access control privileges to users. 
+
+Note that only admins have access to groups, or direct knowlege of what groups a
+user belongs to. If an admin wanted to create an *Assholes* group they are 
+free to do so.
+
+"""
 type Group implements Node {
   id: Int!
   memberCount: Int
 
-  """Reads and enables pagination through a set of `User`."""
+  """Listing of all users who have been assigned to this group."""
   members(
     direction: SortByDirection
 
@@ -797,6 +2617,8 @@ type Group implements Node {
     offset: Int
     orderBy: ParticipantSortBy
   ): [User]
+
+  """Label for the group."""
   name: String
 
   """
@@ -812,6 +2634,8 @@ type Group implements Node {
 """An input for mutations affecting `Group`"""
 input GroupInput {
   id: Int
+
+  """Label for the group."""
   name: String
   projectId: Int!
 }
@@ -821,6 +2645,8 @@ Represents an update to a `Group`. Fields that are set will be updated.
 """
 input GroupPatch {
   id: Int
+
+  """Label for the group."""
   name: String
   projectId: Int
 }
@@ -834,6 +2660,330 @@ enum GroupsOrderBy {
   PRIMARY_KEY_DESC
   PROJECT_ID_ASC
   PROJECT_ID_DESC
+}
+
+"""All input for the `initializeBlankSketchClassForm` mutation."""
+input InitializeBlankSketchClassFormInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  sketchClassId: Int
+}
+
+"""The output of our `initializeBlankSketchClassForm` mutation."""
+type InitializeBlankSketchClassFormPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  form: Form
+
+  """An edge for our `Form`. May be used by Relay 1."""
+  formEdge(
+    """The method to use when ordering `Form`."""
+    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `SketchClass` that is related to this `Form`."""
+  sketchClass: SketchClass
+
+  """Reads a single `Survey` that is related to this `Form`."""
+  survey: Survey
+}
+
+"""All input for the `initializeBlankSurveyForm` mutation."""
+input InitializeBlankSurveyFormInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  surveyId: Int
+}
+
+"""The output of our `initializeBlankSurveyForm` mutation."""
+type InitializeBlankSurveyFormPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  form: Form
+
+  """An edge for our `Form`. May be used by Relay 1."""
+  formEdge(
+    """The method to use when ordering `Form`."""
+    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `SketchClass` that is related to this `Form`."""
+  sketchClass: SketchClass
+
+  """Reads a single `Survey` that is related to this `Form`."""
+  survey: Survey
+}
+
+"""All input for the `initializeSketchClassFormFromTemplate` mutation."""
+input InitializeSketchClassFormFromTemplateInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  sketchClassId: Int
+  templateId: Int
+}
+
+"""The output of our `initializeSketchClassFormFromTemplate` mutation."""
+type InitializeSketchClassFormFromTemplatePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  form: Form
+
+  """An edge for our `Form`. May be used by Relay 1."""
+  formEdge(
+    """The method to use when ordering `Form`."""
+    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `SketchClass` that is related to this `Form`."""
+  sketchClass: SketchClass
+
+  """Reads a single `Survey` that is related to this `Form`."""
+  survey: Survey
+}
+
+"""All input for the `initializeSurveyFormFromTemplate` mutation."""
+input InitializeSurveyFormFromTemplateInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  surveyId: Int
+  templateId: Int
+}
+
+"""The output of our `initializeSurveyFormFromTemplate` mutation."""
+type InitializeSurveyFormFromTemplatePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  form: Form
+
+  """An edge for our `Form`. May be used by Relay 1."""
+  formEdge(
+    """The method to use when ordering `Form`."""
+    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `SketchClass` that is related to this `Form`."""
+  sketchClass: SketchClass
+
+  """Reads a single `Survey` that is related to this `Form`."""
+  survey: Survey
+}
+
+"""
+Invite emails can be associated with either a project or survey invitation. 
+Project invite emails are sent by direct admin action, going into a QUEUED state
+and eventually sent out by a backend emailing process. Survey invites are 
+automatically created whenever a survey is published.
+
+[More details on the mailing process can be found on the
+wiki](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management).
+
+"""
+type InviteEmail implements Node {
+  createdAt: Datetime!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `ProjectInvite` that is related to this `InviteEmail`."""
+  projectInvite: ProjectInvite
+  projectInviteId: Int
+
+  """
+  Updated by the mailer processes and SES notifications.
+  
+  """
+  status: EmailStatus!
+
+  """Reads a single `SurveyInvite` that is related to this `InviteEmail`."""
+  surveyInvite: SurveyInvite
+  surveyInviteId: Int
+
+  """
+  Emails contain a link with an embedded JSON Web Token that is used to authorize 
+  access. These tokens have an expiration that is both embedded in the token and 
+  tracked in the database. Each email has its own token and expiration.
+  
+  """
+  tokenExpiresAt: Datetime
+  updatedAt: Datetime
+}
+
+"""
+A condition to be used against `InviteEmail` object types. All fields are tested
+for equality and combined with a logical ‘and.’
+"""
+input InviteEmailCondition {
+  """Checks for equality with the object’s `projectInviteId` field."""
+  projectInviteId: Int
+
+  """Checks for equality with the object’s `status` field."""
+  status: EmailStatus
+
+  """Checks for equality with the object’s `surveyInviteId` field."""
+  surveyInviteId: Int
+}
+
+"""Methods to use when ordering `InviteEmail`."""
+enum InviteEmailsOrderBy {
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_INVITE_ID_ASC
+  PROJECT_INVITE_ID_DESC
+  STATUS_ASC
+  STATUS_DESC
+  SURVEY_INVITE_ID_ASC
+  SURVEY_INVITE_ID_DESC
+}
+
+enum InviteOrderBy {
+  EMAIL
+  NAME
+}
+
+type InviteStat {
+  count: Int
+  status: InviteStatus
+}
+
+"""
+Invite status is derived from feedback notifications coming from the AWS SES
+email service and token expiration date. See the inviteEmails relation for more details.
+"""
+enum InviteStatus {
+  """
+  Emails may be bounced due to a full inbox, misconfigured mail server, or other
+  reasons. See [AWS SES documentation](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/monitor-using-event-publishing.html#event-publishing-terminology).
+  """
+  BOUNCED
+
+  """
+  User has reported SeaSketch as sending Spam in this or another project.
+  SeaSketch will no longer send emails to this user in any project.
+  """
+  COMPLAINT
+
+  """
+  
+  #### Project Invites
+  User has accepted the invite.
+  
+  #### Survey Invites
+  User has responded to the survey.
+  """
+  CONFIRMED
+
+  """Delivered to the user's mail server"""
+  DELIVERED
+
+  """
+  SeaSketch application error when sending invite emails. Refer to email status
+  """
+  ERROR
+
+  """
+  
+  #### Project Invites    
+  Admin has sent the invite, but the mail delivery subsystem has not yet sent the invite.
+  
+  #### Survey Invites
+  Invite has been created but email has not yet been sent. Emails will be sent
+  automatically by a periodic backend process (approx every 20 seconds).
+  
+  """
+  QUEUED
+
+  """
+  Invite email has been sent but not yet delivered to the user's mail server
+  """
+  SENT
+
+  """
+  Project invites have this status when a survey invite is queued for sending in
+  this project. Users can be invited to a survey + have an un-sent project
+  invite that they can confirm using `confirmProjectInviteWithSurveyToken()`.
+  This way users do not need to simultaneously be sent both a project and survey invite.
+  """
+  SURVEY_INVITE_QUEUED
+
+  """
+  Survey invite for this project and email has already been sent. See InviteStatus.SURVEY_INVITE_QUEUED for more details.
+  """
+  SURVEY_INVITE_SENT
+
+  """
+  
+  For **project invites**, Invite JSON Web Tokens are set to expire in 14
+  (admins) or 60 days. **Survey invites** expire after 60 days for invite_only
+  surveys, and after 2 years for public surveys. Invites should be resent if
+  still necessary
+  """
+  TOKEN_EXPIRED
+
+  """Unused enum value."""
+  UNCONFIRMED
+
+  """
+  **Project Invites only**. Invites may be created but not sent immediately.
+  This way admins can collaboratively update a project invite list before
+  mass-sending invites when a project is first published.
+  """
+  UNSENT
+
+  """
+  
+  The user has unsubscribed from all emails originating from SeaSketch.
+  
+  If this happens SeaSketch will not be able to send any invitations to the user.
+  
+  """
+  UNSUBSCRIBED
 }
 
 """All input for the `joinProject` mutation."""
@@ -860,6 +3010,11 @@ type JoinProjectPayload {
   query: Query
 }
 
+"""
+A JavaScript object encoded in the JSON format as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
 """All input for the `leaveProject` mutation."""
 input LeaveProjectInput {
   """
@@ -884,6 +3039,40 @@ type LeaveProjectPayload {
   query: Query
 }
 
+"""All input for the `makeResponseDraft` mutation."""
+input MakeResponseDraftInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  responseId: Int
+}
+
+"""The output of our `makeResponseDraft` mutation."""
+type MakeResponseDraftPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyResponse`."""
+  survey: Survey
+  surveyResponse: SurveyResponse
+
+  """An edge for our `SurveyResponse`. May be used by Relay 1."""
+  surveyResponseEdge(
+    """The method to use when ordering `SurveyResponse`."""
+    orderBy: [SurveyResponsesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyResponsesEdge
+}
+
 """
 The root mutation type which contains root level fields which mutate data.
 """
@@ -905,6 +3094,11 @@ type Mutation {
     """
     input: AddUserToGroupInput!
   ): AddUserToGroupPayload
+
+  """
+  Add a SketchClass to the list of valid children for a Collection-type SketchClass.
+  
+  """
   addValidChildSketchClass(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -921,6 +3115,92 @@ type Mutation {
     """
     input: ApproveParticipantInput!
   ): ApproveParticipantPayload
+
+  """
+  Confirm that a new user has seen any onboarding materials. Updates User.onboarded date.
+  
+  """
+  confirmOnboarded(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ConfirmOnboardedInput!
+  ): ConfirmOnboardedPayload
+
+  """
+  Accept a project invite using a token (distributed via email). When
+  confirming a token, the current session will be assigned any group
+  membership or admin privileges assigned to the invite. The act of
+  accepting a token that was sent via email will also verify the user's
+  email if it wasn't already.
+  
+  More details on how to handle invites can be found
+  [on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites)
+  """
+  confirmProjectInvite(
+    """JWT string"""
+    token: String!
+  ): ProjectInviteTokenClaims
+
+  """
+  Project invites can be paired with survey invites so that users can be sent an
+  email inviting them to a survey, then use that survey invite to confirm a 
+  project invitation. This way there are no duplicative emails sent.
+  
+  Clients must set x-ss-survey-invite-token header before calling this mutation.
+  
+  """
+  confirmProjectInviteWithSurveyToken(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ConfirmProjectInviteWithSurveyTokenInput!
+  ): ConfirmProjectInviteWithSurveyTokenPayload
+
+  """
+  Users can confirm project invites without clicking thru an email if they are 
+  registered for SeaSketch and their verified email matches that of a project 
+  invite. Outstanding (or confirmed) invites can be accessed via the 
+  `currentProject.invite` query.
+  
+  More details on how to handle invites can be found [on the
+  wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
+  
+  """
+  confirmProjectInviteWithVerifiedEmail(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ConfirmProjectInviteWithVerifiedEmailInput!
+  ): ConfirmProjectInviteWithVerifiedEmailPayload
+
+  """Creates a single `FormConditionalRenderingRule`."""
+  createFormConditionalRenderingRule(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateFormConditionalRenderingRuleInput!
+  ): CreateFormConditionalRenderingRulePayload
+
+  """Creates a single `FormField`."""
+  createFormField(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateFormFieldInput!
+  ): CreateFormFieldPayload
+  createFormTemplateFromSketchClass(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateFormTemplateFromSketchClassInput!
+  ): CreateFormTemplateFromSketchClassPayload
+  createFormTemplateFromSurvey(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateFormTemplateFromSurveyInput!
+  ): CreateFormTemplateFromSurveyPayload
 
   """Creates a single `Forum`."""
   createForum(
@@ -950,6 +3230,33 @@ type Mutation {
     input: CreateProjectInput!
   ): CreateProjectPayload
 
+  """Creates a single `ProjectInviteGroup`."""
+  createProjectInviteGroup(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateProjectInviteGroupInput!
+  ): CreateProjectInviteGroupPayload
+
+  """
+  Create a set of project invites from a set of emails and optional names. Clients
+  should implement this feature as a simple textarea where admins can copy and 
+  paste a set of names and emails from a spreadsheet.#
+  
+  Invites can be assigned to a list of groups and optional admin permission. The
+  function can either send these invite emails immediately or they can be manually
+  sent later.
+  
+  More details on project invite management [can be found in the wiki](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management).
+  
+  """
+  createProjectInvites(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateProjectInvitesInput!
+  ): CreateProjectInvitesPayload
+
   """Creates a single `Sketch`."""
   createSketch(
     """
@@ -973,6 +3280,102 @@ type Mutation {
     """
     input: CreateSketchFolderInput!
   ): CreateSketchFolderPayload
+
+  """Creates a single `Survey`."""
+  createSurvey(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSurveyInput!
+  ): CreateSurveyPayload
+
+  """Creates a single `SurveyInvitedGroup`."""
+  createSurveyInvitedGroup(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSurveyInvitedGroupInput!
+  ): CreateSurveyInvitedGroupPayload
+  createSurveyInvites(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSurveyInvitesInput!
+  ): CreateSurveyInvitesPayload
+
+  """Creates a single `SurveyResponse`."""
+  createSurveyResponse(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSurveyResponseInput!
+  ): CreateSurveyResponsePayload
+
+  """Deletes a single `Form` using a unique key."""
+  deleteForm(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormInput!
+  ): DeleteFormPayload
+
+  """Deletes a single `Form` using its globally unique id."""
+  deleteFormByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormByNodeIdInput!
+  ): DeleteFormPayload
+
+  """Deletes a single `Form` using a unique key."""
+  deleteFormBySketchClassId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormBySketchClassIdInput!
+  ): DeleteFormPayload
+
+  """Deletes a single `Form` using a unique key."""
+  deleteFormBySurveyId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormBySurveyIdInput!
+  ): DeleteFormPayload
+
+  """Deletes a single `FormConditionalRenderingRule` using a unique key."""
+  deleteFormConditionalRenderingRule(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormConditionalRenderingRuleInput!
+  ): DeleteFormConditionalRenderingRulePayload
+
+  """
+  Deletes a single `FormConditionalRenderingRule` using its globally unique id.
+  """
+  deleteFormConditionalRenderingRuleByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormConditionalRenderingRuleByNodeIdInput!
+  ): DeleteFormConditionalRenderingRulePayload
+
+  """Deletes a single `FormField` using a unique key."""
+  deleteFormField(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormFieldInput!
+  ): DeleteFormFieldPayload
+
+  """Deletes a single `FormField` using its globally unique id."""
+  deleteFormFieldByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormFieldByNodeIdInput!
+  ): DeleteFormFieldPayload
 
   """Deletes a single `Forum` using a unique key."""
   deleteForum(
@@ -1025,6 +3428,38 @@ type Mutation {
     input: DeleteProjectInput!
   ): DeleteProjectPayload
 
+  """Deletes a single `ProjectInvite` using a unique key."""
+  deleteProjectInvite(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteProjectInviteInput!
+  ): DeleteProjectInvitePayload
+
+  """Deletes a single `ProjectInvite` using a unique key."""
+  deleteProjectInviteByEmailAndProjectId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteProjectInviteByEmailAndProjectIdInput!
+  ): DeleteProjectInvitePayload
+
+  """Deletes a single `ProjectInvite` using its globally unique id."""
+  deleteProjectInviteByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteProjectInviteByNodeIdInput!
+  ): DeleteProjectInvitePayload
+
+  """Deletes a single `ProjectInviteGroup` using a unique key."""
+  deleteProjectInviteGroupByInviteIdAndGroupId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteProjectInviteGroupByInviteIdAndGroupIdInput!
+  ): DeleteProjectInviteGroupPayload
+
   """Deletes a single `Sketch` using a unique key."""
   deleteSketch(
     """
@@ -1073,6 +3508,78 @@ type Mutation {
     input: DeleteSketchFolderByNodeIdInput!
   ): DeleteSketchFolderPayload
 
+  """Deletes a single `Survey` using a unique key."""
+  deleteSurvey(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSurveyInput!
+  ): DeleteSurveyPayload
+
+  """Deletes a single `Survey` using its globally unique id."""
+  deleteSurveyByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSurveyByNodeIdInput!
+  ): DeleteSurveyPayload
+
+  """Deletes a single `SurveyInvite` using a unique key."""
+  deleteSurveyInvite(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSurveyInviteInput!
+  ): DeleteSurveyInvitePayload
+
+  """Deletes a single `SurveyInvite` using a unique key."""
+  deleteSurveyInviteByEmail(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSurveyInviteByEmailInput!
+  ): DeleteSurveyInvitePayload
+
+  """Deletes a single `SurveyInvite` using a unique key."""
+  deleteSurveyInviteByEmailAndSurveyId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSurveyInviteByEmailAndSurveyIdInput!
+  ): DeleteSurveyInvitePayload
+
+  """Deletes a single `SurveyInvite` using its globally unique id."""
+  deleteSurveyInviteByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSurveyInviteByNodeIdInput!
+  ): DeleteSurveyInvitePayload
+
+  """Deletes a single `SurveyInvitedGroup` using a unique key."""
+  deleteSurveyInvitedGroupBySurveyIdAndGroupId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput!
+  ): DeleteSurveyInvitedGroupPayload
+
+  """Deletes a single `SurveyResponse` using a unique key."""
+  deleteSurveyResponse(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSurveyResponseInput!
+  ): DeleteSurveyResponsePayload
+
+  """Deletes a single `SurveyResponse` using its globally unique id."""
+  deleteSurveyResponseByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSurveyResponseByNodeIdInput!
+  ): DeleteSurveyResponsePayload
+
   """
   Give a user admin access to a project. User must have already joined the project and shared their user profile.
   """
@@ -1084,9 +3591,64 @@ type Mutation {
   ): GrantAdminAccessPayload
 
   """
-  Adds current user to the list of participants for a project, sharing their
-  profile with administrators. Their profile will also be shared in public or
-  group discussion forum posts.
+  When creating a new SketchClass, admins can either choose from a set of 
+  templates or start with a blank form. This mutation will initialize with a blank
+  form with no fields configured.
+  
+  """
+  initializeBlankSketchClassForm(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: InitializeBlankSketchClassFormInput!
+  ): InitializeBlankSketchClassFormPayload
+
+  """
+  When creating a new Survey, admins can either choose from a set of 
+  templates or start with a blank form. This mutation will initialize with a blank
+  form with no fields configured.
+  
+  """
+  initializeBlankSurveyForm(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: InitializeBlankSurveyFormInput!
+  ): InitializeBlankSurveyFormPayload
+
+  """
+  Admins can choose to start a new SketchClass with a form derived from the list
+  of Form templates.
+  
+  """
+  initializeSketchClassFormFromTemplate(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: InitializeSketchClassFormFromTemplateInput!
+  ): InitializeSketchClassFormFromTemplatePayload
+
+  """
+  Admins can choose to start a new Survey with a form derived from the list
+  of Form templates.
+  
+  """
+  initializeSurveyFormFromTemplate(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: InitializeSurveyFormFromTemplateInput!
+  ): InitializeSurveyFormFromTemplatePayload
+
+  """
+  Adds current user to the list of participants for a project, sharing their 
+  profile with administrators in user listings. Their profile will also be shared 
+  in public or group discussion forum posts.
+  
+  Clients will need to determine when/how to show prompts to join a project based
+  on activity that minimizes annoyance when browsing among projects but also makes
+  sure users are visible to admins so that they may gain user group permissions.
+  
   """
   joinProject(
     """
@@ -1095,7 +3657,14 @@ type Mutation {
     input: JoinProjectInput!
   ): JoinProjectPayload
 
-  """Approve a user for use of an invite_only project."""
+  """
+  Turns off profile sharing in this project. User privacy choices should be 
+  respected, and profile information should disappear from the admin users lists,
+  forum posts, and any other shared content. In the forum a balance will need to 
+  be made to hide their posts entirely since anonymous content could be malicious, 
+  and maintain a historical record of discussions.
+  
+  """
   leaveProject(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -1104,14 +3673,18 @@ type Mutation {
   ): LeaveProjectPayload
 
   """
-  Mark that the user represented in the current session has been shown post-user-registration content.
+  Project administrators cannot edit survey responses and survey respondants 
+  cannot edit responses after they have been submitted. Admins can use this 
+  mutation to put a response into draft mode so that they can be updated and 
+  resubmitted by the respondant.
+  
   """
-  onboarded(
+  makeResponseDraft(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: OnboardedInput!
-  ): OnboardedPayload
+    input: MakeResponseDraftInput!
+  ): MakeResponseDraftPayload
 
   """
   Remove a group from a given access control list. Must be an administrator.
@@ -1132,12 +3705,73 @@ type Mutation {
     """
     input: RemoveUserFromGroupInput!
   ): RemoveUserFromGroupPayload
+
+  """
+  Remove a SketchClass from the list of valid children for a Collection.
+  
+  """
   removeValidChildSketchClass(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
     input: RemoveValidChildSketchClassInput!
   ): RemoveValidChildSketchClassPayload
+
+  """
+  Remove participant admin privileges.
+  
+  """
+  revokeAdminAccess(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: RevokeAdminAccessInput!
+  ): RevokeAdminAccessPayload
+
+  """
+  Send all UNSENT invites in the current project.
+  
+  """
+  sendAllProjectInvites(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SendAllProjectInvitesInput!
+  ): SendAllProjectInvitesPayload
+
+  """
+  Send a list of project invites identified by their id.
+  
+  """
+  sendProjectInvites(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SendProjectInvitesInput!
+  ): SendProjectInvitesPayload
+
+  """
+  Send a reminder email for a survey invite that has already been sent.
+  Returns the same inviteId if successful.
+  """
+  sendSurveyInviteReminder(
+    """ID of survey invite"""
+    inviteId: Int!
+  ): Int
+
+  """
+  Sets the positions of all fields in a form at once. Any missing field ids from
+  the input will be positioned at the end of the form.
+  
+  Use this instead of trying to manage the position of form fields individually.
+  
+  """
+  setFormFieldOrder(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SetFormFieldOrderInput!
+  ): SetFormFieldOrderPayload
 
   """Updates a single `Acl` using a unique key and a patch."""
   updateAcl(
@@ -1162,6 +3796,60 @@ type Mutation {
     """
     input: UpdateAclByNodeIdInput!
   ): UpdateAclPayload
+
+  """Updates a single `Acl` using a unique key and a patch."""
+  updateAclBySketchClassId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateAclBySketchClassIdInput!
+  ): UpdateAclPayload
+
+  """
+  Updates a single `EmailNotificationPreference` using a unique key and a patch.
+  """
+  updateEmailNotificationPreferenceByUserId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateEmailNotificationPreferenceByUserIdInput!
+  ): UpdateEmailNotificationPreferencePayload
+
+  """
+  Updates a single `FormConditionalRenderingRule` using a unique key and a patch.
+  """
+  updateFormConditionalRenderingRule(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormConditionalRenderingRuleInput!
+  ): UpdateFormConditionalRenderingRulePayload
+
+  """
+  Updates a single `FormConditionalRenderingRule` using its globally unique id and a patch.
+  """
+  updateFormConditionalRenderingRuleByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormConditionalRenderingRuleByNodeIdInput!
+  ): UpdateFormConditionalRenderingRulePayload
+
+  """Updates a single `FormField` using a unique key and a patch."""
+  updateFormField(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormFieldInput!
+  ): UpdateFormFieldPayload
+
+  """Updates a single `FormField` using its globally unique id and a patch."""
+  updateFormFieldByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormFieldByNodeIdInput!
+  ): UpdateFormFieldPayload
 
   """Updates a single `Forum` using a unique key and a patch."""
   updateForum(
@@ -1235,6 +3923,40 @@ type Mutation {
     input: UpdateProjectBySlugInput!
   ): UpdateProjectPayload
 
+  """Updates a single `ProjectInvite` using a unique key and a patch."""
+  updateProjectInvite(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateProjectInviteInput!
+  ): UpdateProjectInvitePayload
+
+  """Updates a single `ProjectInvite` using a unique key and a patch."""
+  updateProjectInviteByEmailAndProjectId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateProjectInviteByEmailAndProjectIdInput!
+  ): UpdateProjectInvitePayload
+
+  """
+  Updates a single `ProjectInvite` using its globally unique id and a patch.
+  """
+  updateProjectInviteByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateProjectInviteByNodeIdInput!
+  ): UpdateProjectInvitePayload
+
+  """Updates a single `ProjectInviteGroup` using a unique key and a patch."""
+  updateProjectInviteGroupByInviteIdAndGroupId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateProjectInviteGroupByInviteIdAndGroupIdInput!
+  ): UpdateProjectInviteGroupPayload
+
   """Updates a single `Sketch` using a unique key and a patch."""
   updateSketch(
     """
@@ -1286,6 +4008,91 @@ type Mutation {
     """
     input: UpdateSketchFolderByNodeIdInput!
   ): UpdateSketchFolderPayload
+
+  """Updates a single `Survey` using a unique key and a patch."""
+  updateSurvey(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSurveyInput!
+  ): UpdateSurveyPayload
+
+  """Updates a single `Survey` using its globally unique id and a patch."""
+  updateSurveyByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSurveyByNodeIdInput!
+  ): UpdateSurveyPayload
+
+  """Updates a single `SurveyInvite` using a unique key and a patch."""
+  updateSurveyInvite(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSurveyInviteInput!
+  ): UpdateSurveyInvitePayload
+
+  """Updates a single `SurveyInvite` using a unique key and a patch."""
+  updateSurveyInviteByEmail(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSurveyInviteByEmailInput!
+  ): UpdateSurveyInvitePayload
+
+  """Updates a single `SurveyInvite` using a unique key and a patch."""
+  updateSurveyInviteByEmailAndSurveyId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSurveyInviteByEmailAndSurveyIdInput!
+  ): UpdateSurveyInvitePayload
+
+  """
+  Updates a single `SurveyInvite` using its globally unique id and a patch.
+  """
+  updateSurveyInviteByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSurveyInviteByNodeIdInput!
+  ): UpdateSurveyInvitePayload
+
+  """
+  Updates the list of groups that should have access to the given survey. Users
+  in any added groups will get an invite, and the system will create an invite for
+  any users that are added to the group. When removing a group, the system will
+  delete invites for any user that is no longer in an invited group. *Clients
+  should warn admins of this behavior when removing groups for an active survey*.
+  
+  The list of invited groups can be accessed via `Survey.invitedGroups`.
+  
+  """
+  updateSurveyInvitedGroups(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSurveyInvitedGroupsInput!
+  ): UpdateSurveyInvitedGroupsPayload
+
+  """Updates a single `SurveyResponse` using a unique key and a patch."""
+  updateSurveyResponse(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSurveyResponseInput!
+  ): UpdateSurveyResponsePayload
+
+  """
+  Updates a single `SurveyResponse` using its globally unique id and a patch.
+  """
+  updateSurveyResponseByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSurveyResponseByNodeIdInput!
+  ): UpdateSurveyResponsePayload
 }
 
 """An object with a globally unique `ID`."""
@@ -1294,29 +4101,6 @@ interface Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
-}
-
-"""All input for the `onboarded` mutation."""
-input OnboardedInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-}
-
-"""The output of our `onboarded` mutation."""
-type OnboardedPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
 }
 
 """Information about pagination in a connection."""
@@ -1340,14 +4124,40 @@ enum ParticipantSortBy {
 }
 
 enum ParticipationStatus {
+  """
+  User has not joined or participated in the project before. This status would
+  only be accessible to a logged in user themselves, never in the admin listing of users.
+  """
   NONE
-  PARTICIPANT
+
+  """
+  While the user has joined the project, they haven't shared (or later
+  un-shared) their profile. Admins will not be able to see any info about them
+  so they cannot be added to groups. Users cannot use any of the discussion or
+  sharing features without publishing their profile.
+  """
+  PARTICIPANT_HIDDEN_PROFILE
+
+  """
+  With a shared profile, this user can now take actions like participating in discussion forums.
+  """
+  PARTICIPANT_SHARED_PROFILE
+
+  """
+  For invite-only projects, this user has requested access to the project and needs approval from an admin.
+  """
   PENDING_APPROVAL
 }
 
 """
-Personal information that users have contributed. Note that access to PII must
-be handle carefully to respect sharing preferences
+Personal information that users have contributed. This information is only 
+accessible directly to admins on projects where the user has chosen to share the
+information (via the `joinProject()` mutation).
+
+Regular SeaSketch users can access user profiles thru accessor fields on shared
+content like forum posts if they have been shared, but regular users have no 
+means of listing out all profiles in bulk.
+
 """
 type Profile {
   affiliations: String
@@ -1391,11 +4201,35 @@ enum ProfilesOrderBy {
   USER_ID_DESC
 }
 
+"""
+SeaSketch Project type. This root type contains most of the fields and queries
+needed to drive the application.
+
+"""
 type Project implements Node {
+  """
+  Admins can control whether a project is public, invite-only, or admins-only.
+  """
   accessControl: ProjectAccessControlSetting
+  adminCount: Int
+
+  """Listing of all users who have admin access."""
+  admins(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [User]
+
+  """Should be a short length in order to fit in the project header."""
   description: String
 
-  """Reads and enables pagination through a set of `Forum`."""
+  """
+  
+  List of all discussion forums the current user has access to.
+      
+  """
   forumsConnection(
     """Read all values in the set after (below) this cursor."""
     after: Cursor
@@ -1424,7 +4258,13 @@ type Project implements Node {
     orderBy: [ForumsOrderBy!] = [PRIMARY_KEY_ASC]
   ): ForumsConnection!
 
-  """Reads and enables pagination through a set of `Group`."""
+  """
+  
+  Listing of current user groups.
+  
+  Group membership can be updated using the `addUserToGroup`/`removeUserFromGroup` mutations
+      
+  """
   groups(
     """Only read the first `n` values of the set."""
     first: Int
@@ -1437,8 +4277,65 @@ type Project implements Node {
   ): [Group!]!
   id: Int!
 
-  """Featured projects may be given prominent placement on the homepage."""
+  """
+  Returns the project invitation for the current user session, if any. Will not
+  appear until the invite has been sent. The system determines the relevant
+  invite using the `canonical_email` claim in the user access token.
+  
+  If the invite status is unconfirmed the client should accept it using the
+  `confirmProjectInviteWithVerifiedEmail()` mutation. Details on how to work
+  with user ingress and project invites [can be found on the
+  wiki](https://github.com/seasketch/next/wiki/User-Ingress).
+  
+  """
+  invite: ProjectInvite
+
+  """
+  Breakdown of number of invites per status. Used to display counts in overview
+  listing of users, groups, and invites in the user administration dashboard.
+  
+  """
+  inviteCounts(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [InviteStat]
+
+  """List project invites by status"""
+  invitesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+    direction: SortByDirection
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+    orderBy: InviteOrderBy
+    statuses: [InviteStatus]
+  ): ProjectInvitesConnection!
+
+  """
+  Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers.
+  """
   isFeatured: Boolean
+
+  """
+  Project admins can decide whether their project will be displayed on the
+  public project listing via Query.projectsConnection.
+  """
   isListed: Boolean
 
   """
@@ -1447,12 +4344,13 @@ type Project implements Node {
   logoLink: String
 
   """
-  URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels
+  URL referencing an image that will be used to represent the project. Will be
+  displayed at 48x48 pixels and must be a public url.
   """
   logoUrl: String
 
   """
-  List of all folders created by this user
+  List of all folders created by this user.
   
   """
   myFolders(
@@ -1487,7 +4385,12 @@ type Project implements Node {
   participantCount: Int
 
   """
-  All users who have opted into participating in the project, sharing their profile with project administrators.
+  All users who have opted into participating in the project, sharing 
+  their profile with project administrators.
+  
+  If the project is invite-only, users who have not been approved will not appear
+  in this list. Those users can be accessed via `unapprovedParticipants()`
+  
   """
   participants(
     direction: SortByDirection
@@ -1500,7 +4403,48 @@ type Project implements Node {
     orderBy: ParticipantSortBy
   ): [User]
 
-  """Reads and enables pagination through a set of `SketchClass`."""
+  """
+  Indicates whether current session should have special access or group
+  privileges. These grants will not be active if the user does not have a
+  verified email address.
+  
+  Clients should check for situations where a user access token has a false
+  `email_verified` cliam paired with privileged access. If that is the case they
+  should prompt users to confirm their email address.
+  
+  """
+  sessionHasPrivilegedAccess: Boolean
+
+  """
+  Returns true if the user has admin privileges on this project. Will return
+  true even if the session email is not verified, but permissions will not work until it is.
+  """
+  sessionIsAdmin: Boolean
+
+  """
+  Invites (and related tokens) for surveys which this user has not yet responded
+  to. Details on how to handle survey invites [can be found on the
+  wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites).
+  
+  """
+  sessionOutstandingSurveyInvites(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [SurveyTokenInfo]
+
+  """Participation status for the currently logged-in session"""
+  sessionParticipationStatus: ParticipationStatus
+
+  """
+  
+  List of all the SketchClasses that can be used in digitizing spatial data. 
+  Accessible to all users, though access control settings may limit which users
+  can access some SketchClasses.
+      
+  """
   sketchClasses(
     """
     A condition to be used in determining which values should be returned by the collection.
@@ -1517,14 +4461,73 @@ type Project implements Node {
     orderBy: [SketchClassesOrderBy!]
   ): [SketchClass!]!
 
-  """Will resolve to https://seasketch.org/{slug}/ and cannot be changed"""
+  """
+  Short identifier for the project used in the url. This property cannot be changed after project creation.
+  """
   slug: String!
+
+  """Listing of all Surveys accessible to the current user."""
+  surveys(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SurveyCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `Survey`."""
+    orderBy: [SurveysOrderBy!]
+  ): [Survey!]!
+
+  """
+  Number of users who have outstanding access requests. Only relevant for invite-only projects.
+  
+  """
+  unapprovedParticipantCount: Int
+
+  """
+  For invite-only projects. List all pending participation requests.
+  
+  Users can be approved using the `approveParticipant()` mutation.
+  
+  """
+  unapprovedParticipants(
+    direction: SortByDirection
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    orderBy: ParticipantSortBy
+  ): [User]
+
+  """Project url will resolve to `https://seasketch.org/{slug}/`"""
   url: String
 }
 
 enum ProjectAccessControlSetting {
+  """Only project administrators will be able to access the project."""
   ADMINS_ONLY
+
+  """
+  
+  Only users who have been invited to join the project can participate. Admins
+  can send email invitations with a special link to signup.
+  
+  Other users may request access, in which case admins can approve those access requests if appropriate.
+      
+  """
   INVITE_ONLY
+
+  """
+  Anyone can join and use a public project, though access to particular
+  datasets, sketch classes, and forums may be restricted via access control lists.
+  """
   PUBLIC
 }
 
@@ -1546,14 +4549,235 @@ input ProjectCondition {
 }
 
 """
+Admins can invite users to their project, adding them to user groups and 
+distributing admin privileges as needed. Invitations can be immediately sent via
+email or they can be sent out later in batches. 
+
+Use the `createProjectInvites()`
+mutation to create one or more invitations and then use graphile generated 
+mutations to update and delete them.
+
+Details on [handling user ingress with invitation
+tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management)
+can be found on the wiki.
+
+"""
+type ProjectInvite implements Node {
+  createdAt: Datetime!
+
+  """Specified by admin when invite was created."""
+  email: Email!
+
+  """Specified by admin when invite was created."""
+  fullname: String
+
+  """
+  
+  Groups to be assigned to the user once the invite is confirmed. Existing
+  invite group membership can be updated using the crud operations on
+  ProjectInviteGroup types.
+      
+  """
+  groups(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Group]
+  id: Int!
+
+  """Listing of all emails related to this invite."""
+  inviteEmails(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: InviteEmailCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `InviteEmail`."""
+    orderBy: [InviteEmailsOrderBy!]
+  ): [InviteEmail!]!
+
+  """
+  User will be made an admin of the project if true. They will not be given special access until their email is verified.
+  """
+  makeAdmin: Boolean!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  projectId: Int!
+
+  """
+  Status derived from the state of invite emails as well as token expiration
+  """
+  status: InviteStatus
+
+  """Is set upon invite acceptance."""
+  userId: Int
+
+  """Project invite has already been accepted."""
+  wasUsed: Boolean!
+}
+
+type ProjectInviteGroup {
+  groupId: Int!
+  inviteId: Int!
+}
+
+"""
+A condition to be used against `ProjectInviteGroup` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input ProjectInviteGroupCondition {
+  """Checks for equality with the object’s `groupId` field."""
+  groupId: Int
+
+  """Checks for equality with the object’s `inviteId` field."""
+  inviteId: Int
+}
+
+"""An input for mutations affecting `ProjectInviteGroup`"""
+input ProjectInviteGroupInput {
+  groupId: Int!
+  inviteId: Int!
+}
+
+"""
+Represents an update to a `ProjectInviteGroup`. Fields that are set will be updated.
+"""
+input ProjectInviteGroupPatch {
+  groupId: Int
+  inviteId: Int
+}
+
+"""A connection to a list of `ProjectInviteGroup` values."""
+type ProjectInviteGroupsConnection {
+  """
+  A list of edges which contains the `ProjectInviteGroup` and cursor to aid in pagination.
+  """
+  edges: [ProjectInviteGroupsEdge!]!
+
+  """A list of `ProjectInviteGroup` objects."""
+  nodes: [ProjectInviteGroup]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `ProjectInviteGroup` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `ProjectInviteGroup` edge in the connection."""
+type ProjectInviteGroupsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `ProjectInviteGroup` at the end of the edge."""
+  node: ProjectInviteGroup
+}
+
+"""Methods to use when ordering `ProjectInviteGroup`."""
+enum ProjectInviteGroupsOrderBy {
+  GROUP_ID_ASC
+  GROUP_ID_DESC
+  INVITE_ID_ASC
+  INVITE_ID_DESC
+  NATURAL
+}
+
+"""An input for mutations affecting `ProjectInviteOption`"""
+input ProjectInviteOptionInput {
+  email: Email
+  fullname: String
+}
+
+"""
+Represents an update to a `ProjectInvite`. Fields that are set will be updated.
+"""
+input ProjectInvitePatch {
+  """Specified by admin when invite was created."""
+  email: Email
+
+  """Specified by admin when invite was created."""
+  fullname: String
+
+  """
+  User will be made an admin of the project if true. They will not be given special access until their email is verified.
+  """
+  makeAdmin: Boolean
+}
+
+"""A connection to a list of `ProjectInvite` values."""
+type ProjectInvitesConnection {
+  """
+  A list of edges which contains the `ProjectInvite` and cursor to aid in pagination.
+  """
+  edges: [ProjectInvitesEdge!]!
+
+  """A list of `ProjectInvite` objects."""
+  nodes: [ProjectInvite]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `ProjectInvite` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `ProjectInvite` edge in the connection."""
+type ProjectInvitesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `ProjectInvite` at the end of the edge."""
+  node: ProjectInvite
+}
+
+type ProjectInviteTokenClaims {
+  admin: Boolean!
+  email: String!
+  fullname: String
+  inviteId: Int!
+  projectId: Int!
+  wasUsed: Boolean!
+}
+
+type ProjectInviteTokenVerificationResults {
+  claims: ProjectInviteTokenClaims
+  error: String
+}
+
+"""
 Represents an update to a `Project`. Fields that are set will be updated.
 """
 input ProjectPatch {
+  """
+  Admins can control whether a project is public, invite-only, or admins-only.
+  """
   accessControl: ProjectAccessControlSetting
+
+  """Should be a short length in order to fit in the project header."""
   description: String
 
-  """Featured projects may be given prominent placement on the homepage."""
+  """
+  Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers.
+  """
   isFeatured: Boolean
+
+  """
+  Project admins can decide whether their project will be displayed on the
+  public project listing via Query.projectsConnection.
+  """
   isListed: Boolean
 
   """
@@ -1562,7 +4786,8 @@ input ProjectPatch {
   logoLink: String
 
   """
-  URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels
+  URL referencing an image that will be used to represent the project. Will be
+  displayed at 48x48 pixels and must be a public url.
   """
   logoUrl: String
   name: String
@@ -1609,7 +4834,19 @@ enum ProjectsOrderBy {
   SLUG_DESC
 }
 
-"""The root query type which gives access points into the data universe."""
+"""
+
+Most relevant root-level queries are listed first, which concern getting 
+the currently logged-in user (`me`) and project (`currentProject`). 
+There are also cross-project resources such as form templates and of 
+course the project listing connection. Most queries when working from a project
+should be performed using fields on the `Project` type.
+
+Postgraphile also automatically generates a variety of accessor queries 
+for each database table. These are unlikely to be needed often but may possibly 
+be utilized by sophisticated GraphQL clients in the future to update caches.
+    
+"""
 type Query implements Node {
   acl(id: Int!): Acl
   aclByForumId(forumId: Int!): Acl
@@ -1619,19 +4856,20 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Acl`."""
     nodeId: ID!
   ): Acl
-  canDigitize(scid: Int): Boolean
-  createBbox(geom: String): [Float]
+  aclBySketchClassId(sketchClassId: Int!): Acl
+
+  """
+  The current SeaSketch Project, which is determined by the `referer` or
+  `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
+  
+  """
   currentProject: Project
-  forum(id: Int!): Forum
+  emailNotificationPreferenceByUserId(userId: Int!): EmailNotificationPreference
 
-  """Reads a single `Forum` using its globally unique `ID`."""
-  forumByNodeId(
-    """The globally unique `ID` to be used in selecting a single `Forum`."""
-    nodeId: ID!
-  ): Forum
-
-  """Reads and enables pagination through a set of `Forum`."""
-  forumsConnection(
+  """
+  Reads and enables pagination through a set of `EmailNotificationPreference`.
+  """
+  emailNotificationPreferencesConnection(
     """Read all values in the set after (below) this cursor."""
     after: Cursor
 
@@ -1641,7 +4879,7 @@ type Query implements Node {
     """
     A condition to be used in determining which values should be returned by the collection.
     """
-    condition: ForumCondition
+    condition: EmailNotificationPreferenceCondition
 
     """Only read the first `n` values of the set."""
     first: Int
@@ -1655,9 +4893,43 @@ type Query implements Node {
     """
     offset: Int
 
-    """The method to use when ordering `Forum`."""
-    orderBy: [ForumsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ForumsConnection
+    """The method to use when ordering `EmailNotificationPreference`."""
+    orderBy: [EmailNotificationPreferencesOrderBy!] = [NATURAL]
+  ): EmailNotificationPreferencesConnection
+  form(id: Int!): Form
+
+  """Reads a single `Form` using its globally unique `ID`."""
+  formByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Form`."""
+    nodeId: ID!
+  ): Form
+  formBySketchClassId(sketchClassId: Int!): Form
+  formBySurveyId(surveyId: Int!): Form
+  formConditionalRenderingRule(id: Int!): FormConditionalRenderingRule
+
+  """
+  Reads a single `FormConditionalRenderingRule` using its globally unique `ID`.
+  """
+  formConditionalRenderingRuleByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `FormConditionalRenderingRule`.
+    """
+    nodeId: ID!
+  ): FormConditionalRenderingRule
+  formField(id: Int!): FormField
+
+  """Reads a single `FormField` using its globally unique `ID`."""
+  formFieldByNodeId(
+    """The globally unique `ID` to be used in selecting a single `FormField`."""
+    nodeId: ID!
+  ): FormField
+  forum(id: Int!): Forum
+
+  """Reads a single `Forum` using its globally unique `ID`."""
+  forumByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Forum`."""
+    nodeId: ID!
+  ): Forum
   group(id: Int!): Group
 
   """Reads a single `Group` using its globally unique `ID`."""
@@ -1666,27 +4938,19 @@ type Query implements Node {
     nodeId: ID!
   ): Group
   groupByProjectIdAndName(name: String!, projectId: Int!): Group
+
+  """Reads a single `InviteEmail` using its globally unique `ID`."""
+  inviteEmailByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `InviteEmail`.
+    """
+    nodeId: ID!
+  ): InviteEmail
+
+  """
+  Access the current session's User. The user is determined by the access token embedded in the `Authorization` header.
+  """
   me: User
-
-  """Reads and enables pagination through a set of `SketchFolder`."""
-  myFolders(
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-    projectId: Int
-  ): [SketchFolder]
-
-  """Reads and enables pagination through a set of `Sketch`."""
-  mySketches(
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-    projectId: Int
-  ): [Sketch]
 
   """Fetches an object given its globally unique `ID`."""
   node(
@@ -1707,8 +4971,59 @@ type Query implements Node {
     nodeId: ID!
   ): Project
   projectBySlug(slug: String!): Project
+  projectInvite(id: Int!): ProjectInvite
+  projectInviteByEmailAndProjectId(email: Email!, projectId: Int!): ProjectInvite
 
-  """Reads and enables pagination through a set of `Project`."""
+  """Reads a single `ProjectInvite` using its globally unique `ID`."""
+  projectInviteByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `ProjectInvite`.
+    """
+    nodeId: ID!
+  ): ProjectInvite
+  projectInviteGroupByInviteIdAndGroupId(groupId: Int!, inviteId: Int!): ProjectInviteGroup
+
+  """Reads and enables pagination through a set of `ProjectInviteGroup`."""
+  projectInviteGroupsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ProjectInviteGroupCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `ProjectInviteGroup`."""
+    orderBy: [ProjectInviteGroupsOrderBy!] = [NATURAL]
+  ): ProjectInviteGroupsConnection
+
+  """
+  
+  The projectsConnection exposes all SeaSketch projects the current session has 
+  access to. For a superuser, this would be all of them (that aren't deleted). 
+  For a project administrator, they have access to all public projects and those 
+  that they administer. For everyone else, they see all public projects and any 
+  `invite-only` projects that they are approved members of.
+  
+  The projectsConnection exposes a fully-featured Relay compatible connection so 
+  that an efficient listing can be made of the hundreds of SeaSketch Projects.
+      
+  """
   projectsConnection(
     """Read all values in the set after (below) this cursor."""
     after: Cursor
@@ -1758,35 +5073,6 @@ type Query implements Node {
     """
     nodeId: ID!
   ): SketchClass
-
-  """Reads and enables pagination through a set of `Sketch`."""
-  sketchesConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: SketchCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `Sketch`."""
-    orderBy: [SketchesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): SketchesConnection
   sketchFolder(id: Int!): SketchFolder
 
   """Reads a single `SketchFolder` using its globally unique `ID`."""
@@ -1796,6 +5082,59 @@ type Query implements Node {
     """
     nodeId: ID!
   ): SketchFolder
+
+  """
+  Note that when requesting a survey and related resources (project, forms &
+  fields) from an invite link when anonymous, the `x-ss-survey-invite-token`
+  header will need to be set in order to gain access to protected resources. For
+  more details [see the
+  wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)
+  """
+  survey(id: Int!): Survey
+
+  """Reads a single `Survey` using its globally unique `ID`."""
+  surveyByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Survey`."""
+    nodeId: ID!
+  ): Survey
+  surveyInvite(id: Int!): SurveyInvite
+  surveyInviteByEmail(email: Email!): SurveyInvite
+  surveyInviteByEmailAndSurveyId(email: Email!, surveyId: Int!): SurveyInvite
+
+  """Reads a single `SurveyInvite` using its globally unique `ID`."""
+  surveyInviteByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `SurveyInvite`.
+    """
+    nodeId: ID!
+  ): SurveyInvite
+  surveyResponse(id: Int!): SurveyResponse
+
+  """Reads a single `SurveyResponse` using its globally unique `ID`."""
+  surveyResponseByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `SurveyResponse`.
+    """
+    nodeId: ID!
+  ): SurveyResponse
+
+  """
+  
+  Template forms can be created by SeaSketch superusers for use in **any** 
+  project. For example, there could be a template for a human-uses survey that
+  project administrators can copy and use as a starting point for customization.
+  
+  SeaSketch superusers can create template Forms using the `createFormTemplateFromSketchClass` 
+  and `createFormTemplateFromSurvey` mutations.
+      
+  """
+  templateForms(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Form]
   user(id: Int!): User
 
   """Reads a single `User` using its globally unique `ID`."""
@@ -1803,6 +5142,31 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `User`."""
     nodeId: ID!
   ): User
+
+  """
+  Verify whether the an invite token has a valid signature and has not yet
+  expired.
+  
+  Use before attempting the confirmProjectInvite() mutation.
+  More details on how to handle invites can be found
+  [on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites)
+  """
+  verifyProjectInvite(
+    """JWT string"""
+    token: String!
+  ): ProjectInviteTokenVerificationResults
+
+  """
+  Verify whether the an invite token has a valid signature and has not yet
+  expired or been used.
+  
+  Use before starting an invite-only survey. For info on invite handling
+  [see the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)
+  """
+  verifySurveyInvite(
+    """JWT string"""
+    token: String!
+  ): SurveyInviteTokenVerificationResults
 }
 
 """All input for the `removeGroupFromAcl` mutation."""
@@ -1882,34 +5246,184 @@ type RemoveValidChildSketchClassPayload {
   query: Query
 }
 
+"""All input for the `revokeAdminAccess` mutation."""
+input RevokeAdminAccessInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+  userId: Int
+}
+
+"""The output of our `revokeAdminAccess` mutation."""
+type RevokeAdminAccessPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `sendAllProjectInvites` mutation."""
+input SendAllProjectInvitesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+}
+
+"""The output of our `sendAllProjectInvites` mutation."""
+type SendAllProjectInvitesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  inviteEmails: [InviteEmail]
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `sendProjectInvites` mutation."""
+input SendProjectInvitesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  inviteIds: [Int]
+}
+
+"""The output of our `sendProjectInvites` mutation."""
+type SendProjectInvitesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  inviteEmails: [InviteEmail]
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `setFormFieldOrder` mutation."""
+input SetFormFieldOrderInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  fieldIds: [Int]
+}
+
+"""The output of our `setFormFieldOrder` mutation."""
+type SetFormFieldOrderPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  formFields: [FormField]
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""
+A *Sketch* is a spatial feature that matches the schema defined by the related 
+*SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
+shared in the discussion forum. They are also the gateway to analytical reports.
+
+Sketches are completely owned by individual users, so access control rules 
+ensure that only the owner of a sketch can perform CRUD operations on them. 
+Admins have no special access. Use the graphile-generated mutations to manage 
+these records.
+
+"""
 type Sketch implements Node {
+  """
+  Bounding box of the final preprocessed geometry. [xmin, ymin, xmax, ymax]
+  """
   bbox: [Float]
 
   """Reads a single `Sketch` that is related to this `Sketch`."""
   collection: Sketch
+
+  """
+  If the sketch is not a collection, it can belong to a collection (collections cannot be nested).
+  """
   collectionId: Int
 
   """Reads a single `Sketch` that is related to this `Sketch`."""
   copiedFrom: Sketch
+
+  """
+  If this Sketch started as a copy of another it is tracked here. Eventually
+  SeaSketch may have a means of visualizing how plans are iterated on over time.
+  """
   copyOf: Int
+
+  """
+  Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.
+  """
   folderId: Int
-  geom: String
+
+  """
+  The geometry of the Sketch **after** it has been preprocessed. This is the
+  geometry that is used for reporting. Preprocessed geometries may be extremely
+  large and complex, so it may be necessary to access them through a vector tile
+  service or some other optimization.
+  """
+  geom: GeometryGeometry
   id: Int!
+
+  """User provided name for the sketch."""
   name: String!
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """
+  Number of points in the final geometry. Can be used to gauge the complexity of
+  the shape and decide whether to load via graphql or use a vector tile service.
+  """
   numVertices: Int
 
   """Reads a single `SketchClass` that is related to this `Sketch`."""
   sketchClass: SketchClass
+
+  """SketchClass that defines the behavior of this type of sketch."""
   sketchClassId: Int!
 
   """Reads a single `User` that is related to this `Sketch`."""
   user: User
-  userGeom: String
+
+  """
+  Spatial feature the user directly digitized, without preprocessing. This is
+  the feature that should be used if the Sketch is later edited.
+  """
+  userGeom: GeometryGeometry
+
+  """Owner of the sketch."""
   userId: Int!
 }
 
@@ -1919,29 +5433,61 @@ Sketch Classes act as a schema for sketches drawn by users.
 """
 type SketchClass implements Node {
   """
-  If set to try, a geometry_type of POLYGON would allow for both POLYGONs and
-  MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still
-  digitize single features. Note that this feature should be used seldomly,
-  since for planning purposes it is unlikely to have non-contiguous zones.
+  Access control lists can be used by admins to control who can digitize
+  sketches of this class. All users will have access to SketchClass schemas in
+  order to render information posted to forums, but they will only be able to
+  digitize or edit these sketches if they are on the access control list.
+  """
+  acl: Acl
+
+  """
+  If set to true, a geometry_type of POLYGON would allow for both POLYGONs and 
+  MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still 
+  digitize single features. 
+  
+  Note that this feature should be used seldomly, since for planning purposes it 
+  is unlikely to have non-contiguous zones.
+  
+  For CHOOSE_FEATURE geometry types, this field will enable the selction of 
+  multiple features.
   
   """
   allowMulti: Boolean!
 
   """
-  Whether the user is allowed to digitize sketches of this type. Digitizing is
-  controlled by admins via access control lists, and archived sketch classes can
-  only be digitized by admins.
-  
+  Whether the current user session is allowed to digitize sketches of this type.
+  Digitizing is controlled by admins via access control lists, and archived
+  sketch classes can only be digitized by admins.
   """
   canDigitize: Boolean
+
+  """Form schema used to collect attributes on these sketches."""
+  form: Form
 
   """
   Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.
   
   """
   geometryType: SketchGeometryType!
+
+  """
+  Name of the report to be displayed.
+  
+  """
   geoprocessingClientName: String
+
+  """
+  Endpoint for the client javascript bundle.
+  
+  """
   geoprocessingClientUrl: String
+
+  """
+  Root endpoint of a
+  [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
+  that should be used for reporting.
+  
+  """
   geoprocessingProjectUrl: String
   id: Int!
 
@@ -1961,10 +5507,14 @@ type SketchClass implements Node {
   isMyPlansOption: Boolean!
 
   """
-  Style used to render sketches of this type.
+  [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
+  render features. Sketches can be styled based on attribute data by using 
+  [Expressions](https://docs.mapbox.com/help/glossary/expression/).
   
   """
-  mapboxGlStyle: String
+  mapboxGlStyle: JSON
+
+  """Label chosen by project admins that is shown to users."""
   name: String!
 
   """
@@ -1974,12 +5524,16 @@ type SketchClass implements Node {
 
   """Reads a single `Project` that is related to this `SketchClass`."""
   project: Project
+
+  """SketchClasses belong to a single project."""
   projectId: Int!
 
   """Number of sketches created with this sketch class"""
   sketchCount: BigInt
 
-  """Reads and enables pagination through a set of `SketchClass`."""
+  """
+  If listed for a Collection, only valid child sketch classes can be added as children.
+  """
   validChildren(
     """Only read the first `n` values of the set."""
     first: Int
@@ -2024,10 +5578,15 @@ enum SketchClassesOrderBy {
 """An input for mutations affecting `SketchClass`"""
 input SketchClassInput {
   """
-  If set to try, a geometry_type of POLYGON would allow for both POLYGONs and
-  MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still
-  digitize single features. Note that this feature should be used seldomly,
-  since for planning purposes it is unlikely to have non-contiguous zones.
+  If set to true, a geometry_type of POLYGON would allow for both POLYGONs and 
+  MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still 
+  digitize single features. 
+  
+  Note that this feature should be used seldomly, since for planning purposes it 
+  is unlikely to have non-contiguous zones.
+  
+  For CHOOSE_FEATURE geometry types, this field will enable the selction of 
+  multiple features.
   
   """
   allowMulti: Boolean
@@ -2037,8 +5596,25 @@ input SketchClassInput {
   
   """
   geometryType: SketchGeometryType
+
+  """
+  Name of the report to be displayed.
+  
+  """
   geoprocessingClientName: String
+
+  """
+  Endpoint for the client javascript bundle.
+  
+  """
   geoprocessingClientUrl: String
+
+  """
+  Root endpoint of a
+  [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
+  that should be used for reporting.
+  
+  """
   geoprocessingProjectUrl: String
   id: Int
 
@@ -2058,11 +5634,17 @@ input SketchClassInput {
   isMyPlansOption: Boolean
 
   """
-  Style used to render sketches of this type.
+  [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
+  render features. Sketches can be styled based on attribute data by using 
+  [Expressions](https://docs.mapbox.com/help/glossary/expression/).
   
   """
-  mapboxGlStyle: String
+  mapboxGlStyle: JSON
+
+  """Label chosen by project admins that is shown to users."""
   name: String!
+
+  """SketchClasses belong to a single project."""
   projectId: Int!
 }
 
@@ -2071,15 +5653,37 @@ Represents an update to a `SketchClass`. Fields that are set will be updated.
 """
 input SketchClassPatch {
   """
-  If set to try, a geometry_type of POLYGON would allow for both POLYGONs and
-  MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still
-  digitize single features. Note that this feature should be used seldomly,
-  since for planning purposes it is unlikely to have non-contiguous zones.
+  If set to true, a geometry_type of POLYGON would allow for both POLYGONs and 
+  MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still 
+  digitize single features. 
+  
+  Note that this feature should be used seldomly, since for planning purposes it 
+  is unlikely to have non-contiguous zones.
+  
+  For CHOOSE_FEATURE geometry types, this field will enable the selction of 
+  multiple features.
   
   """
   allowMulti: Boolean
+
+  """
+  Name of the report to be displayed.
+  
+  """
   geoprocessingClientName: String
+
+  """
+  Endpoint for the client javascript bundle.
+  
+  """
   geoprocessingClientUrl: String
+
+  """
+  Root endpoint of a
+  [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
+  that should be used for reporting.
+  
+  """
   geoprocessingProjectUrl: String
 
   """
@@ -2090,79 +5694,24 @@ input SketchClassPatch {
   """
   isArchived: Boolean
 
-  """
-  Style used to render sketches of this type.
-  
-  """
-  mapboxGlStyle: String
+  """Label chosen by project admins that is shown to users."""
   name: String
 }
 
 """
-A condition to be used against `Sketch` object types. All fields are tested for equality and combined with a logical ‘and.’
+SketchFolders can be used by users to organize their sketches. Collection-type
+sketches can be used to organize sketches as well, but they are limited in that 
+they cannot be nested, and also represent specific management semantics. Folders
+can be used by users to arbitrarily organize their Sketches.
+
 """
-input SketchCondition {
-  """Checks for equality with the object’s `collectionId` field."""
-  collectionId: Int
-
-  """Checks for equality with the object’s `copyOf` field."""
-  copyOf: Int
-
-  """Checks for equality with the object’s `id` field."""
-  id: Int
-
-  """Checks for equality with the object’s `sketchClassId` field."""
-  sketchClassId: Int
-
-  """Checks for equality with the object’s `userId` field."""
-  userId: Int
-}
-
-"""A connection to a list of `Sketch` values."""
-type SketchesConnection {
-  """
-  A list of edges which contains the `Sketch` and cursor to aid in pagination.
-  """
-  edges: [SketchesEdge!]!
-
-  """A list of `Sketch` objects."""
-  nodes: [Sketch]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """The count of *all* `Sketch` you could get from the connection."""
-  totalCount: Int!
-}
-
-"""A `Sketch` edge in the connection."""
-type SketchesEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `Sketch` at the end of the edge."""
-  node: Sketch
-}
-
-"""Methods to use when ordering `Sketch`."""
-enum SketchesOrderBy {
-  COLLECTION_ID_ASC
-  COLLECTION_ID_DESC
-  COPY_OF_ASC
-  COPY_OF_DESC
-  ID_ASC
-  ID_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
-  SKETCH_CLASS_ID_ASC
-  SKETCH_CLASS_ID_DESC
-  USER_ID_ASC
-  USER_ID_DESC
-}
-
 type SketchFolder implements Node {
+  """
+  The parent sketch collection, if any. Folders can only have a single parent entity.
+  """
   collectionId: Int
+
+  """The parent folder, if any."""
   folderId: Int
   id: Int!
   name: String!
@@ -2172,27 +5721,17 @@ type SketchFolder implements Node {
   """
   nodeId: ID!
   projectId: Int!
-
-  """Reads a single `User` that is related to this `SketchFolder`."""
-  user: User
   userId: Int!
-}
-
-"""
-A condition to be used against `SketchFolder` object types. All fields are
-tested for equality and combined with a logical ‘and.’
-"""
-input SketchFolderCondition {
-  """Checks for equality with the object’s `id` field."""
-  id: Int
-
-  """Checks for equality with the object’s `userId` field."""
-  userId: Int
 }
 
 """An input for mutations affecting `SketchFolder`"""
 input SketchFolderInput {
+  """
+  The parent sketch collection, if any. Folders can only have a single parent entity.
+  """
   collectionId: Int
+
+  """The parent folder, if any."""
   folderId: Int
   id: Int
   name: String!
@@ -2204,29 +5743,17 @@ input SketchFolderInput {
 Represents an update to a `SketchFolder`. Fields that are set will be updated.
 """
 input SketchFolderPatch {
+  """
+  The parent sketch collection, if any. Folders can only have a single parent entity.
+  """
   collectionId: Int
+
+  """The parent folder, if any."""
   folderId: Int
   id: Int
   name: String
   projectId: Int
   userId: Int
-}
-
-"""A connection to a list of `SketchFolder` values."""
-type SketchFoldersConnection {
-  """
-  A list of edges which contains the `SketchFolder` and cursor to aid in pagination.
-  """
-  edges: [SketchFoldersEdge!]!
-
-  """A list of `SketchFolder` objects."""
-  nodes: [SketchFolder]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """The count of *all* `SketchFolder` you could get from the connection."""
-  totalCount: Int!
 }
 
 """A `SketchFolder` edge in the connection."""
@@ -2250,6 +5777,15 @@ enum SketchFoldersOrderBy {
 }
 
 enum SketchGeometryType {
+  """
+  Users will choose one (or more) features from a feature collection. For example, a choice of grid cells or marxan zones.
+  """
+  CHOOSE_FEATURE
+
+  """
+  Sketch itself will have no geometry, but can be associated with a number of
+  child sketches. Can be represented as a GeoJSON FeatureCollection.
+  """
   COLLECTION
   LINESTRING
   POINT
@@ -2258,13 +5794,55 @@ enum SketchGeometryType {
 
 """An input for mutations affecting `Sketch`"""
 input SketchInput {
+  """
+  Bounding box of the final preprocessed geometry. [xmin, ymin, xmax, ymax]
+  """
+  bbox: [Float]
+
+  """
+  If the sketch is not a collection, it can belong to a collection (collections cannot be nested).
+  """
   collectionId: Int
+
+  """
+  If this Sketch started as a copy of another it is tracked here. Eventually
+  SeaSketch may have a means of visualizing how plans are iterated on over time.
+  """
+  copyOf: Int
+
+  """
+  Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.
+  """
   folderId: Int
-  geom: String
+
+  """
+  The geometry of the Sketch **after** it has been preprocessed. This is the
+  geometry that is used for reporting. Preprocessed geometries may be extremely
+  large and complex, so it may be necessary to access them through a vector tile
+  service or some other optimization.
+  """
+  geom: GeoJSON
   id: Int
+
+  """User provided name for the sketch."""
   name: String!
+
+  """
+  Number of points in the final geometry. Can be used to gauge the complexity of
+  the shape and decide whether to load via graphql or use a vector tile service.
+  """
+  numVertices: Int
+
+  """SketchClass that defines the behavior of this type of sketch."""
   sketchClassId: Int!
-  userGeom: String
+
+  """
+  Spatial feature the user directly digitized, without preprocessing. This is
+  the feature that should be used if the Sketch is later edited.
+  """
+  userGeom: GeoJSON
+
+  """Owner of the sketch."""
   userId: Int!
 }
 
@@ -2272,15 +5850,614 @@ input SketchInput {
 Represents an update to a `Sketch`. Fields that are set will be updated.
 """
 input SketchPatch {
+  """
+  If the sketch is not a collection, it can belong to a collection (collections cannot be nested).
+  """
   collectionId: Int
-  geom: String
+
+  """
+  The geometry of the Sketch **after** it has been preprocessed. This is the
+  geometry that is used for reporting. Preprocessed geometries may be extremely
+  large and complex, so it may be necessary to access them through a vector tile
+  service or some other optimization.
+  """
+  geom: GeoJSON
+
+  """User provided name for the sketch."""
   name: String
-  userGeom: String
+
+  """
+  Spatial feature the user directly digitized, without preprocessing. This is
+  the feature that should be used if the Sketch is later edited.
+  """
+  userGeom: GeoJSON
 }
 
 enum SortByDirection {
   ASC
   DESC
+}
+
+type Survey implements Node {
+  """
+  PUBLIC or INVITE_ONLY
+  
+  """
+  accessType: SurveyAccessType!
+
+  """
+  Shown to users after completing a survey. Expected to be something like Draft.js content state
+  """
+  closingMessage: JSON!
+
+  """Reads a single `Form` that is related to this `Survey`."""
+  form: Form
+
+  """Reads and enables pagination through a set of `Form`."""
+  formsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: FormCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `Form`."""
+    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormsConnection! @deprecated(reason: "Please use form instead")
+
+  """
+  If set, responses that originate from an IP address outside this fence will be flagged.
+  """
+  geofence: GeographyPolygon
+  id: Int!
+
+  """
+  Shown to users before starting a survey response. Expected to be something like Draft.js content state
+  """
+  introMessage: JSON!
+
+  """
+  
+  Listing of groups whose users should be invited to participate in the survey.
+  
+  Use `updateSurveyInvitedGroups()` mutation to modify.
+  
+  """
+  invitedGroups(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Group]
+
+  """
+  Disabled surveys will not be accessible to non-admins. Invite email sending will
+  be paused.
+  
+  """
+  isDisabled: Boolean!
+
+  """
+  If set, there can only be one response with matching contact information. The
+  app will also discourage multiple submissions from the same browser session.
+  """
+  limitToSingleResponse: Boolean!
+  name: String!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `Project` that is related to this `Survey`."""
+  project: Project
+  projectId: Int!
+
+  """
+  Only applicable for public surveys. Show tools to respondants for sharing the 
+  survey on social media to encourage responses.
+  
+  """
+  showSocialMediaButtons: Boolean
+
+  """
+  Usually the survey will show a button that says [Begin Survey]. This can be 
+  customized by admins.
+  
+  """
+  startButtonText: String
+  submittedResponseCount: Int
+
+  """
+  All related survey invites. Survey invites will be automatically created for
+  users in the groups specified by `surveyInvitedGroups`.
+  """
+  surveyInvites(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SurveyInviteCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `SurveyInvite`."""
+    orderBy: [SurveyInvitesOrderBy!]
+  ): [SurveyInvite!]!
+
+  """
+  Responses related to this survey. End-users will have access to their own
+  submitted or draft responses. Administrators will have access to their own,
+  plus all submitted responses.
+  """
+  surveyResponsesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SurveyResponseCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `SurveyResponse`."""
+    orderBy: [SurveyResponsesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyResponsesConnection!
+}
+
+"""Controls who has access to respond to a survey"""
+enum SurveyAccessType {
+  """Only users part of an invited group or email invitation can respond"""
+  INVITE_ONLY
+
+  """Anyone can respond"""
+  PUBLIC
+}
+
+"""
+A condition to be used against `Survey` object types. All fields are tested for equality and combined with a logical ‘and.’
+"""
+input SurveyCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+}
+
+"""An input for mutations affecting `Survey`"""
+input SurveyInput {
+  """
+  PUBLIC or INVITE_ONLY
+  
+  """
+  accessType: SurveyAccessType
+
+  """
+  Shown to users after completing a survey. Expected to be something like Draft.js content state
+  """
+  closingMessage: JSON
+
+  """
+  If set, responses that originate from an IP address outside this fence will be flagged.
+  """
+  geofence: GeoJSON
+  id: Int
+
+  """
+  Shown to users before starting a survey response. Expected to be something like Draft.js content state
+  """
+  introMessage: JSON
+
+  """
+  Disabled surveys will not be accessible to non-admins. Invite email sending will
+  be paused.
+  
+  """
+  isDisabled: Boolean
+
+  """
+  If set, there can only be one response with matching contact information. The
+  app will also discourage multiple submissions from the same browser session.
+  """
+  limitToSingleResponse: Boolean
+  name: String!
+  projectId: Int!
+
+  """
+  Only applicable for public surveys. Show tools to respondants for sharing the 
+  survey on social media to encourage responses.
+  
+  """
+  showSocialMediaButtons: Boolean
+
+  """
+  Usually the survey will show a button that says [Begin Survey]. This can be 
+  customized by admins.
+  
+  """
+  startButtonText: String
+}
+
+type SurveyInvite implements Node {
+  createdAt: Datetime!
+  email: Email
+  fullname: String
+  id: Int!
+
+  """Reads and enables pagination through a set of `InviteEmail`."""
+  inviteEmails(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: InviteEmailCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `InviteEmail`."""
+    orderBy: [InviteEmailsOrderBy!]
+  ): [InviteEmail!]!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """
+  Indicates the status of the invite, e.g. whether an invite email has been
+  sent, status of those emails, and whether a response has been submitted.
+  """
+  status: InviteStatus
+
+  """Reads a single `Survey` that is related to this `SurveyInvite`."""
+  survey: Survey
+  surveyId: Int!
+  userId: Int
+  wasUsed: Boolean!
+}
+
+"""
+A condition to be used against `SurveyInvite` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input SurveyInviteCondition {
+  """Checks for equality with the object’s `email` field."""
+  email: Email
+
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `surveyId` field."""
+  surveyId: Int
+}
+
+type SurveyInvitedGroup {
+  groupId: Int!
+
+  """Reads a single `Survey` that is related to this `SurveyInvitedGroup`."""
+  survey: Survey
+  surveyId: Int!
+}
+
+"""An input for mutations affecting `SurveyInvitedGroup`"""
+input SurveyInvitedGroupInput {
+  groupId: Int!
+  surveyId: Int!
+}
+
+input SurveyInviteOptionsInput {
+  email: Email
+  fullname: String
+}
+
+"""
+Represents an update to a `SurveyInvite`. Fields that are set will be updated.
+"""
+input SurveyInvitePatch {
+  fullname: String
+}
+
+"""A `SurveyInvite` edge in the connection."""
+type SurveyInvitesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `SurveyInvite` at the end of the edge."""
+  node: SurveyInvite
+}
+
+"""Methods to use when ordering `SurveyInvite`."""
+enum SurveyInvitesOrderBy {
+  EMAIL_ASC
+  EMAIL_DESC
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  SURVEY_ID_ASC
+  SURVEY_ID_DESC
+}
+
+type SurveyInviteTokenClaims {
+  email: String
+  fullname: String
+  inviteId: Int!
+  projectId: Int!
+  surveyId: Int!
+  wasUsed: Boolean!
+}
+
+type SurveyInviteTokenVerificationResults {
+  claims: SurveyInviteTokenClaims
+  error: String
+}
+
+"""
+Represents an update to a `Survey`. Fields that are set will be updated.
+"""
+input SurveyPatch {
+  """
+  PUBLIC or INVITE_ONLY
+  
+  """
+  accessType: SurveyAccessType
+
+  """
+  Shown to users after completing a survey. Expected to be something like Draft.js content state
+  """
+  closingMessage: JSON
+
+  """
+  If set, responses that originate from an IP address outside this fence will be flagged.
+  """
+  geofence: GeoJSON
+  id: Int
+
+  """
+  Shown to users before starting a survey response. Expected to be something like Draft.js content state
+  """
+  introMessage: JSON
+
+  """
+  Disabled surveys will not be accessible to non-admins. Invite email sending will
+  be paused.
+  
+  """
+  isDisabled: Boolean
+
+  """
+  If set, there can only be one response with matching contact information. The
+  app will also discourage multiple submissions from the same browser session.
+  """
+  limitToSingleResponse: Boolean
+  name: String
+  projectId: Int
+
+  """
+  Only applicable for public surveys. Show tools to respondants for sharing the 
+  survey on social media to encourage responses.
+  
+  """
+  showSocialMediaButtons: Boolean
+
+  """
+  Usually the survey will show a button that says [Begin Survey]. This can be 
+  customized by admins.
+  
+  """
+  startButtonText: String
+}
+
+type SurveyResponse implements Node {
+  """
+  Should be set by the client on submission and tracked by cookies or
+  localStorage. Surveys that permit only a single entry enable users to bypass
+  the limit for legitimate purposes, like entering responses on a shared computer.
+  
+  """
+  bypassedDuplicateSubmissionControl: Boolean!
+  createdAt: Datetime!
+
+  """JSON representation of responses, keyed by the form field export_id"""
+  data: JSON!
+  id: Int!
+
+  """
+  Users may save their responses for later editing before submission. After submission they can no longer edit them.
+  """
+  isDraft: Boolean!
+
+  """
+  Duplicate entries are detected by matching contact-information field values.
+  
+  """
+  isDuplicateEntry: Boolean!
+
+  """
+  Detected by comparing ip hashes from previous entries. IP hashes are not tied
+  to particular responses, so only the second and subsequent entries are flagged.
+  
+  """
+  isDuplicateIp: Boolean!
+
+  """
+  Unusual or missing user-agent headers on submissions are flagged. May indicate
+  scripting but does not necessarily imply malicious intent.
+  
+  """
+  isUnrecognizedUserAgent: Boolean!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """
+  Checked on SUBMISSION, so adding or changing a survey geofence after responses
+  have been submitted will not update values. GPS coordinates and IP addresses
+  are not stored for privacy purposes.
+  
+  """
+  outsideGeofence: Boolean!
+
+  """Reads a single `Survey` that is related to this `SurveyResponse`."""
+  survey: Survey
+  surveyId: Int!
+  updatedAt: Datetime
+  userId: Int
+}
+
+"""
+A condition to be used against `SurveyResponse` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input SurveyResponseCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `surveyId` field."""
+  surveyId: Int
+
+  """Checks for equality with the object’s `userId` field."""
+  userId: Int
+}
+
+"""An input for mutations affecting `SurveyResponse`"""
+input SurveyResponseInput {
+  """
+  Should be set by the client on submission and tracked by cookies or
+  localStorage. Surveys that permit only a single entry enable users to bypass
+  the limit for legitimate purposes, like entering responses on a shared computer.
+  
+  """
+  bypassedDuplicateSubmissionControl: Boolean
+  createdAt: Datetime
+
+  """JSON representation of responses, keyed by the form field export_id"""
+  data: JSON
+  id: Int
+
+  """
+  Users may save their responses for later editing before submission. After submission they can no longer edit them.
+  """
+  isDraft: Boolean
+  surveyId: Int!
+  updatedAt: Datetime
+  userId: Int
+}
+
+"""
+Represents an update to a `SurveyResponse`. Fields that are set will be updated.
+"""
+input SurveyResponsePatch {
+  """JSON representation of responses, keyed by the form field export_id"""
+  data: JSON
+
+  """
+  Users may save their responses for later editing before submission. After submission they can no longer edit them.
+  """
+  isDraft: Boolean
+}
+
+"""A connection to a list of `SurveyResponse` values."""
+type SurveyResponsesConnection {
+  """
+  A list of edges which contains the `SurveyResponse` and cursor to aid in pagination.
+  """
+  edges: [SurveyResponsesEdge!]!
+
+  """A list of `SurveyResponse` objects."""
+  nodes: [SurveyResponse]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `SurveyResponse` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `SurveyResponse` edge in the connection."""
+type SurveyResponsesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `SurveyResponse` at the end of the edge."""
+  node: SurveyResponse
+}
+
+"""Methods to use when ordering `SurveyResponse`."""
+enum SurveyResponsesOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  SURVEY_ID_ASC
+  SURVEY_ID_DESC
+  USER_ID_ASC
+  USER_ID_DESC
+}
+
+"""Methods to use when ordering `Survey`."""
+enum SurveysOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+}
+
+type SurveyTokenInfo {
+  """ID of related project"""
+  projectId: Int
+
+  """ID of related survey"""
+  surveyId: Int
+
+  """Signed token that can be used for accessing the survey"""
+  token: String
 }
 
 """All input for the `updateAclByForumId` mutation."""
@@ -2317,6 +6494,21 @@ input UpdateAclByNodeIdInput {
   patch: AclPatch!
 }
 
+"""All input for the `updateAclBySketchClassId` mutation."""
+input UpdateAclBySketchClassIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `Acl` being updated.
+  """
+  patch: AclPatch!
+  sketchClassId: Int!
+}
+
 """All input for the `updateAcl` mutation."""
 input UpdateAclInput {
   """
@@ -2345,6 +6537,180 @@ type UpdateAclPayload {
 
   """Reads a single `Forum` that is related to this `Acl`."""
   forum: Forum
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `SketchClass` that is related to this `Acl`."""
+  sketchClass: SketchClass
+}
+
+"""
+All input for the `updateEmailNotificationPreferenceByUserId` mutation.
+"""
+input UpdateEmailNotificationPreferenceByUserIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `EmailNotificationPreference` being updated.
+  """
+  patch: EmailNotificationPreferencePatch!
+  userId: Int!
+}
+
+"""The output of our update `EmailNotificationPreference` mutation."""
+type UpdateEmailNotificationPreferencePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `EmailNotificationPreference` that was updated by this mutation."""
+  emailNotificationPreference: EmailNotificationPreference
+
+  """An edge for our `EmailNotificationPreference`. May be used by Relay 1."""
+  emailNotificationPreferenceEdge(
+    """The method to use when ordering `EmailNotificationPreference`."""
+    orderBy: [EmailNotificationPreferencesOrderBy!] = [NATURAL]
+  ): EmailNotificationPreferencesEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """
+  Reads a single `User` that is related to this `EmailNotificationPreference`.
+  """
+  user: User
+}
+
+"""
+All input for the `updateFormConditionalRenderingRuleByNodeId` mutation.
+"""
+input UpdateFormConditionalRenderingRuleByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `FormConditionalRenderingRule` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `FormConditionalRenderingRule` being updated.
+  """
+  patch: FormConditionalRenderingRulePatch!
+}
+
+"""All input for the `updateFormConditionalRenderingRule` mutation."""
+input UpdateFormConditionalRenderingRuleInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `FormConditionalRenderingRule` being updated.
+  """
+  patch: FormConditionalRenderingRulePatch!
+}
+
+"""The output of our update `FormConditionalRenderingRule` mutation."""
+type UpdateFormConditionalRenderingRulePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `FormField` that is related to this `FormConditionalRenderingRule`.
+  """
+  field: FormField
+
+  """The `FormConditionalRenderingRule` that was updated by this mutation."""
+  formConditionalRenderingRule: FormConditionalRenderingRule
+
+  """
+  An edge for our `FormConditionalRenderingRule`. May be used by Relay 1.
+  """
+  formConditionalRenderingRuleEdge(
+    """The method to use when ordering `FormConditionalRenderingRule`."""
+    orderBy: [FormConditionalRenderingRulesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormConditionalRenderingRulesEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateFormFieldByNodeId` mutation."""
+input UpdateFormFieldByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `FormField` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `FormField` being updated.
+  """
+  patch: FormFieldPatch!
+}
+
+"""All input for the `updateFormField` mutation."""
+input UpdateFormFieldInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `FormField` being updated.
+  """
+  patch: FormFieldPatch!
+}
+
+"""The output of our update `FormField` mutation."""
+type UpdateFormFieldPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Form` that is related to this `FormField`."""
+  form: Form
+
+  """The `FormField` that was updated by this mutation."""
+  formField: FormField
+
+  """An edge for our `FormField`. May be used by Relay 1."""
+  formFieldEdge(
+    """The method to use when ordering `FormField`."""
+    orderBy: [FormFieldsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormFieldsEdge
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -2438,6 +6804,8 @@ input UpdateGroupByProjectIdAndNameInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+
+  """Label for the group."""
   name: String!
 
   """
@@ -2555,7 +6923,9 @@ input UpdateProjectBySlugInput {
   """
   patch: ProjectPatch!
 
-  """Will resolve to https://seasketch.org/{slug}/ and cannot be changed"""
+  """
+  Short identifier for the project used in the url. This property cannot be changed after project creation.
+  """
   slug: String!
 }
 
@@ -2572,6 +6942,116 @@ input UpdateProjectInput {
   An object where the defined keys will be set on the `Project` being updated.
   """
   patch: ProjectPatch!
+}
+
+"""All input for the `updateProjectInviteByEmailAndProjectId` mutation."""
+input UpdateProjectInviteByEmailAndProjectIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """Specified by admin when invite was created."""
+  email: Email!
+
+  """
+  An object where the defined keys will be set on the `ProjectInvite` being updated.
+  """
+  patch: ProjectInvitePatch!
+  projectId: Int!
+}
+
+"""All input for the `updateProjectInviteByNodeId` mutation."""
+input UpdateProjectInviteByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `ProjectInvite` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `ProjectInvite` being updated.
+  """
+  patch: ProjectInvitePatch!
+}
+
+"""
+All input for the `updateProjectInviteGroupByInviteIdAndGroupId` mutation.
+"""
+input UpdateProjectInviteGroupByInviteIdAndGroupIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupId: Int!
+  inviteId: Int!
+
+  """
+  An object where the defined keys will be set on the `ProjectInviteGroup` being updated.
+  """
+  patch: ProjectInviteGroupPatch!
+}
+
+"""The output of our update `ProjectInviteGroup` mutation."""
+type UpdateProjectInviteGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `ProjectInviteGroup` that was updated by this mutation."""
+  projectInviteGroup: ProjectInviteGroup
+
+  """An edge for our `ProjectInviteGroup`. May be used by Relay 1."""
+  projectInviteGroupEdge(
+    """The method to use when ordering `ProjectInviteGroup`."""
+    orderBy: [ProjectInviteGroupsOrderBy!] = [NATURAL]
+  ): ProjectInviteGroupsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateProjectInvite` mutation."""
+input UpdateProjectInviteInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `ProjectInvite` being updated.
+  """
+  patch: ProjectInvitePatch!
+}
+
+"""The output of our update `ProjectInvite` mutation."""
+type UpdateProjectInvitePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `ProjectInvite` that was updated by this mutation."""
+  projectInvite: ProjectInvite
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """The output of our update `Project` mutation."""
@@ -2731,9 +7211,6 @@ type UpdateSketchFolderPayload {
     """The method to use when ordering `SketchFolder`."""
     orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
   ): SketchFoldersEdge
-
-  """Reads a single `User` that is related to this `SketchFolder`."""
-  user: User
 }
 
 """All input for the `updateSketch` mutation."""
@@ -2776,37 +7253,262 @@ type UpdateSketchPayload {
   """Reads a single `SketchClass` that is related to this `Sketch`."""
   sketchClass: SketchClass
 
-  """An edge for our `Sketch`. May be used by Relay 1."""
-  sketchEdge(
-    """The method to use when ordering `Sketch`."""
-    orderBy: [SketchesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): SketchesEdge
-
   """Reads a single `User` that is related to this `Sketch`."""
   user: User
 }
 
-type User implements Node {
-  id: Int!
-  isAdmin(project: Int): Boolean
-  isApproved(project: Int): Boolean
+"""All input for the `updateSurveyByNodeId` mutation."""
+input UpdateSurveyByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
 
   """
-  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  The globally unique `ID` which will identify a single `Survey` to be updated.
   """
   nodeId: ID!
 
   """
-  Indicates whether the user has seen post-registration information. Mostly a tool for the client UI to use if needed.
+  An object where the defined keys will be set on the `Survey` being updated.
   """
-  onboarded: Datetime
-  participationStatus(projectId: Int): ParticipationStatus
+  patch: SurveyPatch!
+}
 
-  """Reads a single `Profile` that is related to this `User`."""
-  profile: Profile
+"""All input for the `updateSurvey` mutation."""
+input UpdateSurveyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
 
-  """Reads and enables pagination through a set of `SketchFolder`."""
-  sketchFoldersConnection(
+  """
+  An object where the defined keys will be set on the `Survey` being updated.
+  """
+  patch: SurveyPatch!
+}
+
+"""All input for the `updateSurveyInviteByEmailAndSurveyId` mutation."""
+input UpdateSurveyInviteByEmailAndSurveyIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  email: Email!
+
+  """
+  An object where the defined keys will be set on the `SurveyInvite` being updated.
+  """
+  patch: SurveyInvitePatch!
+  surveyId: Int!
+}
+
+"""All input for the `updateSurveyInviteByEmail` mutation."""
+input UpdateSurveyInviteByEmailInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  email: Email!
+
+  """
+  An object where the defined keys will be set on the `SurveyInvite` being updated.
+  """
+  patch: SurveyInvitePatch!
+}
+
+"""All input for the `updateSurveyInviteByNodeId` mutation."""
+input UpdateSurveyInviteByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `SurveyInvite` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `SurveyInvite` being updated.
+  """
+  patch: SurveyInvitePatch!
+}
+
+"""All input for the `updateSurveyInvitedGroups` mutation."""
+input UpdateSurveyInvitedGroupsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupIds: [Int]
+  surveyId: Int
+}
+
+"""The output of our `updateSurveyInvitedGroups` mutation."""
+type UpdateSurveyInvitedGroupsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  groups: [Group]
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateSurveyInvite` mutation."""
+input UpdateSurveyInviteInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `SurveyInvite` being updated.
+  """
+  patch: SurveyInvitePatch!
+}
+
+"""The output of our update `SurveyInvite` mutation."""
+type UpdateSurveyInvitePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyInvite`."""
+  survey: Survey
+
+  """The `SurveyInvite` that was updated by this mutation."""
+  surveyInvite: SurveyInvite
+
+  """An edge for our `SurveyInvite`. May be used by Relay 1."""
+  surveyInviteEdge(
+    """The method to use when ordering `SurveyInvite`."""
+    orderBy: [SurveyInvitesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyInvitesEdge
+}
+
+"""The output of our update `Survey` mutation."""
+type UpdateSurveyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Project` that is related to this `Survey`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `Survey` that was updated by this mutation."""
+  survey: Survey
+}
+
+"""All input for the `updateSurveyResponseByNodeId` mutation."""
+input UpdateSurveyResponseByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `SurveyResponse` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `SurveyResponse` being updated.
+  """
+  patch: SurveyResponsePatch!
+}
+
+"""All input for the `updateSurveyResponse` mutation."""
+input UpdateSurveyResponseInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `SurveyResponse` being updated.
+  """
+  patch: SurveyResponsePatch!
+}
+
+"""The output of our update `SurveyResponse` mutation."""
+type UpdateSurveyResponsePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyResponse`."""
+  survey: Survey
+
+  """The `SurveyResponse` that was updated by this mutation."""
+  surveyResponse: SurveyResponse
+
+  """An edge for our `SurveyResponse`. May be used by Relay 1."""
+  surveyResponseEdge(
+    """The method to use when ordering `SurveyResponse`."""
+    orderBy: [SurveyResponsesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyResponsesEdge
+}
+
+"""
+The SeaSketch User type is quite sparse since authentication is handled by Auth0
+and we store no personal information unless the user explicitly adds it to the
+user `Profile`.
+
+During operation of the system, users identify themselves using bearer tokens. 
+These tokens contain ephemeral information like `canonical_email` which can be
+used to accept project invite tokens.
+
+"""
+type User implements Node {
+  """
+  Email notification preferences can be read and set by the current user session.
+      These settings cannot be accessed by other users or SeaSketch project admins.
+  """
+  emailNotificationPreference: EmailNotificationPreference
+
+  """
+  Reads and enables pagination through a set of `EmailNotificationPreference`.
+  """
+  emailNotificationPreferencesConnection(
     """Read all values in the set after (below) this cursor."""
     after: Cursor
 
@@ -2816,7 +7518,7 @@ type User implements Node {
     """
     A condition to be used in determining which values should be returned by the collection.
     """
-    condition: SketchFolderCondition
+    condition: EmailNotificationPreferenceCondition
 
     """Only read the first `n` values of the set."""
     first: Int
@@ -2830,7 +7532,54 @@ type User implements Node {
     """
     offset: Int
 
-    """The method to use when ordering `SketchFolder`."""
-    orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
-  ): SketchFoldersConnection!
+    """The method to use when ordering `EmailNotificationPreference`."""
+    orderBy: [EmailNotificationPreferencesOrderBy!] = [NATURAL]
+  ): EmailNotificationPreferencesConnection! @deprecated(reason: "Please use emailNotificationPreference instead")
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """
+  Indicates whether the user has seen post-registration information. Can be 
+  updated with `confirmOnboarded()` mutation. 
+  
+  Since this field is a date, it could
+  hypothetically be reset as terms of service are updated, though it may be better
+  to add a new property to track that.
+  
+  """
+  onboarded: Datetime
+  participationStatus(projectId: Int): ParticipationStatus
+
+  """
+  
+  Access the user's profile. This feature is only accessible to project admins if
+  the user has chosen to share their profile with the project.
+  
+  User profiles cannot be accessed directly en-mass by end-users. Rather, Survey 
+  `Posts` and other shared content will have accessor methods to get at this 
+  information, but again, only if the profile has been shared.
+  """
+  profile: Profile
+}
+
+"""A `User` edge in the connection."""
+type UsersEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `User` at the end of the edge."""
+  node: User
+}
+
+"""Methods to use when ordering `User`."""
+enum UsersOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
 }

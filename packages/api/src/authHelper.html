@@ -6,9 +6,9 @@
     <script src="https://cdn.auth0.com/js/auth0-spa-js/1.7/auth0-spa-js.production.js"></script>
     <script type="text/javascript">
       let auth0 = null;
-      
+
       const fetchAuthConfig = () => fetch("/auth_config.json");
-      
+
       const configureClient = async () => {
         const response = await fetchAuthConfig();
         const config = await response.json();
@@ -17,17 +17,17 @@
           domain: config.domain,
           client_id: config.clientId,
           audience: config.audience,
-          cacheLocation: 'localstorage',
-          scope: "cburt",
+          // cacheLocation: "localstorage",
+          scope: "openid profile email",
         });
       };
 
-      const updateUI = async () => { 
+      const updateUI = async () => {
         const isAuthenticated = await auth0.isAuthenticated();
 
         document.getElementById("btn-logout").disabled = !isAuthenticated;
         document.getElementById("btn-login").disabled = isAuthenticated;
-        
+
         // NEW - add logic to show/hide gated content after authentication
         if (isAuthenticated) {
           document.getElementById("gated-content").classList.remove("hidden");
@@ -35,7 +35,6 @@
           document.getElementById(
             "ipt-access-token"
           ).innerHTML = await auth0.getTokenSilently();
-
         } else {
           document.getElementById("gated-content").classList.add("hidden");
         }
@@ -43,13 +42,14 @@
 
       const login = async () => {
         await auth0.loginWithRedirect({
-          redirect_uri: window.location.origin + "/auth-helper"
+          redirect_uri: window.location.origin + "/auth-helper",
+          scope: "openid email",
         });
       };
 
       const logout = () => {
         auth0.logout({
-          returnTo: window.location.origin + "/auth-helper"
+          returnTo: window.location.origin + "/auth-helper",
         });
       };
 
@@ -61,7 +61,7 @@
 
         /* Copy the text inside the text field */
         document.execCommand("copy");
-      }
+      };
 
       window.onload = async () => {
         await configureClient();
@@ -72,16 +72,15 @@
         // NEW - check for the code and state parameters
         const query = window.location.search;
         if (query.includes("code=") && query.includes("state=")) {
-
           // Process the login state
           await auth0.handleRedirectCallback();
-          
+
           updateUI();
 
           // Use replaceState to redirect the user away and remove the querystring parameters
           window.history.replaceState({}, document.title, "/auth-helper");
         }
-      }
+      };
     </script>
     <style>
       .hidden {
@@ -97,19 +96,26 @@
 
   <body>
     <h2>Get Token</h2>
-    <p>Sign in here for a token that can be used to interact with the <a href="/graphiql">GraphQL endpoint</a></p>
+    <p>
+      Sign in here for a token that can be used to interact with the
+      <a href="/graphiql">GraphQL endpoint</a>
+    </p>
     <button id="btn-login" disabled="true" onclick="login()">Log in</button>
     <button id="btn-logout" disabled="true" onclick="logout()">Log out</button>
 
     <div class="hidden" id="gated-content">
       <p>
         You are currently
-        <strong>logged in</strong>. <button onclick="copyToken()">Copy Token</button>
+        <strong>logged in</strong>.
+        <button onclick="copyToken()">Copy Token</button>
       </p>
       <label>
         <textarea id="ipt-access-token"></textarea>
       </label>
-      <p>Note that you may need to indicate a project subdomain using <code>x-ss-slug</code> when working with the API.</p>
+      <p>
+        Note that you may need to indicate a project subdomain using
+        <code>x-ss-slug</code> when working with the API.
+      </p>
     </div>
   </body>
 </html>
