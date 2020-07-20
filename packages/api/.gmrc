@@ -8,7 +8,7 @@
     {
       "_": "command",
       "shadow": true,
-      "command": "echo 'after' && if [ \"$IN_TESTS\" != \"1\" ]; then npm run db:schema && npm run services:genkeys; fi"
+      "command": "echo 'after' && if [ \"$IN_TESTS\" != \"1\" ]; then npm run db:schema && npm run services:rotatekeys; fi"
     }
   ]
 }
