@@ -214,7 +214,9 @@ CREATE TYPE public.invite_status AS ENUM (
     'CONFIRMED',
     'TOKEN_EXPIRED',
     'ERROR',
-    'UNSUBSCRIBED'
+    'UNSUBSCRIBED',
+    'SURVEY_INVITE_QUEUED',
+    'SURVEY_INVITE_SENT'
 );
 
 
@@ -1146,6 +1148,47 @@ CREATE FUNCTION public.confirm_project_invite(invite_id integer) RETURNS integer
 --
 
 COMMENT ON FUNCTION public.confirm_project_invite(invite_id integer) IS '@omit';
+
+
+--
+-- Name: confirm_project_invite_with_survey_token(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      -- check that there is a user logged in with a verified email
+      if nullif(current_setting('session.user_id', TRUE), '')::int is not null and nullif(current_setting('session.survey_invite_email', TRUE), '')::text is not null then
+        -- check if there is an invite that matches that email
+        if exists(select 1 from project_invites where email = nullif(current_setting('session.survey_invite_email', TRUE), '')) then
+          -- if so, run confirm_project_invite(invite_id)
+          return (
+            select confirm_project_invite((
+              select id from project_invites where email = nullif(current_setting('session.survey_invite_email', TRUE), '')
+            ))
+          );
+        else
+          raise exception 'No sent invite matching your email found';
+        end if;
+      else
+        raise exception 'Must be logged in with a verified email and have x-ss-survey-invite-token header set';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION confirm_project_invite_with_survey_token("projectId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) IS '
+Project invites can be paired with survey invites so that users can be sent an
+email inviting them to a survey, then use that survey invite to confirm a 
+project invitation. This way there are no duplicative emails sent.
+
+Clients must set x-ss-survey-invite-token header before calling this mutation.
+';
 
 
 --
@@ -2767,12 +2810,42 @@ CREATE FUNCTION public.project_invites_status(invite public.project_invites) RET
       email_status invite_status;
       expired boolean;
       has_complaint boolean;
+      survey_invite_status invite_status;
     begin
       select exists(select 1 from invite_emails where to_address = invite.email and status = 'COMPLAINT') into has_complaint;
-      if invite.was_used = true then 
+      -- check for sent survey invites
+      select 
+        status 
+      into
+        survey_invite_status
+      from 
+        invite_emails 
+      where 
+        invite_emails.to_address = invite.email and
+        invite_emails.survey_invite_id = any(select id from surveys where surveys.project_id = invite.project_id);
+      if survey_invite_status is not null then
+        if survey_invite_status in ('SENT', 'DELIVERED', 'CONFIRMED') then
+          return 'SURVEY_INVITE_SENT';
+        else
+          return survey_invite_status;
+        end if;
+      elseif exists(
+        select
+          1
+        from
+          survey_invites
+        inner join
+          surveys
+        on
+          survey_invites.survey_id = surveys.id
+        where
+          survey_invites.email = invite.email and
+          surveys.project_id = invite.project_id
+      ) then
+        return 'SURVEY_INVITE_QUEUED';
+      elseif invite.was_used = true then 
         return 'CONFIRMED';
-      end if;
-      if has_complaint then
+      elseif has_complaint then
         return 'COMPLAINT';
       else
         select
@@ -2867,13 +2940,16 @@ CREATE FUNCTION public.projects_invite(p public.projects) RETURNS public.project
     from 
       project_invites 
     where 
-      project_id = p.id and
-      email = current_setting('session.canonical_email', TRUE)::email and
-      exists(
-        select 1 from invite_emails 
-        where status != 'QUEUED' and 
-        project_invite_id = project_invites.id
-      )
+      project_id = p.id and ((
+        email = current_setting('session.canonical_email', TRUE)::email and
+        exists(
+          select 1 from invite_emails 
+          where status != 'QUEUED' and 
+          project_invite_id = project_invites.id
+        )
+      ) or (
+        email = current_setting('session.survey_invite_email', TRUE)::email
+      ))
     limit 1;
   $$;
 
@@ -8018,6 +8094,14 @@ GRANT ALL ON FUNCTION public.confirm_onboarded() TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.confirm_project_invite(invite_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.confirm_project_invite(invite_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION confirm_project_invite_with_survey_token("projectId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) TO anon;
+GRANT ALL ON FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) TO seasketch_user;
 
 
 --
