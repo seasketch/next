@@ -289,5 +289,9 @@ Use \`updateSurveyInvitedGroups()\` mutation to modify.
     "SurveyTokenInfo.projectId": "ID of related project",
     "Query.survey":
       "Note that when requesting a survey and related resources (project, forms & fields) from an invite link when anonymous, the `x-ss-survey-invite-token` header will need to be set in order to gain access to protected resources. For more details [see the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)",
+    "Mutation.deleteTopic":
+      "Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting.",
+    "Mutation.deletePost":
+      "Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting.",
   },
 };

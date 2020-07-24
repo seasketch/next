@@ -21,14 +21,14 @@ describe("Admins can edit access control lists", () => {
         sql`insert into forums (project_id, name) values (${projectId}, 'Forum A') returning id`
       );
       let aclType = await conn.oneFirst(
-        sql`select type from access_control_lists where forum_id = ${forumId}`
+        sql`select type from access_control_lists where forum_id_read = ${forumId}`
       );
       expect(aclType).toBe("public");
       await conn.any(
-        sql`update access_control_lists set type = 'admins_only' where forum_id = ${forumId}`
+        sql`update access_control_lists set type = 'admins_only' where forum_id_read = ${forumId}`
       );
       aclType = await conn.oneFirst(
-        sql`select type from access_control_lists where forum_id = ${forumId}`
+        sql`select type from access_control_lists where forum_id_read = ${forumId}`
       );
       expect(aclType).toBe("admins_only");
       await conn.any(sql`ROLLBACK`);
@@ -44,14 +44,14 @@ describe("Admins can edit access control lists", () => {
         sql`insert into forums (project_id, name) values (${projectId}, 'Forum A') returning id`
       );
       let aclType = await conn.oneFirst(
-        sql`select type from access_control_lists where forum_id = ${forumId}`
+        sql`select type from access_control_lists where forum_id_read = ${forumId}`
       );
       expect(aclType).toBe("public");
       const rando = await createUser(conn);
       await createSession(conn, rando, true, false, projectId);
       expect(
         conn.oneFirst(
-          sql`update access_control_lists set type = 'admins_only' where forum_id = ${forumId} returning id`
+          sql`update access_control_lists set type = 'admins_only' where forum_id_read = ${forumId} returning id`
         )
       ).rejects.toThrow();
       await conn.any(sql`ROLLBACK`);
@@ -67,7 +67,7 @@ describe("Admins can edit access control lists", () => {
         sql`insert into forums (project_id, name) values (${projectId}, 'Forum A') returning id`
       );
       const aclId = await conn.oneFirst(
-        sql`update access_control_lists set type = 'group' where forum_id = ${forumId} returning id`
+        sql`update access_control_lists set type = 'group' where forum_id_read = ${forumId} returning id`
       );
       const groupId = await conn.oneFirst(
         sql`insert into project_groups (project_id, name) values (${projectId}, 'Group A') returning id`
@@ -90,7 +90,7 @@ describe("Admins can edit access control lists", () => {
         sql`insert into forums (project_id, name) values (${projectId}, 'Forum A') returning id`
       );
       const aclId = await conn.oneFirst(
-        sql`update access_control_lists set type = 'group' where forum_id = ${forumId} returning id`
+        sql`update access_control_lists set type = 'group' where forum_id_read = ${forumId} returning id`
       );
       const groupId = await conn.oneFirst(
         sql`insert into project_groups (project_id, name) values (${projectId}, 'Group A') returning id`
@@ -123,7 +123,7 @@ describe("ACL evaluation", () => {
         sql`insert into forums (project_id, name) values (${projectId}, 'Forum A') returning id`
       );
       const aclId = await conn.oneFirst(
-        sql`update access_control_lists set type = 'public' where forum_id = ${forumId} returning id`
+        sql`update access_control_lists set type = 'public' where forum_id_read = ${forumId} returning id`
       );
       await conn.any(sql`set role = anon`);
       const passes = await conn.oneFirst(sql`select session_on_acl(${aclId})`);
@@ -139,7 +139,7 @@ describe("ACL evaluation", () => {
         sql`insert into forums (project_id, name) values (${projectId}, 'Forum A') returning id`
       );
       const aclId = await conn.oneFirst(
-        sql`update access_control_lists set type = 'admins_only' where forum_id = ${forumId} returning id`
+        sql`update access_control_lists set type = 'admins_only' where forum_id_read = ${forumId} returning id`
       );
       await clearSession(conn);
       await conn.any(sql`set role = anon`);
@@ -162,7 +162,7 @@ describe("ACL evaluation", () => {
         sql`insert into forums (project_id, name) values (${projectId}, 'Forum A') returning id`
       );
       const aclId = await conn.oneFirst(
-        sql`update access_control_lists set type = 'group' where forum_id = ${forumId} returning id`
+        sql`update access_control_lists set type = 'group' where forum_id_read = ${forumId} returning id`
       );
       const groupId = await conn.oneFirst(
         sql`insert into project_groups (project_id, name) values (${projectId}, 'Group A') returning id`
@@ -215,7 +215,7 @@ describe("email confirmation and access to protected resources", () => {
           sql`insert into forums (project_id, name) values (${projectId}, 'Forum A') returning id`
         );
         const aclId = await conn.oneFirst(
-          sql`update access_control_lists set type = 'group' where forum_id = ${forumId} returning id`
+          sql`update access_control_lists set type = 'group' where forum_id_read = ${forumId} returning id`
         );
         const groupId = await conn.oneFirst(
           sql`insert into project_groups (project_id, name) values (${projectId}, 'Group A') returning id`

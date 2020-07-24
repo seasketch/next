@@ -19,6 +19,10 @@ import currentProjectMiddlware from "./middleware/currentProjectMiddleware";
 import surveyInviteMiddlware from "./middleware/surveyInviteMiddleware";
 import { IncomingRequest } from "./middleware/IncomingRequest";
 import verifyEmailMiddleware from "./middleware/verifyEmailMiddleware";
+// @ts-ignore
+import orderTopicsByDateAndStickyPlugin from "./plugins/orderTopicsByDateAndStickyPlugin";
+import { unsubscribeFromTopic } from "./activityNotifications/topicNotifications";
+console.log(orderTopicsByDateAndStickyPlugin);
 
 const app = express();
 
@@ -40,6 +44,23 @@ app.get("/auth_config.json", (req, res) => {
       audience: process.env.JWT_AUD,
     })
   );
+});
+
+app.get("/unsubscribeFromTopic", (req, res) => {
+  const token = req.query.token;
+  if (!token || token.length < 1) {
+    res.status(400);
+    res.send("Missing token");
+  } else {
+    unsubscribeFromTopic(pool, token)
+      .then(() => {
+        res.send("You have been unsubscribed from this discussion topic.");
+      })
+      .catch((e) => {
+        res.status(400);
+        res.send(e.toString());
+      });
+  }
 });
 
 app.get("/.well-known/jwks.json", async (req, res) => {
@@ -105,6 +126,7 @@ app.use(
       ProjectInvitesPlugin,
       SurveyInvitesPlugin,
       CanonicalEmailPlugin,
+      orderTopicsByDateAndStickyPlugin,
       reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

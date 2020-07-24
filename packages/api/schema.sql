@@ -366,9 +366,10 @@ CREATE TABLE public.access_control_lists (
     id integer NOT NULL,
     project_id integer NOT NULL,
     type public.access_control_list_type DEFAULT 'public'::public.access_control_list_type NOT NULL,
-    forum_id integer,
     sketch_class_id integer,
-    CONSTRAINT access_control_list_has_related_model CHECK (((((sketch_class_id IS NOT NULL))::integer + ((forum_id IS NOT NULL))::integer) = 1))
+    forum_id_read integer,
+    forum_id_write integer,
+    CONSTRAINT access_control_list_has_related_model CHECK ((((((sketch_class_id IS NOT NULL))::integer + ((forum_id_read IS NOT NULL))::integer) + ((forum_id_write IS NOT NULL))::integer) = 1))
 );
 
 
@@ -575,6 +576,34 @@ CREATE FUNCTION public.add_valid_child_sketch_class(parent integer, child intege
 COMMENT ON FUNCTION public.add_valid_child_sketch_class(parent integer, child integer) IS '
 Add a SketchClass to the list of valid children for a Collection-type SketchClass.
 ';
+
+
+--
+-- Name: after_post_insert(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_post_insert() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      insert into pending_topic_notifications (
+        user_id, 
+        topic_id
+      ) select distinct 
+          posts.author_id, 
+          NEW.topic_id
+        from
+          posts
+        where
+          posts.topic_id = NEW.topic_id and
+          -- don't notify anyone who has unsubscribed from this topic
+          posts.author_id not in (select user_id from topic_notification_unsubscribes where topic_id = NEW.topic_id) and
+          -- don't notify self
+          posts.author_id != NEW.author_id
+      on conflict do nothing;
+      return NEW;
+    end;
+  $$;
 
 
 --
@@ -1415,13 +1444,94 @@ CREATE FUNCTION public.create_form_template_from_survey("surveyId" integer, "tem
 CREATE FUNCTION public.create_forum_acl() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-BEGIN
-  INSERT INTO
-    access_control_lists(project_id, forum_id, type)
-    VALUES(new.project_id, new.id, 'public'::access_control_list_type);
-      RETURN new;
-END;
+begin
+  insert into
+    access_control_lists(project_id, forum_id_read, type)
+    values(new.project_id, new.id, 'public'::access_control_list_type);
+
+  insert into
+    access_control_lists(project_id, forum_id_write, type)
+    values(new.project_id, new.id, 'public'::access_control_list_type);
+  return new;
+end;
 $$;
+
+
+--
+-- Name: posts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.posts (
+    id integer NOT NULL,
+    topic_id integer NOT NULL,
+    author_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    message_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
+    hidden_by_moderator boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: COLUMN posts.message_contents; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.posts.message_contents IS '@omit';
+
+
+--
+-- Name: create_post(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_post(message jsonb, "topicId" integer) RETURNS public.posts
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      post posts;
+      pid int;
+      is_archived boolean;
+      locked boolean;
+      is_admin boolean;
+    begin
+      select
+        project_id,
+        archived,
+        topics.locked,
+        session_is_admin(project_id)
+      from
+        forums
+      into
+        pid,
+        is_archived,
+        locked,
+        is_admin
+      inner join
+        topics
+      on
+        topics.id = "topicId"
+      where
+        forums.id = topics.forum_id;
+      if session_has_project_access(pid) = false then
+        raise exception 'Project access permission denied';
+      end if;
+      if session_on_acl((select id from access_control_lists where forum_id_write = (select forum_id from topics where id = "topicId"))) = false then
+        raise exception 'Permission denied';
+      end if;
+      if not exists(select 1 from project_participants where it_me(user_id) and project_id = pid and share_profile = true) then
+        raise exception 'User profile must be shared in order to post in the forum';
+      end if;
+      if session_is_banned_from_posting(pid) then
+        raise exception 'Forum posts have been disabled for this user';
+      end if;
+      if is_admin = false and locked = true then
+        raise exception 'Cannot post to a locked topic';
+      end if;
+      if is_admin = false and is_archived = true then
+        raise exception 'Cannot post to archived forums';
+      end if;
+      insert into posts (message_contents, topic_id, author_id) values (message, "topicId", current_setting('session.user_id', TRUE)::int) returning * into post;
+      return post;
+    end;
+  $$;
 
 
 --
@@ -1815,6 +1925,86 @@ $$;
 
 
 --
+-- Name: topics; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.topics (
+    id integer NOT NULL,
+    title text NOT NULL,
+    forum_id integer NOT NULL,
+    author_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    sticky boolean DEFAULT false NOT NULL,
+    locked boolean DEFAULT false NOT NULL,
+    CONSTRAINT titlechk CHECK ((char_length(title) <= 80))
+);
+
+
+--
+-- Name: COLUMN topics.title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.topics.title IS 'Title displayed in the topics listing. Can be updated in the first 5 minutes after creation.';
+
+
+--
+-- Name: COLUMN topics.sticky; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.topics.sticky IS 'Can be toggled by project admins. Sticky topics will be listed at the topic of the forum.';
+
+
+--
+-- Name: COLUMN topics.locked; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.topics.locked IS 'Can be toggled by project admins. Locked topics can only be posted to by project admins and will display a lock symbol.';
+
+
+--
+-- Name: create_topic(integer, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_topic("forumId" integer, title text, message jsonb) RETURNS public.topics
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      topic topics;
+      pid int;
+    begin
+      select project_id into pid from forums where id = "forumId";
+      if session_has_project_access(pid) = false then
+        raise exception 'Project access permission denied';
+      end if;
+      if not exists(select 1 from project_participants where it_me(user_id) and project_id = pid and share_profile = true) then
+        raise exception 'User profile must be shared in order to post in the forum';
+      end if;
+      if session_is_banned_from_posting(pid) then
+        raise exception 'Forum posts have been disabled for this user';
+      end if;
+      if session_on_acl((select id from access_control_lists where forum_id_write = "forumId")) = false then
+        raise exception 'Permission denied';
+      elsif exists(select 1 from forums where id = "forumId" and archived = true) then
+        raise exception 'Cannot post to archived forums';
+      else
+        insert into topics (title, forum_id, author_id) values (title, "forumId", current_setting('session.user_id', TRUE)::int) returning * into topic;
+        insert into posts (topic_id, author_id, message_contents) values (topic.id, current_setting('session.user_id', TRUE)::int, message);
+        return topic;
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION create_topic("forumId" integer, title text, message jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb) IS '
+Must have write permission for the specified forum. Create a new discussion topic, including the first post. `message` must be JSON, something like the output of DraftJS.
+';
+
+
+--
 -- Name: current_project(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1862,6 +2052,56 @@ $$;
 --
 
 COMMENT ON FUNCTION public.delete_project(project_id integer, OUT project public.projects) IS 'Marks project as deleted. Will remain in database but not accessible to anyone. Function can only be accessed by project administrators.';
+
+
+--
+-- Name: disable_forum_posting(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.disable_forum_posting("userId" integer, "projectId" integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      if session_is_admin("projectId") then
+        update project_participants set is_banned_from_forums = true where project_id = "projectId" and user_id = "userId";
+        return;
+      else
+        raise exception 'Must be project admin';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION disable_forum_posting("userId" integer, "projectId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.disable_forum_posting("userId" integer, "projectId" integer) IS 'Ban a user from posting in the discussion forum';
+
+
+--
+-- Name: enable_forum_posting(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enable_forum_posting("userId" integer, "projectId" integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      if session_is_admin("projectId") then
+        update project_participants set is_banned_from_forums = false where project_id = "projectId" and user_id = "userId";
+        return;
+      else
+        raise exception 'Must be project admin';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION enable_forum_posting("userId" integer, "projectId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" integer) IS 'Re-enable discussion forum posting for a user that was previously banned.';
 
 
 --
@@ -2391,6 +2631,28 @@ resubmitted by the respondant.
 
 
 --
+-- Name: mark_topic_as_read(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.mark_topic_as_read("topicId" integer) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    delete from pending_topic_notifications where it_me(user_id) and topic_id = "topicId" returning true;
+  $$;
+
+
+--
+-- Name: FUNCTION mark_topic_as_read("topicId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.mark_topic_as_read("topicId" integer) IS '
+Mark the topic as read by the current session user. Used to avoid sending email
+notifications to users who have already read a topic. Call when loading a topic, 
+and whenever new posts are shown.
+';
+
+
+--
 -- Name: me(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2652,6 +2914,114 @@ $$;
 --
 
 COMMENT ON FUNCTION public.onboarded() IS '@omit';
+
+
+--
+-- Name: user_profiles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_profiles (
+    user_id integer NOT NULL,
+    fullname text,
+    nickname text,
+    picture text,
+    email public.email,
+    affiliations text,
+    bio text,
+    CONSTRAINT user_profiles_picture_check CHECK ((picture ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
+);
+
+
+--
+-- Name: TABLE user_profiles; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.user_profiles IS '@omit all
+@name profile
+Personal information that users have contributed. This information is only 
+accessible directly to admins on projects where the user has chosen to share the
+information (via the `joinProject()` mutation).
+
+Regular SeaSketch users can access user profiles thru accessor fields on shared
+content like forum posts if they have been shared, but regular users have no 
+means of listing out all profiles in bulk.
+';
+
+
+--
+-- Name: posts_author_profile(public.posts); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.posts_author_profile(post public.posts) RETURNS public.user_profiles
+    LANGUAGE sql STABLE
+    AS $$
+    select
+      user_profiles.*
+    from
+      user_profiles
+    inner join
+      project_participants
+    on
+      project_participants.user_id = post.author_id
+    where
+      project_participants.share_profile = true
+    limit 1;
+  $$;
+
+
+--
+-- Name: FUNCTION posts_author_profile(post public.posts); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.posts_author_profile(post public.posts) IS '
+User Profile of the author. If a user has not shared their profile the post message will be hidden.
+';
+
+
+--
+-- Name: posts_message(public.posts); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.posts_message(post public.posts) RETURNS jsonb
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select
+      message_contents
+    from
+      posts
+    inner join
+      topics
+    on
+      topics.id = post.topic_id
+    inner join
+      forums
+    on
+      forums.id = topics.forum_id
+    inner join
+      project_participants
+    on
+      project_participants.user_id = post.author_id
+    where
+      posts.id = post.id and
+      post.hidden_by_moderator = false and
+      project_participants.share_profile = true and
+      project_participants.project_id = forums.project_id
+  $$;
+
+
+--
+-- Name: FUNCTION posts_message(post public.posts); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.posts_message(post public.posts) IS '
+Message contents of the post as JSON for use with DraftJS. 
+
+Message may be null if user is not currently sharing their profile, in which 
+case the client should explain such. 
+
+Message could also be null if `hiddenByModerator` is set. In that case the 
+client should explain that the post violated the `CommunityGuidelines`, if set.
+';
 
 
 --
@@ -3145,6 +3515,40 @@ in this list. Those users can be accessed via `unapprovedParticipants()`
 
 
 --
+-- Name: projects_session_has_posts(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_session_has_posts(project public.projects) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select exists(
+      select 
+        1 
+      from 
+        posts 
+      inner join
+        topics
+      on
+        posts.topic_id = topics.id
+      inner join
+        forums
+      on
+        forums.id = topics.forum_id
+      where
+        forums.project_id = project.id and
+        it_me(posts.author_id)
+    );
+  $$;
+
+
+--
+-- Name: FUNCTION projects_session_has_posts(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_session_has_posts(project public.projects) IS 'Whether the current user has any discussion forum posts in this project. Use this to determine whether `project.communityGuidelines` should be shown to the user before their first post.';
+
+
+--
 -- Name: projects_session_has_privileged_access(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3333,6 +3737,37 @@ $$;
 --
 
 COMMENT ON FUNCTION public.projects_url(p public.projects) IS 'Project url will resolve to `https://seasketch.org/{slug}/`';
+
+
+--
+-- Name: projects_users_banned_from_forums(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_users_banned_from_forums(project public.projects) RETURNS SETOF public.users
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    begin
+      if session_is_admin(project.id) then
+        return query select users.* from users
+        inner join
+          project_participants
+        on
+          project_participants.user_id = users.id
+        where
+          project_participants.project_id = project.id and
+          project_participants.is_banned_from_forums = true;
+      else
+        raise exception 'Must be a project admin';
+      end if;
+    end;
+$$;
+
+
+--
+-- Name: FUNCTION projects_users_banned_from_forums(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_users_banned_from_forums(project public.projects) IS 'List of all banned users. Listing only accessible to admins.';
 
 
 --
@@ -3799,6 +4234,17 @@ COMMENT ON FUNCTION public.session_is_approved_participant(pid integer) IS '@omi
 
 
 --
+-- Name: session_is_banned_from_posting(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.session_is_banned_from_posting(pid integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select is_banned_from_forums from project_participants where project_id = pid and user_id = nullif(current_setting('session.user_id', TRUE), '')::int;
+  $$;
+
+
+--
 -- Name: session_is_superuser(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4026,6 +4472,201 @@ the input will be positioned at the end of the form.
 
 Use this instead of trying to manage the position of form fields individually.
 ';
+
+
+--
+-- Name: forums; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.forums (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    name text NOT NULL,
+    "position" integer DEFAULT 0,
+    description text,
+    archived boolean DEFAULT false
+);
+
+
+--
+-- Name: TABLE forums; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.forums IS '
+@omit all
+Discussion forums are the highest level organizing unit of the discussion forums
+for a project. Each forum can have many topics (threads), which then contain
+posts. Only project administrators can create and configure forums.
+';
+
+
+--
+-- Name: COLUMN forums.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.forums.name IS 'Title displayed for the forum.';
+
+
+--
+-- Name: COLUMN forums."position"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.forums."position" IS 'Sets position of this forum in the listing. Forums should be listed by position in ascending order. Set using `setForumOrder()`';
+
+
+--
+-- Name: COLUMN forums.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.forums.description IS 'Optional description of the forum to be displayed to project users.';
+
+
+--
+-- Name: COLUMN forums.archived; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.forums.archived IS 'Archived forums will only be accessible by project administrators from the admin dashboard. This is an alternative to deleting a forum.';
+
+
+--
+-- Name: set_forum_order(integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_forum_order("forumIds" integer[]) RETURNS SETOF public.forums
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+      pos int;
+      forum record;
+    begin
+      select 
+        forums.project_id
+      into
+        pid
+      from
+        forums
+      where
+        forums.id = any ("forumIds")
+      limit 1;
+      if session_is_admin(pid) = false then
+        raise exception 'Must be project admin';
+      end if;
+      pos = 1;
+      for forum in (select * from forums where forums.project_id = pid order by array_position("forumIds", id)) loop
+        update forums set position = pos where id = forum.id;
+        pos = pos + 1;
+      end loop;
+      return query select * from forums where forums.project_id = pid order by position asc;
+    end
+  $$;
+
+
+--
+-- Name: set_post_hidden_by_moderator(integer, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_post_hidden_by_moderator("postId" integer, value boolean) RETURNS public.posts
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+      post posts;
+    begin
+      select
+        forums.project_id
+      from
+        posts
+      into
+        pid
+      inner join
+        topics
+      on
+        posts.topic_id = topics.id
+      inner join
+        forums
+      on
+        forums.id = topics.forum_id
+      where
+        posts.id = "postId";
+      if session_is_admin(pid) = false then
+        raise exception 'Permission denied';
+      end if;
+      update posts set hidden_by_moderator = "value" where id = "postId" returning * into post;
+      return post;
+    end;
+  $$;
+
+
+--
+-- Name: set_topic_locked(integer, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_topic_locked("topicId" integer, value boolean) RETURNS public.topics
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+      topic topics;
+    begin
+      select
+        forums.project_id
+      from
+        topics
+      into
+        pid
+      inner join
+        forums
+      on
+        forums.id = topics.forum_id
+      where
+        topics.id = "topicId";
+      if session_is_admin(pid) then
+        update topics set locked = value where id = "topicId" returning * into topic;
+        return topic;
+      end if;
+      raise exception 'Must be project admin';
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION set_topic_locked("topicId" integer, value boolean); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.set_topic_locked("topicId" integer, value boolean) IS 'Lock a topic so that it can no longer be responded to. Past discussion will still be visible. This mutation is only available to project admins.';
+
+
+--
+-- Name: set_topic_sticky(integer, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_topic_sticky("topicId" integer, value boolean) RETURNS public.topics
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+      topic topics;
+    begin
+      select
+        forums.project_id
+      from
+        topics
+      into
+        pid
+      inner join
+        forums
+      on
+        forums.id = topics.forum_id
+      where
+        topics.id = "topicId";
+      if session_is_admin(pid) then
+        update topics set sticky = value where id = "topicId" returning * into topic;
+        return topic;
+      end if;
+      raise exception 'Must be project admin';
+    end;
+  $$;
 
 
 --
@@ -4590,6 +5231,40 @@ COMMENT ON FUNCTION public.template_forms() IS '@simpleCollections only';
 
 
 --
+-- Name: topics_author_profile(public.topics); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.topics_author_profile(topic public.topics) RETURNS public.user_profiles
+    LANGUAGE sql STABLE
+    AS $$
+    select
+      user_profiles.*
+    from
+      user_profiles
+    inner join
+      topics
+    on
+      topics.id = topic.id
+    inner join
+      project_participants
+    on
+      project_participants.user_id = topic.author_id
+    where
+      project_participants.share_profile = true
+    limit 1;
+  $$;
+
+
+--
+-- Name: FUNCTION topics_author_profile(topic public.topics); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.topics_author_profile(topic public.topics) IS '
+User Profile of the author. If a user has not shared their profile the first post contents will be hidden.
+';
+
+
+--
 -- Name: unsubscribed(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4605,6 +5280,72 @@ $$;
 --
 
 COMMENT ON FUNCTION public.unsubscribed("userId" integer) IS '@omit';
+
+
+--
+-- Name: update_post(integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_post("postId" integer, message jsonb) RETURNS public.posts
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+      tid int;
+      post posts;
+    begin
+      select
+        topics.id,
+        forums.project_id
+      from
+        posts
+      into
+        tid,
+        pid
+      inner join
+        topics
+      on
+        posts.topic_id = topics.id
+      inner join
+        forums
+      on
+        forums.id = topics.forum_id
+      where
+        posts.id = "postId";
+
+      if session_is_admin(pid) then
+        update 
+          posts 
+        set 
+          message_contents = message
+        where
+          id = "postId"
+        returning
+          *
+        into
+          post;
+        return post;
+      else
+        if not exists(select 1 from posts where id = "postId" and author_id = current_setting('session.user_id', TRUE)::int) then
+          raise exception 'Permission denied';
+        end if;
+        if not exists(select 1 from posts where id = "postId" and created_at > now() - interval '5 minutes') then
+          raise exception 'Posts can only be edited in the first 5 minutes after posting.';
+        end if;
+        update 
+          posts 
+        set 
+          message_contents = message
+        where
+          id = "postId"
+        returning
+          *
+        into
+          post;
+        return post;
+      end if;
+    end;
+  $$;
 
 
 --
@@ -4713,6 +5454,33 @@ should warn admins of this behavior when removing groups for an active survey*.
 
 The list of invited groups can be accessed via `Survey.invitedGroups`.
 ';
+
+
+--
+-- Name: users_banned_from_forums(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_banned_from_forums(u public.users, "projectId" integer) RETURNS boolean
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      is_banned boolean;
+    begin
+      if session_is_admin("projectId") then
+        select is_banned_from_forums into is_banned from project_participants where project_id = "projectId" and user_id = u.id;
+        return is_banned;
+      else
+        raise exception 'Must be a project admin';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION users_banned_from_forums(u public.users, "projectId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.users_banned_from_forums(u public.users, "projectId" integer) IS 'Whether the user has been banned from the forums. Use `disableForumPosting()` and `enableForumPosting()` mutations to modify this state. Accessible only to admins.';
 
 
 --
@@ -4847,6 +5615,38 @@ ALTER TABLE public.access_control_lists ALTER COLUMN id ADD GENERATED BY DEFAULT
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- Name: community_guidelines; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.community_guidelines (
+    project_id integer NOT NULL,
+    content jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+--
+-- Name: TABLE community_guidelines; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.community_guidelines IS '
+@omit many,all
+Community guidelines can be set by project admins with standards for using the 
+discussion forums. Users will be shown this content before making their first
+post, and they will be shown when posts are hidden by moderators for violating
+community standards.
+';
+
+
+--
+-- Name: COLUMN community_guidelines.content; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.community_guidelines.content IS '
+JSON contents are expected to be used with a system like DraftJS on the client.
+';
 
 
 --
@@ -5002,24 +5802,6 @@ ALTER TABLE public.forms ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 
 --
--- Name: forums; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.forums (
-    id integer NOT NULL,
-    project_id integer NOT NULL,
-    name text NOT NULL
-);
-
-
---
--- Name: TABLE forums; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.forums IS '@omit all';
-
-
---
 -- Name: forums_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -5073,6 +5855,57 @@ COMMENT ON TABLE public.jwks IS '
 @omit
 JSON web key set table. Design guided by https://tools.ietf.org/html/rfc7517
 ';
+
+
+--
+-- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pending_topic_notifications (
+    id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    topic_id integer NOT NULL,
+    user_id integer NOT NULL
+);
+
+
+--
+-- Name: TABLE pending_topic_notifications; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.pending_topic_notifications IS '
+Created by trigger whenever a new message is posted to a topic, for each user who has 
+replied to that topic. A backend process will need to periodically check this 
+table and delete records.
+';
+
+
+--
+-- Name: pending_topic_notifications_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.pending_topic_notifications ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.pending_topic_notifications_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: posts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.posts ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.posts_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
 
 
 --
@@ -5140,7 +5973,8 @@ CREATE TABLE public.project_participants (
     is_admin boolean DEFAULT false,
     approved boolean DEFAULT false NOT NULL,
     requested_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-    share_profile boolean DEFAULT false NOT NULL
+    share_profile boolean DEFAULT false NOT NULL,
+    is_banned_from_forums boolean DEFAULT false NOT NULL
 );
 
 
@@ -5312,35 +6146,56 @@ ALTER TABLE public.surveys ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY 
 
 
 --
--- Name: user_profiles; Type: TABLE; Schema: public; Owner: -
+-- Name: topic_notification_unsubscribes; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_profiles (
-    user_id integer NOT NULL,
-    fullname text,
-    nickname text,
-    picture text,
-    email public.email,
-    affiliations text,
-    bio text,
-    CONSTRAINT user_profiles_picture_check CHECK ((picture ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
+CREATE TABLE public.topic_notification_unsubscribes (
+    id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    topic_id integer NOT NULL,
+    user_id integer NOT NULL
 );
 
 
 --
--- Name: TABLE user_profiles; Type: COMMENT; Schema: public; Owner: -
+-- Name: TABLE topic_notification_unsubscribes; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.user_profiles IS '@omit all
-@name profile
-Personal information that users have contributed. This information is only 
-accessible directly to admins on projects where the user has chosen to share the
-information (via the `joinProject()` mutation).
-
-Regular SeaSketch users can access user profiles thru accessor fields on shared
-content like forum posts if they have been shared, but regular users have no 
-means of listing out all profiles in bulk.
+COMMENT ON TABLE public.topic_notification_unsubscribes IS '
+Users are emailed notifications when there is a response to discussion topics 
+they have replied to. These could get annoying for very chatty threads, so users
+have the option to unsubscribe to a single topic by clicking a link in their 
+email. This link should include a jwt token that identifies the project, topic, 
+and user.
 ';
+
+
+--
+-- Name: topic_notification_unsubscribes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.topic_notification_unsubscribes ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.topic_notification_unsubscribes_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: topics_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.topics ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.topics_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
 
 
 --
@@ -5366,14 +6221,6 @@ ALTER TABLE ONLY public.access_control_list_groups
 
 
 --
--- Name: access_control_lists access_control_lists_forum_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.access_control_lists
-    ADD CONSTRAINT access_control_lists_forum_id_key UNIQUE (forum_id);
-
-
---
 -- Name: access_control_lists access_control_lists_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5387,6 +6234,14 @@ ALTER TABLE ONLY public.access_control_lists
 
 ALTER TABLE ONLY public.access_control_lists
     ADD CONSTRAINT access_control_lists_sketch_class_id_key UNIQUE (sketch_class_id);
+
+
+--
+-- Name: community_guidelines community_guidelines_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.community_guidelines
+    ADD CONSTRAINT community_guidelines_pkey PRIMARY KEY (project_id);
 
 
 --
@@ -5467,6 +6322,30 @@ ALTER TABLE ONLY public.invite_emails
 
 ALTER TABLE ONLY public.jwks
     ADD CONSTRAINT jwks_pkey PRIMARY KEY (kid);
+
+
+--
+-- Name: pending_topic_notifications pending_topic_notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_topic_notifications
+    ADD CONSTRAINT pending_topic_notifications_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pending_topic_notifications pending_topic_notifications_topic_id_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_topic_notifications
+    ADD CONSTRAINT pending_topic_notifications_topic_id_user_id_key UNIQUE (topic_id, user_id);
+
+
+--
+-- Name: posts posts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.posts
+    ADD CONSTRAINT posts_pkey PRIMARY KEY (id);
 
 
 --
@@ -5637,6 +6516,30 @@ ALTER TABLE ONLY public.surveys
 
 
 --
+-- Name: topic_notification_unsubscribes topic_notification_unsubscribes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.topic_notification_unsubscribes
+    ADD CONSTRAINT topic_notification_unsubscribes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: topic_notification_unsubscribes topic_notification_unsubscribes_topic_id_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.topic_notification_unsubscribes
+    ADD CONSTRAINT topic_notification_unsubscribes_topic_id_user_id_key UNIQUE (topic_id, user_id);
+
+
+--
+-- Name: topics topics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.topics
+    ADD CONSTRAINT topics_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: user_profiles user_profiles_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5683,10 +6586,17 @@ CREATE INDEX access_control_list_groups_group_id_idx ON public.access_control_li
 
 
 --
--- Name: access_control_lists_forum_id_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: access_control_lists_forum_id_read_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX access_control_lists_forum_id_idx ON public.access_control_lists USING btree (forum_id) WHERE (forum_id IS NOT NULL);
+CREATE UNIQUE INDEX access_control_lists_forum_id_read_idx ON public.access_control_lists USING btree (forum_id_read) WHERE (forum_id_read IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_forum_id_write_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_forum_id_write_idx ON public.access_control_lists USING btree (forum_id_write) WHERE (forum_id_write IS NOT NULL);
 
 
 --
@@ -5785,6 +6695,13 @@ CREATE INDEX invite_emails_survey_invite_id_to_address_idx ON public.invite_emai
 --
 
 CREATE INDEX invite_emails_token_idx ON public.invite_emails USING btree (token);
+
+
+--
+-- Name: posts_topic_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX posts_topic_id_idx ON public.posts USING btree (topic_id);
 
 
 --
@@ -6019,6 +6936,20 @@ CREATE INDEX surveys_project_id_idx ON public.surveys USING btree (project_id);
 
 
 --
+-- Name: topic_notification_unsubscribes_topic_id_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX topic_notification_unsubscribes_topic_id_user_id_idx ON public.topic_notification_unsubscribes USING btree (topic_id, user_id);
+
+
+--
+-- Name: topics_forum_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX topics_forum_id_idx ON public.topics USING btree (forum_id);
+
+
+--
 -- Name: user_profiles_user_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6037,6 +6968,13 @@ CREATE INDEX users_sub ON public.users USING btree (sub);
 --
 
 CREATE TRIGGER after_add_user_to_group_update_survey_invites AFTER INSERT ON public.project_group_members FOR EACH ROW EXECUTE FUNCTION public.add_user_to_group_update_survey_invites_trigger();
+
+
+--
+-- Name: posts after_post_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER after_post_insert_trigger AFTER INSERT ON public.posts FOR EACH ROW EXECUTE FUNCTION public.after_post_insert();
 
 
 --
@@ -6189,11 +7127,19 @@ ALTER TABLE ONLY public.access_control_list_groups
 
 
 --
--- Name: access_control_lists access_control_lists_forum_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: access_control_lists access_control_lists_forum_id_read_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.access_control_lists
-    ADD CONSTRAINT access_control_lists_forum_id_fkey FOREIGN KEY (forum_id) REFERENCES public.forums(id) ON DELETE CASCADE;
+    ADD CONSTRAINT access_control_lists_forum_id_read_fkey FOREIGN KEY (forum_id_read) REFERENCES public.forums(id) ON DELETE CASCADE;
+
+
+--
+-- Name: access_control_lists access_control_lists_forum_id_write_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_forum_id_write_fkey FOREIGN KEY (forum_id_write) REFERENCES public.forums(id) ON DELETE CASCADE;
 
 
 --
@@ -6210,6 +7156,24 @@ ALTER TABLE ONLY public.access_control_lists
 
 ALTER TABLE ONLY public.access_control_lists
     ADD CONSTRAINT access_control_lists_sketch_class_id_fkey FOREIGN KEY (sketch_class_id) REFERENCES public.sketch_classes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: community_guidelines community_guidelines_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.community_guidelines
+    ADD CONSTRAINT community_guidelines_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id);
+
+
+--
+-- Name: CONSTRAINT community_guidelines_project_id_fkey ON community_guidelines; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT community_guidelines_project_id_fkey ON public.community_guidelines IS '
+@foreignFieldName communityGuidelines
+Community Guidelines for this project when using the discussion forums.
+';
 
 
 --
@@ -6324,6 +7288,38 @@ ALTER TABLE ONLY public.invite_emails
 COMMENT ON CONSTRAINT invite_emails_survey_invite_id_fkey ON public.invite_emails IS '
 @simpleCollections only
 ';
+
+
+--
+-- Name: pending_topic_notifications pending_topic_notifications_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_topic_notifications
+    ADD CONSTRAINT pending_topic_notifications_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES public.topics(id);
+
+
+--
+-- Name: pending_topic_notifications pending_topic_notifications_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pending_topic_notifications
+    ADD CONSTRAINT pending_topic_notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: posts posts_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.posts
+    ADD CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id);
+
+
+--
+-- Name: posts posts_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.posts
+    ADD CONSTRAINT posts_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE;
 
 
 --
@@ -6655,6 +7651,38 @@ ALTER TABLE ONLY public.surveys
 
 
 --
+-- Name: topic_notification_unsubscribes topic_notification_unsubscribes_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.topic_notification_unsubscribes
+    ADD CONSTRAINT topic_notification_unsubscribes_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES public.topics(id);
+
+
+--
+-- Name: topic_notification_unsubscribes topic_notification_unsubscribes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.topic_notification_unsubscribes
+    ADD CONSTRAINT topic_notification_unsubscribes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: topics topics_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.topics
+    ADD CONSTRAINT topics_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id);
+
+
+--
+-- Name: topics topics_forum_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.topics
+    ADD CONSTRAINT topics_forum_id_fkey FOREIGN KEY (forum_id) REFERENCES public.forums(id) ON DELETE CASCADE;
+
+
+--
 -- Name: user_profiles user_profiles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6667,23 +7695,6 @@ ALTER TABLE ONLY public.user_profiles
 --
 
 COMMENT ON CONSTRAINT user_profiles_user_id_fkey ON public.user_profiles IS '@omit many';
-
-
---
--- Name: postgraphile_watch_ddl; Type: EVENT TRIGGER; Schema: -; Owner: -
---
-
-CREATE EVENT TRIGGER postgraphile_watch_ddl ON ddl_command_end
-         WHEN TAG IN ('ALTER AGGREGATE', 'ALTER DOMAIN', 'ALTER EXTENSION', 'ALTER FOREIGN TABLE', 'ALTER FUNCTION', 'ALTER POLICY', 'ALTER SCHEMA', 'ALTER TABLE', 'ALTER TYPE', 'ALTER VIEW', 'COMMENT', 'CREATE AGGREGATE', 'CREATE DOMAIN', 'CREATE EXTENSION', 'CREATE FOREIGN TABLE', 'CREATE FUNCTION', 'CREATE INDEX', 'CREATE POLICY', 'CREATE RULE', 'CREATE SCHEMA', 'CREATE TABLE', 'CREATE TABLE AS', 'CREATE VIEW', 'DROP AGGREGATE', 'DROP DOMAIN', 'DROP EXTENSION', 'DROP FOREIGN TABLE', 'DROP FUNCTION', 'DROP INDEX', 'DROP OWNED', 'DROP POLICY', 'DROP RULE', 'DROP SCHEMA', 'DROP TABLE', 'DROP TYPE', 'DROP VIEW', 'GRANT', 'REVOKE', 'SELECT INTO')
-   EXECUTE FUNCTION postgraphile_watch.notify_watchers_ddl();
-
-
---
--- Name: postgraphile_watch_drop; Type: EVENT TRIGGER; Schema: -; Owner: -
---
-
-CREATE EVENT TRIGGER postgraphile_watch_drop ON sql_drop
-   EXECUTE FUNCTION postgraphile_watch.notify_watchers_drop();
 
 
 --
@@ -6707,11 +7718,31 @@ CREATE POLICY access_control_lists_update ON public.access_control_lists FOR UPD
    FROM public.sketch_classes
   WHERE (sketch_classes.id = access_control_lists.sketch_class_id))) OR public.session_is_admin(( SELECT forums.project_id
    FROM public.forums
-  WHERE (forums.id = access_control_lists.forum_id))))) WITH CHECK ((public.session_is_admin(( SELECT sketch_classes.project_id
+  WHERE ((forums.id = access_control_lists.forum_id_read) OR (forums.id = access_control_lists.forum_id_write)))))) WITH CHECK ((public.session_is_admin(( SELECT sketch_classes.project_id
    FROM public.sketch_classes
   WHERE (sketch_classes.id = access_control_lists.sketch_class_id))) OR public.session_is_admin(( SELECT forums.project_id
    FROM public.forums
-  WHERE (forums.id = access_control_lists.forum_id)))));
+  WHERE ((forums.id = access_control_lists.forum_id_read) OR (forums.id = access_control_lists.forum_id_write))))));
+
+
+--
+-- Name: community_guidelines; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.community_guidelines ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: community_guidelines community_guidelines_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY community_guidelines_admin ON public.community_guidelines TO seasketch_user USING (public.session_is_admin(project_id)) WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: community_guidelines community_guidelines_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY community_guidelines_select ON public.community_guidelines FOR SELECT TO seasketch_user USING (public.session_has_project_access(project_id));
 
 
 --
@@ -6799,19 +7830,19 @@ CREATE POLICY forum_access_admins ON public.forums TO seasketch_user USING (publ
 
 
 --
--- Name: forums forum_access_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY forum_access_select ON public.forums FOR SELECT TO anon USING (public.session_on_acl(( SELECT access_control_lists.id
-   FROM public.access_control_lists
-  WHERE (access_control_lists.forum_id = forums.id))));
-
-
---
 -- Name: forums; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.forums ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: forums forums_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY forums_select ON public.forums FOR SELECT USING ((public.session_has_project_access(project_id) AND public.session_on_acl(( SELECT access_control_lists.id
+   FROM public.access_control_lists
+  WHERE (access_control_lists.forum_id_read = forums.id)))));
+
 
 --
 -- Name: invite_emails; Type: ROW SECURITY; Schema: public; Owner: -
@@ -6829,6 +7860,30 @@ CREATE POLICY invite_emails_admin ON public.invite_emails FOR SELECT TO seasketc
    FROM (public.survey_invites
      JOIN public.surveys ON ((surveys.id = survey_invites.survey_id)))
   WHERE (survey_invites.id = invite_emails.survey_invite_id)))));
+
+
+--
+-- Name: posts posts_delete; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY posts_delete ON public.posts FOR DELETE USING (((public.it_me(author_id) AND (now() < (created_at + '00:05:00'::interval))) OR public.session_is_admin(( SELECT forums.project_id
+   FROM (public.forums
+     JOIN public.topics ON ((topics.id = posts.topic_id)))
+  WHERE (forums.id = topics.forum_id)))));
+
+
+--
+-- Name: posts posts_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY posts_select ON public.posts FOR SELECT TO anon USING ((public.session_has_project_access(( SELECT forums.project_id
+   FROM (public.forums
+     JOIN public.topics ON ((topics.id = posts.topic_id)))
+  WHERE (forums.id = topics.forum_id))) AND public.session_on_acl(( SELECT access_control_lists.id
+   FROM ((public.access_control_lists
+     JOIN public.topics ON ((topics.id = posts.topic_id)))
+     JOIN public.forums ON ((forums.id = topics.forum_id)))
+  WHERE (access_control_lists.forum_id_read = forums.id)))));
 
 
 --
@@ -7091,6 +8146,45 @@ CREATE POLICY surveys_invited_groups_admin ON public.survey_invited_groups TO se
 --
 
 CREATE POLICY surveys_select ON public.surveys FOR SELECT TO anon USING ((public.session_is_admin(project_id) OR public.session_has_survey_invite(id) OR (public.session_has_project_access(project_id) AND (is_disabled = false) AND ((access_type = 'PUBLIC'::public.survey_access_type) OR public.session_in_group(public.survey_group_ids(id))))));
+
+
+--
+-- Name: topics; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.topics ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: topics topics_delete; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY topics_delete ON public.topics FOR DELETE USING ((public.session_is_admin(( SELECT forums.project_id
+   FROM public.forums
+  WHERE (forums.id = topics.forum_id))) OR (public.it_me(author_id) AND (now() < (created_at + '00:05:00'::interval)) AND (NOT (EXISTS ( SELECT 1
+   FROM public.posts
+  WHERE ((posts.topic_id = posts.id) AND (posts.author_id <> posts.author_id))))))));
+
+
+--
+-- Name: topics topics_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY topics_select ON public.topics FOR SELECT TO seasketch_user USING ((public.session_has_project_access(( SELECT forums.project_id
+   FROM public.forums
+  WHERE (forums.id = topics.forum_id))) AND public.session_on_acl(( SELECT access_control_lists.id
+   FROM public.access_control_lists
+  WHERE (access_control_lists.forum_id_read = topics.forum_id)))));
+
+
+--
+-- Name: topics topics_update; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY topics_update ON public.topics FOR UPDATE USING ((public.session_is_admin(( SELECT forums.project_id
+   FROM public.forums
+  WHERE (forums.id = topics.forum_id))) OR (public.it_me(author_id) AND (now() < (created_at + '00:05:00'::interval))))) WITH CHECK ((public.session_is_admin(( SELECT forums.project_id
+   FROM public.forums
+  WHERE (forums.id = topics.forum_id))) OR (public.it_me(author_id) AND (now() < (created_at + '00:05:00'::interval)))));
 
 
 --
@@ -7654,13 +8748,6 @@ GRANT SELECT(type),UPDATE(type) ON TABLE public.access_control_lists TO seasketc
 
 
 --
--- Name: COLUMN access_control_lists.forum_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(forum_id) ON TABLE public.access_control_lists TO seasketch_user;
-
-
---
 -- Name: TABLE project_groups; Type: ACL; Schema: public; Owner: -
 --
 
@@ -7732,6 +8819,13 @@ REVOKE ALL ON FUNCTION public.addgeometrycolumn(schema_name character varying, t
 --
 
 REVOKE ALL ON FUNCTION public.addgeometrycolumn(catalog_name character varying, schema_name character varying, table_name character varying, column_name character varying, new_srid_in integer, new_type character varying, new_dim integer, use_typmod boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_post_insert(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_post_insert() FROM PUBLIC;
 
 
 --
@@ -8100,7 +9194,7 @@ GRANT ALL ON FUNCTION public.confirm_project_invite(invite_id integer) TO anon;
 -- Name: FUNCTION confirm_project_invite_with_survey_token("projectId" integer); Type: ACL; Schema: public; Owner: -
 --
 
-GRANT ALL ON FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) TO anon;
+REVOKE ALL ON FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) TO seasketch_user;
 
 
@@ -8170,6 +9264,22 @@ GRANT ALL ON FUNCTION public.create_form_template_from_survey("surveyId" integer
 --
 
 REVOKE ALL ON FUNCTION public.create_forum_acl() FROM PUBLIC;
+
+
+--
+-- Name: TABLE posts; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.posts TO anon;
+GRANT DELETE ON TABLE public.posts TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_post(message jsonb, "topicId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer) TO seasketch_user;
 
 
 --
@@ -8308,6 +9418,43 @@ GRANT ALL ON FUNCTION public.create_survey_invites("surveyId" integer, "includeP
 
 
 --
+-- Name: TABLE topics; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.topics TO anon;
+GRANT DELETE ON TABLE public.topics TO seasketch_user;
+
+
+--
+-- Name: COLUMN topics.title; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(title) ON TABLE public.topics TO seasketch_user;
+
+
+--
+-- Name: COLUMN topics.sticky; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(sticky) ON TABLE public.topics TO seasketch_user;
+
+
+--
+-- Name: COLUMN topics.locked; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(locked) ON TABLE public.topics TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_topic("forumId" integer, title text, message jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION crypt(text, text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8366,6 +9513,14 @@ REVOKE ALL ON FUNCTION public.digest(text, text) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION disable_forum_posting("userId" integer, "projectId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.disable_forum_posting("userId" integer, "projectId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.disable_forum_posting("userId" integer, "projectId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION disablelongtransactions(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8412,6 +9567,14 @@ REVOKE ALL ON FUNCTION public.dropgeometrytable(schema_name character varying, t
 --
 
 REVOKE ALL ON FUNCTION public.dropgeometrytable(catalog_name character varying, schema_name character varying, table_name character varying) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION enable_forum_posting("userId" integer, "projectId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" integer) TO seasketch_user;
 
 
 --
@@ -9501,6 +10664,14 @@ GRANT ALL ON FUNCTION public.make_response_draft("responseId" integer) TO seaske
 
 
 --
+-- Name: FUNCTION mark_topic_as_read("topicId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.mark_topic_as_read("topicId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.mark_topic_as_read("topicId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION me(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -10199,6 +11370,30 @@ REVOKE ALL ON FUNCTION public.postgis_wagyu_version() FROM PUBLIC;
 
 
 --
+-- Name: TABLE user_profiles; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.user_profiles TO anon;
+GRANT UPDATE ON TABLE public.user_profiles TO seasketch_user;
+
+
+--
+-- Name: FUNCTION posts_author_profile(post public.posts); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.posts_author_profile(post public.posts) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.posts_author_profile(post public.posts) TO anon;
+
+
+--
+-- Name: FUNCTION posts_message(post public.posts); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.posts_message(post public.posts) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.posts_message(post public.posts) TO anon;
+
+
+--
 -- Name: FUNCTION project_groups_member_count(g public.project_groups); Type: ACL; Schema: public; Owner: -
 --
 
@@ -10327,6 +11522,14 @@ GRANT ALL ON FUNCTION public.projects_participants(p public.projects, order_by p
 
 
 --
+-- Name: FUNCTION projects_session_has_posts(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_session_has_posts(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_session_has_posts(project public.projects) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_session_has_privileged_access(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -10380,6 +11583,14 @@ GRANT ALL ON FUNCTION public.projects_unapproved_participants(p public.projects,
 
 REVOKE ALL ON FUNCTION public.projects_url(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_url(p public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_users_banned_from_forums(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_users_banned_from_forums(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_users_banned_from_forums(project public.projects) TO seasketch_user;
 
 
 --
@@ -10606,6 +11817,14 @@ GRANT ALL ON FUNCTION public.session_is_approved_participant(pid integer) TO ano
 
 
 --
+-- Name: FUNCTION session_is_banned_from_posting(pid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.session_is_banned_from_posting(pid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.session_is_banned_from_posting(pid integer) TO anon;
+
+
+--
 -- Name: FUNCTION session_is_superuser(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -10684,6 +11903,74 @@ GRANT UPDATE(component_settings) ON TABLE public.form_fields TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.set_form_field_order("fieldIds" integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.set_form_field_order("fieldIds" integer[]) TO seasketch_user;
+
+
+--
+-- Name: TABLE forums; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.forums TO anon;
+GRANT INSERT,DELETE ON TABLE public.forums TO seasketch_user;
+
+
+--
+-- Name: COLUMN forums.name; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(name) ON TABLE public.forums TO seasketch_user;
+
+
+--
+-- Name: COLUMN forums."position"; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE("position") ON TABLE public.forums TO seasketch_user;
+
+
+--
+-- Name: COLUMN forums.description; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(description) ON TABLE public.forums TO seasketch_user;
+
+
+--
+-- Name: COLUMN forums.archived; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(archived) ON TABLE public.forums TO seasketch_user;
+
+
+--
+-- Name: FUNCTION set_forum_order("forumIds" integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_forum_order("forumIds" integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_forum_order("forumIds" integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION set_post_hidden_by_moderator("postId" integer, value boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_post_hidden_by_moderator("postId" integer, value boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_post_hidden_by_moderator("postId" integer, value boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION set_topic_locked("topicId" integer, value boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_topic_locked("topicId" integer, value boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_topic_locked("topicId" integer, value boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION set_topic_sticky("topicId" integer, value boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_topic_sticky("topicId" integer, value boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_topic_sticky("topicId" integer, value boolean) TO seasketch_user;
 
 
 --
@@ -13661,6 +14948,14 @@ REVOKE ALL ON FUNCTION public.texticregexne(public.citext, public.citext) FROM P
 
 
 --
+-- Name: FUNCTION topics_author_profile(topic public.topics); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.topics_author_profile(topic public.topics) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.topics_author_profile(topic public.topics) TO anon;
+
+
+--
 -- Name: FUNCTION translate(public.citext, public.citext, text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -13711,6 +15006,14 @@ GRANT ALL ON FUNCTION public.unsubscribed("userId" integer) TO graphile;
 
 
 --
+-- Name: FUNCTION update_post("postId" integer, message jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_post("postId" integer, message jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_post("postId" integer, message jsonb) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION update_survey_group_invites(surveyid integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -13744,6 +15047,14 @@ REVOKE ALL ON FUNCTION public.updategeometrysrid(character varying, character va
 --
 
 REVOKE ALL ON FUNCTION public.updategeometrysrid(catalogn_name character varying, schema_name character varying, table_name character varying, column_name character varying, new_srid_in integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION users_banned_from_forums(u public.users, "projectId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_banned_from_forums(u public.users, "projectId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_banned_from_forums(u public.users, "projectId" integer) TO seasketch_user;
 
 
 --
@@ -13982,6 +15293,21 @@ GRANT SELECT ON TABLE public.access_control_list_groups TO seasketch_user;
 
 
 --
+-- Name: TABLE community_guidelines; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.community_guidelines TO anon;
+GRANT INSERT,DELETE ON TABLE public.community_guidelines TO seasketch_user;
+
+
+--
+-- Name: COLUMN community_guidelines.content; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(content) ON TABLE public.community_guidelines TO seasketch_user;
+
+
+--
 -- Name: TABLE email_notification_preferences; Type: ACL; Schema: public; Owner: -
 --
 
@@ -14025,14 +15351,6 @@ GRANT UPDATE(operator) ON TABLE public.form_conditional_rendering_rules TO seask
 
 
 --
--- Name: TABLE forums; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.forums TO anon;
-GRANT ALL ON TABLE public.forums TO seasketch_user;
-
-
---
 -- Name: TABLE jwks; Type: ACL; Schema: public; Owner: -
 --
 
@@ -14068,18 +15386,10 @@ GRANT INSERT,DELETE ON TABLE public.survey_invited_groups TO seasketch_user;
 
 
 --
--- Name: TABLE user_profiles; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.user_profiles TO anon;
-GRANT UPDATE ON TABLE public.user_profiles TO seasketch_user;
-
-
---
 -- Name: DEFAULT PRIVILEGES FOR FUNCTIONS; Type: DEFAULT ACL; Schema: -; Owner: -
 --
 
-ALTER DEFAULT PRIVILEGES FOR ROLE graphile_migrate REVOKE ALL ON FUNCTIONS  FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE ALL ON FUNCTIONS  FROM PUBLIC;
 
 
 --
