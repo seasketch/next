@@ -2690,23 +2690,6 @@ input ForumPatch {
   position: Int
 }
 
-"""A connection to a list of `Forum` values."""
-type ForumsConnection {
-  """
-  A list of edges which contains the `Forum` and cursor to aid in pagination.
-  """
-  edges: [ForumsEdge!]!
-
-  """A list of `Forum` objects."""
-  nodes: [Forum]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """The count of *all* `Forum` you could get from the connection."""
-  totalCount: Int!
-}
-
 """A `Forum` edge in the connection."""
 type ForumsEdge {
   """A cursor for use in pagination."""
@@ -3674,6 +3657,12 @@ type Mutation {
     """
     input: CreateGroupInput!
   ): CreateGroupPayload
+
+  """
+  Must have write permission for the specified forum. Create reply to a
+  discussion topic. `message` must be JSON, something like the output of DraftJS.
+  
+  """
   createPost(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -4331,12 +4320,26 @@ type Mutation {
     """
     input: SetFormFieldOrderInput!
   ): SetFormFieldOrderPayload
+
+  """
+  Set the order in which discussion forums will be displayed. Provide a list of
+  forum IDs in the correct order. Missing ids will be added to the end of the list.
+  
+  """
   setForumOrder(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
     input: SetForumOrderInput!
   ): SetForumOrderPayload
+
+  """
+  Admins can use this function to hide the contents of a message. Message will
+  still appear in the client with the missing content, and should link to the
+  Community Guidelines for why the post may have been hidden. If admins want all
+  evidence of the post removed they must delete it.
+  
+  """
   setPostHiddenByModerator(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -4354,6 +4357,11 @@ type Mutation {
     """
     input: SetTopicLockedInput!
   ): SetTopicLockedPayload
+
+  """
+  Admins can use this mutation to place topics at the top of the forum listing.
+  
+  """
   setTopicSticky(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -4488,6 +4496,11 @@ type Mutation {
     """
     input: UpdateGroupByProjectIdAndNameInput!
   ): UpdateGroupPayload
+
+  """
+  Updates the contents of the post. Can only be used by the author for 5 minutes after posting.
+  
+  """
   updatePost(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -4778,6 +4791,12 @@ type Post implements Node {
   """
   authorProfile: Profile
   createdAt: Datetime!
+
+  """
+  If set, the post has been hidden by a project admin. Contents of the post will
+  not be available to the client. Admins should update this field using
+  `setPostHiddenByModerator()`.
+  """
   hiddenByModerator: Boolean!
   id: Int!
 
@@ -4935,13 +4954,7 @@ type Project implements Node {
   List of all discussion forums the current user has access to.
       
   """
-  forumsConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
+  forums(
     """
     A condition to be used in determining which values should be returned by the collection.
     """
@@ -4950,18 +4963,12 @@ type Project implements Node {
     """Only read the first `n` values of the set."""
     first: Int
 
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
+    """Skip the first `n` values."""
     offset: Int
 
     """The method to use when ordering `Forum`."""
-    orderBy: [ForumsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ForumsConnection!
+    orderBy: [ForumsOrderBy!]
+  ): [Forum!]!
 
   """
   
@@ -5221,26 +5228,17 @@ type Project implements Node {
   """Project url will resolve to `https://seasketch.org/{slug}/`"""
   url: String
 
-  """List of all banned users. Listing only accessible to admins."""
-  usersBannedFromForumsConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
+  """
+  List of all banned users. Listing only accessible to admins.
+  
+  """
+  usersBannedFromForums(
     """Only read the first `n` values of the set."""
     first: Int
 
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
+    """Skip the first `n` values."""
     offset: Int
-  ): UsersConnection!
+  ): [User]
 }
 
 enum ProjectAccessControlSetting {
@@ -7408,8 +7406,7 @@ type Topic implements Node {
   authorId: Int!
 
   """
-  User Profile of the author. If a user has not shared their profile the first post contents will be hidden.
-  
+  User Profile of the author. If a user has not shared their profile the post contents will be hidden.
   """
   authorProfile: Profile
   createdAt: Datetime!
@@ -7420,7 +7417,10 @@ type Topic implements Node {
   id: Int!
 
   """
-  Can be toggled by project admins. Locked topics can only be posted to by project admins and will display a lock symbol.
+  Locked topics can only be posted to by project admins and will display a lock symbol.
+  
+  Can be toggled by project admins using `setTopicLocked()` mutation.
+  
   """
   locked: Boolean!
 
@@ -7459,7 +7459,10 @@ type Topic implements Node {
   ): PostsConnection!
 
   """
-  Can be toggled by project admins. Sticky topics will be listed at the topic of the forum.
+  Sticky topics will be listed at the topic of the forum.
+  
+  Can be toggled by project admins using `setTopicSticky()` mutation.
+  
   """
   sticky: Boolean!
 
@@ -7485,12 +7488,18 @@ Represents an update to a `Topic`. Fields that are set will be updated.
 """
 input TopicPatch {
   """
-  Can be toggled by project admins. Locked topics can only be posted to by project admins and will display a lock symbol.
+  Locked topics can only be posted to by project admins and will display a lock symbol.
+  
+  Can be toggled by project admins using `setTopicLocked()` mutation.
+  
   """
   locked: Boolean
 
   """
-  Can be toggled by project admins. Sticky topics will be listed at the topic of the forum.
+  Sticky topics will be listed at the topic of the forum.
+  
+  Can be toggled by project admins using `setTopicSticky()` mutation.
+  
   """
   sticky: Boolean
 
@@ -8779,23 +8788,6 @@ type User implements Node {
   information, but again, only if the profile has been shared.
   """
   profile: Profile
-}
-
-"""A connection to a list of `User` values."""
-type UsersConnection {
-  """
-  A list of edges which contains the `User` and cursor to aid in pagination.
-  """
-  edges: [UsersEdge!]!
-
-  """A list of `User` objects."""
-  nodes: [User]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """The count of *all* `User` you could get from the connection."""
-  totalCount: Int!
 }
 
 """A `User` edge in the connection."""

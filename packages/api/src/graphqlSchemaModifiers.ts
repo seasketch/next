@@ -47,6 +47,18 @@ export default {
       "initializeBlankSurveyForm",
       "initializeSurveyFormFromTemplate",
       "setFormFieldOrder",
+
+      // Forums
+      "setForumOrder",
+      "createTopic",
+      "createPost",
+      "updatePost",
+      "setPostHiddenByModerator",
+      "setTopicLocked",
+      "setTopicSticky",
+      "markTopicAsRead",
+      "enableForumPosting",
+      "disableForumPosting",
     ],
     Query: [
       "me",
@@ -76,11 +88,12 @@ export default {
       "sessionParticipationStatus",
       "invite",
       "sessionOutstandingSurveyInvites",
+      "sessionHasPosts",
       "myFolders",
       "mySketches",
       // resources used by all users
       "sketchClasses",
-      "forumsConnection",
+      "forums",
       "surveys",
       // admin-specific resources
       // user management
@@ -93,6 +106,7 @@ export default {
       "participants",
       "unapprovedParticipants",
       "groups",
+      "usersBannedFromForums",
     ],
     Sketch: [
       "nodeId",
@@ -168,7 +182,7 @@ List of all the SketchClasses that can be used in digitizing spatial data.
 Accessible to all users, though access control settings may limit which users
 can access some SketchClasses.
     `,
-    "Project.forumsConnection": `
+    "Project.forums": `
 List of all discussion forums the current user has access to.
     `,
     "Project.surveys": `Listing of all Surveys accessible to the current user.`,
@@ -293,5 +307,7 @@ Use \`updateSurveyInvitedGroups()\` mutation to modify.
       "Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting.",
     "Mutation.deletePost":
       "Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting.",
+    "Topic.authorProfile":
+      "User Profile of the author. If a user has not shared their profile the post contents will be hidden.",
   },
 };

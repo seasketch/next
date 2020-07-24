@@ -1479,6 +1479,13 @@ COMMENT ON COLUMN public.posts.message_contents IS '@omit';
 
 
 --
+-- Name: COLUMN posts.hidden_by_moderator; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.posts.hidden_by_moderator IS 'If set, the post has been hidden by a project admin. Contents of the post will not be available to the client. Admins should update this field using `setPostHiddenByModerator()`.';
+
+
+--
 -- Name: create_post(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1532,6 +1539,15 @@ CREATE FUNCTION public.create_post(message jsonb, "topicId" integer) RETURNS pub
       return post;
     end;
   $$;
+
+
+--
+-- Name: FUNCTION create_post(message jsonb, "topicId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_post(message jsonb, "topicId" integer) IS '
+Must have write permission for the specified forum. Create reply to a discussion topic. `message` must be JSON, something like the output of DraftJS.
+';
 
 
 --
@@ -1951,14 +1967,22 @@ COMMENT ON COLUMN public.topics.title IS 'Title displayed in the topics listing.
 -- Name: COLUMN topics.sticky; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.topics.sticky IS 'Can be toggled by project admins. Sticky topics will be listed at the topic of the forum.';
+COMMENT ON COLUMN public.topics.sticky IS '
+Sticky topics will be listed at the topic of the forum.
+
+Can be toggled by project admins using `setTopicSticky()` mutation.
+';
 
 
 --
 -- Name: COLUMN topics.locked; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.topics.locked IS 'Can be toggled by project admins. Locked topics can only be posted to by project admins and will display a lock symbol.';
+COMMENT ON COLUMN public.topics.locked IS '
+Locked topics can only be posted to by project admins and will display a lock symbol.
+
+Can be toggled by project admins using `setTopicLocked()` mutation.
+';
 
 
 --
@@ -3767,7 +3791,10 @@ $$;
 -- Name: FUNCTION projects_users_banned_from_forums(project public.projects); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.projects_users_banned_from_forums(project public.projects) IS 'List of all banned users. Listing only accessible to admins.';
+COMMENT ON FUNCTION public.projects_users_banned_from_forums(project public.projects) IS '
+@simpleCollections only
+List of all banned users. Listing only accessible to admins.
+';
 
 
 --
@@ -4483,8 +4510,8 @@ CREATE TABLE public.forums (
     project_id integer NOT NULL,
     name text NOT NULL,
     "position" integer DEFAULT 0,
-    description text,
-    archived boolean DEFAULT false
+    archived boolean DEFAULT false,
+    description text
 );
 
 
@@ -4515,17 +4542,17 @@ COMMENT ON COLUMN public.forums."position" IS 'Sets position of this forum in th
 
 
 --
--- Name: COLUMN forums.description; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.forums.description IS 'Optional description of the forum to be displayed to project users.';
-
-
---
 -- Name: COLUMN forums.archived; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.forums.archived IS 'Archived forums will only be accessible by project administrators from the admin dashboard. This is an alternative to deleting a forum.';
+
+
+--
+-- Name: COLUMN forums.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.forums.description IS 'Optional description of the forum to be displayed to project users.';
 
 
 --
@@ -4563,6 +4590,15 @@ CREATE FUNCTION public.set_forum_order("forumIds" integer[]) RETURNS SETOF publi
 
 
 --
+-- Name: FUNCTION set_forum_order("forumIds" integer[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.set_forum_order("forumIds" integer[]) IS '
+Set the order in which discussion forums will be displayed. Provide a list of forum IDs in the correct order. Missing ids will be added to the end of the list.
+';
+
+
+--
 -- Name: set_post_hidden_by_moderator(integer, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4596,6 +4632,15 @@ CREATE FUNCTION public.set_post_hidden_by_moderator("postId" integer, value bool
       return post;
     end;
   $$;
+
+
+--
+-- Name: FUNCTION set_post_hidden_by_moderator("postId" integer, value boolean); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.set_post_hidden_by_moderator("postId" integer, value boolean) IS '
+Admins can use this function to hide the contents of a message. Message will still appear in the client with the missing content, and should link to the Community Guidelines for why the post may have been hidden. If admins want all evidence of the post removed they must delete it.
+';
 
 
 --
@@ -4667,6 +4712,15 @@ CREATE FUNCTION public.set_topic_sticky("topicId" integer, value boolean) RETURN
       raise exception 'Must be project admin';
     end;
   $$;
+
+
+--
+-- Name: FUNCTION set_topic_sticky("topicId" integer, value boolean); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.set_topic_sticky("topicId" integer, value boolean) IS '
+Admins can use this mutation to place topics at the top of the forum listing.
+';
 
 
 --
@@ -5346,6 +5400,15 @@ CREATE FUNCTION public.update_post("postId" integer, message jsonb) RETURNS publ
       end if;
     end;
   $$;
+
+
+--
+-- Name: FUNCTION update_post("postId" integer, message jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.update_post("postId" integer, message jsonb) IS '
+Updates the contents of the post. Can only be used by the author for 5 minutes after posting.
+';
 
 
 --
@@ -6593,10 +6656,24 @@ CREATE UNIQUE INDEX access_control_lists_forum_id_read_idx ON public.access_cont
 
 
 --
+-- Name: access_control_lists_forum_id_read_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_forum_id_read_idx1 ON public.access_control_lists USING btree (forum_id_read) WHERE (forum_id_read IS NOT NULL);
+
+
+--
 -- Name: access_control_lists_forum_id_write_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX access_control_lists_forum_id_write_idx ON public.access_control_lists USING btree (forum_id_write) WHERE (forum_id_write IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_forum_id_write_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_forum_id_write_idx1 ON public.access_control_lists USING btree (forum_id_write) WHERE (forum_id_write IS NOT NULL);
 
 
 --
@@ -7135,11 +7212,27 @@ ALTER TABLE ONLY public.access_control_lists
 
 
 --
+-- Name: access_control_lists access_control_lists_forum_id_read_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_forum_id_read_fkey1 FOREIGN KEY (forum_id_read) REFERENCES public.forums(id) ON DELETE CASCADE;
+
+
+--
 -- Name: access_control_lists access_control_lists_forum_id_write_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.access_control_lists
     ADD CONSTRAINT access_control_lists_forum_id_write_fkey FOREIGN KEY (forum_id_write) REFERENCES public.forums(id) ON DELETE CASCADE;
+
+
+--
+-- Name: access_control_lists access_control_lists_forum_id_write_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_forum_id_write_fkey1 FOREIGN KEY (forum_id_write) REFERENCES public.forums(id) ON DELETE CASCADE;
 
 
 --
@@ -7256,6 +7349,13 @@ ALTER TABLE ONLY public.forms
 
 ALTER TABLE ONLY public.forums
     ADD CONSTRAINT forums_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: CONSTRAINT forums_project_id_fkey ON forums; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT forums_project_id_fkey ON public.forums IS '@simpleCollections only';
 
 
 --
@@ -7695,6 +7795,23 @@ ALTER TABLE ONLY public.user_profiles
 --
 
 COMMENT ON CONSTRAINT user_profiles_user_id_fkey ON public.user_profiles IS '@omit many';
+
+
+--
+-- Name: postgraphile_watch_ddl; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER postgraphile_watch_ddl ON ddl_command_end
+         WHEN TAG IN ('ALTER AGGREGATE', 'ALTER DOMAIN', 'ALTER EXTENSION', 'ALTER FOREIGN TABLE', 'ALTER FUNCTION', 'ALTER POLICY', 'ALTER SCHEMA', 'ALTER TABLE', 'ALTER TYPE', 'ALTER VIEW', 'COMMENT', 'CREATE AGGREGATE', 'CREATE DOMAIN', 'CREATE EXTENSION', 'CREATE FOREIGN TABLE', 'CREATE FUNCTION', 'CREATE INDEX', 'CREATE POLICY', 'CREATE RULE', 'CREATE SCHEMA', 'CREATE TABLE', 'CREATE TABLE AS', 'CREATE VIEW', 'DROP AGGREGATE', 'DROP DOMAIN', 'DROP EXTENSION', 'DROP FOREIGN TABLE', 'DROP FUNCTION', 'DROP INDEX', 'DROP OWNED', 'DROP POLICY', 'DROP RULE', 'DROP SCHEMA', 'DROP TABLE', 'DROP TYPE', 'DROP VIEW', 'GRANT', 'REVOKE', 'SELECT INTO')
+   EXECUTE FUNCTION postgraphile_watch.notify_watchers_ddl();
+
+
+--
+-- Name: postgraphile_watch_drop; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER postgraphile_watch_drop ON sql_drop
+   EXECUTE FUNCTION postgraphile_watch.notify_watchers_drop();
 
 
 --
@@ -11928,17 +12045,17 @@ GRANT UPDATE("position") ON TABLE public.forums TO seasketch_user;
 
 
 --
--- Name: COLUMN forums.description; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(description) ON TABLE public.forums TO seasketch_user;
-
-
---
 -- Name: COLUMN forums.archived; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(archived) ON TABLE public.forums TO seasketch_user;
+
+
+--
+-- Name: COLUMN forums.description; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(description) ON TABLE public.forums TO seasketch_user;
 
 
 --
