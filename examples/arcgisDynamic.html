@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.11.1/mapbox-gl.js"></script>
+    <script src="../dist/bundle.js?blarg2"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v1.11.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <title>ArcGIS Dynamic Map Service Demo</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        font-size: 16px;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+      }
+
+      #controls {
+        background-color: white;
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 5px;
+      }
+
+      input,
+      select {
+        margin: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="controls">
+      <select id="example"> </select>
+      <br />
+      sublayers
+      <form id="sublayers"></form>
+      <hr style="opacity: 0.4;" />
+      <input id="reverse" type="checkbox" />
+      <label for="reverse">reverse sublayer order</label>
+      <br />
+      <input id="supportDevicePixelRatio" type="checkbox" checked />
+      <label for="supportDevicePixelRatio">support devicePixelRatio</label>
+      <br />
+      <select id="format">
+        <option value="png">png</option>
+        <option value="png8">png8</option>
+        <option value="png24">png24</option>
+        <option value="png32">png32</option>
+        <option value="jpg">jpg</option>
+        <option value="gif">gif</option>
+      </select>
+      <label for="format">format</label>
+    </div>
+    <script>
+      const { ArcGISDynamicMapService } = MapBoxGLEsriSources;
+
+      const examples = [
+        {
+          name: "USA (Dynamic Layers)",
+          url:
+            "https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer",
+          sublayers: [
+            { sublayer: 0, opacity: 1, visible: true },
+            { sublayer: 1, opacity: 1, visible: true },
+            { sublayer: 2, opacity: 0.5, visible: true },
+            { sublayer: 3, opacity: 1, visible: true },
+          ],
+          settings: {
+            supportsDynamicLayers: true,
+          },
+          mapSettings: {
+            center: [-96.16251459388923, 37.376932705721984],
+            zoom: 3.5,
+          },
+        },
+        {
+          name: "World Cities",
+          url:
+            "https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer",
+          sublayers: [
+            { sublayer: 0, opacity: 1, visible: true },
+            { sublayer: 1, opacity: 1, visible: false },
+            { sublayer: 2, opacity: 1, visible: false },
+          ],
+          settings: {
+            supportsDynamicLayers: false,
+          },
+          mapSettings: {
+            center: [-80.80771595847261, 13.634992433183484],
+            zoom: 1.666,
+          },
+        },
+      ];
+
+      const defaultSettings = {
+        supportsDynamicLayers: false,
+        queryParameters: {
+          format: "png",
+        },
+      };
+
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoidW5kZXJibHVld2F0ZXJzIiwiYSI6IjMzZ215RTQifQ.u6Gb_-kNfvaxiHdd9eJEEA";
+
+      var map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/streets-v11",
+        center: examples[0].mapSettings.center,
+        zoom: examples[0].mapSettings.zoom,
+      });
+
+      window.map = map;
+      let esriSource;
+      let currentExample = examples[0];
+      updateSublayerInputs(currentExample);
+      document.getElementById("example").innerHTML = examples
+        .map((example) => {
+          return `<option value=${examples.indexOf(example)}>${
+            example.name
+          }</option>`;
+        })
+        .join("\n");
+      map.on("load", async () => {
+        esriSource = createSource(currentExample);
+
+        document.getElementById("sublayers").addEventListener("change", () => {
+          updateLayers();
+        });
+        document.getElementById("format").addEventListener("change", (e) => {
+          esriSource.updateQueryParameters({
+            format: e.target.value,
+          });
+        });
+        document
+          .getElementById("supportDevicePixelRatio")
+          .addEventListener("change", (e) => {
+            esriSource.updateUseDevicePixelRatio(!!e.target.checked);
+          });
+
+        document.getElementById("example").addEventListener("change", (e) => {
+          const example = examples[parseInt(e.target.value)];
+          currentExample = example;
+          map.flyTo(example.mapSettings);
+          document.getElementById("reverse").disabled = !example.settings
+            .supportsDynamicLayers;
+          updateSublayerInputs(example);
+
+          setTimeout(() => {
+            createSource(example);
+          }, 700);
+        });
+
+        document.getElementById("reverse").addEventListener("change", (e) => {
+          updateLayers();
+        });
+      });
+
+      function updateLayers() {
+        const sublayers = currentExample.sublayers.map((lyr) => {
+          return {
+            id: lyr.sublayer,
+            checked:
+              document.querySelectorAll(`#visibility-${lyr.sublayer}:checked`)
+                .length > 0,
+            opacity:
+              parseFloat(
+                document.getElementById(`opacity-${lyr.sublayer}`).value
+              ) / 100,
+          };
+        });
+        const layerUpdate = sublayers
+          .filter((s) => s.checked === true)
+          .map((s) => ({
+            sublayer: s.id,
+            opacity: s.opacity,
+          }));
+        if (document.getElementById(`reverse`).checked) {
+          layerUpdate.reverse();
+        }
+        esriSource.updateLayers(layerUpdate);
+      }
+
+      function updateSublayerInputs(example) {
+        document.getElementById("sublayers").innerHTML = example.sublayers
+          .map((layer) => {
+            return `
+            <label for="visibility-${layer.sublayer}">${layer.sublayer}</label>
+            <input id="visibility-${layer.sublayer}" type="checkbox" ${
+              layer.visible ? "checked" : ""
+            } />
+            <input id="opacity-${
+              layer.sublayer
+            }" type="range" max="100" min="0" value="${layer.opacity * 100}" ${
+              example.settings.supportsDynamicLayers === false ? "disabled" : ""
+            } />
+            <br />
+          `;
+          })
+          .join("\n");
+      }
+
+      function createSource(example) {
+        if (map.getSource("ags-source")) {
+          esriSource.destroy();
+          map.removeLayer("ags-layer");
+          map.removeSource("ags-source");
+        }
+        esriSource = new ArcGISDynamicMapService(
+          map,
+          "ags-source",
+          example.url,
+          {
+            layers: example.sublayers.filter((lyr) => lyr.visible),
+            ...defaultSettings,
+            ...{
+              supportDevicePixelRatio: document.getElementById(
+                "supportDevicePixelRatio"
+              ).checked,
+            },
+            ...example.settings,
+            queryParameters: {
+              ...defaultSettings.queryParameters,
+              ...(example.settings.queryParameters || {}),
+              ...{
+                format: document.getElementById("format").value,
+              },
+            },
+          }
+        );
+        map.addLayer({
+          id: "ags-layer",
+          type: "raster",
+          source: esriSource.id,
+          paint: {
+            "raster-fade-duration": 0,
+          },
+        });
+        return esriSource;
+      }
+    </script>
+  </body>
+</html>
