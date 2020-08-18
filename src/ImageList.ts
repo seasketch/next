@@ -40,6 +40,7 @@ export class ImageList {
    * there is a way to request a high-dpi image I do not know it. Instead,
    * serialized image data is just pulled from the symbol itself.
    *
+   * @hidden
    * @param {PictureFillSymbol} symbol
    * @returns {string} imageid
    */
@@ -71,6 +72,7 @@ export class ImageList {
    * @param {number} sublayer
    * @param {number} legendIndex
    * @returns {string} imageid
+   * @hidden
    */
   addEsriPMS(
     symbol: PictureMarkerSymbol,
@@ -132,6 +134,7 @@ export class ImageList {
    *
    * @param {SimpleMarkerSymbol} symbol
    * @returns {string} imageid
+   * @hidden
    */
   addEsriSMS(symbol: SimpleMarkerSymbol): string {
     const imageid = uuid();
@@ -153,6 +156,12 @@ export class ImageList {
     return imageid;
   }
 
+  /**
+   * @hidden
+   * @param {SimpleFillSymbol} symbol
+   * @returns
+   * @memberof ImageList
+   */
   addEsriSFS(symbol: SimpleFillSymbol) {
     const imageId = uuid();
     const pattern = fillPatterns[symbol.style!](rgba(symbol.color));
@@ -167,6 +176,21 @@ export class ImageList {
     return imageId;
   }
 
+  /**
+   * Add all images to a MapBox GL JS map instance so that they may be used in
+   * style layers. Call before adding layers created by {@link styleForFeatureLayer | styleForFeatureLayer}.
+   *
+   * The ImageList may contain multiple copies of images at different dpi. Since
+   * MapBox GL does not currently support adding images at multiple resolutions
+   * this function will pick those that best match the current [devicePixelRatio](https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio).
+   * If the devicePixelRatio changes (e.g. switching monitors), the images
+   * *will not* be updated and may be at a less than ideal resolution, though
+   * mapbox gl will still show them at the correct size.
+   *
+   * @param {Map} map
+   * @returns
+   * @memberof ImageList
+   */
   addToMap(map: Map) {
     return Promise.all(
       this.imageSets.map(async (imageSet) => {

@@ -131,32 +131,10 @@
         zoom: 1.5,
       });
 
-      // const url =
-      // "https://data1-bluehalo.seasketch.org/arcgis/rest/services/Curacao/20160723_CUR_SA_DCNA/MapServer/66";
-      // This one is a unique value renderer that uses multiple fields! TODO: find something similar on sampleserver
-      // "https://apps.douglas.co.us/arcgis/rest/services/POSSE_BLDG_Permits_Inspector_WM_Future/MapServer/2";
-      // "https://data.seasketch.org/arcgis/rest/services/Barbuda/Coastal_Jurisdiction_2/MapServer/1";
-      // "https://data.seasketch.org/arcgis/rest/services/Barbuda/Place_Names/MapServer/0";
-      // "https://data.seasketch.org/arcgis/rest/services/Barbuda/Land_Based_Data/MapServer/4";
-      // "https://data1-bluehalo.seasketch.org/arcgis/rest/services/Curacao/20160723_CUR_SA_DCNA/MapServer/46";
-      // "https://data.seasketch.org/arcgis/rest/services/Barbuda/Place_Names/MapServer/0";
-      // "https://data.seasketch.org/arcgis/rest/services/Barbuda/Enviropnment_Division/MapServer/8";
       window.map = map;
       map.on("load", async () => {
         await populateExamples();
         initControls(window.examples);
-        // const styleInfo = await styleForFeatureLayer(url, "ags-vector");
-
-        // const source = new ArcGISVectorSource(map, "ags-vector", url, {
-        //   strategy: "geojson",
-        //   bytesLimit: 1000 * 1000 * 10, // 1mb
-        // });
-
-        // await styleInfo.imageList.addToMap(map);
-
-        // for (const layer of styleInfo.layers) {
-        //   map.addLayer(layer);
-        // }
       });
 
       async function initControls(examples) {
@@ -204,8 +182,7 @@
             }
           }
           const source = new ArcGISVectorSource(map, sublayerSourceId, url, {
-            strategy: "geojson",
-            bytesLimit: 1000 * 1000 * 25, // 25mb
+            bytesLimit: 1000 * 1000 * 5, // 5mb
           });
           currentSources.push(source);
           await styleInfo.imageList.addToMap(map);
