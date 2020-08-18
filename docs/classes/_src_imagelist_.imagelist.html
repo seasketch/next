@@ -2729,18 +2729,6 @@ img {
 					<a href="_src_imagelist_.imagelist.html#constructor" class="tsd-kind-icon">constructor</a>
 				</li>
 				<li class=" tsd-kind-method tsd-parent-kind-class">
-					<a href="_src_imagelist_.imagelist.html#addesripfs" class="tsd-kind-icon">add<wbr>EsriPFS</a>
-				</li>
-				<li class=" tsd-kind-method tsd-parent-kind-class">
-					<a href="_src_imagelist_.imagelist.html#addesripms" class="tsd-kind-icon">add<wbr>EsriPMS</a>
-				</li>
-				<li class=" tsd-kind-method tsd-parent-kind-class">
-					<a href="_src_imagelist_.imagelist.html#addesrisfs" class="tsd-kind-icon">add<wbr>EsriSFS</a>
-				</li>
-				<li class=" tsd-kind-method tsd-parent-kind-class">
-					<a href="_src_imagelist_.imagelist.html#addesrisms" class="tsd-kind-icon">add<wbr>EsriSMS</a>
-				</li>
-				<li class=" tsd-kind-method tsd-parent-kind-class">
 					<a href="_src_imagelist_.imagelist.html#addtomap" class="tsd-kind-icon">add<wbr>ToMap</a>
 				</li>
 			</ul>
@@ -2776,10 +2764,6 @@ img {
 					<section class="tsd-index-section ">
 						<h3>Methods</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-method tsd-parent-kind-class"><a href="_src_imagelist_.imagelist.html#addesripfs" class="tsd-kind-icon">add<wbr>EsriPFS</a></li>
-							<li class="tsd-kind-method tsd-parent-kind-class"><a href="_src_imagelist_.imagelist.html#addesripms" class="tsd-kind-icon">add<wbr>EsriPMS</a></li>
-							<li class="tsd-kind-method tsd-parent-kind-class"><a href="_src_imagelist_.imagelist.html#addesrisfs" class="tsd-kind-icon">add<wbr>EsriSFS</a></li>
-							<li class="tsd-kind-method tsd-parent-kind-class"><a href="_src_imagelist_.imagelist.html#addesrisms" class="tsd-kind-icon">add<wbr>EsriSMS</a></li>
 							<li class="tsd-kind-method tsd-parent-kind-class"><a href="_src_imagelist_.imagelist.html#addtomap" class="tsd-kind-icon">add<wbr>ToMap</a></li>
 						</ul>
 					</section>
@@ -2812,122 +2796,6 @@ img {
 		<section class="tsd-panel-group tsd-member-group ">
 			<h2>Methods</h2>
 			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
-				<a name="addesripfs" class="tsd-anchor"></a>
-				<h3>add<wbr>EsriPFS</h3>
-				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-					<li class="tsd-signature tsd-kind-icon">add<wbr>EsriPFS<span class="tsd-signature-symbol">(</span>symbol<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PictureFillSymbol</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></li>
-				</ul>
-				<ul class="tsd-descriptions">
-					<li class="tsd-description">
-						<aside class="tsd-sources">
-						</aside>
-						<div class="tsd-comment tsd-typography">
-							<div class="lead">
-								<p>Add a fill image for a PictureFillSymbol to the image set.</p>
-							</div>
-							<p>PictureFillSymbol images cannot be requested at high-dpi from the legend
-								endpoint because they would include an outline and not the full pattern. If
-								there is a way to request a high-dpi image I do not know it. Instead,
-							serialized image data is just pulled from the symbol itself.</p>
-						</div>
-						<h4 class="tsd-parameters-title">Parameters</h4>
-						<ul class="tsd-parameters">
-							<li>
-								<h5>symbol: <span class="tsd-signature-type">PictureFillSymbol</span></h5>
-							</li>
-						</ul>
-						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4>
-						<p>imageid</p>
-					</li>
-				</ul>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
-				<a name="addesripms" class="tsd-anchor"></a>
-				<h3>add<wbr>EsriPMS</h3>
-				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-					<li class="tsd-signature tsd-kind-icon">add<wbr>EsriPMS<span class="tsd-signature-symbol">(</span>symbol<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PictureMarkerSymbol</span>, serviceBaseUrl<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, sublayer<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span>, legendIndex<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></li>
-				</ul>
-				<ul class="tsd-descriptions">
-					<li class="tsd-description">
-						<aside class="tsd-sources">
-						</aside>
-						<div class="tsd-comment tsd-typography">
-							<div class="lead">
-								<p>Add a PictureMarkerSymbol image to the set. If the server supports high-dpi
-									legends (10.6+), this function will fetch high resolution markers from the
-									origin server. Otherwise it will just use serialized image data from the
-								symbol definition.</p>
-							</div>
-						</div>
-						<h4 class="tsd-parameters-title">Parameters</h4>
-						<ul class="tsd-parameters">
-							<li>
-								<h5>symbol: <span class="tsd-signature-type">PictureMarkerSymbol</span></h5>
-							</li>
-							<li>
-								<h5>serviceBaseUrl: <span class="tsd-signature-type">string</span></h5>
-							</li>
-							<li>
-								<h5>sublayer: <span class="tsd-signature-type">number</span></h5>
-							</li>
-							<li>
-								<h5>legendIndex: <span class="tsd-signature-type">number</span></h5>
-							</li>
-						</ul>
-						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4>
-						<p>imageid</p>
-					</li>
-				</ul>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
-				<a name="addesrisfs" class="tsd-anchor"></a>
-				<h3>add<wbr>EsriSFS</h3>
-				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-					<li class="tsd-signature tsd-kind-icon">add<wbr>EsriSFS<span class="tsd-signature-symbol">(</span>symbol<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">SimpleFillSymbol</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></li>
-				</ul>
-				<ul class="tsd-descriptions">
-					<li class="tsd-description">
-						<aside class="tsd-sources">
-						</aside>
-						<h4 class="tsd-parameters-title">Parameters</h4>
-						<ul class="tsd-parameters">
-							<li>
-								<h5>symbol: <span class="tsd-signature-type">SimpleFillSymbol</span></h5>
-							</li>
-						</ul>
-						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4>
-					</li>
-				</ul>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
-				<a name="addesrisms" class="tsd-anchor"></a>
-				<h3>add<wbr>EsriSMS</h3>
-				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-					<li class="tsd-signature tsd-kind-icon">add<wbr>EsriSMS<span class="tsd-signature-symbol">(</span>symbol<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">SimpleMarkerSymbol</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></li>
-				</ul>
-				<ul class="tsd-descriptions">
-					<li class="tsd-description">
-						<aside class="tsd-sources">
-						</aside>
-						<div class="tsd-comment tsd-typography">
-							<div class="lead">
-								<p>Adds a SimpleMarkerSymbol to the ImageSet. These markers will be generated
-									in multiple resolutions using html canvas to support multiple device pixel
-								ratios (1, 2 and 3)</p>
-							</div>
-						</div>
-						<h4 class="tsd-parameters-title">Parameters</h4>
-						<ul class="tsd-parameters">
-							<li>
-								<h5>symbol: <span class="tsd-signature-type">SimpleMarkerSymbol</span></h5>
-							</li>
-						</ul>
-						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4>
-						<p>imageid</p>
-					</li>
-				</ul>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
 				<a name="addtomap" class="tsd-anchor"></a>
 				<h3>add<wbr>ToMap</h3>
 				<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -2937,6 +2805,23 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 						</aside>
+						<div class="tsd-comment tsd-typography">
+							<div class="lead">
+								<p>Add all images to a MapBox GL JS map instance so that they may be used in
+								style layers. Call before adding layers created by <a href="../modules/_src_styleforfeaturelayer_.html#styleforfeaturelayer">styleForFeatureLayer</a>.</p>
+							</div>
+							<p>The ImageList may contain multiple copies of images at different dpi. Since
+								MapBox GL does not currently support adding images at multiple resolutions
+								this function will pick those that best match the current <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio">devicePixelRatio</a>.
+								If the devicePixelRatio changes (e.g. switching monitors), the images
+								<em>will not</em> be updated and may be at a less than ideal resolution, though
+							mapbox gl will still show them at the correct size.</p>
+							<dl class="tsd-comment-tags">
+								<dt>memberof</dt>
+								<dd><p>ImageList</p>
+								</dd>
+							</dl>
+						</div>
 						<h4 class="tsd-parameters-title">Parameters</h4>
 						<ul class="tsd-parameters">
 							<li>

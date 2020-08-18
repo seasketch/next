@@ -2729,35 +2729,47 @@ img {
 					<a href="_src_arcgisvectorsource_.arcgisvectorsource.html#constructor" class="tsd-kind-icon">constructor</a>
 				</li>
 				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-					<a href="_src_arcgisvectorsource_.arcgisvectorsource.html#baseurl" class="tsd-kind-icon">base<wbr>Url</a>
-				</li>
-				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-					<a href="_src_arcgisvectorsource_.arcgisvectorsource.html#data" class="tsd-kind-icon">data</a>
-				</li>
-				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-					<a href="_src_arcgisvectorsource_.arcgisvectorsource.html#id" class="tsd-kind-icon">id</a>
-				</li>
-				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-					<a href="_src_arcgisvectorsource_.arcgisvectorsource.html#map" class="tsd-kind-icon">map</a>
-				</li>
-				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-					<a href="_src_arcgisvectorsource_.arcgisvectorsource.html#outfields" class="tsd-kind-icon">out<wbr>Fields</a>
-				</li>
-				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-protected">
 					<a href="_src_arcgisvectorsource_.arcgisvectorsource.html#source" class="tsd-kind-icon">source</a>
-				</li>
-				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-					<a href="_src_arcgisvectorsource_.arcgisvectorsource.html#supportspagination" class="tsd-kind-icon">supports<wbr>Pagination</a>
 				</li>
 				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-protected">
 					<a href="_src_arcgisvectorsource_.arcgisvectorsource.html#totalbytes" class="tsd-kind-icon">total<wbr>Bytes</a>
 				</li>
 			</ul>
 		</li>
+		<li class=" tsd-kind-interface tsd-parent-kind-module">
+			<a href="../interfaces/_src_arcgisvectorsource_.arcgisvectorsourceoptions.html" class="tsd-kind-icon">ArcGISVector<wbr>Source<wbr>Options</a>
+		</li>
 	</ul>
 </nav>
 <div class="container container-main">
 	<div class="content-wrap">
+		<section class="tsd-panel tsd-comment">
+			<div class="tsd-comment tsd-typography">
+				<div class="lead">
+					<p>Add ArcGIS Feature Layers to MapBox GL JS maps as a geojson source. These
+						data sources can be styled using output from
+						<a href="../modules/_src_styleforfeaturelayer_.html#styleforfeaturelayer">styleForFeatureLayer</a> or custom layers that
+					reference the provided source id.</p>
+				</div>
+				<a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
+					<h3>Usage</h3>
+				</a>
+				<pre><code class="language-typescript"><span class="hljs-keyword">import</span> { ArcGISVectorSource } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;mapbox-gl-esri-sources&quot;</span>;
+
+<span class="hljs-comment">// setup map...</span>
+
+<span class="hljs-keyword">const</span> esriSource = <span class="hljs-keyword">new</span> ArcGISVectorSource(
+  map,
+  <span class="hljs-string">&#x27;cities-source-id&#x27;</span>,
+  <span class="hljs-string">&quot;https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0&quot;</span>),
+  {
+    bytesLimit: <span class="hljs-number">1000</span> * <span class="hljs-number">1000</span> * <span class="hljs-number">2</span>, <span class="hljs-comment">// 2mb</span>
+    geometryPrecision: <span class="hljs-number">5</span>,
+    outFields: <span class="hljs-string">&quot;POP,CITY_NAME&quot;</span>
+  }
+);</code></pre>
+			</div>
+		</section>
 		<section class="tsd-panel tsd-hierarchy">
 			<h3>Hierarchy</h3>
 			<ul class="tsd-hierarchy">
@@ -2779,13 +2791,7 @@ img {
 					<section class="tsd-index-section tsd-is-private-protected">
 						<h3>Properties</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><a href="_src_arcgisvectorsource_.arcgisvectorsource.html#baseurl" class="tsd-kind-icon">base<wbr>Url</a></li>
-							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><a href="_src_arcgisvectorsource_.arcgisvectorsource.html#data" class="tsd-kind-icon">data</a></li>
-							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><a href="_src_arcgisvectorsource_.arcgisvectorsource.html#id" class="tsd-kind-icon">id</a></li>
-							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><a href="_src_arcgisvectorsource_.arcgisvectorsource.html#map" class="tsd-kind-icon">map</a></li>
-							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><a href="_src_arcgisvectorsource_.arcgisvectorsource.html#outfields" class="tsd-kind-icon">out<wbr>Fields</a></li>
 							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><a href="_src_arcgisvectorsource_.arcgisvectorsource.html#source" class="tsd-kind-icon">source</a></li>
-							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><a href="_src_arcgisvectorsource_.arcgisvectorsource.html#supportspagination" class="tsd-kind-icon">supports<wbr>Pagination</a></li>
 							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><a href="_src_arcgisvectorsource_.arcgisvectorsource.html#totalbytes" class="tsd-kind-icon">total<wbr>Bytes</a></li>
 						</ul>
 					</section>
@@ -2798,25 +2804,45 @@ img {
 				<a name="constructor" class="tsd-anchor"></a>
 				<h3>constructor</h3>
 				<ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class">
-					<li class="tsd-signature tsd-kind-icon">new <wbr>ArcGISVector<wbr>Source<span class="tsd-signature-symbol">(</span>map<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Map</span>, id<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, url<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, options<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">{ </span>bytesLimit<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span>geometryPrecision<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span>strategy<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">ArcGISVectorSourceStrategy</span><span class="tsd-signature-symbol">; </span>supportsPagination<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_src_arcgisvectorsource_.arcgisvectorsource.html" class="tsd-signature-type">ArcGISVectorSource</a></li>
+					<li class="tsd-signature tsd-kind-icon">new <wbr>ArcGISVector<wbr>Source<span class="tsd-signature-symbol">(</span>map<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Map</span>, id<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, url<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, options<span class="tsd-signature-symbol">?: </span><a href="../interfaces/_src_arcgisvectorsource_.arcgisvectorsourceoptions.html" class="tsd-signature-type">ArcGISVectorSourceOptions</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_src_arcgisvectorsource_.arcgisvectorsource.html" class="tsd-signature-type">ArcGISVectorSource</a></li>
 				</ul>
 				<ul class="tsd-descriptions">
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 						</aside>
+						<div class="tsd-comment tsd-typography">
+							<div class="lead">
+								<p>Creates an instance of ArcGISVectorSource.</p>
+							</div>
+						</div>
 						<h4 class="tsd-parameters-title">Parameters</h4>
 						<ul class="tsd-parameters">
 							<li>
 								<h5>map: <span class="tsd-signature-type">Map</span></h5>
+								<div class="tsd-comment tsd-typography">
+									<div class="lead">
+										<p>MapBox GL JS map instance where source will be added</p>
+									</div>
+								</div>
 							</li>
 							<li>
 								<h5>id: <span class="tsd-signature-type">string</span></h5>
+								<div class="tsd-comment tsd-typography">
+									<div class="lead">
+										<p>ID will be assigned to the GeoJSONSource instance</p>
+									</div>
+								</div>
 							</li>
 							<li>
 								<h5>url: <span class="tsd-signature-type">string</span></h5>
+								<div class="tsd-comment tsd-typography">
+									<div class="lead">
+										<p>Base url for an <a href="https://developers.arcgis.com/rest/services-reference/layer-table.htm">ArcGIS Server Feature Layer</a>. Should end in <em>/MapServer/0..n</em></p>
+									</div>
+								</div>
 							</li>
 							<li>
-								<h5><span class="tsd-flag ts-flagOptional">Optional</span> options: <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">{ </span>bytesLimit<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span>geometryPrecision<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span>strategy<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">ArcGISVectorSourceStrategy</span><span class="tsd-signature-symbol">; </span>supportsPagination<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span><span class="tsd-signature-symbol"> }</span></h5>
+								<h5><span class="tsd-flag ts-flagOptional">Optional</span> options: <a href="../interfaces/_src_arcgisvectorsource_.arcgisvectorsourceoptions.html" class="tsd-signature-type">ArcGISVectorSourceOptions</a></h5>
 							</li>
 						</ul>
 						<h4 class="tsd-returns-title">Returns <a href="_src_arcgisvectorsource_.arcgisvectorsource.html" class="tsd-signature-type">ArcGISVectorSource</a></h4>
@@ -2827,53 +2853,16 @@ img {
 		<section class="tsd-panel-group tsd-member-group tsd-is-private-protected">
 			<h2>Properties</h2>
 			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-				<a name="baseurl" class="tsd-anchor"></a>
-				<h3><span class="tsd-flag ts-flagProtected">Protected</span> base<wbr>Url</h3>
-				<div class="tsd-signature tsd-kind-icon">base<wbr>Url<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
-				<aside class="tsd-sources">
-				</aside>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-				<a name="data" class="tsd-anchor"></a>
-				<h3><span class="tsd-flag ts-flagProtected">Protected</span> data</h3>
-				<div class="tsd-signature tsd-kind-icon">data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">FeatureCollection</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Point</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">MultiPoint</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">LineString</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">MultiLineString</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Polygon</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">MultiPolygon</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">GeometryCollection</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">null</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">{}</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> = {type: &quot;FeatureCollection&quot;,features: [],} as FeatureCollection</span></div>
-				<aside class="tsd-sources">
-				</aside>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-				<a name="id" class="tsd-anchor"></a>
-				<h3><span class="tsd-flag ts-flagProtected">Protected</span> id</h3>
-				<div class="tsd-signature tsd-kind-icon">id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
-				<aside class="tsd-sources">
-				</aside>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-				<a name="map" class="tsd-anchor"></a>
-				<h3><span class="tsd-flag ts-flagProtected">Protected</span> map</h3>
-				<div class="tsd-signature tsd-kind-icon">map<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span></div>
-				<aside class="tsd-sources">
-				</aside>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-				<a name="outfields" class="tsd-anchor"></a>
-				<h3><span class="tsd-flag ts-flagProtected">Protected</span> out<wbr>Fields</h3>
-				<div class="tsd-signature tsd-kind-icon">out<wbr>Fields<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> = &quot;*&quot;</span></div>
-				<aside class="tsd-sources">
-				</aside>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-protected">
 				<a name="source" class="tsd-anchor"></a>
 				<h3><span class="tsd-flag ts-flagProtected">Protected</span> source</h3>
 				<div class="tsd-signature tsd-kind-icon">source<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GeoJSONSource</span></div>
 				<aside class="tsd-sources">
 				</aside>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-protected">
-				<a name="supportspagination" class="tsd-anchor"></a>
-				<h3><span class="tsd-flag ts-flagProtected">Protected</span> supports<wbr>Pagination</h3>
-				<div class="tsd-signature tsd-kind-icon">supports<wbr>Pagination<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> = true</span></div>
-				<aside class="tsd-sources">
-				</aside>
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>GeoJSONSource instance added to the map</p>
+					</div>
+				</div>
 			</section>
 			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-protected">
 				<a name="totalbytes" class="tsd-anchor"></a>
@@ -2881,6 +2870,12 @@ img {
 				<div class="tsd-signature tsd-kind-icon">total<wbr>Bytes<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div>
 				<aside class="tsd-sources">
 				</aside>
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>Size of the dataset added to the map. Relies on <code>content-length</code> header
+						from the data host, which may not be available.</p>
+					</div>
+				</div>
 			</section>
 		</section>
 		<footer class="with-border-bottom">

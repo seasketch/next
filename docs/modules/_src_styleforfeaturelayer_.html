@@ -2722,15 +2722,6 @@ img {
 </header>
 <nav class="tsd-navigation secondary">
 	<ul>
-		<li class=" tsd-kind-interface tsd-parent-kind-module">
-			<a href="../interfaces/_src_styleforfeaturelayer_.classbreaksrenderer.html" class="tsd-kind-icon">Class<wbr>Breaks<wbr>Renderer</a>
-		</li>
-		<li class=" tsd-kind-interface tsd-parent-kind-module">
-			<a href="../interfaces/_src_styleforfeaturelayer_.simplerenderer.html" class="tsd-kind-icon">Simple<wbr>Renderer</a>
-		</li>
-		<li class=" tsd-kind-interface tsd-parent-kind-module">
-			<a href="../interfaces/_src_styleforfeaturelayer_.uniquevaluerenderer.html" class="tsd-kind-icon">Unique<wbr>Value<wbr>Renderer</a>
-		</li>
 		<li class=" tsd-kind-function tsd-parent-kind-module">
 			<a href="_src_styleforfeaturelayer_.html#styleforfeaturelayer" class="tsd-kind-icon">style<wbr>For<wbr>Feature<wbr>Layer</a>
 		</li>
@@ -2742,14 +2733,6 @@ img {
 			<h2>Index</h2>
 			<section class="tsd-panel tsd-index-panel">
 				<div class="tsd-index-content">
-					<section class="tsd-index-section ">
-						<h3>Interfaces</h3>
-						<ul class="tsd-index-list">
-							<li class="tsd-kind-interface tsd-parent-kind-module"><a href="../interfaces/_src_styleforfeaturelayer_.classbreaksrenderer.html" class="tsd-kind-icon">Class<wbr>Breaks<wbr>Renderer</a></li>
-							<li class="tsd-kind-interface tsd-parent-kind-module"><a href="../interfaces/_src_styleforfeaturelayer_.simplerenderer.html" class="tsd-kind-icon">Simple<wbr>Renderer</a></li>
-							<li class="tsd-kind-interface tsd-parent-kind-module"><a href="../interfaces/_src_styleforfeaturelayer_.uniquevaluerenderer.html" class="tsd-kind-icon">Unique<wbr>Value<wbr>Renderer</a></li>
-						</ul>
-					</section>
 					<section class="tsd-index-section ">
 						<h3>Functions</h3>
 						<ul class="tsd-index-list">
@@ -2771,16 +2754,56 @@ img {
 					<li class="tsd-description">
 						<aside class="tsd-sources">
 						</aside>
+						<div class="tsd-comment tsd-typography">
+							<div class="lead">
+								<p>This function retrieves rendering and style information from the ArcGIS REST
+									API for a given <a href="https://developers.arcgis.com/rest/services-reference/layer-table.htm">Feature Layer</a>
+									and produces images and style layers that can be used to faithfully represent
+									these services as vectors in MapBox GL. It can be used in conjunction with
+								<a href="../classes/_src_arcgisvectorsource_.arcgisvectorsource.html">ArcGISVectorSource</a>.</p>
+							</div>
+							<p>Style generation is seperated from source handling so that you could even
+								use tippecanoe or other tools to generate vector tiles from a service and
+								style them using the generated layers. With this seperation of concerns it&#39;s
+								also possible to cache style information so that it does not need to
+							always be generated dynamically.</p>
+							<a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
+								<h3>Usage</h3>
+							</a>
+							<pre><code class="language-typescript"><span class="hljs-keyword">import</span> { ArcGISVectorSource, styleForFeatureLayer } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;mapbox-gl-esri-sources&quot;</span>;
+
+<span class="hljs-comment">// setup map...</span>
+<span class="hljs-comment">// add source...</span>
+
+<span class="hljs-keyword">const</span> { imageList, layers } = styleForFeatureLayer(
+  <span class="hljs-string">&quot;https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0&quot;</span>,
+  <span class="hljs-string">&quot;cities-source-id&quot;</span>
+);
+
+imageList.addToMap(map);
+
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> layer <span class="hljs-keyword">of</span> layers) {
+  map.addLayer(layer);
+}
+</code></pre>
+						</div>
 						<h4 class="tsd-parameters-title">Parameters</h4>
 						<ul class="tsd-parameters">
 							<li>
 								<h5>url: <span class="tsd-signature-type">string</span></h5>
+								<div class="tsd-comment tsd-typography">
+									<p>Feature layer endpoint. Should terminate in <em>/MapServer/0..n</em></p>
+								</div>
 							</li>
 							<li>
 								<h5>sourceId: <span class="tsd-signature-type">string</span></h5>
+								<div class="tsd-comment tsd-typography">
+									<p>ID for the <a href="https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/">source</a> of vector data to be used in rendering.</p>
+								</div>
 							</li>
 						</ul>
 						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">{ </span>imageList<span class="tsd-signature-symbol">: </span><a href="../classes/_src_imagelist_.imagelist.html" class="tsd-signature-type">ImageList</a><span class="tsd-signature-symbol">; </span>layers<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Layer</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						<p>The <a href="../classes/_src_imagelist_.imagelist.html#addtomap">ImageList.addToMap(map)</a> function should be called before adding the generated layers to the map.</p>
 					</li>
 				</ul>
 			</section>
