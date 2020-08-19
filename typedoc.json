@@ -1,10 +1,9 @@
 {
   "inputFiles": "./src/index.ts",
-  "mode": "modules",
+  "mode": "file",
   "out": "./docs",
   "excludePrivate": true,
   "excludeNotExported": true,
   "disableSources": true,
-  "theme": "minimal",
-  "plugin": "none"
+  "theme": "minimal"
 }

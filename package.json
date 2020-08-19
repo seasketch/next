@@ -1,8 +1,8 @@
 {
   "name": "mapbox-gl-esri-sources",
-  "version": "1.0.0",
-  "description": "Render dynamic map services from sources like WMS and ArcGIS Server with MapBox GL JS",
-  "main": "dist/index.js",
+  "version": "0.8.0",
+  "description": "Render data services from ArcGIS in MapBox GL JS",
+  "module": "dist/index.js",
   "scripts": {
     "start": "http-server",
     "watch": "rollup -c rollup.config.js --watch",
@@ -29,13 +29,14 @@
     "@rollup/plugin-commonjs": "^14.0.0",
     "@rollup/plugin-node-resolve": "^8.4.0",
     "@types/arcgis-rest-api": "^10.4.4",
+    "@types/geojson": "^7946.0.7",
     "@types/mapbox-gl": "^1.11.1",
     "@types/uuid": "^8.0.1",
-    "@types/geojson": "^7946.0.7",
     "http-server": "^0.12.3",
     "jest": "^26.2.2",
     "rollup": "^2.23.0",
-    "typedoc": "^0.17.8",
+    "rollup-plugin-cleanup": "^3.1.1",
+    "typedoc": "^0.17.0-3",
     "typescript": "^3.9.7"
   },
   "dependencies": {

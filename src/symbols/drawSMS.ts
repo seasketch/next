@@ -1,6 +1,7 @@
 import { SimpleFillSymbol, SimpleMarkerSymbol } from "arcgis-rest-api";
 import { createCanvas, rgba, ptToPx } from "./utils";
 
+/** @hidden */
 export default function (symbol: SimpleMarkerSymbol, pixelRatio: 1 | 2 | 3) {
   const size = ptToPx(symbol.size || 13);
   const scale = 2 ** (pixelRatio - 1);

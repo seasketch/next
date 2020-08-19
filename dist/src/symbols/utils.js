@@ -1,18 +1,22 @@
 // @ts-ignore
 import { v4 as uuid } from "uuid";
+/** @hidden */
 export function generateId() {
     return uuid();
 }
+/** @hidden */
 export function createCanvas(w, h) {
     const canvas = document.createElement("canvas");
     canvas.setAttribute("width", w.toString());
     canvas.setAttribute("height", h.toString());
     return canvas;
 }
+/** @hidden */
 export const rgba = (color) => {
     color = color || [0, 0, 0, 0];
     return `rgba(${color[0]},${color[1]},${color[2]},${color[3]})`;
 };
+/** @hidden */
 export const colorAndOpacity = (color) => {
     color = color || [0, 0, 0, 0];
     return {
@@ -20,7 +24,9 @@ export const colorAndOpacity = (color) => {
         opacity: color[3] / 255,
     };
 };
+/** @hidden */
 export const ptToPx = (pt) => Math.round(pt * 1.33);
+/** @hidden */
 const ANCHORS = {
     // Note that these are essentially backwards from what you'd expect
     // details: http://resources.arcgis.com/en/help/rest/apiref/index.html?renderer.html
@@ -54,4 +60,5 @@ const ANCHORS = {
     // // Label Placement Values For Polygon Features
     esriServerPolygonPlacementAlwaysHorizontal: "center",
 };
+/** @hidden */
 export const toTextAnchor = (labelPlacement) => ANCHORS[labelPlacement] || "center";

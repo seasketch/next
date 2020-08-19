@@ -1,4 +1,5 @@
 import { createCanvas, rgba, ptToPx } from "./utils";
+/** @hidden */
 export default function (symbol, pixelRatio) {
     var _a, _b;
     const size = ptToPx(symbol.size || 13);

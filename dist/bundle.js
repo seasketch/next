@@ -2,62 +2,7 @@ var MapBoxGLEsriSources = (function (exports) {
     'use strict';
 
     const blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
-    /**
-     * Add an Esri Dynamic Map Service as an image source to a MapBox GL JS map, and
-     * use the included methods to update visible sublayers, set layer order and
-     * opacity, support high-dpi screens, and transparently deal with issues related
-     * to crossing the central meridian.
-     *
-     * ```typescript
-     * import { ArcGISDynamicMapService } from "mapbox-gl-esri-sources";
-     *
-     * // ... setup your map
-     *
-     * const populatedPlaces = new ArcGISDynamicMapService(
-     *   map,
-     *   "populated-places-source",
-     *   "https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer", {
-     *     supportsDynamicLayers: true,
-     *     sublayers: [
-     *       { sublayer: 0, opacity: 1 },
-     *       { sublayer: 1, opacity: 1 },
-     *       { sublayer: 2, opacity: 0.5 },
-     *     ],
-     *     queryParameters: {
-     *       format: 'png32'
-     *     }
-     *   }
-     * });
-     *
-     * // Don't forget to add a layer to reference your source
-     * map.addLayer({
-     *   id: "ags-layer",
-     *   type: "raster",
-     *   source: populatedPlaces.id,
-     *   paint: {
-     *     "raster-fade-duration": 0,
-     *     "raster-opacity": 0.9
-     *   },
-     * });
-     *
-     * // turn off the third sublayer and update opacity
-     * populatedPlaces.updateLayers([
-     *   { sublayer: 0, opacity: 0.5 },
-     *   { sublayer: 1, opacity: 1 },
-     * ]);
-     *
-     * // disable high-dpi screen support
-     * populatedPlaces.updateUseDevicePixelRatio(false);
-     * ```
-     * @class ArcGISDynamicMapService
-     */
     class ArcGISDynamicMapService {
-        /**
-         * @param {Map} map MapBox GL JS Map instance
-         * @param {string} id ID to be used when adding refering to this source from layers
-         * @param {string} baseUrl Location of the service. Should end in /MapServer
-         * @param {ArcGISDynamicMapServiceOptions} [options]
-         */
         constructor(map, id, baseUrl, options) {
             this.supportDevicePixelRatio = true;
             this.supportsDynamicLayers = false;
@@ -106,15 +51,11 @@ var MapBoxGLEsriSources = (function (exports) {
             });
             this.source = this.map.getSource(this.id);
         }
-        /**
-         * Clears all map event listeners setup by this instance.
-         */
         destroy() {
             this.map.off("moveend", this.updateSource);
         }
         getUrl() {
             const bounds = this.map.getBounds();
-            // create bbox in web mercator
             let bbox = [
                 lon2meters(bounds.getWest()),
                 lat2meters(bounds.getSouth()),
@@ -123,7 +64,6 @@ var MapBoxGLEsriSources = (function (exports) {
             ];
             const groundResolution = getGroundResolution(this.map.getZoom() +
                 (this.supportDevicePixelRatio ? window.devicePixelRatio - 1 : 0));
-            // Width and height can't be based on container width if the map is rotated
             const width = Math.round((bbox[2] - bbox[0]) / groundResolution);
             const height = Math.round((bbox[3] - bbox[1]) / groundResolution);
             this.url.searchParams.set("format", "png");
@@ -131,20 +71,16 @@ var MapBoxGLEsriSources = (function (exports) {
             if (this.supportDevicePixelRatio) {
                 switch (window.devicePixelRatio) {
                     case 1:
-                        // standard pixelRatio looks best at 96
                         this.url.searchParams.set("dpi", "96");
                         break;
                     case 2:
-                        // for higher pixelRatios, esri's software seems to like the dpi
-                        // bumped up somewhat higher than a simple formula would suggest
                         this.url.searchParams.set("dpi", "220");
                         break;
                     case 3:
                         this.url.searchParams.set("dpi", "390");
                         break;
                     default:
-                        this.url.searchParams.set("dpi", 
-                        // Bumping pixel ratio a bit. see above
+                        this.url.searchParams.set("dpi",
                         (window.devicePixelRatio * 96 * 1.22).toString());
                         break;
                 }
@@ -152,14 +88,8 @@ var MapBoxGLEsriSources = (function (exports) {
             else {
                 this.url.searchParams.set("dpi", "96");
             }
-            // Default to epsg:3857
             this.url.searchParams.set("imageSR", "102100");
             this.url.searchParams.set("bboxSR", "102100");
-            // If the map extent crosses the meridian, we need to create a new
-            // projection and map the x coordinates to that space. The Esri JS API
-            // exhibits this same behavior. Solution was inspired by:
-            // * https://github.com/Esri/esri-leaflet/issues/672#issuecomment-160691149
-            // * https://gist.github.com/perrygeo/4478844
             if (Math.abs(bbox[0]) > 20037508.34 || Math.abs(bbox[2]) > 20037508.34) {
                 const centralMeridian = bounds.getCenter().lng;
                 if (this.supportDevicePixelRatio && window.devicePixelRatio > 1) {
@@ -201,7 +131,6 @@ var MapBoxGLEsriSources = (function (exports) {
                 }
             }
             if (this.layers && (!layersInOrder || hasOpacityUpdates)) {
-                // need to provide renderInfo
                 const dynamicLayers = this.layers.map((lyr) => {
                     return {
                         id: lyr.sublayer,
@@ -221,60 +150,20 @@ var MapBoxGLEsriSources = (function (exports) {
             }
             return this.url.toString();
         }
-        /**
-         * Update the list of sublayers and re-render the the map. If
-         * `supportsDynamicLayers` is enabled, sublayer order and opacity will be
-         * respected.
-         *
-         * ```typescript
-         * // reverses layer rendering order and sets one sublayer to 50% transparency
-         * mapService.updateLayers([
-         *   { sublayer: 1, opacity: 0.5 },
-         *   { sublayer: 0, opacity: 1 }
-         * ]);
-         * ```
-         *
-         * @param layers SublayerState is an array of objects with `sublayer` and
-         *               optional `opacity` props.
-         *
-         */
         updateLayers(layers) {
             this.layers = layers;
             this.updateSource();
         }
-        /**
-         * Update query params sent with each export request and re-render the map. A
-         * list of supported parameters can be found in the [Esri REST API docs](https://developers.arcgis.com/rest/services-reference/export-map.htm#GUID-C93E8957-99FD-473B-B0E1-68EA315EBD98).
-         * Query parameters will override any values set by this library, such as
-         * `format`, `dpi`, `size`, and `bbox`.
-         *
-         * ```typescript
-         *
-         * mapServiceSource.updateQueryParameters({
-         *  format: 'png32',
-         *  // visualize temporal datasets!
-         *  historicMoment: slider.value
-         * })
-         *
-         * ```
-         */
         updateQueryParameters(queryParameters) {
             this.queryParameters = queryParameters;
             this.updateSource();
         }
-        /**
-         * Update support for adjusting image resolution based on devicePixelRatio and
-         * re-render the map. Useful for giving users the option to toggle
-         * high-resolution images depending on network conditions.
-         * @param enable
-         */
         updateUseDevicePixelRatio(enable) {
             this.supportDevicePixelRatio = enable;
             this.updateSource();
         }
     }
     function lat2meters(lat) {
-        // thanks! https://gist.github.com/onderaltintas/6649521
         var y = Math.log(Math.tan(((90 + lat) * Math.PI) / 360)) / (Math.PI / 180);
         return (y * 20037508.34) / 180;
     }
@@ -296,34 +185,26 @@ var MapBoxGLEsriSources = (function (exports) {
     * Copyright (c) 2012-2020 Environmental Systems Research Institute, Inc.
     * Mon May 18 2020 14:30:35 GMT-0700 (Pacific Daylight Time)
     */
-    /* Copyright (c) 2012-2019 Environmental Systems Research Institute, Inc.
-     * Apache-2.0 */
-
     var edgeIntersectsEdge = function edgeIntersectsEdge(a1, a2, b1, b2) {
       var uaT = (b2[0] - b1[0]) * (a1[1] - b1[1]) - (b2[1] - b1[1]) * (a1[0] - b1[0]);
       var ubT = (a2[0] - a1[0]) * (a1[1] - b1[1]) - (a2[1] - a1[1]) * (a1[0] - b1[0]);
       var uB = (b2[1] - b1[1]) * (a2[0] - a1[0]) - (b2[0] - b1[0]) * (a2[1] - a1[1]);
-
       if (uB !== 0) {
         var ua = uaT / uB;
         var ub = ubT / uB;
-
         if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
           return true;
         }
       }
-
       return false;
     };
     var coordinatesContainPoint = function coordinatesContainPoint(coordinates, point) {
       var contains = false;
-
       for (var i = -1, l = coordinates.length, j = l - 1; ++i < l; j = i) {
         if ((coordinates[i][1] <= point[1] && point[1] < coordinates[j][1] || coordinates[j][1] <= point[1] && point[1] < coordinates[i][1]) && point[0] < (coordinates[j][0] - coordinates[i][0]) * (point[1] - coordinates[i][1]) / (coordinates[j][1] - coordinates[i][1]) + coordinates[i][0]) {
           contains = !contains;
         }
       }
-
       return contains;
     };
     var pointsEqual = function pointsEqual(a, b) {
@@ -332,7 +213,6 @@ var MapBoxGLEsriSources = (function (exports) {
           return false;
         }
       }
-
       return true;
     };
     var arrayIntersectsArray = function arrayIntersectsArray(a, b) {
@@ -343,146 +223,93 @@ var MapBoxGLEsriSources = (function (exports) {
           }
         }
       }
-
       return false;
     };
-
-    /* Copyright (c) 2012-2019 Environmental Systems Research Institute, Inc.
-     * Apache-2.0 */
-
     var closeRing = function closeRing(coordinates) {
       if (!pointsEqual(coordinates[0], coordinates[coordinates.length - 1])) {
         coordinates.push(coordinates[0]);
       }
-
       return coordinates;
-    }; // determine if polygon ring coordinates are clockwise. clockwise signifies outer ring, counter-clockwise an inner ring
-    // or hole. this logic was found at http://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-
-    // points-are-in-clockwise-order
-
+    };
     var ringIsClockwise = function ringIsClockwise(ringToTest) {
       var total = 0;
       var i = 0;
       var rLength = ringToTest.length;
       var pt1 = ringToTest[i];
       var pt2;
-
       for (i; i < rLength - 1; i++) {
         pt2 = ringToTest[i + 1];
         total += (pt2[0] - pt1[0]) * (pt2[1] + pt1[1]);
         pt1 = pt2;
       }
-
       return total >= 0;
-    }; // This function ensures that rings are oriented in the right directions
-    // from http://jsperf.com/cloning-an-object/2
-
+    };
     var shallowClone = function shallowClone(obj) {
       var target = {};
-
       for (var i in obj) {
-        // both arcgis attributes and geojson props are just hardcoded keys
         if (obj.hasOwnProperty(i)) {
-          // eslint-disable-line no-prototype-builtins
           target[i] = obj[i];
         }
       }
-
       return target;
     };
-
-    /* Copyright (c) 2012-2019 Environmental Systems Research Institute, Inc.
-     * Apache-2.0 */
-
     var coordinatesContainCoordinates = function coordinatesContainCoordinates(outer, inner) {
       var intersects = arrayIntersectsArray(outer, inner);
       var contains = coordinatesContainPoint(outer, inner[0]);
-
       if (!intersects && contains) {
         return true;
       }
-
       return false;
-    }; // do any polygons in this array contain any other polygons in this array?
-    // used for checking for holes in arcgis rings
-
-
+    };
     var convertRingsToGeoJSON = function convertRingsToGeoJSON(rings) {
       var outerRings = [];
       var holes = [];
-      var x; // iterator
-
-      var outerRing; // current outer ring being evaluated
-
-      var hole; // current hole being evaluated
-      // for each ring
-
+      var x;
+      var outerRing;
+      var hole;
       for (var r = 0; r < rings.length; r++) {
         var ring = closeRing(rings[r].slice(0));
-
         if (ring.length < 4) {
           continue;
-        } // is this ring an outer ring? is it clockwise?
-
-
+        }
         if (ringIsClockwise(ring)) {
-          var polygon = [ring.slice().reverse()]; // wind outer rings counterclockwise for RFC 7946 compliance
-
-          outerRings.push(polygon); // push to outer rings
+          var polygon = [ring.slice().reverse()];
+          outerRings.push(polygon);
         } else {
-          holes.push(ring.slice().reverse()); // wind inner rings clockwise for RFC 7946 compliance
+          holes.push(ring.slice().reverse());
         }
       }
-
-      var uncontainedHoles = []; // while there are holes left...
-
+      var uncontainedHoles = [];
       while (holes.length) {
-        // pop a hole off out stack
-        hole = holes.pop(); // loop over all outer rings and see if they contain our hole.
-
+        hole = holes.pop();
         var contained = false;
-
         for (x = outerRings.length - 1; x >= 0; x--) {
           outerRing = outerRings[x][0];
-
           if (coordinatesContainCoordinates(outerRing, hole)) {
-            // the hole is contained push it into our polygon
             outerRings[x].push(hole);
             contained = true;
             break;
           }
-        } // ring is not contained in any outer ring
-        // sometimes this happens https://github.com/Esri/esri-leaflet/issues/320
-
-
+        }
         if (!contained) {
           uncontainedHoles.push(hole);
         }
-      } // if we couldn't match any holes using contains we can try intersects...
-
-
+      }
       while (uncontainedHoles.length) {
-        // pop a hole off out stack
-        hole = uncontainedHoles.pop(); // loop over all outer rings and see if any intersect our hole.
-
+        hole = uncontainedHoles.pop();
         var intersects = false;
-
         for (x = outerRings.length - 1; x >= 0; x--) {
           outerRing = outerRings[x][0];
-
           if (arrayIntersectsArray(outerRing, hole)) {
-            // the hole is contained push it into our polygon
             outerRings[x].push(hole);
             intersects = true;
             break;
           }
         }
-
         if (!intersects) {
           outerRings.push([hole.reverse()]);
         }
       }
-
       if (outerRings.length === 1) {
         return {
           type: 'Polygon',
@@ -495,47 +322,36 @@ var MapBoxGLEsriSources = (function (exports) {
         };
       }
     };
-
     var getId = function getId(attributes, idAttribute) {
       var keys = idAttribute ? [idAttribute, 'OBJECTID', 'FID'] : ['OBJECTID', 'FID'];
-
       for (var i = 0; i < keys.length; i++) {
         var key = keys[i];
-
         if (key in attributes && (typeof attributes[key] === 'string' || typeof attributes[key] === 'number')) {
           return attributes[key];
         }
       }
-
       throw Error('No valid id attribute found');
     };
-
     var arcgisToGeoJSON = function arcgisToGeoJSON(arcgis, idAttribute) {
       var geojson = {};
-
       if (arcgis.features) {
         geojson.type = 'FeatureCollection';
         geojson.features = [];
-
         for (var i = 0; i < arcgis.features.length; i++) {
           geojson.features.push(arcgisToGeoJSON(arcgis.features[i], idAttribute));
         }
       }
-
       if (typeof arcgis.x === 'number' && typeof arcgis.y === 'number') {
         geojson.type = 'Point';
         geojson.coordinates = [arcgis.x, arcgis.y];
-
         if (typeof arcgis.z === 'number') {
           geojson.coordinates.push(arcgis.z);
         }
       }
-
       if (arcgis.points) {
         geojson.type = 'MultiPoint';
         geojson.coordinates = arcgis.points.slice(0);
       }
-
       if (arcgis.paths) {
         if (arcgis.paths.length === 1) {
           geojson.type = 'LineString';
@@ -545,85 +361,40 @@ var MapBoxGLEsriSources = (function (exports) {
           geojson.coordinates = arcgis.paths.slice(0);
         }
       }
-
       if (arcgis.rings) {
         geojson = convertRingsToGeoJSON(arcgis.rings.slice(0));
       }
-
       if (typeof arcgis.xmin === 'number' && typeof arcgis.ymin === 'number' && typeof arcgis.xmax === 'number' && typeof arcgis.ymax === 'number') {
         geojson.type = 'Polygon';
         geojson.coordinates = [[[arcgis.xmax, arcgis.ymax], [arcgis.xmin, arcgis.ymax], [arcgis.xmin, arcgis.ymin], [arcgis.xmax, arcgis.ymin], [arcgis.xmax, arcgis.ymax]]];
       }
-
       if (arcgis.geometry || arcgis.attributes) {
         geojson.type = 'Feature';
         geojson.geometry = arcgis.geometry ? arcgisToGeoJSON(arcgis.geometry) : null;
         geojson.properties = arcgis.attributes ? shallowClone(arcgis.attributes) : null;
-
         if (arcgis.attributes) {
           try {
             geojson.id = getId(arcgis.attributes, idAttribute);
-          } catch (err) {// don't set an id
+          } catch (err) {
           }
         }
-      } // if no valid geometry was encountered
-
-
+      }
       if (JSON.stringify(geojson.geometry) === JSON.stringify({})) {
         geojson.geometry = null;
       }
-
       if (arcgis.spatialReference && arcgis.spatialReference.wkid && arcgis.spatialReference.wkid !== 4326) {
         console.warn('Object converted in non-standard crs - ' + JSON.stringify(arcgis.spatialReference));
       }
-
       return geojson;
     };
 
-    // @ts-ignore
     const WORLD = { xmin: -180, xmax: 180, ymin: -90, ymax: 90 };
-    /**
-     * Add ArcGIS Feature Layers to MapBox GL JS maps as a geojson source. These
-     * data sources can be styled using output from
-     * {@link styleForFeatureLayer | styleForFeatureLayer } or custom layers that
-     * reference the provided source id.
-     *
-     * ### Usage
-     *
-     * ```typescript
-     * import { ArcGISVectorSource } from "mapbox-gl-esri-sources";
-     *
-     * // setup map...
-     *
-     * const esriSource = new ArcGISVectorSource(
-     *   map,
-     *   'cities-source-id',
-     *   "https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0"),
-     *   {
-     *     bytesLimit: 1000 * 1000 * 2, // 2mb
-     *     geometryPrecision: 5,
-     *     outFields: "POP,CITY_NAME"
-     *   }
-     * );
-     * ```
-     * @class ArcGISVectorSource
-     */
     class ArcGISVectorSource {
-        /**
-         * Creates an instance of ArcGISVectorSource.
-         * @param {Map} map MapBox GL JS map instance where source will be added
-         * @param {string} id ID will be assigned to the GeoJSONSource instance
-         * @param {string} url Base url for an [ArcGIS Server Feature Layer](https://developers.arcgis.com/rest/services-reference/layer-table.htm). Should end in _/MapServer/0..n_
-         */
         constructor(map, id, url, options) {
             this.data = {
                 type: "FeatureCollection",
                 features: [],
             };
-            /**
-             * Size of the dataset added to the map. Relies on `content-length` header
-             * from the data host, which may not be available.
-             */
             this.totalBytes = 0;
             this.outFields = "*";
             this.supportsPagination = true;
@@ -667,8 +438,6 @@ var MapBoxGLEsriSources = (function (exports) {
                 returnGeometry: "true",
                 geometryPrecision: ((_c = (_b = this.options) === null || _b === void 0 ? void 0 : _b.geometryPrecision) === null || _c === void 0 ? void 0 : _c.toString()) || "6",
                 returnIdsOnly: "false",
-                // use json and convert rather than geojson. geojson endpoints don't
-                // support gzip so are much less efficient
                 f: "json",
                 resultOffset: this.supportsPagination
                     ? this.data.features.length.toString()
@@ -714,18 +483,12 @@ var MapBoxGLEsriSources = (function (exports) {
         }
     }
 
-    // Unique ID creation requires a high quality random # generator. In the browser we therefore
-    // require the crypto API and do not support built-in fallback to lower quality random number
-    // generators (like Math.random()).
-    // getRandomValues needs to be invoked in a context where "this" is a Crypto implementation. Also,
-    // find the complete implementation of crypto (msCrypto) on IE11.
     var getRandomValues = typeof crypto !== 'undefined' && crypto.getRandomValues && crypto.getRandomValues.bind(crypto) || typeof msCrypto !== 'undefined' && typeof msCrypto.getRandomValues === 'function' && msCrypto.getRandomValues.bind(msCrypto);
     var rnds8 = new Uint8Array(16);
     function rng() {
       if (!getRandomValues) {
         throw new Error('crypto.getRandomValues() not supported. See https://github.com/uuidjs/uuid#getrandomvalues-not-supported');
       }
-
       return getRandomValues(rnds8);
     }
 
@@ -735,55 +498,34 @@ var MapBoxGLEsriSources = (function (exports) {
       return typeof uuid === 'string' && REGEX.test(uuid);
     }
 
-    /**
-     * Convert array of 16 byte values to UUID string format of the form:
-     * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
-     */
-
     var byteToHex = [];
-
     for (var i = 0; i < 256; ++i) {
       byteToHex.push((i + 0x100).toString(16).substr(1));
     }
-
     function stringify(arr) {
       var offset = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-      // Note: Be careful editing this code!  It's been tuned for performance
-      // and works in ways you may not expect. See https://github.com/uuidjs/uuid/pull/434
-      var uuid = (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + '-' + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + '-' + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + '-' + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + '-' + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase(); // Consistency check for valid UUID.  If this throws, it's likely due to one
-      // of the following:
-      // - One or more input array values don't map to a hex octet (leading to
-      // "undefined" in the uuid)
-      // - Invalid input values for the RFC `version` or `variant` fields
-
+      var uuid = (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + '-' + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + '-' + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + '-' + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + '-' + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
       if (!validate(uuid)) {
         throw TypeError('Stringified UUID is invalid');
       }
-
       return uuid;
     }
 
     function v4(options, buf, offset) {
       options = options || {};
-      var rnds = options.random || (options.rng || rng)(); // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
-
+      var rnds = options.random || (options.rng || rng)();
       rnds[6] = rnds[6] & 0x0f | 0x40;
-      rnds[8] = rnds[8] & 0x3f | 0x80; // Copy bytes to buffer, if provided
-
+      rnds[8] = rnds[8] & 0x3f | 0x80;
       if (buf) {
         offset = offset || 0;
-
         for (var i = 0; i < 16; ++i) {
           buf[offset + i] = rnds[i];
         }
-
         return buf;
       }
-
       return stringify(rnds);
     }
 
-    // @ts-ignore
     function generateId() {
         return v4();
     }
@@ -806,10 +548,6 @@ var MapBoxGLEsriSources = (function (exports) {
     };
     const ptToPx = (pt) => Math.round(pt * 1.33);
     const ANCHORS = {
-        // Note that these are essentially backwards from what you'd expect
-        // details: http://resources.arcgis.com/en/help/rest/apiref/index.html?renderer.html
-        // https://www.mapbox.com/mapbox-gl-js/style-spec/#layout-symbol-text-anchor
-        // Label Placement Values For Point Features
         esriServerPointLabelPlacementAboveCenter: "bottom",
         esriServerPointLabelPlacementAboveLeft: "bottom-right",
         esriServerPointLabelPlacementAboveRight: "bottom-left",
@@ -819,8 +557,6 @@ var MapBoxGLEsriSources = (function (exports) {
         esriServerPointLabelPlacementCenterCenter: "center",
         esriServerPointLabelPlacementCenterLeft: "right",
         esriServerPointLabelPlacementCenterRight: "left",
-        // Label Placement Values For Line Features
-        // esriServerLinePlacementAboveAfter
         esriServerLinePlacementAboveAlong: "bottom",
         esriServerLinePlacementAboveBefore: "bottom-left",
         esriServerLinePlacementAboveStart: "bottom-left",
@@ -835,7 +571,6 @@ var MapBoxGLEsriSources = (function (exports) {
         esriServerLinePlacementCenterBefore: "center-left",
         esriServerLinePlacementCenterStart: "center-left",
         esriServerLinePlacementCenterEnd: "center-right",
-        // // Label Placement Values For Polygon Features
         esriServerPolygonPlacementAlwaysHorizontal: "center",
     };
     const toTextAnchor = (labelPlacement) => ANCHORS[labelPlacement] || "center";
@@ -851,7 +586,6 @@ var MapBoxGLEsriSources = (function (exports) {
     var esriSLS = (symbol, sourceId) => {
         const { color, opacity } = colorAndOpacity(symbol.color);
         let strokeWidth = ptToPx(symbol.width || 1);
-        // No idea why... but this matches map service image output
         if (strokeWidth === -1) {
             strokeWidth = 1;
         }
@@ -887,7 +621,6 @@ var MapBoxGLEsriSources = (function (exports) {
                 });
                 break;
             case "esriSFSNull":
-                // leave empty
                 break;
             case "esriSFSBackwardDiagonal":
             case "esriSFSCross":
@@ -952,14 +685,6 @@ var MapBoxGLEsriSources = (function (exports) {
         ];
     };
 
-    // TODO: Add support for lesser-used options
-    // height
-    // width
-    // angle
-    // xoffset
-    // yoffset
-    // xscale
-    // yscale
     var esriPFS = (symbol, sourceId, imageList) => {
         const imageId = imageList.addEsriPFS(symbol);
         const layers = [
@@ -1020,13 +745,10 @@ var MapBoxGLEsriSources = (function (exports) {
         ctx.fillStyle = rgba(symbol.color);
         switch (symbol.style) {
             case "esriSMSCircle":
-                // canvas.style = "image-rendering: pixelated;";
-                // ctx.imageSmoothingEnabled = false;
                 ctx.beginPath();
                 var x = width / 2;
                 var y = height / 2;
                 var diameter = size * scale;
-                // I have no idea why, but adding a bit here helps match arcgis server output a bit better
                 var radius = Math.round((diameter + ctx.lineWidth) / 2);
                 ctx.arc(x, y, radius, 0, Math.PI * 2, true);
                 ctx.fill();
@@ -1199,18 +921,6 @@ var MapBoxGLEsriSources = (function (exports) {
                 this.supportsHighDPILegends = true;
             }
         }
-        /**
-         * Add a fill image for a PictureFillSymbol to the image set.
-         *
-         * PictureFillSymbol images cannot be requested at high-dpi from the legend
-         * endpoint because they would include an outline and not the full pattern. If
-         * there is a way to request a high-dpi image I do not know it. Instead,
-         * serialized image data is just pulled from the symbol itself.
-         *
-         * @hidden
-         * @param {PictureFillSymbol} symbol
-         * @returns {string} imageid
-         */
         addEsriPFS(symbol) {
             const imageid = v4();
             console.log(symbol);
@@ -1227,19 +937,6 @@ var MapBoxGLEsriSources = (function (exports) {
             });
             return imageid;
         }
-        /**
-         * Add a PictureMarkerSymbol image to the set. If the server supports high-dpi
-         * legends (10.6+), this function will fetch high resolution markers from the
-         * origin server. Otherwise it will just use serialized image data from the
-         * symbol definition.
-         *
-         * @param {PictureMarkerSymbol} symbol
-         * @param {string} serviceBaseUrl
-         * @param {number} sublayer
-         * @param {number} legendIndex
-         * @returns {string} imageid
-         * @hidden
-         */
         addEsriPMS(symbol, serviceBaseUrl, sublayer, legendIndex) {
             const imageid = v4();
             if (this.supportsHighDPILegends) {
@@ -1276,15 +973,6 @@ var MapBoxGLEsriSources = (function (exports) {
             }
             return imageid;
         }
-        /**
-         * Adds a SimpleMarkerSymbol to the ImageSet. These markers will be generated
-         * in multiple resolutions using html canvas to support multiple device pixel
-         * ratios (1, 2 and 3)
-         *
-         * @param {SimpleMarkerSymbol} symbol
-         * @returns {string} imageid
-         * @hidden
-         */
         addEsriSMS(symbol) {
             const imageid = v4();
             const images = [1, 2, 3].map((pixelRatio) => {
@@ -1302,12 +990,6 @@ var MapBoxGLEsriSources = (function (exports) {
             });
             return imageid;
         }
-        /**
-         * @hidden
-         * @param {SimpleFillSymbol} symbol
-         * @returns
-         * @memberof ImageList
-         */
         addEsriSFS(symbol) {
             const imageId = v4();
             const pattern = fillPatterns[symbol.style](rgba(symbol.color));
@@ -1321,32 +1003,12 @@ var MapBoxGLEsriSources = (function (exports) {
             });
             return imageId;
         }
-        /**
-         * Add all images to a MapBox GL JS map instance so that they may be used in
-         * style layers. Call before adding layers created by {@link styleForFeatureLayer | styleForFeatureLayer}.
-         *
-         * The ImageList may contain multiple copies of images at different dpi. Since
-         * MapBox GL does not currently support adding images at multiple resolutions
-         * this function will pick those that best match the current [devicePixelRatio](https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio).
-         * If the devicePixelRatio changes (e.g. switching monitors), the images
-         * *will not* be updated and may be at a less than ideal resolution, though
-         * mapbox gl will still show them at the correct size.
-         *
-         * @param {Map} map
-         * @returns
-         * @memberof ImageList
-         */
         addToMap(map) {
             return Promise.all(this.imageSets.map(async (imageSet) => {
                 if (imageSet instanceof Promise) {
                     imageSet = await imageSet;
                 }
                 let imageData = imageSet.images[0];
-                // MapBox GL does not allow adding images with multiple copies for each
-                // pixelRatio. So we have to pick the one that matches the current
-                // devicePixelRatio. This may change during the user session and result
-                // than a less than ideal display, but updating the image is a lot of
-                // extra complexity to manage.
                 if (imageSet.images.length > 1) {
                     imageData =
                         imageSet.images.find((i) => i.pixelRatio === Math.round(window.devicePixelRatio)) || imageData;
@@ -1412,19 +1074,11 @@ var MapBoxGLEsriSources = (function (exports) {
     }
 
     var esriTS = (labelingInfo, geometryType, fieldNames) => {
-        // TODO: Support scale-dependant rendering. Right now just taking first label
-        // TODO: labelExpressions (full Arcade!?)
-        // TODO: where expressions
-        // TODO: xoffset, yoffset, kerning, angle, rightToLeft, horizontalAlignment, etc
-        // See https://developers.arcgis.com/documentation/common-data-types/labeling-objects.htm
         return {
             id: generateId(),
             type: "symbol",
             layout: {
-                // TODO: properly support labeling functions like UCASE(), CONCAT(), etc
-                // https://developers.arcgis.com/documentation/common-data-types/labeling-objects.htm
                 "text-field": toExpression(labelingInfo.labelExpression, fieldNames),
-                // Only supports points right now
                 "text-anchor": toTextAnchor(labelingInfo.labelPlacement),
                 "text-size": ptToPx(labelingInfo.symbol.font.size || 13),
                 "symbol-placement": geometryType === "line" ? "line" : "point",
@@ -1454,44 +1108,6 @@ var MapBoxGLEsriSources = (function (exports) {
         return expression;
     }
 
-    /**
-     * This function retrieves rendering and style information from the ArcGIS REST
-     * API for a given [Feature Layer](https://developers.arcgis.com/rest/services-reference/layer-table.htm)
-     * and produces images and style layers that can be used to faithfully represent
-     * these services as vectors in MapBox GL. It can be used in conjunction with
-     * {@link ArcGISVectorSource | ArcGISVectorSource}.
-     *
-     * Style generation is seperated from source handling so that you could even
-     * use tippecanoe or other tools to generate vector tiles from a service and
-     * style them using the generated layers. With this seperation of concerns it's
-     * also possible to cache style information so that it does not need to
-     * always be generated dynamically.
-     *
-     * ### Usage
-     *
-     * ```typescript
-     * import { ArcGISVectorSource, styleForFeatureLayer } from "mapbox-gl-esri-sources";
-     *
-     * // setup map...
-     * // add source...
-     *
-     * const { imageList, layers } = styleForFeatureLayer(
-     *   "https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0",
-     *   "cities-source-id"
-     * );
-     *
-     * imageList.addToMap(map);
-     *
-     * for (const layer of layers) {
-     *   map.addLayer(layer);
-     * }
-     *
-     * ```
-     *
-     * @param {string} url Feature layer endpoint. Should terminate in _/MapServer/0..n_
-     * @param {string} sourceId ID for the [source](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/) of vector data to be used in rendering.
-     * @returns The {@link ImageList.addToMap | ImageList.addToMap(map)} function should be called before adding the generated layers to the map.
-     */
     async function styleForFeatureLayer(url, sourceId) {
         const rootUrl = url.replace(/\/\d+[\/]*$/, "");
         const sublayer = parseInt(url.match(/\/(\d+)[\/]*$/)[1]);
@@ -1546,7 +1162,6 @@ var MapBoxGLEsriSources = (function (exports) {
                 break;
             }
             case "classBreaks":
-                // TODO: look for test dataset for backgroundFillSymbol
                 if (renderer.backgroundFillSymbol) {
                     layers.push(...symbolToLayers(renderer.backgroundFillSymbol, sourceId, imageList, rootUrl, sublayer, 0));
                 }
@@ -1581,7 +1196,6 @@ var MapBoxGLEsriSources = (function (exports) {
                 }
                 break;
             default:
-                // simple
                 layers = symbolToLayers(renderer.symbol, sourceId, imageList, rootUrl, sublayer, 0);
                 break;
         }

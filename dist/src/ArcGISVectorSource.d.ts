@@ -47,7 +47,7 @@ export interface ArcGISVectorSourceOptions {
 /**
  * Add ArcGIS Feature Layers to MapBox GL JS maps as a geojson source. These
  * data sources can be styled using output from
- * {@link styleForFeatureLayer | styleForFeatureLayer } or custom layers that
+ * {@link styleForFeatureLayer } or custom layers that
  * reference the provided source id.
  *
  * ### Usage

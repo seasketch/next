@@ -1,6 +1,7 @@
 import { ptToPx, toTextAnchor, rgba, generateId } from "./utils";
 import { Layer } from "mapbox-gl";
 
+/** @hidden */
 export default (
   labelingInfo: any,
   geometryType: "line" | "point",
@@ -35,6 +36,7 @@ export default (
   } as Layer;
 };
 
+/** @hidden */
 function toExpression(labelExpression: string, fieldNames: string[]) {
   const fields = (labelExpression.match(/\[\w+\]/g) || [])
     .map((val) => val.replace(/[\[\]]/g, ""))

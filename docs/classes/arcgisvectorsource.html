@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>mapbox-gl-esri-sources | mapbox-gl-esri-sources</title>
+	<title>ArcGISVectorSource | mapbox-gl-esri-sources</title>
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<style type="text/css">/*! normalize.css v1.1.3 | MIT License | git.io/normalize */
@@ -2335,7 +2335,7 @@ img {
 		<div class="container">
 			<div class="table-wrap">
 				<div class="table-cell">
-					<strong><a href="index.html">mapbox-gl-esri-sources</a></strong>
+					<strong><a href="../index.html">mapbox-gl-esri-sources</a></strong>
 				</div>
 				<div class="table-cell" id="tsd-widgets">
 					<div id="tsd-filter">
@@ -2366,204 +2366,114 @@ img {
 <nav class="tsd-navigation secondary">
 	<ul>
 		<li class=" tsd-kind-class">
-			<a href="classes/arcgisdynamicmapservice.html" class="tsd-kind-icon">ArcGISDynamic<wbr>Map<wbr>Service</a>
+			<a href="arcgisdynamicmapservice.html" class="tsd-kind-icon">ArcGISDynamic<wbr>Map<wbr>Service</a>
+		</li>
+		<li class="current tsd-kind-class">
+			<a href="arcgisvectorsource.html" class="tsd-kind-icon">ArcGISVector<wbr>Source</a>
+			<ul>
+				<li class=" tsd-kind-constructor tsd-parent-kind-class">
+					<a href="arcgisvectorsource.html#constructor" class="tsd-kind-icon">constructor</a>
+				</li>
+				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-protected">
+					<a href="arcgisvectorsource.html#source" class="tsd-kind-icon">source</a>
+				</li>
+				<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-protected">
+					<a href="arcgisvectorsource.html#totalbytes" class="tsd-kind-icon">total<wbr>Bytes</a>
+				</li>
+			</ul>
 		</li>
 		<li class=" tsd-kind-class">
-			<a href="classes/arcgisvectorsource.html" class="tsd-kind-icon">ArcGISVector<wbr>Source</a>
-		</li>
-		<li class=" tsd-kind-class">
-			<a href="classes/imagelist.html" class="tsd-kind-icon">Image<wbr>List</a>
+			<a href="imagelist.html" class="tsd-kind-icon">Image<wbr>List</a>
 		</li>
 		<li class=" tsd-kind-interface">
-			<a href="interfaces/arcgisdynamicmapserviceoptions.html" class="tsd-kind-icon">ArcGISDynamic<wbr>Map<wbr>Service<wbr>Options</a>
+			<a href="../interfaces/arcgisdynamicmapserviceoptions.html" class="tsd-kind-icon">ArcGISDynamic<wbr>Map<wbr>Service<wbr>Options</a>
 		</li>
 		<li class=" tsd-kind-interface">
-			<a href="interfaces/arcgisvectorsourceoptions.html" class="tsd-kind-icon">ArcGISVector<wbr>Source<wbr>Options</a>
+			<a href="../interfaces/arcgisvectorsourceoptions.html" class="tsd-kind-icon">ArcGISVector<wbr>Source<wbr>Options</a>
 		</li>
 		<li class=" tsd-kind-interface">
-			<a href="interfaces/image.html" class="tsd-kind-icon">Image</a>
+			<a href="../interfaces/image.html" class="tsd-kind-icon">Image</a>
 		</li>
 		<li class=" tsd-kind-interface">
-			<a href="interfaces/imageset.html" class="tsd-kind-icon">Image<wbr>Set</a>
+			<a href="../interfaces/imageset.html" class="tsd-kind-icon">Image<wbr>Set</a>
 		</li>
 		<li class=" tsd-kind-interface">
-			<a href="interfaces/sublayerstate.html" class="tsd-kind-icon">Sublayer<wbr>State</a>
+			<a href="../interfaces/sublayerstate.html" class="tsd-kind-icon">Sublayer<wbr>State</a>
 		</li>
 		<li class=" tsd-kind-function">
-			<a href="globals.html#styleforfeaturelayer" class="tsd-kind-icon">style<wbr>For<wbr>Feature<wbr>Layer</a>
+			<a href="../globals.html#styleforfeaturelayer" class="tsd-kind-icon">style<wbr>For<wbr>Feature<wbr>Layer</a>
 		</li>
 	</ul>
 </nav>
 <div class="container container-main">
 	<div class="content-wrap">
-		<div class="tsd-panel tsd-typography">
-			<p>Easily add Esri map services or vector layers to MapBox GL JS, maintaining a faithful reproduction of cartographic style. In many cases services can render with greater graphical fidelity and performance than in the Esri JS API or ArcGIS Online.</p>
-			<img src="https://user-images.githubusercontent.com/511063/90651726-3b36be00-e1f2-11ea-891a-aa39bd24f28c.png" alt="vector layers demonstration in mapbox" width="512"/>
-			<a href="#examples" id="examples" style="color: inherit; text-decoration: none;">
-				<h2>Examples</h2>
-			</a>
-			<ul>
-				<li><a href="https://seasketch.github.io/mapbox-gl-esri-sources/examples/arcgisDynamic.html">Dynamic MapService</a></li>
-				<li><a href="https://seasketch.github.io/mapbox-gl-esri-sources/examples/arcgisVectorLayers.html">Vector Layers</a></li>
-			</ul>
-			<a href="#arcgis-tiled-map-services" id="arcgis-tiled-map-services" style="color: inherit; text-decoration: none;">
-				<h2>ArcGIS Tiled Map Services</h2>
-			</a>
-			<p>Tiled services host pre-seeded sets of image tiles referenced using z/y/z urls similar to WMTS or TMS layers. You actually don&#39;t need this module to load tiled services, but since you are here I&#39;ll show you how to do it!</p>
-			<p><a href="https://seasketch.github.io/mapbox-gl-esri-sources/examples/arcgisTiled.html">Anacapa Island Tiled Service Example</a></p>
-			<pre><code class="language-javascript">map.on(<span class="hljs-string">"load"</span>, () =&gt; {
-  <span class="hljs-comment">// add the image source</span>
-  map.addSource(<span class="hljs-string">"tile-layer"</span>, {
-    <span class="hljs-attr">type</span>: <span class="hljs-string">"raster"</span>,
-    <span class="hljs-attr">tiles</span>: [
-      <span class="hljs-comment">// Be sure to reference the /tile/ endpoint with appropriate template vars</span>
-      <span class="hljs-string">"https://tiles.arcgis.com/tiles/4TXrdeWh0RyCqPgB/arcgis/rest/services/Anacapa_Island/MapServer/tile/{z}/{y}/{x}"</span>,
-    ],
-    <span class="hljs-comment">// Most services have tile sizes of 256. You may use this division trick to</span>
-    <span class="hljs-comment">// support higher resolution screens, though watch out for missing tile</span>
-    <span class="hljs-comment">// images at higher zoom levels.</span>
-    <span class="hljs-attr">tileSize</span>: <span class="hljs-number">256</span> / <span class="hljs-built_in">window</span>.devicePixelRatio,
-    <span class="hljs-comment">// min/max zoom can be based on service metadata</span>
-    <span class="hljs-attr">minZoom</span>: <span class="hljs-number">0</span>,
-    <span class="hljs-attr">maxZoom</span>: <span class="hljs-number">23</span>,
-    <span class="hljs-comment">// MapService metadata also has a "Full Extent", which you can convert to</span>
-    <span class="hljs-comment">// degrees and avoid 404 errors from out of bounds requests</span>
-    <span class="hljs-attr">bounds</span>: [
-      <span class="hljs-number">-119.45627340923632</span>,
-      <span class="hljs-number">33.9923034787097</span>,
-      <span class="hljs-number">-119.33632759039419</span>,
-      <span class="hljs-number">34.028212713477615</span>,
-    ],
-    <span class="hljs-comment">// More options are detailed in:</span>
-    <span class="hljs-comment">// https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#raster-tiles</span>
-  });
-  <span class="hljs-comment">// now add a layer that references this source</span>
-  map.addLayer({
-    <span class="hljs-attr">id</span>: <span class="hljs-string">"esri-tiles"</span>,
-    <span class="hljs-attr">source</span>: <span class="hljs-string">"tile-layer"</span>,
-    <span class="hljs-attr">type</span>: <span class="hljs-string">"raster"</span>,
-    <span class="hljs-comment">// see https://docs.mapbox.com/mapbox-gl-js/style-spec/layers/#raster</span>
-    <span class="hljs-comment">// you can control opacity, saturation, and other rendering aspects</span>
-  });
-});</code></pre>
-			<a href="#arcgis-dynamic-map-services" id="arcgis-dynamic-map-services" style="color: inherit; text-decoration: none;">
-				<h2>ArcGIS Dynamic Map Services</h2>
-			</a>
-			<p>Dynamic Map Services are more difficult to support without this module. These services work similar to older WMS where it&#39;s expected that images representing the entire viewport are requested. <code>mapbox-gl-esri-sources</code> provides an <a href="https://seasketch.github.io/mapbox-gl-esri-sources/docs/classes/arcgisdynamicmapservice.html">ArcGISDynamicService</a> class which will listen to map viewport change events and update this image. It also provides <a href="https://seasketch.github.io/mapbox-gl-esri-sources/docs/classes/arcgisdynamicmapservice.html#updatelayers">methods</a> to update sublayer visibility, order and opacity.</p>
-			<p>By default images will be requested in a resolution that matches the client&#39;s <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio">devicePixelRatio</a> for higher quality maps on high-dpi devices.</p>
-			<pre><code class="language-javascript"><span class="hljs-keyword">import</span> { ArcGISDynamicMapService } <span class="hljs-keyword">from</span> <span class="hljs-string">"mapbox-gl-esri-sources"</span>;
-
- <span class="hljs-comment">// ... setup your map</span>
- map.on(<span class="hljs-string">"load"</span>, () =&gt; {
-   <span class="hljs-keyword">const</span> populatedPlaces = <span class="hljs-keyword">new</span> ArcGISDynamicMapService(
-    map,
-    <span class="hljs-string">"populated-places-source"</span>,
-    <span class="hljs-string">"https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer"</span>, {
-      <span class="hljs-attr">supportsDynamicLayers</span>: <span class="hljs-literal">true</span>,
-      <span class="hljs-attr">sublayers</span>: [
-        { <span class="hljs-attr">sublayer</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">opacity</span>: <span class="hljs-number">1</span> },
-        { <span class="hljs-attr">sublayer</span>: <span class="hljs-number">1</span>, <span class="hljs-attr">opacity</span>: <span class="hljs-number">1</span> },
-        { <span class="hljs-attr">sublayer</span>: <span class="hljs-number">2</span>, <span class="hljs-attr">opacity</span>: <span class="hljs-number">0.5</span> },
-      ],
-      <span class="hljs-attr">queryParameters</span>: {
-        <span class="hljs-attr">format</span>: <span class="hljs-string">'png32'</span>
-      }
-    }
-  });
-  <span class="hljs-comment">// Don't forget to add a layer to reference your source</span>
-  map.addLayer({
-    <span class="hljs-attr">id</span>: <span class="hljs-string">"ags-layer"</span>,
-    <span class="hljs-attr">type</span>: <span class="hljs-string">"raster"</span>,
-    <span class="hljs-attr">source</span>: populatedPlaces.id,
-    <span class="hljs-attr">paint</span>: {
-      <span class="hljs-comment">// fading looks weird on non-tiled images</span>
-      <span class="hljs-string">"raster-fade-duration"</span>: <span class="hljs-number">0</span>,
-    },
-  });
-  <span class="hljs-comment">// turn off the third sublayer and update opacity</span>
-  populatedPlaces.updateLayers([
-    { <span class="hljs-attr">sublayer</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">opacity</span>: <span class="hljs-number">0.5</span> },
-    { <span class="hljs-attr">sublayer</span>: <span class="hljs-number">1</span>, <span class="hljs-attr">opacity</span>: <span class="hljs-number">1</span> },
-  ]);
-});</code></pre>
-			<p><a href="https://seasketch.github.io/mapbox-gl-esri-sources/docs/classes/arcgisdynamicmapservice.html">API Documentation</a></p>
-			<p><a href="https://seasketch.github.io/mapbox-gl-esri-sources/examples/arcgisDynamic.html">Dynamic Map Service Examples</a></p>
-			<a href="#arcgis-feature-layers" id="arcgis-feature-layers" style="color: inherit; text-decoration: none;">
-				<h2>ArcGIS Feature Layers</h2>
-			</a>
-			<p>Both Esri map and feature services typically support querying vector data through a &quot;feature layer&quot; endpoint and most often this is the best way to display data from ArcGIS in MapBox GL. This module provides both an <a href="https://seasketch.github.io/mapbox-gl-esri-sources/docs/classes/arcgisvectorsource.html">ArcGISVectorSource</a> class for loading the entire dataset as a GeoJSON source, and the <a href="https://seasketch.github.io/mapbox-gl-esri-sources/docs/globals.html#styleforfeaturelayer">styleForFeatureLayer</a> function which will faithfully translate renderer information from the ArcGIS REST API into GL Style.</p>
-			<pre><code class="language-javascript"><span class="hljs-keyword">import</span> {
-  ArcGISVectorSource,
-  styleForFeatureLayer,
-} <span class="hljs-keyword">from</span> <span class="hljs-string">"mapbox-gl-esri-sources"</span>;
+		<section class="tsd-panel tsd-comment">
+			<div class="tsd-comment tsd-typography">
+				<div class="lead">
+					<p>Add ArcGIS Feature Layers to MapBox GL JS maps as a geojson source. These
+						data sources can be styled using output from
+						<a href="../globals.html#styleforfeaturelayer"></a> or custom layers that
+					reference the provided source id.</p>
+				</div>
+				<a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
+					<h3>Usage</h3>
+				</a>
+				<pre><code class="language-typescript"><span class="hljs-keyword">import</span> { ArcGISVectorSource } <span class="hljs-keyword">from</span> <span class="hljs-string">"mapbox-gl-esri-sources"</span>;
 
 <span class="hljs-comment">// setup map...</span>
 
-map.on(<span class="hljs-string">"load"</span>, () =&gt; {
-
-  <span class="hljs-keyword">const</span> { imageList, layers } = styleForFeatureLayer(
-    <span class="hljs-string">"https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0"</span>,
-    <span class="hljs-string">"cities-source-id"</span>
-  );
-
-  <span class="hljs-keyword">const</span> esriSource = <span class="hljs-keyword">new</span> ArcGISVectorSource(
-    map,
-    <span class="hljs-string">'cities-source-id'</span>,
-    <span class="hljs-string">"https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0"</span>),
-    {
-      <span class="hljs-attr">bytesLimit</span>: <span class="hljs-number">1000</span> * <span class="hljs-number">1000</span> * <span class="hljs-number">2</span>, <span class="hljs-comment">// 2mb</span>
-    }
-  );
-
-  imageList.addToMap(map);
-
-  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> layer <span class="hljs-keyword">of</span> layers) {
-    map.addLayer(layer);
+<span class="hljs-keyword">const</span> esriSource = <span class="hljs-keyword">new</span> ArcGISVectorSource(
+  map,
+  <span class="hljs-string">'cities-source-id'</span>,
+  <span class="hljs-string">"https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0"</span>),
+  {
+    bytesLimit: <span class="hljs-number">1000</span> * <span class="hljs-number">1000</span> * <span class="hljs-number">2</span>, <span class="hljs-comment">// 2mb</span>
+    geometryPrecision: <span class="hljs-number">5</span>,
+    outFields: <span class="hljs-string">"POP,CITY_NAME"</span>
   }
-});</code></pre>
-			<p>The process of generating images and styles is seperate from loading the vector source to provide more flexibility. Rather than just dynamically loading style and data together, you might generate and cache style information so that it doesn&#39;t have to be created on each map load. You could also adjust layers as needed, or even generate vector tiles from complex services using tippecanoe and use the same layers with this new derivative source.</p>
-			<p><a href="https://seasketch.github.io/mapbox-gl-esri-sources/examples/arcgisVectorLayers.html">Vector Layer Examples</a></p>
-			<p><a href="https://seasketch.github.io/mapbox-gl-esri-sources/docs/classes/arcgisvectorsource.html">ArcGISVectorSource API</a> | <a href="https://seasketch.github.io/mapbox-gl-esri-sources/docs/globals.html#styleforfeaturelayer">styleForFeatureLayer API</a></p>
-		</div>
-		<div style="position:relative;"><a name="typedoc-main-index" class="tsd-anchor"></a></div>
+);</code></pre>
+				<dl class="tsd-comment-tags">
+					<dt>class</dt>
+					<dd><p>ArcGISVectorSource</p>
+					</dd>
+				</dl>
+			</div>
+		</section>
+		<section class="tsd-panel tsd-hierarchy">
+			<h3>Hierarchy</h3>
+			<ul class="tsd-hierarchy">
+				<li>
+					<span class="target">ArcGISVectorSource</span>
+				</li>
+			</ul>
+		</section>
 		<section class="tsd-panel-group tsd-index-group">
 			<h2>Index</h2>
 			<section class="tsd-panel tsd-index-panel">
 				<div class="tsd-index-content">
 					<section class="tsd-index-section ">
-						<h3>Classes</h3>
+						<h3>Constructors</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-class"><a href="classes/arcgisdynamicmapservice.html" class="tsd-kind-icon">ArcGISDynamic<wbr>Map<wbr>Service</a></li>
-							<li class="tsd-kind-class"><a href="classes/arcgisvectorsource.html" class="tsd-kind-icon">ArcGISVector<wbr>Source</a></li>
-							<li class="tsd-kind-class"><a href="classes/imagelist.html" class="tsd-kind-icon">Image<wbr>List</a></li>
+							<li class="tsd-kind-constructor tsd-parent-kind-class"><a href="arcgisvectorsource.html#constructor" class="tsd-kind-icon">constructor</a></li>
 						</ul>
 					</section>
-					<section class="tsd-index-section ">
-						<h3>Interfaces</h3>
+					<section class="tsd-index-section tsd-is-private-protected">
+						<h3>Properties</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-interface"><a href="interfaces/arcgisdynamicmapserviceoptions.html" class="tsd-kind-icon">ArcGISDynamic<wbr>Map<wbr>Service<wbr>Options</a></li>
-							<li class="tsd-kind-interface"><a href="interfaces/arcgisvectorsourceoptions.html" class="tsd-kind-icon">ArcGISVector<wbr>Source<wbr>Options</a></li>
-							<li class="tsd-kind-interface"><a href="interfaces/image.html" class="tsd-kind-icon">Image</a></li>
-							<li class="tsd-kind-interface"><a href="interfaces/imageset.html" class="tsd-kind-icon">Image<wbr>Set</a></li>
-							<li class="tsd-kind-interface"><a href="interfaces/sublayerstate.html" class="tsd-kind-icon">Sublayer<wbr>State</a></li>
-						</ul>
-					</section>
-					<section class="tsd-index-section ">
-						<h3>Functions</h3>
-						<ul class="tsd-index-list">
-							<li class="tsd-kind-function"><a href="globals.html#styleforfeaturelayer" class="tsd-kind-icon">style<wbr>For<wbr>Feature<wbr>Layer</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><a href="arcgisvectorsource.html#source" class="tsd-kind-icon">source</a></li>
+							<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><a href="arcgisvectorsource.html#totalbytes" class="tsd-kind-icon">total<wbr>Bytes</a></li>
 						</ul>
 					</section>
 				</div>
 			</section>
 		</section>
 		<section class="tsd-panel-group tsd-member-group ">
-			<h2>Functions</h2>
-			<section class="tsd-panel tsd-member tsd-kind-function">
-				<a name="styleforfeaturelayer" class="tsd-anchor"></a>
-				<h3>style<wbr>For<wbr>Feature<wbr>Layer</h3>
-				<ul class="tsd-signatures tsd-kind-function">
-					<li class="tsd-signature tsd-kind-icon">style<wbr>For<wbr>Feature<wbr>Layer<span class="tsd-signature-symbol">(</span>url<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, sourceId<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">{ </span>imageList<span class="tsd-signature-symbol">: </span><a href="classes/imagelist.html" class="tsd-signature-type">ImageList</a><span class="tsd-signature-symbol">; </span>layers<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Layer</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span></li>
+			<h2>Constructors</h2>
+			<section class="tsd-panel tsd-member tsd-kind-constructor tsd-parent-kind-class">
+				<a name="constructor" class="tsd-anchor"></a>
+				<h3>constructor</h3>
+				<ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class">
+					<li class="tsd-signature tsd-kind-icon">new <wbr>ArcGISVector<wbr>Source<span class="tsd-signature-symbol">(</span>map<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Map</span>, id<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, url<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, options<span class="tsd-signature-symbol">?: </span><a href="../interfaces/arcgisvectorsourceoptions.html" class="tsd-signature-type">ArcGISVectorSourceOptions</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="arcgisvectorsource.html" class="tsd-signature-type">ArcGISVectorSource</a></li>
 				</ul>
 				<ul class="tsd-descriptions">
 					<li class="tsd-description">
@@ -2571,56 +2481,75 @@ map.on(<span class="hljs-string">"load"</span>, () =&gt; {
 						</aside>
 						<div class="tsd-comment tsd-typography">
 							<div class="lead">
-								<p>This function retrieves rendering and style information from the ArcGIS REST
-									API for a given <a href="https://developers.arcgis.com/rest/services-reference/layer-table.htm">Feature Layer</a>
-									and produces images and style layers that can be used to faithfully represent
-									these services as vectors in MapBox GL. It can be used in conjunction with
-								<a href="classes/arcgisvectorsource.html">ArcGISVectorSource</a>.</p>
+								<p>Creates an instance of ArcGISVectorSource.</p>
 							</div>
-							<p>Style generation is seperated from source handling so that you could even
-								use tippecanoe or other tools to generate vector tiles from a service and
-								style them using the generated layers. With this seperation of concerns it&#39;s
-								also possible to cache style information so that it does not need to
-							always be generated dynamically.</p>
-							<a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
-								<h3>Usage</h3>
-							</a>
-							<pre><code class="language-typescript"><span class="hljs-keyword">import</span> { ArcGISVectorSource, styleForFeatureLayer } <span class="hljs-keyword">from</span> <span class="hljs-string">"mapbox-gl-esri-sources"</span>;
-
-<span class="hljs-comment">// setup map...</span>
-<span class="hljs-comment">// add source...</span>
-
-<span class="hljs-keyword">const</span> { imageList, layers } = styleForFeatureLayer(
-  <span class="hljs-string">"https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0"</span>,
-  <span class="hljs-string">"cities-source-id"</span>
-);
-
-imageList.addToMap(map);
-
-<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> layer of layers) {
-  map.addLayer(layer);
-}
-</code></pre>
 						</div>
 						<h4 class="tsd-parameters-title">Parameters</h4>
 						<ul class="tsd-parameters">
 							<li>
-								<h5>url: <span class="tsd-signature-type">string</span></h5>
+								<h5>map: <span class="tsd-signature-type">Map</span></h5>
 								<div class="tsd-comment tsd-typography">
-									<p>Feature layer endpoint. Should terminate in <em>/MapServer/0..n</em></p>
+									<div class="lead">
+										<p>MapBox GL JS map instance where source will be added</p>
+									</div>
 								</div>
 							</li>
 							<li>
-								<h5>sourceId: <span class="tsd-signature-type">string</span></h5>
+								<h5>id: <span class="tsd-signature-type">string</span></h5>
 								<div class="tsd-comment tsd-typography">
-									<p>ID for the <a href="https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/">source</a> of vector data to be used in rendering.</p>
+									<div class="lead">
+										<p>ID will be assigned to the GeoJSONSource instance</p>
+									</div>
 								</div>
 							</li>
+							<li>
+								<h5>url: <span class="tsd-signature-type">string</span></h5>
+								<div class="tsd-comment tsd-typography">
+									<div class="lead">
+										<p>Base url for an <a href="https://developers.arcgis.com/rest/services-reference/layer-table.htm">ArcGIS Server Feature Layer</a>. Should end in <em>/MapServer/0..n</em></p>
+									</div>
+								</div>
+							</li>
+							<li>
+								<h5><span class="tsd-flag ts-flagOptional">Optional</span> options: <a href="../interfaces/arcgisvectorsourceoptions.html" class="tsd-signature-type">ArcGISVectorSourceOptions</a></h5>
+							</li>
 						</ul>
-						<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">{ </span>imageList<span class="tsd-signature-symbol">: </span><a href="classes/imagelist.html" class="tsd-signature-type">ImageList</a><span class="tsd-signature-symbol">; </span>layers<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Layer</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">&gt;</span></h4>
-						<p>The <a href="classes/imagelist.html#addtomap">ImageList.addToMap</a> function should be called before adding the generated layers to the map.</p>
+						<h4 class="tsd-returns-title">Returns <a href="arcgisvectorsource.html" class="tsd-signature-type">ArcGISVectorSource</a></h4>
 					</li>
 				</ul>
+			</section>
+		</section>
+		<section class="tsd-panel-group tsd-member-group tsd-is-private-protected">
+			<h2>Properties</h2>
+			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-protected">
+				<a name="source" class="tsd-anchor"></a>
+				<h3><span class="tsd-flag ts-flagProtected">Protected</span> source</h3>
+				<div class="tsd-signature tsd-kind-icon">source<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">GeoJSONSource</span></div>
+				<aside class="tsd-sources">
+				</aside>
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>GeoJSONSource instance added to the map</p>
+					</div>
+					<dl class="tsd-comment-tags">
+						<dt>type</dt>
+						<dd><p>{GeoJSONSource}</p>
+						</dd>
+					</dl>
+				</div>
+			</section>
+			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-protected">
+				<a name="totalbytes" class="tsd-anchor"></a>
+				<h3><span class="tsd-flag ts-flagProtected">Protected</span> total<wbr>Bytes</h3>
+				<div class="tsd-signature tsd-kind-icon">total<wbr>Bytes<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 0</span></div>
+				<aside class="tsd-sources">
+				</aside>
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>Size of the dataset added to the map. Relies on <code>content-length</code> header
+						from the data host, which may not be available.</p>
+					</div>
+				</div>
 			</section>
 		</section>
 		<footer class="with-border-bottom">

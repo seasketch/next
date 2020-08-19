@@ -1,4 +1,5 @@
 import { generateId } from "./utils";
+/** @hidden */
 export default (symbol, sourceId, imageList) => {
     const imageId = imageList.addEsriSMS(symbol);
     return [

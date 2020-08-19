@@ -12,6 +12,7 @@ import { ImageList } from "../ImageList";
 // yoffset
 // xscale
 // yscale
+/** @hidden */
 export default (
   symbol: PictureFillSymbol,
   sourceId: string,

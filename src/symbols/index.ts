@@ -13,6 +13,7 @@ import {
 } from "arcgis-rest-api";
 import { ImageSet, ImageList } from "../ImageList";
 
+/** @hidden */
 export function symbolToLayers(
   symbol: Symbol,
   sourceId: string,

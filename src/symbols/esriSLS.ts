@@ -4,6 +4,7 @@ import { SimpleLineSymbol } from "arcgis-rest-api";
 import { Layer, LinePaint } from "mapbox-gl";
 import { generateId } from "./utils";
 
+/** @hidden */
 export default (symbol: SimpleLineSymbol, sourceId: string) => {
   const { color, opacity } = colorAndOpacity(symbol.color!);
   let strokeWidth = ptToPx(symbol.width || 1);

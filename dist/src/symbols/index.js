@@ -3,6 +3,7 @@ import esriSFS from "./esriSFS";
 import esriPMS from "./esriPMS";
 import esriSMS from "./esriSMS";
 import esriPFS from "./esriPFS";
+/** @hidden */
 export function symbolToLayers(symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendIndex) {
     var layers;
     switch (symbol.type) {

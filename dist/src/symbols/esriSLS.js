@@ -1,6 +1,7 @@
 import { colorAndOpacity, ptToPx } from "./utils";
 import linePatterns from "./linePatterns";
 import { generateId } from "./utils";
+/** @hidden */
 export default (symbol, sourceId) => {
     const { color, opacity } = colorAndOpacity(symbol.color);
     let strokeWidth = ptToPx(symbol.width || 1);

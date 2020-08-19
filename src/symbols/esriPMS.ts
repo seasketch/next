@@ -3,6 +3,7 @@ import { Layer } from "mapbox-gl";
 import { generateId } from "./utils";
 import { ImageSet, ImageList } from "../ImageList";
 
+/** @hidden */
 export default (
   symbol: PictureMarkerSymbol,
   sourceId: string,

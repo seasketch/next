@@ -1,4 +1,5 @@
 import { createCanvas } from "./utils";
+/** @hidden */
 export default {
     esriSFSVertical: (strokeStyle = "#000000") => {
         var canvas = createCanvas(16, 16);

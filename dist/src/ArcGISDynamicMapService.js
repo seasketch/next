@@ -1,3 +1,4 @@
+/** @hidden */
 const blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 /**
  * Add an Esri Dynamic Map Service as an image source to a MapBox GL JS map, and
@@ -270,14 +271,17 @@ export class ArcGISDynamicMapService {
         this.updateSource();
     }
 }
+/** @hidden */
 function lat2meters(lat) {
     // thanks! https://gist.github.com/onderaltintas/6649521
     var y = Math.log(Math.tan(((90 + lat) * Math.PI) / 360)) / (Math.PI / 180);
     return (y * 20037508.34) / 180;
 }
+/** @hidden */
 function lon2meters(lon) {
     return (lon * 20037508.34) / 180;
 }
+/** @hidden */
 function getGroundResolution(level) {
     let groundResolution = resolutions[level];
     if (!groundResolution) {
@@ -286,4 +290,5 @@ function getGroundResolution(level) {
     }
     return groundResolution;
 }
+/** @hidden */
 const resolutions = {};

@@ -178,7 +178,7 @@ export class ImageList {
 
   /**
    * Add all images to a MapBox GL JS map instance so that they may be used in
-   * style layers. Call before adding layers created by {@link styleForFeatureLayer | styleForFeatureLayer}.
+   * style layers. Call before adding layers created by {@link styleForFeatureLayer}.
    *
    * The ImageList may contain multiple copies of images at different dpi. Since
    * MapBox GL does not currently support adding images at multiple resolutions
@@ -222,6 +222,7 @@ export class ImageList {
   }
 }
 
+/** @hidden */
 async function createImage(
   width: number,
   height: number,
@@ -236,6 +237,7 @@ async function createImage(
   });
 }
 
+/** @hidden */
 function createFillImage(pattern: CanvasPattern, pixelRatio: 1 | 2 | 3): Image {
   const size = 4 * 2 ** pixelRatio;
   const canvas = document.createElement("canvas");
@@ -260,12 +262,14 @@ function createFillImage(pattern: CanvasPattern, pixelRatio: 1 | 2 | 3): Image {
   };
 }
 
+/** @hidden */
 const cache: {
   [rootUrl: string]: {
     [pixelRatio: number]: Promise<any>;
   };
 } = {};
 
+/** @hidden */
 async function fetchLegendImage(
   serviceRoot: string,
   sublayer: number,
@@ -285,6 +289,7 @@ async function fetchLegendImage(
   };
 }
 
+/** @hidden */
 async function fetchLegendData(serviceRoot: string, pixelRatio: 2 | 3) {
   const dpi = pixelRatio === 2 ? 192 : 384;
   if (!cache[serviceRoot]) {

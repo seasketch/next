@@ -1,4 +1,5 @@
 import { ptToPx, toTextAnchor, rgba, generateId } from "./utils";
+/** @hidden */
 export default (labelingInfo, geometryType, fieldNames) => {
     // TODO: Support scale-dependant rendering. Right now just taking first label
     // TODO: labelExpressions (full Arcade!?)
@@ -26,6 +27,7 @@ export default (labelingInfo, geometryType, fieldNames) => {
         },
     };
 };
+/** @hidden */
 function toExpression(labelExpression, fieldNames) {
     const fields = (labelExpression.match(/\[\w+\]/g) || [])
         .map((val) => val.replace(/[\[\]]/g, ""))

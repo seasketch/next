@@ -3,6 +3,7 @@ import { FeatureCollection } from "geojson";
 // @ts-ignore
 import { arcgisToGeoJSON } from "@terraformer/arcgis";
 
+/** @hidden */
 const WORLD = { xmin: -180, xmax: 180, ymin: -90, ymax: 90 };
 
 export interface ArcGISVectorSourceOptions {
@@ -54,7 +55,7 @@ export interface ArcGISVectorSourceOptions {
 /**
  * Add ArcGIS Feature Layers to MapBox GL JS maps as a geojson source. These
  * data sources can be styled using output from
- * {@link styleForFeatureLayer | styleForFeatureLayer } or custom layers that
+ * {@link styleForFeatureLayer } or custom layers that
  * reference the provided source id.
  *
  * ### Usage

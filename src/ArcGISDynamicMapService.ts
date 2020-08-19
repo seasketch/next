@@ -1,5 +1,6 @@
 import { Map, LngLatBounds, AnySourceImpl, ImageSource } from "mapbox-gl";
 
+/** @hidden */
 const blankDataUri =
   "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
@@ -348,16 +349,19 @@ export class ArcGISDynamicMapService {
   }
 }
 
+/** @hidden */
 function lat2meters(lat: number) {
   // thanks! https://gist.github.com/onderaltintas/6649521
   var y = Math.log(Math.tan(((90 + lat) * Math.PI) / 360)) / (Math.PI / 180);
   return (y * 20037508.34) / 180;
 }
 
+/** @hidden */
 function lon2meters(lon: number) {
   return (lon * 20037508.34) / 180;
 }
 
+/** @hidden */
 function getGroundResolution(level: number) {
   let groundResolution = resolutions[level];
   if (!groundResolution) {
@@ -367,4 +371,5 @@ function getGroundResolution(level: number) {
   return groundResolution;
 }
 
+/** @hidden */
 const resolutions: { [level: number]: number } = {};

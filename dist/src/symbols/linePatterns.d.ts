@@ -1,3 +1,4 @@
+/** @hidden */
 declare const patterns: {
     esriSLSDash: (strokeWidth: number) => number[];
     esriSLSDashDot: (strokeWidth: number) => number[];

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.11.1/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v1.11.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <title>ArcGIS Tiled Map Service Demo</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        font-size: 16px;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoidW5kZXJibHVld2F0ZXJzIiwiYSI6IjMzZ215RTQifQ.u6Gb_-kNfvaxiHdd9eJEEA";
+
+      var map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/streets-v11",
+        center: [-119.3753962665794, 34.01500289168925],
+        zoom: 11,
+      });
+
+      window.map = map;
+
+      map.on("load", () => {
+        // add the image source
+        map.addSource("tile-layer", {
+          type: "raster",
+          tiles: [
+            "https://tiles.arcgis.com/tiles/4TXrdeWh0RyCqPgB/arcgis/rest/services/Anacapa_Island/MapServer/tile/{z}/{y}/{x}",
+          ],
+          // Most services have tile sizes of 256. You may use this division
+          // trick to support higher resolution screens, though watch out for
+          // missing tile images at higher zoom levels.
+          tileSize: 256 / window.devicePixelRatio,
+          // These can be based on service metadata
+          minZoom: 0,
+          maxZoom: 23,
+          // MapService metadata has a "Full Extent", which you can convert to
+          // degrees and avoid 404 errors from out of bounds requests
+          bounds: [
+            -119.45627340923632,
+            33.9923034787097,
+            -119.33632759039419,
+            34.028212713477615,
+          ],
+          // More options are detailed in:
+          // https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#raster-tiles
+        });
+        // now add a layer that references this source
+        map.addLayer({
+          id: "esri-tiles",
+          source: "tile-layer",
+          type: "raster",
+          // see https://docs.mapbox.com/mapbox-gl-js/style-spec/layers/#raster
+        });
+      });
+    </script>
+  </body>
+</html>

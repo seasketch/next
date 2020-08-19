@@ -1,3 +1,4 @@
+/** @hidden */
 const patterns = {
   esriSLSDash: (strokeWidth: number) => [2, 0.5],
   esriSLSDashDot: (strokeWidth: number) => [3, 1, 1, 1],

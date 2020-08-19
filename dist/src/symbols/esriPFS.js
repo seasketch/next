@@ -8,6 +8,7 @@ import { generateId } from "./utils";
 // yoffset
 // xscale
 // yscale
+/** @hidden */
 export default (symbol, sourceId, imageList) => {
     const imageId = imageList.addEsriPFS(symbol);
     const layers = [

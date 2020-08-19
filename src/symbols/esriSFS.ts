@@ -5,6 +5,7 @@ import { Layer } from "mapbox-gl";
 import { generateId } from "./utils";
 import { ImageList } from "../ImageList";
 
+/** @hidden */
 export default (
   symbol: SimpleFillSymbol,
   sourceId: string,

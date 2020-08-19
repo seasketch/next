@@ -7,7 +7,7 @@ import { generateId } from "./symbols/utils";
  * API for a given [Feature Layer](https://developers.arcgis.com/rest/services-reference/layer-table.htm)
  * and produces images and style layers that can be used to faithfully represent
  * these services as vectors in MapBox GL. It can be used in conjunction with
- * {@link ArcGISVectorSource | ArcGISVectorSource}.
+ * {@link ArcGISVectorSource}.
  *
  * Style generation is seperated from source handling so that you could even
  * use tippecanoe or other tools to generate vector tiles from a service and
@@ -38,7 +38,7 @@ import { generateId } from "./symbols/utils";
  *
  * @param {string} url Feature layer endpoint. Should terminate in _/MapServer/0..n_
  * @param {string} sourceId ID for the [source](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/) of vector data to be used in rendering.
- * @returns The {@link ImageList.addToMap | ImageList.addToMap(map)} function should be called before adding the generated layers to the map.
+ * @returns The {@link ImageList.addToMap} function should be called before adding the generated layers to the map.
  */
 export default async function styleForFeatureLayer(url, sourceId) {
     const rootUrl = url.replace(/\/\d+[\/]*$/, "");
@@ -146,6 +146,7 @@ export default async function styleForFeatureLayer(url, sourceId) {
         layers,
     };
 }
+/** @hidden */
 function normalizeValuesForFieldTypes(value, delimiter, fieldTypes) {
     const values = value.split(delimiter);
     return values.map((v, i) => {
@@ -160,6 +161,7 @@ function normalizeValuesForFieldTypes(value, delimiter, fieldTypes) {
         }
     });
 }
+/** @hidden */
 const FIELD_TYPES = {
     esriFieldTypeSmallInteger: "integer",
     esriFieldTypeInteger: "integer",

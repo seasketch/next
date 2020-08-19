@@ -60,7 +60,7 @@ export declare class ImageList {
     addEsriSFS(symbol: SimpleFillSymbol): string;
     /**
      * Add all images to a MapBox GL JS map instance so that they may be used in
-     * style layers. Call before adding layers created by {@link styleForFeatureLayer | styleForFeatureLayer}.
+     * style layers. Call before adding layers created by {@link styleForFeatureLayer}.
      *
      * The ImageList may contain multiple copies of images at different dpi. Since
      * MapBox GL does not currently support adding images at multiple resolutions

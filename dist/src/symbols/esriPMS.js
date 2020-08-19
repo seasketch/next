@@ -1,4 +1,5 @@
 import { generateId } from "./utils";
+/** @hidden */
 export default (symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendIndex) => {
     const imageId = imageList.addEsriPMS(symbol, serviceBaseUrl, sublayer, legendIndex);
     return [

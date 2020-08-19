@@ -1,6 +1,7 @@
 import { rgba } from "./utils";
 import esriSLS from "./esriSLS";
 import { generateId } from "./utils";
+/** @hidden */
 export default (symbol, sourceId, imageList) => {
     const layers = [];
     switch (symbol.style) {
