@@ -1,0 +1,6 @@
+// Note that babelrc is not used by create-react-app. Don't put stuff here!
+// This is solely used to support i18next-extract
+{
+  "presets": ["react-app"],
+  "plugins": ["i18next-extract"]
+}

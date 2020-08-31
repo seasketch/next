@@ -1,0 +1,21 @@
+query SimpleProjectList($first: Int, $offset: Int) {
+  projectsConnection(first: $first, offset: $offset) {
+    nodes {
+      id
+      name
+      url
+      description
+      isListed
+      isFeatured
+      logoUrl
+      forums {
+        name
+        topicsConnection {
+          nodes {
+            title
+          }
+        }
+      }
+    }
+  }
+}
