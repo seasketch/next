@@ -10,7 +10,17 @@
       "name": "Node: Nodemon",
       "processId": "${command:PickProcess}",
       "restart": true,
-      "protocol": "inspector",
+      "protocol": "inspector"
+    },
+    {
+      "name": "Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/src",
+      "sourceMapPathOverrides": {
+        "webpack:///src/*": "${webRoot}/*"
+      }
     }
   ]
 }
