@@ -22,7 +22,6 @@ import verifyEmailMiddleware from "./middleware/verifyEmailMiddleware";
 // @ts-ignore
 import orderTopicsByDateAndStickyPlugin from "./plugins/orderTopicsByDateAndStickyPlugin";
 import { unsubscribeFromTopic } from "./activityNotifications/topicNotifications";
-console.log(orderTopicsByDateAndStickyPlugin);
 
 const app = express();
 
@@ -103,6 +102,8 @@ app.use(
     allowExplain: (req) => process.env.NODE_ENV !== "production",
     ignoreRBAC: false,
     ignoreIndexes: false,
+    enableCors: true,
+    setofFunctionsContainNulls: false,
     pgSettings: async (req: IncomingRequest) => {
       // These session vars will be added to each postgres transaction
       return {
@@ -147,7 +148,7 @@ app.use(
 app.listen(process.env.PORT || 3857);
 
 console.log(
-  `seasketch server running on http://localhost:${
+  `SeaSketch server running on http://localhost:${
     process.env.PORT || 3857
   }/graphiql`
 );
