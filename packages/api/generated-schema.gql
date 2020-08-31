@@ -4931,7 +4931,7 @@ type Project implements Node {
   """
   Admins can control whether a project is public, invite-only, or admins-only.
   """
-  accessControl: ProjectAccessControlSetting
+  accessControl: ProjectAccessControlSetting!
   adminCount: Int
 
   """Listing of all users who have admin access."""
@@ -5042,13 +5042,13 @@ type Project implements Node {
   """
   Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers.
   """
-  isFeatured: Boolean
+  isFeatured: Boolean!
 
   """
   Project admins can decide whether their project will be displayed on the
   public project listing via Query.projectsConnection.
   """
-  isListed: Boolean
+  isListed: Boolean!
 
   """
   If a logoUrl is provided, it will link to this url in a new window if provided.
