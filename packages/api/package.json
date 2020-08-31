@@ -78,7 +78,7 @@
     "node-rsa": "^1.0.8",
     "nodemon": "^2.0.4",
     "pgmock2": "^2.0.2",
-    "postgraphile": "^4.7.0",
+    "postgraphile": "^4.8.0",
     "redis": "^3.0.2",
     "shortid": "^2.2.15",
     "slonik": "^22.4.11",
