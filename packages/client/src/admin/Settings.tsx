@@ -666,8 +666,12 @@ function SuperUserSettings() {
   if (loading) {
     return null;
   }
+
+  const isFeaturedToggled =
+    isFeatured === null ? data!.projectBySlug!.isFeatured : isFeatured;
+
   const toggleIsFeatured = () => {
-    const featured = !isFeatured;
+    const featured = !isFeaturedToggled;
     setIsFeatured(featured);
     mutate({
       variables: {
@@ -676,9 +680,6 @@ function SuperUserSettings() {
       },
     }).catch((e) => {});
   };
-
-  const isFeaturedToggled =
-    isFeatured === null ? data!.projectBySlug!.isFeatured : isFeatured;
 
   return (
     <>
