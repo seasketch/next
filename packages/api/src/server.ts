@@ -22,6 +22,11 @@ import verifyEmailMiddleware from "./middleware/verifyEmailMiddleware";
 // @ts-ignore
 import orderTopicsByDateAndStickyPlugin from "./plugins/orderTopicsByDateAndStickyPlugin";
 import { unsubscribeFromTopic } from "./activityNotifications/topicNotifications";
+// @ts-ignore
+import PostGraphileUploadFieldPlugin from "postgraphile-plugin-upload-field";
+import { graphqlUploadExpress } from "graphql-upload";
+import uploadFieldDefinitions from "./uploadFieldDefinitions";
+import bytes from "bytes";
 
 const app = express();
 
@@ -94,6 +99,13 @@ app.use(surveyInviteMiddlware);
 app.use(verifyEmailMiddleware);
 
 app.use(
+  graphqlUploadExpress({
+    maxFiles: 2,
+    maxFileSize: bytes("25mb"),
+  })
+);
+
+app.use(
   postgraphile(pool, "public", {
     ownerConnectionString: process.env.OWNER_DATABASE_URL,
     watchPg: true,
@@ -123,6 +135,7 @@ app.use(
     },
     appendPlugins: [
       PgSimplifyInflectorPlugin,
+      PostGraphileUploadFieldPlugin,
       postgisPlugin,
       ProjectInvitesPlugin,
       SurveyInvitesPlugin,
@@ -133,6 +146,7 @@ app.use(
     ],
     graphileBuildOptions: {
       pgOmitListSuffix: true,
+      uploadFieldDefinitions,
     },
     exportGqlSchemaPath: "./generated-schema.gql",
     sortExport: true,

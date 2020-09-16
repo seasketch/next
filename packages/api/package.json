@@ -41,11 +41,19 @@
     "titleTemplate": "{title}"
   },
   "dependencies": {
+    "@types/bytes": "^3.1.0",
+    "@types/graphql-upload": "^8.0.4",
     "@types/redis": "^2.8.25",
+    "@types/uuid": "^8.3.0",
     "auth0": "^2.27.0",
+    "bytes": "^3.1.0",
+    "graphql-upload": "^11.0.0",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.8.0",
-    "ms": "^2.1.2"
+    "ms": "^2.1.2",
+    "postgraphile-plugin-upload-field": "^1.0.0-alpha.10",
+    "slugify": "^1.4.5",
+    "uuid": "^8.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.10.5",
@@ -64,7 +72,7 @@
     "@types/pg": "^7.14.4",
     "@types/shortid": "0.0.29",
     "@types/slonik": "^22.1.2",
-    "aws-sdk": "^2.713.0",
+    "aws-sdk": "^2.751.0",
     "compression": "^1.7.4",
     "dotenv": "^8.2.0",
     "dotenv-cli": "^3.2.0",

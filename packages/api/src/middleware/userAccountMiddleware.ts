@@ -34,8 +34,7 @@ export default function userAccountMiddlware(
       req.user.canonicalEmail =
         req.user["https://seasketch.org/canonical_email"];
     }
-    req.user.superuser =
-      (req.user.permissions || []).indexOf("superuser") !== -1;
+    req.user.superuser = !!req.user["https://seasketch.org/superuser"];
 
     req.user.emailVerified = !!req.user["https://seasketch.org/email_verified"];
     const key = `userid-by-sub:${req.user.sub}`;

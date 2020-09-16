@@ -1567,9 +1567,9 @@ CREATE TABLE public.projects (
     is_featured boolean DEFAULT false NOT NULL,
     is_deleted boolean DEFAULT false NOT NULL,
     deleted_at timestamp with time zone,
+    region public.geometry(Polygon) DEFAULT public.st_geomfromgeojson('{"coordinates":[[[-157.05324470015358,69.74201326987497],[135.18377661193057,69.74201326987497],[135.18377661193057,-43.27449014737426],[-157.05324470015358,-43.27449014737426],[-157.05324470015358,69.74201326987497]]],"type":"Polygon"}'::text) NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
-    CONSTRAINT projects_logo_link_check CHECK ((logo_link ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
-    CONSTRAINT projects_logo_url_check CHECK ((logo_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
+    CONSTRAINT name_min_length CHECK ((length(name) >= 4))
 );
 
 
@@ -9400,6 +9400,22 @@ GRANT ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer) TO se
 
 
 --
+-- Name: FUNCTION geometry(public.geometry, integer, boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) TO anon;
+
+
+--
+-- Name: FUNCTION st_geomfromgeojson(text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_geomfromgeojson(text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_geomfromgeojson(text) TO anon;
+
+
+--
 -- Name: TABLE projects; Type: ACL; Schema: public; Owner: -
 --
 
@@ -9459,6 +9475,14 @@ GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
+
+
+--
+-- Name: COLUMN projects.region; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(region) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -9986,6 +10010,7 @@ REVOKE ALL ON FUNCTION public.geometry(point) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.geometry(polygon) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geometry(polygon) TO anon;
 
 
 --
@@ -9993,6 +10018,7 @@ REVOKE ALL ON FUNCTION public.geometry(polygon) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.geometry(text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geometry(text) TO anon;
 
 
 --
@@ -10000,6 +10026,7 @@ REVOKE ALL ON FUNCTION public.geometry(text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.geometry(public.box2d) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geometry(public.box2d) TO anon;
 
 
 --
@@ -10007,6 +10034,7 @@ REVOKE ALL ON FUNCTION public.geometry(public.box2d) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.geometry(public.box3d) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geometry(public.box3d) TO anon;
 
 
 --
@@ -10014,14 +10042,6 @@ REVOKE ALL ON FUNCTION public.geometry(public.box3d) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.geometry(public.geography) FROM PUBLIC;
-
-
---
--- Name: FUNCTION geometry(public.geometry, integer, boolean); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) TO anon;
 
 
 --
@@ -11449,6 +11469,7 @@ REVOKE ALL ON FUNCTION public.postgis_transform_geometry(geom public.geometry, t
 --
 
 REVOKE ALL ON FUNCTION public.postgis_type_name(geomname character varying, coord_dimension integer, use_new_name boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.postgis_type_name(geomname character varying, coord_dimension integer, use_new_name boolean) TO anon;
 
 
 --
@@ -12435,6 +12456,7 @@ REVOKE ALL ON FUNCTION public.st_asgeojson(text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_asgeojson(geog public.geography, maxdecimaldigits integer, options integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_asgeojson(geog public.geography, maxdecimaldigits integer, options integer) TO anon;
 
 
 --
@@ -12442,6 +12464,7 @@ REVOKE ALL ON FUNCTION public.st_asgeojson(geog public.geography, maxdecimaldigi
 --
 
 REVOKE ALL ON FUNCTION public.st_asgeojson(geom public.geometry, maxdecimaldigits integer, options integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_asgeojson(geom public.geometry, maxdecimaldigits integer, options integer) TO anon;
 
 
 --
@@ -12890,6 +12913,7 @@ REVOKE ALL ON FUNCTION public.st_convexhull(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_coorddim(geometry public.geometry) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_coorddim(geometry public.geometry) TO anon;
 
 
 --
@@ -13429,14 +13453,6 @@ REVOKE ALL ON FUNCTION public.st_geomfromgeojson(json) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_geomfromgeojson(jsonb) FROM PUBLIC;
-
-
---
--- Name: FUNCTION st_geomfromgeojson(text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.st_geomfromgeojson(text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.st_geomfromgeojson(text) TO anon;
 
 
 --
@@ -14669,6 +14685,7 @@ REVOKE ALL ON FUNCTION public.st_split(geom1 public.geometry, geom2 public.geome
 --
 
 REVOKE ALL ON FUNCTION public.st_srid(geog public.geography) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_srid(geog public.geography) TO anon;
 
 
 --
@@ -14676,6 +14693,7 @@ REVOKE ALL ON FUNCTION public.st_srid(geog public.geography) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_srid(geom public.geometry) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_srid(geom public.geometry) TO anon;
 
 
 --
@@ -15013,6 +15031,7 @@ GRANT ALL ON FUNCTION public.template_forms() TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.text(public.geometry) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.text(public.geometry) TO anon;
 
 
 --

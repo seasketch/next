@@ -1,0 +1,22 @@
+query ProjectRegion($slug: String!) {
+  projectBySlug(slug: $slug) {
+    __typename
+    id
+    region {
+      geojson
+    }
+  }
+}
+
+mutation UpdateProjectRegion($slug: String!, $region: GeoJSON!) {
+  updateProjectBySlug(input: { slug: $slug, patch: { region: $region } }) {
+    clientMutationId
+    project {
+      __typename
+      id
+      region {
+        geojson
+      }
+    }
+  }
+}

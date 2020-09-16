@@ -4,38 +4,81 @@ import "./index.css";
 import App from "./App";
 import "./i18n";
 import * as serviceWorker from "./serviceWorker";
-import { Auth0Provider } from "@auth0/auth0-react";
-import { ApolloClient, InMemoryCache } from "@apollo/client";
-import { ApolloProvider } from "@apollo/client";
+import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
+import {
+  ApolloProvider,
+  ApolloClient,
+  createHttpLink,
+  InMemoryCache,
+} from "@apollo/client";
+import { createUploadLink } from "apollo-upload-client";
+import { setContext } from "@apollo/client/link/context";
+import "./tailwind.css";
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route,
+  Link,
+  useHistory,
+} from "react-router-dom";
+import auth0spa from "@auth0/auth0-spa-js";
 
-const client = new ApolloClient({
-  uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!,
-  cache: new InMemoryCache(),
-});
+function Auth0ProviderWithRouter(props: any) {
+  const history = useHistory();
+  return (
+    <Auth0Provider
+      {...props}
+      onRedirectCallback={(appState) => {
+        const location = appState.returnTo || "/";
+        history.replace(location);
+      }}
+      scope="openid profile email permissions"
+    >
+      {props.children}
+    </Auth0Provider>
+  );
+}
 
-console.log(client);
-// @ts-ignore
-window.client = client;
+function ApolloProviderWithToken(props: any) {
+  const auth = useAuth0();
+  const httpLink = createUploadLink({
+    uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!,
+  });
+  const authLink = setContext(async (_, { headers }) => {
+    // @ts-ignore
+    const idClaims = await auth.getIdTokenClaims();
+
+    const token = idClaims?.__raw || null;
+    // get the authentication token from local storage if it exists
+    // return the headers to the context so httpLink can read them
+    return {
+      headers: {
+        ...headers,
+        authorization: token ? `Bearer ${token}` : "",
+      },
+    };
+  });
+  const client = new ApolloClient({
+    link: authLink.concat(httpLink),
+    cache: new InMemoryCache(),
+  });
+  return <ApolloProvider client={client}>{props.children}</ApolloProvider>;
+}
 
 ReactDOM.render(
   <React.StrictMode>
-    <Auth0Provider
-      domain={process.env.REACT_APP_AUTH0_DOMAIN!}
-      clientId={process.env.REACT_APP_AUTH0_CLIENT_ID!}
-      redirectUri={window.location.origin}
-      cacheLocation="localstorage"
-      onRedirectCallback={(appState) => {
-        const url = new URL(window.location.toString());
-        if (url.searchParams.get("forwardTo")) {
-          // @ts-ignore
-          window.location = url.searchParams.get("forwardTo");
-        }
-      }}
-    >
-      <ApolloProvider client={client}>
-        <App />
-      </ApolloProvider>
-    </Auth0Provider>
+    <Router>
+      <Auth0ProviderWithRouter
+        domain={process.env.REACT_APP_AUTH0_DOMAIN!}
+        clientId={process.env.REACT_APP_AUTH0_CLIENT_ID!}
+        redirectUri={`${window.location.origin}/authenticate`}
+        cacheLocation="localstorage"
+      >
+        <ApolloProviderWithToken>
+          <App />
+        </ApolloProviderWithToken>
+      </Auth0ProviderWithRouter>
+    </Router>
   </React.StrictMode>,
   document.getElementById("root")
 );

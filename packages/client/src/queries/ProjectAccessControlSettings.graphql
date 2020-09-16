@@ -1,0 +1,29 @@
+query ProjectAccessControlSettings($slug: String!) {
+  projectBySlug(slug: $slug) {
+    __typename
+    id
+    accessControl
+    isListed
+  }
+}
+
+mutation updateProjectAccessControlSettings(
+  $slug: String!
+  $accessControl: ProjectAccessControlSetting
+  $isListed: Boolean
+) {
+  updateProjectBySlug(
+    input: {
+      slug: $slug
+      patch: { accessControl: $accessControl, isListed: $isListed }
+    }
+  ) {
+    clientMutationId
+    project {
+      __typename
+      id
+      accessControl
+      isListed
+    }
+  }
+}

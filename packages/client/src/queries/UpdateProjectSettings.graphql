@@ -1,0 +1,32 @@
+mutation UpdateProjectSettings(
+  $slug: String!
+  $clientMutationId: String
+  $name: String
+  $description: String
+  $logoUrl: Upload
+  $logoLink: String
+  $isFeatured: Boolean
+) {
+  updateProjectBySlug(
+    input: {
+      slug: $slug
+      clientMutationId: $clientMutationId
+      patch: {
+        name: $name
+        description: $description
+        logoUrl: $logoUrl
+        logoLink: $logoLink
+        isFeatured: $isFeatured
+      }
+    }
+  ) {
+    clientMutationId
+    project {
+      id
+      name
+      description
+      logoUrl
+      logoLink
+    }
+  }
+}

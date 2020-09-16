@@ -12,13 +12,15 @@ type UserClaims = {
   /* superuser privileges can be applied in the auth0 database for McClintock Lab staff */
   superuser: boolean;
   /* auth0 token includes arbitrary permissions */
-  permissions?: string[];
+  // permissions?: string[];
 
   // auth0 rule engine embeds seasketch-specific fields
   /* email used to register for seasketch */
   "https://seasketch.org/canonical_email"?: string;
   /* email can be verified via the auth0 management api or through a UI */
   "https://seasketch.org/email_verified"?: boolean;
+  /* set in auth0 rules engine */
+  "https://seasketch.org/superuser"?: boolean;
 };
 
 export interface IncomingRequest extends Request {

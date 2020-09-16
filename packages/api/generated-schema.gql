@@ -32,7 +32,7 @@ type Acl implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [Group]
+  ): [Group!]
   id: Int!
 
   """
@@ -656,7 +656,7 @@ type CreateProjectInvitesPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  projectInvites: [ProjectInvite]
+  projectInvites: [ProjectInvite!]
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -869,7 +869,7 @@ type CreateSurveyInvitesPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
-  surveyInvites: [SurveyInvite]
+  surveyInvites: [SurveyInvite!]
 }
 
 """The output of our create `Survey` mutation."""
@@ -2008,7 +2008,7 @@ type EmailNotificationPreferencesConnection {
   edges: [EmailNotificationPreferencesEdge!]!
 
   """A list of `EmailNotificationPreference` objects."""
-  nodes: [EmailNotificationPreference]!
+  nodes: [EmailNotificationPreference!]!
 
   """Information to aid in pagination."""
   pageInfo: PageInfo!
@@ -2025,7 +2025,7 @@ type EmailNotificationPreferencesEdge {
   cursor: Cursor
 
   """The `EmailNotificationPreference` at the end of the edge."""
-  node: EmailNotificationPreference
+  node: EmailNotificationPreference!
 }
 
 """Methods to use when ordering `EmailNotificationPreference`."""
@@ -2291,7 +2291,7 @@ type FormConditionalRenderingRulesEdge {
   cursor: Cursor
 
   """The `FormConditionalRenderingRule` at the end of the edge."""
-  node: FormConditionalRenderingRule
+  node: FormConditionalRenderingRule!
 }
 
 """Methods to use when ordering `FormConditionalRenderingRule`."""
@@ -2478,7 +2478,7 @@ type FormFieldsEdge {
   cursor: Cursor
 
   """The `FormField` at the end of the edge."""
-  node: FormField
+  node: FormField!
 }
 
 """Methods to use when ordering `FormField`."""
@@ -2523,7 +2523,7 @@ type FormsConnection {
   edges: [FormsEdge!]!
 
   """A list of `Form` objects."""
-  nodes: [Form]!
+  nodes: [Form!]!
 
   """Information to aid in pagination."""
   pageInfo: PageInfo!
@@ -2538,7 +2538,7 @@ type FormsEdge {
   cursor: Cursor
 
   """The `Form` at the end of the edge."""
-  node: Form
+  node: Form!
 }
 
 """Methods to use when ordering `Form`."""
@@ -2696,7 +2696,7 @@ type ForumsEdge {
   cursor: Cursor
 
   """The `Forum` at the end of the edge."""
-  node: Forum
+  node: Forum!
 }
 
 """Methods to use when ordering `Forum`."""
@@ -3022,7 +3022,7 @@ type Group implements Node {
     """Skip the first `n` values."""
     offset: Int
     orderBy: ParticipantSortBy
-  ): [User]
+  ): [User!]
 
   """Label for the group."""
   name: String
@@ -4841,7 +4841,7 @@ type PostsConnection {
   edges: [PostsEdge!]!
 
   """A list of `Post` objects."""
-  nodes: [Post]!
+  nodes: [Post!]!
 
   """Information to aid in pagination."""
   pageInfo: PageInfo!
@@ -4856,7 +4856,7 @@ type PostsEdge {
   cursor: Cursor
 
   """The `Post` at the end of the edge."""
-  node: Post
+  node: Post!
 }
 
 """Methods to use when ordering `Post`."""
@@ -4912,7 +4912,7 @@ type ProfilesEdge {
   cursor: Cursor
 
   """The `Profile` at the end of the edge."""
-  node: Profile
+  node: Profile!
 }
 
 """Methods to use when ordering `Profile`."""
@@ -4941,7 +4941,7 @@ type Project implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [User]
+  ): [User!]
 
   """Reads a single `CommunityGuideline` that is related to this `Project`."""
   communityGuidelines: CommunityGuideline
@@ -5013,7 +5013,7 @@ type Project implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [InviteStat]
+  ): [InviteStat!]
 
   """List project invites by status"""
   invitesConnection(
@@ -5071,7 +5071,7 @@ type Project implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [SketchFolder]
+  ): [SketchFolder!]
 
   """
   A list of all sketches for this project and the current user session
@@ -5083,7 +5083,7 @@ type Project implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [Sketch]
+  ): [Sketch!]
   name: String!
 
   """
@@ -5113,7 +5113,8 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
     orderBy: ParticipantSortBy
-  ): [User]
+  ): [User!]
+  region: GeometryPolygon!
 
   """
   Whether the current user has any discussion forum posts in this project. Use
@@ -5152,7 +5153,7 @@ type Project implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [SurveyTokenInfo]
+  ): [SurveyTokenInfo!]
 
   """Participation status for the currently logged-in session"""
   sessionParticipationStatus: ParticipationStatus
@@ -5223,7 +5224,7 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
     orderBy: ParticipantSortBy
-  ): [User]
+  ): [User!]
 
   """Project url will resolve to `https://seasketch.org/{slug}/`"""
   url: String
@@ -5238,7 +5239,7 @@ type Project implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [User]
+  ): [User!]
 }
 
 enum ProjectAccessControlSetting {
@@ -5315,7 +5316,7 @@ type ProjectInvite implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [Group]
+  ): [Group!]
   id: Int!
 
   """Listing of all emails related to this invite."""
@@ -5397,7 +5398,7 @@ type ProjectInviteGroupsConnection {
   edges: [ProjectInviteGroupsEdge!]!
 
   """A list of `ProjectInviteGroup` objects."""
-  nodes: [ProjectInviteGroup]!
+  nodes: [ProjectInviteGroup!]!
 
   """Information to aid in pagination."""
   pageInfo: PageInfo!
@@ -5414,7 +5415,7 @@ type ProjectInviteGroupsEdge {
   cursor: Cursor
 
   """The `ProjectInviteGroup` at the end of the edge."""
-  node: ProjectInviteGroup
+  node: ProjectInviteGroup!
 }
 
 """Methods to use when ordering `ProjectInviteGroup`."""
@@ -5456,7 +5457,7 @@ type ProjectInvitesConnection {
   edges: [ProjectInvitesEdge!]!
 
   """A list of `ProjectInvite` objects."""
-  nodes: [ProjectInvite]!
+  nodes: [ProjectInvite!]!
 
   """Information to aid in pagination."""
   pageInfo: PageInfo!
@@ -5471,7 +5472,7 @@ type ProjectInvitesEdge {
   cursor: Cursor
 
   """The `ProjectInvite` at the end of the edge."""
-  node: ProjectInvite
+  node: ProjectInvite!
 }
 
 type ProjectInviteTokenClaims {
@@ -5520,8 +5521,9 @@ input ProjectPatch {
   URL referencing an image that will be used to represent the project. Will be
   displayed at 48x48 pixels and must be a public url.
   """
-  logoUrl: String
+  logoUrl: Upload
   name: String
+  region: GeoJSON
 }
 
 """A connection to a list of `Project` values."""
@@ -5532,7 +5534,7 @@ type ProjectsConnection {
   edges: [ProjectsEdge!]!
 
   """A list of `Project` objects."""
-  nodes: [Project]!
+  nodes: [Project!]!
 
   """Information to aid in pagination."""
   pageInfo: PageInfo!
@@ -5547,7 +5549,7 @@ type ProjectsEdge {
   cursor: Cursor
 
   """The `Project` at the end of the edge."""
-  node: Project
+  node: Project!
 }
 
 """Methods to use when ordering `Project`."""
@@ -5910,7 +5912,7 @@ type Query implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [Form]
+  ): [Form!]
   topic(id: Int!): Topic
 
   """Reads a single `Topic` using its globally unique `ID`."""
@@ -6100,7 +6102,7 @@ type SendAllProjectInvitesPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  inviteEmails: [InviteEmail]
+  inviteEmails: [InviteEmail!]
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -6125,7 +6127,7 @@ type SendProjectInvitesPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  inviteEmails: [InviteEmail]
+  inviteEmails: [InviteEmail!]
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -6150,7 +6152,7 @@ type SetFormFieldOrderPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  formFields: [FormField]
+  formFields: [FormField!]
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -6175,7 +6177,7 @@ type SetForumOrderPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  forums: [Forum]
+  forums: [Forum!]
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -6482,7 +6484,7 @@ type SketchClass implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [SketchClass]
+  ): [SketchClass!]
 }
 
 """
@@ -6503,7 +6505,7 @@ type SketchClassesEdge {
   cursor: Cursor
 
   """The `SketchClass` at the end of the edge."""
-  node: SketchClass
+  node: SketchClass!
 }
 
 """Methods to use when ordering `SketchClass`."""
@@ -6704,7 +6706,7 @@ type SketchFoldersEdge {
   cursor: Cursor
 
   """The `SketchFolder` at the end of the edge."""
-  node: SketchFolder
+  node: SketchFolder!
 }
 
 """Methods to use when ordering `SketchFolder`."""
@@ -6888,7 +6890,7 @@ type Survey implements Node {
 
     """Skip the first `n` values."""
     offset: Int
-  ): [Group]
+  ): [Group!]
 
   """
   Disabled surveys will not be accessible to non-admins. Invite email sending will
@@ -7144,7 +7146,7 @@ type SurveyInvitesEdge {
   cursor: Cursor
 
   """The `SurveyInvite` at the end of the edge."""
-  node: SurveyInvite
+  node: SurveyInvite!
 }
 
 """Methods to use when ordering `SurveyInvite`."""
@@ -7349,7 +7351,7 @@ type SurveyResponsesConnection {
   edges: [SurveyResponsesEdge!]!
 
   """A list of `SurveyResponse` objects."""
-  nodes: [SurveyResponse]!
+  nodes: [SurveyResponse!]!
 
   """Information to aid in pagination."""
   pageInfo: PageInfo!
@@ -7364,7 +7366,7 @@ type SurveyResponsesEdge {
   cursor: Cursor
 
   """The `SurveyResponse` at the end of the edge."""
-  node: SurveyResponse
+  node: SurveyResponse!
 }
 
 """Methods to use when ordering `SurveyResponse`."""
@@ -7517,7 +7519,7 @@ type TopicsConnection {
   edges: [TopicsEdge!]!
 
   """A list of `Topic` objects."""
-  nodes: [Topic]!
+  nodes: [Topic!]!
 
   """Information to aid in pagination."""
   pageInfo: PageInfo!
@@ -7532,7 +7534,7 @@ type TopicsEdge {
   cursor: Cursor
 
   """The `Topic` at the end of the edge."""
-  node: Topic
+  node: Topic!
 }
 
 """Methods to use when ordering `Topic`."""
@@ -8517,7 +8519,7 @@ type UpdateSurveyInvitedGroupsPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  groups: [Group]
+  groups: [Group!]
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -8706,6 +8708,9 @@ type UpdateTopicPayload {
   ): TopicsEdge
 }
 
+"""The `Upload` scalar type represents a file upload."""
+scalar Upload
+
 """
 The SeaSketch User type is quite sparse since authentication is handled by Auth0
 and we store no personal information unless the user explicitly adds it to the
@@ -8796,7 +8801,7 @@ type UsersEdge {
   cursor: Cursor
 
   """The `User` at the end of the edge."""
-  node: User
+  node: User!
 }
 
 """Methods to use when ordering `User`."""

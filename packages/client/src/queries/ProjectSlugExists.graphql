@@ -1,0 +1,5 @@
+query ProjectSlugExists($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+  }
+}

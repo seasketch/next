@@ -3,19 +3,9 @@ query SimpleProjectList($first: Int, $offset: Int) {
     nodes {
       id
       name
-      url
+      slug
       description
-      isListed
-      isFeatured
-      logoUrl
-      forums {
-        name
-        topicsConnection {
-          nodes {
-            title
-          }
-        }
-      }
+      url
     }
   }
 }

@@ -27,6 +27,8 @@ export type Scalars = {
   GeoJSON: any;
   /** A JavaScript object encoded in the JSON format as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSON: any;
+  /** The `Upload` scalar type represents a file upload. */
+  Upload: any;
 };
 
 export enum AccessControlListType {
@@ -54,7 +56,7 @@ export type Acl = Node & {
    * 
    * Use `addGroupToAcl()`/`removeGroupFromAcl()` mutations to edit these permissions.
    */
-  groups?: Maybe<Array<Maybe<Group>>>;
+  groups?: Maybe<Array<Group>>;
   id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -622,7 +624,7 @@ export type CreateProjectInvitesPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  projectInvites?: Maybe<Array<Maybe<ProjectInvite>>>;
+  projectInvites?: Maybe<Array<ProjectInvite>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -811,7 +813,7 @@ export type CreateSurveyInvitesPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-  surveyInvites?: Maybe<Array<Maybe<SurveyInvite>>>;
+  surveyInvites?: Maybe<Array<SurveyInvite>>;
 };
 
 /** The output of our create `Survey` mutation. */
@@ -1804,7 +1806,7 @@ export type EmailNotificationPreferencesConnection = {
   /** A list of edges which contains the `EmailNotificationPreference` and cursor to aid in pagination. */
   edges: Array<EmailNotificationPreferencesEdge>;
   /** A list of `EmailNotificationPreference` objects. */
-  nodes: Array<Maybe<EmailNotificationPreference>>;
+  nodes: Array<EmailNotificationPreference>;
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `EmailNotificationPreference` you could get from the connection. */
@@ -1817,7 +1819,7 @@ export type EmailNotificationPreferencesEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `EmailNotificationPreference` at the end of the edge. */
-  node?: Maybe<EmailNotificationPreference>;
+  node: EmailNotificationPreference;
 };
 
 /** Methods to use when ordering `EmailNotificationPreference`. */
@@ -2038,7 +2040,7 @@ export type FormConditionalRenderingRulesEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `FormConditionalRenderingRule` at the end of the edge. */
-  node?: Maybe<FormConditionalRenderingRule>;
+  node: FormConditionalRenderingRule;
 };
 
 /** Methods to use when ordering `FormConditionalRenderingRule`. */
@@ -2185,7 +2187,7 @@ export type FormFieldsEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `FormField` at the end of the edge. */
-  node?: Maybe<FormField>;
+  node: FormField;
 };
 
 /** Methods to use when ordering `FormField`. */
@@ -2223,7 +2225,7 @@ export type FormsConnection = {
   /** A list of edges which contains the `Form` and cursor to aid in pagination. */
   edges: Array<FormsEdge>;
   /** A list of `Form` objects. */
-  nodes: Array<Maybe<Form>>;
+  nodes: Array<Form>;
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `Form` you could get from the connection. */
@@ -2236,7 +2238,7 @@ export type FormsEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `Form` at the end of the edge. */
-  node?: Maybe<Form>;
+  node: Form;
 };
 
 /** Methods to use when ordering `Form`. */
@@ -2363,7 +2365,7 @@ export type ForumsEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `Forum` at the end of the edge. */
-  node?: Maybe<Forum>;
+  node: Forum;
 };
 
 /** Methods to use when ordering `Forum`. */
@@ -2697,7 +2699,7 @@ export type Group = Node & {
   id: Scalars['Int'];
   memberCount?: Maybe<Scalars['Int']>;
   /** Listing of all users who have been assigned to this group. */
-  members?: Maybe<Array<Maybe<User>>>;
+  members?: Maybe<Array<User>>;
   /** Label for the group. */
   name?: Maybe<Scalars['String']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -4371,7 +4373,7 @@ export type PostsConnection = {
   /** A list of edges which contains the `Post` and cursor to aid in pagination. */
   edges: Array<PostsEdge>;
   /** A list of `Post` objects. */
-  nodes: Array<Maybe<Post>>;
+  nodes: Array<Post>;
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `Post` you could get from the connection. */
@@ -4384,7 +4386,7 @@ export type PostsEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `Post` at the end of the edge. */
-  node?: Maybe<Post>;
+  node: Post;
 };
 
 /** Methods to use when ordering `Post`. */
@@ -4437,7 +4439,7 @@ export type ProfilesEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `Profile` at the end of the edge. */
-  node?: Maybe<Profile>;
+  node: Profile;
 };
 
 /** Methods to use when ordering `Profile`. */
@@ -4457,7 +4459,7 @@ export type Project = Node & {
   accessControl: ProjectAccessControlSetting;
   adminCount?: Maybe<Scalars['Int']>;
   /** Listing of all users who have admin access. */
-  admins?: Maybe<Array<Maybe<User>>>;
+  admins?: Maybe<Array<User>>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   /** Should be a short length in order to fit in the project header. */
@@ -4486,7 +4488,7 @@ export type Project = Node & {
    * Breakdown of number of invites per status. Used to display counts in overview
    * listing of users, groups, and invites in the user administration dashboard.
    */
-  inviteCounts?: Maybe<Array<Maybe<InviteStat>>>;
+  inviteCounts?: Maybe<Array<InviteStat>>;
   /** List project invites by status */
   invitesConnection: ProjectInvitesConnection;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
@@ -4504,9 +4506,9 @@ export type Project = Node & {
    */
   logoUrl?: Maybe<Scalars['String']>;
   /** List of all folders created by this user. */
-  myFolders?: Maybe<Array<Maybe<SketchFolder>>>;
+  myFolders?: Maybe<Array<SketchFolder>>;
   /** A list of all sketches for this project and the current user session */
-  mySketches?: Maybe<Array<Maybe<Sketch>>>;
+  mySketches?: Maybe<Array<Sketch>>;
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -4519,7 +4521,8 @@ export type Project = Node & {
    * If the project is invite-only, users who have not been approved will not appear
    * in this list. Those users can be accessed via `unapprovedParticipants()`
    */
-  participants?: Maybe<Array<Maybe<User>>>;
+  participants?: Maybe<Array<User>>;
+  region: GeometryPolygon;
   /**
    * Whether the current user has any discussion forum posts in this project. Use
    * this to determine whether `project.communityGuidelines` should be shown to the
@@ -4546,7 +4549,7 @@ export type Project = Node & {
    * to. Details on how to handle survey invites [can be found on the
    * wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites).
    */
-  sessionOutstandingSurveyInvites?: Maybe<Array<Maybe<SurveyTokenInfo>>>;
+  sessionOutstandingSurveyInvites?: Maybe<Array<SurveyTokenInfo>>;
   /** Participation status for the currently logged-in session */
   sessionParticipationStatus?: Maybe<ParticipationStatus>;
   /**
@@ -4566,11 +4569,11 @@ export type Project = Node & {
    * 
    * Users can be approved using the `approveParticipant()` mutation.
    */
-  unapprovedParticipants?: Maybe<Array<Maybe<User>>>;
+  unapprovedParticipants?: Maybe<Array<User>>;
   /** Project url will resolve to `https://seasketch.org/{slug}/` */
   url?: Maybe<Scalars['String']>;
   /** List of all banned users. Listing only accessible to admins. */
-  usersBannedFromForums?: Maybe<Array<Maybe<User>>>;
+  usersBannedFromForums?: Maybe<Array<User>>;
 };
 
 
@@ -4774,7 +4777,7 @@ export type ProjectInvite = Node & {
    * invite group membership can be updated using the crud operations on
    * ProjectInviteGroup types.
    */
-  groups?: Maybe<Array<Maybe<Group>>>;
+  groups?: Maybe<Array<Group>>;
   id: Scalars['Int'];
   /** Listing of all emails related to this invite. */
   inviteEmails: Array<InviteEmail>;
@@ -4866,7 +4869,7 @@ export type ProjectInviteGroupsConnection = {
   /** A list of edges which contains the `ProjectInviteGroup` and cursor to aid in pagination. */
   edges: Array<ProjectInviteGroupsEdge>;
   /** A list of `ProjectInviteGroup` objects. */
-  nodes: Array<Maybe<ProjectInviteGroup>>;
+  nodes: Array<ProjectInviteGroup>;
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `ProjectInviteGroup` you could get from the connection. */
@@ -4879,7 +4882,7 @@ export type ProjectInviteGroupsEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `ProjectInviteGroup` at the end of the edge. */
-  node?: Maybe<ProjectInviteGroup>;
+  node: ProjectInviteGroup;
 };
 
 /** Methods to use when ordering `ProjectInviteGroup`. */
@@ -4913,7 +4916,7 @@ export type ProjectInvitesConnection = {
   /** A list of edges which contains the `ProjectInvite` and cursor to aid in pagination. */
   edges: Array<ProjectInvitesEdge>;
   /** A list of `ProjectInvite` objects. */
-  nodes: Array<Maybe<ProjectInvite>>;
+  nodes: Array<ProjectInvite>;
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `ProjectInvite` you could get from the connection. */
@@ -4926,7 +4929,7 @@ export type ProjectInvitesEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `ProjectInvite` at the end of the edge. */
-  node?: Maybe<ProjectInvite>;
+  node: ProjectInvite;
 };
 
 export type ProjectInviteTokenClaims = {
@@ -4964,8 +4967,9 @@ export type ProjectPatch = {
    * URL referencing an image that will be used to represent the project. Will be
    * displayed at 48x48 pixels and must be a public url.
    */
-  logoUrl?: Maybe<Scalars['String']>;
+  logoUrl?: Maybe<Scalars['Upload']>;
   name?: Maybe<Scalars['String']>;
+  region?: Maybe<Scalars['GeoJSON']>;
 };
 
 /** A connection to a list of `Project` values. */
@@ -4974,7 +4978,7 @@ export type ProjectsConnection = {
   /** A list of edges which contains the `Project` and cursor to aid in pagination. */
   edges: Array<ProjectsEdge>;
   /** A list of `Project` objects. */
-  nodes: Array<Maybe<Project>>;
+  nodes: Array<Project>;
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `Project` you could get from the connection. */
@@ -4987,7 +4991,7 @@ export type ProjectsEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `Project` at the end of the edge. */
-  node?: Maybe<Project>;
+  node: Project;
 };
 
 /** Methods to use when ordering `Project`. */
@@ -5128,7 +5132,7 @@ export type Query = Node & {
    * SeaSketch superusers can create template Forms using the `createFormTemplateFromSketchClass` 
    * and `createFormTemplateFromSurvey` mutations.
    */
-  templateForms?: Maybe<Array<Maybe<Form>>>;
+  templateForms?: Maybe<Array<Form>>;
   topic?: Maybe<Topic>;
   /** Reads a single `Topic` using its globally unique `ID`. */
   topicByNodeId?: Maybe<Topic>;
@@ -6229,7 +6233,7 @@ export type SendAllProjectInvitesPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  inviteEmails?: Maybe<Array<Maybe<InviteEmail>>>;
+  inviteEmails?: Maybe<Array<InviteEmail>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -6252,7 +6256,7 @@ export type SendProjectInvitesPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  inviteEmails?: Maybe<Array<Maybe<InviteEmail>>>;
+  inviteEmails?: Maybe<Array<InviteEmail>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -6275,7 +6279,7 @@ export type SetFormFieldOrderPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  formFields?: Maybe<Array<Maybe<FormField>>>;
+  formFields?: Maybe<Array<FormField>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -6298,7 +6302,7 @@ export type SetForumOrderPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  forums?: Maybe<Array<Maybe<Forum>>>;
+  forums?: Maybe<Array<Forum>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -6535,7 +6539,7 @@ export type SketchClass = Node & {
   /** Number of sketches created with this sketch class */
   sketchCount?: Maybe<Scalars['BigInt']>;
   /** If listed for a Collection, only valid child sketch classes can be added as children. */
-  validChildren?: Maybe<Array<Maybe<SketchClass>>>;
+  validChildren?: Maybe<Array<SketchClass>>;
 };
 
 
@@ -6562,7 +6566,7 @@ export type SketchClassesEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `SketchClass` at the end of the edge. */
-  node?: Maybe<SketchClass>;
+  node: SketchClass;
 };
 
 /** Methods to use when ordering `SketchClass`. */
@@ -6710,7 +6714,7 @@ export type SketchFoldersEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `SketchFolder` at the end of the edge. */
-  node?: Maybe<SketchFolder>;
+  node: SketchFolder;
 };
 
 /** Methods to use when ordering `SketchFolder`. */
@@ -6824,7 +6828,7 @@ export type Survey = Node & {
    * 
    * Use `updateSurveyInvitedGroups()` mutation to modify.
    */
-  invitedGroups?: Maybe<Array<Maybe<Group>>>;
+  invitedGroups?: Maybe<Array<Group>>;
   /**
    * Disabled surveys will not be accessible to non-admins. Invite email sending will
    * be paused.
@@ -7025,7 +7029,7 @@ export type SurveyInvitesEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `SurveyInvite` at the end of the edge. */
-  node?: Maybe<SurveyInvite>;
+  node: SurveyInvite;
 };
 
 /** Methods to use when ordering `SurveyInvite`. */
@@ -7179,7 +7183,7 @@ export type SurveyResponsesConnection = {
   /** A list of edges which contains the `SurveyResponse` and cursor to aid in pagination. */
   edges: Array<SurveyResponsesEdge>;
   /** A list of `SurveyResponse` objects. */
-  nodes: Array<Maybe<SurveyResponse>>;
+  nodes: Array<SurveyResponse>;
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `SurveyResponse` you could get from the connection. */
@@ -7192,7 +7196,7 @@ export type SurveyResponsesEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `SurveyResponse` at the end of the edge. */
-  node?: Maybe<SurveyResponse>;
+  node: SurveyResponse;
 };
 
 /** Methods to use when ordering `SurveyResponse`. */
@@ -7302,7 +7306,7 @@ export type TopicsConnection = {
   /** A list of edges which contains the `Topic` and cursor to aid in pagination. */
   edges: Array<TopicsEdge>;
   /** A list of `Topic` objects. */
-  nodes: Array<Maybe<Topic>>;
+  nodes: Array<Topic>;
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `Topic` you could get from the connection. */
@@ -7315,7 +7319,7 @@ export type TopicsEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `Topic` at the end of the edge. */
-  node?: Maybe<Topic>;
+  node: Topic;
 };
 
 /** Methods to use when ordering `Topic`. */
@@ -8105,7 +8109,7 @@ export type UpdateSurveyInvitedGroupsPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  groups?: Maybe<Array<Maybe<Group>>>;
+  groups?: Maybe<Array<Group>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -8260,6 +8264,7 @@ export type UpdateTopicPayloadTopicEdgeArgs = {
   orderBy?: Maybe<Array<TopicsOrderBy>>;
 };
 
+
 /**
  * The SeaSketch User type is quite sparse since authentication is handled by Auth0
  * and we store no personal information unless the user explicitly adds it to the
@@ -8364,7 +8369,7 @@ export type UsersEdge = {
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `User` at the end of the edge. */
-  node?: Maybe<User>;
+  node: User;
 };
 
 /** Methods to use when ordering `User`. */
@@ -8376,6 +8381,120 @@ export enum UsersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+export type CreateProjectMutationVariables = Exact<{
+  name: Scalars['String'];
+  slug: Scalars['String'];
+}>;
+
+
+export type CreateProjectMutation = (
+  { __typename?: 'Mutation' }
+  & { createProject?: Maybe<(
+    { __typename?: 'CreateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'url' | 'slug'>
+    )> }
+  )> }
+);
+
+export type CurrentProjectMetadataQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type CurrentProjectMetadataQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
+  )> }
+);
+
+export type ProjectAccessControlSettingsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectAccessControlSettingsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename: 'Project' }
+    & Pick<Project, 'id' | 'accessControl' | 'isListed'>
+  )> }
+);
+
+export type UpdateProjectAccessControlSettingsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  accessControl?: Maybe<ProjectAccessControlSetting>;
+  isListed?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UpdateProjectAccessControlSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectBySlug?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & Pick<UpdateProjectPayload, 'clientMutationId'>
+    & { project?: Maybe<(
+      { __typename: 'Project' }
+      & Pick<Project, 'id' | 'accessControl' | 'isListed'>
+    )> }
+  )> }
+);
+
+export type ProjectRegionQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectRegionQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename: 'Project' }
+    & Pick<Project, 'id'>
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ) }
+  )> }
+);
+
+export type UpdateProjectRegionMutationVariables = Exact<{
+  slug: Scalars['String'];
+  region: Scalars['GeoJSON'];
+}>;
+
+
+export type UpdateProjectRegionMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectBySlug?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & Pick<UpdateProjectPayload, 'clientMutationId'>
+    & { project?: Maybe<(
+      { __typename: 'Project' }
+      & Pick<Project, 'id'>
+      & { region: (
+        { __typename?: 'GeometryPolygon' }
+        & Pick<GeometryPolygon, 'geojson'>
+      ) }
+    )> }
+  )> }
+);
+
+export type ProjectSlugExistsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectSlugExistsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+  )> }
+);
+
 export type SimpleProjectListQueryVariables = Exact<{
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -8386,44 +8505,330 @@ export type SimpleProjectListQuery = (
   { __typename?: 'Query' }
   & { projectsConnection?: Maybe<(
     { __typename?: 'ProjectsConnection' }
-    & { nodes: Array<Maybe<(
+    & { nodes: Array<(
       { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name' | 'url' | 'description' | 'isListed' | 'isFeatured' | 'logoUrl'>
-      & { forums: Array<(
-        { __typename?: 'Forum' }
-        & Pick<Forum, 'name'>
-        & { topicsConnection: (
-          { __typename?: 'TopicsConnection' }
-          & { nodes: Array<Maybe<(
-            { __typename?: 'Topic' }
-            & Pick<Topic, 'title'>
-          )>> }
-        ) }
-      )> }
-    )>> }
+      & Pick<Project, 'id' | 'name' | 'slug' | 'description' | 'url'>
+    )> }
+  )> }
+);
+
+export type UpdateProjectNameMutationVariables = Exact<{
+  name: Scalars['String'];
+  slug: Scalars['String'];
+  clientMutationId?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateProjectNameMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectBySlug?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & Pick<UpdateProjectPayload, 'clientMutationId'>
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'name'>
+    )> }
+  )> }
+);
+
+export type UpdateProjectSettingsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  clientMutationId?: Maybe<Scalars['String']>;
+  name?: Maybe<Scalars['String']>;
+  description?: Maybe<Scalars['String']>;
+  logoUrl?: Maybe<Scalars['Upload']>;
+  logoLink?: Maybe<Scalars['String']>;
+  isFeatured?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UpdateProjectSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectBySlug?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & Pick<UpdateProjectPayload, 'clientMutationId'>
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'logoLink'>
+    )> }
   )> }
 );
 
 
+export const CreateProjectDocument = gql`
+    mutation CreateProject($name: String!, $slug: String!) {
+  createProject(input: {name: $name, slug: $slug}) {
+    project {
+      id
+      url
+      slug
+    }
+  }
+}
+    `;
+export type CreateProjectMutationFn = Apollo.MutationFunction<CreateProjectMutation, CreateProjectMutationVariables>;
+
+/**
+ * __useCreateProjectMutation__
+ *
+ * To run a mutation, you first call `useCreateProjectMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateProjectMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createProjectMutation, { data, loading, error }] = useCreateProjectMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useCreateProjectMutation(baseOptions?: Apollo.MutationHookOptions<CreateProjectMutation, CreateProjectMutationVariables>) {
+        return Apollo.useMutation<CreateProjectMutation, CreateProjectMutationVariables>(CreateProjectDocument, baseOptions);
+      }
+export type CreateProjectMutationHookResult = ReturnType<typeof useCreateProjectMutation>;
+export type CreateProjectMutationResult = Apollo.MutationResult<CreateProjectMutation>;
+export type CreateProjectMutationOptions = Apollo.BaseMutationOptions<CreateProjectMutation, CreateProjectMutationVariables>;
+export const CurrentProjectMetadataDocument = gql`
+    query CurrentProjectMetadata($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    slug
+    url
+    name
+    description
+    logoLink
+    logoUrl
+    accessControl
+    sessionIsAdmin
+    isFeatured
+  }
+}
+    `;
+
+/**
+ * __useCurrentProjectMetadataQuery__
+ *
+ * To run a query within a React component, call `useCurrentProjectMetadataQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCurrentProjectMetadataQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCurrentProjectMetadataQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useCurrentProjectMetadataQuery(baseOptions?: Apollo.QueryHookOptions<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>) {
+        return Apollo.useQuery<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>(CurrentProjectMetadataDocument, baseOptions);
+      }
+export function useCurrentProjectMetadataLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>) {
+          return Apollo.useLazyQuery<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>(CurrentProjectMetadataDocument, baseOptions);
+        }
+export type CurrentProjectMetadataQueryHookResult = ReturnType<typeof useCurrentProjectMetadataQuery>;
+export type CurrentProjectMetadataLazyQueryHookResult = ReturnType<typeof useCurrentProjectMetadataLazyQuery>;
+export type CurrentProjectMetadataQueryResult = Apollo.QueryResult<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>;
+export const ProjectAccessControlSettingsDocument = gql`
+    query ProjectAccessControlSettings($slug: String!) {
+  projectBySlug(slug: $slug) {
+    __typename
+    id
+    accessControl
+    isListed
+  }
+}
+    `;
+
+/**
+ * __useProjectAccessControlSettingsQuery__
+ *
+ * To run a query within a React component, call `useProjectAccessControlSettingsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectAccessControlSettingsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectAccessControlSettingsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectAccessControlSettingsQuery(baseOptions?: Apollo.QueryHookOptions<ProjectAccessControlSettingsQuery, ProjectAccessControlSettingsQueryVariables>) {
+        return Apollo.useQuery<ProjectAccessControlSettingsQuery, ProjectAccessControlSettingsQueryVariables>(ProjectAccessControlSettingsDocument, baseOptions);
+      }
+export function useProjectAccessControlSettingsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectAccessControlSettingsQuery, ProjectAccessControlSettingsQueryVariables>) {
+          return Apollo.useLazyQuery<ProjectAccessControlSettingsQuery, ProjectAccessControlSettingsQueryVariables>(ProjectAccessControlSettingsDocument, baseOptions);
+        }
+export type ProjectAccessControlSettingsQueryHookResult = ReturnType<typeof useProjectAccessControlSettingsQuery>;
+export type ProjectAccessControlSettingsLazyQueryHookResult = ReturnType<typeof useProjectAccessControlSettingsLazyQuery>;
+export type ProjectAccessControlSettingsQueryResult = Apollo.QueryResult<ProjectAccessControlSettingsQuery, ProjectAccessControlSettingsQueryVariables>;
+export const UpdateProjectAccessControlSettingsDocument = gql`
+    mutation updateProjectAccessControlSettings($slug: String!, $accessControl: ProjectAccessControlSetting, $isListed: Boolean) {
+  updateProjectBySlug(input: {slug: $slug, patch: {accessControl: $accessControl, isListed: $isListed}}) {
+    clientMutationId
+    project {
+      __typename
+      id
+      accessControl
+      isListed
+    }
+  }
+}
+    `;
+export type UpdateProjectAccessControlSettingsMutationFn = Apollo.MutationFunction<UpdateProjectAccessControlSettingsMutation, UpdateProjectAccessControlSettingsMutationVariables>;
+
+/**
+ * __useUpdateProjectAccessControlSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateProjectAccessControlSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateProjectAccessControlSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateProjectAccessControlSettingsMutation, { data, loading, error }] = useUpdateProjectAccessControlSettingsMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      accessControl: // value for 'accessControl'
+ *      isListed: // value for 'isListed'
+ *   },
+ * });
+ */
+export function useUpdateProjectAccessControlSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectAccessControlSettingsMutation, UpdateProjectAccessControlSettingsMutationVariables>) {
+        return Apollo.useMutation<UpdateProjectAccessControlSettingsMutation, UpdateProjectAccessControlSettingsMutationVariables>(UpdateProjectAccessControlSettingsDocument, baseOptions);
+      }
+export type UpdateProjectAccessControlSettingsMutationHookResult = ReturnType<typeof useUpdateProjectAccessControlSettingsMutation>;
+export type UpdateProjectAccessControlSettingsMutationResult = Apollo.MutationResult<UpdateProjectAccessControlSettingsMutation>;
+export type UpdateProjectAccessControlSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateProjectAccessControlSettingsMutation, UpdateProjectAccessControlSettingsMutationVariables>;
+export const ProjectRegionDocument = gql`
+    query ProjectRegion($slug: String!) {
+  projectBySlug(slug: $slug) {
+    __typename
+    id
+    region {
+      geojson
+    }
+  }
+}
+    `;
+
+/**
+ * __useProjectRegionQuery__
+ *
+ * To run a query within a React component, call `useProjectRegionQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectRegionQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectRegionQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectRegionQuery(baseOptions?: Apollo.QueryHookOptions<ProjectRegionQuery, ProjectRegionQueryVariables>) {
+        return Apollo.useQuery<ProjectRegionQuery, ProjectRegionQueryVariables>(ProjectRegionDocument, baseOptions);
+      }
+export function useProjectRegionLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectRegionQuery, ProjectRegionQueryVariables>) {
+          return Apollo.useLazyQuery<ProjectRegionQuery, ProjectRegionQueryVariables>(ProjectRegionDocument, baseOptions);
+        }
+export type ProjectRegionQueryHookResult = ReturnType<typeof useProjectRegionQuery>;
+export type ProjectRegionLazyQueryHookResult = ReturnType<typeof useProjectRegionLazyQuery>;
+export type ProjectRegionQueryResult = Apollo.QueryResult<ProjectRegionQuery, ProjectRegionQueryVariables>;
+export const UpdateProjectRegionDocument = gql`
+    mutation UpdateProjectRegion($slug: String!, $region: GeoJSON!) {
+  updateProjectBySlug(input: {slug: $slug, patch: {region: $region}}) {
+    clientMutationId
+    project {
+      __typename
+      id
+      region {
+        geojson
+      }
+    }
+  }
+}
+    `;
+export type UpdateProjectRegionMutationFn = Apollo.MutationFunction<UpdateProjectRegionMutation, UpdateProjectRegionMutationVariables>;
+
+/**
+ * __useUpdateProjectRegionMutation__
+ *
+ * To run a mutation, you first call `useUpdateProjectRegionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateProjectRegionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateProjectRegionMutation, { data, loading, error }] = useUpdateProjectRegionMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      region: // value for 'region'
+ *   },
+ * });
+ */
+export function useUpdateProjectRegionMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectRegionMutation, UpdateProjectRegionMutationVariables>) {
+        return Apollo.useMutation<UpdateProjectRegionMutation, UpdateProjectRegionMutationVariables>(UpdateProjectRegionDocument, baseOptions);
+      }
+export type UpdateProjectRegionMutationHookResult = ReturnType<typeof useUpdateProjectRegionMutation>;
+export type UpdateProjectRegionMutationResult = Apollo.MutationResult<UpdateProjectRegionMutation>;
+export type UpdateProjectRegionMutationOptions = Apollo.BaseMutationOptions<UpdateProjectRegionMutation, UpdateProjectRegionMutationVariables>;
+export const ProjectSlugExistsDocument = gql`
+    query ProjectSlugExists($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+  }
+}
+    `;
+
+/**
+ * __useProjectSlugExistsQuery__
+ *
+ * To run a query within a React component, call `useProjectSlugExistsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectSlugExistsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectSlugExistsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectSlugExistsQuery(baseOptions?: Apollo.QueryHookOptions<ProjectSlugExistsQuery, ProjectSlugExistsQueryVariables>) {
+        return Apollo.useQuery<ProjectSlugExistsQuery, ProjectSlugExistsQueryVariables>(ProjectSlugExistsDocument, baseOptions);
+      }
+export function useProjectSlugExistsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectSlugExistsQuery, ProjectSlugExistsQueryVariables>) {
+          return Apollo.useLazyQuery<ProjectSlugExistsQuery, ProjectSlugExistsQueryVariables>(ProjectSlugExistsDocument, baseOptions);
+        }
+export type ProjectSlugExistsQueryHookResult = ReturnType<typeof useProjectSlugExistsQuery>;
+export type ProjectSlugExistsLazyQueryHookResult = ReturnType<typeof useProjectSlugExistsLazyQuery>;
+export type ProjectSlugExistsQueryResult = Apollo.QueryResult<ProjectSlugExistsQuery, ProjectSlugExistsQueryVariables>;
 export const SimpleProjectListDocument = gql`
     query SimpleProjectList($first: Int, $offset: Int) {
   projectsConnection(first: $first, offset: $offset) {
     nodes {
       id
       name
-      url
+      slug
       description
-      isListed
-      isFeatured
-      logoUrl
-      forums {
-        name
-        topicsConnection {
-          nodes {
-            title
-          }
-        }
-      }
+      url
     }
   }
 }
@@ -8455,3 +8860,86 @@ export function useSimpleProjectListLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type SimpleProjectListQueryHookResult = ReturnType<typeof useSimpleProjectListQuery>;
 export type SimpleProjectListLazyQueryHookResult = ReturnType<typeof useSimpleProjectListLazyQuery>;
 export type SimpleProjectListQueryResult = Apollo.QueryResult<SimpleProjectListQuery, SimpleProjectListQueryVariables>;
+export const UpdateProjectNameDocument = gql`
+    mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
+  updateProjectBySlug(input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name}}) {
+    clientMutationId
+    project {
+      id
+      name
+    }
+  }
+}
+    `;
+export type UpdateProjectNameMutationFn = Apollo.MutationFunction<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>;
+
+/**
+ * __useUpdateProjectNameMutation__
+ *
+ * To run a mutation, you first call `useUpdateProjectNameMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateProjectNameMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateProjectNameMutation, { data, loading, error }] = useUpdateProjectNameMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      slug: // value for 'slug'
+ *      clientMutationId: // value for 'clientMutationId'
+ *   },
+ * });
+ */
+export function useUpdateProjectNameMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>) {
+        return Apollo.useMutation<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>(UpdateProjectNameDocument, baseOptions);
+      }
+export type UpdateProjectNameMutationHookResult = ReturnType<typeof useUpdateProjectNameMutation>;
+export type UpdateProjectNameMutationResult = Apollo.MutationResult<UpdateProjectNameMutation>;
+export type UpdateProjectNameMutationOptions = Apollo.BaseMutationOptions<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>;
+export const UpdateProjectSettingsDocument = gql`
+    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean) {
+  updateProjectBySlug(input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured}}) {
+    clientMutationId
+    project {
+      id
+      name
+      description
+      logoUrl
+      logoLink
+    }
+  }
+}
+    `;
+export type UpdateProjectSettingsMutationFn = Apollo.MutationFunction<UpdateProjectSettingsMutation, UpdateProjectSettingsMutationVariables>;
+
+/**
+ * __useUpdateProjectSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateProjectSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateProjectSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateProjectSettingsMutation, { data, loading, error }] = useUpdateProjectSettingsMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      clientMutationId: // value for 'clientMutationId'
+ *      name: // value for 'name'
+ *      description: // value for 'description'
+ *      logoUrl: // value for 'logoUrl'
+ *      logoLink: // value for 'logoLink'
+ *      isFeatured: // value for 'isFeatured'
+ *   },
+ * });
+ */
+export function useUpdateProjectSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectSettingsMutation, UpdateProjectSettingsMutationVariables>) {
+        return Apollo.useMutation<UpdateProjectSettingsMutation, UpdateProjectSettingsMutationVariables>(UpdateProjectSettingsDocument, baseOptions);
+      }
+export type UpdateProjectSettingsMutationHookResult = ReturnType<typeof useUpdateProjectSettingsMutation>;
+export type UpdateProjectSettingsMutationResult = Apollo.MutationResult<UpdateProjectSettingsMutation>;
+export type UpdateProjectSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateProjectSettingsMutation, UpdateProjectSettingsMutationVariables>;

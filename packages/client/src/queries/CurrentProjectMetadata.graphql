@@ -1,0 +1,14 @@
+query CurrentProjectMetadata($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    slug
+    url
+    name
+    description
+    logoLink
+    logoUrl
+    accessControl
+    sessionIsAdmin
+    isFeatured
+  }
+}

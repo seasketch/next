@@ -1,76 +1,74 @@
-import React from "react";
-import "./App.css";
+import React, { Suspense } from "react";
 import { BrowserRouter as Router, Switch, Route, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
 import { useAuth0 } from "@auth0/auth0-react";
-import ProjectsPage from "./ProjectsPage";
+import ProjectsPage from "./homepage/ProjectsPage";
+import Header from "./header/Header";
+import NewProjectCTA from "./homepage/NewProjectCTA";
+import NewProjectPage from "./homepage/NewProjectPage";
+import NotFound from "./NotFound";
+
+const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
 
 function App() {
-  const { t, i18n } = useTranslation();
-  const {
-    user,
-    isAuthenticated,
-    logout,
-    loginWithRedirect,
-    loginWithPopup,
-    isLoading,
-  } = useAuth0();
+  const { t, i18n } = useTranslation(["homepage"]);
   return (
-    <Router>
-      {isLoading ? (
-        <div></div>
-      ) : (
-        <div className="App">
-          <Switch>
-            <Route path="/signin">
-              <SignInPage />
-            </Route>
-            <Route path="/projects">
-              <ProjectsPage />
-            </Route>
-            <Route path="/authenticate">
-              <span>authenticating...</span>
-            </Route>
-            <Route path="/">
-              <header className="App-header">
-                <p>{t("Welcome to SeaSketch")}</p>
-                <a className="App-link" href="/projects">
-                  {t("Projects")}
-                </a>
-                {!user ? (
-                  <a
-                    className="App-link"
-                    href="/"
-                    onClick={() =>
-                      loginWithRedirect({
-                        redirectUri: `${window.location.protocol}//${window.location.host}/authenticate?forwardTo=/projects`,
-                      })
-                    }
-                  >
-                    {t("Sign In")}
-                  </a>
-                ) : (
-                  <a
-                    className="App-link"
-                    href="/"
-                    onClick={() =>
-                      logout({
-                        localOnly: false,
-                        returnTo: window.location.toString(),
-                      })
-                    }
-                  >
-                    {t("Sign Out")}
-                    <br /> ({user.name})
-                  </a>
-                )}
-              </header>
-            </Route>
-          </Switch>
-        </div>
-      )}
-    </Router>
+    <div className="App">
+      <Suspense fallback={<div>Loading...</div>}>
+        <Route
+          path={[
+            "/signin",
+            "/projects",
+            "/new-project",
+            "/authenticate",
+            "/",
+            "/api",
+            "/team",
+          ]}
+          exact
+        >
+          <Header />
+        </Route>
+        <Switch>
+          <Route path="/signin">
+            <SignInPage />
+          </Route>
+          <Route exact path="/projects">
+            <ProjectsPage />
+          </Route>
+          <Route exact path="/api"></Route>
+          <Route exact path="/team"></Route>
+          <Route path="/new-project">
+            <NewProjectPage />
+          </Route>
+          <Route path="/authenticate">
+            {/* check Auth0ProviderWithRouter#onRedirectCallback in index.tsx */}
+            <span>authenticating...</span>
+          </Route>
+          <Route exact path="/">
+            <div className="p-4 pb-12 bg-white">
+              <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
+                {t("SeaSketch Supports Collaborative Planning for our Oceans")}
+              </h1>
+              <p className="max-w-4xl mx-auto">
+                {t(`SeaSketch puts powerful tools into the hands of ocean planners,
+              stakeholders and the public that were once limited to GIS
+              professionals, enabling participatory marine spatial planning
+              processes that are closely tied to the relevant science and
+              information. SeaSketch is being used around the globe in small
+              agency teams and large community-driven initiatives to make better
+              management decisions every day.`)}
+              </p>
+            </div>
+            <NewProjectCTA />
+          </Route>
+          <Route path="/:slug">
+            <LazyProjectApp />
+          </Route>
+        </Switch>
+      </Suspense>
+    </div>
   );
 }
 

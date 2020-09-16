@@ -1,0 +1,19 @@
+mutation UpdateProjectName(
+  $name: String!
+  $slug: String!
+  $clientMutationId: String
+) {
+  updateProjectBySlug(
+    input: {
+      slug: $slug
+      clientMutationId: $clientMutationId
+      patch: { name: $name }
+    }
+  ) {
+    clientMutationId
+    project {
+      id
+      name
+    }
+  }
+}
