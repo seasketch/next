@@ -19,6 +19,7 @@ export default function NewProjectForm() {
   const [createProject, mutationStatus] = useCreateProjectMutation({
     refetchQueries: ["SimpleProjectList"],
   });
+
   const { loading, error, data } = useProjectSlugExistsQuery({
     variables: {
       slug: debouncedSlug,

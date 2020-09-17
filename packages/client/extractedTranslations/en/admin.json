@@ -1,0 +1,68 @@
+{
+  "Access Control Settings": "",
+  "Admins Only": "",
+  "Anyone can visit the project and participate": {
+    " Can only be enabled for <1>listed</1> projects": {
+      "": "Anyone can visit the project and participate. Can only be enabled for <1>listed</1> projects."
+    }
+  },
+  "Basic Settings": "",
+  "Brief description below the name": "",
+  "Choose an Image": "",
+  "Contact <2>support</2> to discuss changing": {
+    "": "Contact <2>support</2> to discuss changing."
+  },
+  "Copied URL": "",
+  "Description": "",
+  "Draw a box around the region where your project will be used": {
+    " SeaSketch will ensure that users see the entirety of this area when they first load the map, regardless of their display size": {
+      "": "Draw a box around the region where your project will be used. SeaSketch will ensure that users see the entirety of this area when they first load the map, regardless of their display size."
+    }
+  },
+  "Error fetching settings": {
+    "": ""
+  },
+  "Error saving settings": {
+    "": ""
+  },
+  "Featured Project": "",
+  "Featured projects will be displayed more prominently on project listing pages": {
+    "": ""
+  },
+  "Invite Only": "",
+  "Logo": "",
+  "Logo Link URL": "",
+  "Map Extent Settings": "",
+  "Only approved participants can visit the project": {
+    " Admins can invite users by email and users can also request access": {
+      "": "Only approved participants can visit the project. Admins can invite users by email and users can also request access."
+    }
+  },
+  "Only project administrators will be able to visit the site": {
+    "": ""
+  },
+  "Permanent Project URL": "",
+  "Project Name": "",
+  "Public": "",
+  "Public Listing": "",
+  "Redraw Bounds": "",
+  "SeaSketch Developer Settings": "",
+  "These options are only visible to the SeaSketch team": {
+    "": ""
+  },
+  "These settings will control who can find and visit your project": {
+    "": ""
+  },
+  "Uploading": "",
+  "We recommend a square PNG logo with transparent background of at least <1>128x128</1> pixels": {
+    "": "We recommend a square PNG logo with transparent background of at least <1>128x128</1> pixels."
+  },
+  "When enabled, this project will be listed on the SeaSketch <2>projects page</2> and accessible to search engines": {
+    " We recommend enabling this setting even for private projects so that your users can find the project easily and request access if necessary": {
+      "": "When enabled, this project will be listed on the SeaSketch <2>projects page</2> and accessible to search engines. We recommend enabling this setting even for private projects so that your users can find the project easily and request access if necessary."
+    }
+  },
+  "You cannot unlist a public project": {
+    "": ""
+  }
+}

@@ -1,6 +1,16 @@
 {
+  "Create your own<1></1><2> SeaSketch Project</2>": "Create your own<1></1><2> SeaSketch Project</2>",
+  "Create your project": "",
+  "Project name": "",
   "Projects": "",
   "Sign In": "",
   "Sign Out": "",
+  "Use our collaborative geodesign tools for ocean conservation planning in your region": {
+    " <i>It's free!</i> Your project will include tools to visualize data, create discussion forums, sketch plans, and collect data using surveys": {
+      " Built-in reports include data from Global Fishing Watch, and can be customized using our Developer API": {
+        "": "Use our collaborative geodesign tools for ocean conservation planning in your region. <i>It's free!</i> Your project will include tools to visualize data, create discussion forums, sketch plans, and collect data using surveys. Built-in reports include data from Global Fishing Watch, and can be customized using our Developer API."
+      }
+    }
+  },
   "Welcome to SeaSketch": ""
 }
