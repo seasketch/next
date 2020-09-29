@@ -7,16 +7,22 @@ var MapBoxGLEsriSources = (function (exports) {
             this.supportDevicePixelRatio = true;
             this.supportsDynamicLayers = false;
             this.updateSource = () => {
-                const bounds = this.map.getBounds();
-                this.source.updateImage({
-                    url: this.getUrl(),
-                    coordinates: [
-                        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-                        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-                        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-                        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-                    ],
-                });
+                if (this.debounceTimeout) {
+                    clearTimeout(this.debounceTimeout);
+                }
+                this.debounceTimeout = setTimeout(() => {
+                    delete this.debounceTimeout;
+                    const bounds = this.map.getBounds();
+                    this.source.updateImage({
+                        url: this.getUrl(),
+                        coordinates: [
+                            [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+                            [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+                            [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
+                            [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+                        ],
+                    });
+                }, 5);
             };
             this.id = id;
             this.baseUrl = baseUrl;
@@ -151,16 +157,22 @@ var MapBoxGLEsriSources = (function (exports) {
             return this.url.toString();
         }
         updateLayers(layers) {
-            this.layers = layers;
-            this.updateSource();
+            if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
+                this.layers = layers;
+                this.updateSource();
+            }
         }
         updateQueryParameters(queryParameters) {
-            this.queryParameters = queryParameters;
-            this.updateSource();
+            if (JSON.stringify(this.queryParameters) !== JSON.stringify(queryParameters)) {
+                this.queryParameters = queryParameters;
+                this.updateSource();
+            }
         }
         updateUseDevicePixelRatio(enable) {
-            this.supportDevicePixelRatio = enable;
-            this.updateSource();
+            if (enable !== this.supportDevicePixelRatio) {
+                this.supportDevicePixelRatio = enable;
+                this.updateSource();
+            }
         }
     }
     function lat2meters(lat) {

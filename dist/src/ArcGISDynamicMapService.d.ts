@@ -93,6 +93,7 @@ export declare class ArcGISDynamicMapService {
     private source;
     private supportDevicePixelRatio;
     private supportsDynamicLayers;
+    private debounceTimeout?;
     /**
      * @param {Map} map MapBox GL JS Map instance
      * @param {string} id ID to be used when adding refering to this source from layers

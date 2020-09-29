@@ -60,16 +60,22 @@ export class ArcGISDynamicMapService {
         this.supportDevicePixelRatio = true;
         this.supportsDynamicLayers = false;
         this.updateSource = () => {
-            const bounds = this.map.getBounds();
-            this.source.updateImage({
-                url: this.getUrl(),
-                coordinates: [
-                    [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-                    [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-                    [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-                    [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-                ],
-            });
+            if (this.debounceTimeout) {
+                clearTimeout(this.debounceTimeout);
+            }
+            this.debounceTimeout = setTimeout(() => {
+                delete this.debounceTimeout;
+                const bounds = this.map.getBounds();
+                this.source.updateImage({
+                    url: this.getUrl(),
+                    coordinates: [
+                        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+                        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+                        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
+                        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+                    ],
+                });
+            }, 5);
         };
         this.id = id;
         this.baseUrl = baseUrl;
@@ -237,8 +243,11 @@ export class ArcGISDynamicMapService {
      *
      */
     updateLayers(layers) {
-        this.layers = layers;
-        this.updateSource();
+        // do a deep comparison of layers to detect whether there are any changes
+        if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
+            this.layers = layers;
+            this.updateSource();
+        }
     }
     /**
      * Update query params sent with each export request and re-render the map. A
@@ -257,8 +266,11 @@ export class ArcGISDynamicMapService {
      * ```
      */
     updateQueryParameters(queryParameters) {
-        this.queryParameters = queryParameters;
-        this.updateSource();
+        // do a deep comparison of layers to detect whether there are any changes
+        if (JSON.stringify(this.queryParameters) !== JSON.stringify(queryParameters)) {
+            this.queryParameters = queryParameters;
+            this.updateSource();
+        }
     }
     /**
      * Update support for adjusting image resolution based on devicePixelRatio and
@@ -267,8 +279,10 @@ export class ArcGISDynamicMapService {
      * @param enable
      */
     updateUseDevicePixelRatio(enable) {
-        this.supportDevicePixelRatio = enable;
-        this.updateSource();
+        if (enable !== this.supportDevicePixelRatio) {
+            this.supportDevicePixelRatio = enable;
+            this.updateSource();
+        }
     }
 }
 /** @hidden */

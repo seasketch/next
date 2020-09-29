@@ -100,6 +100,7 @@ export class ArcGISDynamicMapService {
   private source: ImageSource;
   private supportDevicePixelRatio: boolean = true;
   private supportsDynamicLayers = false;
+  private debounceTimeout?: NodeJS.Timeout;
 
   /**
    * @param {Map} map MapBox GL JS Map instance
@@ -280,16 +281,22 @@ export class ArcGISDynamicMapService {
   }
 
   private updateSource = () => {
-    const bounds = this.map.getBounds();
-    this.source.updateImage({
-      url: this.getUrl(),
-      coordinates: [
-        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-      ],
-    });
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
+    }
+    this.debounceTimeout = setTimeout(() => {
+      delete this.debounceTimeout;
+      const bounds = this.map.getBounds();
+      this.source.updateImage({
+        url: this.getUrl(),
+        coordinates: [
+          [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+          [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+          [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
+          [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+        ],
+      });
+    }, 5);
   };
 
   /**
@@ -310,8 +317,11 @@ export class ArcGISDynamicMapService {
    *
    */
   updateLayers(layers: SublayerState[]) {
-    this.layers = layers;
-    this.updateSource();
+    // do a deep comparison of layers to detect whether there are any changes
+    if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
+      this.layers = layers;
+      this.updateSource();
+    }
   }
 
   /**
@@ -333,8 +343,13 @@ export class ArcGISDynamicMapService {
   updateQueryParameters(queryParameters: {
     [queryString: string]: string | number;
   }) {
-    this.queryParameters = queryParameters;
-    this.updateSource();
+    // do a deep comparison of layers to detect whether there are any changes
+    if (
+      JSON.stringify(this.queryParameters) !== JSON.stringify(queryParameters)
+    ) {
+      this.queryParameters = queryParameters;
+      this.updateSource();
+    }
   }
 
   /**
@@ -344,8 +359,10 @@ export class ArcGISDynamicMapService {
    * @param enable
    */
   updateUseDevicePixelRatio(enable: boolean) {
-    this.supportDevicePixelRatio = enable;
-    this.updateSource();
+    if (enable !== this.supportDevicePixelRatio) {
+      this.supportDevicePixelRatio = enable;
+      this.updateSource();
+    }
   }
 }
 

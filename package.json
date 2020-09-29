@@ -1,8 +1,9 @@
 {
-  "name": "mapbox-gl-esri-sources",
-  "version": "0.8.0",
+  "name": "@seasketch/mapbox-gl-esri-sources",
+  "version": "0.8.3",
   "description": "Render data services from ArcGIS in MapBox GL JS",
   "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "start": "http-server",
     "watch": "rollup -c rollup.config.js --watch",

@@ -82,7 +82,7 @@ export declare class ArcGISVectorSource {
      * from the data host, which may not be available.
      */
     protected totalBytes: number;
-    private id;
+    protected id: string;
     private baseUrl;
     private options;
     private map;
