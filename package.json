@@ -1,6 +1,6 @@
 {
   "name": "@seasketch/mapbox-gl-esri-sources",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "Render data services from ArcGIS in MapBox GL JS",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",

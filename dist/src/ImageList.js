@@ -171,6 +171,20 @@ export class ImageList {
             });
         }));
     }
+    /**
+     * Remove a previously added ImageList from the map
+     *
+     * @param {Map} map
+     * @memberof ImageList
+     */
+    removeFromMap(map) {
+        return Promise.all(this.imageSets.map(async (imageSet) => {
+            if (imageSet instanceof Promise) {
+                imageSet = await imageSet;
+            }
+            map.removeImage(imageSet.id);
+        }));
+    }
 }
 /** @hidden */
 async function createImage(width, height, dataURI) {

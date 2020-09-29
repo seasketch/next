@@ -74,4 +74,11 @@ export declare class ImageList {
      * @memberof ImageList
      */
     addToMap(map: Map): Promise<void[]>;
+    /**
+     * Remove a previously added ImageList from the map
+     *
+     * @param {Map} map
+     * @memberof ImageList
+     */
+    removeFromMap(map: Map): Promise<void[]>;
 }

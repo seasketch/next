@@ -1034,6 +1034,14 @@ var MapBoxGLEsriSources = (function (exports) {
                 });
             }));
         }
+        removeFromMap(map) {
+            return Promise.all(this.imageSets.map(async (imageSet) => {
+                if (imageSet instanceof Promise) {
+                    imageSet = await imageSet;
+                }
+                map.removeImage(imageSet.id);
+            }));
+        }
     }
     async function createImage(width, height, dataURI) {
         return new Promise((resolve) => {
