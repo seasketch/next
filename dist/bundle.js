@@ -7,21 +7,24 @@ var MapBoxGLEsriSources = (function (exports) {
             this.supportDevicePixelRatio = true;
             this.supportsDynamicLayers = false;
             this.updateSource = () => {
+                const bounds = this.map.getBounds();
+                this.source.updateImage({
+                    url: this.getUrl(),
+                    coordinates: [
+                        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+                        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+                        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
+                        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+                    ],
+                });
+            };
+            this.debouncedUpdateSource = () => {
                 if (this.debounceTimeout) {
                     clearTimeout(this.debounceTimeout);
                 }
                 this.debounceTimeout = setTimeout(() => {
                     delete this.debounceTimeout;
-                    const bounds = this.map.getBounds();
-                    this.source.updateImage({
-                        url: this.getUrl(),
-                        coordinates: [
-                            [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-                            [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-                            [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-                            [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-                        ],
-                    });
+                    this.updateSource();
                 }, 5);
             };
             this.id = id;
@@ -159,19 +162,19 @@ var MapBoxGLEsriSources = (function (exports) {
         updateLayers(layers) {
             if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
                 this.layers = layers;
-                this.updateSource();
+                this.debouncedUpdateSource();
             }
         }
         updateQueryParameters(queryParameters) {
             if (JSON.stringify(this.queryParameters) !== JSON.stringify(queryParameters)) {
                 this.queryParameters = queryParameters;
-                this.updateSource();
+                this.debouncedUpdateSource();
             }
         }
         updateUseDevicePixelRatio(enable) {
             if (enable !== this.supportDevicePixelRatio) {
                 this.supportDevicePixelRatio = enable;
-                this.updateSource();
+                this.debouncedUpdateSource();
             }
         }
     }

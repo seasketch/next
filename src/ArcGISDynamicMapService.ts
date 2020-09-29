@@ -281,21 +281,25 @@ export class ArcGISDynamicMapService {
   }
 
   private updateSource = () => {
+    const bounds = this.map.getBounds();
+    this.source.updateImage({
+      url: this.getUrl(),
+      coordinates: [
+        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
+        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+      ],
+    });
+  };
+
+  private debouncedUpdateSource = () => {
     if (this.debounceTimeout) {
       clearTimeout(this.debounceTimeout);
     }
     this.debounceTimeout = setTimeout(() => {
       delete this.debounceTimeout;
-      const bounds = this.map.getBounds();
-      this.source.updateImage({
-        url: this.getUrl(),
-        coordinates: [
-          [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-          [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-          [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-          [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-        ],
-      });
+      this.updateSource();
     }, 5);
   };
 
@@ -320,7 +324,7 @@ export class ArcGISDynamicMapService {
     // do a deep comparison of layers to detect whether there are any changes
     if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
       this.layers = layers;
-      this.updateSource();
+      this.debouncedUpdateSource();
     }
   }
 
@@ -348,7 +352,7 @@ export class ArcGISDynamicMapService {
       JSON.stringify(this.queryParameters) !== JSON.stringify(queryParameters)
     ) {
       this.queryParameters = queryParameters;
-      this.updateSource();
+      this.debouncedUpdateSource();
     }
   }
 
@@ -361,7 +365,7 @@ export class ArcGISDynamicMapService {
   updateUseDevicePixelRatio(enable: boolean) {
     if (enable !== this.supportDevicePixelRatio) {
       this.supportDevicePixelRatio = enable;
-      this.updateSource();
+      this.debouncedUpdateSource();
     }
   }
 }

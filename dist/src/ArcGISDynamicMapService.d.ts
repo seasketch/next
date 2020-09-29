@@ -107,6 +107,7 @@ export declare class ArcGISDynamicMapService {
     destroy(): void;
     private getUrl;
     private updateSource;
+    private debouncedUpdateSource;
     /**
      * Update the list of sublayers and re-render the the map. If
      * `supportsDynamicLayers` is enabled, sublayer order and opacity will be
