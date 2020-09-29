@@ -24,7 +24,6 @@ export class ImageList {
      */
     addEsriPFS(symbol) {
         const imageid = uuid();
-        console.log(symbol);
         this.imageSets.push({
             id: imageid,
             images: [

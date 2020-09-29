@@ -938,7 +938,6 @@ var MapBoxGLEsriSources = (function (exports) {
         }
         addEsriPFS(symbol) {
             const imageid = v4();
-            console.log(symbol);
             this.imageSets.push({
                 id: imageid,
                 images: [

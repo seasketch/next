@@ -46,7 +46,6 @@ export class ImageList {
    */
   addEsriPFS(symbol: PictureFillSymbol): string {
     const imageid = uuid();
-    console.log(symbol);
     this.imageSets.push({
       id: imageid,
       images: [
