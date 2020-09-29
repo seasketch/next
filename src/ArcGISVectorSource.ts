@@ -93,7 +93,7 @@ export class ArcGISVectorSource {
    * from the data host, which may not be available.
    */
   protected totalBytes = 0;
-  private id: string;
+  protected id: string;
   private baseUrl: string;
   private options:
     | undefined
