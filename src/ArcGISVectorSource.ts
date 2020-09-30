@@ -1,7 +1,7 @@
 import { Map, GeoJSONSource } from "mapbox-gl";
 import { FeatureCollection } from "geojson";
 // @ts-ignore
-import { arcgisToGeoJSON } from "@terraformer/arcgis";
+// import { arcgisToGeoJSON } from "@terraformer/arcgis";
 
 /** @hidden */
 const WORLD = { xmin: -180, xmax: 180, ymin: -90, ymax: 90 };
@@ -163,7 +163,10 @@ export class ArcGISVectorSource {
       returnIdsOnly: "false",
       // use json and convert rather than geojson. geojson endpoints don't
       // support gzip so are much less efficient
-      f: "json",
+      // CB - 9/30/2020 - esriJson convertion process is slooow. Going back to
+      // GeoJSON directly from server. If performance is important, proxy data
+      // somehow
+      f: "geojson",
       resultOffset: this.supportsPagination
         ? this.data.features.length.toString()
         : "",
@@ -186,7 +189,8 @@ export class ArcGISVectorSource {
         );
       }
     } else {
-      const featureCollection = arcgisToGeoJSON(esriJSON);
+      const featureCollection = esriJSON;
+      // const featureCollection = arcgisToGeoJSON(esriJSON);
       this.data = {
         type: "FeatureCollection",
         features: [...this.data.features, ...featureCollection.features],
