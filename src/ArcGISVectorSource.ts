@@ -154,9 +154,7 @@ export class ArcGISVectorSource {
     const params = new URLSearchParams({
       inSR: "4326",
       outSR: "4326",
-      geometry: JSON.stringify(WORLD),
-      geometryType: "esriGeometryEnvelope",
-      spatialRel: "esriSpatialRelIntersects",
+      where: "1>0",
       outFields: this.outFields,
       returnGeometry: "true",
       geometryPrecision: this.options?.geometryPrecision?.toString() || "6",
@@ -175,27 +173,25 @@ export class ArcGISVectorSource {
       mode: "cors",
     });
     this.totalBytes += parseInt(response.headers.get("content-length") || "0");
-    const esriJSON = await response.json();
-    if (esriJSON.error) {
+    const featureCollection = await response.json();
+    if (featureCollection.error) {
       if (
         this.supportsPagination &&
-        /pagination/i.test(esriJSON.error.message)
+        /pagination/i.test(featureCollection.error.message)
       ) {
         this.supportsPagination = false;
         this.fetchGeoJSON();
       } else {
         throw new Error(
-          `Error retrieving feature data. ${esriJSON.error.message}`
+          `Error retrieving feature data. ${featureCollection.error.message}`
         );
       }
     } else {
-      const featureCollection = esriJSON;
-      // const featureCollection = arcgisToGeoJSON(esriJSON);
       this.data = {
         type: "FeatureCollection",
         features: [...this.data.features, ...featureCollection.features],
       };
-      if (esriJSON.exceededTransferLimit) {
+      if (featureCollection.exceededTransferLimit) {
         if (this.supportsPagination === false) {
           this.source.setData(this.data);
           throw new Error(

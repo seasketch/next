@@ -195,7 +195,6 @@ var MapBoxGLEsriSources = (function (exports) {
     }
     const resolutions = {};
 
-    const WORLD = { xmin: -180, xmax: 180, ymin: -90, ymax: 90 };
     class ArcGISVectorSource {
         constructor(map, id, url, options) {
             this.data = {
@@ -238,9 +237,7 @@ var MapBoxGLEsriSources = (function (exports) {
             const params = new URLSearchParams({
                 inSR: "4326",
                 outSR: "4326",
-                geometry: JSON.stringify(WORLD),
-                geometryType: "esriGeometryEnvelope",
-                spatialRel: "esriSpatialRelIntersects",
+                where: "1>0",
                 outFields: this.outFields,
                 returnGeometry: "true",
                 geometryPrecision: ((_c = (_b = this.options) === null || _b === void 0 ? void 0 : _b.geometryPrecision) === null || _c === void 0 ? void 0 : _c.toString()) || "6",
@@ -254,24 +251,23 @@ var MapBoxGLEsriSources = (function (exports) {
                 mode: "cors",
             });
             this.totalBytes += parseInt(response.headers.get("content-length") || "0");
-            const esriJSON = await response.json();
-            if (esriJSON.error) {
+            const featureCollection = await response.json();
+            if (featureCollection.error) {
                 if (this.supportsPagination &&
-                    /pagination/i.test(esriJSON.error.message)) {
+                    /pagination/i.test(featureCollection.error.message)) {
                     this.supportsPagination = false;
                     this.fetchGeoJSON();
                 }
                 else {
-                    throw new Error(`Error retrieving feature data. ${esriJSON.error.message}`);
+                    throw new Error(`Error retrieving feature data. ${featureCollection.error.message}`);
                 }
             }
             else {
-                const featureCollection = esriJSON;
                 this.data = {
                     type: "FeatureCollection",
                     features: [...this.data.features, ...featureCollection.features],
                 };
-                if (esriJSON.exceededTransferLimit) {
+                if (featureCollection.exceededTransferLimit) {
                     if (this.supportsPagination === false) {
                         this.source.setData(this.data);
                         throw new Error("Data source does not support pagination but exceeds transfer limit");
