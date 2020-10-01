@@ -85,11 +85,6 @@ export class ArcGISVectorSource {
             returnGeometry: "true",
             geometryPrecision: ((_c = (_b = this.options) === null || _b === void 0 ? void 0 : _b.geometryPrecision) === null || _c === void 0 ? void 0 : _c.toString()) || "6",
             returnIdsOnly: "false",
-            // use json and convert rather than geojson. geojson endpoints don't
-            // support gzip so are much less efficient
-            // CB - 9/30/2020 - esriJson convertion process is slooow. Going back to
-            // GeoJSON directly from server. If performance is important, proxy data
-            // somehow
             f: "geojson",
             resultOffset: this.supportsPagination
                 ? this.data.features.length.toString()
@@ -124,6 +119,7 @@ export class ArcGISVectorSource {
                     if (this.displayIncompleteFeatureCollections) {
                         this.source.setData(this.data);
                     }
+                    console.log("fetching more data");
                     this.fetchGeoJSON();
                 }
             }

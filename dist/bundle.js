@@ -276,6 +276,7 @@ var MapBoxGLEsriSources = (function (exports) {
                         if (this.displayIncompleteFeatureCollections) {
                             this.source.setData(this.data);
                         }
+                        console.log("fetching more data");
                         this.fetchGeoJSON();
                     }
                 }
