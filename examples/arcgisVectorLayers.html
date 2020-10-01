@@ -110,7 +110,7 @@
     <div id="map"></div>
     <div id="controls">
       <form>
-        <select id="example"> </select>
+        <select id="example"></select>
       </form>
     </div>
     <script>
@@ -181,9 +181,7 @@
               layer.layout.visibility = "none";
             }
           }
-          const source = new ArcGISVectorSource(map, sublayerSourceId, url, {
-            bytesLimit: 1000 * 1000 * 5, // 5mb
-          });
+          const source = new ArcGISVectorSource(map, sublayerSourceId, url);
           currentSources.push(source);
           await styleInfo.imageList.addToMap(map);
           currentLayers.push(styleInfo.layers);

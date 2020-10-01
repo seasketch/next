@@ -20,7 +20,6 @@ const WORLD = { xmin: -180, xmax: 180, ymin: -90, ymax: 90 };
  *   'cities-source-id',
  *   "https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0"),
  *   {
- *     bytesLimit: 1000 * 1000 * 2, // 2mb
  *     geometryPrecision: 5,
  *     outFields: "POP,CITY_NAME"
  *   }
@@ -40,11 +39,6 @@ export class ArcGISVectorSource {
             type: "FeatureCollection",
             features: [],
         };
-        /**
-         * Size of the dataset added to the map. Relies on `content-length` header
-         * from the data host, which may not be available.
-         */
-        this.totalBytes = 0;
         this.outFields = "*";
         this.supportsPagination = true;
         this.displayIncompleteFeatureCollections = true;
@@ -73,17 +67,14 @@ export class ArcGISVectorSource {
         this.fetchGeoJSON();
     }
     async fetchGeoJSON() {
-        var _a, _b, _c;
-        if (((_a = this.options) === null || _a === void 0 ? void 0 : _a.bytesLimit) && this.options.bytesLimit < this.totalBytes) {
-            throw new Error("Exceeded data transfer limit for this source");
-        }
+        var _a, _b;
         const params = new URLSearchParams({
             inSR: "4326",
             outSR: "4326",
             where: "1>0",
             outFields: this.outFields,
             returnGeometry: "true",
-            geometryPrecision: ((_c = (_b = this.options) === null || _b === void 0 ? void 0 : _b.geometryPrecision) === null || _c === void 0 ? void 0 : _c.toString()) || "6",
+            geometryPrecision: ((_b = (_a = this.options) === null || _a === void 0 ? void 0 : _a.geometryPrecision) === null || _b === void 0 ? void 0 : _b.toString()) || "6",
             returnIdsOnly: "false",
             f: "geojson",
             resultOffset: this.supportsPagination
@@ -93,7 +84,6 @@ export class ArcGISVectorSource {
         const response = await fetch(`${this.baseUrl}/query?${params.toString()}`, {
             mode: "cors",
         });
-        this.totalBytes += parseInt(response.headers.get("content-length") || "0");
         const featureCollection = await response.json();
         if (featureCollection.error) {
             if (this.supportsPagination &&

@@ -122,9 +122,6 @@ map.on("load", () => {
     map,
     'cities-source-id',
     "https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0"),
-    {
-      bytesLimit: 1000 * 1000 * 2, // 2mb
-    }
   );
 
   imageList.addToMap(map);

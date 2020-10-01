@@ -2381,9 +2381,6 @@ img {
 			<a href="arcgisvectorsourceoptions.html" class="tsd-kind-icon">ArcGISVector<wbr>Source<wbr>Options</a>
 			<ul>
 				<li class=" tsd-kind-property tsd-parent-kind-interface">
-					<a href="arcgisvectorsourceoptions.html#byteslimit" class="tsd-kind-icon">bytes<wbr>Limit</a>
-				</li>
-				<li class=" tsd-kind-property tsd-parent-kind-interface">
 					<a href="arcgisvectorsourceoptions.html#displayincompletefeaturecollections" class="tsd-kind-icon">display<wbr>Incomplete<wbr>Feature<wbr>Collections</a>
 				</li>
 				<li class=" tsd-kind-property tsd-parent-kind-interface">
@@ -2428,7 +2425,6 @@ img {
 					<section class="tsd-index-section ">
 						<h3>Properties</h3>
 						<ul class="tsd-index-list">
-							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="arcgisvectorsourceoptions.html#byteslimit" class="tsd-kind-icon">bytes<wbr>Limit</a></li>
 							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="arcgisvectorsourceoptions.html#displayincompletefeaturecollections" class="tsd-kind-icon">display<wbr>Incomplete<wbr>Feature<wbr>Collections</a></li>
 							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="arcgisvectorsourceoptions.html#geometryprecision" class="tsd-kind-icon">geometry<wbr>Precision</a></li>
 							<li class="tsd-kind-property tsd-parent-kind-interface"><a href="arcgisvectorsourceoptions.html#outfields" class="tsd-kind-icon">out<wbr>Fields</a></li>
@@ -2441,27 +2437,6 @@ img {
 		<section class="tsd-panel-group tsd-member-group ">
 			<h2>Properties</h2>
 			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-				<a name="byteslimit" class="tsd-anchor"></a>
-				<h3><span class="tsd-flag ts-flagOptional">Optional</span> bytes<wbr>Limit</h3>
-				<div class="tsd-signature tsd-kind-icon">bytes<wbr>Limit<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">number</span></div>
-				<aside class="tsd-sources">
-				</aside>
-				<div class="tsd-comment tsd-typography">
-					<div class="lead">
-						<p>If given and the data host provides a <code>content-length</code> header, data will
-						only be fetched until this limit is reached.</p>
-					</div>
-					<dl class="tsd-comment-tags">
-						<dt>type</dt>
-						<dd><p>{number}</p>
-						</dd>
-						<dt>default</dt>
-						<dd><p>unlimited</p>
-						</dd>
-					</dl>
-				</div>
-			</section>
-			<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 				<a name="displayincompletefeaturecollections" class="tsd-anchor"></a>
 				<h3><span class="tsd-flag ts-flagOptional">Optional</span> display<wbr>Incomplete<wbr>Feature<wbr>Collections</h3>
 				<div class="tsd-signature tsd-kind-icon">display<wbr>Incomplete<wbr>Feature<wbr>Collections<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">true</span></div>
@@ -2470,9 +2445,9 @@ img {
 				<div class="tsd-comment tsd-typography">
 					<div class="lead">
 						<p>ArcGISVectorSource will page through results until the entire dataset is
-							downloaded or the <code>bytesLimit</code> is reached. If set to true, data will be
-							rendered each time a page of features are downloaded. Otherwise, the source
-						data will only be updated once upon completion.</p>
+							downloaded. If set to true, data will be rendered each time a page of
+							features are downloaded. Otherwise, the source data will only be updated
+						once upon completion.</p>
 					</div>
 					<dl class="tsd-comment-tags">
 						<dt>type</dt>

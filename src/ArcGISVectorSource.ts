@@ -8,17 +8,10 @@ const WORLD = { xmin: -180, xmax: 180, ymin: -90, ymax: 90 };
 
 export interface ArcGISVectorSourceOptions {
   /**
-   * If given and the data host provides a `content-length` header, data will
-   * only be fetched until this limit is reached.
-   * @type {number}
-   * @default unlimited
-   */
-  bytesLimit?: number;
-  /**
    * ArcGISVectorSource will page through results until the entire dataset is
-   * downloaded or the `bytesLimit` is reached. If set to true, data will be
-   * rendered each time a page of features are downloaded. Otherwise, the source
-   * data will only be updated once upon completion.
+   * downloaded. If set to true, data will be rendered each time a page of
+   * features are downloaded. Otherwise, the source data will only be updated
+   * once upon completion.
    * @type {boolean}
    * @default true
    */
@@ -70,7 +63,6 @@ export interface ArcGISVectorSourceOptions {
  *   'cities-source-id',
  *   "https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0"),
  *   {
- *     bytesLimit: 1000 * 1000 * 2, // 2mb
  *     geometryPrecision: 5,
  *     outFields: "POP,CITY_NAME"
  *   }
@@ -88,17 +80,11 @@ export class ArcGISVectorSource {
    * @type {GeoJSONSource}
    */
   protected source: GeoJSONSource;
-  /**
-   * Size of the dataset added to the map. Relies on `content-length` header
-   * from the data host, which may not be available.
-   */
-  protected totalBytes = 0;
   protected id: string;
   private baseUrl: string;
   private options:
     | undefined
     | {
-        bytesLimit?: number;
         geometryPrecision?: number;
       };
   private map: Map;
@@ -148,9 +134,6 @@ export class ArcGISVectorSource {
   }
 
   private async fetchGeoJSON() {
-    if (this.options?.bytesLimit && this.options.bytesLimit < this.totalBytes) {
-      throw new Error("Exceeded data transfer limit for this source");
-    }
     const params = new URLSearchParams({
       inSR: "4326",
       outSR: "4326",
@@ -167,7 +150,6 @@ export class ArcGISVectorSource {
     const response = await fetch(`${this.baseUrl}/query?${params.toString()}`, {
       mode: "cors",
     });
-    this.totalBytes += parseInt(response.headers.get("content-length") || "0");
     const featureCollection = await response.json();
     if (featureCollection.error) {
       if (

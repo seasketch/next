@@ -1,17 +1,10 @@
 import { Map, GeoJSONSource } from "mapbox-gl";
 export interface ArcGISVectorSourceOptions {
     /**
-     * If given and the data host provides a `content-length` header, data will
-     * only be fetched until this limit is reached.
-     * @type {number}
-     * @default unlimited
-     */
-    bytesLimit?: number;
-    /**
      * ArcGISVectorSource will page through results until the entire dataset is
-     * downloaded or the `bytesLimit` is reached. If set to true, data will be
-     * rendered each time a page of features are downloaded. Otherwise, the source
-     * data will only be updated once upon completion.
+     * downloaded. If set to true, data will be rendered each time a page of
+     * features are downloaded. Otherwise, the source data will only be updated
+     * once upon completion.
      * @type {boolean}
      * @default true
      */
@@ -62,7 +55,6 @@ export interface ArcGISVectorSourceOptions {
  *   'cities-source-id',
  *   "https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer/0"),
  *   {
- *     bytesLimit: 1000 * 1000 * 2, // 2mb
  *     geometryPrecision: 5,
  *     outFields: "POP,CITY_NAME"
  *   }
@@ -77,11 +69,6 @@ export declare class ArcGISVectorSource {
      * @type {GeoJSONSource}
      */
     protected source: GeoJSONSource;
-    /**
-     * Size of the dataset added to the map. Relies on `content-length` header
-     * from the data host, which may not be available.
-     */
-    protected totalBytes: number;
     protected id: string;
     private baseUrl;
     private options;

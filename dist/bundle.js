@@ -201,7 +201,6 @@ var MapBoxGLEsriSources = (function (exports) {
                 type: "FeatureCollection",
                 features: [],
             };
-            this.totalBytes = 0;
             this.outFields = "*";
             this.supportsPagination = true;
             this.displayIncompleteFeatureCollections = true;
@@ -230,17 +229,14 @@ var MapBoxGLEsriSources = (function (exports) {
             this.fetchGeoJSON();
         }
         async fetchGeoJSON() {
-            var _a, _b, _c;
-            if (((_a = this.options) === null || _a === void 0 ? void 0 : _a.bytesLimit) && this.options.bytesLimit < this.totalBytes) {
-                throw new Error("Exceeded data transfer limit for this source");
-            }
+            var _a, _b;
             const params = new URLSearchParams({
                 inSR: "4326",
                 outSR: "4326",
                 where: "1>0",
                 outFields: this.outFields,
                 returnGeometry: "true",
-                geometryPrecision: ((_c = (_b = this.options) === null || _b === void 0 ? void 0 : _b.geometryPrecision) === null || _c === void 0 ? void 0 : _c.toString()) || "6",
+                geometryPrecision: ((_b = (_a = this.options) === null || _a === void 0 ? void 0 : _a.geometryPrecision) === null || _b === void 0 ? void 0 : _b.toString()) || "6",
                 returnIdsOnly: "false",
                 f: "geojson",
                 resultOffset: this.supportsPagination
@@ -250,7 +246,6 @@ var MapBoxGLEsriSources = (function (exports) {
             const response = await fetch(`${this.baseUrl}/query?${params.toString()}`, {
                 mode: "cors",
             });
-            this.totalBytes += parseInt(response.headers.get("content-length") || "0");
             const featureCollection = await response.json();
             if (featureCollection.error) {
                 if (this.supportsPagination &&
