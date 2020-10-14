@@ -17,6 +17,7 @@ import useBreadcrumbs from "use-react-router-breadcrumbs";
 import { useAuth0 } from "@auth0/auth0-react";
 
 const LazyBasicSettings = React.lazy(() => import("./Settings"));
+const LazyDataSettings = React.lazy(() => import("./data/DataSettings"));
 
 interface Section {
   breadcrumb: string;
@@ -177,8 +178,20 @@ const sections: Section[] = [
 ];
 
 export default function AdminApp() {
-  const { slug } = useParams();
-  const routeConfig = sections
+  const { slug } = useParams<{ slug: string }>();
+  const routeConfig = [
+    ...sections,
+    ...[
+      {
+        breadcrumb: "Add Data",
+        path: "/admin/data/add-data",
+      },
+      {
+        breadcrumb: "ArcGIS Server",
+        path: "/admin/data/add-data/arcgis",
+      },
+    ],
+  ]
     .map((section) => ({
       ...section,
       path: `/:slug${section.path}`,
@@ -324,21 +337,23 @@ export default function AdminApp() {
                     <div key={b.key}>
                       <NavLink
                         activeStyle={{ pointerEvents: "none" }}
-                        to={b.location}
-                        className="text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out"
+                        // isActive={b.match.url === }
+                        exact
+                        to={b.match.url}
+                        className="text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out text-sm mr-2 sm:mr-0"
                       >
                         {b.breadcrumb}
                       </NavLink>
                       {i < breadcrumbs.length - 1 && (
                         <svg
-                          className="flex-shrink-0 mx-2 h-5 w-5 text-gray-400"
+                          className="hidden flex-shrink-0 sm:inline -mt-0.5 mx-2 h-5 w-5 text-gray-400"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >
                           <path
-                            fill-rule="evenodd"
+                            fillRule="evenodd"
                             d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                            clip-rule="evenodd"
+                            clipRule="evenodd"
                           />
                         </svg>
                       )}
@@ -394,7 +409,11 @@ export default function AdminApp() {
             </Route>
             <Route exact path={`${path}/activity`}></Route>
             <Route exact path={`${path}/users`}></Route>
-            <Route exact path={`${path}/data`}></Route>
+            <Route path={`${path}/data`}>
+              <React.Suspense fallback={<div></div>}>
+                <LazyDataSettings />
+              </React.Suspense>
+            </Route>
             <Route exact path={`${path}/sketching`}></Route>
             <Route exact path={`${path}/forums`}></Route>
             <Route exact path={`${path}/surveys`}></Route>

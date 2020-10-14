@@ -1,18 +1,16 @@
 import React, { Suspense } from "react";
-import { BrowserRouter as Router, Switch, Route, Link } from "react-router-dom";
+import { Switch, Route } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
-import { useAuth0 } from "@auth0/auth0-react";
 import ProjectsPage from "./homepage/ProjectsPage";
 import Header from "./header/Header";
 import NewProjectCTA from "./homepage/NewProjectCTA";
 import NewProjectPage from "./homepage/NewProjectPage";
-import NotFound from "./NotFound";
 
 const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
 
 function App() {
-  const { t, i18n } = useTranslation(["homepage"]);
+  const { t } = useTranslation(["homepage"]);
   return (
     <div className="App">
       <Suspense fallback={<div>Loading...</div>}>

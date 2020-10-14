@@ -21,7 +21,14 @@ export default function ProjectAutosaveInput(props: {
         variables,
       }).catch((e) => {});
     }
-  }, [debouncedValue, props.propName, props.value]);
+  }, [
+    debouncedValue,
+    props.propName,
+    props.value,
+    props.slug,
+    mutation,
+    mutationStatus,
+  ]);
   return (
     <TextInput
       id={props.propName}

@@ -1,0 +1,126 @@
+import React, { useState } from "react";
+import {
+  normalizeArcGISServerUrl,
+  NormalizedArcGISServerLocation,
+} from "./arcgis";
+import useRecentDataServers from "./useRecentServers";
+
+export default function ArcGISSearchPage({
+  onResult,
+}: {
+  onResult?: (e: {
+    location: NormalizedArcGISServerLocation;
+    version: string;
+  }) => void;
+}) {
+  const [inputUrl, setInputUrl] = useState("");
+  const [inputError, setInputError] = useState<string>();
+  const [recentServers, addServer] = useRecentDataServers();
+
+  const onSubmitServiceUrl = async () => {
+    const l = normalizeArcGISServerUrl(inputUrl);
+    loadServerUrl(l);
+  };
+
+  const loadServerUrl = async (location: NormalizedArcGISServerLocation) => {
+    if (/http:/.test(location.baseUrl)) {
+      setInputError("Service protocol https:// is required.");
+    } else {
+      try {
+        const serviceResponse = await fetch(
+          location.servicesRoot + "?f=json"
+        ).then((r) => r.json());
+        if (serviceResponse.currentVersion) {
+          addServer({ location: location.baseUrl, type: "arcgis" });
+          if (onResult) {
+            onResult({
+              location: location,
+              version: serviceResponse.currentVersion,
+            });
+          }
+          // setVersion(serviceResponse.currentVersion);
+          // setLocation(location);
+        } else {
+          setInputError("Unrecognized server response");
+        }
+      } catch (e) {
+        console.log(e);
+        setInputError(e.toString());
+      }
+    }
+  };
+
+  return (
+    <div className="max-w-lg mx-auto mt-4 px-2">
+      <label
+        htmlFor="arcgis"
+        className="block text-sm font-medium leading-5 text-gray-700"
+      >
+        ArcGIS Server Location
+      </label>
+      <div className="mt-1 flex rounded-md shadow-sm">
+        <div className="relative flex-grow focus-within:z-10">
+          <input
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                onSubmitServiceUrl();
+              }
+            }}
+            id="arcgis"
+            value={inputUrl}
+            onChange={(e) => setInputUrl(e.target.value)}
+            className="form-input block w-full rounded-none rounded-l-md transition ease-in-out duration-150 sm:text-sm"
+            placeholder="https://example.com/argis/rest/services"
+          />
+        </div>
+        <button
+          onClick={onSubmitServiceUrl}
+          className="-ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-r-md text-gray-700 bg-gray-50 hover:text-gray-500 hover:bg-white focus:outline-none focus:shadow-outline-blue focus:border-blue-300 active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150"
+        >
+          <svg
+            className="text-gray-800 w-4 h-4"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <span className="ml-2">Browse</span>
+        </button>
+      </div>
+      {inputError && <p className="text-sm text-red-900">{inputError}</p>}
+      {recentServers && recentServers.length > 0 && (
+        <div className="pt-6">
+          <h4 className="block text-sm font-medium leading-5 text-gray-700">
+            Recently Used Servers
+          </h4>
+          <ul className="pt-2">
+            {recentServers
+              .filter((server) => server.type === "arcgis")
+              .map((server) => (
+                <li
+                  key={server.location}
+                  className="text-sm text-gray-700 hover:text-gray-900 cursor-pointer"
+                  onClick={() =>
+                    loadServerUrl({
+                      baseUrl: server.location,
+                      location: "/",
+                      servicesRoot: server.location + "/arcgis/rest/services",
+                    })
+                  }
+                >
+                  {server.location}
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

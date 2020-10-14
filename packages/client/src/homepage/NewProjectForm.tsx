@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { gql, useQuery } from "@apollo/client";
 import {
   useProjectSlugExistsQuery,
   useCreateProjectMutation,
@@ -16,7 +15,7 @@ export default function NewProjectForm() {
   const [name, setName] = useState("");
   const [mutationError, setMutationError] = useState<string | null>(null);
   const debouncedSlug = useDebounce(slug, 200) as string;
-  const [createProject, mutationStatus] = useCreateProjectMutation({
+  const [createProject] = useCreateProjectMutation({
     refetchQueries: ["SimpleProjectList"],
   });
 
@@ -25,6 +24,10 @@ export default function NewProjectForm() {
       slug: debouncedSlug,
     },
   });
+
+  if (error) {
+    return <span>error.message</span>;
+  }
   return (
     <>
       <div className="mt-6">

@@ -1,15 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  Props,
-  ChangeEvent,
-  useCallback,
-  useRef,
-  SetStateAction,
-  Ref,
-  RefObject,
-  Dispatch,
-} from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import TextInput from "../components/TextInput";
 import {
@@ -34,8 +23,8 @@ import Button from "../components/Button";
 import { useTranslation, Trans } from "react-i18next";
 
 export default function Settings() {
-  const { slug } = useParams();
-  const { error, data, loading } = useCurrentProjectMetadataQuery({
+  const { slug } = useParams<{ slug: string }>();
+  const { data } = useCurrentProjectMetadataQuery({
     variables: { slug },
   });
   const { user } = useAuth0();
@@ -75,9 +64,8 @@ function BasicSettingsForm(props: {
   url: string;
   slug: string;
 }) {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t } = useTranslation(["admin"]);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   useEffect(() => {
     if (copiedToClipboard === true) {
       const timeout = setTimeout(() => {
@@ -284,7 +272,7 @@ function UploadLogoField(props: { slug: string; logoUrl?: string | null }) {
 
 function AccessControlSettings() {
   const { t, i18n } = useTranslation(["admin"]);
-  const { slug } = useParams();
+  const { slug } = useParams<{ slug: string }>();
   const { data, loading, error } = useProjectAccessControlSettingsQuery({
     variables: {
       slug,
@@ -516,7 +504,7 @@ function MapExtentSettings() {
   const [map, setMap] = useState<Map | null>(null);
   const [draw, setDraw] = useState<any>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  const { slug } = useParams();
+  const { slug } = useParams<{ slug: string }>();
   const [drawing, setDrawing] = useState(true);
   const { data, error, loading } = useProjectRegionQuery({
     variables: {
@@ -654,7 +642,7 @@ function MapExtentSettings() {
 
 function SuperUserSettings() {
   const { t, i18n } = useTranslation(["admin"]);
-  const { slug } = useParams();
+  const { slug } = useParams<{ slug: string }>();
   const [isFeatured, setIsFeatured] = useState<boolean | null>(null);
   const { data, loading, error } = useCurrentProjectMetadataQuery({
     variables: {

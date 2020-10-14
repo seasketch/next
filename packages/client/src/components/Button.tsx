@@ -1,4 +1,5 @@
 import React from "react";
+import { useHistory } from "react-router-dom";
 
 export interface ButtonProps {
   /* Disables user interaction */
@@ -15,9 +16,23 @@ export interface ButtonProps {
   loading?: boolean;
   /** Render a <label /> with htmlFor set */
   labelFor?: string;
+  href?: string;
+  children?: React.ReactNode;
 }
 
 export default function Button(props: ButtonProps) {
+  const history = useHistory();
+  let onClick = props.onClick;
+  if (props.href) {
+    onClick = () => {
+      console.log("onClick", props.href);
+      history.push(props.href!);
+    };
+  }
+  let label: string | React.ReactNode = props.label;
+  if (props.children) {
+    label = props.children;
+  }
   const buttonClassName = `select-none ${
     props.disabled
       ? "opacity-75 pointer-events-none"
@@ -58,15 +73,18 @@ export default function Button(props: ButtonProps) {
     </div>
   );
   return (
-    <span className="inline-flex rounded-md shadow-sm">
+    <span
+      className={`inline-flex rounded-md shadow-sm ${props.className}`}
+      onClick={onClick}
+    >
       {props.labelFor ? (
         <label htmlFor={props.labelFor} className={buttonClassName}>
-          {props.label}
+          {label}
           {props.loading && spinner}
         </label>
       ) : (
         <button className={buttonClassName}>
-          {props.label}
+          {label}
           {props.loading && spinner}
         </button>
       )}

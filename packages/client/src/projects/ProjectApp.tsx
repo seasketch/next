@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React from "react";
 import {
   useParams,
   Link,
@@ -11,9 +11,9 @@ import { useCurrentProjectMetadataQuery } from "../generated/graphql";
 import AdminApp from "../admin/AdminApp";
 
 export default function ProjectApp() {
-  const { slug } = useParams();
-  let { path, url } = useRouteMatch();
-  const { data, loading, error } = useCurrentProjectMetadataQuery({
+  const { slug } = useParams<{ slug: string }>();
+  let { path } = useRouteMatch();
+  const { data } = useCurrentProjectMetadataQuery({
     variables: {
       slug: slug || "",
     },

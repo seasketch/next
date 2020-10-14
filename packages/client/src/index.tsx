@@ -5,23 +5,11 @@ import App from "./App";
 import "./i18n";
 import * as serviceWorker from "./serviceWorker";
 import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
-import {
-  ApolloProvider,
-  ApolloClient,
-  createHttpLink,
-  InMemoryCache,
-} from "@apollo/client";
+import { ApolloProvider, ApolloClient, InMemoryCache } from "@apollo/client";
 import { createUploadLink } from "apollo-upload-client";
 import { setContext } from "@apollo/client/link/context";
 import "./tailwind.css";
-import {
-  BrowserRouter as Router,
-  Switch,
-  Route,
-  Link,
-  useHistory,
-} from "react-router-dom";
-import auth0spa from "@auth0/auth0-spa-js";
+import { BrowserRouter as Router, useHistory } from "react-router-dom";
 
 function Auth0ProviderWithRouter(props: any) {
   const history = useHistory();
