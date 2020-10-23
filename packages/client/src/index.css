@@ -38,3 +38,7 @@ code {
   border-right-color: transparent;
   animation: loader-rotate 1s linear infinite;
 }
+
+.CodeMirror {
+  height: auto !important;
+}

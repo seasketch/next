@@ -1,17 +1,17 @@
-import React, { ReactNode, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   CatalogItem,
   extentToLatLngBounds,
   NormalizedArcGISServerLocation,
   useArcGISServiceSettings,
   useMapServerInfo,
-  useVisibleLayersSettings,
-  ArcGISServiceSettings,
   LayerInfo,
+  treeDataFromLayerList,
   MapServerCatalogInfo,
+  ArcGISServiceSettings,
+  VectorSublayerSettings,
 } from "./arcgis";
 import { Map } from "mapbox-gl";
-import OverlayManager, { OverlayConfig } from "./OverlayManager";
 import ArcGISSearchPage from "./ArcGISSearchPage";
 import {
   ArcGISBrowserColumn,
@@ -23,11 +23,18 @@ import OutgoingLinkIcon from "../../../components/OutgoingLinkIcon";
 import ArcGISServiceMetadata from "./ArcGISServiceMetadata";
 import SegmentControl from "../../../components/SegmentControl";
 import SettingsIcon from "../../../components/SettingsIcon";
-import { ArcGISLayerTree } from "./ArcGISLayerTree";
-import { ArcGISVectorSourceOptions } from "@seasketch/mapbox-gl-esri-sources";
 import DynamicMapServerSettingsForm from "./DynamicMapServerSettingsForm";
 import VectorFeatureLayerSettingsForm from "./VectorFeatureLayerSettingsForm";
 import { FeatureLayerSettings } from "./FeatureLayerSettings";
+import {
+  LayerManagerContext,
+  useLayerManager,
+  SeaSketchSource,
+  SeaSketchLayer,
+} from "../../../dataLayers/LayerManager";
+import TableOfContents, {
+  TableOfContentsNode,
+} from "../../../dataLayers/tableOfContents/TableOfContents";
 
 export default function ArcGISBrowser() {
   const [server, setServer] = useState<{
@@ -36,15 +43,12 @@ export default function ArcGISBrowser() {
   }>();
   const [columns, setColumns] = useState<ArcGISBrowserColumnProps[]>([]);
   const [map, setMap] = useState<Map | null>(null);
-  const [overlayManager, setOverlayManager] = useState<OverlayManager>();
   const [selectedMapServer, setSelectedMapServer] = useState<string>();
   const mapServerInfo = useMapServerInfo(selectedMapServer);
   const [selectedFeatureLayer, setSelectedFeatureLayer] = useState<LayerInfo>();
   const serviceColumnRef = useRef<HTMLDivElement>(null);
-
-  const [visibleLayers, updateVisibleLayers] = useVisibleLayersSettings(
-    selectedMapServer
-  );
+  const layerManager = useLayerManager();
+  const [treeData, setTreeData] = useState<TableOfContentsNode[]>([]);
   const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
     selectedMapServer
   );
@@ -65,23 +69,90 @@ export default function ArcGISBrowser() {
     }
   }, [serviceData, map]);
 
-  // Update overlays when any settings or state changes
+  // Update sources and layers whenever settings change
   useEffect(() => {
-    if (serviceData && overlayManager && serviceSettings) {
-      const overlays = calculateOverlays(
-        serviceData.mapServerInfo,
-        serviceData.layerInfo,
-        serviceSettings,
-        visibleLayers
-      );
-      overlayManager.updateOverlays(overlays);
-      console.log("updateOverlays", overlays);
-    } else {
-      if (overlayManager) {
-        overlayManager.updateOverlays([]);
+    if (serviceSettings && serviceData && layerManager.manager) {
+      const sources: SeaSketchSource[] = [];
+      const layers: SeaSketchLayer[] = [];
+      if (serviceSettings.sourceType === "arcgis-dynamic-mapservice") {
+        sources.push(
+          dynamicServiceSourceFromSettings(serviceData, serviceSettings)
+        );
+      } else if (serviceSettings.sourceType === "arcgis-vector-source") {
+        for (const layer of serviceData.layerInfo) {
+          const settings = serviceSettings.vectorSublayerSettings.find(
+            (s) => s.sublayer === layer.id
+          );
+          sources.push(vectorSourceFromSettings(layer, settings!));
+        }
       }
+
+      for (const layer of serviceData.layerInfo) {
+        if (serviceSettings.sourceType === "arcgis-dynamic-mapservice") {
+          layers.push({
+            id: layer.generatedId,
+            sublayerId: layer.id.toString(),
+            sourceId: serviceData.mapServerInfo.generatedId,
+            renderUnder: serviceSettings.renderUnder || "labels",
+          });
+        } else {
+          const vectorSettings = serviceSettings.vectorSublayerSettings.find(
+            (v) => v.sublayer === layer.id
+          );
+          layers.push(vectorLayerFromSettings(layer, vectorSettings));
+        }
+      }
+      layerManager.manager.reset(sources, layers);
     }
-  }, [overlayManager, serviceData, visibleLayers, serviceSettings]);
+  }, [serviceData, serviceSettings?.sourceType]);
+
+  useEffect(() => {
+    if (
+      serviceData &&
+      layerManager.manager &&
+      serviceSettings &&
+      serviceSettings.sourceType === "arcgis-dynamic-mapservice"
+    ) {
+      layerManager.manager.updateSource(
+        dynamicServiceSourceFromSettings(serviceData, serviceSettings)
+      );
+    }
+  }, [
+    serviceSettings?.enableHighDpi,
+    serviceSettings?.imageFormat,
+    serviceSettings?.renderUnder,
+  ]);
+
+  useEffect(() => {
+    if (serviceData && layerManager.manager) {
+      const data = treeDataFromLayerList(serviceData.layerInfo);
+      setTreeData(data);
+      // Collect visible layers *only* if they are under toggled groups/folders
+      const collectIds = (ids: string[], node: TableOfContentsNode) => {
+        const layerInfo = serviceData.layerInfo.find(
+          (lyr) => lyr.generatedId === node.id
+        );
+        if (layerInfo?.defaultVisibility === true || node === data[0]) {
+          if (node.children) {
+            for (const child of node.children) {
+              collectIds(ids, child);
+            }
+          } else {
+            if (node.type === "layer") {
+              if (layerInfo?.defaultVisibility === true) {
+                ids.push(node.id);
+              }
+            }
+          }
+        } else {
+          // Don't descend into un-toggled folders
+        }
+        return ids;
+      };
+      const collectedVisibleLayers = collectIds([], data[0]);
+      layerManager.manager.setVisibleLayers(collectedVisibleLayers);
+    }
+  }, [serviceData, layerManager.manager]);
 
   // Add new catalog column or service column on selection
   const onCatalogItemSelection = (
@@ -119,187 +190,213 @@ export default function ArcGISBrowser() {
   } else {
     return (
       <>
-        <div className="flex flex-col h-full">
-          <OverlayMap
-            onLoad={(map, manager) => {
-              setMap(map);
-              setOverlayManager(manager);
-            }}
-          />
-          <div className="bg-white text-lg p-2 text-primary-500 border-b">
-            {server.location.baseUrl}
-            <span className="ml-4 italic text-gray-500">
-              ArcGIS Version {server.version}
-            </span>
-          </div>
-          <div className="flex flex-2 h-1/2 max-w-full overflow-x-scroll">
-            {columns.map((props) => (
-              <ArcGISBrowserColumn
-                key={props.url}
-                {...props}
-                onSelection={(item) => onCatalogItemSelection(item, props)}
-              />
-            ))}
-            {selectedMapServer && mapServerInfo.loading && (
-              <div className="flex-1 flex justify-center items-center">
-                <Spinner svgClassName="h-8 w-8" />
-              </div>
-            )}
-            {selectedMapServer && serviceData && serviceSettings && (
-              <div
-                ref={serviceColumnRef}
-                className="p-2 overflow-y-scroll bg-white max-w-2xl w-1/2 shadow"
-                style={{ minWidth: 320 }}
-              >
-                <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    {serviceData.mapServerInfo.documentInfo.Title ||
-                      serviceData.mapServerInfo.mapName}
-                    <a target="_blank" href={serviceData.mapServerInfo.url}>
-                      <OutgoingLinkIcon />
-                    </a>
-                  </h3>
-                </div>
-                <ArcGISServiceMetadata
-                  serviceInfo={serviceData.mapServerInfo}
+        <LayerManagerContext.Provider value={layerManager}>
+          <div className="flex flex-col h-full">
+            <OverlayMap
+              onLoad={(map) => {
+                setMap(map);
+                layerManager.manager!.setMap(map);
+              }}
+            />
+            <div className="bg-white text-lg p-2 text-primary-500 border-b">
+              {server.location.baseUrl}
+              <span className="ml-4 italic text-gray-500">
+                ArcGIS Version {server.version}
+              </span>
+            </div>
+            <div className="flex flex-2 h-1/2 max-w-full overflow-x-scroll">
+              {columns.map((props) => (
+                <ArcGISBrowserColumn
+                  key={props.url}
+                  {...props}
+                  onSelection={(item) => onCatalogItemSelection(item, props)}
                 />
-                <div className="mt-10 px-6">
-                  <div className="mx-auto mb-4 max-w-md">
-                    <SegmentControl
-                      segments={["Image Source", "Vector Sources"]}
-                      value={
-                        serviceSettings.sourceType ===
-                        "arcgis-dynamic-mapservice"
-                          ? "Image Source"
-                          : "Vector Sources"
-                      }
-                      onClick={(segment) =>
-                        setServiceSettings({
-                          ...serviceSettings,
-                          sourceType:
-                            segment === "Image Source"
-                              ? "arcgis-dynamic-mapservice"
-                              : "arcgis-vector-source",
-                        })
-                      }
-                    />
-                  </div>
-                  {serviceSettings.sourceType ===
-                    "arcgis-dynamic-mapservice" && (
-                    <p className="text-sm text-gray-600">
-                      Image sources display data as full-screen images, typical
-                      of how most web mapping portals work. Each time the user
-                      pans or zooms the map a new image will be requested and
-                      displayed with the requested layers.
-                    </p>
-                  )}
-
-                  {serviceSettings.sourceType === "arcgis-vector-source" && (
-                    <p className="text-sm text-gray-600">
-                      When using vector sources, SeaSketch loads actual geometry
-                      data and uses the user's browser to render it. This can
-                      result in a much faster, sharper, and more interactive map
-                      but takes a little more work to configure. Each layer can
-                      be styled and configured independently (click{" "}
-                      <SettingsIcon className="w-4 h-4 inline-block" />
-                      ).
-                    </p>
-                  )}
-
-                  <ArcGISLayerTree
-                    onVectorSettingsClick={(featureLayerInfo) => {
-                      setSelectedFeatureLayer(featureLayerInfo);
-                    }}
-                    vectorMode={
-                      serviceSettings.sourceType === "arcgis-vector-source"
-                    }
-                    mapServiceInfo={serviceData.mapServerInfo}
-                    layers={serviceData.layerInfo}
-                    onVisibleLayersChanged={(layerIds) =>
-                      updateVisibleLayers(layerIds)
-                    }
-                  />
-                  {serviceSettings.sourceType ===
-                    "arcgis-dynamic-mapservice" && (
-                    <DynamicMapServerSettingsForm
-                      settings={serviceSettings}
-                      updateSettings={setServiceSettings}
-                    />
-                  )}
-                  {serviceSettings.sourceType === "arcgis-vector-source" && (
-                    <VectorFeatureLayerSettingsForm
-                      settings={serviceSettings}
-                      updateSettings={setServiceSettings}
-                    />
-                  )}
+              ))}
+              {selectedMapServer && mapServerInfo.loading && (
+                <div className="flex-1 flex justify-center items-center">
+                  <Spinner svgClassName="h-8 w-8" />
                 </div>
-              </div>
-            )}
-            {selectedFeatureLayer && serviceSettings && (
-              <FeatureLayerSettings
-                layer={selectedFeatureLayer}
-                settings={serviceSettings}
-                updateSettings={setServiceSettings}
-              />
-            )}
+              )}
+              {selectedMapServer && serviceData && serviceSettings && (
+                <div
+                  ref={serviceColumnRef}
+                  className="p-2 overflow-y-scroll bg-white max-w-2xl w-1/2 shadow"
+                  style={{ minWidth: 320 }}
+                >
+                  <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      {serviceData.mapServerInfo.documentInfo.Title ||
+                        serviceData.mapServerInfo.mapName}
+                      <a target="_blank" href={serviceData.mapServerInfo.url}>
+                        <OutgoingLinkIcon />
+                      </a>
+                    </h3>
+                  </div>
+                  <ArcGISServiceMetadata
+                    serviceInfo={serviceData.mapServerInfo}
+                  />
+                  <div className="mt-10 px-6">
+                    <div className="mx-auto mb-4 max-w-md">
+                      <SegmentControl
+                        segments={["Image Source", "Vector Sources"]}
+                        value={
+                          serviceSettings.sourceType ===
+                          "arcgis-dynamic-mapservice"
+                            ? "Image Source"
+                            : "Vector Sources"
+                        }
+                        onClick={(segment) =>
+                          setServiceSettings({
+                            ...serviceSettings,
+                            sourceType:
+                              segment === "Image Source"
+                                ? "arcgis-dynamic-mapservice"
+                                : "arcgis-vector-source",
+                          })
+                        }
+                      />
+                    </div>
+                    {serviceSettings.sourceType ===
+                      "arcgis-dynamic-mapservice" && (
+                      <p className="text-sm text-gray-600">
+                        Image sources display data as full-screen images,
+                        typical of how most web mapping portals work. Each time
+                        the user pans or zooms the map a new image will be
+                        requested and displayed with the requested layers.
+                      </p>
+                    )}
+
+                    {serviceSettings.sourceType === "arcgis-vector-source" && (
+                      <p className="text-sm text-gray-600">
+                        When using vector sources, SeaSketch loads actual
+                        geometry data and uses the user's browser to render it.
+                        This can result in a much faster, sharper, and more
+                        interactive map but takes a little more work to
+                        configure. Each layer can be styled and configured
+                        independently (click{" "}
+                        <SettingsIcon className="w-4 h-4 inline-block" />
+                        ).
+                      </p>
+                    )}
+                    <TableOfContents
+                      nodes={treeData}
+                      onChange={(data) => setTreeData(data)}
+                      extraButtons={
+                        serviceSettings.sourceType === "arcgis-vector-source"
+                          ? (node) =>
+                              node.type === "layer"
+                                ? [
+                                    <button
+                                      className="cursor-pointer rounded block border mr-2 focus:outline-none focus:shadow-outline-blue p-0.5"
+                                      onClick={() =>
+                                        setSelectedFeatureLayer(
+                                          serviceData.layerInfo.find(
+                                            (l) => l.generatedId === node.id
+                                          )
+                                        )
+                                      }
+                                    >
+                                      <SettingsIcon className="w-4 h-4 text-primary-500 hover:text-primary-600" />
+                                    </button>,
+                                  ]
+                                : []
+                          : undefined
+                      }
+                    />
+                    {serviceSettings.sourceType ===
+                      "arcgis-dynamic-mapservice" && (
+                      <DynamicMapServerSettingsForm
+                        settings={serviceSettings}
+                        updateSettings={setServiceSettings}
+                      />
+                    )}
+                    {serviceSettings.sourceType === "arcgis-vector-source" && (
+                      <VectorFeatureLayerSettingsForm
+                        settings={serviceSettings}
+                        updateSettings={setServiceSettings}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+              {selectedFeatureLayer && serviceSettings && (
+                <FeatureLayerSettings
+                  layer={selectedFeatureLayer}
+                  settings={serviceSettings}
+                  updateSettings={(settings) => {
+                    setServiceSettings(settings);
+                    const layerSettings = settings.vectorSublayerSettings.find(
+                      (s) => s.sublayer === selectedFeatureLayer.id
+                    );
+                    const source = vectorSourceFromSettings(
+                      selectedFeatureLayer,
+                      layerSettings
+                    );
+                    layerManager.manager!.updateSource(source);
+                    layerManager.manager!.updateLayer(
+                      vectorLayerFromSettings(
+                        selectedFeatureLayer,
+                        layerSettings
+                      )
+                    );
+                  }}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        </LayerManagerContext.Provider>
       </>
     );
   }
 }
 
-const calculateOverlays = (
-  mapServiceInfo: MapServerCatalogInfo,
-  layerInfo: LayerInfo[],
-  settings: ArcGISServiceSettings,
-  visibleLayers?: number[]
-): OverlayConfig => {
-  const overlays: OverlayConfig = [];
-  console.log("settings", settings);
-  if (settings.sourceType === "arcgis-dynamic-mapservice") {
-    overlays.push({
-      id: mapServiceInfo.url,
-      type: "ArcGISDynamicMapService",
-      url: mapServiceInfo.url,
-      options: {
-        supportsDynamicLayers: mapServiceInfo.supportsDynamicLayers,
-        useDevicePixelRatio: settings.enableHighDpi,
-        layers: visibleLayers
-          ? visibleLayers.map((lyr) => ({ sublayer: lyr }))
-          : undefined,
-        queryParameters: {
-          format: settings.imageFormat,
-          transparent: "true",
-        },
+function dynamicServiceSourceFromSettings(
+  serviceData: {
+    mapServerInfo: MapServerCatalogInfo;
+    layerInfo: LayerInfo[];
+  },
+  serviceSettings: ArcGISServiceSettings
+): SeaSketchSource {
+  return {
+    id: serviceData.mapServerInfo.generatedId,
+    type: "ArcGISDynamicMapService",
+    url: serviceData.mapServerInfo.url,
+    options: {
+      supportsDynamicLayers: serviceData.mapServerInfo.supportsDynamicLayers,
+      useDevicePixelRatio: serviceSettings.enableHighDpi,
+      queryParameters: {
+        format: serviceSettings.imageFormat,
+        transparent: "true",
       },
-    });
-  } else if (settings.sourceType === "arcgis-vector-source") {
-    for (const sublayerId of visibleLayers || []) {
-      if (settings.excludedSublayers.indexOf(sublayerId) === -1) {
-        const info = layerInfo.find((l) => l.id === sublayerId);
-        const layerSettings = settings.vectorSublayerSettings.find(
-          (s) => s.sublayer === sublayerId
-        );
-        if (info && info.type === "Feature Layer") {
-          overlays.push({
-            id: info.generatedSourceId,
-            type: "ArcGISVectorSource",
-            url: `${mapServiceInfo.url}/${sublayerId}`,
-            imageList: info.imageList,
-            layers: info.mapboxLayers,
-            options: {
-              supportsPagination:
-                info.advancedQueryCapabilities.supportsPagination,
-              bytesLimit: layerSettings?.ignoreByteLimit ? undefined : 5000000,
-              geometryPrecision: layerSettings?.geometryPrecision || 6,
-            } as ArcGISVectorSourceOptions,
-          });
-        }
-      }
-    }
-  } else {
-    throw new Error("Unknown source type");
-  }
-  return overlays;
-};
+    },
+  };
+}
+
+function vectorSourceFromSettings(
+  layer: LayerInfo,
+  settings?: VectorSublayerSettings
+): SeaSketchSource {
+  return {
+    id: layer.generatedId,
+    type: "ArcGISVectorSource",
+    url: layer.url,
+    imageSets: layer.imageList ? layer.imageList.toJSON() : [],
+    options: {
+      bytesLimit: settings?.ignoreByteLimit ? undefined : 5000000,
+      outFields: "*",
+      geometryPrecision: settings?.geometryPrecision,
+    },
+  };
+}
+
+function vectorLayerFromSettings(
+  layer: LayerInfo,
+  settings?: VectorSublayerSettings
+): SeaSketchLayer {
+  return {
+    id: layer.generatedId,
+    sourceId: layer.generatedId,
+    renderUnder: settings?.renderUnder || "labels",
+    mapboxLayers: settings?.mapboxLayers || layer.mapboxLayers,
+  };
+}

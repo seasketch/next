@@ -1,9 +1,16 @@
 import { Layer, LngLatBoundsLike } from "mapbox-gl";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Symbol } from "arcgis-rest-api";
-import { ImageList } from "@seasketch/mapbox-gl-esri-sources/dist/src/ImageList";
+import { ImageList } from "@seasketch/mapbox-gl-esri-sources";
 import { styleForFeatureLayer } from "@seasketch/mapbox-gl-esri-sources";
 import { v4 as uuid } from "uuid";
+import { fetchFeatureLayerData } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISVectorSource";
+import bboxPolygon from "@turf/bbox-polygon";
+import area from "@turf/area";
+import bbox from "@turf/bbox";
+import geobuf from "geobuf";
+import Pbf from "pbf";
+import { TableOfContentsNode } from "../../../dataLayers/tableOfContents/TableOfContents";
 
 export interface NormalizedArcGISServerLocation {
   baseUrl: string;
@@ -105,6 +112,7 @@ export interface MapServerCatalogInfo {
   maxRecordCount: number;
   maxImageHeight: number;
   maxImageWidth: number;
+  generatedId: string;
 }
 
 export interface Extent {
@@ -150,7 +158,7 @@ export interface LayerInfo {
   };
   mapboxLayers: Layer[];
   imageList: ImageList;
-  generatedSourceId: string;
+  generatedId: string;
 }
 
 const mapServerInfoCache: {
@@ -193,6 +201,7 @@ export function useMapServerInfo(location: string | undefined) {
         .then(async (r) => {
           const mapServerData = await r.json();
           mapServerData.url = location;
+          mapServerData.generatedId = uuid();
           if (!abortController.signal.aborted) {
             fetch(`${location}/layers?f=json`, {
               signal: abortController.signal,
@@ -204,14 +213,14 @@ export function useMapServerInfo(location: string | undefined) {
               const layerInfo: LayerInfo[] = await Promise.all(
                 layerData.layers.map(async (lyr: LayerInfo) => {
                   if (lyr.type === "Feature Layer") {
-                    const generatedSourceId = uuid();
+                    const generatedId = uuid();
                     const { layers, imageList } = await styleForFeatureLayer(
                       location + "/" + lyr.id,
-                      generatedSourceId
+                      generatedId
                     );
                     return {
                       ...lyr,
-                      generatedSourceId,
+                      generatedId,
                       mapboxLayers: layers,
                       imageList,
                       url: `${location}/${lyr.id}`,
@@ -273,119 +282,6 @@ export type MapServerImageFormat =
   | "GIF"
   | "JPG"
   | "PNG24";
-
-// export interface ArcGISVectorSublayerDetails {
-//   [sublayerId: number]: ArcGISVectorSublayerDetail;
-// }
-
-// export interface ArcGISVectorSublayerDetail {
-//   data?: {
-//     /** in bytes */
-//     estimatedSize: number;
-//     numberOfFeatures: number;
-//     supportsPagination: boolean;
-//   };
-//   loading: boolean;
-//   error?: string;
-// }
-
-// export function useArcGISVectorSublayerDetails(
-//   layers: LayerInfo[],
-//   baseServiceLocation: string
-// ) {
-//   const [data, setData] = useState<ArcGISVectorSublayerDetails>();
-
-//   useEffect(() => {
-//     const abortController = new AbortController();
-//     (async () => {
-//       for (const layer of layers.filter((l) => l.type === "Feature Layer")) {
-//         if (!abortController.signal.aborted) {
-//           setData((prev) => {
-//             prev = prev || {};
-//             prev[layer.id] = {
-//               loading: true,
-//             };
-//             return { ...prev };
-//           });
-//           try {
-//             const sublayerData = await fetchVectorSublayerDetails(
-//               baseServiceLocation,
-//               layer
-//             );
-//             if (!abortController.signal.aborted) {
-//               setData((prev) => {
-//                 prev![layer.id].data = {
-//                   ...sublayerData,
-//                 };
-//                 prev![layer.id].loading = false;
-//                 return { ...prev };
-//               });
-//             }
-//           } catch (e) {
-//             setData((prev) => {
-//               prev = prev || {};
-//               prev[layer.id] = {
-//                 loading: true,
-//               };
-//               return { ...prev };
-//             });
-//           }
-//         }
-//       }
-//     })();
-//     return () => {
-//       setData({});
-//       abortController.abort();
-//     };
-//   }, [layers, baseServiceLocation]);
-//   return data;
-// }
-
-// async function fetchVectorSublayerDetails(
-//   baseServiceLocation: string,
-//   layer: LayerInfo
-// ): Promise<{
-//   estimatedSize: number;
-//   numberOfFeatures: number;
-//   supportsPagination: boolean;
-// }> {
-//   const data = {
-//     supportsPagination: layer.advancedQueryCapabilities.supportsPagination,
-//     numberOfFeatures: 0,
-//     estimatedSize: 0,
-//   };
-//   const location = `${baseServiceLocation}/${layer.id}`;
-//   // Get count
-//   const response = await fetch(
-//     `${location}/query?f=json&where=1>0&returnCountOnly=true`,
-//     {
-//       cache: "force-cache",
-//     }
-//   );
-//   if (!response.ok) {
-//     throw new Error("Invalid return data");
-//   } else {
-//     const json = await response.json();
-//     data.numberOfFeatures = json.count as number;
-//   }
-//   // Get size
-//   let query = `${location}/query?f=geojson&where=1>0&geometryPrecision=6`;
-//   if (layer.advancedQueryCapabilities.supportsPagination) {
-//     query = query + "&resultRecordCount=10&resultOffset=0&outFields=*";
-//   }
-//   const geomResponse = await fetch(query, { cache: "force-cache" });
-//   if (!response.ok) {
-//     throw new Error("Problem fetching sample of geometry");
-//   }
-//   const jsonData = await geomResponse.json();
-//   const size = new TextEncoder().encode(JSON.stringify(jsonData)).length;
-//   data.estimatedSize =
-//     data.numberOfFeatures <= 10
-//       ? size
-//       : (size / jsonData.features.length) * data.numberOfFeatures;
-
-//   return data;
-// }
 
 export interface CatalogItem {
   name: string;
@@ -464,8 +360,9 @@ export interface VectorSublayerSettings {
   renderUnder: RenderUnderBasemapLayers;
   instantLayers: boolean;
   geobufSource?: string;
-  geometryPrecision: 4 | 5 | 6 | 7;
+  geometryPrecision: 4 | 5 | 6;
   ignoreByteLimit: boolean;
+  mapboxLayers?: any[];
   // tileSource: string;
   // tileJobId: string;
 }
@@ -528,4 +425,111 @@ export function useVisibleLayersSettings(
       }
     },
   ];
+}
+
+export function useFeatureLayerSizeData(
+  url: string,
+  settings?: VectorSublayerSettings
+) {
+  const [data, setData] = useState<{
+    geoJsonBytes: number;
+    geobufBytes: number;
+    areaKm: number;
+  }>();
+  const [loading, setLoading] = useState<boolean>();
+  const [error, setError] = useState<Error>();
+
+  function updateStats() {
+    if (url) {
+      setLoading(true);
+      fetchFeatureLayerData(
+        url,
+        "*",
+        (e) => {
+          setLoading(false);
+          setError(e);
+        },
+        settings?.geometryPrecision || 6
+      ).then((featureCollection) => {
+        const geoJsonBytes = byteLength(JSON.stringify(featureCollection));
+        const box = bboxPolygon(bbox(featureCollection));
+        const sqMeters = area(box);
+        const areaKm = sqMeters / 1000000;
+        const buffer = geobuf.encode(featureCollection, new Pbf());
+        setData({
+          geoJsonBytes,
+          geobufBytes: buffer.length,
+          areaKm,
+        });
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    setData(undefined);
+    setError(undefined);
+    updateStats();
+  }, [settings?.geometryPrecision, url]);
+  return {
+    data,
+    loading,
+    error,
+  };
+}
+
+// https://stackoverflow.com/a/23329386/299467
+function byteLength(str: string) {
+  // returns the byte length of an utf8 string
+  var s = str.length;
+  for (var i = str.length - 1; i >= 0; i--) {
+    var code = str.charCodeAt(i);
+    if (code > 0x7f && code <= 0x7ff) s++;
+    else if (code > 0x7ff && code <= 0xffff) s += 2;
+    if (code >= 0xdc00 && code <= 0xdfff) i--; //trail surrogate
+  }
+  return s;
+}
+
+export function treeDataFromLayerList(layers: LayerInfo[]) {
+  let data: TableOfContentsNode[] = [];
+  let nodesBySublayer: { [id: string]: TableOfContentsNode } = {
+    root: {
+      id: "root",
+      title: "Layers",
+      expanded: true,
+      type: "folder",
+      children: [],
+    },
+  };
+  const root = nodesBySublayer["root"];
+  data.push(root);
+  if (layers.length) {
+    for (const layer of layers) {
+      const node: TableOfContentsNode = {
+        id: layer.generatedId,
+        title: layer.name,
+        expanded: false,
+        type: layer.type === "Group Layer" ? "folder" : "layer",
+      };
+      nodesBySublayer[layer.id] = node;
+      if (layer.parentLayer && layer.parentLayer.id !== -1) {
+        const parent = nodesBySublayer[layer.parentLayer.id];
+        if (!parent) {
+          throw new Error(`Could not find parent node for ${layer.name}`);
+        }
+        if (!parent.children) {
+          parent.children = [];
+        }
+        parent.children.push(node);
+      } else {
+        root.children!.push(node);
+      }
+    }
+  } else {
+    data = [];
+  }
+  return data;
 }

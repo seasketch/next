@@ -68,7 +68,7 @@ export default function MapServerColumn(props: {
           const layerInfo = data.layerInfo.find((l) => l.id === sublayerId);
           if (layerInfo && layerInfo.type === "Feature Layer") {
             overlays.push({
-              id: layerInfo.generatedSourceId,
+              id: layerInfo.generatedId,
               type: "ArcGISVectorSource",
               url: `${props.item.url}/${sublayerId}`,
               imageList: layerInfo.imageList,

@@ -6,6 +6,7 @@ import {
 } from "@seasketch/mapbox-gl-esri-sources";
 import { ImageList } from "@seasketch/mapbox-gl-esri-sources/dist/src/ImageList";
 import { ImageSource, Layer, Map } from "mapbox-gl";
+import { v4 as uuid } from "uuid";
 
 interface Overlay {
   id: string;
@@ -29,6 +30,7 @@ interface ArcGISVectorSourceOverlay extends Overlay {
   options: ArcGISVectorSourceOptions;
   imageList: ImageList;
   layers: Layer[];
+  finalAddedLayers?: Layer[];
 }
 
 interface ArcGISVectorSourceOverlayInstance extends ArcGISVectorSourceOverlay {
@@ -46,6 +48,7 @@ export default class OverlayManager {
     | ArcGISDynamicMapServiceOverlayInstance
     | ArcGISVectorSourceOverlayInstance
   )[];
+  private visibleLayersIds: { [overlayId: string]: string[] } = {};
 
   constructor(
     map: Map,
@@ -59,26 +62,28 @@ export default class OverlayManager {
   }
 
   updateOverlays(
-    overlays: (ArcGISDynamicMapServiceOverlay | ArcGISVectorSourceOverlay)[]
+    newOverlays: (ArcGISDynamicMapServiceOverlay | ArcGISVectorSourceOverlay)[]
   ) {
-    // update or remove existing overlays depending on new configuration
-    for (const overlay of [...this.visibleOverlays]) {
-      const match = overlays.find(({ id }) => id === overlay.id);
-      if (!match) {
-        // remove any overlays that should no longer be visible
-        this.removeOverlay(overlay);
-      } else {
-        // update any that already exist
-        this.updateOverlay(overlay, match);
-      }
-    }
-    // add the rest
-    for (const overlay of overlays) {
-      const match = this.visibleOverlays.find(({ id }) => id === overlay.id);
-      if (!match) {
-        this.addOverlay(overlay);
-      }
-    }
+    // // update or remove existing overlays depending on new configuration
+    // for (const existingOverlay of [...this.visibleOverlays]) {
+    //   const newOverlayProps = newOverlays.find(
+    //     ({ id }) => id === existingOverlay.id
+    //   );
+    //   if (!newOverlayProps) {
+    //     // remove any overlays that should no longer be visible
+    //     this.removeOverlay(existingOverlay);
+    //   } else {
+    //     // update any that already exist
+    //     this.updateOverlay(existingOverlay, newOverlayProps);
+    //   }
+    // }
+    // // add the rest
+    // for (const overlay of newOverlays) {
+    //   const match = this.visibleOverlays.find(({ id }) => id === overlay.id);
+    //   if (!match) {
+    //     this.addOverlay(overlay);
+    //   }
+    // }
   }
 
   private removeOverlay(
@@ -91,9 +96,7 @@ export default class OverlayManager {
       this.map.removeLayer(overlay.layer.id);
       this.map.removeSource(overlay.id);
     } else if (isArcGISVectorSourceOverlayInstance(overlay)) {
-      for (const layer of overlay.layers) {
-        this.map.removeLayer(layer.id);
-      }
+      this.removeLayersForOverlay(overlay.id);
       this.map.removeSource(overlay.id);
     } else {
       throw new Error("Unrecognized overlay type");
@@ -102,77 +105,96 @@ export default class OverlayManager {
   }
 
   private async updateOverlay(
-    overlay:
+    existingOverlay:
       | ArcGISVectorSourceOverlayInstance
       | ArcGISDynamicMapServiceOverlayInstance,
     newProperties: ArcGISVectorSourceOverlay | ArcGISDynamicMapServiceOverlay
   ) {
-    if (overlay.id !== newProperties.id) {
+    if (existingOverlay.id !== newProperties.id) {
       throw new Error("Cannot update overlay with different ID than original");
     }
-    if (isArcGISDynamicMapServiceOverlayInstance(overlay)) {
+    if (isArcGISDynamicMapServiceOverlayInstance(existingOverlay)) {
       // ArcGISDynamicMapService instances will compare new options and prevent
       // unnecessary re-renders
       const props = newProperties as ArcGISDynamicMapServiceOverlay;
       if (props.options.useDevicePixelRatio !== undefined) {
-        overlay.instance.updateUseDevicePixelRatio(
+        existingOverlay.instance.updateUseDevicePixelRatio(
           props.options.useDevicePixelRatio
         );
       }
       if (props.options.queryParameters) {
-        overlay.instance.updateQueryParameters(props.options.queryParameters);
+        existingOverlay.instance.updateQueryParameters(
+          props.options.queryParameters
+        );
       }
       if (props.options.layers) {
-        overlay.instance.updateLayers(props.options.layers);
+        existingOverlay.instance.updateLayers(props.options.layers);
       }
-      if (props.url !== overlay.url) {
+      if (props.url !== existingOverlay.url) {
         throw new Error("Cannot update the url of an overlay");
       }
-      overlay.options = props.options;
-    } else if (isArcGISVectorSourceOverlayInstance(overlay)) {
+      existingOverlay.options = props.options;
+    } else if (isArcGISVectorSourceOverlayInstance(existingOverlay)) {
       const props = newProperties as ArcGISVectorSourceOverlay;
-      if (props.url !== overlay.url) {
+      if (props.url !== existingOverlay.url) {
         throw new Error("Cannot update the url of an overlay");
       }
       // ArcGISVectorSource instances aren't designed to be updated. Any changes
       // to options will require removing any layers and reloading the source
       const optionsChanges =
-        props.options.displayIncompleteFeatureCollections !=
-          overlay.options.displayIncompleteFeatureCollections ||
-        props.options.geometryPrecision != overlay.options.geometryPrecision ||
-        props.options.outFields != overlay.options.outFields ||
-        props.options.supportsPagination != overlay.options.supportsPagination;
+        props.options.bytesLimit != existingOverlay.options.bytesLimit ||
+        props.options.geometryPrecision !=
+          existingOverlay.options.geometryPrecision ||
+        props.options.outFields != existingOverlay.options.outFields ||
+        props.options.supportsPagination !=
+          existingOverlay.options.supportsPagination;
       // TODO: may need to improve layer and imageList comparison here
       if (
         optionsChanges ||
-        props.layers !== overlay.layers ||
-        props.imageList !== overlay.imageList
+        props.layers !== existingOverlay.layers ||
+        props.imageList !== existingOverlay.imageList
       ) {
-        for (const layer of props.layers) {
-          this.map.removeLayer(layer.id);
-        }
-        if (props.imageList !== overlay.imageList) {
-          await overlay.imageList.removeFromMap(this.map);
-          overlay.imageList = props.imageList;
-          await overlay.imageList.addToMap(this.map);
+        this.removeLayersForOverlay(existingOverlay.id);
+        if (props.imageList !== existingOverlay.imageList) {
+          await existingOverlay.imageList.removeFromMap(this.map);
+          existingOverlay.imageList = props.imageList;
+          await existingOverlay.imageList.addToMap(this.map);
         }
         if (optionsChanges) {
-          this.map.removeSource(overlay.id);
+          this.map.removeSource(existingOverlay.id);
           const newSource = new ArcGISVectorSource(
             this.map,
             props.id,
             props.url,
             props.options
           );
-          overlay.options = props.options;
+          existingOverlay.options = props.options;
         }
-        overlay.layers = props.layers;
-        for (const layer of overlay.layers) {
-          this.map.addLayer(layer);
-        }
+        this.addLayersForOverlay(existingOverlay.id, props.layers);
       }
     } else {
       throw new Error("Unrecognized overlay type");
+    }
+  }
+
+  private removeLayersForOverlay(overlayId: string) {
+    for (const id of this.visibleLayersIds[overlayId]) {
+      this.map.removeLayer(id);
+    }
+    this.visibleLayersIds[overlayId] = [];
+  }
+
+  private addLayersForOverlay(overlayId: string, layers: Layer[]) {
+    this.visibleLayersIds[overlayId] = this.visibleLayersIds[overlayId] || [];
+    for (var i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      const id = overlayId + "-layer-" + i;
+      this.map.addLayer({
+        ...layer,
+        source: overlayId,
+        id,
+      });
+      this.visibleLayersIds[overlayId].push(id);
     }
   }
 
@@ -216,9 +238,7 @@ export default class OverlayManager {
       if (overlay.imageList) {
         overlay.imageList.addToMap(this.map);
       }
-      for (const layer of overlay.layers) {
-        this.map.addLayer(layer);
-      }
+      this.addLayersForOverlay(overlay.id, overlay.layers);
       this.visibleOverlays.push({
         ...overlay,
         instance,

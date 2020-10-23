@@ -1,0 +1,22 @@
+/* .rstcustom__rowContents {
+  flex-direction: row-reverse !important;
+} */
+
+.form-checkbox[aria-checked="mixed"] {
+  background-image: url(data:image/svg+xml;charset=utf-8;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSJ3aGl0ZSI+DQogIDxwYXRoIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIyIiBkPSJNMTggMTJINiIgLz4NCjwvc3ZnPg==);
+}
+
+.rstcustom__toolbarButton {
+  display: flex;
+  align-items: center;
+}
+
+.rstcustom__rowWrapper:hover {
+  opacity: 1 !important;
+}
+
+.rstcustom__rowLabel {
+  max-width: 300px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}

@@ -7,6 +7,8 @@ import "react-sortable-tree/style.css";
 import "./ArcGISLayerTree.css";
 import Button from "../../../components/Button";
 import SettingsIcon from "../../../components/SettingsIcon";
+import LayerLoadingStateContext from "./LayerLoadingStateContext";
+import Spinner from "../../../components/Spinner";
 
 interface ArcGISLayerTreeProps {
   mapServiceInfo: MapServerCatalogInfo;
@@ -39,9 +41,6 @@ export function ArcGISLayerTree(props: ArcGISLayerTreeProps) {
     treeDataFromLayerList(props.layers)
   );
   const [nodeStates, setNodeStates] = useState<NodeStates>({});
-  const renderableLayers = useMemo(() => {
-    return props.layers.filter((lyr) => lyr.type !== "Group Layer");
-  }, [props.layers]);
 
   const [expansionToggled, setExpansionToggled] = useState(true);
 
@@ -133,6 +132,7 @@ export function ArcGISLayerTree(props: ArcGISLayerTreeProps) {
                   rasterLayer={rowInfo.node.layerData.type === "Raster Layer"}
                   id={rowInfo.node.layerData.id}
                   onChange={(id, isChecked) => {
+                    console.log(rowInfo.node);
                     const newState = {
                       ...nodeStates,
                     };
@@ -174,7 +174,18 @@ export function ArcGISLayerTree(props: ArcGISLayerTreeProps) {
                   : []),
               ],
               // buttons:
-              //   ,
+              //   rowInfo.node.layerData && rowInfo.node.layerData.url
+              //     ? [
+              //         <StateIndicators
+              //           sourceId={
+              //             !!props.vectorMode
+              //               ? rowInfo.node.layerData.generatedSourceId
+              //               : rowInfo.node.layerData.url.replace(/\/\d+$/, "")
+              //           }
+              //         />,
+              //       ]
+              //     : [],
+              // //   ,
             })}
             onChange={(newData) => setTreeData(newData as TreeData[])}
             // rowHeight={42}
@@ -202,6 +213,7 @@ function VisibilityCheckbox(props: {
       // @ts-ignore
       indeterminate={(visibility === "mixed").toString()}
       onChange={(e) => {
+        console.log(nodeData);
         if (props.onChange) {
           props.onChange(props.id, !!e.target.checked);
         }
@@ -213,6 +225,21 @@ function VisibilityCheckbox(props: {
         (!props.vectorMode || !props.rasterLayer)
       }
     />
+  );
+}
+
+function StateIndicators(props: { sourceId: string }) {
+  const context = useContext(LayerLoadingStateContext);
+  const layerContext = context[props.sourceId];
+  return (
+    <>
+      {layerContext && (
+        <div>
+          {layerContext.loading && <Spinner />}
+          {layerContext.error && <span>{layerContext.error.message}</span>}
+        </div>
+      )}
+    </>
   );
 }
 
