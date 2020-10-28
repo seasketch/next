@@ -39,3 +39,10 @@ export function updateDynamicMapService(
   instance.updateQueryParameters(state.options.queryParameters || {});
   return instance;
 }
+
+export function isArcGISDynamicServiceLoading(
+  instance: ArcGISDynamicMapService,
+  map: Map
+) {
+  return instance.loading;
+}

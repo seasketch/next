@@ -212,8 +212,8 @@ export function useMapServerInfo(location: string | undefined) {
               setLoading(false);
               const layerInfo: LayerInfo[] = await Promise.all(
                 layerData.layers.map(async (lyr: LayerInfo) => {
+                  const generatedId = uuid();
                   if (lyr.type === "Feature Layer") {
-                    const generatedId = uuid();
                     const { layers, imageList } = await styleForFeatureLayer(
                       location + "/" + lyr.id,
                       generatedId
@@ -226,7 +226,11 @@ export function useMapServerInfo(location: string | undefined) {
                       url: `${location}/${lyr.id}`,
                     };
                   } else {
-                    return lyr;
+                    return {
+                      ...lyr,
+                      generatedId,
+                      url: `${location}/${lyr.id}`,
+                    };
                   }
                 })
               );

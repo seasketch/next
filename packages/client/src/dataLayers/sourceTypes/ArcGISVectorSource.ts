@@ -76,3 +76,9 @@ export function updateArcGISVectorSource(
 
   return instance;
 }
+
+export function isArcGISVectorSourceLoading(
+  instance: ArcGISVectorSourceInstance
+) {
+  return instance.loading;
+}

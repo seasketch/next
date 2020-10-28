@@ -1,9 +1,14 @@
 import React from "react";
 
-export default function Spinner(props: { svgClassName?: string }) {
+export default function Spinner(props: {
+  svgClassName?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <div
-      className={`ml-3 inline-block inset-y-0 items-center pointer-events-none transition-opacity duration-500 opacity-50`}
+      style={props.style}
+      className={`ml-3 inline-block inset-y-0 items-center pointer-events-none transition-opacity duration-500 opacity-50 ${props.className}`}
     >
       <svg
         className={`animate-spin h-5 w-5 text-gray-500 ${props.svgClassName}`}

@@ -72,6 +72,13 @@ export default function ArcGISBrowser() {
   // Update sources and layers whenever settings change
   useEffect(() => {
     if (serviceSettings && serviceData && layerManager.manager) {
+      setTreeData(
+        updateDisabledState(
+          serviceSettings?.sourceType || "arcgis-dynamic-mapservice",
+          treeData,
+          serviceData.layerInfo
+        )
+      );
       const sources: SeaSketchSource[] = [];
       const layers: SeaSketchLayer[] = [];
       if (serviceSettings.sourceType === "arcgis-dynamic-mapservice") {
@@ -95,7 +102,7 @@ export default function ArcGISBrowser() {
             sourceId: serviceData.mapServerInfo.generatedId,
             renderUnder: serviceSettings.renderUnder || "labels",
           });
-        } else {
+        } else if (layer.type !== "Raster Layer") {
           const vectorSettings = serviceSettings.vectorSublayerSettings.find(
             (v) => v.sublayer === layer.id
           );
@@ -126,7 +133,13 @@ export default function ArcGISBrowser() {
   useEffect(() => {
     if (serviceData && layerManager.manager) {
       const data = treeDataFromLayerList(serviceData.layerInfo);
-      setTreeData(data);
+      setTreeData(
+        updateDisabledState(
+          serviceSettings?.sourceType || "arcgis-dynamic-mapservice",
+          data,
+          serviceData.layerInfo
+        )
+      );
       // Collect visible layers *only* if they are under toggled groups/folders
       const collectIds = (ids: string[], node: TableOfContentsNode) => {
         const layerInfo = serviceData.layerInfo.find(
@@ -281,10 +294,11 @@ export default function ArcGISBrowser() {
                     <TableOfContents
                       nodes={treeData}
                       onChange={(data) => setTreeData(data)}
+                      disabledMessage="(raster only)"
                       extraButtons={
                         serviceSettings.sourceType === "arcgis-vector-source"
                           ? (node) =>
-                              node.type === "layer"
+                              node.type === "layer" && !node.disabled
                                 ? [
                                     <button
                                       className="cursor-pointer rounded block border mr-2 focus:outline-none focus:shadow-outline-blue p-0.5"
@@ -399,4 +413,33 @@ function vectorLayerFromSettings(
     renderUnder: settings?.renderUnder || "labels",
     mapboxLayers: settings?.mapboxLayers || layer.mapboxLayers,
   };
+}
+
+function updateDisabledState(
+  sourceType: "arcgis-dynamic-mapservice" | "arcgis-vector-source",
+  treeData: TableOfContentsNode[],
+  layers: LayerInfo[]
+) {
+  const updateChildren = (node: TableOfContentsNode) => {
+    if (node.children) {
+      for (const child of node.children) {
+        updateChildren(child);
+      }
+    }
+    if (node.type === "layer") {
+      const layer = layers.find((l) => l.generatedId === node.id);
+      if (
+        sourceType === "arcgis-vector-source" &&
+        layer?.type === "Raster Layer"
+      ) {
+        node.disabled = true;
+      } else {
+        node.disabled = false;
+      }
+    }
+  };
+  if (treeData.length) {
+    updateChildren(treeData[0]);
+  }
+  return [...treeData];
 }

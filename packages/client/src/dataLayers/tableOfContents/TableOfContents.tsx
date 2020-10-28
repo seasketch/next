@@ -6,6 +6,7 @@ import "react-sortable-tree/style.css";
 import { LayerManagerContext } from "../LayerManager";
 import VisibilityCheckbox from "./VisibilityCheckbox";
 import "./TableOfContents.css";
+import Spinner from "../../components/Spinner";
 
 export interface TableOfContentsNode {
   id: string;
@@ -21,6 +22,7 @@ interface TableOfContentsProps {
   onChange: (nodes: TableOfContentsNode[]) => void;
   isVirtualized?: boolean;
   extraButtons?: (node: TableOfContentsNode) => React.ReactNode[];
+  disabledMessage?: string;
 }
 
 export default function TableOfContents(props: TableOfContentsProps) {
@@ -66,12 +68,18 @@ export default function TableOfContents(props: TableOfContentsProps) {
         style={{ height: "auto" }}
         theme={FileExplorerTheme}
         generateNodeProps={(data) => {
+          const layerState = layerStates[data.node.id];
           const visibility =
             data.node.type === "layer"
-              ? !!layerStates[data.node.id]?.visible
+              ? !!layerState?.visible
               : folderVisibility(data.node as TableOfContentsNode, layerStates);
           const isVisible = visibility === "mixed" || visibility;
           return {
+            title: `${data.node.title}${
+              data.node.disabled && props.disabledMessage
+                ? " " + props.disabledMessage
+                : ""
+            }`,
             style: {
               opacity: data.node.disabled ? 0.5 : 1,
             },
@@ -84,7 +92,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
                   if (data.node.type === "layer") {
                     childIds = [data.node.id];
                   } else {
-                    childIds = getChildren(
+                    childIds = getEnabledChildren(
                       data.node as TableOfContentsNode,
                       isVisible,
                       layerStates
@@ -101,6 +109,17 @@ export default function TableOfContents(props: TableOfContentsProps) {
               ...(props.extraButtons
                 ? props.extraButtons(data.node as TableOfContentsNode)
                 : []),
+            ],
+            buttons: [
+              layerState?.error ? (
+                <span>{layerState.error?.message}</span>
+              ) : null,
+              <Spinner
+                // className="transition duration-500 ease-in"
+                style={{
+                  display: layerState?.loading ? "inline-block" : "none",
+                }}
+              />,
             ],
           };
         }}
@@ -147,7 +166,7 @@ function folderVisibility(
   }
 }
 
-function getChildren(
+function getEnabledChildren(
   folder: TableOfContentsNode,
   visible: boolean,
   layerStates: { [id: string]: { visible: boolean | "mixed" } }
@@ -156,8 +175,8 @@ function getChildren(
   if (folder.children) {
     for (const child of folder.children) {
       if (child.type === "folder") {
-        ids = ids.concat(getChildren(child, visible, layerStates));
-      } else {
+        ids = ids.concat(getEnabledChildren(child, visible, layerStates));
+      } else if (!child.disabled) {
         const state = layerStates[child.id];
         if ((!state && visible === false) || state?.visible === visible) {
           ids.push(child.id);

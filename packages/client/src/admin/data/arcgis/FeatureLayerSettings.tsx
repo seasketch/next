@@ -178,7 +178,7 @@ export function FeatureLayerSettings(props: {
               . Area: {Math.round(sizeData.data.areaKm)} sq km.
             </div>
           ) : (
-            <div>{sizeData.error}</div>
+            <div>{sizeData.error?.message}</div>
           )}
           <Button
             loading={isDownloading}

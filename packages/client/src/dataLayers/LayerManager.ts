@@ -1,12 +1,9 @@
 import {
-  GeoJSONSource,
-  AnySourceImpl,
-  VideoSource,
-  ImageSource,
-  RasterSource,
-  VectorSource,
   Layer as MapBoxLayer,
   Map,
+  MapDataEvent,
+  ErrorEvent,
+  Source,
 } from "mapbox-gl";
 import {
   createContext,
@@ -17,11 +14,13 @@ import {
 } from "react";
 import {
   ArcGISDynamicMapServiceSource,
+  isArcGISDynamicServiceLoading,
   updateDynamicMapService,
 } from "./sourceTypes/ArcGISDynamicMapServiceSource";
 import {
   ArcGISVectorSource,
   updateArcGISVectorSource,
+  isArcGISVectorSourceLoading,
 } from "./sourceTypes/ArcGISVectorSource";
 import { MapBoxSource } from "./sourceTypes/MapBoxSource";
 import { WMSSource } from "./sourceTypes/WMSSource";
@@ -55,7 +54,8 @@ type SourceList = SeaSketchSource[];
 
 class LayerManager {
   private sources: SourceList = [];
-  private layers: SeaSketchLayer[] = [];
+  private layers: { [layerId: string]: SeaSketchLayer } = {};
+  private layersBySourceId: { [sourceId: string]: SeaSketchLayer[] } = {};
   private visibleLayers: { [id: string]: LayerState } = {};
   private basemapLandLayerId: string = "land";
   private basemapLabelsLayerId: string = "road-label";
@@ -67,6 +67,8 @@ class LayerManager {
   } = {};
   private dirtyMapServices: string[] = [];
   private updateMapServicesDebouncerReference?: NodeJS.Timeout;
+  private updateSourcesStateDebouncerReference?: NodeJS.Timeout;
+  private backoff: number = 100;
 
   constructor(setState: Dispatch<SetStateAction<LayerManagerContext>>) {
     this.setState = setState;
@@ -75,20 +77,129 @@ class LayerManager {
   setMap(map: Map) {
     if (this.map) {
       // remove event listeners
+      this.map.off("error", this.onMapError);
+      this.map.off("data", this.onMapDataEvent);
+      this.map.off("dataloading", this.onMapDataEvent);
     }
     // add event listeners
     this.map = map;
+    this.map.on("error", this.onMapError);
+    this.map.on("data", this.onMapDataEvent);
+    this.map.on("dataloading", this.onMapDataEvent);
   }
 
-  // updateSources(sources: SourceList) {
-  //   console.log("updateSources", sources);
-  // }
+  onMapDataEvent = (
+    event: MapDataEvent & { source: Source; sourceId: string }
+  ) => {
+    // let anyChanges = false;
+    if (event.sourceId === "composite") {
+      // ignore
+      return;
+    }
+    // Filter out events that are related to styles, or about turning geojson
+    // or image data into tiles. We don't care about stuff that isn't related to
+    // network activity
+    if (
+      event.dataType === "source" &&
+      ((event.source.type !== "geojson" && event.source.type !== "image") ||
+        !event.tile)
+    ) {
+      this.debouncedUpdateSourceStates();
+    }
+  };
+
+  onMapError = (event: ErrorEvent & { sourceId?: string }) => {
+    if (event.sourceId && event.sourceId !== "composite") {
+      let anySet = false;
+      for (const layerId of Object.keys(this.visibleLayers)) {
+        if (event.sourceId === this.layers[layerId].sourceId) {
+          this.visibleLayers[layerId].error = event.error;
+          this.visibleLayers[layerId].loading = false;
+          anySet = true;
+        }
+      }
+      if (anySet) {
+        this.debouncedUpdateState();
+      }
+    }
+  };
+
+  debouncedUpdateSourceStates(backoff = 10) {
+    if (this.updateSourcesStateDebouncerReference) {
+      clearTimeout(this.updateSourcesStateDebouncerReference);
+    }
+    this.updateSourcesStateDebouncerReference = setTimeout(() => {
+      delete this.updateSourcesStateDebouncerReference;
+      this.updateSourceStates();
+    }, backoff);
+  }
+
+  updateSourceStates() {
+    let anyChanges = false;
+    let anyLoading = false;
+    if (!this.map) {
+      throw new Error("LayerManager.map not set");
+    }
+    let sources: { [sourceId: string]: SeaSketchLayer[] } = {};
+    for (const layerId of Object.keys(this.visibleLayers)) {
+      const layer = this.layers[layerId];
+      if (!sources[layer.sourceId]) {
+        sources[layer.sourceId] = [];
+      }
+      sources[layer.sourceId].push(layer);
+    }
+    for (const sourceId in sources) {
+      let loading = this.isSourceLoading(sourceId);
+      if (loading) {
+        anyLoading = true;
+      }
+      const isDynamicService =
+        this.sourceCache[sourceId] &&
+        this.sourceCache[sourceId] instanceof ArcGISDynamicMapServiceInstance;
+      for (const layer of sources[sourceId]) {
+        if (this.visibleLayers[layer.id].loading !== loading) {
+          this.visibleLayers[layer.id].loading = loading;
+          anyChanges = true;
+        }
+        if (this.visibleLayers[layer.id].error && loading) {
+          delete this.visibleLayers[layer.id].error;
+          anyChanges = true;
+        }
+      }
+    }
+    if (anyChanges) {
+      this.debouncedUpdateState();
+    }
+    // if (anyLoading) {
+    //   console.log("some loading");
+    //   this.debouncedUpdateSourceStates(this.backoff);
+    //   this.backoff = this.backoff * 2;
+    // } else {
+    //   this.backoff = 100;
+    // }
+  }
+
+  isSourceLoading(id: string) {
+    // let loaded = this.map.isSourceLoaded(id);
+    let loading = false;
+    const instance = this.sourceCache[id];
+    if (instance) {
+      if (instance instanceof ArcGISVectorSourceInstance) {
+        return isArcGISVectorSourceLoading(instance);
+      } else if (instance instanceof ArcGISDynamicMapServiceInstance) {
+        return isArcGISDynamicServiceLoading(instance, this.map!);
+      }
+    } else {
+      loading = !this.map!.isSourceLoaded(id);
+    }
+    return loading;
+  }
 
   updateLayer(layer: SeaSketchLayer) {
     if (!this.map) {
       throw new Error(`Map instance not set`);
     }
-    const existingLayer = this.layers.find((l) => l.id === layer.id);
+    const existingLayer = this.layers[layer.id];
     if (!existingLayer) {
       throw new Error(`Layer with id ${layer.id} not found`);
     }
@@ -112,7 +223,12 @@ class LayerManager {
     } else {
       // do nothing
     }
-    this.layers = [...this.layers.filter((l) => l.id !== layer.id), layer];
+    this.layers[layer.id] = layer;
+    const sourceLayers = this.layersBySourceId[existingLayer.sourceId];
+    this.layersBySourceId[existingLayer.sourceId] = [
+      ...sourceLayers.filter((l) => l.id !== layer.id),
+      layer,
+    ];
   }
 
   highlightLayer(layerId: string) {}
@@ -120,25 +236,35 @@ class LayerManager {
   reset(sources: SourceList, layers: SeaSketchLayer[]) {
     const oldVisibleLayers = Object.keys(this.visibleLayers);
     // Remove any visible overlay layers and their sources
-    for (const layer of this.layers) {
+    for (const layer of Object.values(this.layers)) {
       this.removeLayer(layer);
     }
     // replace internal sources list with the new one
     this.sources = sources;
     // this.clearSourceCache();
     // replace internal layers list
-    this.layers = layers;
+    this.layers = {};
+    this.layersBySourceId = {};
+    for (const layer of layers) {
+      this.layers[layer.id] = layer;
+      if (!this.layersBySourceId[layer.sourceId]) {
+        this.layersBySourceId[layer.sourceId] = [];
+      }
+      this.layersBySourceId[layer.sourceId].push(layer);
+    }
     // add visible layers and associated sources to map
-    this.setVisibleLayers(oldVisibleLayers);
+    this.setVisibleLayers(oldVisibleLayers.filter((id) => id in this.layers));
   }
 
   setVisibleLayers(layerIds: string[]) {
-    const layers = this.layers.filter((l) => layerIds.indexOf(l.id) !== -1);
+    const layers = layerIds.map((id) => this.layers[id]);
     const notVisible = layers.filter((l) => !this.visibleLayers[l.id]);
-    const layersForRemoval = this.layers.filter(
-      (l) => !!this.visibleLayers[l.id] && layerIds.indexOf(l.id) === -1
-    );
-
+    const layersForRemoval = [];
+    for (const id in this.visibleLayers) {
+      if (layerIds.indexOf(id) === -1) {
+        layersForRemoval.push(this.layers[id]);
+      }
+    }
     for (const layer of notVisible) {
       this.addLayer(layer);
     }
@@ -149,18 +275,8 @@ class LayerManager {
   }
 
   hideLayers(layerIds: string[]) {
-    if (layerIds.length === 1) {
-      const layer = this.layers.find((l) => l.id === layerIds[0]);
-      if (layer) {
-        this.removeLayer(layer);
-      }
-    } else {
-      const layers = this.layers.filter(
-        (layer) => layerIds.indexOf(layer.id) !== -1
-      );
-      for (const layer of layers) {
-        this.removeLayer(layer);
-      }
+    for (const id of layerIds) {
+      this.removeLayer(this.layers[id]);
     }
   }
 
@@ -189,7 +305,7 @@ class LayerManager {
             "Replacing source with a different type not yet supported"
           );
         } else {
-          const layers = this.layers.filter(
+          const layers = Object.values(this.layers).filter(
             (l) => l.sourceId === source.id && this.visibleLayers[l.id]
           );
           // update source
@@ -226,18 +342,8 @@ class LayerManager {
   }
 
   showLayers(layerIds: string[]) {
-    if (layerIds.length === 1) {
-      const layer = this.layers.find((l) => l.id === layerIds[0]);
-      if (layer) {
-        this.addLayer(layer);
-      }
-    } else {
-      const layers = this.layers.filter(
-        (layer) => layerIds.indexOf(layer.id) !== -1
-      );
-      for (const layer of layers) {
-        this.addLayer(layer);
-      }
+    for (const id of layerIds) {
+      this.addLayer(this.layers[id]);
     }
   }
 
@@ -264,7 +370,7 @@ class LayerManager {
       }
     }
     this.visibleLayers[layer.id] = {
-      loading,
+      loading: false,
       visible: true,
     };
     this.debouncedUpdateState();
@@ -295,14 +401,14 @@ class LayerManager {
     if (this.updateStateDebouncerReference) {
       clearTimeout(this.updateStateDebouncerReference);
     }
-    this.updateStateDebouncerReference = setTimeout(this.updateState, 1);
+    this.updateStateDebouncerReference = setTimeout(this.updateState, 5);
   }
 
   private updateState = () => {
     delete this.updateStateDebouncerReference;
     this.setState((oldState) => ({
       ...oldState,
-      layerStates: this.visibleLayers,
+      layerStates: { ...this.visibleLayers },
     }));
   };
 
@@ -382,7 +488,7 @@ class LayerManager {
       sublayersBySource[dirty] = [];
     }
     this.dirtyMapServices = [];
-    for (const layer of this.layers) {
+    for (const layer of Object.values(this.layers)) {
       if (sublayersBySource[layer.sourceId] && this.visibleLayers[layer.id]) {
         sublayersBySource[layer.sourceId].push(layer.sublayerId!);
       }

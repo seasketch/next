@@ -1,7 +1,7 @@
 import mapboxgl, { ErrorEvent, Map, MapDataEvent } from "mapbox-gl";
 import React, { useEffect, useState, useRef } from "react";
 import { useLayerManager } from "../../../dataLayers/LayerManager";
-import OverlayManager from "./OverlayManager";
+// import OverlayManager from "./OverlayManager";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -16,7 +16,6 @@ export default function OverlayMap(props: OverlayMapProps) {
   const layerManager = useLayerManager();
 
   useEffect(() => {
-    console.log("use effect", mapContainer.current, map);
     mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
     if (!map) {
       const mapInstance = new mapboxgl.Map({
@@ -26,7 +25,6 @@ export default function OverlayMap(props: OverlayMapProps) {
         zoom: 0.09527381899319892,
       });
       mapInstance.on("load", () => {
-        console.warn("map instance load");
         setMap(mapInstance);
         mapInstance.resize();
         setTimeout(() => {
