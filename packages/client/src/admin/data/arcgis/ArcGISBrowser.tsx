@@ -131,7 +131,7 @@ export default function ArcGISBrowser() {
   ]);
 
   useEffect(() => {
-    if (serviceData && layerManager.manager) {
+    if (serviceData && layerManager.manager && map) {
       const data = treeDataFromLayerList(serviceData.layerInfo);
       setTreeData(
         updateDisabledState(
@@ -207,8 +207,8 @@ export default function ArcGISBrowser() {
           <div className="flex flex-col h-full">
             <OverlayMap
               onLoad={(map) => {
-                setMap(map);
                 layerManager.manager!.setMap(map);
+                setMap(map);
               }}
             />
             <div className="bg-white text-lg p-2 text-primary-500 border-b">
@@ -291,32 +291,34 @@ export default function ArcGISBrowser() {
                         ).
                       </p>
                     )}
-                    <TableOfContents
-                      nodes={treeData}
-                      onChange={(data) => setTreeData(data)}
-                      disabledMessage="(raster only)"
-                      extraButtons={
-                        serviceSettings.sourceType === "arcgis-vector-source"
-                          ? (node) =>
-                              node.type === "layer" && !node.disabled
-                                ? [
-                                    <button
-                                      className="cursor-pointer rounded block border mr-2 focus:outline-none focus:shadow-outline-blue p-0.5"
-                                      onClick={() =>
-                                        setSelectedFeatureLayer(
-                                          serviceData.layerInfo.find(
-                                            (l) => l.generatedId === node.id
+                    <div className="mt-4 mb-4">
+                      <TableOfContents
+                        nodes={treeData}
+                        onChange={(data) => setTreeData(data)}
+                        disabledMessage="(raster only)"
+                        extraButtons={
+                          serviceSettings.sourceType === "arcgis-vector-source"
+                            ? (node) =>
+                                node.type === "layer" && !node.disabled
+                                  ? [
+                                      <button
+                                        className="cursor-pointer rounded block border mr-2 focus:outline-none focus:shadow-outline-blue p-0.5"
+                                        onClick={() =>
+                                          setSelectedFeatureLayer(
+                                            serviceData.layerInfo.find(
+                                              (l) => l.generatedId === node.id
+                                            )
                                           )
-                                        )
-                                      }
-                                    >
-                                      <SettingsIcon className="w-4 h-4 text-primary-500 hover:text-primary-600" />
-                                    </button>,
-                                  ]
-                                : []
-                          : undefined
-                      }
-                    />
+                                        }
+                                      >
+                                        <SettingsIcon className="w-4 h-4 text-primary-500 hover:text-primary-600" />
+                                      </button>,
+                                    ]
+                                  : []
+                            : undefined
+                        }
+                      />
+                    </div>
                     {serviceSettings.sourceType ===
                       "arcgis-dynamic-mapservice" && (
                       <DynamicMapServerSettingsForm
@@ -335,6 +337,7 @@ export default function ArcGISBrowser() {
               )}
               {selectedFeatureLayer && serviceSettings && (
                 <FeatureLayerSettings
+                  service={mapServerInfo.data!.mapServerInfo}
                   layer={selectedFeatureLayer}
                   settings={serviceSettings}
                   updateSettings={(settings) => {
@@ -411,7 +414,10 @@ function vectorLayerFromSettings(
     id: layer.generatedId,
     sourceId: layer.generatedId,
     renderUnder: settings?.renderUnder || "labels",
-    mapboxLayers: settings?.mapboxLayers || layer.mapboxLayers,
+    mapboxLayers:
+      settings?.importType === "dynamic"
+        ? layer.mapboxLayers
+        : settings?.mapboxLayers || layer.mapboxLayers,
   };
 }
 

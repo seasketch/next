@@ -87,6 +87,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
               <VisibilityCheckbox
                 id={data.node.id}
                 disabled={data.node.disabled}
+                error={!!layerState?.error}
                 onClick={() => {
                   let childIds = [];
                   if (data.node.type === "layer") {
@@ -112,7 +113,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
             ],
             buttons: [
               layerState?.error ? (
-                <span>{layerState.error?.message}</span>
+                <LayerError message={layerState.error.message} />
               ) : null,
               <Spinner
                 // className="transition duration-500 ease-in"
@@ -125,6 +126,27 @@ export default function TableOfContents(props: TableOfContentsProps) {
         }}
       />
     </div>
+  );
+}
+
+function LayerError(props: { message: string }) {
+  return (
+    <span title={props.message}>
+      <svg
+        className="text-red-800 w-5 h-5"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    </span>
   );
 }
 

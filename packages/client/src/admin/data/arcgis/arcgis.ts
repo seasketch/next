@@ -11,6 +11,8 @@ import bbox from "@turf/bbox";
 import geobuf from "geobuf";
 import Pbf from "pbf";
 import { TableOfContentsNode } from "../../../dataLayers/tableOfContents/TableOfContents";
+import gzipSize from "gzip-size";
+import { FeatureCollection } from "geojson";
 
 export interface NormalizedArcGISServerLocation {
   baseUrl: string;
@@ -146,6 +148,8 @@ export interface LayerInfo {
   defaultVisibility: boolean;
   parentLayer?: { id: number };
   extent: Extent;
+  description?: string;
+  copyrightText?: string;
   drawingInfo: {
     renderer: Symbol;
     scaleSymbols: boolean;
@@ -356,17 +360,19 @@ export interface ArcGISServiceSettings {
   renderUnder: RenderUnderBasemapLayers;
   excludedSublayers: number[];
   vectorSublayerSettings: VectorSublayerSettings[];
-  preferInstantLayers: boolean;
+  // preferInstantLayers: boolean;
 }
+
+export type VectorImportType = "geojson" | "dynamic";
 
 export interface VectorSublayerSettings {
   sublayer: number;
   renderUnder: RenderUnderBasemapLayers;
-  instantLayers: boolean;
-  geobufSource?: string;
+  importType: VectorImportType;
   geometryPrecision: 4 | 5 | 6;
   ignoreByteLimit: boolean;
   mapboxLayers?: any[];
+  uploadedGeoJSON?: FeatureCollection;
   // tileSource: string;
   // tileJobId: string;
 }
@@ -378,7 +384,7 @@ const defaultServiceSettings: ArcGISServiceSettings = {
   renderUnder: "labels",
   excludedSublayers: [],
   vectorSublayerSettings: [],
-  preferInstantLayers: true,
+  // preferInstantLayers: true,
 };
 
 const settingsCache: { [location: string]: ArcGISServiceSettings } = {};
@@ -431,42 +437,65 @@ export function useVisibleLayersSettings(
   ];
 }
 
+const featureLayerSizeDataCache: {
+  [key: string]: {
+    geoJsonBytes: number;
+    gzipBytes: number;
+    areaKm: number;
+    objects: number;
+    attributes: number;
+  };
+} = {};
+
 export function useFeatureLayerSizeData(
   url: string,
   settings?: VectorSublayerSettings
 ) {
   const [data, setData] = useState<{
     geoJsonBytes: number;
-    geobufBytes: number;
+    gzipBytes: number;
     areaKm: number;
+    objects: number;
+    attributes: number;
   }>();
   const [loading, setLoading] = useState<boolean>();
   const [error, setError] = useState<Error>();
 
   function updateStats() {
     if (url) {
-      setLoading(true);
-      fetchFeatureLayerData(
-        url,
-        "*",
-        (e) => {
+      const key = url + "-" + (settings?.geometryPrecision || 6);
+      if (featureLayerSizeDataCache[key]) {
+        setData(featureLayerSizeDataCache[key]);
+      } else {
+        setLoading(true);
+        fetchFeatureLayerData(
+          url,
+          "*",
+          (e: Error) => {
+            setLoading(false);
+            setError(e);
+          },
+          settings?.geometryPrecision || 6
+        ).then((featureCollection: any) => {
+          const str = JSON.stringify(featureCollection);
+          const geoJsonBytes = byteLength(str);
+          const box = bboxPolygon(bbox(featureCollection));
+          const sqMeters = area(box);
+          const areaKm = sqMeters / 1000000;
+          const gSize = gzipSize.sync(str);
+          const d = {
+            geoJsonBytes,
+            areaKm,
+            gzipBytes: gSize,
+            objects: featureCollection.features.length,
+            attributes: Object.keys(featureCollection.features[0].properties)
+              .length,
+          };
+          setData(d);
           setLoading(false);
-          setError(e);
-        },
-        settings?.geometryPrecision || 6
-      ).then((featureCollection) => {
-        const geoJsonBytes = byteLength(JSON.stringify(featureCollection));
-        const box = bboxPolygon(bbox(featureCollection));
-        const sqMeters = area(box);
-        const areaKm = sqMeters / 1000000;
-        const buffer = geobuf.encode(featureCollection, new Pbf());
-        setData({
-          geoJsonBytes,
-          geobufBytes: buffer.length,
-          areaKm,
+          featureLayerSizeDataCache[key] = d;
         });
-        setLoading(false);
-      });
+      }
     } else {
       setLoading(false);
     }

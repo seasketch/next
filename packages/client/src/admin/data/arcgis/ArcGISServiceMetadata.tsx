@@ -1,41 +1,66 @@
 import React, { ReactNode } from "react";
 import DefinitionList from "../../../components/DefinitionList";
-import { MapServerCatalogInfo } from "./arcgis";
+import { LayerInfo, MapServerCatalogInfo } from "./arcgis";
 
 export interface ArcGISServiceMetadataProps {
   serviceInfo: MapServerCatalogInfo;
+  layer?: LayerInfo;
 }
 
 export default function ArcGISServiceMetadata(
   props: ArcGISServiceMetadataProps
 ) {
   const mapServerInfo = props.serviceInfo;
-  const definitionListItems: [string, string | ReactNode][] = [
-    [
-      "Description",
-      mapServerInfo.serviceDescription || mapServerInfo.description,
-    ],
-    ["Author", mapServerInfo.documentInfo.Author],
-    ["Subject", mapServerInfo.documentInfo.Subject],
-    ["Comments", mapServerInfo.documentInfo.Comments],
-    ["Copyright", mapServerInfo.copyrightText],
-    ["Keywords", mapServerInfo.documentInfo.Keywords],
-    [
-      "Projection",
+  let definitionListItems: [string, string | ReactNode][] = [];
+  if (props.layer) {
+    definitionListItems.push(
+      ["Description", props.layer?.description],
+      ["Author", mapServerInfo.documentInfo.Author],
+      ["Copyright", props.layer?.copyrightText || mapServerInfo.copyrightText],
+      [
+        "Projection",
 
-      <a
-        className="underline"
-        target="_blank"
-        href={`https://epsg.io/${
-          mapServerInfo.spatialReference.latestWkid ||
-          mapServerInfo.spatialReference.wkid
-        }`}
-      >
-        {mapServerInfo.spatialReference.latestWkid ||
-          mapServerInfo.spatialReference.wkid}
-      </a>,
-    ],
-  ];
+        <a
+          className="underline"
+          target="_blank"
+          href={`https://epsg.io/${
+            mapServerInfo.spatialReference.latestWkid ||
+            mapServerInfo.spatialReference.wkid
+          }`}
+        >
+          {mapServerInfo.spatialReference.latestWkid ||
+            mapServerInfo.spatialReference.wkid}
+        </a>,
+      ]
+    );
+  } else {
+    definitionListItems.push(
+      [
+        "Description",
+        mapServerInfo.serviceDescription || mapServerInfo.description,
+      ],
+      ["Author", mapServerInfo.documentInfo.Author],
+      ["Subject", mapServerInfo.documentInfo.Subject],
+      ["Comments", mapServerInfo.documentInfo.Comments],
+      ["Copyright", mapServerInfo.copyrightText],
+      ["Keywords", mapServerInfo.documentInfo.Keywords],
+      [
+        "Projection",
+
+        <a
+          className="underline"
+          target="_blank"
+          href={`https://epsg.io/${
+            mapServerInfo.spatialReference.latestWkid ||
+            mapServerInfo.spatialReference.wkid
+          }`}
+        >
+          {mapServerInfo.spatialReference.latestWkid ||
+            mapServerInfo.spatialReference.wkid}
+        </a>,
+      ]
+    );
+  }
   return (
     <div>
       <DefinitionList items={definitionListItems} />

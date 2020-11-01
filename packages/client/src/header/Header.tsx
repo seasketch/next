@@ -11,7 +11,7 @@ export default function Header(props: { projectMode?: boolean }) {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
   const { t, i18n } = useTranslation(["nav"]);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const { slug } = useParams();
+  const { slug } = useParams<{ slug: string }>();
   const currentProjectQuery = useCurrentProjectMetadataQuery({
     variables: {
       slug: slug || "",

@@ -265,12 +265,14 @@ class LayerManager {
         layersForRemoval.push(this.layers[id]);
       }
     }
-    for (const layer of notVisible) {
-      this.addLayer(layer);
-    }
+    if (this.map) {
+      for (const layer of notVisible) {
+        this.addLayer(layer);
+      }
 
-    for (const layer of layersForRemoval) {
-      this.removeLayer(layer);
+      for (const layer of layersForRemoval) {
+        this.removeLayer(layer);
+      }
     }
   }
 
@@ -391,6 +393,15 @@ class LayerManager {
         for (var i = 0; i < layer.mapboxLayers?.length; i++) {
           this.map.removeLayer(`${layer.id}-${i}`);
         }
+      }
+      const instance = this.sourceCache[layer.sourceId];
+      if (
+        instance &&
+        instance instanceof ArcGISVectorSourceInstance &&
+        this.visibleLayers[layer.id].error
+      ) {
+        delete this.sourceCache[layer.sourceId];
+        this.map.removeSource(layer.sourceId);
       }
     }
     delete this.visibleLayers[layer.id];

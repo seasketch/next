@@ -5,11 +5,13 @@ export default function VisibilityCheckbox(props: {
   onClick?: () => void;
   disabled: boolean;
   visibility: boolean | "mixed";
+  error?: boolean;
 }) {
   return (
     <input
       disabled={props.disabled}
-      className="form-checkbox cursor-pointer mr-2"
+      className={`cursor-pointer mr-2 form-checkbox`}
+      style={props.error === true ? { backgroundColor: "#c54141" } : {}}
       // @ts-ignore
       indeterminate={(props.visibility === "mixed").toString()}
       onChange={(e) => {
