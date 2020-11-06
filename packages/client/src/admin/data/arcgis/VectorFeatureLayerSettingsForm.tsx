@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useContext } from "react";
 import Button from "../../../components/Button";
 import InputBlock from "../../../components/InputBlock";
 import Switch from "../../../components/Switch";
+import { LayerManagerContext } from "../../../dataLayers/LayerManager";
 import { ArcGISServiceSettings, MapServerImageFormat } from "./arcgis";
 
 export default function VectorFeatureLayerSettingsForm(props: {
@@ -22,26 +23,6 @@ export default function VectorFeatureLayerSettingsForm(props: {
           label={`Import ${settings.vectorSublayerSettings.length} layers`}
         />
       </div>
-      {/* <InputBlock
-        className="mt-4 text-sm"
-        title="Enable Instant Layers"
-        input={
-          <Switch
-            isToggled={settings.preferInstantLayers}
-            onClick={() =>
-              updateSettings({
-                ...settings,
-                preferInstantLayers: !settings.preferInstantLayers,
-              })
-            }
-          />
-        }
-      >
-        Creates an optimized copy of these data that will be hosted on our
-        content delivery network for quick and reliable access anywhere in the
-        world. This copy can be manually updated whenever data changes at the
-        source.
-      </InputBlock> */}
     </div>
   );
 }

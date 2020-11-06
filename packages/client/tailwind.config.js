@@ -10,6 +10,11 @@ module.exports = {
   ],
   theme: {
     extend: {
+      spacing: {
+        "144": "36rem",
+        "128": "32rem",
+        "160": "40rem",
+      },
       fontFamily: {
         sans: ["Inter var", ...defaultTheme.fontFamily.sans],
       },

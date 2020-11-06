@@ -396,6 +396,7 @@ class LayerManager {
       }
       const instance = this.sourceCache[layer.sourceId];
       if (
+        this.visibleLayers[layer.id] &&
         instance &&
         instance instanceof ArcGISVectorSourceInstance &&
         this.visibleLayers[layer.id].error

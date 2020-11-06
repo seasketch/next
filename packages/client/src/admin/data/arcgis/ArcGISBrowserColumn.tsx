@@ -15,6 +15,7 @@ export interface ArcGISBrowserColumnProps {
     | "GeometryServer"
     | "GeocodeServer";
   onSelection?: (item: CatalogItem) => void;
+  leading?: boolean;
 }
 
 export function ArcGISBrowserColumn(props: ArcGISBrowserColumnProps) {
@@ -47,6 +48,7 @@ export function ArcGISBrowserColumn(props: ArcGISBrowserColumnProps) {
             url={item.url}
             selected={item.url === selectedItem?.url}
             type={item.type}
+            leading={props.leading}
           />
         ))}
       </ul>
@@ -66,16 +68,29 @@ function ServiceItem(props: {
   title: string;
   key: string;
   selected: boolean;
+  leading?: boolean;
   onClick?: (e: { id: string; url: string }) => void;
 }) {
   const disabled = props.type !== "MapServer" && props.type !== "Folder";
-  const svgClassName = `mr-1.5 w-4 h-4 inline ${
-    props.selected ? "text-white" : disabled ? "text-gray-500" : "text-gray-800"
+  const svgClassName = `mr-1.5 w-4 -mt-0.5 h-4 inline ${
+    props.selected
+      ? !!props.leading
+        ? "text-white"
+        : "text-black"
+      : disabled
+      ? "text-gray-500"
+      : "text-gray-800"
   }`;
   return (
     <li
       className={`cursor-pointer text-sm max-w-full truncate ${
-        props.selected ? "bg-primary-600 text-white" : "bg-white text-black"
+        props.selected
+          ? `${
+              !!props.leading
+                ? "bg-primary-600  text-white"
+                : "bg-gray-300 text-black"
+            }`
+          : "bg-white text-black"
       } py-1 px-2 pr-4 ${disabled && "pointer-events-none text-gray-500"}`}
       onClick={() =>
         props.onClick && props.onClick({ id: props.url, url: props.url })

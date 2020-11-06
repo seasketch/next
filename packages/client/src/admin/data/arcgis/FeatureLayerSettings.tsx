@@ -1,9 +1,10 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import InputBlock from "../../../components/InputBlock";
 import OutgoingLinkIcon from "../../../components/OutgoingLinkIcon";
 import Switch from "../../../components/Switch";
 import {
   ArcGISServiceSettings,
+  esriFieldTypesToTileJSONTypes,
   LayerInfo,
   MapServerCatalogInfo,
   useFeatureLayerSizeData,
@@ -62,6 +63,7 @@ export function FeatureLayerSettings(props: {
     importType: "geojson",
     renderUnder: "labels",
     ignoreByteLimit: false,
+    outFields: "*",
   };
   const rootElRef = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<string>();
@@ -73,7 +75,6 @@ export function FeatureLayerSettings(props: {
     settings.vectorSublayerSettings.find((s) => s.sublayer === layer.id)!
   );
   const [isDownloading, setIsDownloading] = useState(false);
-
   function download() {
     setIsDownloading(true);
     fetchFeatureLayerData(
@@ -132,10 +133,32 @@ export function FeatureLayerSettings(props: {
     }
   }, [props.layer]);
 
+  const toggleField = (alias: string) => {
+    let outFields = `${layerSettings.outFields}`;
+    if (outFields === "*") {
+      outFields = layer.fields
+        .map((f) => f.alias)
+        .filter((f) => f !== alias)
+        .join(",");
+    } else {
+      const currentFields = outFields.split(",");
+      if (currentFields.indexOf(alias) !== -1) {
+        // remove
+        outFields = currentFields.filter((f) => f !== alias).join(",");
+      } else {
+        // add
+        outFields = [...currentFields, alias].join(",");
+      }
+    }
+    updateSettings("outFields", outFields);
+  };
+
+  // console.log(sizeData);
+
   return (
     <div
       ref={rootElRef}
-      className="p-2 overflow-y-scroll bg-white md:w-1/2 shadow"
+      className="p-2 overflow-y-scroll bg-white border-l max-h-full border-gray-300 max-w-full md:w-128 lg:w-144 flex-grow-0 flex-shrink-0"
       style={{ minWidth: 340 }}
     >
       <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
@@ -150,27 +173,6 @@ export function FeatureLayerSettings(props: {
       <ArcGISServiceMetadata layer={layer} serviceInfo={props.service} />
 
       <div className="p-2 px-4">
-        {/*  <InputBlock
-          title="Ignore size limit"
-          className="mt-4 text-sm"
-          input={
-            <Switch
-              isToggled={layerSettings.ignoreByteLimit}
-              onClick={() =>
-                updateSettings(
-                  "ignoreByteLimit",
-                  !layerSettings.ignoreByteLimit
-                )
-              }
-            />
-          }
-        >
-          SeaSketch by default limits vector layers to 5 megabytes of
-          uncompressed GeoJSON. You may bypass the limit for this layer but be
-          aware that large datasets take longer to download and exceptionally
-          large ones can slow down or crash the browser.
-        </InputBlock> */}
-
         <div className="py-2">
           <h3 className="font-medium text-sm py-2">
             Vector Dataset Statistics
@@ -223,7 +225,7 @@ export function FeatureLayerSettings(props: {
                       className="form-checkbox"
                       type="checkbox"
                       checked={layerSettings.ignoreByteLimit}
-                      onClick={() =>
+                      onChange={() =>
                         updateSettings(
                           "ignoreByteLimit",
                           !layerSettings.ignoreByteLimit
@@ -246,7 +248,7 @@ export function FeatureLayerSettings(props: {
                 id="geojson"
                 name="importType"
                 type="radio"
-                onClick={() => updateSettings("importType", "geojson")}
+                onChange={() => updateSettings("importType", "geojson")}
                 checked={layerSettings.importType === "geojson"}
                 className="form-radio h-4 w-4 text-primary-600 transition duration-150 ease-in-out"
               />
@@ -278,12 +280,16 @@ export function FeatureLayerSettings(props: {
                 render under land option) and simplifying geometry to only the
                 precision needed for visualization.
               </p>
-              {(sizeData.data?.geoJsonBytes || 0) > VECTOR_BYTES_LIMIT ? (
-                <Warning disabled={layerSettings.importType === "dynamic"}>
-                  Given the size of this dataset you should add this layer to a
-                  tileset after import or upload a simplified revision.
-                </Warning>
-              ) : null}
+              {(sizeData.data?.warnings || [])
+                .filter((w) => w.type === "geojson")
+                .map((w) => (
+                  <Warning
+                    level={w.level}
+                    disabled={layerSettings.importType === "dynamic"}
+                  >
+                    {w.message}
+                  </Warning>
+                ))}
             </div>
           </div>
 
@@ -292,7 +298,7 @@ export function FeatureLayerSettings(props: {
               <input
                 id="dynamic"
                 name="importType"
-                onClick={() => updateSettings("importType", "dynamic")}
+                onChange={() => updateSettings("importType", "dynamic")}
                 checked={layerSettings.importType === "dynamic"}
                 type="radio"
                 className="form-radio h-4 w-4 text-primary-600 transition duration-150 ease-in-out"
@@ -308,17 +314,16 @@ export function FeatureLayerSettings(props: {
                 and cartography are immediately available in SeaSketch but
                 performance is poorer and features are limited.
               </p>
-              {(sizeData.data?.geoJsonBytes || 0) > VECTOR_BYTES_LIMIT ||
-              (sizeData.data?.objects || 0) > NUM_FEATURES_LIMIT ? (
-                <Warning disabled={layerSettings.importType === "geojson"}>
-                  {(sizeData.data?.geoJsonBytes || 0) > VECTOR_BYTES_LIMIT &&
-                    "Large datasets can perform poorly when using dynamic links."}
-                  {(sizeData.data?.objects || 0) > NUM_FEATURES_LIMIT &&
-                    ` Due to the number of features, loading this layer will require > ${Math.round(
-                      sizeData.data!.objects / 1000
-                    )} requests to the origin server.`}
-                </Warning>
-              ) : null}
+              {(sizeData.data?.warnings || [])
+                .filter((w) => w.type === "arcgis")
+                .map((w) => (
+                  <Warning
+                    level={w.level}
+                    disabled={layerSettings.importType === "geojson"}
+                  >
+                    {w.message}
+                  </Warning>
+                ))}
             </div>
           </div>
         </div>
@@ -370,6 +375,102 @@ export function FeatureLayerSettings(props: {
           uploads.
         </InputBlock>
 
+        <InputBlock
+          className="mt-4 text-sm"
+          title="Rendering order"
+          input={
+            <select
+              id="renderUnder"
+              className="form-select block w-full pl-3 pr-8 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 sm:text-sm sm:leading-5"
+              value={layerSettings.renderUnder}
+              onChange={(e) => {
+                updateSettings(
+                  "renderUnder",
+                  e.target.value as "none" | "labels" | "land"
+                );
+              }}
+            >
+              <option value={"none"}>Cover basemap</option>
+              <option value={"labels"}>Under labels</option>
+              <option value={"land"}>Under land</option>
+            </select>
+          }
+        >
+          If your basemaps are configured to identify these special layers, you
+          can render this service underneath labels or land.
+        </InputBlock>
+
+        <div className="py-2">
+          <h3 className="font-medium text-sm py-2">Included Fields</h3>
+          <p className="text-sm text-gray-700">
+            Limit the fields included in this dataset in order to reduce
+            download size. Does not apply to uploaded revisions. Be careful not
+            to remove fields used in styles.
+          </p>
+
+          <div className="flex flex-col mt-3">
+            <div className="overflow-x-auto sm:-mx-2 lg:-mx-2">
+              <div className="py-2 align-middle inline-block min-w-full sm:px-2 lg:px-2">
+                <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead>
+                      <tr>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">
+                          Field
+                        </th>
+                        <th className="px-6 py-3 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">
+                          Type
+                        </th>
+                        <th className="px-6 py-3 bg-gray-50 text-center text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">
+                          Included
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="max-h-1/2 overflow-y-scroll">
+                      {layer.fields
+                        .filter((f) => f.alias !== "Shape")
+                        .map((field, index) => {
+                          return (
+                            <tr
+                              key={field.alias}
+                              className={
+                                index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                              }
+                            >
+                              <td className="px-6 py-4 whitespace-no-wrap text-sm leading-5 font-medium text-gray-900">
+                                {field.alias}
+                              </td>
+                              <td className="px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-500">
+                                {esriFieldTypesToTileJSONTypes[field.type]}
+                              </td>
+                              <td className="px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-500 text-center">
+                                {field.type === "esriFieldTypeOID" ? (
+                                  "Required"
+                                ) : (
+                                  <input
+                                    onChange={() => toggleField(field.alias)}
+                                    type="checkbox"
+                                    className="form-checkbox"
+                                    checked={
+                                      layerSettings.outFields === "*" ||
+                                      layerSettings.outFields
+                                        .split(",")
+                                        .indexOf(field.alias) !== -1
+                                    }
+                                  />
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {layerSettings.importType !== "dynamic" && (
           <>
             <InputBlock
@@ -391,9 +492,7 @@ export function FeatureLayerSettings(props: {
             </InputBlock>
             <CodeMirror
               className={`h-auto border ${
-                styleErrors.length > 0 || jsonErrors
-                  ? "border-red-300"
-                  : "mb-10"
+                styleErrors.length > 0 || jsonErrors ? "border-red-300" : "my-2"
               }`}
               value={
                 style ||
@@ -441,6 +540,21 @@ export function FeatureLayerSettings(props: {
                 ))}
               </div>
             )}
+            <button
+              disabled={style === undefined}
+              className={`text-sm underline text-primary-600 ${
+                style === undefined ? "pointer-events-none opacity-50" : ""
+              }`}
+              onClick={() => {
+                if (
+                  window.confirm("Are you sure you want to clear your changes?")
+                ) {
+                  updateSettings("mapboxLayers", undefined);
+                }
+              }}
+            >
+              Reset to server style
+            </button>
           </>
         )}
       </div>
@@ -485,7 +599,7 @@ function Lightning(props: { className?: string }) {
       className={`text-gray-500 w-3 h-3 ${props.className}`}
     >
       <path
-        fill-rule="evenodd"
+        fillRule="evenodd"
         d="M11.251.068a.5.5 0 01.227.58L9.677 6.5H13a.5.5 0 01.364.843l-8 8.5a.5.5 0 01-.842-.49L6.323 9.5H3a.5.5 0 01-.364-.843l8-8.5a.5.5 0 01.615-.09z"
       ></path>
     </svg>

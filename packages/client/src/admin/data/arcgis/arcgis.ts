@@ -11,8 +11,10 @@ import bbox from "@turf/bbox";
 import geobuf from "geobuf";
 import Pbf from "pbf";
 import { TableOfContentsNode } from "../../../dataLayers/tableOfContents/TableOfContents";
-import gzipSize from "gzip-size";
 import { FeatureCollection } from "geojson";
+import Worker from "../../../workers/index";
+
+const worker = new Worker();
 
 export interface NormalizedArcGISServerLocation {
   baseUrl: string;
@@ -163,7 +165,29 @@ export interface LayerInfo {
   mapboxLayers: Layer[];
   imageList: ImageList;
   generatedId: string;
+  fields: {
+    name: string;
+    type:
+      | "esriFieldTypeOID"
+      | "esriFieldTypeDouble"
+      | "esriFieldTypeSmallInteger"
+      | "esriFieldTypeString"
+      | "esriFieldTypeDate"
+      | "esriFieldTypeGeometry"
+      | "esriFieldTypeInteger";
+    alias: string;
+  }[];
 }
+
+export const esriFieldTypesToTileJSONTypes = {
+  esriFieldTypeOID: "Number",
+  esriFieldTypeDouble: "Number",
+  esriFieldTypeSmallInteger: "Number",
+  esriFieldTypeString: "String",
+  esriFieldTypeDate: "String",
+  esriFieldTypeGeometry: "String",
+  esriFieldTypeInteger: "Number",
+};
 
 const mapServerInfoCache: {
   [url: string]: {
@@ -358,7 +382,7 @@ export interface ArcGISServiceSettings {
   enableHighDpi: boolean;
   imageFormat: MapServerImageFormat;
   renderUnder: RenderUnderBasemapLayers;
-  excludedSublayers: number[];
+  excludedSublayers: string[];
   vectorSublayerSettings: VectorSublayerSettings[];
   // preferInstantLayers: boolean;
 }
@@ -368,6 +392,7 @@ export type VectorImportType = "geojson" | "dynamic";
 export interface VectorSublayerSettings {
   sublayer: number;
   renderUnder: RenderUnderBasemapLayers;
+  outFields: string;
   importType: VectorImportType;
   geometryPrecision: 4 | 5 | 6;
   ignoreByteLimit: boolean;
@@ -438,62 +463,52 @@ export function useVisibleLayersSettings(
 }
 
 const featureLayerSizeDataCache: {
-  [key: string]: {
-    geoJsonBytes: number;
-    gzipBytes: number;
-    areaKm: number;
-    objects: number;
-    attributes: number;
-  };
+  [key: string]: FeatureLayerSizeInfo;
 } = {};
+
+const makeFeatureLayerSizeDataCacheKey = (
+  url: string,
+  settings?: VectorSublayerSettings
+) =>
+  url +
+  "-" +
+  (settings?.geometryPrecision || 6) +
+  "-" +
+  (settings?.outFields || "*");
+
+interface FeatureLayerSizeInfo {
+  geoJsonBytes: number;
+  gzipBytes: number;
+  areaKm: number;
+  objects: number;
+  attributes: number;
+  warnings: VectorImportWarning[];
+}
 
 export function useFeatureLayerSizeData(
   url: string,
   settings?: VectorSublayerSettings
 ) {
-  const [data, setData] = useState<{
-    geoJsonBytes: number;
-    gzipBytes: number;
-    areaKm: number;
-    objects: number;
-    attributes: number;
-  }>();
+  const [data, setData] = useState<FeatureLayerSizeInfo>();
   const [loading, setLoading] = useState<boolean>();
   const [error, setError] = useState<Error>();
 
   function updateStats() {
     if (url) {
-      const key = url + "-" + (settings?.geometryPrecision || 6);
+      const key = makeFeatureLayerSizeDataCacheKey(url, settings);
       if (featureLayerSizeDataCache[key]) {
         setData(featureLayerSizeDataCache[key]);
       } else {
         setLoading(true);
-        fetchFeatureLayerData(
+        fetchFeatureSizeDetails(
           url,
-          "*",
-          (e: Error) => {
-            setLoading(false);
-            setError(e);
-          },
-          settings?.geometryPrecision || 6
-        ).then((featureCollection: any) => {
-          const str = JSON.stringify(featureCollection);
-          const geoJsonBytes = byteLength(str);
-          const box = bboxPolygon(bbox(featureCollection));
-          const sqMeters = area(box);
-          const areaKm = sqMeters / 1000000;
-          const gSize = gzipSize.sync(str);
-          const d = {
-            geoJsonBytes,
-            areaKm,
-            gzipBytes: gSize,
-            objects: featureCollection.features.length,
-            attributes: Object.keys(featureCollection.features[0].properties)
-              .length,
-          };
-          setData(d);
+          new AbortController(),
+          settings,
+          undefined
+        ).then((data) => {
+          featureLayerSizeDataCache[key] = data;
+          setData(data);
           setLoading(false);
-          featureLayerSizeDataCache[key] = d;
         });
       }
     } else {
@@ -511,6 +526,207 @@ export function useFeatureLayerSizeData(
     loading,
     error,
   };
+}
+
+async function fetchFeatureSizeDetails(
+  url: string,
+  controller: AbortController,
+  layerSettings?: VectorSublayerSettings,
+  loadedBytesCallback?: (
+    bytes: number,
+    loadedFeatures?: number,
+    estimatedFeatures?: number
+  ) => void
+) {
+  return await fetchFeatureLayerData(
+    url,
+    layerSettings?.outFields || "*",
+    (e: Error) => {
+      // setLoading(false);
+      // setError(e);
+      throw e;
+    },
+    layerSettings?.geometryPrecision || 6,
+    controller,
+    loadedBytesCallback
+  ).then((featureCollection: any) => {
+    const str = JSON.stringify(featureCollection);
+    const geoJsonBytes = byteLength(str);
+    const box = bboxPolygon(bbox(featureCollection));
+    const sqMeters = area(box);
+    const areaKm = sqMeters / 1000000;
+    // const gSize = gzipSize.sync(str);
+    const gSize = 0;
+
+    const warnings = calculateWarnings(
+      featureCollection.features.length,
+      geoJsonBytes,
+      layerSettings
+    );
+
+    return {
+      geoJsonBytes,
+      areaKm,
+      gzipBytes: gSize,
+      objects: featureCollection.features.length,
+      attributes: Object.keys(
+        (featureCollection.features[0] || { properties: {} }).properties
+      ).length,
+      warnings,
+    };
+  });
+}
+
+function calculateWarnings(
+  numFeatures: number,
+  geoJsonBytes: number,
+  layerSettings?: VectorSublayerSettings
+) {
+  const warnings: VectorImportWarning[] = [];
+  const numRequests = Math.ceil(numFeatures / 1000);
+  if (numRequests > 1) {
+    warnings.push({
+      type: "arcgis",
+      level: "warning",
+      message: `This dataset will require ${numRequests} requests to load due to the number of features.`,
+    });
+  }
+  if (geoJsonBytes > 5_000_000) {
+    warnings.push({
+      type: "arcgis",
+      level: "warning",
+      message: `Dynamic vector sources are not recommended for large layers. Consider importing a copy into SeaSketch or using an Image Source.`,
+    });
+  }
+  if (geoJsonBytes > 30_000_000) {
+    warnings.push({
+      type: "geojson",
+      level: "warning",
+      message:
+        "Consider importing very large datasets individually to avoid a long import process.",
+    });
+  } else if (geoJsonBytes > 5_000_000) {
+    warnings.push({
+      type: "geojson",
+      level: geoJsonBytes > 10_000_000 ? "warning" : "info",
+      message:
+        "This dataset could take a long time to download depending on connection speed. You should consider adding it to a tileset after import.",
+    });
+  }
+  return warnings;
+}
+
+interface VectorImportWarning {
+  type: "arcgis" | "geojson";
+  message: string;
+  level: "error" | "warning" | "info";
+}
+
+export function useVectorSublayerStatus(
+  begin: boolean,
+  layers?: LayerInfo[],
+  settings?: VectorSublayerSettings[]
+) {
+  const [state, setState] = useState<{
+    [id: string]: {
+      error?: Error;
+      loading?: boolean;
+      loadedBytes?: number;
+      loadedFeatures?: number;
+      estimatedFeatures?: number;
+      data?: FeatureLayerSizeInfo;
+    };
+  }>({});
+  const [controller, setController] = useState(new AbortController());
+  useEffect(() => {
+    setState({});
+    if (begin) {
+      (async () => {
+        for (const layer of layers || []) {
+          const layerSettings = settings?.find((s) => s.sublayer === layer.id);
+          const key = makeFeatureLayerSizeDataCacheKey(
+            layer.url,
+            layerSettings
+          );
+          // console.log(`get ${layer.name}`);
+          if (!controller.signal.aborted) {
+            if (featureLayerSizeDataCache[key]) {
+              // recalculate warnings in case settings changed
+              const data = featureLayerSizeDataCache[key];
+              data.warnings = calculateWarnings(
+                data.objects,
+                data.geoJsonBytes,
+                layerSettings
+              );
+
+              setState((prev) => ({
+                ...prev,
+                [layer.generatedId]: {
+                  data,
+                  loading: false,
+                  error: undefined,
+                },
+              }));
+            } else {
+              setState((prev) => ({
+                ...prev,
+                [layer.generatedId]: {
+                  loading: true,
+                },
+              }));
+              try {
+                const data = await fetchFeatureSizeDetails(
+                  layer.url,
+                  controller,
+                  layerSettings,
+                  (bytes, loadedFeatures, estimatedFeatures) => {
+                    setState((prev) => ({
+                      ...prev,
+                      [layer.generatedId]: {
+                        loading: true,
+                        loadedBytes: bytes,
+                        loadedFeatures,
+                        estimatedFeatures,
+                      },
+                    }));
+                  }
+                );
+
+                setState((prev) => {
+                  return {
+                    ...prev,
+                    [layer.generatedId]: {
+                      loading: false,
+                      data,
+                    },
+                  };
+                });
+                featureLayerSizeDataCache[key] = data;
+              } catch (e) {
+                setState((prev) => {
+                  return {
+                    ...prev,
+                    [layer.generatedId]: {
+                      error: e,
+                    },
+                  };
+                });
+              }
+            }
+          } else {
+            // console.log("aborted", layer.name);
+            // setState({});
+          }
+        }
+      })();
+    }
+    return () => {
+      controller.abort();
+      setController(new AbortController());
+    };
+  }, [layers, settings, begin]);
+
+  return { layerStatus: state, abortController: controller };
 }
 
 // https://stackoverflow.com/a/23329386/299467

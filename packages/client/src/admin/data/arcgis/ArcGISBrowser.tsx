@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   CatalogItem,
   extentToLatLngBounds,
@@ -35,6 +35,11 @@ import {
 import TableOfContents, {
   TableOfContentsNode,
 } from "../../../dataLayers/tableOfContents/TableOfContents";
+import Button from "../../../components/Button";
+import Modal from "../../../components/Modal";
+import ImportVectorLayersModal from "./ImportVectorLayersModal";
+import { settings } from "cluster";
+import ExcludeLayerToggle from "./ExcludeLayerToggle";
 
 export default function ArcGISBrowser() {
   const [server, setServer] = useState<{
@@ -52,11 +57,13 @@ export default function ArcGISBrowser() {
   const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
     selectedMapServer
   );
+  const [modalOpen, setModalOpen] = useState(false);
   const serviceData = mapServerInfo.data;
 
   // Update map extent when showing new services
   useEffect(() => {
     if (serviceData && map) {
+      layerManager.manager?.setMap(map);
       const extent =
         serviceData.mapServerInfo.fullExtent ||
         serviceData.mapServerInfo.initialExtent;
@@ -167,6 +174,62 @@ export default function ArcGISBrowser() {
     }
   }, [serviceData, layerManager.manager]);
 
+  const featureLayerSettingsRef = useRef(null);
+
+  const settingsButton = (path: HTMLElement[]) => {
+    for (const el of path.slice(0, 3)) {
+      if (
+        el.tagName === "BUTTON" &&
+        el.getAttribute("data-type") === "settings"
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const colorPicker = (path: HTMLElement[]) => {
+    for (const el of path.slice(0, 5)) {
+      if (el.className.indexOf("colorpicker-body") !== -1) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const handleDocumentClick = useCallback(
+    (e) => {
+      if (
+        selectedFeatureLayer &&
+        e.path.indexOf(featureLayerSettingsRef.current) === -1 &&
+        e.target.tagName !== "INPUT" &&
+        !settingsButton(e.path) &&
+        !colorPicker(e.path)
+      ) {
+        setSelectedFeatureLayer(undefined);
+      }
+    },
+    [selectedFeatureLayer]
+  );
+
+  const columnContainer = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (columnContainer.current) {
+      columnContainer.current.scrollLeft = 10000;
+    }
+  }, [selectedFeatureLayer, selectedMapServer, columns]);
+
+  useEffect(() => {
+    if (selectedFeatureLayer) {
+      document.addEventListener("click", handleDocumentClick);
+    }
+
+    return () => {
+      document.removeEventListener("click", handleDocumentClick);
+    };
+  }, [selectedFeatureLayer]);
+
   // Add new catalog column or service column on selection
   const onCatalogItemSelection = (
     item: CatalogItem,
@@ -217,10 +280,17 @@ export default function ArcGISBrowser() {
                 ArcGIS Version {server.version}
               </span>
             </div>
-            <div className="flex flex-2 h-1/2 max-w-full overflow-x-scroll">
-              {columns.map((props) => (
+            <div
+              ref={columnContainer}
+              className="flex flex-2 h-1/2 max-w-full overflow-x-scroll"
+            >
+              {columns.map((props, i) => (
                 <ArcGISBrowserColumn
                   key={props.url}
+                  leading={
+                    (selectedMapServer && i === columns.length - 1) ||
+                    (!selectedMapServer && i === columns.length - 2)
+                  }
                   {...props}
                   onSelection={(item) => onCatalogItemSelection(item, props)}
                 />
@@ -233,8 +303,7 @@ export default function ArcGISBrowser() {
               {selectedMapServer && serviceData && serviceSettings && (
                 <div
                   ref={serviceColumnRef}
-                  className="p-2 overflow-y-scroll bg-white max-w-2xl w-1/2 shadow"
-                  style={{ minWidth: 320 }}
+                  className="p-2 overflow-y-scroll bg-white max-w-full md:w-128 lg:w-144 flex-grow-0 flex-shrink-0"
                 >
                   <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
                     <h3 className="text-lg leading-6 font-medium text-gray-900">
@@ -296,13 +365,25 @@ export default function ArcGISBrowser() {
                         nodes={treeData}
                         onChange={(data) => setTreeData(data)}
                         disabledMessage="(raster only)"
+                        extraClassName={(node) =>
+                          serviceSettings.excludedSublayers.indexOf(node.id) !==
+                          -1
+                            ? "line-through opacity-50"
+                            : ""
+                        }
                         extraButtons={
                           serviceSettings.sourceType === "arcgis-vector-source"
                             ? (node) =>
                                 node.type === "layer" && !node.disabled
                                   ? [
                                       <button
-                                        className="cursor-pointer rounded block border mr-2 focus:outline-none focus:shadow-outline-blue p-0.5"
+                                        data-type="settings"
+                                        className={`cursor-pointer rounded block border mr-2 focus:outline-none focus:shadow-outline-blue p-0.5 ${
+                                          selectedFeatureLayer?.generatedId ===
+                                          node.id
+                                            ? "shadow-outline-blue"
+                                            : ""
+                                        }`}
                                         onClick={() =>
                                           setSelectedFeatureLayer(
                                             serviceData.layerInfo.find(
@@ -313,6 +394,34 @@ export default function ArcGISBrowser() {
                                       >
                                         <SettingsIcon className="w-4 h-4 text-primary-500 hover:text-primary-600" />
                                       </button>,
+                                      <ExcludeLayerToggle
+                                        excluded={
+                                          serviceSettings.excludedSublayers.indexOf(
+                                            node.id
+                                          ) !== -1
+                                        }
+                                        onClick={() => {
+                                          let excluded = [
+                                            ...serviceSettings.excludedSublayers,
+                                          ];
+                                          if (
+                                            serviceSettings.excludedSublayers.indexOf(
+                                              node.id
+                                            ) !== -1
+                                          ) {
+                                            // already excluded
+                                            excluded = excluded.filter(
+                                              (id) => id !== node.id
+                                            );
+                                          } else {
+                                            excluded.push(node.id);
+                                          }
+                                          setServiceSettings({
+                                            ...serviceSettings,
+                                            excludedSublayers: excluded,
+                                          });
+                                        }}
+                                      />,
                                     ]
                                   : []
                             : undefined
@@ -327,39 +436,68 @@ export default function ArcGISBrowser() {
                       />
                     )}
                     {serviceSettings.sourceType === "arcgis-vector-source" && (
-                      <VectorFeatureLayerSettingsForm
-                        settings={serviceSettings}
-                        updateSettings={setServiceSettings}
-                      />
+                      <div>
+                        <div className="mt-6 mb-5 bg-cool-gray-100 rounded py-2 px-4 pb-3">
+                          <h3 className="font-medium">Import Layers</h3>
+                          <p className="text-sm text-gray-600 mt-1 mb-2">
+                            Before importing vector sources, SeaSketch will
+                            these vector sources for compatability and file size
+                            issues.
+                          </p>
+                          <Button
+                            primary={true}
+                            onClick={() => setModalOpen(true)}
+                            label={`Import all ${
+                              mapServerInfo.data?.layerInfo.filter(
+                                (l) => l.type === "Feature Layer"
+                              ).length
+                            } layers`}
+                          />
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
               )}
               {selectedFeatureLayer && serviceSettings && (
-                <FeatureLayerSettings
-                  service={mapServerInfo.data!.mapServerInfo}
-                  layer={selectedFeatureLayer}
-                  settings={serviceSettings}
-                  updateSettings={(settings) => {
-                    setServiceSettings(settings);
-                    const layerSettings = settings.vectorSublayerSettings.find(
-                      (s) => s.sublayer === selectedFeatureLayer.id
-                    );
-                    const source = vectorSourceFromSettings(
-                      selectedFeatureLayer,
-                      layerSettings
-                    );
-                    layerManager.manager!.updateSource(source);
-                    layerManager.manager!.updateLayer(
-                      vectorLayerFromSettings(
+                <div ref={featureLayerSettingsRef}>
+                  <FeatureLayerSettings
+                    service={mapServerInfo.data!.mapServerInfo}
+                    layer={selectedFeatureLayer}
+                    settings={serviceSettings}
+                    updateSettings={(settings) => {
+                      setServiceSettings(settings);
+                      const layerSettings = settings.vectorSublayerSettings.find(
+                        (s) => s.sublayer === selectedFeatureLayer.id
+                      );
+                      const source = vectorSourceFromSettings(
                         selectedFeatureLayer,
                         layerSettings
-                      )
-                    );
-                  }}
-                />
+                      );
+                      layerManager.manager!.updateSource(source);
+                      layerManager.manager!.updateLayer(
+                        vectorLayerFromSettings(
+                          selectedFeatureLayer,
+                          layerSettings
+                        )
+                      );
+                    }}
+                  />
+                </div>
               )}
             </div>
+            <ImportVectorLayersModal
+              layers={mapServerInfo.data?.layerInfo.filter(
+                (l) =>
+                  l.type !== "Group Layer" &&
+                  l.type !== "Raster Layer" &&
+                  serviceSettings?.excludedSublayers.indexOf(l.generatedId) ===
+                    -1
+              )}
+              settings={serviceSettings?.vectorSublayerSettings}
+              open={modalOpen}
+              onRequestClose={() => setModalOpen(false)}
+            />
           </div>
         </LayerManagerContext.Provider>
       </>
@@ -400,7 +538,7 @@ function vectorSourceFromSettings(
     imageSets: layer.imageList ? layer.imageList.toJSON() : [],
     options: {
       bytesLimit: settings?.ignoreByteLimit ? undefined : 5000000,
-      outFields: "*",
+      outFields: settings?.outFields || "*",
       geometryPrecision: settings?.geometryPrecision,
     },
   };

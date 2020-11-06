@@ -23,6 +23,7 @@ interface TableOfContentsProps {
   isVirtualized?: boolean;
   extraButtons?: (node: TableOfContentsNode) => React.ReactNode[];
   disabledMessage?: string;
+  extraClassName?: (node: TableOfContentsNode) => string | null;
 }
 
 export default function TableOfContents(props: TableOfContentsProps) {
@@ -80,9 +81,11 @@ export default function TableOfContents(props: TableOfContentsProps) {
                 ? " " + props.disabledMessage
                 : ""
             }`,
-            style: {
-              opacity: data.node.disabled ? 0.5 : 1,
-            },
+            className: `${data.node.disabled ? "opacity-50" : ""} ${
+              props.extraClassName
+                ? props.extraClassName(data.node as TableOfContentsNode)
+                : ""
+            }`,
             icons: [
               <VisibilityCheckbox
                 id={data.node.id}
@@ -95,6 +98,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
                   } else {
                     childIds = getEnabledChildren(
                       data.node as TableOfContentsNode,
+
                       isVisible,
                       layerStates
                     );

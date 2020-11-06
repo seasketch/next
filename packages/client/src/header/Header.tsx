@@ -23,13 +23,10 @@ export default function Header(props: { projectMode?: boolean }) {
   ]);
 
   useEffect(() => {
-    console.log("effect");
     if (profileModalOpen) {
-      console.log("add handler", handleDocumentClick);
       document.addEventListener("click", handleDocumentClick);
     }
     return () => {
-      console.log("remove handler", handleDocumentClick);
       document.removeEventListener("click", handleDocumentClick);
     };
   });
