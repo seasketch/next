@@ -6,7 +6,9 @@ var MapBoxGLEsriSources = (function (exports) {
         constructor(map, id, baseUrl, options) {
             this.supportDevicePixelRatio = true;
             this.supportsDynamicLayers = false;
+            this._loading = true;
             this.updateSource = () => {
+                this._loading = true;
                 const bounds = this.map.getBounds();
                 this.source.updateImage({
                     url: this.getUrl(),
@@ -59,9 +61,23 @@ var MapBoxGLEsriSources = (function (exports) {
                 ],
             });
             this.source = this.map.getSource(this.id);
+            this.map.on("data", (event) => {
+                if (event.sourceId === this.id &&
+                    event.dataType === "source" &&
+                    event.sourceDataType === "content") {
+                    this._loading = false;
+                }
+            });
+            this.map.on("error", (event) => {
+                if (event.sourceId && event.sourceId === this.id) {
+                    this._loading = false;
+                }
+            });
         }
         destroy() {
             this.map.off("moveend", this.updateSource);
+            this.map.off("data", this.updateSource);
+            this.map.off("error", this.updateSource);
         }
         getUrl() {
             const bounds = this.map.getBounds();
@@ -159,6 +175,9 @@ var MapBoxGLEsriSources = (function (exports) {
             }
             return this.url.toString();
         }
+        get loading() {
+            return this._loading;
+        }
         updateLayers(layers) {
             if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
                 this.layers = layers;
@@ -197,13 +216,14 @@ var MapBoxGLEsriSources = (function (exports) {
 
     class ArcGISVectorSource {
         constructor(map, id, url, options) {
+            var _a;
             this.data = {
                 type: "FeatureCollection",
                 features: [],
             };
             this.outFields = "*";
             this.supportsPagination = true;
-            this.displayIncompleteFeatureCollections = true;
+            this._loading = true;
             this.id = id;
             this.baseUrl = url;
             this.options = options;
@@ -217,69 +237,140 @@ var MapBoxGLEsriSources = (function (exports) {
                 options["supportsPagination"] === false) {
                 this.supportsPagination = false;
             }
-            if (options &&
-                "displayIncompleteFeatureCollections" in options &&
-                options["displayIncompleteFeatureCollections"] === false) {
-                this.displayIncompleteFeatureCollections = false;
-            }
             if (options && options.outFields) {
                 this.outFields = options.outFields;
             }
             this.source = this.map.getSource(this.id);
-            this.fetchGeoJSON();
-        }
-        async fetchGeoJSON() {
-            var _a, _b;
-            const params = new URLSearchParams({
-                inSR: "4326",
-                outSR: "4326",
-                where: "1>0",
-                outFields: this.outFields,
-                returnGeometry: "true",
-                geometryPrecision: ((_b = (_a = this.options) === null || _a === void 0 ? void 0 : _a.geometryPrecision) === null || _b === void 0 ? void 0 : _b.toString()) || "6",
-                returnIdsOnly: "false",
-                f: "geojson",
-                resultOffset: this.supportsPagination
-                    ? this.data.features.length.toString()
-                    : "",
+            let hadError = false;
+            const onError = (e) => {
+                hadError = true;
+                this._loading = false;
+                this.map.fire("error", {
+                    source: this.source,
+                    sourceId: this.id,
+                    error: e,
+                });
+            };
+            this.map.fire("dataloading", {
+                source: this.source,
+                sourceId: this.id,
+                dataType: "source",
+                isSourceLoaded: false,
+                sourceDataType: "content",
             });
-            const response = await fetch(`${this.baseUrl}/query?${params.toString()}`, {
-                mode: "cors",
-            });
-            const featureCollection = await response.json();
-            if (featureCollection.error) {
-                if (this.supportsPagination &&
-                    /pagination/i.test(featureCollection.error.message)) {
-                    this.supportsPagination = false;
-                    this.fetchGeoJSON();
+            fetchFeatureLayerData(this.baseUrl, this.outFields, onError, (_a = this.options) === null || _a === void 0 ? void 0 : _a.geometryPrecision, null, null, false, 1000, options === null || options === void 0 ? void 0 : options.bytesLimit)
+                .then((fc) => {
+                this._loading = false;
+                if (!hadError) {
+                    this.source.setData(fc);
                 }
-                else {
-                    throw new Error(`Error retrieving feature data. ${featureCollection.error.message}`);
+            })
+                .catch(onError);
+        }
+        get loading() {
+            return this._loading;
+        }
+    }
+    async function fetchFeatureLayerData(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {
+        const featureCollection = {
+            type: "FeatureCollection",
+            features: [],
+        };
+        const params = new URLSearchParams({
+            inSR: "4326",
+            outSR: "4326",
+            where: "1>0",
+            outFields,
+            returnGeometry: "true",
+            geometryPrecision: geometryPrecision.toString(),
+            returnIdsOnly: "false",
+            f: "geojson",
+        });
+        await fetchData(url, params, featureCollection, onError, abortController || new AbortController(), onPageReceived, disablePagination, pageSize, bytesLimit);
+        return featureCollection;
+    }
+    async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIds) {
+        bytesReceived = bytesReceived || 0;
+        const decoder = new TextDecoder("utf-8");
+        params.set("returnIdsOnly", "false");
+        if (featureCollection.features.length > 0) {
+            if (objectIds) {
+                const nextPageObjectIds = objectIds.slice(0, pageSize);
+                params.delete("where");
+                params.delete("resultOffset");
+                params.delete("resultRecordCount");
+                params.set("objectIds", nextPageObjectIds.join(","));
+            }
+            else {
+                params.set("resultOffset", featureCollection.features.length.toString());
+                params.set("resultRecordCount", pageSize.toString());
+            }
+        }
+        const response = await fetch(`${baseUrl}/query?${params.toString()}`, {
+            mode: "cors",
+            signal: abortController.signal,
+        });
+        const str = await response.text();
+        bytesReceived += byteLength(str);
+        if (bytesLimit && bytesReceived >= bytesLimit) {
+            const e = new Error(`Exceeded bytesLimit. ${bytesReceived} >= ${bytesLimit}`);
+            return onError(e);
+        }
+        const fc = JSON.parse(str);
+        if (fc.error) {
+            if (/pagination/i.test(fc.error.message)) {
+                params.delete("resultOffset");
+                params.delete("resultRecordCount");
+                params.set("returnIdsOnly", "true");
+                try {
+                    const r = await fetch(`${baseUrl}/query?${params.toString()}`, {
+                        mode: "cors",
+                        signal: abortController.signal,
+                    });
+                    const featureIds = featureCollection.features.map((f) => f.id);
+                    const objectIdParameters = await r.json();
+                    await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdParameters.objectIds.filter((id) => featureIds.indexOf(id) === -1));
+                }
+                catch (e) {
+                    return onError(e);
                 }
             }
             else {
-                this.data = {
-                    type: "FeatureCollection",
-                    features: [...this.data.features, ...featureCollection.features],
-                };
-                if (featureCollection.exceededTransferLimit) {
-                    if (this.supportsPagination === false) {
-                        this.source.setData(this.data);
-                        throw new Error("Data source does not support pagination but exceeds transfer limit");
-                    }
-                    else {
-                        if (this.displayIncompleteFeatureCollections) {
-                            this.source.setData(this.data);
-                        }
-                        console.log("fetching more data");
-                        this.fetchGeoJSON();
-                    }
-                }
-                else {
-                    this.source.setData(this.data);
-                }
+                return onError(new Error(fc.error.message));
             }
         }
+        else {
+            featureCollection.features.push(...fc.features);
+            if (onPageReceived) {
+                onPageReceived(bytesReceived, featureCollection.features.length, 0);
+            }
+            if (objectIds) {
+                let priorLength = objectIds.length;
+                const featureIds = fc.features.map((f) => f.id);
+                objectIds = objectIds.filter((id) => featureIds.indexOf(id) === -1);
+                if (priorLength <= objectIds.length) {
+                    const e = new Error("Feature id's coming from server do not match those requested");
+                    return onError(e);
+                }
+            }
+            if (fc.exceededTransferLimit || (objectIds && objectIds.length)) {
+                await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIds);
+            }
+        }
+        return bytesReceived;
+    }
+    function byteLength(str) {
+        var s = str.length;
+        for (var i = str.length - 1; i >= 0; i--) {
+            var code = str.charCodeAt(i);
+            if (code > 0x7f && code <= 0x7ff)
+                s++;
+            else if (code > 0x7ff && code <= 0xffff)
+                s += 2;
+            if (code >= 0xdc00 && code <= 0xdfff)
+                i--;
+        }
+        return s;
     }
 
     var getRandomValues = typeof crypto !== 'undefined' && crypto.getRandomValues && crypto.getRandomValues.bind(crypto) || typeof msCrypto !== 'undefined' && typeof msCrypto.getRandomValues === 'function' && msCrypto.getRandomValues.bind(msCrypto);
@@ -336,7 +427,7 @@ var MapBoxGLEsriSources = (function (exports) {
     }
     const rgba = (color) => {
         color = color || [0, 0, 0, 0];
-        return `rgba(${color[0]},${color[1]},${color[2]},${color[3]})`;
+        return `rgba(${color[0]},${color[1]},${color[2]},${color[3] / 255})`;
     };
     const colorAndOpacity = (color) => {
         color = color || [0, 0, 0, 0];
@@ -408,16 +499,27 @@ var MapBoxGLEsriSources = (function (exports) {
 
     var esriSFS = (symbol, sourceId, imageList) => {
         const layers = [];
+        let useFillOutlineColor = symbol.outline &&
+            ptToPx(symbol.outline.width || 1) === 1 &&
+            symbol.outline.style === "esriSLSSolid";
         switch (symbol.style) {
             case "esriSFSSolid":
-                layers.push({
-                    id: generateId(),
-                    type: "fill",
-                    source: sourceId,
-                    paint: {
-                        "fill-color": rgba(symbol.color),
-                    },
-                });
+                if (symbol.color && symbol.color[3] === 0) {
+                    useFillOutlineColor = false;
+                }
+                else {
+                    layers.push({
+                        id: generateId(),
+                        type: "fill",
+                        source: sourceId,
+                        paint: {
+                            "fill-color": rgba(symbol.color),
+                            ...(useFillOutlineColor
+                                ? { "fill-outline-color": rgba(symbol.outline.color) }
+                                : {}),
+                        },
+                    });
+                }
                 break;
             case "esriSFSNull":
                 break;
@@ -434,13 +536,16 @@ var MapBoxGLEsriSources = (function (exports) {
                     type: "fill",
                     paint: {
                         "fill-pattern": imageId,
+                        ...(useFillOutlineColor
+                            ? { "fill-outline-color": rgba(symbol.outline.color) }
+                            : {}),
                     },
                 });
                 break;
             default:
                 throw new Error(`Unknown fill style ${symbol.style}`);
         }
-        if (symbol.outline) {
+        if (symbol.outline && !useFillOutlineColor) {
             let outline = esriSLS(symbol.outline, sourceId);
             layers.push(...outline);
         }
@@ -713,12 +818,18 @@ var MapBoxGLEsriSources = (function (exports) {
     };
 
     class ImageList {
-        constructor(arcGISVersion) {
+        constructor(arcGISVersion, imageSets) {
             this.imageSets = [];
             this.supportsHighDPILegends = false;
             if (arcGISVersion && arcGISVersion >= 10.6) {
                 this.supportsHighDPILegends = true;
             }
+            if (imageSets) {
+                this.imageSets = imageSets;
+            }
+        }
+        toJSON() {
+            return this.imageSets;
         }
         addEsriPFS(symbol) {
             const imageid = v4();
@@ -1050,6 +1161,7 @@ var MapBoxGLEsriSources = (function (exports) {
 
     exports.ArcGISDynamicMapService = ArcGISDynamicMapService;
     exports.ArcGISVectorSource = ArcGISVectorSource;
+    exports.ImageList = ImageList;
     exports.styleForFeatureLayer = styleForFeatureLayer;
 
     return exports;

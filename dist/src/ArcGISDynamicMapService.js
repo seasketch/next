@@ -59,7 +59,9 @@ export class ArcGISDynamicMapService {
     constructor(map, id, baseUrl, options) {
         this.supportDevicePixelRatio = true;
         this.supportsDynamicLayers = false;
+        this._loading = true;
         this.updateSource = () => {
+            this._loading = true;
             const bounds = this.map.getBounds();
             this.source.updateImage({
                 url: this.getUrl(),
@@ -112,12 +114,26 @@ export class ArcGISDynamicMapService {
             ],
         });
         this.source = this.map.getSource(this.id);
+        this.map.on("data", (event) => {
+            if (event.sourceId === this.id &&
+                event.dataType === "source" &&
+                event.sourceDataType === "content") {
+                this._loading = false;
+            }
+        });
+        this.map.on("error", (event) => {
+            if (event.sourceId && event.sourceId === this.id) {
+                this._loading = false;
+            }
+        });
     }
     /**
      * Clears all map event listeners setup by this instance.
      */
     destroy() {
         this.map.off("moveend", this.updateSource);
+        this.map.off("data", this.updateSource);
+        this.map.off("error", this.updateSource);
     }
     getUrl() {
         const bounds = this.map.getBounds();
@@ -227,6 +243,10 @@ export class ArcGISDynamicMapService {
             this.url.searchParams.set(key, this.queryParameters[key].toString());
         }
         return this.url.toString();
+    }
+    /** Whether a source image is currently being fetched over the network */
+    get loading() {
+        return this._loading;
     }
     /**
      * Update the list of sublayers and re-render the the map. If

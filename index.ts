@@ -5,6 +5,7 @@ import {
 import {
   ArcGISVectorSource,
   ArcGISVectorSourceOptions,
+  fetchFeatureLayerData,
 } from "./src/ArcGISVectorSource";
 export {
   ArcGISDynamicMapService,
@@ -13,3 +14,4 @@ export {
   ArcGISVectorSourceOptions,
 };
 export { default as styleForFeatureLayer } from "./src/styleForFeatureLayer";
+export { ImageList } from "./src/ImageList";

@@ -101,6 +101,7 @@ export class ArcGISDynamicMapService {
   private supportDevicePixelRatio: boolean = true;
   private supportsDynamicLayers = false;
   private debounceTimeout?: NodeJS.Timeout;
+  private _loading = true;
 
   /**
    * @param {Map} map MapBox GL JS Map instance
@@ -150,6 +151,20 @@ export class ArcGISDynamicMapService {
       ],
     });
     this.source = this.map.getSource(this.id) as ImageSource;
+    this.map.on("data", (event) => {
+      if (
+        event.sourceId === this.id &&
+        event.dataType === "source" &&
+        event.sourceDataType === "content"
+      ) {
+        this._loading = false;
+      }
+    });
+    this.map.on("error", (event) => {
+      if (event.sourceId && event.sourceId === this.id) {
+        this._loading = false;
+      }
+    });
   }
 
   /**
@@ -157,6 +172,8 @@ export class ArcGISDynamicMapService {
    */
   destroy() {
     this.map.off("moveend", this.updateSource);
+    this.map.off("data", this.updateSource);
+    this.map.off("error", this.updateSource);
   }
 
   private getUrl() {
@@ -280,7 +297,13 @@ export class ArcGISDynamicMapService {
     return this.url.toString();
   }
 
+  /** Whether a source image is currently being fetched over the network */
+  get loading(): boolean {
+    return this._loading;
+  }
+
   private updateSource = () => {
+    this._loading = true;
     const bounds = this.map.getBounds();
     this.source.updateImage({
       url: this.getUrl(),

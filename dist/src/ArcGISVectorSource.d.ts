@@ -1,14 +1,6 @@
 import { Map, GeoJSONSource } from "mapbox-gl";
+import { FeatureCollection } from "geojson";
 export interface ArcGISVectorSourceOptions {
-    /**
-     * ArcGISVectorSource will page through results until the entire dataset is
-     * downloaded. If set to true, data will be rendered each time a page of
-     * features are downloaded. Otherwise, the source data will only be updated
-     * once upon completion.
-     * @type {boolean}
-     * @default true
-     */
-    displayIncompleteFeatureCollections?: boolean;
     /**
      * Number of digits precision after the decimal to fetch from the origin
      * server. The default of 6 a good compromise between precision (~10cm) and
@@ -36,6 +28,8 @@ export interface ArcGISVectorSourceOptions {
      * @default "*"
      */
     outFields?: string;
+    bytesLimit?: number;
+    onError?: (error: Error) => void;
 }
 /**
  * Add ArcGIS Feature Layers to MapBox GL JS maps as a geojson source. These
@@ -75,7 +69,8 @@ export declare class ArcGISVectorSource {
     private map;
     private outFields;
     private supportsPagination;
-    private displayIncompleteFeatureCollections;
+    /** Set to true when source is fetching data */
+    private _loading;
     /**
      * Creates an instance of ArcGISVectorSource.
      * @param {Map} map MapBox GL JS map instance where source will be added
@@ -83,5 +78,6 @@ export declare class ArcGISVectorSource {
      * @param {string} url Base url for an [ArcGIS Server Feature Layer](https://developers.arcgis.com/rest/services-reference/layer-table.htm). Should end in _/MapServer/0..n_
      */
     constructor(map: Map, id: string, url: string, options?: ArcGISVectorSourceOptions);
-    private fetchGeoJSON;
+    get loading(): boolean;
 }
+export declare function fetchFeatureLayerData(url: string, outFields: string, onError: (error: Error) => void, geometryPrecision?: number, abortController?: AbortController | null, onPageReceived?: ((bytes: number, loadedFeatures: number, estimatedFeatures: number) => void) | null, disablePagination?: boolean, pageSize?: number, bytesLimit?: number): Promise<FeatureCollection<import("geojson").Geometry, import("geojson").GeoJsonProperties>>;

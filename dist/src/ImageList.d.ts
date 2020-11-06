@@ -13,7 +13,8 @@ export interface ImageSet {
 export declare class ImageList {
     private imageSets;
     private supportsHighDPILegends;
-    constructor(arcGISVersion?: number);
+    constructor(arcGISVersion?: number, imageSets?: ImageSet[]);
+    toJSON(): ImageSet[];
     /**
      * Add a fill image for a PictureFillSymbol to the image set.
      *

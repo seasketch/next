@@ -1,7 +1,3 @@
-// @ts-ignore
-// import { arcgisToGeoJSON } from "@terraformer/arcgis";
-/** @hidden */
-const WORLD = { xmin: -180, xmax: 180, ymin: -90, ymax: 90 };
 /**
  * Add ArcGIS Feature Layers to MapBox GL JS maps as a geojson source. These
  * data sources can be styled using output from
@@ -35,13 +31,15 @@ export class ArcGISVectorSource {
      * @param {string} url Base url for an [ArcGIS Server Feature Layer](https://developers.arcgis.com/rest/services-reference/layer-table.htm). Should end in _/MapServer/0..n_
      */
     constructor(map, id, url, options) {
+        var _a;
         this.data = {
             type: "FeatureCollection",
             features: [],
         };
         this.outFields = "*";
         this.supportsPagination = true;
-        this.displayIncompleteFeatureCollections = true;
+        /** Set to true when source is fetching data */
+        this._loading = true;
         this.id = id;
         this.baseUrl = url;
         this.options = options;
@@ -55,67 +53,145 @@ export class ArcGISVectorSource {
             options["supportsPagination"] === false) {
             this.supportsPagination = false;
         }
-        if (options &&
-            "displayIncompleteFeatureCollections" in options &&
-            options["displayIncompleteFeatureCollections"] === false) {
-            this.displayIncompleteFeatureCollections = false;
-        }
         if (options && options.outFields) {
             this.outFields = options.outFields;
         }
         this.source = this.map.getSource(this.id);
-        this.fetchGeoJSON();
-    }
-    async fetchGeoJSON() {
-        var _a, _b;
-        const params = new URLSearchParams({
-            inSR: "4326",
-            outSR: "4326",
-            where: "1>0",
-            outFields: this.outFields,
-            returnGeometry: "true",
-            geometryPrecision: ((_b = (_a = this.options) === null || _a === void 0 ? void 0 : _a.geometryPrecision) === null || _b === void 0 ? void 0 : _b.toString()) || "6",
-            returnIdsOnly: "false",
-            f: "geojson",
-            resultOffset: this.supportsPagination
-                ? this.data.features.length.toString()
-                : "",
+        let hadError = false;
+        const onError = (e) => {
+            hadError = true;
+            this._loading = false;
+            this.map.fire("error", {
+                source: this.source,
+                sourceId: this.id,
+                error: e,
+            });
+        };
+        this.map.fire("dataloading", {
+            source: this.source,
+            sourceId: this.id,
+            dataType: "source",
+            isSourceLoaded: false,
+            sourceDataType: "content",
         });
-        const response = await fetch(`${this.baseUrl}/query?${params.toString()}`, {
-            mode: "cors",
-        });
-        const featureCollection = await response.json();
-        if (featureCollection.error) {
-            if (this.supportsPagination &&
-                /pagination/i.test(featureCollection.error.message)) {
-                this.supportsPagination = false;
-                this.fetchGeoJSON();
+        fetchFeatureLayerData(this.baseUrl, this.outFields, onError, (_a = this.options) === null || _a === void 0 ? void 0 : _a.geometryPrecision, null, null, false, 1000, options === null || options === void 0 ? void 0 : options.bytesLimit)
+            .then((fc) => {
+            this._loading = false;
+            if (!hadError) {
+                this.source.setData(fc);
             }
-            else {
-                throw new Error(`Error retrieving feature data. ${featureCollection.error.message}`);
+        })
+            .catch(onError);
+        // this.fetchGeoJSON().catch(options?.onError);
+    }
+    get loading() {
+        return this._loading;
+    }
+}
+export async function fetchFeatureLayerData(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {
+    const featureCollection = {
+        type: "FeatureCollection",
+        features: [],
+    };
+    const params = new URLSearchParams({
+        inSR: "4326",
+        outSR: "4326",
+        where: "1>0",
+        outFields,
+        returnGeometry: "true",
+        geometryPrecision: geometryPrecision.toString(),
+        returnIdsOnly: "false",
+        f: "geojson",
+    });
+    await fetchData(url, params, featureCollection, onError, abortController || new AbortController(), onPageReceived, disablePagination, pageSize, bytesLimit);
+    return featureCollection;
+}
+async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIds) {
+    bytesReceived = bytesReceived || 0;
+    const decoder = new TextDecoder("utf-8");
+    params.set("returnIdsOnly", "false");
+    if (featureCollection.features.length > 0) {
+        if (objectIds) {
+            // fetch next page using objectIds
+            let featureIds;
+            const nextPageObjectIds = objectIds.slice(0, pageSize);
+            params.delete("where");
+            params.delete("resultOffset");
+            params.delete("resultRecordCount");
+            params.set("objectIds", nextPageObjectIds.join(","));
+        }
+        else {
+            // fetch next page using built-in pagination first
+            params.set("resultOffset", featureCollection.features.length.toString());
+            params.set("resultRecordCount", pageSize.toString());
+        }
+    }
+    const response = await fetch(`${baseUrl}/query?${params.toString()}`, {
+        mode: "cors",
+        signal: abortController.signal,
+    });
+    const str = await response.text();
+    bytesReceived += byteLength(str);
+    if (bytesLimit && bytesReceived >= bytesLimit) {
+        const e = new Error(`Exceeded bytesLimit. ${bytesReceived} >= ${bytesLimit}`);
+        return onError(e);
+    }
+    const fc = JSON.parse(str);
+    if (fc.error) {
+        if (/pagination/i.test(fc.error.message)) {
+            params.delete("resultOffset");
+            params.delete("resultRecordCount");
+            params.set("returnIdsOnly", "true");
+            try {
+                const r = await fetch(`${baseUrl}/query?${params.toString()}`, {
+                    mode: "cors",
+                    signal: abortController.signal,
+                });
+                const featureIds = featureCollection.features.map((f) => f.id);
+                const objectIdParameters = await r.json();
+                await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdParameters.objectIds.filter((id) => featureIds.indexOf(id) === -1));
+            }
+            catch (e) {
+                return onError(e);
             }
         }
         else {
-            this.data = {
-                type: "FeatureCollection",
-                features: [...this.data.features, ...featureCollection.features],
-            };
-            if (featureCollection.exceededTransferLimit) {
-                if (this.supportsPagination === false) {
-                    this.source.setData(this.data);
-                    throw new Error("Data source does not support pagination but exceeds transfer limit");
-                }
-                else {
-                    if (this.displayIncompleteFeatureCollections) {
-                        this.source.setData(this.data);
-                    }
-                    console.log("fetching more data");
-                    this.fetchGeoJSON();
-                }
-            }
-            else {
-                this.source.setData(this.data);
-            }
+            return onError(new Error(fc.error.message));
         }
     }
+    else {
+        featureCollection.features.push(...fc.features);
+        if (onPageReceived) {
+            onPageReceived(bytesReceived, featureCollection.features.length, 0);
+        }
+        if (objectIds) {
+            let priorLength = objectIds.length;
+            const priorValue = [...objectIds];
+            const featureIds = fc.features.map((f) => f.id);
+            objectIds = objectIds.filter((id) => featureIds.indexOf(id) === -1);
+            if (priorLength <= objectIds.length) {
+                const e = new Error("Feature id's coming from server do not match those requested");
+                return onError(e);
+            }
+        }
+        if (fc.exceededTransferLimit || (objectIds && objectIds.length)) {
+            await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIds);
+        }
+    }
+    return bytesReceived;
+}
+// https://stackoverflow.com/a/23329386/299467
+function byteLength(str) {
+    // returns the byte length of an utf8 string
+    var s = str.length;
+    for (var i = str.length - 1; i >= 0; i--) {
+        var code = str.charCodeAt(i);
+        if (code > 0x7f && code <= 0x7ff)
+            s++;
+        else if (code > 0x7ff && code <= 0xffff)
+            s += 2;
+        if (code >= 0xdc00 && code <= 0xdfff)
+            i--; //trail surrogate
+    }
+    return s;
 }

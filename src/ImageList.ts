@@ -26,10 +26,17 @@ export class ImageList {
   private imageSets: (ImageSet | Promise<ImageSet>)[] = [];
   private supportsHighDPILegends = false;
 
-  constructor(arcGISVersion?: number) {
+  constructor(arcGISVersion?: number, imageSets?: ImageSet[]) {
     if (arcGISVersion && arcGISVersion >= 10.6) {
       this.supportsHighDPILegends = true;
     }
+    if (imageSets) {
+      this.imageSets = imageSets;
+    }
+  }
+
+  toJSON() {
+    return this.imageSets as ImageSet[];
   }
 
   /**

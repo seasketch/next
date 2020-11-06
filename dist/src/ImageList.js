@@ -3,12 +3,18 @@ import drawSMS from "./symbols/drawSMS";
 import fillPatterns from "./symbols/fillPatterns";
 import { rgba, ptToPx } from "./symbols/utils";
 export class ImageList {
-    constructor(arcGISVersion) {
+    constructor(arcGISVersion, imageSets) {
         this.imageSets = [];
         this.supportsHighDPILegends = false;
         if (arcGISVersion && arcGISVersion >= 10.6) {
             this.supportsHighDPILegends = true;
         }
+        if (imageSets) {
+            this.imageSets = imageSets;
+        }
+    }
+    toJSON() {
+        return this.imageSets;
     }
     /**
      * Add a fill image for a PictureFillSymbol to the image set.
