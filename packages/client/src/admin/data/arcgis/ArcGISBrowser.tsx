@@ -175,6 +175,9 @@ export default function ArcGISBrowser() {
   }, [serviceData, layerManager.manager]);
 
   const featureLayerSettingsRef = useRef(null);
+  const numLayers =
+    mapServerInfo.data?.layerInfo.filter((l) => l.type === "Feature Layer")
+      .length || 0;
 
   const settingsButton = (path: HTMLElement[]) => {
     for (const el of path.slice(0, 3)) {
@@ -368,64 +371,71 @@ export default function ArcGISBrowser() {
                         extraClassName={(node) =>
                           serviceSettings.excludedSublayers.indexOf(node.id) !==
                           -1
-                            ? "line-through opacity-50"
+                            ? "line-through disabled"
                             : ""
                         }
-                        extraButtons={
-                          serviceSettings.sourceType === "arcgis-vector-source"
-                            ? (node) =>
-                                node.type === "layer" && !node.disabled
-                                  ? [
-                                      <button
-                                        data-type="settings"
-                                        className={`cursor-pointer rounded block border mr-2 focus:outline-none focus:shadow-outline-blue p-0.5 ${
-                                          selectedFeatureLayer?.generatedId ===
-                                          node.id
-                                            ? "shadow-outline-blue"
-                                            : ""
-                                        }`}
-                                        onClick={() =>
-                                          setSelectedFeatureLayer(
-                                            serviceData.layerInfo.find(
-                                              (l) => l.generatedId === node.id
-                                            )
-                                          )
-                                        }
-                                      >
-                                        <SettingsIcon className="w-4 h-4 text-primary-500 hover:text-primary-600" />
-                                      </button>,
-                                      <ExcludeLayerToggle
-                                        excluded={
-                                          serviceSettings.excludedSublayers.indexOf(
-                                            node.id
-                                          ) !== -1
-                                        }
-                                        onClick={() => {
-                                          let excluded = [
-                                            ...serviceSettings.excludedSublayers,
-                                          ];
-                                          if (
-                                            serviceSettings.excludedSublayers.indexOf(
-                                              node.id
-                                            ) !== -1
-                                          ) {
-                                            // already excluded
-                                            excluded = excluded.filter(
-                                              (id) => id !== node.id
-                                            );
-                                          } else {
-                                            excluded.push(node.id);
-                                          }
-                                          setServiceSettings({
-                                            ...serviceSettings,
-                                            excludedSublayers: excluded,
-                                          });
-                                        }}
-                                      />,
-                                    ]
-                                  : []
-                            : undefined
-                        }
+                        extraButtons={(node) => {
+                          let buttons = [];
+                          if (node.type === "layer" && !node.disabled) {
+                            if (
+                              serviceSettings.sourceType ===
+                              "arcgis-vector-source"
+                            ) {
+                              buttons.push(
+                                <button
+                                  data-type="settings"
+                                  className={`cursor-pointer rounded block border mr-2 focus:outline-none focus:shadow-outline-blue p-0.5 ${
+                                    selectedFeatureLayer?.generatedId ===
+                                    node.id
+                                      ? "shadow-outline-blue"
+                                      : ""
+                                  }`}
+                                  onClick={() =>
+                                    setSelectedFeatureLayer(
+                                      serviceData.layerInfo.find(
+                                        (l) => l.generatedId === node.id
+                                      )
+                                    )
+                                  }
+                                >
+                                  <SettingsIcon className="w-4 h-4 text-primary-500 hover:text-primary-600" />
+                                </button>
+                              );
+                            }
+                          }
+                          buttons.push(
+                            <ExcludeLayerToggle
+                              excluded={
+                                serviceSettings.excludedSublayers.indexOf(
+                                  node.id
+                                ) !== -1
+                              }
+                              onClick={() => {
+                                let excluded = [
+                                  ...serviceSettings.excludedSublayers,
+                                ];
+                                if (
+                                  serviceSettings.excludedSublayers.indexOf(
+                                    node.id
+                                  ) !== -1
+                                ) {
+                                  // already excluded
+                                  excluded = excluded.filter(
+                                    (id) => id !== node.id
+                                  );
+                                } else {
+                                  excluded.push(node.id);
+                                }
+                                layerManager.manager?.hideLayers([node.id]);
+                                setServiceSettings({
+                                  ...serviceSettings,
+                                  excludedSublayers: excluded,
+                                });
+                              }}
+                            />
+                          );
+                          return buttons;
+                        }}
                       />
                     </div>
                     {serviceSettings.sourceType ===
@@ -446,12 +456,26 @@ export default function ArcGISBrowser() {
                           </p>
                           <Button
                             primary={true}
+                            disabled={
+                              numLayers -
+                                serviceSettings.excludedSublayers.length ===
+                              0
+                            }
                             onClick={() => setModalOpen(true)}
-                            label={`Import all ${
-                              mapServerInfo.data?.layerInfo.filter(
-                                (l) => l.type === "Feature Layer"
-                              ).length
-                            } layers`}
+                            label={`Import ${
+                              serviceSettings.excludedSublayers.length === 0
+                                ? "all"
+                                : ""
+                            } ${
+                              numLayers -
+                              serviceSettings.excludedSublayers.length
+                            } layer${
+                              numLayers -
+                                serviceSettings.excludedSublayers.length ===
+                              1
+                                ? ""
+                                : "s"
+                            }`}
                           />
                         </div>
                       </div>

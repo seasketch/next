@@ -25,7 +25,6 @@ export default function Button(props: ButtonProps) {
   let onClick = props.onClick;
   if (props.href) {
     onClick = () => {
-      console.log("onClick", props.href);
       history.push(props.href!);
     };
   }
@@ -75,7 +74,7 @@ export default function Button(props: ButtonProps) {
   return (
     <span
       className={`inline-flex rounded-md shadow-sm ${props.className}`}
-      onClick={onClick}
+      onClick={props.disabled ? undefined : onClick}
     >
       {props.labelFor ? (
         <label htmlFor={props.labelFor} className={buttonClassName}>

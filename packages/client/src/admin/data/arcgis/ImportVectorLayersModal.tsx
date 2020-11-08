@@ -55,6 +55,14 @@ export default function ImportVectorLayersModal(
   ).length;
   const pendingIndex = layers.length - remaining;
 
+  const numErrors = Object.values(layerStatus).filter((s) => {
+    if (s.error || s.data?.warnings.find((w) => w.level === "error")) {
+      return true;
+    } else {
+      return false;
+    }
+  }).length;
+
   return (
     <Modal
       open={open}
@@ -80,6 +88,15 @@ export default function ImportVectorLayersModal(
                 />
               </div>
             </>
+          ) : numErrors > 0 ? (
+            <div>
+              <p className="my-2 mb-3">
+                There were errors found when analyzing this service. Either
+                exclude layers with errors from the import or adjust their
+                settings to fix the error before proceeding.
+              </p>
+              <Button onClick={onRequestClose} label="Go Back" />
+            </div>
           ) : (
             <div>
               {totalBytes > 0 && (

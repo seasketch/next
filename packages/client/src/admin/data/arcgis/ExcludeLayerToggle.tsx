@@ -9,7 +9,11 @@ export default function ExcludeLayerToggle({
 }) {
   const className = "w-5 h-5 text-primary-600";
   return (
-    <div className="-ml-1 mr-1 cursor-pointer" onClick={onClick}>
+    <button
+      title={excluded ? "Include layer" : "Exclude layer"}
+      className="-ml-1 mr-1 cursor-pointer"
+      onClick={onClick}
+    >
       {!excluded ? (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -41,6 +45,6 @@ export default function ExcludeLayerToggle({
           />
         </svg>
       )}
-    </div>
+    </button>
   );
 }

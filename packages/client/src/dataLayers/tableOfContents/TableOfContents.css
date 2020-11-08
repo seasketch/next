@@ -21,3 +21,21 @@
   overflow: hidden;
   padding-right: 10px;
 }
+
+.rstcustom__row.disabled .rstcustom__rowLabel {
+  opacity: 0.5 !important;
+}
+
+.rstcustom__row.disabled input[type="checkbox"] {
+  pointer-events: none;
+  opacity: 0.5 !important;
+}
+
+.rstcustom__row.disabled input[type="checkbox"]:checked {
+  pointer-events: all;
+}
+
+.rstcustom__row.disabled button[data-type="settings"] {
+  pointer-events: none;
+  opacity: 0.5;
+}
