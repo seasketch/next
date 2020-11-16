@@ -25,7 +25,7 @@ describe("Access control", () => {
         );
         const count = await conn.oneFirst(sql`select count(*) from projects`);
         expect(count).toBe(1);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
     test("Superusers can see all projects, even unlisted", async () => {
@@ -39,7 +39,7 @@ describe("Access control", () => {
         await conn.any(sql`SET ROLE seasketch_superuser`);
         const count = await conn.oneFirst(sql`select count(*) from projects`);
         expect(count).toBe(2);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
@@ -65,7 +65,7 @@ describe("Access control", () => {
         expect(name).toBe("listed");
         const count = await conn.oneFirst(sql`select count(*) from projects`);
         expect(count).toBe(1);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
   });
@@ -79,12 +79,13 @@ describe("Access control", () => {
             sql`INSERT INTO projects (name, slug) values ('nope', 'nope')`
           )
         ).rejects.toThrow(/denied/);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
     test("createProject mutation inserts project and admin records", async () => {
       await pool.transaction(async (conn) => {
+        await conn.query(sql`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`);
         const userId = await conn.oneFirst(
           sql`insert into users (sub) values ('Ahab') returning id`
         );
@@ -96,7 +97,7 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         const pid = await conn.oneFirst(
-          sql`select id from create_project('foo', 'foo')`
+          sql`select id from create_project('foo1', 'foo1')`
         );
         expect(pid).toBeGreaterThan(0);
         await conn.any(sql`SET ROLE postgres`);
@@ -104,11 +105,12 @@ describe("Access control", () => {
           sql`select count(*) from project_participants where user_id = ${userId} and project_id = ${pid} and is_admin = true`
         );
         expect(count).toBe(1);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
     test("createProject can only be called if email is verified", async () => {
       await pool.transaction(async (conn) => {
+        await conn.query(sql`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`);
         const userId = await conn.oneFirst(
           sql`insert into users (sub) values ('Ahab') returning id`
         );
@@ -117,18 +119,18 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         expect(
-          conn.oneFirst(sql`select id from create_project('foo', 'foo')`)
+          conn.oneFirst(sql`select id from create_project('foo2', 'foo2')`)
         ).rejects.toThrow(/email/i);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
     test("Anonymous users cannot create projects", async () => {
       await pool.transaction(async (conn) => {
         await conn.any(sql`SET ROLE seasketch_user`);
         expect(
-          conn.oneFirst(sql`select id from create_project('foo', 'foo')`)
+          conn.oneFirst(sql`select id from create_project('foo3', 'foo3')`)
         ).rejects.toThrow();
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
   });
@@ -136,20 +138,22 @@ describe("Access control", () => {
   describe("Project updates", () => {
     test("Superusers can update any project", async () => {
       await pool.transaction(async (conn) => {
+        await conn.query(sql`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`);
         const pid = await conn.oneFirst(
-          sql`INSERT INTO projects (name, slug) values ('foo', 'foo') returning id`
+          sql`INSERT INTO projects (name, slug) values ('foo4', 'foo4') returning id`
         );
         await conn.any(sql`SET ROLE seasketch_superuser`);
         const isFeatured = await conn.oneFirst(
           sql`update projects set is_featured = true where id = ${pid} returning is_featured`
         );
         expect(isFeatured).toBe(true);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
     test("Admins can update their own projects", async () => {
       await pool.transaction(async (conn) => {
+        await conn.query(sql`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`);
         const userId = await conn.oneFirst(
           sql`insert into users (sub) values ('Ahab') returning id`
         );
@@ -161,13 +165,13 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         const pid = await conn.oneFirst(
-          sql`select id from create_project('foo', 'foo')`
+          sql`select id from create_project('foo5', 'foo5')`
         );
         const isListed = await conn.oneFirst(
           sql`update projects set is_listed = true where id = ${pid} returning is_listed`
         );
         expect(isListed).toBe(true);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
@@ -187,7 +191,7 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         const pid = await conn.oneFirst(
-          sql`select id from create_project('foo', 'foo')`
+          sql`select id from create_project('foo6', 'foo6')`
         );
         const isListed = await conn.oneFirst(
           sql`update projects set is_listed = true where id = ${pid} returning is_listed`
@@ -197,7 +201,7 @@ describe("Access control", () => {
           sql`select set_config('session.user_id', ${userBId}, true)`
         );
         const pid2 = await conn.oneFirst(
-          sql`select id from create_project('bar', 'bar')`
+          sql`select id from create_project('bar1', 'bar1')`
         );
         const isListed2 = await conn.oneFirst(
           sql`update projects set is_listed = true where id = ${pid2} returning is_listed`
@@ -208,7 +212,7 @@ describe("Access control", () => {
             sql`update projects set is_listed = true where id = ${pid} returning is_listed`
           )
         ).rejects.toThrow();
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
@@ -225,7 +229,7 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         const pid = await conn.oneFirst(
-          sql`select id from create_project('foo', 'foo')`
+          sql`select id from create_project('foo7', 'foo7')`
         );
         await conn.any(sql`SET ROLE anon`);
         expect(
@@ -233,7 +237,7 @@ describe("Access control", () => {
             sql`update projects set is_listed = true where id = ${pid} returning is_listed`
           )
         ).rejects.toThrow();
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
@@ -253,7 +257,7 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         const pid = await conn.oneFirst(
-          sql`select id from create_project('foo', 'foo')`
+          sql`select id from create_project('foo8', 'foo8')`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userBId}, true)`
@@ -263,14 +267,14 @@ describe("Access control", () => {
             sql`update projects set is_listed = true where id = ${pid} returning is_listed`
           )
         ).rejects.toThrow();
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
     test("slug cannot be modified by superusers", async () => {
       await pool.transaction(async (conn) => {
         const pid = await conn.oneFirst(
-          sql`INSERT INTO projects (name, slug) values ('foo', 'foo') returning id`
+          sql`INSERT INTO projects (name, slug) values ('foo9', 'foo9') returning id`
         );
         await conn.any(sql`SET ROLE seasketch_superuser`);
         expect(
@@ -278,7 +282,7 @@ describe("Access control", () => {
             sql`update projects set slug = 'new-slug' where id = ${pid} returning slug`
           )
         ).rejects.toThrow();
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
@@ -295,14 +299,14 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         const pid2 = await conn.oneFirst(
-          sql`select id from create_project('foo2', 'foo2')`
+          sql`select id from create_project('foo10', 'foo10')`
         );
         expect(
           conn.oneFirst(
             sql`update projects set slug = 'new-slug' where id = ${pid2} returning slug`
           )
         ).rejects.toThrow();
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
@@ -319,14 +323,14 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         const pid = await conn.oneFirst(
-          sql`select id from create_project('foo', 'foo')`
+          sql`select id from create_project('foo11', 'foo11')`
         );
         expect(
           conn.oneFirst(
             sql`update projects set is_featured = true where id = ${pid}`
           )
         ).rejects.toThrow();
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
     test("is_featured can be modified by superusers", async () => {
@@ -342,14 +346,14 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         const pid = await conn.oneFirst(
-          sql`select id from create_project('foo', 'foo')`
+          sql`select id from create_project('foo12', 'foo12')`
         );
         await conn.any(sql`SET ROLE seasketch_superuser`);
         const isFeatured = await conn.oneFirst(
           sql`update projects set is_featured = true where id = ${pid} returning is_featured`
         );
         expect(isFeatured).toBe(true);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
   });
@@ -364,7 +368,7 @@ describe("Access control", () => {
         await expect(
           conn.oneFirst(sql`delete from projects where name = 'name'`)
         ).rejects.toThrow(/denied/);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
     test("Nobody sees projects marked is_deleted", async () => {
@@ -385,14 +389,14 @@ describe("Access control", () => {
           sql`select count(*) from projects`
         );
         expect(anonCount).toBe(0);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
     test("is_deleted and deleted_at cannot be updated directly", async () => {
       await pool.transaction(async (conn) => {
         const pid = await conn.oneFirst(
-          sql`INSERT INTO projects (name, slug) values ('foo', 'foo') returning id`
+          sql`INSERT INTO projects (name, slug) values ('foo13', 'foo13') returning id`
         );
         await conn.any(sql`SET ROLE seasketch_superuser`);
         expect(
@@ -400,14 +404,14 @@ describe("Access control", () => {
             sql`update projects set is_deleted = true and deleted_at = now() where id = ${pid}`
           )
         ).rejects.toThrow();
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
     test("Superusers can delete projects", async () => {
       await pool.transaction(async (conn) => {
         const pid = await conn.oneFirst(
-          sql`INSERT INTO projects (name, slug) values ('foo', 'foo') returning id`
+          sql`INSERT INTO projects (name, slug) values ('foo14', 'foo14') returning id`
         );
         await conn.any(sql`SET ROLE seasketch_superuser`);
         const { is_deleted, deleted_at } = await conn.one(
@@ -416,7 +420,7 @@ describe("Access control", () => {
         expect(is_deleted).toBe(true);
         expect(deleted_at).toBeLessThan(new Date().getTime() + 1000);
         expect(deleted_at).toBeGreaterThan(new Date().getTime() - 1000);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
@@ -433,13 +437,13 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         const pid = await conn.oneFirst(
-          sql`select id from create_project('foo', 'foo')`
+          sql`select id from create_project('foo15', 'foo15')`
         );
         const isDeleted = await conn.oneFirst(
           sql`select is_deleted from delete_project(${pid})`
         );
         expect(isDeleted).toBe(true);
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
 
@@ -459,18 +463,18 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_user`);
         const pid = await conn.oneFirst(
-          sql`select id from create_project('foo', 'foo')`
+          sql`select id from create_project('foo16', 'foo16')`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userBId}, true)`
         );
         const pid2 = await conn.oneFirst(
-          sql`select id from create_project('bar', 'bar')`
+          sql`select id from create_project('bar2', 'bar2')`
         );
         expect(
           conn.oneFirst(sql`select delete_project(${pid})`)
         ).rejects.toThrow();
-        await conn.any(sql`ROLLBACK`);
+        await conn.any(sql`ROLLBACK;`);
       });
     });
   });
@@ -480,13 +484,13 @@ describe("Access control", () => {
       test("Is the default", async () => {
         await pool.transaction(async (conn) => {
           const pid = await conn.oneFirst(
-            sql`INSERT INTO projects (name, slug) values ('new', 'new') returning id`
+            sql`INSERT INTO projects (name, slug) values ('new1', 'new1') returning id`
           );
           const accessControl = await conn.oneFirst(
             sql`select access_control from projects where id = ${pid}`
           );
           expect(accessControl).toBe("admins_only");
-          await conn.any(sql`ROLLBACK`);
+          await conn.any(sql`ROLLBACK;`);
         });
       });
     });
@@ -531,7 +535,7 @@ describe("Access control", () => {
             sql`select count(*) from projects`
           );
           expect(countUnapproved).toBe(0);
-          await conn.any(sql`ROLLBACK`);
+          await conn.any(sql`ROLLBACK;`);
         });
       });
     });
@@ -547,7 +551,7 @@ describe("Access control", () => {
               sql`update projects set access_control = 'public', is_listed = false where id = ${pid}`
             )
           ).rejects.toThrow(/check/);
-          await conn.any(sql`ROLLBACK`);
+          await conn.any(sql`ROLLBACK;`);
         });
       });
     });

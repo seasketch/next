@@ -65,7 +65,7 @@ test("superuser role properly identified", (done) => {
   const req = ({
     user: {
       sub: "google:1",
-      permissions: ["superuser"],
+      "https://seasketch.org/superuser": true,
       "https://seasketch.org/canonical_email": "chad@example.com",
       "https://seasketch.org/email_verified": true,
     },

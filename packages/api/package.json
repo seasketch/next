@@ -71,7 +71,7 @@
     "@types/node-rsa": "^1.0.0",
     "@types/pg": "^7.14.4",
     "@types/shortid": "0.0.29",
-    "@types/slonik": "^22.1.2",
+    "@types/slonik": "^22.1.4",
     "aws-sdk": "^2.751.0",
     "compression": "^1.7.4",
     "dotenv": "^8.2.0",
@@ -89,7 +89,7 @@
     "postgraphile": "^4.8.0",
     "redis": "^3.0.2",
     "shortid": "^2.2.15",
-    "slonik": "^22.4.11",
+    "slonik": "^23.0.2",
     "slonik-sql-tag-raw": "^1.0.2",
     "typescript": "^3.9.6"
   },
