@@ -237,6 +237,7 @@ export async function verifyOnlyAuthorsCanEditRecords(
       expect(newValue).toBe(record[attr] + " (updated)");
       // verify that user2 can't update user1's
       await createSession(conn, user1, true, false, projectId);
+      await conn.any(sql`SAVEPOINT before_update`);
       expect(
         conn.oneFirst(
           sql`update ${table} set ${col} = ${
@@ -244,6 +245,7 @@ export async function verifyOnlyAuthorsCanEditRecords(
           } where id = ${item1}`
         )
       ).rejects.toThrow();
+      await conn.any(sql`ROLLBACK to before_update`);
       // verify user1 can delete their own records
       expect(
         await conn.oneFirst(
@@ -251,11 +253,13 @@ export async function verifyOnlyAuthorsCanEditRecords(
         )
       ).toBeTruthy();
       // verify user1 can't delete user2's
+      await conn.any(sql`SAVEPOINT before_delete`);
       expect(
         conn.oneFirst(
           sql`delete from ${table} where id = ${item2} returning id`
         )
       ).rejects.toThrow();
+      await conn.any(sql`ROLLBACK to before_delete`);
       // verify an admin or superuser can't delete user2's
       await createSession(conn, adminId, true, true, projectId);
       expect(
@@ -380,34 +384,39 @@ export async function verifyOnlyProjectGroupMembersCanAccessResource(
       const nonParticipant = await createUser(conn);
       await createSession(conn, adminId, true, false, projectId);
       const groupId = await createGroup(conn, projectId, "group a", [userA]);
+      const groupBId = await createGroup(conn, projectId, "group b", [userB]);
       const id = await fn(conn, projectId, groupId, adminId);
       // userA in group a can select object
       await clearSession(conn);
       await createSession(conn, userA, true, false, projectId);
+      let count = await conn.oneFirst(
+        sql`select count(id) from ${sql.identifier([
+          tableName,
+        ])} where id = ${id}`
+      );
+      expect(count).toBe(1);
+      // userB cannot
+      await createSession(conn, userB, true, false, projectId);
+      count = await conn.oneFirst(
+        sql`select count(id) from ${sql.identifier([
+          tableName,
+        ])} where id = ${id}`
+      );
+      expect(count).toBe(0);
+      // admin can select object
+      await createSession(conn, adminId, true, false, projectId);
       let selectedId = await conn.oneFirst(
         sql`select id from ${sql.identifier([tableName])} where id = ${id}`
       );
       expect(selectedId).toBe(id);
-      // admin can select object
-      await createSession(conn, adminId, true, false, projectId);
-      selectedId = await conn.oneFirst(
-        sql`select id from ${sql.identifier([tableName])} where id = ${id}`
-      );
-      expect(selectedId).toBe(id);
-      // userB cannot
-      await createSession(conn, userB, true, false, projectId);
-      expect(
-        conn.oneFirst(
-          sql`select id from ${sql.identifier([tableName])} where id = ${id}`
-        )
-      ).rejects.toThrow();
       // nonParticipant cannot
       await createSession(conn, nonParticipant, true, false, projectId);
-      expect(
-        conn.oneFirst(
-          sql`select id from ${sql.identifier([tableName])} where id = ${id}`
-        )
-      ).rejects.toThrow();
+      count = await conn.oneFirst(
+        sql`select count(id) from ${sql.identifier([
+          tableName,
+        ])} where id = ${id}`
+      );
+      expect(count).toBe(0);
     }
   );
 }
@@ -427,14 +436,20 @@ export async function limitToGroup(
 }
 
 type verifyCRUDOpsLimitedToAdminsOptions = {
+  setup?: (
+    conn: DatabaseTransactionConnectionType,
+    projectId: number,
+    adminId: number,
+    userIds: [number, number]
+  ) => Promise<void>;
   create: (
     conn: DatabaseTransactionConnectionType,
     projectId: number,
     adminId: number,
     userIds: [number, number]
-  ) => Promise<SqlSqlTokenType<any>>;
-  update: ((recordId: number) => SqlSqlTokenType<any>) | false;
-  delete: (recordId: number) => SqlSqlTokenType<any>;
+  ) => Promise<SqlSqlTokenType>;
+  update: ((recordId: number) => SqlSqlTokenType) | false;
+  delete: (recordId: number) => SqlSqlTokenType;
 };
 
 export async function verifyCRUDOpsLimitedToAdmins(
@@ -446,6 +461,9 @@ export async function verifyCRUDOpsLimitedToAdmins(
     "public",
     async (conn, projectId, adminId, userIds) => {
       const [userA, userB] = userIds;
+      if (options.setup) {
+        await options.setup(conn, projectId, adminId, userIds);
+      }
       const projectBId = await createProject(conn, userB, "public");
       await createSession(conn, adminId, true, false, projectId);
       const createSql = await options.create(conn, projectId, adminId, userIds);
@@ -457,7 +475,7 @@ export async function verifyCRUDOpsLimitedToAdmins(
       const record = await conn.one(createSql);
       expect(record).toBeTruthy();
       if (options.update !== false) {
-        const updateSql = await options.update(record.id);
+        const updateSql = await options.update(record.id as number);
         await createSession(conn, userB, true, false, projectBId);
         await conn.any(sql`SAVEPOINT before_update`);
         expect(conn.one(updateSql)).rejects.toThrow();
@@ -466,7 +484,7 @@ export async function verifyCRUDOpsLimitedToAdmins(
         const updated = await conn.one(updateSql);
         expect(updated).toBeTruthy();
       }
-      const deleteSql = await options.delete(record.id);
+      const deleteSql = await options.delete(record.id as number);
       await conn.any(sql`SAVEPOINT before_delete`);
       await createSession(conn, userB, true, false, projectBId);
       expect(conn.one(deleteSql)).rejects.toThrow();

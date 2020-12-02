@@ -4,7 +4,9 @@ import {
   MapDataEvent,
   ErrorEvent,
   Source,
+  RasterDemSource
 } from "mapbox-gl";
+
 import {
   createContext,
   Dispatch,

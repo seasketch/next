@@ -1,0 +1,54 @@
+query ProjectBucketSetting($slug: String!) {
+  projectBySlug(slug: $slug) {
+    __typename
+    id
+    dataSourcesBucket {
+      id
+      region
+      name
+      location {
+        geojson
+      }
+    }
+  }
+  dataSourcesBucketsConnection {
+    nodes {
+      id
+      name
+      region
+      location {
+        geojson
+      }
+    }
+  }
+}
+
+mutation UpdateProjectStorageBucket($slug: String!, $bucket: Int!) {
+  updateProjectBySlug(
+    input: { slug: $slug, patch: { dataSourcesBucketId: $bucket } }
+  ) {
+    clientMutationId
+    project {
+      __typename
+      id
+      dataSourcesBucket {
+        id
+        region
+        name
+      }
+    }
+  }
+}
+
+# mutation UpdateProjectRegion($slug: String!, $region: GeoJSON!) {
+#   updateProjectBySlug(input: { slug: $slug, patch: { region: $region } }) {
+#     clientMutationId
+#     project {
+#       __typename
+#       id
+#       region {
+#         geojson
+#       }
+#     }
+#   }
+# }

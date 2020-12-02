@@ -149,7 +149,7 @@ export default function ImportVectorLayersModal(
                   index % 2 !== 0 ? "bg-white" : "bg-gray-50"
                 }`}
               >
-                <div className="flex-1 px-6 py-4 whitespace-no-wrap text-sm leading-5 font-medium text-gray-900">
+                <div className="flex-1 px-6 py-4 whitespace-no-wrap text-sm leading-5 font-medium text-gray-900 truncate">
                   <span className="truncate">{layer.name}</span>
                 </div>
                 <div className="w-20 px-6 py-4 whitespace-no-wrap text-sm leading-5 text-right pr-0 text-gray-500">

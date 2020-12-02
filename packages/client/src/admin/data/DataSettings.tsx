@@ -7,6 +7,7 @@ import {
   useRouteMatch,
 } from "react-router-dom";
 import Button from "../../components/Button";
+import DataBucketSettings from "./DataBucketSettings";
 const LazyArcGISBrowser = React.lazy(() => import("./arcgis/ArcGISBrowser"));
 
 export default function DataSettings() {
@@ -18,6 +19,7 @@ export default function DataSettings() {
           <Link to={`./data/add-data`} component={Button}>
             Add Data
           </Link>
+          <DataBucketSettings className="m-5 max-w-xl" />
         </Route>
         <Route exact path={`${path}/add-data`}>
           <div className="pt-2 pb-6 md:py-6">

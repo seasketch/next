@@ -22,7 +22,7 @@ describe("current user access", () => {
         sql`insert into users (sub) values ('foo:abc123') returning id`
       );
       await conn.any(
-        sql`select set_config('role', 'seasketch_user', true), set_config('session.user_id', ${userId.toString()}, true)`
+        sql`select set_config('role', 'seasketch_user', true), set_config('session.user_id', ${userId!.toString()}, true)`
       );
       const id = await conn.oneFirst(sql`select id from me()`);
       expect(id).toBe(userId);
@@ -48,7 +48,7 @@ describe("current user access", () => {
         sql`insert into projects (name, slug) values ('Chad', 'cburt') returning id`
       );
       await conn.any(
-        sql`select set_config('role', 'anon', true), set_config('session.project_id', ${pid.toString()}, true)`
+        sql`select set_config('role', 'anon', true), set_config('session.project_id', ${pid!.toString()}, true)`
       );
       const id = await conn.oneFirst(sql`select id from current_project()`);
       expect(id).toBe(pid);

@@ -9,6 +9,8 @@ export type Scalars = {
   Boolean: boolean;
   Int: number;
   Float: number;
+  /** A floating point number that requires more precision than IEEE 754 binary 64 */
+  BigFloat: any;
   /**
    * A signed eight-byte integer. The upper big integer values are greater than the
    * max value for a JavaScript number. Therefore all big integers will be output as
@@ -29,6 +31,8 @@ export type Scalars = {
   JSON: any;
   /** The `Upload` scalar type represents a file upload. */
   Upload: any;
+  /** A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122). */
+  UUID: any;
 };
 
 export enum AccessControlListType {
@@ -63,6 +67,9 @@ export type Acl = Node & {
   /** Reads a single `SketchClass` that is related to this `Acl`. */
   sketchClass?: Maybe<SketchClass>;
   sketchClassId?: Maybe<Scalars['Int']>;
+  /** Reads a single `TableOfContentsItem` that is related to this `Acl`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemId?: Maybe<Scalars['Int']>;
   /** Control whether access control is PUBLIC, ADMINS_ONLY, or GROUP */
   type: AccessControlListType;
 };
@@ -180,6 +187,7 @@ export type ApproveParticipantPayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
+
 
 
 /**
@@ -313,6 +321,78 @@ export type CreateCommunityGuidelinePayload = {
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the create `DataLayer` mutation. */
+export type CreateDataLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `DataLayer` to be created by this mutation. */
+  dataLayer: DataLayerInput;
+};
+
+/** The output of our create `DataLayer` mutation. */
+export type CreateDataLayerPayload = {
+  __typename?: 'CreateDataLayerPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `DataLayer` that was created by this mutation. */
+  dataLayer?: Maybe<DataLayer>;
+  /** An edge for our `DataLayer`. May be used by Relay 1. */
+  dataLayerEdge?: Maybe<DataLayersEdge>;
+  /** Reads a single `DataSource` that is related to this `DataLayer`. */
+  dataSource?: Maybe<DataSource>;
+  /** Reads a single `Project` that is related to this `DataLayer`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `DataLayer` mutation. */
+export type CreateDataLayerPayloadDataLayerEdgeArgs = {
+  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+};
+
+/** All input for the create `DataSource` mutation. */
+export type CreateDataSourceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `DataSource` to be created by this mutation. */
+  dataSource: DataSourceInput;
+};
+
+/** The output of our create `DataSource` mutation. */
+export type CreateDataSourcePayload = {
+  __typename?: 'CreateDataSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `DataSource` that was created by this mutation. */
+  dataSource?: Maybe<DataSource>;
+  /** An edge for our `DataSource`. May be used by Relay 1. */
+  dataSourceEdge?: Maybe<DataSourcesEdge>;
+  /** Reads a single `Project` that is related to this `DataSource`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `DataSource` mutation. */
+export type CreateDataSourcePayloadDataSourceEdgeArgs = {
+  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
 };
 
 /** All input for the create `FormConditionalRenderingRule` mutation. */
@@ -637,6 +717,8 @@ export type CreateProjectPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
   project?: Maybe<Project>;
   /** An edge for our `Project`. May be used by Relay 1. */
   projectEdge?: Maybe<ProjectsEdge>;
@@ -867,6 +949,41 @@ export type CreateSurveyResponsePayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
 
+/** All input for the create `TableOfContentsItem` mutation. */
+export type CreateTableOfContentsItemInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `TableOfContentsItem` to be created by this mutation. */
+  tableOfContentsItem: TableOfContentsItemInput;
+};
+
+/** The output of our create `TableOfContentsItem` mutation. */
+export type CreateTableOfContentsItemPayload = {
+  __typename?: 'CreateTableOfContentsItemPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `TableOfContentsItem` that was created by this mutation. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our create `TableOfContentsItem` mutation. */
+export type CreateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 /** All input for the `createTopic` mutation. */
 export type CreateTopicInput = {
   /**
@@ -902,6 +1019,682 @@ export type CreateTopicPayloadTopicEdgeArgs = {
   orderBy?: Maybe<Array<TopicsOrderBy>>;
 };
 
+
+/**
+ * Data layers represent multiple MapBox GL Style layers tied to a single source. 
+ * These layers could also be called "operational layers" in that they are meant to
+ * be overlaid on a basemap.
+ * 
+ * The layers can appear tied to a TableOfContentsItem or be part of rich features 
+ * associated with a basemap.
+ */
+export type DataLayer = Node & {
+  __typename?: 'DataLayer';
+  /** Reads a single `DataSource` that is related to this `DataLayer`. */
+  dataSource?: Maybe<DataSource>;
+  dataSourceId: Scalars['Int'];
+  id: Scalars['Int'];
+  /**
+   * JSON array of MapBox GL Style layers. Layers should not specify an id or
+   * sourceId. These will be automatically generated at runtime.
+   */
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `DataLayer`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  /**
+   * Determines z-ordering of layer in relation to layers in the basemap. For this
+   * functionality to work, layers must be identified in the basemap configuration.
+   */
+  renderUnder: RenderUnderType;
+  /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
+  sourceLayer?: Maybe<Scalars['String']>;
+  /**
+   * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
+   * is blank and this layer merely controls the display of a single sublayer when
+   * making image requests.
+   */
+  sublayer?: Maybe<Scalars['String']>;
+  /** Reads a single `TableOfContentsItem` that is related to this `DataLayer`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /**
+   * Reads and enables pagination through a set of `TableOfContentsItem`.
+   * @deprecated Please use tableOfContentsItem instead
+   */
+  tableOfContentsItemsConnection: TableOfContentsItemsConnection;
+};
+
+
+/**
+ * Data layers represent multiple MapBox GL Style layers tied to a single source. 
+ * These layers could also be called "operational layers" in that they are meant to
+ * be overlaid on a basemap.
+ * 
+ * The layers can appear tied to a TableOfContentsItem or be part of rich features 
+ * associated with a basemap.
+ */
+export type DataLayerTableOfContentsItemsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<TableOfContentsItemCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
+/**
+ * A condition to be used against `DataLayer` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type DataLayerCondition = {
+  /** Checks for equality with the object’s `dataSourceId` field. */
+  dataSourceId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `DataLayer` */
+export type DataLayerInput = {
+  dataSourceId: Scalars['Int'];
+  id?: Maybe<Scalars['Int']>;
+  /**
+   * JSON array of MapBox GL Style layers. Layers should not specify an id or
+   * sourceId. These will be automatically generated at runtime.
+   */
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  projectId: Scalars['Int'];
+  /**
+   * Determines z-ordering of layer in relation to layers in the basemap. For this
+   * functionality to work, layers must be identified in the basemap configuration.
+   */
+  renderUnder?: Maybe<RenderUnderType>;
+  /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
+  sourceLayer?: Maybe<Scalars['String']>;
+  /**
+   * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
+   * is blank and this layer merely controls the display of a single sublayer when
+   * making image requests.
+   */
+  sublayer?: Maybe<Scalars['String']>;
+};
+
+/** Represents an update to a `DataLayer`. Fields that are set will be updated. */
+export type DataLayerPatch = {
+  dataSourceId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
+  /**
+   * JSON array of MapBox GL Style layers. Layers should not specify an id or
+   * sourceId. These will be automatically generated at runtime.
+   */
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  projectId?: Maybe<Scalars['Int']>;
+  /**
+   * Determines z-ordering of layer in relation to layers in the basemap. For this
+   * functionality to work, layers must be identified in the basemap configuration.
+   */
+  renderUnder?: Maybe<RenderUnderType>;
+  /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
+  sourceLayer?: Maybe<Scalars['String']>;
+  /**
+   * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
+   * is blank and this layer merely controls the display of a single sublayer when
+   * making image requests.
+   */
+  sublayer?: Maybe<Scalars['String']>;
+};
+
+/** A connection to a list of `DataLayer` values. */
+export type DataLayersConnection = {
+  __typename?: 'DataLayersConnection';
+  /** A list of edges which contains the `DataLayer` and cursor to aid in pagination. */
+  edges: Array<DataLayersEdge>;
+  /** A list of `DataLayer` objects. */
+  nodes: Array<DataLayer>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `DataLayer` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `DataLayer` edge in the connection. */
+export type DataLayersEdge = {
+  __typename?: 'DataLayersEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `DataLayer` at the end of the edge. */
+  node: DataLayer;
+};
+
+/** Methods to use when ordering `DataLayer`. */
+export enum DataLayersOrderBy {
+  DataSourceIdAsc = 'DATA_SOURCE_ID_ASC',
+  DataSourceIdDesc = 'DATA_SOURCE_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ * 
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
+export type DataSource = Node & {
+  __typename?: 'DataSource';
+  /** Contains an attribution to be displayed when the map is shown to a user. */
+  attribution?: Maybe<Scalars['String']>;
+  /**
+   * An array containing the longitude and latitude of the southwest and northeast
+   * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
+   * ne.lng, ne.lat]`. When this property is included in a source, no tiles outside
+   * of the given bounds are requested by Mapbox GL. This property can also be used
+   * as metadata for non-tiled sources.
+   */
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
+  bucketId?: Maybe<Scalars['Int']>;
+  /**
+   * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
+   * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
+   * values produce fewer rendering artifacts near tile edges and slower performance.
+   */
+  buffer?: Maybe<Scalars['Int']>;
+  /**
+   * GeoJSON only.
+   * 
+   * If the data is a collection of point features, setting this to true clusters
+   * the points by radius into groups. Cluster groups become new Point features in
+   * the source with additional properties:
+   * 
+   *   * cluster Is true if the point is a cluster
+   *   * cluster_id A unqiue id for the cluster to be used in conjunction with the
+   * [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+   *   * point_count Number of original points grouped into this cluster
+   *   * point_count_abbreviated An abbreviated point count
+   */
+  cluster?: Maybe<Scalars['Boolean']>;
+  /**
+   * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
+   * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
+   */
+  clusterMaxZoom?: Maybe<Scalars['Int']>;
+  /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
+  clusterProperties?: Maybe<Scalars['JSON']>;
+  /**
+   * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
+   * indicates a radius equal to the width of a tile.
+   */
+  clusterRadius?: Maybe<Scalars['Int']>;
+  /** Image sources only. Corners of image specified in longitude, latitude pairs. */
+  coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  createdAt: Scalars['Datetime'];
+  /** Reads and enables pagination through a set of `DataLayer`. */
+  dataLayersConnection: DataLayersConnection;
+  /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
+  encoding?: Maybe<RasterDemEncoding>;
+  /**
+   * SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a
+   * different class of storage that requires a temporary security credential to
+   * access. Set during creation and cannot be changed.
+   */
+  enhancedSecurity?: Maybe<Scalars['Boolean']>;
+  /**
+   * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
+   * the feature.id property will be auto assigned based on its index in the
+   * features array, over-writing any previous values.
+   */
+  generateId?: Maybe<Scalars['Boolean']>;
+  /** Should be used as sourceId in stylesheets. */
+  id: Scalars['Int'];
+  /**
+   * For SeaSketchVector sources, identifies whether the original source comes from
+   * a direct upload or a service location like ArcGIS server
+   */
+  importType?: Maybe<DataSourceImportTypes>;
+  /**
+   * GeoJSON only. Whether to calculate line distance metrics. This is required for
+   * line layers that specify line-gradient values.
+   */
+  lineMetrics?: Maybe<Scalars['Boolean']>;
+  /**
+   * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
+   * which tiles are available, as in the TileJSON spec. Data from tiles at the
+   * maxzoom are used when displaying the map at higher zoom levels.
+   */
+  maxzoom?: Maybe<Scalars['Int']>;
+  /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
+  minzoom?: Maybe<Scalars['Int']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
+  objectKey?: Maybe<Scalars['UUID']>;
+  /**
+   * For SeaSketchVector sources, identifies location of original service that
+   * hosted the data, if any. This can be used to update a layer with an updated
+   * copy of the data source if necessary.
+   */
+  originalSourceUrl?: Maybe<Scalars['String']>;
+  /** Reads a single `Project` that is related to this `DataSource`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  /**
+   * GeoJSON only. A property to use as a feature id (for feature state). Either a
+   * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
+   */
+  promoteId?: Maybe<Scalars['Boolean']>;
+  /**
+   * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
+   * querystring parameters that will be added to requests.
+   */
+  queryParameters?: Maybe<Scalars['JSON']>;
+  /**
+   * For MapBox Vector and Raster sources. Influences the y direction of the tile
+   * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
+   */
+  scheme?: Maybe<TileScheme>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
+  tileSize?: Maybe<Scalars['Int']>;
+  /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
+  tolerance?: Maybe<Scalars['BigFloat']>;
+  /** MapBox GL source type or custom seasketch type. */
+  type: DataSourceTypes;
+  /**
+   * A URL to a TileJSON resource for tiled sources. For GeoJSON or
+   * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
+   * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
+   */
+  url?: Maybe<Scalars['String']>;
+  /** Video sources only. URLs to video content in order of preferred format. */
+  urls?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
+  useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+};
+
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ * 
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
+export type DataSourceDataLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<DataLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+};
+
+/**
+ * A condition to be used against `DataSource` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type DataSourceCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+export enum DataSourceImportTypes {
+  /** Imported from an arcgis feature layer identified by original_source_url */
+  Arcgis = 'ARCGIS',
+  /** Uploaded directly to SeaSketch using GeoJSON or shapefile */
+  Upload = 'UPLOAD'
+}
+
+/** An input for mutations affecting `DataSource` */
+export type DataSourceInput = {
+  /** Contains an attribution to be displayed when the map is shown to a user. */
+  attribution?: Maybe<Scalars['String']>;
+  /**
+   * An array containing the longitude and latitude of the southwest and northeast
+   * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
+   * ne.lng, ne.lat]`. When this property is included in a source, no tiles outside
+   * of the given bounds are requested by Mapbox GL. This property can also be used
+   * as metadata for non-tiled sources.
+   */
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
+  bucketId?: Maybe<Scalars['Int']>;
+  /**
+   * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
+   * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
+   * values produce fewer rendering artifacts near tile edges and slower performance.
+   */
+  buffer?: Maybe<Scalars['Int']>;
+  /**
+   * GeoJSON only.
+   * 
+   * If the data is a collection of point features, setting this to true clusters
+   * the points by radius into groups. Cluster groups become new Point features in
+   * the source with additional properties:
+   * 
+   *   * cluster Is true if the point is a cluster
+   *   * cluster_id A unqiue id for the cluster to be used in conjunction with the
+   * [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+   *   * point_count Number of original points grouped into this cluster
+   *   * point_count_abbreviated An abbreviated point count
+   */
+  cluster?: Maybe<Scalars['Boolean']>;
+  /**
+   * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
+   * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
+   */
+  clusterMaxZoom?: Maybe<Scalars['Int']>;
+  /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
+  clusterProperties?: Maybe<Scalars['JSON']>;
+  /**
+   * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
+   * indicates a radius equal to the width of a tile.
+   */
+  clusterRadius?: Maybe<Scalars['Int']>;
+  /** Image sources only. Corners of image specified in longitude, latitude pairs. */
+  coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  createdAt?: Maybe<Scalars['Datetime']>;
+  /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
+  encoding?: Maybe<RasterDemEncoding>;
+  /**
+   * SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a
+   * different class of storage that requires a temporary security credential to
+   * access. Set during creation and cannot be changed.
+   */
+  enhancedSecurity?: Maybe<Scalars['Boolean']>;
+  /**
+   * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
+   * the feature.id property will be auto assigned based on its index in the
+   * features array, over-writing any previous values.
+   */
+  generateId?: Maybe<Scalars['Boolean']>;
+  /** Should be used as sourceId in stylesheets. */
+  id?: Maybe<Scalars['Int']>;
+  /**
+   * For SeaSketchVector sources, identifies whether the original source comes from
+   * a direct upload or a service location like ArcGIS server
+   */
+  importType?: Maybe<DataSourceImportTypes>;
+  /**
+   * GeoJSON only. Whether to calculate line distance metrics. This is required for
+   * line layers that specify line-gradient values.
+   */
+  lineMetrics?: Maybe<Scalars['Boolean']>;
+  /**
+   * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
+   * which tiles are available, as in the TileJSON spec. Data from tiles at the
+   * maxzoom are used when displaying the map at higher zoom levels.
+   */
+  maxzoom?: Maybe<Scalars['Int']>;
+  /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
+  minzoom?: Maybe<Scalars['Int']>;
+  /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
+  objectKey?: Maybe<Scalars['UUID']>;
+  /**
+   * For SeaSketchVector sources, identifies location of original service that
+   * hosted the data, if any. This can be used to update a layer with an updated
+   * copy of the data source if necessary.
+   */
+  originalSourceUrl?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+  /**
+   * GeoJSON only. A property to use as a feature id (for feature state). Either a
+   * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
+   */
+  promoteId?: Maybe<Scalars['Boolean']>;
+  /**
+   * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
+   * querystring parameters that will be added to requests.
+   */
+  queryParameters?: Maybe<Scalars['JSON']>;
+  /**
+   * For MapBox Vector and Raster sources. Influences the y direction of the tile
+   * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
+   */
+  scheme?: Maybe<TileScheme>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
+  tileSize?: Maybe<Scalars['Int']>;
+  /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
+  tolerance?: Maybe<Scalars['BigFloat']>;
+  /** MapBox GL source type or custom seasketch type. */
+  type: DataSourceTypes;
+  /**
+   * A URL to a TileJSON resource for tiled sources. For GeoJSON or
+   * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
+   * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
+   */
+  url?: Maybe<Scalars['String']>;
+  /** Video sources only. URLs to video content in order of preferred format. */
+  urls?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
+  useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+};
+
+/** Represents an update to a `DataSource`. Fields that are set will be updated. */
+export type DataSourcePatch = {
+  /** Contains an attribution to be displayed when the map is shown to a user. */
+  attribution?: Maybe<Scalars['String']>;
+  /**
+   * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
+   * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
+   * values produce fewer rendering artifacts near tile edges and slower performance.
+   */
+  buffer?: Maybe<Scalars['Int']>;
+  /**
+   * GeoJSON only.
+   * 
+   * If the data is a collection of point features, setting this to true clusters
+   * the points by radius into groups. Cluster groups become new Point features in
+   * the source with additional properties:
+   * 
+   *   * cluster Is true if the point is a cluster
+   *   * cluster_id A unqiue id for the cluster to be used in conjunction with the
+   * [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+   *   * point_count Number of original points grouped into this cluster
+   *   * point_count_abbreviated An abbreviated point count
+   */
+  cluster?: Maybe<Scalars['Boolean']>;
+  /**
+   * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
+   * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
+   */
+  clusterMaxZoom?: Maybe<Scalars['Int']>;
+  /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
+  clusterProperties?: Maybe<Scalars['JSON']>;
+  /**
+   * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
+   * indicates a radius equal to the width of a tile.
+   */
+  clusterRadius?: Maybe<Scalars['Int']>;
+  /** Image sources only. Corners of image specified in longitude, latitude pairs. */
+  coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
+  encoding?: Maybe<RasterDemEncoding>;
+  /**
+   * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
+   * the feature.id property will be auto assigned based on its index in the
+   * features array, over-writing any previous values.
+   */
+  generateId?: Maybe<Scalars['Boolean']>;
+  /**
+   * GeoJSON only. Whether to calculate line distance metrics. This is required for
+   * line layers that specify line-gradient values.
+   */
+  lineMetrics?: Maybe<Scalars['Boolean']>;
+  /**
+   * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
+   * which tiles are available, as in the TileJSON spec. Data from tiles at the
+   * maxzoom are used when displaying the map at higher zoom levels.
+   */
+  maxzoom?: Maybe<Scalars['Int']>;
+  /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
+  minzoom?: Maybe<Scalars['Int']>;
+  /**
+   * GeoJSON only. A property to use as a feature id (for feature state). Either a
+   * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
+   */
+  promoteId?: Maybe<Scalars['Boolean']>;
+  /**
+   * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
+   * querystring parameters that will be added to requests.
+   */
+  queryParameters?: Maybe<Scalars['JSON']>;
+  /**
+   * For MapBox Vector and Raster sources. Influences the y direction of the tile
+   * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
+   */
+  scheme?: Maybe<TileScheme>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
+  tileSize?: Maybe<Scalars['Int']>;
+  /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
+  tolerance?: Maybe<Scalars['BigFloat']>;
+  /**
+   * A URL to a TileJSON resource for tiled sources. For GeoJSON or
+   * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
+   * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
+   */
+  url?: Maybe<Scalars['String']>;
+  /** Video sources only. URLs to video content in order of preferred format. */
+  urls?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
+  useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+};
+
+export type DataSourcesBucket = Node & {
+  __typename?: 'DataSourcesBucket';
+  bucket: Scalars['String'];
+  id: Scalars['Int'];
+  location: GeometryPoint;
+  name: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads and enables pagination through a set of `Project`. */
+  projectsConnection: ProjectsConnection;
+  region: Scalars['String'];
+};
+
+
+export type DataSourcesBucketProjectsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ProjectCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+/**
+ * A condition to be used against `DataSourcesBucket` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type DataSourcesBucketCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `DataSourcesBucket` values. */
+export type DataSourcesBucketsConnection = {
+  __typename?: 'DataSourcesBucketsConnection';
+  /** A list of edges which contains the `DataSourcesBucket` and cursor to aid in pagination. */
+  edges: Array<DataSourcesBucketsEdge>;
+  /** A list of `DataSourcesBucket` objects. */
+  nodes: Array<DataSourcesBucket>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `DataSourcesBucket` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `DataSourcesBucket` edge in the connection. */
+export type DataSourcesBucketsEdge = {
+  __typename?: 'DataSourcesBucketsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `DataSourcesBucket` at the end of the edge. */
+  node: DataSourcesBucket;
+};
+
+/** Methods to use when ordering `DataSourcesBucket`. */
+export enum DataSourcesBucketsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+/** A connection to a list of `DataSource` values. */
+export type DataSourcesConnection = {
+  __typename?: 'DataSourcesConnection';
+  /** A list of edges which contains the `DataSource` and cursor to aid in pagination. */
+  edges: Array<DataSourcesEdge>;
+  /** A list of `DataSource` objects. */
+  nodes: Array<DataSource>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `DataSource` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `DataSource` edge in the connection. */
+export type DataSourcesEdge = {
+  __typename?: 'DataSourcesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `DataSource` at the end of the edge. */
+  node: DataSource;
+};
+
+/** Methods to use when ordering `DataSource`. */
+export enum DataSourcesOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
+export enum DataSourceTypes {
+  /** Loads dynamic images for the entire viewport from arcgis server */
+  ArcgisDynamicMapserver = 'ARCGIS_DYNAMIC_MAPSERVER',
+  /** Loads vector data from arcgis server for rendering as a geojson source */
+  ArcgisVector = 'ARCGIS_VECTOR',
+  /** MapBox GL Style "geojson" source */
+  Geojson = 'GEOJSON',
+  /** MapBox GL Style "image" source */
+  Image = 'IMAGE',
+  /** MapBox GL Style "raster" source */
+  Raster = 'RASTER',
+  /** MapBox GL Style "raster" source */
+  RasterDem = 'RASTER_DEM',
+  /** Combination of geojson and possible vector sources hosted on SeaSketch CND */
+  SeasketchVector = 'SEASKETCH_VECTOR',
+  /** MapBox GL Style "vector" source */
+  Vector = 'VECTOR',
+  /** MapBox GL Style "video" source */
+  Video = 'VIDEO'
+}
 
 
 /** All input for the `deleteCommunityGuidelineByNodeId` mutation. */
@@ -940,6 +1733,101 @@ export type DeleteCommunityGuidelinePayload = {
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `deleteDataLayerByNodeId` mutation. */
+export type DeleteDataLayerByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `DataLayer` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteDataLayer` mutation. */
+export type DeleteDataLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `DataLayer` mutation. */
+export type DeleteDataLayerPayload = {
+  __typename?: 'DeleteDataLayerPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `DataLayer` that was deleted by this mutation. */
+  dataLayer?: Maybe<DataLayer>;
+  /** An edge for our `DataLayer`. May be used by Relay 1. */
+  dataLayerEdge?: Maybe<DataLayersEdge>;
+  /** Reads a single `DataSource` that is related to this `DataLayer`. */
+  dataSource?: Maybe<DataSource>;
+  deletedDataLayerNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `Project` that is related to this `DataLayer`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our delete `DataLayer` mutation. */
+export type DeleteDataLayerPayloadDataLayerEdgeArgs = {
+  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+};
+
+/** All input for the `deleteDataSourceByNodeId` mutation. */
+export type DeleteDataSourceByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `DataSource` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteDataSource` mutation. */
+export type DeleteDataSourceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Should be used as sourceId in stylesheets. */
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `DataSource` mutation. */
+export type DeleteDataSourcePayload = {
+  __typename?: 'DeleteDataSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `DataSource` that was deleted by this mutation. */
+  dataSource?: Maybe<DataSource>;
+  /** An edge for our `DataSource`. May be used by Relay 1. */
+  dataSourceEdge?: Maybe<DataSourcesEdge>;
+  deletedDataSourceNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `Project` that is related to this `DataSource`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our delete `DataSource` mutation. */
+export type DeleteDataSourcePayloadDataSourceEdgeArgs = {
+  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
 };
 
 /** All input for the `deleteFormByNodeId` mutation. */
@@ -1346,6 +2234,8 @@ export type DeleteProjectPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
   project?: Maybe<Project>;
   /** An edge for our `Project`. May be used by Relay 1. */
   projectEdge?: Maybe<ProjectsEdge>;
@@ -1670,6 +2560,28 @@ export type DeleteSurveyResponsePayload = {
 /** The output of our delete `SurveyResponse` mutation. */
 export type DeleteSurveyResponsePayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+};
+
+/** All input for the `deleteTableOfContentsBranch` mutation. */
+export type DeleteTableOfContentsBranchInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tableOfContentsItemId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `deleteTableOfContentsBranch` mutation. */
+export type DeleteTableOfContentsBranchPayload = {
+  __typename?: 'DeleteTableOfContentsBranchPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `deleteTopicByNodeId` mutation. */
@@ -3177,6 +4089,10 @@ export type Mutation = {
   confirmProjectInviteWithVerifiedEmail?: Maybe<ConfirmProjectInviteWithVerifiedEmailPayload>;
   /** Creates a single `CommunityGuideline`. */
   createCommunityGuideline?: Maybe<CreateCommunityGuidelinePayload>;
+  /** Creates a single `DataLayer`. */
+  createDataLayer?: Maybe<CreateDataLayerPayload>;
+  /** Creates a single `DataSource`. */
+  createDataSource?: Maybe<CreateDataSourcePayload>;
   /** Creates a single `FormConditionalRenderingRule`. */
   createFormConditionalRenderingRule?: Maybe<CreateFormConditionalRenderingRulePayload>;
   /** Creates a single `FormField`. */
@@ -3225,6 +4141,8 @@ export type Mutation = {
   createSurveyInvites?: Maybe<CreateSurveyInvitesPayload>;
   /** Creates a single `SurveyResponse`. */
   createSurveyResponse?: Maybe<CreateSurveyResponsePayload>;
+  /** Creates a single `TableOfContentsItem`. */
+  createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
   /**
    * Must have write permission for the specified forum. Create a new discussion
    * topic, including the first post. `message` must be JSON, something like the
@@ -3235,6 +4153,14 @@ export type Mutation = {
   deleteCommunityGuideline?: Maybe<DeleteCommunityGuidelinePayload>;
   /** Deletes a single `CommunityGuideline` using its globally unique id. */
   deleteCommunityGuidelineByNodeId?: Maybe<DeleteCommunityGuidelinePayload>;
+  /** Deletes a single `DataLayer` using a unique key. */
+  deleteDataLayer?: Maybe<DeleteDataLayerPayload>;
+  /** Deletes a single `DataLayer` using its globally unique id. */
+  deleteDataLayerByNodeId?: Maybe<DeleteDataLayerPayload>;
+  /** Deletes a single `DataSource` using a unique key. */
+  deleteDataSource?: Maybe<DeleteDataSourcePayload>;
+  /** Deletes a single `DataSource` using its globally unique id. */
+  deleteDataSourceByNodeId?: Maybe<DeleteDataSourcePayload>;
   /** Deletes a single `Form` using a unique key. */
   deleteForm?: Maybe<DeleteFormPayload>;
   /** Deletes a single `Form` using its globally unique id. */
@@ -3308,6 +4234,7 @@ export type Mutation = {
   deleteSurveyResponse?: Maybe<DeleteSurveyResponsePayload>;
   /** Deletes a single `SurveyResponse` using its globally unique id. */
   deleteSurveyResponseByNodeId?: Maybe<DeleteSurveyResponsePayload>;
+  deleteTableOfContentsBranch?: Maybe<DeleteTableOfContentsBranchPayload>;
   /** Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting. */
   deleteTopic?: Maybe<DeleteTopicPayload>;
   /** Deletes a single `Topic` using its globally unique id. */
@@ -3371,6 +4298,7 @@ export type Mutation = {
    * and whenever new posts are shown.
    */
   markTopicAsRead?: Maybe<MarkTopicAsReadPayload>;
+  publishTableOfContents?: Maybe<PublishTableOfContentsPayload>;
   /** Remove a group from a given access control list. Must be an administrator. */
   removeGroupFromAcl?: Maybe<RemoveGroupFromAclPayload>;
   /** Remove the given user from a group. Must be an administrator of the project. */
@@ -3420,10 +4348,20 @@ export type Mutation = {
   updateAclByNodeId?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAclBySketchClassId?: Maybe<UpdateAclPayload>;
+  /** Updates a single `Acl` using a unique key and a patch. */
+  updateAclByTableOfContentsItemId?: Maybe<UpdateAclPayload>;
   /** Updates a single `CommunityGuideline` using a unique key and a patch. */
   updateCommunityGuideline?: Maybe<UpdateCommunityGuidelinePayload>;
   /** Updates a single `CommunityGuideline` using its globally unique id and a patch. */
   updateCommunityGuidelineByNodeId?: Maybe<UpdateCommunityGuidelinePayload>;
+  /** Updates a single `DataLayer` using a unique key and a patch. */
+  updateDataLayer?: Maybe<UpdateDataLayerPayload>;
+  /** Updates a single `DataLayer` using its globally unique id and a patch. */
+  updateDataLayerByNodeId?: Maybe<UpdateDataLayerPayload>;
+  /** Updates a single `DataSource` using a unique key and a patch. */
+  updateDataSource?: Maybe<UpdateDataSourcePayload>;
+  /** Updates a single `DataSource` using its globally unique id and a patch. */
+  updateDataSourceByNodeId?: Maybe<UpdateDataSourcePayload>;
   /** Updates a single `EmailNotificationPreference` using a unique key and a patch. */
   updateEmailNotificationPreferenceByUserId?: Maybe<UpdateEmailNotificationPreferencePayload>;
   /** Updates a single `FormConditionalRenderingRule` using a unique key and a patch. */
@@ -3500,6 +4438,13 @@ export type Mutation = {
   updateSurveyResponse?: Maybe<UpdateSurveyResponsePayload>;
   /** Updates a single `SurveyResponse` using its globally unique id and a patch. */
   updateSurveyResponseByNodeId?: Maybe<UpdateSurveyResponsePayload>;
+  /** Updates a single `TableOfContentsItem` using a unique key and a patch. */
+  updateTableOfContentsItem?: Maybe<UpdateTableOfContentsItemPayload>;
+  /** Updates a single `TableOfContentsItem` using a unique key and a patch. */
+  updateTableOfContentsItemByDataLayerId?: Maybe<UpdateTableOfContentsItemPayload>;
+  /** Updates a single `TableOfContentsItem` using its globally unique id and a patch. */
+  updateTableOfContentsItemByNodeId?: Maybe<UpdateTableOfContentsItemPayload>;
+  updateTableOfContentsItemParent?: Maybe<UpdateTableOfContentsItemParentPayload>;
   /** Updates a single `Topic` using a unique key and a patch. */
   updateTopic?: Maybe<UpdateTopicPayload>;
   /** Updates a single `Topic` using its globally unique id and a patch. */
@@ -3558,6 +4503,18 @@ export type MutationConfirmProjectInviteWithVerifiedEmailArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateCommunityGuidelineArgs = {
   input: CreateCommunityGuidelineInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateDataLayerArgs = {
+  input: CreateDataLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateDataSourceArgs = {
+  input: CreateDataSourceInput;
 };
 
 
@@ -3664,6 +4621,12 @@ export type MutationCreateSurveyResponseArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateTableOfContentsItemArgs = {
+  input: CreateTableOfContentsItemInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateTopicArgs = {
   input: CreateTopicInput;
 };
@@ -3678,6 +4641,30 @@ export type MutationDeleteCommunityGuidelineArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteCommunityGuidelineByNodeIdArgs = {
   input: DeleteCommunityGuidelineByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteDataLayerArgs = {
+  input: DeleteDataLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteDataLayerByNodeIdArgs = {
+  input: DeleteDataLayerByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteDataSourceArgs = {
+  input: DeleteDataSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteDataSourceByNodeIdArgs = {
+  input: DeleteDataSourceByNodeIdInput;
 };
 
 
@@ -3892,6 +4879,12 @@ export type MutationDeleteSurveyResponseByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteTableOfContentsBranchArgs = {
+  input: DeleteTableOfContentsBranchInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteTopicArgs = {
   input: DeleteTopicInput;
 };
@@ -3966,6 +4959,12 @@ export type MutationMakeResponseDraftArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMarkTopicAsReadArgs = {
   input: MarkTopicAsReadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationPublishTableOfContentsArgs = {
+  input: PublishTableOfContentsInput;
 };
 
 
@@ -4060,6 +5059,12 @@ export type MutationUpdateAclBySketchClassIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateAclByTableOfContentsItemIdArgs = {
+  input: UpdateAclByTableOfContentsItemIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateCommunityGuidelineArgs = {
   input: UpdateCommunityGuidelineInput;
 };
@@ -4068,6 +5073,30 @@ export type MutationUpdateCommunityGuidelineArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateCommunityGuidelineByNodeIdArgs = {
   input: UpdateCommunityGuidelineByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateDataLayerArgs = {
+  input: UpdateDataLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateDataLayerByNodeIdArgs = {
+  input: UpdateDataLayerByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateDataSourceArgs = {
+  input: UpdateDataSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateDataSourceByNodeIdArgs = {
+  input: UpdateDataSourceByNodeIdInput;
 };
 
 
@@ -4276,6 +5305,30 @@ export type MutationUpdateSurveyResponseByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateTableOfContentsItemArgs = {
+  input: UpdateTableOfContentsItemInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateTableOfContentsItemByDataLayerIdArgs = {
+  input: UpdateTableOfContentsItemByDataLayerIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateTableOfContentsItemByNodeIdArgs = {
+  input: UpdateTableOfContentsItemByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateTableOfContentsItemParentArgs = {
+  input: UpdateTableOfContentsItemParentInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTopicArgs = {
   input: UpdateTopicInput;
 };
@@ -4462,6 +5515,13 @@ export type Project = Node & {
   admins?: Maybe<Array<User>>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
+  /** Reads and enables pagination through a set of `DataLayer`. */
+  dataLayersConnection: DataLayersConnection;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  dataSourcesBucketId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `DataSource`. */
+  dataSourcesConnection: DataSourcesConnection;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   /** List of all discussion forums the current user has access to. */
@@ -4584,6 +5644,36 @@ export type Project = Node & {
 export type ProjectAdminsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectDataLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<DataLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectDataSourcesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<DataSourceCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
 };
 
 
@@ -4744,6 +5834,8 @@ export enum ProjectAccessControlSetting {
 export type ProjectCondition = {
   /** Checks for equality with the object’s `accessControl` field. */
   accessControl?: Maybe<ProjectAccessControlSetting>;
+  /** Checks for equality with the object’s `dataSourcesBucketId` field. */
+  dataSourcesBucketId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `isFeatured` field. */
@@ -4952,6 +6044,7 @@ export type ProjectInviteTokenVerificationResults = {
 export type ProjectPatch = {
   /** Admins can control whether a project is public, invite-only, or admins-only. */
   accessControl?: Maybe<ProjectAccessControlSetting>;
+  dataSourcesBucketId?: Maybe<Scalars['Int']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
@@ -4998,6 +6091,8 @@ export type ProjectsEdge = {
 export enum ProjectsOrderBy {
   AccessControlAsc = 'ACCESS_CONTROL_ASC',
   AccessControlDesc = 'ACCESS_CONTROL_DESC',
+  DataSourcesBucketIdAsc = 'DATA_SOURCES_BUCKET_ID_ASC',
+  DataSourcesBucketIdDesc = 'DATA_SOURCES_BUCKET_ID_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   IsFeaturedAsc = 'IS_FEATURED_ASC',
@@ -5008,6 +6103,29 @@ export enum ProjectsOrderBy {
   SlugAsc = 'SLUG_ASC',
   SlugDesc = 'SLUG_DESC'
 }
+
+/** All input for the `publishTableOfContents` mutation. */
+export type PublishTableOfContentsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `publishTableOfContents` mutation. */
+export type PublishTableOfContentsPayload = {
+  __typename?: 'PublishTableOfContentsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+};
 
 /**
  * Most relevant root-level queries are listed first, which concern getting 
@@ -5026,6 +6144,7 @@ export type Query = Node & {
   /** Reads a single `Acl` using its globally unique `ID`. */
   aclByNodeId?: Maybe<Acl>;
   aclBySketchClassId?: Maybe<Acl>;
+  aclByTableOfContentsItemId?: Maybe<Acl>;
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
   communityGuidelineByNodeId?: Maybe<CommunityGuideline>;
@@ -5034,6 +6153,19 @@ export type Query = Node & {
    * `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
    */
   currentProject?: Maybe<Project>;
+  dataLayer?: Maybe<DataLayer>;
+  /** Reads a single `DataLayer` using its globally unique `ID`. */
+  dataLayerByNodeId?: Maybe<DataLayer>;
+  /** Reads and enables pagination through a set of `DataLayer`. */
+  dataLayersConnection?: Maybe<DataLayersConnection>;
+  dataSource?: Maybe<DataSource>;
+  /** Reads a single `DataSource` using its globally unique `ID`. */
+  dataSourceByNodeId?: Maybe<DataSource>;
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  /** Reads a single `DataSourcesBucket` using its globally unique `ID`. */
+  dataSourcesBucketByNodeId?: Maybe<DataSourcesBucket>;
+  /** Reads and enables pagination through a set of `DataSourcesBucket`. */
+  dataSourcesBucketsConnection?: Maybe<DataSourcesBucketsConnection>;
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
@@ -5124,6 +6256,12 @@ export type Query = Node & {
   surveyResponse?: Maybe<SurveyResponse>;
   /** Reads a single `SurveyResponse` using its globally unique `ID`. */
   surveyResponseByNodeId?: Maybe<SurveyResponse>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemByDataLayerId?: Maybe<TableOfContentsItem>;
+  /** Reads a single `TableOfContentsItem` using its globally unique `ID`. */
+  tableOfContentsItemByNodeId?: Maybe<TableOfContentsItem>;
+  /** Reads and enables pagination through a set of `TableOfContentsItem`. */
+  tableOfContentsItemsConnection?: Maybe<TableOfContentsItemsConnection>;
   /**
    * Template forms can be created by SeaSketch superusers for use in **any** 
    * project. For example, there could be a template for a human-uses survey that
@@ -5220,6 +6358,22 @@ export type QueryAclBySketchClassIdArgs = {
  * for each database table. These are unlikely to be needed often but may possibly 
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
+export type QueryAclByTableOfContentsItemIdArgs = {
+  tableOfContentsItemId: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
 export type QueryCommunityGuidelineArgs = {
   projectId: Scalars['Int'];
 };
@@ -5238,6 +6392,146 @@ export type QueryCommunityGuidelineArgs = {
  */
 export type QueryCommunityGuidelineByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryDataLayerArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryDataLayerByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryDataLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<DataLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryDataSourceArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryDataSourceByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryDataSourcesBucketArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryDataSourcesBucketByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryDataSourcesBucketsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<DataSourcesBucketCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<DataSourcesBucketsOrderBy>>;
 };
 
 
@@ -6000,6 +7294,76 @@ export type QuerySurveyResponseByNodeIdArgs = {
  * for each database table. These are unlikely to be needed often but may possibly 
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
+export type QueryTableOfContentsItemArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryTableOfContentsItemByDataLayerIdArgs = {
+  dataLayerId: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryTableOfContentsItemByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryTableOfContentsItemsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<TableOfContentsItemCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
 export type QueryTemplateFormsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -6123,6 +7487,11 @@ export type QueryVerifySurveyInviteArgs = {
   token: Scalars['String'];
 };
 
+export enum RasterDemEncoding {
+  Mapbox = 'MAPBOX',
+  Terrarium = 'TERRARIUM'
+}
+
 /** All input for the `removeGroupFromAcl` mutation. */
 export type RemoveGroupFromAclInput = {
   aclId?: Maybe<Scalars['Int']>;
@@ -6191,6 +7560,12 @@ export type RemoveValidChildSketchClassPayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
+
+export enum RenderUnderType {
+  Labels = 'LABELS',
+  Land = 'LAND',
+  None = 'NONE'
+}
 
 /** All input for the `revokeAdminAccess` mutation. */
 export type RevokeAdminAccessInput = {
@@ -7233,6 +8608,133 @@ export type SurveyTokenInfo = {
   token?: Maybe<Scalars['String']>;
 };
 
+export type TableOfContentsItem = Node & {
+  __typename?: 'TableOfContentsItem';
+  /** Reads a single `Acl` that is related to this `TableOfContentsItem`. */
+  acl?: Maybe<Acl>;
+  /** If set, users will be able to zoom to the bounds of this item */
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** If is_folder=false, a DataLayers visibility will be controlled by this item */
+  dataLayerId?: Maybe<Scalars['Int']>;
+  id: Scalars['Int'];
+  /**
+   * If set, folders with this property cannot be toggled in order to activate all
+   * their children. Toggles can only be used to toggle children off
+   */
+  isClickOffOnly: Scalars['Boolean'];
+  /** Identifies whether this item is part of the draft table of contents edited by admin or the static public version */
+  isDraft: Scalars['Boolean'];
+  /** If not a folder, the item is a layer-type and must have a data_layer_id */
+  isFolder: Scalars['Boolean'];
+  /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
+  metadata?: Maybe<Scalars['JSON']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  parentStableId?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+  /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
+  showRadioChildren: Scalars['Boolean'];
+  /** Stable id referenced by parent_stable_id and map bookmarks. Also maintains nesting paths when publishing. */
+  stableId: Scalars['String'];
+  /** Name used in the table of contents rendering */
+  title: Scalars['String'];
+};
+
+/**
+ * A condition to be used against `TableOfContentsItem` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type TableOfContentsItemCondition = {
+  /** Checks for equality with the object’s `dataLayerId` field. */
+  dataLayerId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `TableOfContentsItem` */
+export type TableOfContentsItemInput = {
+  /** If set, users will be able to zoom to the bounds of this item */
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /** If is_folder=false, a DataLayers visibility will be controlled by this item */
+  dataLayerId?: Maybe<Scalars['Int']>;
+  /**
+   * If set, folders with this property cannot be toggled in order to activate all
+   * their children. Toggles can only be used to toggle children off
+   */
+  isClickOffOnly?: Maybe<Scalars['Boolean']>;
+  /** If not a folder, the item is a layer-type and must have a data_layer_id */
+  isFolder?: Maybe<Scalars['Boolean']>;
+  /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
+  metadata?: Maybe<Scalars['JSON']>;
+  parentStableId?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+  /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
+  showRadioChildren?: Maybe<Scalars['Boolean']>;
+  /** Stable id referenced by parent_stable_id and map bookmarks. Also maintains nesting paths when publishing. */
+  stableId: Scalars['String'];
+  /** Name used in the table of contents rendering */
+  title: Scalars['String'];
+};
+
+/** Represents an update to a `TableOfContentsItem`. Fields that are set will be updated. */
+export type TableOfContentsItemPatch = {
+  /** If set, users will be able to zoom to the bounds of this item */
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /** If is_folder=false, a DataLayers visibility will be controlled by this item */
+  dataLayerId?: Maybe<Scalars['Int']>;
+  /**
+   * If set, folders with this property cannot be toggled in order to activate all
+   * their children. Toggles can only be used to toggle children off
+   */
+  isClickOffOnly?: Maybe<Scalars['Boolean']>;
+  /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
+  metadata?: Maybe<Scalars['JSON']>;
+  /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
+  showRadioChildren?: Maybe<Scalars['Boolean']>;
+  /** Name used in the table of contents rendering */
+  title?: Maybe<Scalars['String']>;
+};
+
+/** A connection to a list of `TableOfContentsItem` values. */
+export type TableOfContentsItemsConnection = {
+  __typename?: 'TableOfContentsItemsConnection';
+  /** A list of edges which contains the `TableOfContentsItem` and cursor to aid in pagination. */
+  edges: Array<TableOfContentsItemsEdge>;
+  /** A list of `TableOfContentsItem` objects. */
+  nodes: Array<TableOfContentsItem>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `TableOfContentsItem` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `TableOfContentsItem` edge in the connection. */
+export type TableOfContentsItemsEdge = {
+  __typename?: 'TableOfContentsItemsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `TableOfContentsItem` at the end of the edge. */
+  node: TableOfContentsItem;
+};
+
+/** Methods to use when ordering `TableOfContentsItem`. */
+export enum TableOfContentsItemsOrderBy {
+  DataLayerIdAsc = 'DATA_LAYER_ID_ASC',
+  DataLayerIdDesc = 'DATA_LAYER_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export enum TileScheme {
+  Tms = 'TMS',
+  Xyz = 'XYZ'
+}
+
 export type Topic = Node & {
   __typename?: 'Topic';
   authorId: Scalars['Int'];
@@ -7359,6 +8861,18 @@ export type UpdateAclBySketchClassIdInput = {
   sketchClassId: Scalars['Int'];
 };
 
+/** All input for the `updateAclByTableOfContentsItemId` mutation. */
+export type UpdateAclByTableOfContentsItemIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** An object where the defined keys will be set on the `Acl` being updated. */
+  patch: AclPatch;
+  tableOfContentsItemId: Scalars['Int'];
+};
+
 /** All input for the `updateAcl` mutation. */
 export type UpdateAclInput = {
   /**
@@ -7385,6 +8899,8 @@ export type UpdateAclPayload = {
   query?: Maybe<Query>;
   /** Reads a single `SketchClass` that is related to this `Acl`. */
   sketchClass?: Maybe<SketchClass>;
+  /** Reads a single `TableOfContentsItem` that is related to this `Acl`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
 };
 
 /** All input for the `updateCommunityGuidelineByNodeId` mutation. */
@@ -7426,6 +8942,107 @@ export type UpdateCommunityGuidelinePayload = {
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `updateDataLayerByNodeId` mutation. */
+export type UpdateDataLayerByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `DataLayer` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `DataLayer` being updated. */
+  patch: DataLayerPatch;
+};
+
+/** All input for the `updateDataLayer` mutation. */
+export type UpdateDataLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `DataLayer` being updated. */
+  patch: DataLayerPatch;
+};
+
+/** The output of our update `DataLayer` mutation. */
+export type UpdateDataLayerPayload = {
+  __typename?: 'UpdateDataLayerPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `DataLayer` that was updated by this mutation. */
+  dataLayer?: Maybe<DataLayer>;
+  /** An edge for our `DataLayer`. May be used by Relay 1. */
+  dataLayerEdge?: Maybe<DataLayersEdge>;
+  /** Reads a single `DataSource` that is related to this `DataLayer`. */
+  dataSource?: Maybe<DataSource>;
+  /** Reads a single `Project` that is related to this `DataLayer`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our update `DataLayer` mutation. */
+export type UpdateDataLayerPayloadDataLayerEdgeArgs = {
+  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+};
+
+/** All input for the `updateDataSourceByNodeId` mutation. */
+export type UpdateDataSourceByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `DataSource` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `DataSource` being updated. */
+  patch: DataSourcePatch;
+};
+
+/** All input for the `updateDataSource` mutation. */
+export type UpdateDataSourceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Should be used as sourceId in stylesheets. */
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `DataSource` being updated. */
+  patch: DataSourcePatch;
+};
+
+/** The output of our update `DataSource` mutation. */
+export type UpdateDataSourcePayload = {
+  __typename?: 'UpdateDataSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `DataSource` that was updated by this mutation. */
+  dataSource?: Maybe<DataSource>;
+  /** An edge for our `DataSource`. May be used by Relay 1. */
+  dataSourceEdge?: Maybe<DataSourcesEdge>;
+  /** Reads a single `Project` that is related to this `DataSource`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our update `DataSource` mutation. */
+export type UpdateDataSourcePayloadDataSourceEdgeArgs = {
+  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
 };
 
 /** All input for the `updateEmailNotificationPreferenceByUserId` mutation. */
@@ -7870,6 +9487,8 @@ export type UpdateProjectPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
   /** The `Project` that was updated by this mutation. */
   project?: Maybe<Project>;
   /** An edge for our `Project`. May be used by Relay 1. */
@@ -8215,6 +9834,102 @@ export type UpdateSurveyResponsePayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
 
+/** All input for the `updateTableOfContentsItemByDataLayerId` mutation. */
+export type UpdateTableOfContentsItemByDataLayerIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** If is_folder=false, a DataLayers visibility will be controlled by this item */
+  dataLayerId: Scalars['Int'];
+  /** An object where the defined keys will be set on the `TableOfContentsItem` being updated. */
+  patch: TableOfContentsItemPatch;
+};
+
+/** All input for the `updateTableOfContentsItemByNodeId` mutation. */
+export type UpdateTableOfContentsItemByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `TableOfContentsItem` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `TableOfContentsItem` being updated. */
+  patch: TableOfContentsItemPatch;
+};
+
+/** All input for the `updateTableOfContentsItem` mutation. */
+export type UpdateTableOfContentsItemInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `TableOfContentsItem` being updated. */
+  patch: TableOfContentsItemPatch;
+};
+
+/** All input for the `updateTableOfContentsItemParent` mutation. */
+export type UpdateTableOfContentsItemParentInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  itemId?: Maybe<Scalars['Int']>;
+  parentStableId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateTableOfContentsItemParent` mutation. */
+export type UpdateTableOfContentsItemParentPayload = {
+  __typename?: 'UpdateTableOfContentsItemParentPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `updateTableOfContentsItemParent` mutation. */
+export type UpdateTableOfContentsItemParentPayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
+/** The output of our update `TableOfContentsItem` mutation. */
+export type UpdateTableOfContentsItemPayload = {
+  __typename?: 'UpdateTableOfContentsItemPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `TableOfContentsItem` that was updated by this mutation. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our update `TableOfContentsItem` mutation. */
+export type UpdateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 /** All input for the `updateTopicByNodeId` mutation. */
 export type UpdateTopicByNodeIdInput = {
   /**
@@ -8380,6 +10095,60 @@ export enum UsersOrderBy {
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
+
+
+export type ProjectBucketSettingQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectBucketSettingQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename: 'Project' }
+    & Pick<Project, 'id'>
+    & { dataSourcesBucket?: Maybe<(
+      { __typename?: 'DataSourcesBucket' }
+      & Pick<DataSourcesBucket, 'id' | 'region' | 'name'>
+      & { location: (
+        { __typename?: 'GeometryPoint' }
+        & Pick<GeometryPoint, 'geojson'>
+      ) }
+    )> }
+  )>, dataSourcesBucketsConnection?: Maybe<(
+    { __typename?: 'DataSourcesBucketsConnection' }
+    & { nodes: Array<(
+      { __typename?: 'DataSourcesBucket' }
+      & Pick<DataSourcesBucket, 'id' | 'name' | 'region'>
+      & { location: (
+        { __typename?: 'GeometryPoint' }
+        & Pick<GeometryPoint, 'geojson'>
+      ) }
+    )> }
+  )> }
+);
+
+export type UpdateProjectStorageBucketMutationVariables = Exact<{
+  slug: Scalars['String'];
+  bucket: Scalars['Int'];
+}>;
+
+
+export type UpdateProjectStorageBucketMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectBySlug?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & Pick<UpdateProjectPayload, 'clientMutationId'>
+    & { project?: Maybe<(
+      { __typename: 'Project' }
+      & Pick<Project, 'id'>
+      & { dataSourcesBucket?: Maybe<(
+        { __typename?: 'DataSourcesBucket' }
+        & Pick<DataSourcesBucket, 'id' | 'region' | 'name'>
+      )> }
+    )> }
+  )> }
+);
 
 export type CreateProjectMutationVariables = Exact<{
   name: Scalars['String'];
@@ -8555,6 +10324,100 @@ export type UpdateProjectSettingsMutation = (
 );
 
 
+export const ProjectBucketSettingDocument = gql`
+    query ProjectBucketSetting($slug: String!) {
+  projectBySlug(slug: $slug) {
+    __typename
+    id
+    dataSourcesBucket {
+      id
+      region
+      name
+      location {
+        geojson
+      }
+    }
+  }
+  dataSourcesBucketsConnection {
+    nodes {
+      id
+      name
+      region
+      location {
+        geojson
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useProjectBucketSettingQuery__
+ *
+ * To run a query within a React component, call `useProjectBucketSettingQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectBucketSettingQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectBucketSettingQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectBucketSettingQuery(baseOptions?: Apollo.QueryHookOptions<ProjectBucketSettingQuery, ProjectBucketSettingQueryVariables>) {
+        return Apollo.useQuery<ProjectBucketSettingQuery, ProjectBucketSettingQueryVariables>(ProjectBucketSettingDocument, baseOptions);
+      }
+export function useProjectBucketSettingLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectBucketSettingQuery, ProjectBucketSettingQueryVariables>) {
+          return Apollo.useLazyQuery<ProjectBucketSettingQuery, ProjectBucketSettingQueryVariables>(ProjectBucketSettingDocument, baseOptions);
+        }
+export type ProjectBucketSettingQueryHookResult = ReturnType<typeof useProjectBucketSettingQuery>;
+export type ProjectBucketSettingLazyQueryHookResult = ReturnType<typeof useProjectBucketSettingLazyQuery>;
+export type ProjectBucketSettingQueryResult = Apollo.QueryResult<ProjectBucketSettingQuery, ProjectBucketSettingQueryVariables>;
+export const UpdateProjectStorageBucketDocument = gql`
+    mutation UpdateProjectStorageBucket($slug: String!, $bucket: Int!) {
+  updateProjectBySlug(input: {slug: $slug, patch: {dataSourcesBucketId: $bucket}}) {
+    clientMutationId
+    project {
+      __typename
+      id
+      dataSourcesBucket {
+        id
+        region
+        name
+      }
+    }
+  }
+}
+    `;
+export type UpdateProjectStorageBucketMutationFn = Apollo.MutationFunction<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>;
+
+/**
+ * __useUpdateProjectStorageBucketMutation__
+ *
+ * To run a mutation, you first call `useUpdateProjectStorageBucketMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateProjectStorageBucketMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateProjectStorageBucketMutation, { data, loading, error }] = useUpdateProjectStorageBucketMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      bucket: // value for 'bucket'
+ *   },
+ * });
+ */
+export function useUpdateProjectStorageBucketMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>) {
+        return Apollo.useMutation<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>(UpdateProjectStorageBucketDocument, baseOptions);
+      }
+export type UpdateProjectStorageBucketMutationHookResult = ReturnType<typeof useUpdateProjectStorageBucketMutation>;
+export type UpdateProjectStorageBucketMutationResult = Apollo.MutationResult<UpdateProjectStorageBucketMutation>;
+export type UpdateProjectStorageBucketMutationOptions = Apollo.BaseMutationOptions<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {

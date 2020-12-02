@@ -402,38 +402,39 @@ export default function ArcGISBrowser() {
                                 </button>
                               );
                             }
-                          }
-                          buttons.push(
-                            <ExcludeLayerToggle
-                              excluded={
-                                serviceSettings.excludedSublayers.indexOf(
-                                  node.id
-                                ) !== -1
-                              }
-                              onClick={() => {
-                                let excluded = [
-                                  ...serviceSettings.excludedSublayers,
-                                ];
-                                if (
+
+                            buttons.push(
+                              <ExcludeLayerToggle
+                                excluded={
                                   serviceSettings.excludedSublayers.indexOf(
                                     node.id
                                   ) !== -1
-                                ) {
-                                  // already excluded
-                                  excluded = excluded.filter(
-                                    (id) => id !== node.id
-                                  );
-                                } else {
-                                  excluded.push(node.id);
                                 }
-                                layerManager.manager?.hideLayers([node.id]);
-                                setServiceSettings({
-                                  ...serviceSettings,
-                                  excludedSublayers: excluded,
-                                });
-                              }}
-                            />
-                          );
+                                onClick={() => {
+                                  let excluded = [
+                                    ...serviceSettings.excludedSublayers,
+                                  ];
+                                  if (
+                                    serviceSettings.excludedSublayers.indexOf(
+                                      node.id
+                                    ) !== -1
+                                  ) {
+                                    // already excluded
+                                    excluded = excluded.filter(
+                                      (id) => id !== node.id
+                                    );
+                                  } else {
+                                    excluded.push(node.id);
+                                  }
+                                  layerManager.manager?.hideLayers([node.id]);
+                                  setServiceSettings({
+                                    ...serviceSettings,
+                                    excludedSublayers: excluded,
+                                  });
+                                }}
+                              />
+                            );
+                          }
                           return buttons;
                         }}
                       />

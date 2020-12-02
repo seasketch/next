@@ -9,6 +9,7 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - ./init_dockerdb.sql:/docker-entrypoint-initdb.d/init_dockerdb.sql
+    command: ["postgres", "-c", "log_statement=all"]
   redis:
     image: "redis:alpine"
     ports:

@@ -51,6 +51,7 @@
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.8.0",
     "ms": "^2.1.2",
+    "nanoid": "^3.1.17",
     "postgraphile-plugin-upload-field": "^1.0.0-alpha.10",
     "slugify": "^1.4.5",
     "uuid": "^8.3.0"
