@@ -1,5 +1,6 @@
 -- Enter migration here
 
+grant execute on function gen_random_uuid to anon;
 
 drop table if exists data_source_types cascade;
 create table data_source_types (
