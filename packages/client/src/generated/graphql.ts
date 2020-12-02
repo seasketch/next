@@ -348,8 +348,6 @@ export type CreateDataLayerPayload = {
   dataLayerEdge?: Maybe<DataLayersEdge>;
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
-  /** Reads a single `Project` that is related to this `DataLayer`. */
-  project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -383,8 +381,6 @@ export type CreateDataSourcePayload = {
   dataSource?: Maybe<DataSource>;
   /** An edge for our `DataSource`. May be used by Relay 1. */
   dataSourceEdge?: Maybe<DataSourcesEdge>;
-  /** Reads a single `Project` that is related to this `DataSource`. */
-  project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -1041,8 +1037,6 @@ export type DataLayer = Node & {
   mapboxGlStyles?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  /** Reads a single `Project` that is related to this `DataLayer`. */
-  project?: Maybe<Project>;
   projectId: Scalars['Int'];
   /**
    * Determines z-ordering of layer in relation to layers in the basemap. For this
@@ -1285,8 +1279,6 @@ export type DataSource = Node & {
    * copy of the data source if necessary.
    */
   originalSourceUrl?: Maybe<Scalars['String']>;
-  /** Reads a single `Project` that is related to this `DataSource`. */
-  project?: Maybe<Project>;
   projectId: Scalars['Int'];
   /**
    * GeoJSON only. A property to use as a feature id (for feature state). Either a
@@ -1339,17 +1331,6 @@ export type DataSourceDataLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<DataLayersOrderBy>>;
-};
-
-/**
- * A condition to be used against `DataSource` object types. All fields are tested
- * for equality and combined with a logical ‘and.’
- */
-export type DataSourceCondition = {
-  /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
 };
 
 export enum DataSourceImportTypes {
@@ -1642,19 +1623,6 @@ export enum DataSourcesBucketsOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
-/** A connection to a list of `DataSource` values. */
-export type DataSourcesConnection = {
-  __typename?: 'DataSourcesConnection';
-  /** A list of edges which contains the `DataSource` and cursor to aid in pagination. */
-  edges: Array<DataSourcesEdge>;
-  /** A list of `DataSource` objects. */
-  nodes: Array<DataSource>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-  /** The count of *all* `DataSource` you could get from the connection. */
-  totalCount: Scalars['Int'];
-};
-
 /** A `DataSource` edge in the connection. */
 export type DataSourcesEdge = {
   __typename?: 'DataSourcesEdge';
@@ -1771,8 +1739,6 @@ export type DeleteDataLayerPayload = {
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
   deletedDataLayerNodeId?: Maybe<Scalars['ID']>;
-  /** Reads a single `Project` that is related to this `DataLayer`. */
-  project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -1818,8 +1784,6 @@ export type DeleteDataSourcePayload = {
   /** An edge for our `DataSource`. May be used by Relay 1. */
   dataSourceEdge?: Maybe<DataSourcesEdge>;
   deletedDataSourceNodeId?: Maybe<Scalars['ID']>;
-  /** Reads a single `Project` that is related to this `DataSource`. */
-  project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -4234,6 +4198,11 @@ export type Mutation = {
   deleteSurveyResponse?: Maybe<DeleteSurveyResponsePayload>;
   /** Deletes a single `SurveyResponse` using its globally unique id. */
   deleteSurveyResponseByNodeId?: Maybe<DeleteSurveyResponsePayload>;
+  /**
+   * Deletes an item from the draft table of contents, as well as all child items
+   * if it is a folder. This action will also delete all related layers and sources
+   * (if no other layers reference the source).
+   */
   deleteTableOfContentsBranch?: Maybe<DeleteTableOfContentsBranchPayload>;
   /** Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting. */
   deleteTopic?: Maybe<DeleteTopicPayload>;
@@ -4298,6 +4267,10 @@ export type Mutation = {
    * and whenever new posts are shown.
    */
   markTopicAsRead?: Maybe<MarkTopicAsReadPayload>;
+  /**
+   * Copies all table of contents items, related layers, sources, and access
+   * control lists to create a new table of contents that will be displayed to project users.
+   */
   publishTableOfContents?: Maybe<PublishTableOfContentsPayload>;
   /** Remove a group from a given access control list. Must be an administrator. */
   removeGroupFromAcl?: Maybe<RemoveGroupFromAclPayload>;
@@ -4444,6 +4417,10 @@ export type Mutation = {
   updateTableOfContentsItemByDataLayerId?: Maybe<UpdateTableOfContentsItemPayload>;
   /** Updates a single `TableOfContentsItem` using its globally unique id and a patch. */
   updateTableOfContentsItemByNodeId?: Maybe<UpdateTableOfContentsItemPayload>;
+  /**
+   * Changes the stable_parent_id of the given item. Use to nest items under
+   * folders, or move them to the root of the tree by setting parent_stable_id to null
+   */
   updateTableOfContentsItemParent?: Maybe<UpdateTableOfContentsItemParentPayload>;
   /** Updates a single `Topic` using a unique key and a patch. */
   updateTopic?: Maybe<UpdateTopicPayload>;
@@ -5515,15 +5492,28 @@ export type Project = Node & {
   admins?: Maybe<Array<User>>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
-  /** Reads and enables pagination through a set of `DataLayer`. */
-  dataLayersConnection: DataLayersConnection;
+  /**
+   * Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
+   * in conjuction with `dataSourcesForItems` to progressively load layer information
+   * when users request layers be displayed on the map.
+   */
+  dataLayersForItems?: Maybe<Array<DataLayer>>;
   /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
   dataSourcesBucket?: Maybe<DataSourcesBucket>;
   dataSourcesBucketId: Scalars['Int'];
-  /** Reads and enables pagination through a set of `DataSource`. */
-  dataSourcesConnection: DataSourcesConnection;
+  /**
+   * Retrieve DataSources for a given set of TableOfContentsItem IDs. Should be used
+   * in conjuction with `dataLayersForItems` to progressively load layer information
+   * when users request layers be displayed on the map.
+   */
+  dataSourcesForItems?: Maybe<Array<DataSource>>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  /**
+   * Draft layer lists, accessible only to admins. Make edits to the layer list and
+   * then use the `publishTableOfContents` mutation when it is ready for end-users.
+   */
+  draftTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
   /** List of all discussion forums the current user has access to. */
   forums: Array<Forum>;
   /**
@@ -5622,6 +5612,8 @@ export type Project = Node & {
   slug: Scalars['String'];
   /** Listing of all Surveys accessible to the current user. */
   surveys: Array<Survey>;
+  /** Public layer list. Cannot be edited directly. */
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
   /** Number of users who have outstanding access requests. Only relevant for invite-only projects. */
   unapprovedParticipantCount?: Maybe<Scalars['Int']>;
   /**
@@ -5651,14 +5643,10 @@ export type ProjectAdminsArgs = {
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
-export type ProjectDataLayersConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<DataLayerCondition>;
+export type ProjectDataLayersForItemsArgs = {
   first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+  tableOfContentsItemIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
 };
 
 
@@ -5666,14 +5654,20 @@ export type ProjectDataLayersConnectionArgs = {
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
-export type ProjectDataSourcesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<DataSourceCondition>;
+export type ProjectDataSourcesForItemsArgs = {
   first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
+  tableOfContentsItemIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectDraftTableOfContentsItemsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -5789,6 +5783,16 @@ export type ProjectSurveysArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SurveysOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectTableOfContentsItemsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -6156,8 +6160,6 @@ export type Query = Node & {
   dataLayer?: Maybe<DataLayer>;
   /** Reads a single `DataLayer` using its globally unique `ID`. */
   dataLayerByNodeId?: Maybe<DataLayer>;
-  /** Reads and enables pagination through a set of `DataLayer`. */
-  dataLayersConnection?: Maybe<DataLayersConnection>;
   dataSource?: Maybe<DataSource>;
   /** Reads a single `DataSource` using its globally unique `ID`. */
   dataSourceByNodeId?: Maybe<DataSource>;
@@ -6260,8 +6262,6 @@ export type Query = Node & {
   tableOfContentsItemByDataLayerId?: Maybe<TableOfContentsItem>;
   /** Reads a single `TableOfContentsItem` using its globally unique `ID`. */
   tableOfContentsItemByNodeId?: Maybe<TableOfContentsItem>;
-  /** Reads and enables pagination through a set of `TableOfContentsItem`. */
-  tableOfContentsItemsConnection?: Maybe<TableOfContentsItemsConnection>;
   /**
    * Template forms can be created by SeaSketch superusers for use in **any** 
    * project. For example, there could be a template for a human-uses survey that
@@ -6424,28 +6424,6 @@ export type QueryDataLayerArgs = {
  */
 export type QueryDataLayerByNodeIdArgs = {
   nodeId: Scalars['ID'];
-};
-
-
-/**
- * Most relevant root-level queries are listed first, which concern getting 
- * the currently logged-in user (`me`) and project (`currentProject`). 
- * There are also cross-project resources such as form templates and of 
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- * 
- * Postgraphile also automatically generates a variety of accessor queries 
- * for each database table. These are unlikely to be needed often but may possibly 
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
-export type QueryDataLayersConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<DataLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
 };
 
 
@@ -7328,28 +7306,6 @@ export type QueryTableOfContentsItemByDataLayerIdArgs = {
  */
 export type QueryTableOfContentsItemByNodeIdArgs = {
   nodeId: Scalars['ID'];
-};
-
-
-/**
- * Most relevant root-level queries are listed first, which concern getting 
- * the currently logged-in user (`me`) and project (`currentProject`). 
- * There are also cross-project resources such as form templates and of 
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- * 
- * Postgraphile also automatically generates a variety of accessor queries 
- * for each database table. These are unlikely to be needed often but may possibly 
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
-export type QueryTableOfContentsItemsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<TableOfContentsItemCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
 
@@ -8608,11 +8564,21 @@ export type SurveyTokenInfo = {
   token?: Maybe<Scalars['String']>;
 };
 
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers 
+ * that can be added to the map. Both layers and folders may be nested into other 
+ * folders for organization, and each folder has its own access control list.
+ * 
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in 
+ * batch only once the layer is turned on, using the 
+ * `dataLayersAndSourcesByLayerId` query.
+ */
 export type TableOfContentsItem = Node & {
   __typename?: 'TableOfContentsItem';
   /** Reads a single `Acl` that is related to this `TableOfContentsItem`. */
   acl?: Maybe<Acl>;
-  /** If set, users will be able to zoom to the bounds of this item */
+  /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
   dataLayer?: Maybe<DataLayer>;
@@ -8624,7 +8590,11 @@ export type TableOfContentsItem = Node & {
    * their children. Toggles can only be used to toggle children off
    */
   isClickOffOnly: Scalars['Boolean'];
-  /** Identifies whether this item is part of the draft table of contents edited by admin or the static public version */
+  /**
+   * Identifies whether this item is part of the draft table of contents edited by
+   * admin or the static public version. This property cannot be changed. Rather,
+   * use the `publishTableOfContents()` mutation
+   */
   isDraft: Scalars['Boolean'];
   /** If not a folder, the item is a layer-type and must have a data_layer_id */
   isFolder: Scalars['Boolean'];
@@ -8632,11 +8602,23 @@ export type TableOfContentsItem = Node & {
   metadata?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /**
+   * stable_id of the parent folder, if any. This property cannot be changed 
+   * directly. To rearrange items into folders, use the 
+   * `updateTableOfContentsItemParent` mutation.
+   */
   parentStableId?: Maybe<Scalars['String']>;
   projectId: Scalars['Int'];
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
-  /** Stable id referenced by parent_stable_id and map bookmarks. Also maintains nesting paths when publishing. */
+  /**
+   * The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
+   * should be used with a custom alphabet that excludes dashes and has a lenght of 
+   * 9. The purpose of the stable_id is to control the nesting arrangement of items
+   * and provide a stable reference for layer visibility settings and map bookmarks.
+   * When published, the id primary key property of the item will change but not the 
+   * stable_id.
+   */
   stableId: Scalars['String'];
   /** Name used in the table of contents rendering */
   title: Scalars['String'];
@@ -8651,11 +8633,15 @@ export type TableOfContentsItemCondition = {
   dataLayerId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `isDraft` field. */
+  isDraft?: Maybe<Scalars['Boolean']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `TableOfContentsItem` */
 export type TableOfContentsItemInput = {
-  /** If set, users will be able to zoom to the bounds of this item */
+  /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
@@ -8668,11 +8654,23 @@ export type TableOfContentsItemInput = {
   isFolder?: Maybe<Scalars['Boolean']>;
   /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
   metadata?: Maybe<Scalars['JSON']>;
+  /**
+   * stable_id of the parent folder, if any. This property cannot be changed 
+   * directly. To rearrange items into folders, use the 
+   * `updateTableOfContentsItemParent` mutation.
+   */
   parentStableId?: Maybe<Scalars['String']>;
   projectId: Scalars['Int'];
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren?: Maybe<Scalars['Boolean']>;
-  /** Stable id referenced by parent_stable_id and map bookmarks. Also maintains nesting paths when publishing. */
+  /**
+   * The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
+   * should be used with a custom alphabet that excludes dashes and has a lenght of 
+   * 9. The purpose of the stable_id is to control the nesting arrangement of items
+   * and provide a stable reference for layer visibility settings and map bookmarks.
+   * When published, the id primary key property of the item will change but not the 
+   * stable_id.
+   */
   stableId: Scalars['String'];
   /** Name used in the table of contents rendering */
   title: Scalars['String'];
@@ -8680,7 +8678,7 @@ export type TableOfContentsItemInput = {
 
 /** Represents an update to a `TableOfContentsItem`. Fields that are set will be updated. */
 export type TableOfContentsItemPatch = {
-  /** If set, users will be able to zoom to the bounds of this item */
+  /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
@@ -8725,9 +8723,13 @@ export enum TableOfContentsItemsOrderBy {
   DataLayerIdDesc = 'DATA_LAYER_ID_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
+  IsDraftAsc = 'IS_DRAFT_ASC',
+  IsDraftDesc = 'IS_DRAFT_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
 export enum TileScheme {
@@ -8983,8 +8985,6 @@ export type UpdateDataLayerPayload = {
   dataLayerEdge?: Maybe<DataLayersEdge>;
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
-  /** Reads a single `Project` that is related to this `DataLayer`. */
-  project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -9033,8 +9033,6 @@ export type UpdateDataSourcePayload = {
   dataSource?: Maybe<DataSource>;
   /** An edge for our `DataSource`. May be used by Relay 1. */
   dataSourceEdge?: Maybe<DataSourcesEdge>;
-  /** Reads a single `Project` that is related to this `DataSource`. */
-  project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };

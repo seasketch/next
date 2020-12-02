@@ -361,9 +361,6 @@ type CreateDataLayerPayload {
   """Reads a single `DataSource` that is related to this `DataLayer`."""
   dataSource: DataSource
 
-  """Reads a single `Project` that is related to this `DataLayer`."""
-  project: Project
-
   """
   Our root query field type. Allows us to run any query from our mutation payload.
   """
@@ -398,9 +395,6 @@ type CreateDataSourcePayload {
     """The method to use when ordering `DataSource`."""
     orderBy: [DataSourcesOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataSourcesEdge
-
-  """Reads a single `Project` that is related to this `DataSource`."""
-  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -1126,9 +1120,6 @@ type DataLayer implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
-
-  """Reads a single `Project` that is related to this `DataLayer`."""
-  project: Project
   projectId: Int!
 
   """
@@ -1467,9 +1458,6 @@ type DataSource implements Node {
   copy of the data source if necessary.
   """
   originalSourceUrl: String
-
-  """Reads a single `Project` that is related to this `DataSource`."""
-  project: Project
   projectId: Int!
 
   """
@@ -1524,18 +1512,6 @@ type DataSource implements Node {
   ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.
   """
   useDevicePixelRatio: Boolean
-}
-
-"""
-A condition to be used against `DataSource` object types. All fields are tested
-for equality and combined with a logical ‘and.’
-"""
-input DataSourceCondition {
-  """Checks for equality with the object’s `id` field."""
-  id: Int
-
-  """Checks for equality with the object’s `projectId` field."""
-  projectId: Int
 }
 
 enum DataSourceImportTypes {
@@ -1949,23 +1925,6 @@ enum DataSourcesBucketsOrderBy {
   PRIMARY_KEY_DESC
 }
 
-"""A connection to a list of `DataSource` values."""
-type DataSourcesConnection {
-  """
-  A list of edges which contains the `DataSource` and cursor to aid in pagination.
-  """
-  edges: [DataSourcesEdge!]!
-
-  """A list of `DataSource` objects."""
-  nodes: [DataSource!]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """The count of *all* `DataSource` you could get from the connection."""
-  totalCount: Int!
-}
-
 """A `DataSource` edge in the connection."""
 type DataSourcesEdge {
   """A cursor for use in pagination."""
@@ -2113,9 +2072,6 @@ type DeleteDataLayerPayload {
   dataSource: DataSource
   deletedDataLayerNodeId: ID
 
-  """Reads a single `Project` that is related to this `DataLayer`."""
-  project: Project
-
   """
   Our root query field type. Allows us to run any query from our mutation payload.
   """
@@ -2165,9 +2121,6 @@ type DeleteDataSourcePayload {
     orderBy: [DataSourcesOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataSourcesEdge
   deletedDataSourceNodeId: ID
-
-  """Reads a single `Project` that is related to this `DataSource`."""
-  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -5316,6 +5269,12 @@ type Mutation {
     """
     input: DeleteSurveyResponseByNodeIdInput!
   ): DeleteSurveyResponsePayload
+
+  """
+  Deletes an item from the draft table of contents, as well as all child items
+  if it is a folder. This action will also delete all related layers and sources
+  (if no other layers reference the source).
+  """
   deleteTableOfContentsBranch(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -5477,6 +5436,11 @@ type Mutation {
     """
     input: MarkTopicAsReadInput!
   ): MarkTopicAsReadPayload
+
+  """
+  Copies all table of contents items, related layers, sources, and access
+  control lists to create a new table of contents that will be displayed to project users.
+  """
   publishTableOfContents(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -6028,6 +5992,11 @@ type Mutation {
     """
     input: UpdateTableOfContentsItemByNodeIdInput!
   ): UpdateTableOfContentsItemPayload
+
+  """
+  Changes the stable_parent_id of the given item. Use to nest items under
+  folders, or move them to the root of the tree by setting parent_stable_id to null
+  """
   updateTableOfContentsItemParent(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -6270,70 +6239,55 @@ type Project implements Node {
   """Reads a single `CommunityGuideline` that is related to this `Project`."""
   communityGuidelines: CommunityGuideline
 
-  """Reads and enables pagination through a set of `DataLayer`."""
-  dataLayersConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: DataLayerCondition
-
+  """
+  Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
+  in conjuction with `dataSourcesForItems` to progressively load layer information
+  when users request layers be displayed on the map.
+  
+  """
+  dataLayersForItems(
     """Only read the first `n` values of the set."""
     first: Int
 
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
+    """Skip the first `n` values."""
     offset: Int
-
-    """The method to use when ordering `DataLayer`."""
-    orderBy: [DataLayersOrderBy!] = [PRIMARY_KEY_ASC]
-  ): DataLayersConnection!
+    tableOfContentsItemIds: [Int]
+  ): [DataLayer!]
 
   """Reads a single `DataSourcesBucket` that is related to this `Project`."""
   dataSourcesBucket: DataSourcesBucket
   dataSourcesBucketId: Int!
 
-  """Reads and enables pagination through a set of `DataSource`."""
-  dataSourcesConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: DataSourceCondition
-
+  """
+  Retrieve DataSources for a given set of TableOfContentsItem IDs. Should be used
+  in conjuction with `dataLayersForItems` to progressively load layer information
+  when users request layers be displayed on the map.
+  
+  """
+  dataSourcesForItems(
     """Only read the first `n` values of the set."""
     first: Int
 
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
+    """Skip the first `n` values."""
     offset: Int
-
-    """The method to use when ordering `DataSource`."""
-    orderBy: [DataSourcesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): DataSourcesConnection!
+    tableOfContentsItemIds: [Int]
+  ): [DataSource!]
 
   """Should be a short length in order to fit in the project header."""
   description: String
+
+  """
+  Draft layer lists, accessible only to admins. Make edits to the layer list and
+  then use the `publishTableOfContents` mutation when it is ready for end-users.
+  
+  """
+  draftTableOfContentsItems(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [TableOfContentsItem!]
 
   """
   
@@ -6588,6 +6542,18 @@ type Project implements Node {
     """The method to use when ordering `Survey`."""
     orderBy: [SurveysOrderBy!]
   ): [Survey!]!
+
+  """
+  Public layer list. Cannot be edited directly.
+  
+  """
+  tableOfContentsItems(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [TableOfContentsItem!]
 
   """
   Number of users who have outstanding access requests. Only relevant for invite-only projects.
@@ -7030,35 +6996,6 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `DataLayer`."""
     nodeId: ID!
   ): DataLayer
-
-  """Reads and enables pagination through a set of `DataLayer`."""
-  dataLayersConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: DataLayerCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `DataLayer`."""
-    orderBy: [DataLayersOrderBy!] = [PRIMARY_KEY_ASC]
-  ): DataLayersConnection
   dataSource(id: Int!): DataSource
 
   """Reads a single `DataSource` using its globally unique `ID`."""
@@ -7406,35 +7343,6 @@ type Query implements Node {
     """
     nodeId: ID!
   ): TableOfContentsItem
-
-  """Reads and enables pagination through a set of `TableOfContentsItem`."""
-  tableOfContentsItemsConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: TableOfContentsItemCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `TableOfContentsItem`."""
-    orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): TableOfContentsItemsConnection
 
   """
   
@@ -8955,11 +8863,24 @@ type SurveyTokenInfo {
   token: String
 }
 
+"""
+TableOfContentsItems represent a tree-view of folders and operational layers 
+that can be added to the map. Both layers and folders may be nested into other 
+folders for organization, and each folder has its own access control list.
+
+Items that represent data layers have a `DataLayer` relation, which in turn has
+a reference to a `DataSource`. Usually these relations should be fetched in 
+batch only once the layer is turned on, using the 
+`dataLayersAndSourcesByLayerId` query.
+
+"""
 type TableOfContentsItem implements Node {
   """Reads a single `Acl` that is related to this `TableOfContentsItem`."""
   acl: Acl
 
-  """If set, users will be able to zoom to the bounds of this item"""
+  """
+  If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy]
+  """
   bounds: [BigFloat]
 
   """
@@ -8980,7 +8901,9 @@ type TableOfContentsItem implements Node {
   isClickOffOnly: Boolean!
 
   """
-  Identifies whether this item is part of the draft table of contents edited by admin or the static public version
+  Identifies whether this item is part of the draft table of contents edited by
+  admin or the static public version. This property cannot be changed. Rather,
+  use the `publishTableOfContents()` mutation
   """
   isDraft: Boolean!
 
@@ -8998,6 +8921,13 @@ type TableOfContentsItem implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """
+  stable_id of the parent folder, if any. This property cannot be changed 
+  directly. To rearrange items into folders, use the 
+  `updateTableOfContentsItemParent` mutation.
+  
+  """
   parentStableId: String
   projectId: Int!
 
@@ -9007,7 +8937,13 @@ type TableOfContentsItem implements Node {
   showRadioChildren: Boolean!
 
   """
-  Stable id referenced by parent_stable_id and map bookmarks. Also maintains nesting paths when publishing.
+  The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
+  should be used with a custom alphabet that excludes dashes and has a lenght of 
+  9. The purpose of the stable_id is to control the nesting arrangement of items
+  and provide a stable reference for layer visibility settings and map bookmarks.
+  When published, the id primary key property of the item will change but not the 
+  stable_id.
+  
   """
   stableId: String!
 
@@ -9025,11 +8961,19 @@ input TableOfContentsItemCondition {
 
   """Checks for equality with the object’s `id` field."""
   id: Int
+
+  """Checks for equality with the object’s `isDraft` field."""
+  isDraft: Boolean
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
 }
 
 """An input for mutations affecting `TableOfContentsItem`"""
 input TableOfContentsItemInput {
-  """If set, users will be able to zoom to the bounds of this item"""
+  """
+  If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy]
+  """
   bounds: [BigFloat]
 
   """
@@ -9052,6 +8996,13 @@ input TableOfContentsItemInput {
   DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders
   """
   metadata: JSON
+
+  """
+  stable_id of the parent folder, if any. This property cannot be changed 
+  directly. To rearrange items into folders, use the 
+  `updateTableOfContentsItemParent` mutation.
+  
+  """
   parentStableId: String
   projectId: Int!
 
@@ -9061,7 +9012,13 @@ input TableOfContentsItemInput {
   showRadioChildren: Boolean
 
   """
-  Stable id referenced by parent_stable_id and map bookmarks. Also maintains nesting paths when publishing.
+  The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
+  should be used with a custom alphabet that excludes dashes and has a lenght of 
+  9. The purpose of the stable_id is to control the nesting arrangement of items
+  and provide a stable reference for layer visibility settings and map bookmarks.
+  When published, the id primary key property of the item will change but not the 
+  stable_id.
+  
   """
   stableId: String!
 
@@ -9073,7 +9030,9 @@ input TableOfContentsItemInput {
 Represents an update to a `TableOfContentsItem`. Fields that are set will be updated.
 """
 input TableOfContentsItemPatch {
-  """If set, users will be able to zoom to the bounds of this item"""
+  """
+  If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy]
+  """
   bounds: [BigFloat]
 
   """
@@ -9135,9 +9094,13 @@ enum TableOfContentsItemsOrderBy {
   DATA_LAYER_ID_DESC
   ID_ASC
   ID_DESC
+  IS_DRAFT_ASC
+  IS_DRAFT_DESC
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
 }
 
 enum TileScheme {
@@ -9485,9 +9448,6 @@ type UpdateDataLayerPayload {
   """Reads a single `DataSource` that is related to this `DataLayer`."""
   dataSource: DataSource
 
-  """Reads a single `Project` that is related to this `DataLayer`."""
-  project: Project
-
   """
   Our root query field type. Allows us to run any query from our mutation payload.
   """
@@ -9546,9 +9506,6 @@ type UpdateDataSourcePayload {
     """The method to use when ordering `DataSource`."""
     orderBy: [DataSourcesOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataSourcesEdge
-
-  """Reads a single `Project` that is related to this `DataSource`."""
-  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

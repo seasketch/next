@@ -322,6 +322,7 @@ alter table data_layers enable row level security;
 
 
 comment on table data_layers is '
+@omit all
 Data layers represent multiple MapBox GL Style layers tied to a single source. 
 These layers could also be called "operational layers" in that they are meant to
 be overlaid on a basemap.
@@ -359,6 +360,9 @@ create table table_of_contents_items (
   bounds decimal[4],
   data_layer_id int unique references data_layers (id)
 );
+
+CREATE INDEX ON table_of_contents_items(project_id);
+
 
 CREATE OR REPLACE FUNCTION before_insert_or_update_table_of_contents_items_trigger() RETURNS trigger
     LANGUAGE plpgsql
@@ -580,22 +584,50 @@ create policy table_of_contents_items_select on table_of_contents_items for sele
 
 
 
+create index on table_of_contents_items(is_draft);
 
+comment on table table_of_contents_items is '
+@omit all
+TableOfContentsItems represent a tree-view of folders and operational layers 
+that can be added to the map. Both layers and folders may be nested into other 
+folders for organization, and each folder has its own access control list.
 
-comment on column table_of_contents_items.stable_id is 'Stable id referenced by parent_stable_id and map bookmarks. Also maintains nesting paths when publishing.';
+Items that represent data layers have a `DataLayer` relation, which in turn has
+a reference to a `DataSource`. Usually these relations should be fetched in 
+batch only once the layer is turned on, using the 
+`dataLayersAndSourcesByLayerId` query.
+';
+comment on constraint data_layers_project_id_fkey on data_layers is '@omit';
+comment on constraint data_sources_project_id_fkey on data_sources is '@omit';
+comment on constraint table_of_contents_items_project_id_fkey on table_of_contents_items is '@omit';
+
+comment on column table_of_contents_items.stable_id is '
+The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
+should be used with a custom alphabet that excludes dashes and has a lenght of 
+9. The purpose of the stable_id is to control the nesting arrangement of items
+and provide a stable reference for layer visibility settings and map bookmarks.
+When published, the id primary key property of the item will change but not the 
+stable_id.
+';
+comment on column table_of_contents_items.parent_stable_id is '
+stable_id of the parent folder, if any. This property cannot be changed 
+directly. To rearrange items into folders, use the 
+`updateTableOfContentsItemParent` mutation.
+';
 comment on column table_of_contents_items.path is '
 @omit
 ltree-compatible, period delimited list of ancestor stable_ids
 ';
-comment on column table_of_contents_items.is_draft is 'Identifies whether this item is part of the draft table of contents edited by admin or the static public version';
+comment on column table_of_contents_items.is_draft is 'Identifies whether this item is part of the draft table of contents edited by admin or the static public version. This property cannot be changed. Rather, use the `publishTableOfContents()` mutation';
 comment on column table_of_contents_items.title is 'Name used in the table of contents rendering';
 comment on column table_of_contents_items.is_folder is 'If not a folder, the item is a layer-type and must have a data_layer_id';
 comment on column table_of_contents_items.show_radio_children is 'If set, children of this folder will appear as radio options so that only one may be toggle at a time';
 comment on column table_of_contents_items.is_click_off_only is 'If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off';
 comment on column table_of_contents_items.metadata is 'DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders';
-comment on column table_of_contents_items.bounds is 'If set, users will be able to zoom to the bounds of this item';
+comment on column table_of_contents_items.bounds is 'If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy]';
 comment on column table_of_contents_items.data_layer_id is 'If is_folder=false, a DataLayers visibility will be controlled by this item';
 
+comment on function update_table_of_contents_item_parent is 'Changes the stable_parent_id of the given item. Use to nest items under folders, or move them to the root of the tree by setting parent_stable_id to null';
 
 create or replace function publish_table_of_contents("projectId" int)
   returns setof table_of_contents_items
@@ -838,6 +870,8 @@ create or replace function publish_table_of_contents("projectId" int)
 
 grant execute on function publish_table_of_contents to seasketch_user;
 
+comment on function publish_table_of_contents is 'Copies all table of contents items, related layers, sources, and access control lists to create a new table of contents that will be displayed to project users.';
+
 drop function if exists delete_table_of_contents_branch(id int);
 create or replace function delete_table_of_contents_branch("tableOfContentsItemId" int)
   returns void
@@ -866,6 +900,8 @@ create or replace function delete_table_of_contents_branch("tableOfContentsItemI
   $$;
 
 grant execute on function delete_table_of_contents_branch to seasketch_user;
+
+comment on function delete_table_of_contents_branch is 'Deletes an item from the draft table of contents, as well as all child items if it is a folder. This action will also delete all related layers and sources (if no other layers reference the source).';
 
 drop function if exists _delete_table_of_contents_item(tid int);
 create or replace function _delete_table_of_contents_item(tid int)
@@ -947,3 +983,120 @@ create policy data_sources_delete on data_sources for delete using (
 );
 
 
+create or replace function projects_table_of_contents_items(p public.projects) 
+  RETURNS SETOF table_of_contents_items
+  language sql
+  stable
+  as $$
+    select
+      table_of_contents_items.*
+    from
+      table_of_contents_items
+    where
+      table_of_contents_items.project_id = p.id and table_of_contents_items.is_draft = false;
+  $$;
+
+grant execute on function projects_table_of_contents_items to anon;
+
+comment on function projects_table_of_contents_items is '
+@simpleCollections only
+Public layer list. Cannot be edited directly.
+';
+
+
+create or replace function projects_draft_table_of_contents_items(p public.projects) 
+  RETURNS SETOF table_of_contents_items
+  language sql
+  stable
+  as $$
+    select
+      table_of_contents_items.*
+    from
+      table_of_contents_items
+    where
+      table_of_contents_items.project_id = p.id and table_of_contents_items.is_draft = true;
+  $$;
+
+grant execute on function projects_draft_table_of_contents_items to anon;
+
+comment on function projects_draft_table_of_contents_items is '
+@simpleCollections only
+Draft layer lists, accessible only to admins. Make edits to the layer list and
+then use the `publishTableOfContents` mutation when it is ready for end-users.
+';
+
+
+create or replace function projects_data_layers_for_items(p public.projects, table_of_contents_item_ids int[]) 
+  RETURNS SETOF data_layers
+  language plpgsql
+  security definer
+  stable
+  as $$
+    declare
+      layer_ids int[];
+    begin
+      if session_is_admin(p.id) then
+        select data_layer_id into layer_ids from table_of_contents_items where project_id = p.id and id = any(table_of_contents_item_ids);
+      else
+        if session_has_project_access(p.id) then
+          select data_layer_id into layer_ids from table_of_contents_items where project_id = p.id and id = any(table_of_contents_item_ids) and _session_on_toc_item_acl(table_of_contents_items.path);
+        else
+          raise 'Access denied';
+        end if;
+      end if;
+      return query select
+        *
+      from
+        data_layers
+      where
+        id = any(layer_ids);
+    end;
+  $$;
+
+
+grant execute on function projects_data_layers_for_items to anon;
+
+comment on function projects_data_layers_for_items is '@simpleCollections only
+Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
+in conjuction with `dataSourcesForItems` to progressively load layer information
+when users request layers be displayed on the map.
+';
+
+
+create or replace function projects_data_sources_for_items(p public.projects, table_of_contents_item_ids int[]) 
+  RETURNS SETOF data_sources
+  language plpgsql
+  security definer
+  stable
+  as $$
+    declare
+      layer_ids int[];
+      source_ids int[];
+    begin
+      if session_is_admin(p.id) then
+        select data_layer_id into layer_ids from table_of_contents_items where project_id = p.id and id = any("table_of_contents_item_ids");
+      else
+        if session_has_project_access(p.id) then
+          select data_layer_id into layer_ids from table_of_contents_items where project_id = p.id and id = any(table_of_contents_item_ids) and _session_on_toc_item_acl(table_of_contents_items.path);
+        else
+          raise 'Access denied';
+        end if;
+      end if;
+      select distinct(data_source_id) into source_ids from data_layers where id = any(layer_ids);
+      return query select
+        *
+      from
+        data_sources
+      where
+        id = any(source_ids);
+    end;
+  $$;
+
+
+grant execute on function projects_data_sources_for_items to anon;
+
+comment on function projects_data_sources_for_items is '@simpleCollections only
+Retrieve DataSources for a given set of TableOfContentsItem IDs. Should be used
+in conjuction with `dataLayersForItems` to progressively load layer information
+when users request layers be displayed on the map.
+';
