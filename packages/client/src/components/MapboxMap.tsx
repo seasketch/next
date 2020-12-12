@@ -1,19 +1,14 @@
 import mapboxgl, { ErrorEvent, Map, MapDataEvent } from "mapbox-gl";
 import React, { useEffect, useState, useRef } from "react";
-import { useLayerManager } from "../../../dataLayers/LayerManager";
-// import OverlayManager from "./OverlayManager";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
-  onData?: (e: MapDataEvent) => void;
-  onDataLoading?: (e: MapDataEvent) => void;
-  onError?: (e: ErrorEvent & MapDataEvent) => void;
+  className?: string;
 }
 
 export default function OverlayMap(props: OverlayMapProps) {
   const [map, setMap] = useState<Map>();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const layerManager = useLayerManager();
 
   useEffect(() => {
     mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
@@ -21,11 +16,34 @@ export default function OverlayMap(props: OverlayMapProps) {
       const mapInstance = new mapboxgl.Map({
         container: mapContainer.current!,
         style: "mapbox://styles/mapbox/streets-v11", // stylesheet location
+        // style: "mapbox://styles/mapbox/satellite-streets-v11", // stylesheet location
         center: [1.9, 18.7],
         zoom: 0.09527381899319892,
       });
       mapInstance.on("load", () => {
         setMap(mapInstance);
+        // @ts-ignore
+        window.map = mapInstance;
+        // mapInstance.addSource("mapbox-dem", {
+        //   type: "raster-dem",
+        //   url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+        //   tileSize: 512,
+        //   maxzoom: 14,
+        // });
+        // // @ts-ignore
+        // mapInstance.setTerrain({ source: "mapbox-dem", exaggeration: 1 });
+
+        mapInstance.addLayer({
+          id: "sky",
+          // @ts-ignore
+          type: "sky",
+          paint: {
+            // @ts-ignore
+            "sky-type": "atmosphere",
+            "sky-atmosphere-sun": [0.0, 0.0],
+            "sky-atmosphere-sun-intensity": 15,
+          },
+        });
         mapInstance.resize();
         setTimeout(() => {
           mapInstance.resize();
@@ -33,23 +51,12 @@ export default function OverlayMap(props: OverlayMapProps) {
         if (props.onLoad) {
           props.onLoad(mapInstance);
         }
-        // if (props.onError) {
-        //   mapInstance.on("error", props.onError);
-        // }
-        // if (props.onDataLoading) {
-        //   mapInstance.on("dataloading", props.onDataLoading);
-        // }
-        // if (props.onData) {
-        //   mapInstance.on("data", props.onData);
-        // }
-        // @ts-ignore
-        window.map = mapInstance;
       });
     }
   }, [map]);
 
   return (
-    <div className="flex-1 bg-gray-900" ref={mapContainer}>
+    <div className={`flex-1 bg-gray-900 ${props.className}`} ref={mapContainer}>
       Map
     </div>
   );

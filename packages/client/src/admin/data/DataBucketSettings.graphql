@@ -3,7 +3,7 @@ query ProjectBucketSetting($slug: String!) {
     __typename
     id
     dataSourcesBucket {
-      id
+      bucket
       region
       name
       location {
@@ -13,7 +13,7 @@ query ProjectBucketSetting($slug: String!) {
   }
   dataSourcesBucketsConnection {
     nodes {
-      id
+      bucket
       name
       region
       location {
@@ -23,7 +23,7 @@ query ProjectBucketSetting($slug: String!) {
   }
 }
 
-mutation UpdateProjectStorageBucket($slug: String!, $bucket: Int!) {
+mutation UpdateProjectStorageBucket($slug: String!, $bucket: String!) {
   updateProjectBySlug(
     input: { slug: $slug, patch: { dataSourcesBucketId: $bucket } }
   ) {
@@ -32,7 +32,7 @@ mutation UpdateProjectStorageBucket($slug: String!, $bucket: Int!) {
       __typename
       id
       dataSourcesBucket {
-        id
+        bucket
         region
         name
       }

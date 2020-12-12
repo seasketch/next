@@ -1,0 +1,65 @@
+query DraftTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    draftTableOfContentsItems {
+      id
+      dataLayerId
+      title
+      acl {
+        type
+      }
+      isClickOffOnly
+      isFolder
+      stableId
+      parentStableId
+      showRadioChildren
+    }
+  }
+}
+
+query layersAndSourcesForItems(
+  $slug: String!
+  $tableOfContentsItemIds: [Int]!
+) {
+  projectBySlug(slug: $slug) {
+    id
+    dataSourcesForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
+      attribution
+      bounds
+      bucketId
+      buffer
+      byteLength
+      cluster
+      clusterMaxZoom
+      clusterProperties
+      clusterRadius
+      coordinates
+      createdAt
+      encoding
+      enhancedSecurity
+      id
+      importType
+      lineMetrics
+      maxzoom
+      minzoom
+      objectKey
+      originalSourceUrl
+      queryParameters
+      scheme
+      tiles
+      tileSize
+      tolerance
+      type
+      url
+      urls
+      useDevicePixelRatio
+    }
+    dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
+      dataSourceId
+      id
+      mapboxGlStyles
+      renderUnder
+      sourceLayer
+      sublayer
+    }
+  }
+}

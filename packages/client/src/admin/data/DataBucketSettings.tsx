@@ -14,12 +14,12 @@ function DataBucketSettings(props: { className?: string }) {
   const [map, setMap] = useState<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const { slug } = useParams<{ slug: string }>();
-  const [region, setRegion] = useState(0);
+  const [region, setRegion] = useState("");
   const buckets = useProjectBucketSettingQuery({
     variables: { slug },
   });
   const projectBucketSetting =
-    buckets.data?.projectBySlug?.dataSourcesBucket?.id || 0;
+    buckets.data?.projectBySlug?.dataSourcesBucket?.bucket || "";
   const [
     mutate,
     { data, error, loading },
@@ -87,11 +87,12 @@ function DataBucketSettings(props: { className?: string }) {
         []) {
         const geometry = JSON.parse(bucket.location.geojson) as Point;
         const feature = {
-          id: bucket.region,
+          id: bucket.bucket,
           type: "Feature",
           properties: {
             name: bucket.name,
             region: bucket.region,
+            bucket: bucket.bucket,
           },
           geometry,
         };
@@ -213,11 +214,11 @@ function DataBucketSettings(props: { className?: string }) {
                 <select
                   id="location"
                   onChange={(e) => {
-                    setRegion(parseInt(e.target.value));
+                    setRegion(e.target.value);
                     mutate({
                       variables: {
                         slug: slug,
-                        bucket: parseInt(e.target.value),
+                        bucket: e.target.value,
                       },
                     });
                   }}
@@ -228,8 +229,8 @@ function DataBucketSettings(props: { className?: string }) {
                     buckets.data?.dataSourcesBucketsConnection?.nodes || []
                   ).map((bucket) => (
                     <option
-                      key={bucket.id}
-                      value={bucket.id}
+                      key={bucket.bucket}
+                      value={bucket.bucket}
                       // selected={bucket.id === projectBucketSetting}
                     >
                       {bucket.name}

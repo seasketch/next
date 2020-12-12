@@ -3,7 +3,7 @@ import {
   ArcGISDynamicMapServiceOptions,
 } from "@seasketch/mapbox-gl-esri-sources";
 import { Map } from "mapbox-gl";
-import { SeaSketchLayer } from "../LayerManager";
+import { ClientDataSource, ClientDataLayer } from "../LayerManager";
 import { SeaSketchSourceBaseOptions } from "./Base";
 
 export type ArcGISDynamicMapServiceSource = {
@@ -13,10 +13,10 @@ export type ArcGISDynamicMapServiceSource = {
 } & SeaSketchSourceBaseOptions;
 
 export function updateDynamicMapService(
-  prev: ArcGISDynamicMapServiceSource,
-  state: ArcGISDynamicMapServiceSource,
+  prev: ClientDataSource,
+  state: ClientDataSource,
   instance: ArcGISDynamicMapService,
-  layers: SeaSketchLayer[],
+  layers: ClientDataLayer[],
   map: Map
 ) {
   if (prev.type !== state.type) {
@@ -32,11 +32,9 @@ export function updateDynamicMapService(
   // Don't need to remove the layers since these services can be updated dynamically
   // The library itself will check if there are any meaningful changes here
   instance.updateUseDevicePixelRatio(
-    state.options.useDevicePixelRatio === undefined
-      ? true
-      : state.options.useDevicePixelRatio
+    state.useDevicePixelRatio === false ? false : true
   );
-  instance.updateQueryParameters(state.options.queryParameters || {});
+  instance.updateQueryParameters(state.queryParameters || {});
   return instance;
 }
 

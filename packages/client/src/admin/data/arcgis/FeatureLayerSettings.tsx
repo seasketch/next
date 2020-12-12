@@ -25,6 +25,7 @@ import { fetchFeatureLayerData } from "@seasketch/mapbox-gl-esri-sources/dist/sr
 import slugify from "slugify";
 import ArcGISServiceMetadata from "./ArcGISServiceMetadata";
 import Warning from "../../../components/Warning";
+import { RenderUnderType } from "../../../generated/graphql";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -32,7 +33,6 @@ require("codemirror/mode/javascript/javascript");
 window.jsonlint = require("jsonlint-mod");
 
 const VECTOR_BYTES_LIMIT = 5_000_000;
-const NUM_FEATURES_LIMIT = 2000;
 
 export function FeatureLayerSettings(props: {
   layer: LayerInfo;
@@ -61,7 +61,7 @@ export function FeatureLayerSettings(props: {
     sublayer: layer.id,
     geometryPrecision: 6,
     importType: "geojson",
-    renderUnder: "labels",
+    renderUnder: RenderUnderType.Labels,
     ignoreByteLimit: false,
     outFields: "*",
   };
@@ -211,9 +211,9 @@ export function FeatureLayerSettings(props: {
                     fill="currentColor"
                   >
                     <path
-                      fill-rule="evenodd"
+                      fillRule="evenodd"
                       d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clip-rule="evenodd"
+                      clipRule="evenodd"
                     />
                   </svg>
                 </div>
@@ -282,8 +282,9 @@ export function FeatureLayerSettings(props: {
               </p>
               {(sizeData.data?.warnings || [])
                 .filter((w) => w.type === "geojson")
-                .map((w) => (
+                .map((w, i) => (
                   <Warning
+                    key={i}
                     level={w.level}
                     disabled={layerSettings.importType === "dynamic"}
                   >
@@ -316,8 +317,9 @@ export function FeatureLayerSettings(props: {
               </p>
               {(sizeData.data?.warnings || [])
                 .filter((w) => w.type === "arcgis")
-                .map((w) => (
+                .map((w, i) => (
                   <Warning
+                    key={i}
                     level={w.level}
                     disabled={layerSettings.importType === "geojson"}
                   >
@@ -386,13 +388,13 @@ export function FeatureLayerSettings(props: {
               onChange={(e) => {
                 updateSettings(
                   "renderUnder",
-                  e.target.value as "none" | "labels" | "land"
+                  e.target.value as RenderUnderType
                 );
               }}
             >
-              <option value={"none"}>Cover basemap</option>
-              <option value={"labels"}>Under labels</option>
-              <option value={"land"}>Under land</option>
+              <option value={RenderUnderType.None}>Cover basemap</option>
+              <option value={RenderUnderType.Labels}>Under labels</option>
+              <option value={RenderUnderType.Land}>Under land</option>
             </select>
           }
         >

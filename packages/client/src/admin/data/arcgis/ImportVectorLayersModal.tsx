@@ -4,10 +4,15 @@ import Button from "../../../components/Button";
 import DownloadIcon from "../../../components/DownloadIcon";
 import LinkIcon from "../../../components/LinkIcon";
 import Modal from "../../../components/Modal";
+import ProgressBar from "../../../components/ProgressBar";
 import Spinner from "../../../components/Spinner";
 import Warning from "../../../components/Warning";
+import useProjectId from "../../../useProjectId";
 import {
+  ArcGISServiceSettings,
   LayerInfo,
+  MapServerCatalogInfo,
+  useImportArcGISService,
   useVectorSublayerStatus,
   VectorSublayerSettings,
 } from "./arcgis";
@@ -15,8 +20,10 @@ import QuotaBar from "./QuotaBar";
 
 interface ImportVectorLayersProps {
   layers?: LayerInfo[];
-  settings?: VectorSublayerSettings[];
+  settings?: ArcGISServiceSettings;
+  mapServerInfo?: MapServerCatalogInfo;
   open: boolean;
+  serviceRoot?: string;
   onRequestClose: () => void;
 }
 
@@ -27,14 +34,21 @@ export default function ImportVectorLayersModal(
   const { layerStatus, abortController } = useVectorSublayerStatus(
     open,
     layers,
-    settings
+    settings?.vectorSublayerSettings
   );
+  const { importService, ...importServiceState } = useImportArcGISService(
+    props.serviceRoot
+  );
+  const projectId = useProjectId();
+
   if (!layers) {
     return null;
   }
   let totalBytes = 0;
   for (const layer of layers) {
-    const layerSettings = settings?.find((l) => l.sublayer === layer.id);
+    const layerSettings = settings?.vectorSublayerSettings.find(
+      (l) => l.sublayer === layer.id
+    );
     if (!layerSettings || layerSettings.importType === "geojson") {
       totalBytes +=
         layerStatus[layer.generatedId]?.data?.geoJsonBytes ||
@@ -48,6 +62,7 @@ export default function ImportVectorLayersModal(
 
   const remaining = layers.filter(
     (layer) =>
+      layer.type !== "Group Layer" &&
       !(
         layerStatus[layer.generatedId] &&
         layerStatus[layer.generatedId].loading !== true
@@ -63,10 +78,45 @@ export default function ImportVectorLayersModal(
     }
   }).length;
 
+  const onImport = () =>
+    importService(
+      layers!.filter((l) => l.type !== "Raster Layer"),
+      props.mapServerInfo!,
+      projectId!,
+      props.settings!,
+      "vector",
+      layers!.reduce((total, layer) => {
+        if (layer.type !== "Group Layer" && layer.type !== "Raster Layer") {
+          const layerSettings = settings?.vectorSublayerSettings.find(
+            (s) => s.sublayer === layer.id
+          );
+          if (layerSettings && layerSettings.importType === "dynamic") {
+            // not uploading
+          } else {
+            total += layerStatus[layer.generatedId].data?.geoJsonBytes || 0;
+          }
+        }
+        return total;
+      }, 0)
+    );
+
   return (
     <Modal
       open={open}
-      onRequestClose={onRequestClose}
+      onRequestClose={() => {
+        if (importServiceState.inProgress) {
+          if (
+            window.confirm(
+              "Are you sure you want to cancel importing this service? Proceeding may leave partially imported service items in the layer list."
+            )
+          ) {
+            importServiceState.abortController?.abort();
+            onRequestClose();
+          }
+        } else {
+          onRequestClose();
+        }
+      }}
       title="Import Vector Layers"
       footer={
         <div className="p-6 bg-cool-gray-100 border-t">
@@ -97,6 +147,35 @@ export default function ImportVectorLayersModal(
               </p>
               <Button onClick={onRequestClose} label="Go Back" />
             </div>
+          ) : importServiceState.inProgress ? (
+            <div>
+              <div>
+                <h3>Importing Service</h3>
+                <ProgressBar progress={importServiceState.progress!} />
+                <div className="mb-2 text-sm">
+                  {importServiceState.statusMessage}
+                </div>
+              </div>
+              {/* <Button
+                onClick={onRequestClose}
+                label="Cancel"
+                className="mr-2"
+              /> */}
+            </div>
+          ) : importServiceState.error ? (
+            <div>
+              <h3>Importing Service</h3>
+              <div className="mb-2 mt-4 text-red-900">
+                <h4>{importServiceState.error.name}</h4>
+                {importServiceState.error.message}
+              </div>
+              <Button
+                onClick={onRequestClose}
+                label="Cancel"
+                className="mr-2"
+              />
+              <Button label="Try Again" primary onClick={onImport} />
+            </div>
           ) : (
             <div>
               {totalBytes > 0 && (
@@ -123,7 +202,7 @@ export default function ImportVectorLayersModal(
                 label="Cancel"
                 className="mr-2"
               />
-              <Button label="Import Layers" primary />
+              <Button label="Import Layers" primary onClick={onImport} />
             </div>
           )}
         </div>
@@ -139,8 +218,14 @@ export default function ImportVectorLayersModal(
         }}
       >
         {layers.map((layer, index) => {
+          const isFolder = layer.type === "Group Layer";
+          if (isFolder) {
+            return null;
+          }
           const status = layerStatus[layer.generatedId];
-          const layerSettings = settings?.find((s) => s.sublayer === layer.id);
+          const layerSettings = settings?.vectorSublayerSettings.find(
+            (s) => s.sublayer === layer.id
+          );
           return (
             <div key={layer.id}>
               <div
@@ -165,6 +250,7 @@ export default function ImportVectorLayersModal(
                       </span>
                     )}
                 </div>
+
                 <div className="w-32 text-right px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-500 align-middle flex justify-end">
                   {status ? (
                     status.loading ? (

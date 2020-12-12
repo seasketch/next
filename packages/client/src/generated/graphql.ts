@@ -1197,13 +1197,15 @@ export type DataSource = Node & {
    */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
-  bucketId?: Maybe<Scalars['Int']>;
+  bucketId?: Maybe<Scalars['String']>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
    * values produce fewer rendering artifacts near tile edges and slower performance.
    */
   buffer?: Maybe<Scalars['Int']>;
+  /** SEASKETCH_VECTOR sources only. Approximate size of the geojson source */
+  byteLength?: Maybe<Scalars['Int']>;
   /**
    * GeoJSON only.
    * 
@@ -1279,6 +1281,8 @@ export type DataSource = Node & {
    * copy of the data source if necessary.
    */
   originalSourceUrl?: Maybe<Scalars['String']>;
+  /** Use to upload source data to s3. Must be an admin. */
+  presignedUploadUrl?: Maybe<Scalars['String']>;
   projectId: Scalars['Int'];
   /**
    * GeoJSON only. A property to use as a feature id (for feature state). Either a
@@ -1353,13 +1357,15 @@ export type DataSourceInput = {
    */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
-  bucketId?: Maybe<Scalars['Int']>;
+  bucketId?: Maybe<Scalars['String']>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
    * values produce fewer rendering artifacts near tile edges and slower performance.
    */
   buffer?: Maybe<Scalars['Int']>;
+  /** SEASKETCH_VECTOR sources only. Approximate size of the geojson source */
+  byteLength?: Maybe<Scalars['Int']>;
   /**
    * GeoJSON only.
    * 
@@ -1562,7 +1568,6 @@ export type DataSourcePatch = {
 export type DataSourcesBucket = Node & {
   __typename?: 'DataSourcesBucket';
   bucket: Scalars['String'];
-  id: Scalars['Int'];
   location: GeometryPoint;
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -1588,8 +1593,8 @@ export type DataSourcesBucketProjectsConnectionArgs = {
  * tested for equality and combined with a logical ‘and.’
  */
 export type DataSourcesBucketCondition = {
-  /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `bucket` field. */
+  bucket?: Maybe<Scalars['String']>;
 };
 
 /** A connection to a list of `DataSourcesBucket` values. */
@@ -1616,8 +1621,8 @@ export type DataSourcesBucketsEdge = {
 
 /** Methods to use when ordering `DataSourcesBucket`. */
 export enum DataSourcesBucketsOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
+  BucketAsc = 'BUCKET_ASC',
+  BucketDesc = 'BUCKET_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
@@ -5500,7 +5505,7 @@ export type Project = Node & {
   dataLayersForItems?: Maybe<Array<DataLayer>>;
   /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
   dataSourcesBucket?: Maybe<DataSourcesBucket>;
-  dataSourcesBucketId: Scalars['Int'];
+  dataSourcesBucketId: Scalars['String'];
   /**
    * Retrieve DataSources for a given set of TableOfContentsItem IDs. Should be used
    * in conjuction with `dataLayersForItems` to progressively load layer information
@@ -5839,7 +5844,7 @@ export type ProjectCondition = {
   /** Checks for equality with the object’s `accessControl` field. */
   accessControl?: Maybe<ProjectAccessControlSetting>;
   /** Checks for equality with the object’s `dataSourcesBucketId` field. */
-  dataSourcesBucketId?: Maybe<Scalars['Int']>;
+  dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `isFeatured` field. */
@@ -6048,7 +6053,7 @@ export type ProjectInviteTokenVerificationResults = {
 export type ProjectPatch = {
   /** Admins can control whether a project is public, invite-only, or admins-only. */
   accessControl?: Maybe<ProjectAccessControlSetting>;
-  dataSourcesBucketId?: Maybe<Scalars['Int']>;
+  dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
@@ -6471,7 +6476,7 @@ export type QueryDataSourceByNodeIdArgs = {
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
 export type QueryDataSourcesBucketArgs = {
-  id: Scalars['Int'];
+  bucket: Scalars['String'];
 };
 
 
@@ -10107,7 +10112,7 @@ export type ProjectBucketSettingQuery = (
     & Pick<Project, 'id'>
     & { dataSourcesBucket?: Maybe<(
       { __typename?: 'DataSourcesBucket' }
-      & Pick<DataSourcesBucket, 'id' | 'region' | 'name'>
+      & Pick<DataSourcesBucket, 'bucket' | 'region' | 'name'>
       & { location: (
         { __typename?: 'GeometryPoint' }
         & Pick<GeometryPoint, 'geojson'>
@@ -10117,7 +10122,7 @@ export type ProjectBucketSettingQuery = (
     { __typename?: 'DataSourcesBucketsConnection' }
     & { nodes: Array<(
       { __typename?: 'DataSourcesBucket' }
-      & Pick<DataSourcesBucket, 'id' | 'name' | 'region'>
+      & Pick<DataSourcesBucket, 'bucket' | 'name' | 'region'>
       & { location: (
         { __typename?: 'GeometryPoint' }
         & Pick<GeometryPoint, 'geojson'>
@@ -10128,7 +10133,7 @@ export type ProjectBucketSettingQuery = (
 
 export type UpdateProjectStorageBucketMutationVariables = Exact<{
   slug: Scalars['String'];
-  bucket: Scalars['Int'];
+  bucket: Scalars['String'];
 }>;
 
 
@@ -10142,8 +10147,114 @@ export type UpdateProjectStorageBucketMutation = (
       & Pick<Project, 'id'>
       & { dataSourcesBucket?: Maybe<(
         { __typename?: 'DataSourcesBucket' }
-        & Pick<DataSourcesBucket, 'id' | 'region' | 'name'>
+        & Pick<DataSourcesBucket, 'bucket' | 'region' | 'name'>
       )> }
+    )> }
+  )> }
+);
+
+export type CreateTableOfContentsItemMutationVariables = Exact<{
+  title: Scalars['String'];
+  stableId: Scalars['String'];
+  projectId: Scalars['Int'];
+  isFolder: Scalars['Boolean'];
+  parentStableId?: Maybe<Scalars['String']>;
+  metadata?: Maybe<Scalars['JSON']>;
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  dataLayerId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type CreateTableOfContentsItemMutation = (
+  { __typename?: 'Mutation' }
+  & { createTableOfContentsItem?: Maybe<(
+    { __typename?: 'CreateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'metadata' | 'bounds' | 'dataLayerId'>
+    )> }
+  )> }
+);
+
+export type CreateArcGisDynamicDataSourceMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  url: Scalars['String'];
+  attribution?: Maybe<Scalars['String']>;
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  queryParameters?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type CreateArcGisDynamicDataSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { createDataSource?: Maybe<(
+    { __typename?: 'CreateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'projectId' | 'type' | 'url'>
+    )> }
+  )> }
+);
+
+export type CreateArcGisImageSourceMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  url: Scalars['String'];
+  attribution?: Maybe<Scalars['String']>;
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  queryParameters?: Maybe<Scalars['JSON']>;
+  enableHighDPI?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type CreateArcGisImageSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { createDataSource?: Maybe<(
+    { __typename?: 'CreateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'url'>
+    )> }
+  )> }
+);
+
+export type CreateSeaSketchVectorSourceMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  attribution?: Maybe<Scalars['String']>;
+  bounds: Array<Maybe<Scalars['BigFloat']>>;
+  byteLength: Scalars['Int'];
+  originalSourceUrl?: Maybe<Scalars['String']>;
+  importType: DataSourceImportTypes;
+  enhancedSecurity: Scalars['Boolean'];
+}>;
+
+
+export type CreateSeaSketchVectorSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { createDataSource?: Maybe<(
+    { __typename?: 'CreateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'projectId' | 'type' | 'url' | 'presignedUploadUrl' | 'bucketId' | 'enhancedSecurity' | 'objectKey'>
+    )> }
+  )> }
+);
+
+export type CreateDataLayerMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  dataSourceId: Scalars['Int'];
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  renderUnder?: Maybe<RenderUnderType>;
+  sublayer?: Maybe<Scalars['String']>;
+}>;
+
+
+export type CreateDataLayerMutation = (
+  { __typename?: 'Mutation' }
+  & { createDataLayer?: Maybe<(
+    { __typename?: 'CreateDataLayerPayload' }
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id' | 'dataSourceId'>
     )> }
   )> }
 );
@@ -10175,6 +10286,47 @@ export type CurrentProjectMetadataQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
+  )> }
+);
+
+export type DraftTableOfContentsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DraftTableOfContentsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren'>
+      & { acl?: Maybe<(
+        { __typename?: 'Acl' }
+        & Pick<Acl, 'type'>
+      )> }
+    )>> }
+  )> }
+);
+
+export type LayersAndSourcesForItemsQueryVariables = Exact<{
+  slug: Scalars['String'];
+  tableOfContentsItemIds: Array<Maybe<Scalars['Int']>>;
+}>;
+
+
+export type LayersAndSourcesForItemsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { dataSourcesForItems?: Maybe<Array<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio'>
+    )>>, dataLayersForItems?: Maybe<Array<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
+    )>> }
   )> }
 );
 
@@ -10328,7 +10480,7 @@ export const ProjectBucketSettingDocument = gql`
     __typename
     id
     dataSourcesBucket {
-      id
+      bucket
       region
       name
       location {
@@ -10338,7 +10490,7 @@ export const ProjectBucketSettingDocument = gql`
   }
   dataSourcesBucketsConnection {
     nodes {
-      id
+      bucket
       name
       region
       location {
@@ -10375,14 +10527,14 @@ export type ProjectBucketSettingQueryHookResult = ReturnType<typeof useProjectBu
 export type ProjectBucketSettingLazyQueryHookResult = ReturnType<typeof useProjectBucketSettingLazyQuery>;
 export type ProjectBucketSettingQueryResult = Apollo.QueryResult<ProjectBucketSettingQuery, ProjectBucketSettingQueryVariables>;
 export const UpdateProjectStorageBucketDocument = gql`
-    mutation UpdateProjectStorageBucket($slug: String!, $bucket: Int!) {
+    mutation UpdateProjectStorageBucket($slug: String!, $bucket: String!) {
   updateProjectBySlug(input: {slug: $slug, patch: {dataSourcesBucketId: $bucket}}) {
     clientMutationId
     project {
       __typename
       id
       dataSourcesBucket {
-        id
+        bucket
         region
         name
       }
@@ -10416,6 +10568,224 @@ export function useUpdateProjectStorageBucketMutation(baseOptions?: Apollo.Mutat
 export type UpdateProjectStorageBucketMutationHookResult = ReturnType<typeof useUpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationResult = Apollo.MutationResult<UpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationOptions = Apollo.BaseMutationOptions<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>;
+export const CreateTableOfContentsItemDocument = gql`
+    mutation CreateTableOfContentsItem($title: String!, $stableId: String!, $projectId: Int!, $isFolder: Boolean!, $parentStableId: String, $metadata: JSON, $bounds: [BigFloat], $dataLayerId: Int) {
+  createTableOfContentsItem(input: {tableOfContentsItem: {title: $title, stableId: $stableId, projectId: $projectId, parentStableId: $parentStableId, metadata: $metadata, bounds: $bounds, dataLayerId: $dataLayerId, isFolder: $isFolder}}) {
+    tableOfContentsItem {
+      id
+      title
+      stableId
+      projectId
+      parentStableId
+      isClickOffOnly
+      isDraft
+      isFolder
+      metadata
+      bounds
+      dataLayerId
+    }
+  }
+}
+    `;
+export type CreateTableOfContentsItemMutationFn = Apollo.MutationFunction<CreateTableOfContentsItemMutation, CreateTableOfContentsItemMutationVariables>;
+
+/**
+ * __useCreateTableOfContentsItemMutation__
+ *
+ * To run a mutation, you first call `useCreateTableOfContentsItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateTableOfContentsItemMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createTableOfContentsItemMutation, { data, loading, error }] = useCreateTableOfContentsItemMutation({
+ *   variables: {
+ *      title: // value for 'title'
+ *      stableId: // value for 'stableId'
+ *      projectId: // value for 'projectId'
+ *      isFolder: // value for 'isFolder'
+ *      parentStableId: // value for 'parentStableId'
+ *      metadata: // value for 'metadata'
+ *      bounds: // value for 'bounds'
+ *      dataLayerId: // value for 'dataLayerId'
+ *   },
+ * });
+ */
+export function useCreateTableOfContentsItemMutation(baseOptions?: Apollo.MutationHookOptions<CreateTableOfContentsItemMutation, CreateTableOfContentsItemMutationVariables>) {
+        return Apollo.useMutation<CreateTableOfContentsItemMutation, CreateTableOfContentsItemMutationVariables>(CreateTableOfContentsItemDocument, baseOptions);
+      }
+export type CreateTableOfContentsItemMutationHookResult = ReturnType<typeof useCreateTableOfContentsItemMutation>;
+export type CreateTableOfContentsItemMutationResult = Apollo.MutationResult<CreateTableOfContentsItemMutation>;
+export type CreateTableOfContentsItemMutationOptions = Apollo.BaseMutationOptions<CreateTableOfContentsItemMutation, CreateTableOfContentsItemMutationVariables>;
+export const CreateArcGisDynamicDataSourceDocument = gql`
+    mutation CreateArcGISDynamicDataSource($projectId: Int!, $url: String!, $attribution: String, $bounds: [BigFloat], $queryParameters: JSON) {
+  createDataSource(input: {dataSource: {projectId: $projectId, type: ARCGIS_VECTOR, url: $url, attribution: $attribution, bounds: $bounds, queryParameters: $queryParameters}}) {
+    dataSource {
+      id
+      projectId
+      type
+      url
+    }
+  }
+}
+    `;
+export type CreateArcGisDynamicDataSourceMutationFn = Apollo.MutationFunction<CreateArcGisDynamicDataSourceMutation, CreateArcGisDynamicDataSourceMutationVariables>;
+
+/**
+ * __useCreateArcGisDynamicDataSourceMutation__
+ *
+ * To run a mutation, you first call `useCreateArcGisDynamicDataSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateArcGisDynamicDataSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createArcGisDynamicDataSourceMutation, { data, loading, error }] = useCreateArcGisDynamicDataSourceMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      url: // value for 'url'
+ *      attribution: // value for 'attribution'
+ *      bounds: // value for 'bounds'
+ *      queryParameters: // value for 'queryParameters'
+ *   },
+ * });
+ */
+export function useCreateArcGisDynamicDataSourceMutation(baseOptions?: Apollo.MutationHookOptions<CreateArcGisDynamicDataSourceMutation, CreateArcGisDynamicDataSourceMutationVariables>) {
+        return Apollo.useMutation<CreateArcGisDynamicDataSourceMutation, CreateArcGisDynamicDataSourceMutationVariables>(CreateArcGisDynamicDataSourceDocument, baseOptions);
+      }
+export type CreateArcGisDynamicDataSourceMutationHookResult = ReturnType<typeof useCreateArcGisDynamicDataSourceMutation>;
+export type CreateArcGisDynamicDataSourceMutationResult = Apollo.MutationResult<CreateArcGisDynamicDataSourceMutation>;
+export type CreateArcGisDynamicDataSourceMutationOptions = Apollo.BaseMutationOptions<CreateArcGisDynamicDataSourceMutation, CreateArcGisDynamicDataSourceMutationVariables>;
+export const CreateArcGisImageSourceDocument = gql`
+    mutation CreateArcGISImageSource($projectId: Int!, $url: String!, $attribution: String, $bounds: [BigFloat], $queryParameters: JSON, $enableHighDPI: Boolean) {
+  createDataSource(input: {dataSource: {projectId: $projectId, type: ARCGIS_DYNAMIC_MAPSERVER, url: $url, attribution: $attribution, bounds: $bounds, queryParameters: $queryParameters, useDevicePixelRatio: $enableHighDPI}}) {
+    dataSource {
+      id
+      url
+    }
+  }
+}
+    `;
+export type CreateArcGisImageSourceMutationFn = Apollo.MutationFunction<CreateArcGisImageSourceMutation, CreateArcGisImageSourceMutationVariables>;
+
+/**
+ * __useCreateArcGisImageSourceMutation__
+ *
+ * To run a mutation, you first call `useCreateArcGisImageSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateArcGisImageSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createArcGisImageSourceMutation, { data, loading, error }] = useCreateArcGisImageSourceMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      url: // value for 'url'
+ *      attribution: // value for 'attribution'
+ *      bounds: // value for 'bounds'
+ *      queryParameters: // value for 'queryParameters'
+ *      enableHighDPI: // value for 'enableHighDPI'
+ *   },
+ * });
+ */
+export function useCreateArcGisImageSourceMutation(baseOptions?: Apollo.MutationHookOptions<CreateArcGisImageSourceMutation, CreateArcGisImageSourceMutationVariables>) {
+        return Apollo.useMutation<CreateArcGisImageSourceMutation, CreateArcGisImageSourceMutationVariables>(CreateArcGisImageSourceDocument, baseOptions);
+      }
+export type CreateArcGisImageSourceMutationHookResult = ReturnType<typeof useCreateArcGisImageSourceMutation>;
+export type CreateArcGisImageSourceMutationResult = Apollo.MutationResult<CreateArcGisImageSourceMutation>;
+export type CreateArcGisImageSourceMutationOptions = Apollo.BaseMutationOptions<CreateArcGisImageSourceMutation, CreateArcGisImageSourceMutationVariables>;
+export const CreateSeaSketchVectorSourceDocument = gql`
+    mutation CreateSeaSketchVectorSource($projectId: Int!, $attribution: String, $bounds: [BigFloat]!, $byteLength: Int!, $originalSourceUrl: String, $importType: DataSourceImportTypes!, $enhancedSecurity: Boolean!) {
+  createDataSource(input: {dataSource: {projectId: $projectId, type: SEASKETCH_VECTOR, attribution: $attribution, bounds: $bounds, byteLength: $byteLength, originalSourceUrl: $originalSourceUrl, importType: $importType, enhancedSecurity: $enhancedSecurity}}) {
+    dataSource {
+      id
+      projectId
+      type
+      url
+      presignedUploadUrl
+      bucketId
+      enhancedSecurity
+      objectKey
+    }
+  }
+}
+    `;
+export type CreateSeaSketchVectorSourceMutationFn = Apollo.MutationFunction<CreateSeaSketchVectorSourceMutation, CreateSeaSketchVectorSourceMutationVariables>;
+
+/**
+ * __useCreateSeaSketchVectorSourceMutation__
+ *
+ * To run a mutation, you first call `useCreateSeaSketchVectorSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateSeaSketchVectorSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createSeaSketchVectorSourceMutation, { data, loading, error }] = useCreateSeaSketchVectorSourceMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      attribution: // value for 'attribution'
+ *      bounds: // value for 'bounds'
+ *      byteLength: // value for 'byteLength'
+ *      originalSourceUrl: // value for 'originalSourceUrl'
+ *      importType: // value for 'importType'
+ *      enhancedSecurity: // value for 'enhancedSecurity'
+ *   },
+ * });
+ */
+export function useCreateSeaSketchVectorSourceMutation(baseOptions?: Apollo.MutationHookOptions<CreateSeaSketchVectorSourceMutation, CreateSeaSketchVectorSourceMutationVariables>) {
+        return Apollo.useMutation<CreateSeaSketchVectorSourceMutation, CreateSeaSketchVectorSourceMutationVariables>(CreateSeaSketchVectorSourceDocument, baseOptions);
+      }
+export type CreateSeaSketchVectorSourceMutationHookResult = ReturnType<typeof useCreateSeaSketchVectorSourceMutation>;
+export type CreateSeaSketchVectorSourceMutationResult = Apollo.MutationResult<CreateSeaSketchVectorSourceMutation>;
+export type CreateSeaSketchVectorSourceMutationOptions = Apollo.BaseMutationOptions<CreateSeaSketchVectorSourceMutation, CreateSeaSketchVectorSourceMutationVariables>;
+export const CreateDataLayerDocument = gql`
+    mutation CreateDataLayer($projectId: Int!, $dataSourceId: Int!, $mapboxGlStyles: JSON, $renderUnder: RenderUnderType, $sublayer: String) {
+  createDataLayer(input: {dataLayer: {projectId: $projectId, dataSourceId: $dataSourceId, mapboxGlStyles: $mapboxGlStyles, renderUnder: $renderUnder, sublayer: $sublayer}}) {
+    dataLayer {
+      id
+      dataSourceId
+    }
+  }
+}
+    `;
+export type CreateDataLayerMutationFn = Apollo.MutationFunction<CreateDataLayerMutation, CreateDataLayerMutationVariables>;
+
+/**
+ * __useCreateDataLayerMutation__
+ *
+ * To run a mutation, you first call `useCreateDataLayerMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateDataLayerMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createDataLayerMutation, { data, loading, error }] = useCreateDataLayerMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      dataSourceId: // value for 'dataSourceId'
+ *      mapboxGlStyles: // value for 'mapboxGlStyles'
+ *      renderUnder: // value for 'renderUnder'
+ *      sublayer: // value for 'sublayer'
+ *   },
+ * });
+ */
+export function useCreateDataLayerMutation(baseOptions?: Apollo.MutationHookOptions<CreateDataLayerMutation, CreateDataLayerMutationVariables>) {
+        return Apollo.useMutation<CreateDataLayerMutation, CreateDataLayerMutationVariables>(CreateDataLayerDocument, baseOptions);
+      }
+export type CreateDataLayerMutationHookResult = ReturnType<typeof useCreateDataLayerMutation>;
+export type CreateDataLayerMutationResult = Apollo.MutationResult<CreateDataLayerMutation>;
+export type CreateDataLayerMutationOptions = Apollo.BaseMutationOptions<CreateDataLayerMutation, CreateDataLayerMutationVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
@@ -10495,6 +10865,124 @@ export function useCurrentProjectMetadataLazyQuery(baseOptions?: Apollo.LazyQuer
 export type CurrentProjectMetadataQueryHookResult = ReturnType<typeof useCurrentProjectMetadataQuery>;
 export type CurrentProjectMetadataLazyQueryHookResult = ReturnType<typeof useCurrentProjectMetadataLazyQuery>;
 export type CurrentProjectMetadataQueryResult = Apollo.QueryResult<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>;
+export const DraftTableOfContentsDocument = gql`
+    query DraftTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    draftTableOfContentsItems {
+      id
+      dataLayerId
+      title
+      acl {
+        type
+      }
+      isClickOffOnly
+      isFolder
+      stableId
+      parentStableId
+      showRadioChildren
+    }
+  }
+}
+    `;
+
+/**
+ * __useDraftTableOfContentsQuery__
+ *
+ * To run a query within a React component, call `useDraftTableOfContentsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDraftTableOfContentsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDraftTableOfContentsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useDraftTableOfContentsQuery(baseOptions?: Apollo.QueryHookOptions<DraftTableOfContentsQuery, DraftTableOfContentsQueryVariables>) {
+        return Apollo.useQuery<DraftTableOfContentsQuery, DraftTableOfContentsQueryVariables>(DraftTableOfContentsDocument, baseOptions);
+      }
+export function useDraftTableOfContentsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DraftTableOfContentsQuery, DraftTableOfContentsQueryVariables>) {
+          return Apollo.useLazyQuery<DraftTableOfContentsQuery, DraftTableOfContentsQueryVariables>(DraftTableOfContentsDocument, baseOptions);
+        }
+export type DraftTableOfContentsQueryHookResult = ReturnType<typeof useDraftTableOfContentsQuery>;
+export type DraftTableOfContentsLazyQueryHookResult = ReturnType<typeof useDraftTableOfContentsLazyQuery>;
+export type DraftTableOfContentsQueryResult = Apollo.QueryResult<DraftTableOfContentsQuery, DraftTableOfContentsQueryVariables>;
+export const LayersAndSourcesForItemsDocument = gql`
+    query layersAndSourcesForItems($slug: String!, $tableOfContentsItemIds: [Int]!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataSourcesForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
+      attribution
+      bounds
+      bucketId
+      buffer
+      byteLength
+      cluster
+      clusterMaxZoom
+      clusterProperties
+      clusterRadius
+      coordinates
+      createdAt
+      encoding
+      enhancedSecurity
+      id
+      importType
+      lineMetrics
+      maxzoom
+      minzoom
+      objectKey
+      originalSourceUrl
+      queryParameters
+      scheme
+      tiles
+      tileSize
+      tolerance
+      type
+      url
+      urls
+      useDevicePixelRatio
+    }
+    dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
+      dataSourceId
+      id
+      mapboxGlStyles
+      renderUnder
+      sourceLayer
+      sublayer
+    }
+  }
+}
+    `;
+
+/**
+ * __useLayersAndSourcesForItemsQuery__
+ *
+ * To run a query within a React component, call `useLayersAndSourcesForItemsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLayersAndSourcesForItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLayersAndSourcesForItemsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      tableOfContentsItemIds: // value for 'tableOfContentsItemIds'
+ *   },
+ * });
+ */
+export function useLayersAndSourcesForItemsQuery(baseOptions?: Apollo.QueryHookOptions<LayersAndSourcesForItemsQuery, LayersAndSourcesForItemsQueryVariables>) {
+        return Apollo.useQuery<LayersAndSourcesForItemsQuery, LayersAndSourcesForItemsQueryVariables>(LayersAndSourcesForItemsDocument, baseOptions);
+      }
+export function useLayersAndSourcesForItemsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LayersAndSourcesForItemsQuery, LayersAndSourcesForItemsQueryVariables>) {
+          return Apollo.useLazyQuery<LayersAndSourcesForItemsQuery, LayersAndSourcesForItemsQueryVariables>(LayersAndSourcesForItemsDocument, baseOptions);
+        }
+export type LayersAndSourcesForItemsQueryHookResult = ReturnType<typeof useLayersAndSourcesForItemsQuery>;
+export type LayersAndSourcesForItemsLazyQueryHookResult = ReturnType<typeof useLayersAndSourcesForItemsLazyQuery>;
+export type LayersAndSourcesForItemsQueryResult = Apollo.QueryResult<LayersAndSourcesForItemsQuery, LayersAndSourcesForItemsQueryVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

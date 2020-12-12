@@ -10,9 +10,27 @@ import area from "@turf/area";
 import bbox from "@turf/bbox";
 import geobuf from "geobuf";
 import Pbf from "pbf";
-import { TableOfContentsNode } from "../../../dataLayers/tableOfContents/TableOfContents";
+import {
+  ClientTableOfContentsItem,
+  TableOfContentsNode,
+} from "../../../dataLayers/tableOfContents/TableOfContents";
 import { FeatureCollection } from "geojson";
 import Worker from "../../../workers/index";
+import {
+  useCreateTableOfContentsItemMutation,
+  useCreateArcGisDynamicDataSourceMutation,
+  useCreateSeaSketchVectorSourceMutation,
+  DataSourceImportTypes,
+  useCreateDataLayerMutation,
+  DraftTableOfContentsDocument,
+  RenderUnderType,
+  useCreateArcGisImageSourceMutation,
+} from "../../../generated/graphql";
+import { customAlphabet } from "nanoid";
+import { default as axios } from "axios";
+const alphabet =
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+const nanoId = customAlphabet(alphabet, 9);
 
 const worker = new Worker();
 
@@ -290,7 +308,9 @@ export function metersToDegrees(x: number, y: number): [number, number] {
   return [lon, lat];
 }
 
-export function extentToLatLngBounds(extent: Extent): LngLatBoundsLike | void {
+export function extentToLatLngBounds(
+  extent: Extent
+): [[number, number], [number, number]] | void {
   if (extent) {
     const wkid = normalizeSpatialReference(extent.spatialReference);
     if (wkid === 4326) {
@@ -375,13 +395,11 @@ export function useCatalogItems(location: string) {
   };
 }
 
-type RenderUnderBasemapLayers = "labels" | "land" | "none";
-
 export interface ArcGISServiceSettings {
   sourceType: "arcgis-dynamic-mapservice" | "arcgis-vector-source";
   enableHighDpi: boolean;
   imageFormat: MapServerImageFormat;
-  renderUnder: RenderUnderBasemapLayers;
+  renderUnder: RenderUnderType;
   excludedSublayers: string[];
   vectorSublayerSettings: VectorSublayerSettings[];
   // preferInstantLayers: boolean;
@@ -391,7 +409,7 @@ export type VectorImportType = "geojson" | "dynamic";
 
 export interface VectorSublayerSettings {
   sublayer: number;
-  renderUnder: RenderUnderBasemapLayers;
+  renderUnder: RenderUnderType;
   outFields: string;
   importType: VectorImportType;
   geometryPrecision: 4 | 5 | 6;
@@ -406,7 +424,7 @@ const defaultServiceSettings: ArcGISServiceSettings = {
   sourceType: "arcgis-dynamic-mapservice",
   enableHighDpi: true,
   imageFormat: "PNG",
-  renderUnder: "labels",
+  renderUnder: RenderUnderType.Labels,
   excludedSublayers: [],
   vectorSublayerSettings: [],
   // preferInstantLayers: true,
@@ -643,79 +661,83 @@ export function useVectorSublayerStatus(
     if (begin) {
       (async () => {
         for (const layer of layers || []) {
-          const layerSettings = settings?.find((s) => s.sublayer === layer.id);
-          const key = makeFeatureLayerSizeDataCacheKey(
-            layer.url,
-            layerSettings
-          );
-          // console.log(`get ${layer.name}`);
-          if (!controller.signal.aborted) {
-            if (featureLayerSizeDataCache[key]) {
-              // recalculate warnings in case settings changed
-              const data = featureLayerSizeDataCache[key];
-              data.warnings = calculateWarnings(
-                data.objects,
-                data.geoJsonBytes,
-                layerSettings
-              );
-
-              setState((prev) => ({
-                ...prev,
-                [layer.generatedId]: {
-                  data,
-                  loading: false,
-                  error: undefined,
-                },
-              }));
-            } else {
-              setState((prev) => ({
-                ...prev,
-                [layer.generatedId]: {
-                  loading: true,
-                },
-              }));
-              try {
-                const data = await fetchFeatureSizeDetails(
-                  layer.url,
-                  controller,
-                  layerSettings,
-                  (bytes, loadedFeatures, estimatedFeatures) => {
-                    setState((prev) => ({
-                      ...prev,
-                      [layer.generatedId]: {
-                        loading: true,
-                        loadedBytes: bytes,
-                        loadedFeatures,
-                        estimatedFeatures,
-                      },
-                    }));
-                  }
+          if (layer.type === "Feature Layer") {
+            const layerSettings = settings?.find(
+              (s) => s.sublayer === layer.id
+            );
+            const key = makeFeatureLayerSizeDataCacheKey(
+              layer.url,
+              layerSettings
+            );
+            // console.log(`get ${layer.name}`);
+            if (!controller.signal.aborted) {
+              if (featureLayerSizeDataCache[key]) {
+                // recalculate warnings in case settings changed
+                const data = featureLayerSizeDataCache[key];
+                data.warnings = calculateWarnings(
+                  data.objects,
+                  data.geoJsonBytes,
+                  layerSettings
                 );
 
-                setState((prev) => {
-                  return {
-                    ...prev,
-                    [layer.generatedId]: {
-                      loading: false,
-                      data,
-                    },
-                  };
-                });
-                featureLayerSizeDataCache[key] = data;
-              } catch (e) {
-                setState((prev) => {
-                  return {
-                    ...prev,
-                    [layer.generatedId]: {
-                      error: e,
-                    },
-                  };
-                });
+                setState((prev) => ({
+                  ...prev,
+                  [layer.generatedId]: {
+                    data,
+                    loading: false,
+                    error: undefined,
+                  },
+                }));
+              } else {
+                setState((prev) => ({
+                  ...prev,
+                  [layer.generatedId]: {
+                    loading: true,
+                  },
+                }));
+                try {
+                  const data = await fetchFeatureSizeDetails(
+                    layer.url,
+                    controller,
+                    layerSettings,
+                    (bytes, loadedFeatures, estimatedFeatures) => {
+                      setState((prev) => ({
+                        ...prev,
+                        [layer.generatedId]: {
+                          loading: true,
+                          loadedBytes: bytes,
+                          loadedFeatures,
+                          estimatedFeatures,
+                        },
+                      }));
+                    }
+                  );
+
+                  setState((prev) => {
+                    return {
+                      ...prev,
+                      [layer.generatedId]: {
+                        loading: false,
+                        data,
+                      },
+                    };
+                  });
+                  featureLayerSizeDataCache[key] = data;
+                } catch (e) {
+                  setState((prev) => {
+                    return {
+                      ...prev,
+                      [layer.generatedId]: {
+                        error: e,
+                      },
+                    };
+                  });
+                }
               }
+            } else {
+              // console.log("aborted", layer.name);
+              // setState({});
             }
-          } else {
-            // console.log("aborted", layer.name);
-            // setState({});
           }
         }
       })();
@@ -743,27 +765,35 @@ function byteLength(str: string) {
 }
 
 export function treeDataFromLayerList(layers: LayerInfo[]) {
-  let data: TableOfContentsNode[] = [];
-  let nodesBySublayer: { [id: string]: TableOfContentsNode } = {
+  let data: ClientTableOfContentsItem[] = [];
+  let nodesBySublayer: { [id: string]: ClientTableOfContentsItem } = {
     root: {
       id: "root",
       title: "Layers",
       expanded: true,
-      type: "folder",
+      isFolder: true,
       children: [],
+      isClickOffOnly: false,
+      showRadioChildren: false,
+      stableId: "root",
     },
   };
   const root = nodesBySublayer["root"];
   data.push(root);
   if (layers.length) {
     for (const layer of layers) {
-      const node: TableOfContentsNode = {
+      const node: ClientTableOfContentsItem = {
         id: layer.generatedId,
         title: layer.name,
         expanded: false,
-        type: layer.type === "Group Layer" ? "folder" : "layer",
+        isFolder: layer.type === "Group Layer",
+        isClickOffOnly: false,
+        showRadioChildren: false,
+        stableId: layer.generatedId,
+        dataLayerId:
+          layer.type !== "Group Layer" ? layer.generatedId : undefined,
       };
-      nodesBySublayer[layer.id] = node;
+      nodesBySublayer[layer.id.toString()] = node;
       if (layer.parentLayer && layer.parentLayer.id !== -1) {
         const parent = nodesBySublayer[layer.parentLayer.id];
         if (!parent) {
@@ -781,4 +811,380 @@ export function treeDataFromLayerList(layers: LayerInfo[]) {
     data = [];
   }
   return data;
+}
+
+interface ImportArcGISServiceState {
+  inProgress: boolean;
+  statusMessage?: string;
+  error?: Error;
+  abortController?: AbortController;
+  parentStableIds?: { [sublayer: number]: string };
+  importService: (
+    layerInfo: LayerInfo[],
+    mapServerInfo: MapServerCatalogInfo,
+    projectId: number,
+    settings: ArcGISServiceSettings,
+    importType: "vector" | "image",
+    totalBytesForUpload?: number
+  ) => Promise<void>;
+  /* 0.0 - 1.0. Used to render a progress bar */
+  progress?: number;
+}
+
+export function useImportArcGISService(serviceRoot?: string) {
+  // const [mutate, mutationState] = useCreateFolderMutation();
+  const [
+    createTableOfContentsItem,
+    createTableOfContentsItemState,
+  ] = useCreateTableOfContentsItemMutation({
+    refetchQueries: [DraftTableOfContentsDocument.loc!.source.body],
+  });
+  const [
+    createDynamicSource,
+    dynamicSourceState,
+  ] = useCreateArcGisDynamicDataSourceMutation();
+  const [
+    createSeaSketchVectorSource,
+    seasketchVectorSourceState,
+  ] = useCreateSeaSketchVectorSourceMutation();
+  const [createDataLayer, createDataLayerState] = useCreateDataLayerMutation();
+  const [
+    createArcGISImageSource,
+    createArcGISImageSourceState,
+  ] = useCreateArcGisImageSourceMutation();
+  const [state, setState] = useState<ImportArcGISServiceState>({
+    inProgress: false,
+    importService: async (
+      layerInfo: LayerInfo[],
+      mapServerInfo: MapServerCatalogInfo,
+      projectId: number,
+      settings: ArcGISServiceSettings,
+      importType: "vector" | "image",
+      totalBytesForUpload?: number
+    ) => {
+      // console.log("totalBytesForUpload", totalBytesForUpload);
+      let totalBytesUploaded = 0;
+      let imageSourceId: number | undefined;
+      let progress = 0.0;
+      console.log("settings", settings);
+      let totalProgressCredits =
+        (totalBytesForUpload || 0) +
+        layerInfo.filter((l) => {
+          return (
+            l.type != "Group Layer" &&
+            !!settings.vectorSublayerSettings.find((s) => s.sublayer === l.id)
+          );
+        }).length *
+          1000;
+      const stableIds: { [sublayer: number]: string } = {};
+      const saved: { [sublayer: number]: boolean } = {};
+      const saveItem = async (layer: LayerInfo) => {
+        if (state.abortController && state.abortController.signal.aborted) {
+          return;
+        }
+        if (saved[layer.id]) {
+          return stableIds[layer.id];
+        } else {
+          let parentStableId: string | undefined = undefined;
+          if (layer.parentLayer && layer.parentLayer.id !== -1) {
+            parentStableId = await saveItem(
+              layerInfo.find((l) => l.id === layer.parentLayer!.id)!
+            );
+          }
+          const id = nanoId();
+          let bounds: number[] | undefined;
+          if (layer.type === "Group Layer") {
+            setState((prev) => {
+              return {
+                ...prev,
+                statusMessage: `Saving folder "${layer.name}"`,
+              };
+            });
+            await createTableOfContentsItem({
+              variables: {
+                projectId,
+                title: layer.name,
+                stableId: id,
+                parentStableId: parentStableId || undefined,
+                isFolder: true,
+              },
+            });
+          } else {
+            const layerSettings = settings.vectorSublayerSettings.find(
+              (s) => s.sublayer === layer.id
+            );
+            let sourceId: number;
+            let dataLayerId: number;
+            if (importType === "vector") {
+              const isDynamic =
+                layerSettings && layerSettings.importType == "dynamic";
+              if (!isDynamic) {
+                // need to upload the geojson and create a new source
+                setState((prev) => {
+                  return {
+                    ...prev,
+                    statusMessage: `Downloading source data for "${layer.name}"`,
+                  };
+                });
+
+                const featureCollection = await fetchFeatureLayerData(
+                  layer.url,
+                  layerSettings?.outFields || "*",
+                  (e) => {
+                    throw e;
+                  },
+                  layerSettings?.geometryPrecision || 6
+                );
+
+                bounds = bbox(featureCollection);
+
+                setState((prev) => {
+                  return {
+                    ...prev,
+                    statusMessage: `Creating source record for "${layer.name}"`,
+                  };
+                });
+                const stringifiedJSON = JSON.stringify(featureCollection);
+                const { data } = await createSeaSketchVectorSource({
+                  variables: {
+                    projectId,
+                    attribution: layer.copyrightText,
+                    bounds: bounds,
+                    byteLength: byteLength(stringifiedJSON),
+                    enhancedSecurity: false,
+                    importType: DataSourceImportTypes.Arcgis,
+                    originalSourceUrl: layer.url,
+                  },
+                });
+                const source = data!.createDataSource!.dataSource!;
+                sourceId = data!.createDataSource!.dataSource!.id;
+                setState((prev) => {
+                  return {
+                    ...prev,
+                    statusMessage: `Uploading "${layer.name}"`,
+                  };
+                });
+
+                try {
+                  const response = await axios({
+                    method: "PUT",
+                    url: source.presignedUploadUrl!,
+                    data: stringifiedJSON,
+                    headers: {
+                      "content-type": "application/json",
+                      "x-amz-tagging": source.enhancedSecurity
+                        ? "enhancedSecurity=YES"
+                        : "",
+                      "cache-control": "max-age=31557600",
+                    },
+                    onUploadProgress: (event) => {
+                      const layerProgress = Math.round(
+                        (event.loaded * 100) / event.total
+                      );
+                      // progress += event.loaded;
+                      setState((prev) => {
+                        return {
+                          ...prev,
+                          statusMessage: `Uploading "${layer.name}" ${layerProgress}%`,
+                          progress:
+                            (progress + event.loaded) / totalProgressCredits,
+                        };
+                      });
+                    },
+                  });
+                } catch (e) {
+                  const error = new Error(e.message);
+                  error.name = "S3UploadError";
+                  throw error;
+                }
+                progress += byteLength(stringifiedJSON);
+              } else {
+                // source is simpler. just provide options
+                setState((prev) => {
+                  return {
+                    ...prev,
+                    statusMessage: `Creating source for "${layer.name}"`,
+                  };
+                });
+                let queryParameters = JSON.stringify({
+                  geometryPrecision: layerSettings?.geometryPrecision || 6,
+                  outFields: layerSettings?.outFields || "*",
+                });
+                const latLngBounds = extentToLatLngBounds(layer.extent);
+                bounds = latLngBounds
+                  ? [
+                      latLngBounds[0][0],
+                      latLngBounds[0][1],
+                      latLngBounds[1][0],
+                      latLngBounds[1][1],
+                    ]
+                  : undefined;
+
+                const sourceResponse = await createDynamicSource({
+                  variables: {
+                    projectId,
+                    url: layer.url,
+                    attribution: layer.copyrightText,
+                    bounds: bounds,
+                    queryParameters: queryParameters,
+                  },
+                });
+
+                sourceId = sourceResponse.data!.createDataSource!.dataSource!
+                  .id;
+                progress += 1000;
+              }
+
+              // Create the layer
+
+              // remove source and id from gl-style layers (generated at runtime)
+              const glStyles =
+                layerSettings?.mapboxLayers || layer.mapboxLayers || [];
+              for (const style of glStyles) {
+                delete style.id;
+                delete style.source;
+              }
+
+              const dataLayerData = await createDataLayer({
+                variables: {
+                  projectId,
+                  dataSourceId: sourceId!,
+                  mapboxGlStyles: !isDynamic ? JSON.stringify(glStyles) : null,
+                  // @ts-ignore
+                  renderUnder: layerSettings?.renderUnder?.toUpperCase(),
+                  // sublayer: isDynamic ? layer.id.toString() : undefined,
+                },
+              });
+              dataLayerId = dataLayerData.data!.createDataLayer!.dataLayer!.id;
+            } else {
+              // create dataLayers for the current sublayer
+              const dataLayerData = await createDataLayer({
+                variables: {
+                  projectId,
+                  dataSourceId: imageSourceId!,
+                  sublayer: layer.id.toString(),
+                  // @ts-ignore
+                  renderUnder: layerSettings?.renderUnder?.toUpperCase(),
+                  // sublayer: isDynamic ? layer.id.toString() : undefined,
+                },
+              });
+              dataLayerId = dataLayerData.data!.createDataLayer!.dataLayer!.id;
+            }
+
+            // Create the table of contents item
+            await createTableOfContentsItem({
+              variables: {
+                title: layer.name,
+                stableId: id,
+                projectId,
+                parentStableId:
+                  layer.parentLayer && layer.parentLayer.id !== -1
+                    ? stableIds[layer.parentLayer.id]
+                    : undefined,
+                // TODO: add metadata json document
+                // metadata: ,
+                isFolder: false,
+                dataLayerId: dataLayerId,
+                bounds,
+              },
+            });
+          }
+          stableIds[layer.id] = id;
+          saved[layer.id] = true;
+          return id;
+        }
+      };
+
+      setState((prev) => {
+        return {
+          ...prev,
+          inProgress: true,
+          abortController: new AbortController(),
+          progress: progress / totalProgressCredits,
+        };
+      });
+
+      // Loop through each layer, adding each and any parent folders
+
+      const dataLayers = layerInfo.filter((l) => l.type !== "Group Layer");
+      let error: Error;
+
+      if (importType === "image") {
+        console.log("settings", settings);
+        const sourceResponse = await createArcGISImageSource({
+          variables: {
+            projectId,
+            url: mapServerInfo.url,
+            attribution:
+              mapServerInfo.copyrightText || mapServerInfo.documentInfo.Author,
+            bounds: [
+              mapServerInfo.fullExtent.xmin,
+              mapServerInfo.fullExtent.ymin,
+              mapServerInfo.fullExtent.xmax,
+              mapServerInfo.fullExtent.ymax,
+            ],
+            queryParameters: JSON.stringify({
+              format: settings.imageFormat || "PNG",
+            }),
+            enableHighDPI: settings.enableHighDpi,
+          },
+        });
+        imageSourceId = sourceResponse.data!.createDataSource!.dataSource!.id;
+      }
+
+      console.log("exlcuded", settings.excludedSublayers, dataLayers);
+      for (const layer of dataLayers.filter(
+        (l) => settings.excludedSublayers.indexOf(l.generatedId) === -1
+      )) {
+        // check first if item has any children
+        if (state.abortController && state.abortController.signal.aborted) {
+          return;
+        }
+        setState((prev) => {
+          return {
+            ...prev,
+            progress: progress / totalProgressCredits,
+          };
+        });
+        try {
+          await saveItem(layer);
+        } catch (e) {
+          error = e;
+          break;
+        }
+      }
+      if (error!) {
+        // console.log("setting error");
+        console.error(error!);
+        setState((prev) => {
+          return {
+            ...prev,
+            error,
+            inProgress: false,
+            // parentStableIds: stableIds,
+          };
+        });
+      } else {
+        setState((prev) => {
+          return {
+            ...prev,
+            inProgress: false,
+            parentStableIds: stableIds,
+          };
+        });
+      }
+    },
+  });
+  useEffect(() => {
+    setState((prev) => {
+      return {
+        ...prev,
+        inProgress: false,
+        error: undefined,
+        parentStableIds: undefined,
+      };
+    });
+  }, [serviceRoot]);
+
+  return state;
 }

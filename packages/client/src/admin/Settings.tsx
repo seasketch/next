@@ -21,6 +21,7 @@ import bbox from "@turf/bbox";
 import { useAuth0 } from "@auth0/auth0-react";
 import Button from "../components/Button";
 import { useTranslation, Trans } from "react-i18next";
+import DataBucketSettings from "./data/DataBucketSettings";
 
 export default function Settings() {
   const { slug } = useParams<{ slug: string }>();
@@ -44,6 +45,9 @@ export default function Settings() {
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <MapExtentSettings />
+        </div>
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+          <DataBucketSettings />
         </div>
         {user && user["https://seasketch.org/superuser"] ? (
           <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">

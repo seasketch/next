@@ -18,7 +18,7 @@ import {
   ArcGISBrowserColumnProps,
 } from "./ArcGISBrowserColumn";
 import Spinner from "../../../components/Spinner";
-import OverlayMap from "./OverlayMap";
+import OverlayMap from "../../../components/MapboxMap";
 import OutgoingLinkIcon from "../../../components/OutgoingLinkIcon";
 import ArcGISServiceMetadata from "./ArcGISServiceMetadata";
 import SegmentControl from "../../../components/SegmentControl";
@@ -29,17 +29,18 @@ import { FeatureLayerSettings } from "./FeatureLayerSettings";
 import {
   LayerManagerContext,
   useLayerManager,
-  SeaSketchSource,
-  SeaSketchLayer,
+  ClientDataLayer,
+  ClientDataSource,
 } from "../../../dataLayers/LayerManager";
 import TableOfContents, {
-  TableOfContentsNode,
+  ClientTableOfContentsItem,
 } from "../../../dataLayers/tableOfContents/TableOfContents";
 import Button from "../../../components/Button";
 import Modal from "../../../components/Modal";
 import ImportVectorLayersModal from "./ImportVectorLayersModal";
 import { settings } from "cluster";
 import ExcludeLayerToggle from "./ExcludeLayerToggle";
+import { DataSourceTypes, RenderUnderType } from "../../../generated/graphql";
 
 export default function ArcGISBrowser() {
   const [server, setServer] = useState<{
@@ -53,7 +54,7 @@ export default function ArcGISBrowser() {
   const [selectedFeatureLayer, setSelectedFeatureLayer] = useState<LayerInfo>();
   const serviceColumnRef = useRef<HTMLDivElement>(null);
   const layerManager = useLayerManager();
-  const [treeData, setTreeData] = useState<TableOfContentsNode[]>([]);
+  const [treeData, setTreeData] = useState<ClientTableOfContentsItem[]>([]);
   const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
     selectedMapServer
   );
@@ -86,8 +87,8 @@ export default function ArcGISBrowser() {
           serviceData.layerInfo
         )
       );
-      const sources: SeaSketchSource[] = [];
-      const layers: SeaSketchLayer[] = [];
+      const sources: ClientDataSource[] = [];
+      const layers: ClientDataLayer[] = [];
       if (serviceSettings.sourceType === "arcgis-dynamic-mapservice") {
         sources.push(
           dynamicServiceSourceFromSettings(serviceData, serviceSettings)
@@ -105,9 +106,9 @@ export default function ArcGISBrowser() {
         if (serviceSettings.sourceType === "arcgis-dynamic-mapservice") {
           layers.push({
             id: layer.generatedId,
-            sublayerId: layer.id.toString(),
-            sourceId: serviceData.mapServerInfo.generatedId,
-            renderUnder: serviceSettings.renderUnder || "labels",
+            sublayer: layer.id.toString(),
+            dataSourceId: serviceData.mapServerInfo.generatedId,
+            renderUnder: serviceSettings.renderUnder || RenderUnderType.Labels,
           });
         } else if (layer.type !== "Raster Layer") {
           const vectorSettings = serviceSettings.vectorSublayerSettings.find(
@@ -148,7 +149,7 @@ export default function ArcGISBrowser() {
         )
       );
       // Collect visible layers *only* if they are under toggled groups/folders
-      const collectIds = (ids: string[], node: TableOfContentsNode) => {
+      const collectIds = (ids: string[], node: ClientTableOfContentsItem) => {
         const layerInfo = serviceData.layerInfo.find(
           (lyr) => lyr.generatedId === node.id
         );
@@ -158,9 +159,9 @@ export default function ArcGISBrowser() {
               collectIds(ids, child);
             }
           } else {
-            if (node.type === "layer") {
+            if (!node.isFolder) {
               if (layerInfo?.defaultVisibility === true) {
-                ids.push(node.id);
+                ids.push(node.id.toString());
               }
             }
           }
@@ -369,14 +370,15 @@ export default function ArcGISBrowser() {
                         onChange={(data) => setTreeData(data)}
                         disabledMessage="(raster only)"
                         extraClassName={(node) =>
-                          serviceSettings.excludedSublayers.indexOf(node.id) !==
-                          -1
+                          serviceSettings.excludedSublayers.indexOf(
+                            node.id as string
+                          ) !== -1
                             ? "line-through disabled"
                             : ""
                         }
                         extraButtons={(node) => {
                           let buttons = [];
-                          if (node.type === "layer" && !node.disabled) {
+                          if (!node.isFolder && !node.disabled) {
                             if (
                               serviceSettings.sourceType ===
                               "arcgis-vector-source"
@@ -407,7 +409,7 @@ export default function ArcGISBrowser() {
                               <ExcludeLayerToggle
                                 excluded={
                                   serviceSettings.excludedSublayers.indexOf(
-                                    node.id
+                                    node.id.toString()
                                   ) !== -1
                                 }
                                 onClick={() => {
@@ -416,7 +418,7 @@ export default function ArcGISBrowser() {
                                   ];
                                   if (
                                     serviceSettings.excludedSublayers.indexOf(
-                                      node.id
+                                      node.id.toString()
                                     ) !== -1
                                   ) {
                                     // already excluded
@@ -424,9 +426,11 @@ export default function ArcGISBrowser() {
                                       (id) => id !== node.id
                                     );
                                   } else {
-                                    excluded.push(node.id);
+                                    excluded.push(node.id.toString());
                                   }
-                                  layerManager.manager?.hideLayers([node.id]);
+                                  layerManager.manager?.hideLayers([
+                                    node.id.toString(),
+                                  ]);
                                   setServiceSettings({
                                     ...serviceSettings,
                                     excludedSublayers: excluded,
@@ -443,6 +447,9 @@ export default function ArcGISBrowser() {
                       "arcgis-dynamic-mapservice" && (
                       <DynamicMapServerSettingsForm
                         settings={serviceSettings}
+                        mapServerInfo={serviceData.mapServerInfo}
+                        layerInfo={serviceData.layerInfo}
+                        serviceRoot={serviceData.mapServerInfo.url}
                         updateSettings={setServiceSettings}
                       />
                     )}
@@ -512,14 +519,14 @@ export default function ArcGISBrowser() {
               )}
             </div>
             <ImportVectorLayersModal
+              serviceRoot={serviceData?.mapServerInfo.url}
               layers={mapServerInfo.data?.layerInfo.filter(
                 (l) =>
-                  l.type !== "Group Layer" &&
                   l.type !== "Raster Layer" &&
                   serviceSettings?.excludedSublayers.indexOf(l.generatedId) ===
                     -1
               )}
-              settings={serviceSettings?.vectorSublayerSettings}
+              settings={serviceSettings}
               open={modalOpen}
               onRequestClose={() => setModalOpen(false)}
             />
@@ -536,18 +543,15 @@ function dynamicServiceSourceFromSettings(
     layerInfo: LayerInfo[];
   },
   serviceSettings: ArcGISServiceSettings
-): SeaSketchSource {
+): ClientDataSource {
   return {
     id: serviceData.mapServerInfo.generatedId,
-    type: "ArcGISDynamicMapService",
+    type: DataSourceTypes.ArcgisDynamicMapserver,
     url: serviceData.mapServerInfo.url,
-    options: {
-      supportsDynamicLayers: serviceData.mapServerInfo.supportsDynamicLayers,
-      useDevicePixelRatio: serviceSettings.enableHighDpi,
-      queryParameters: {
-        format: serviceSettings.imageFormat,
-        transparent: "true",
-      },
+    useDevicePixelRatio: serviceSettings.enableHighDpi,
+    queryParameters: {
+      format: serviceSettings.imageFormat,
+      transparent: "true",
     },
   };
 }
@@ -555,14 +559,15 @@ function dynamicServiceSourceFromSettings(
 function vectorSourceFromSettings(
   layer: LayerInfo,
   settings?: VectorSublayerSettings
-): SeaSketchSource {
+): ClientDataSource {
   return {
     id: layer.generatedId,
-    type: "ArcGISVectorSource",
+    type: DataSourceTypes.ArcgisVector,
     url: layer.url,
-    imageSets: layer.imageList ? layer.imageList.toJSON() : [],
-    options: {
-      bytesLimit: settings?.ignoreByteLimit ? undefined : 5000000,
+    // TODO: add imageSets back
+    // imageSets: layer.imageList ? layer.imageList.toJSON() : [],
+    bytesLimit: settings?.ignoreByteLimit ? undefined : 5000000,
+    queryParameters: {
       outFields: settings?.outFields || "*",
       geometryPrecision: settings?.geometryPrecision,
     },
@@ -572,30 +577,29 @@ function vectorSourceFromSettings(
 function vectorLayerFromSettings(
   layer: LayerInfo,
   settings?: VectorSublayerSettings
-): SeaSketchLayer {
+): ClientDataLayer {
   return {
     id: layer.generatedId,
-    sourceId: layer.generatedId,
-    renderUnder: settings?.renderUnder || "labels",
-    mapboxLayers:
-      settings?.importType === "dynamic"
-        ? layer.mapboxLayers
-        : settings?.mapboxLayers || layer.mapboxLayers,
+    dataSourceId: layer.generatedId,
+    renderUnder: settings?.renderUnder || RenderUnderType.Labels,
+    mapboxGlStyles: JSON.stringify(
+      settings?.mapboxLayers || layer.mapboxLayers
+    ),
   };
 }
 
 function updateDisabledState(
   sourceType: "arcgis-dynamic-mapservice" | "arcgis-vector-source",
-  treeData: TableOfContentsNode[],
+  treeData: ClientTableOfContentsItem[],
   layers: LayerInfo[]
 ) {
-  const updateChildren = (node: TableOfContentsNode) => {
+  const updateChildren = (node: ClientTableOfContentsItem) => {
     if (node.children) {
       for (const child of node.children) {
         updateChildren(child);
       }
     }
-    if (node.type === "layer") {
+    if (!node.isFolder) {
       const layer = layers.find((l) => l.generatedId === node.id);
       if (
         sourceType === "arcgis-vector-source" &&

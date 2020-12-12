@@ -269,7 +269,7 @@ describe("Data validation", () => {
           let id2 = await conn.oneFirst(
             sql`insert into data_sources (project_id, type, url, import_type, ${raw(
               prop
-            )}) values (${projectId}, 'seasketch-vector', 'https://example.com/item.bin', 'arcgis', ${val}) returning id`
+            )}, byte_length) values (${projectId}, 'seasketch-vector', 'https://example.com/item.bin', 'arcgis', ${val}, 0) returning id`
           );
           expect(id).toBeTruthy();
           await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
@@ -440,13 +440,17 @@ describe("Data validation", () => {
           const type = Object.keys(types)[i];
           if (ok) {
             let id = await conn.oneFirst(
-              sql`insert into data_sources (project_id, type, url, import_type) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload') returning id`
+              type === "seasketch-vector"
+                ? sql`insert into data_sources (project_id, type, url, import_type, byte_length) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload', 0) returning id`
+                : sql`insert into data_sources (project_id, type, url, import_type) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload') returning id`
             );
             expect(id).toBeTruthy();
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
             expect(
               conn.oneFirst(
-                sql`insert into data_sources (project_id, type, url) values (${projectId}, ${type}, 'https://example.com/item.webp') returning id`
+                type === "seasketch-vector"
+                  ? sql`insert into data_sources (project_id, type, url, byte_length) values (${projectId}, ${type}, 'https://example.com/item.webp', 12) returning id`
+                  : sql`insert into data_sources (project_id, type, url) values (${projectId}, ${type}, 'https://example.com/item.webp') returning id`
               )
             ).rejects.toThrow(/import_type/i);
             await conn.any(sql`ROLLBACK to ${raw(`point_${i}`)}`);
@@ -479,12 +483,16 @@ describe("Data validation", () => {
           const type = Object.keys(types)[i];
           if (ok) {
             let id = await conn.oneFirst(
-              sql`insert into data_sources (project_id, type, url, import_type, original_source_url) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload', 'https://example.com/arcgis/rest/services/bullshit') returning id`
+              type === "seasketch-vector"
+                ? sql`insert into data_sources (project_id, type, url, import_type, original_source_url, byte_length) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload', 'https://example.com/arcgis/rest/services/bullshit', 0) returning id`
+                : sql`insert into data_sources (project_id, type, url, import_type, original_source_url) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload', 'https://example.com/arcgis/rest/services/bullshit') returning id`
             );
             expect(id).toBeTruthy();
             // not required, so this should work
             let id2 = conn.oneFirst(
-              sql`insert into data_sources (project_id, type, url, import_type) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload') returning id`
+              type === "seasketch-vector"
+                ? sql`insert into data_sources (project_id, type, url, import_type, byte_length) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload', 12) returning id`
+                : sql`insert into data_sources (project_id, type, url, import_type) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload') returning id`
             );
             expect(id2).toBeTruthy();
           } else {
@@ -515,12 +523,16 @@ describe("Data validation", () => {
           const type = Object.keys(types)[i];
           if (ok) {
             let id = await conn.oneFirst(
-              sql`insert into data_sources (project_id, type, url, import_type, enhanced_security) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload', true) returning id`
+              type === "seasketch-vector"
+                ? sql`insert into data_sources (project_id, type, url, import_type, enhanced_security, byte_length) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload', true, 0) returning id`
+                : sql`insert into data_sources (project_id, type, url, import_type, enhanced_security) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload', true) returning id`
             );
             expect(id).toBeTruthy();
             // not required, so this should work
             let id2 = conn.oneFirst(
-              sql`insert into data_sources (project_id, type, url, import_type) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload') returning id`
+              type === "seasketch-vector"
+                ? sql`insert into data_sources (project_id, type, url, import_type, byte_length) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload', 12) returning id`
+                : sql`insert into data_sources (project_id, type, url, import_type) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload') returning id`
             );
             expect(id2).toBeTruthy();
           } else {
@@ -544,10 +556,10 @@ describe("Data validation", () => {
         "public",
         async (conn, projectId, adminId, [userA]) => {
           const { bucket_id, object_key, tiles, url } = await conn.one(sql`
-                insert into data_sources (project_id, type, url, import_type, tiles) values (${projectId}, 'seasketch-vector', 'https://example.com/geojson.json', 'upload', ${sql.array(
+                insert into data_sources (project_id, type, url, import_type, tiles, byte_length) values (${projectId}, 'seasketch-vector', 'https://example.com/geojson.json', 'upload', ${sql.array(
             ["https://example.com/foo"],
             "text"
-          )}) returning bucket_id, object_key, tiles, url
+          )}, 0) returning bucket_id, object_key, tiles, url
               `);
           expect(bucket_id).toBe(1);
           expect((object_key as string).length).toBeGreaterThan(20);
@@ -563,10 +575,10 @@ describe("Data validation", () => {
         async (conn, projectId, adminId, [userA]) => {
           await createSession(conn, adminId);
           const id = await conn.oneFirst(sql`
-                insert into data_sources (project_id, type, url, import_type, tiles) values (${projectId}, 'seasketch-vector', 'https://example.com/geojson.json', 'upload', ${sql.array(
+                insert into data_sources (project_id, type, url, import_type, tiles, byte_length) values (${projectId}, 'seasketch-vector', 'https://example.com/geojson.json', 'upload', ${sql.array(
             ["https://example.com/foo"],
             "text"
-          )}) returning id
+          )}, 0) returning id
               `);
           expect(id).toBeTruthy();
           expect(
@@ -584,7 +596,7 @@ describe("Data validation", () => {
         async (conn, projectId, adminId, [userA]) => {
           await createSession(conn, adminId);
           const id = await conn.oneFirst(sql`
-                  insert into data_sources (project_id, type, import_type, enhanced_security) values (${projectId}, 'seasketch-vector', 'upload', true) returning id
+                  insert into data_sources (project_id, type, import_type, enhanced_security, byte_length) values (${projectId}, 'seasketch-vector', 'upload', true, 0) returning id
                 `);
           expect(id).toBeTruthy();
           expect(
@@ -602,7 +614,7 @@ describe("Data validation", () => {
         async (conn, projectId, adminId, [userA]) => {
           await createSession(conn, adminId);
           const id = await conn.oneFirst(sql`
-                    insert into data_sources (project_id, type, import_type, original_source_url) values (${projectId}, 'seasketch-vector', 'arcgis', 'https://example.com/arcgis/rest/services/bullshit/MapServer') returning id
+                    insert into data_sources (project_id, type, import_type, original_source_url, byte_length) values (${projectId}, 'seasketch-vector', 'arcgis', 'https://example.com/arcgis/rest/services/bullshit/MapServer', 12) returning id
                   `);
           expect(id).toBeTruthy();
           expect(
@@ -620,7 +632,7 @@ describe("Access Control", () => {
   test("Only admins can create and edit data_sources in their own project", async () => {
     await verifyCRUDOpsLimitedToAdmins(pool, {
       create: async (conn, projectId, adminId) => {
-        return sql`insert into data_sources (project_id, type, import_type, original_source_url) values (${projectId}, 'seasketch-vector', 'arcgis', 'https://example.com/arcgis/rest/services/bullshit/MapServer') returning id`;
+        return sql`insert into data_sources (project_id, type, import_type, original_source_url, byte_length) values (${projectId}, 'seasketch-vector', 'arcgis', 'https://example.com/arcgis/rest/services/bullshit/MapServer', 0) returning id`;
       },
       update: (id) => {
         return sql`update data_sources set buffer = 1 where id = ${id} returning *`;

@@ -82,7 +82,7 @@ describe("Data validation", () => {
           sql`insert into data_sources (project_id, type, url) values (${projectId}, 'vector', 'https://example.com/arcgis/rest/services/bullshit/MapServer') returning id`
         );
         const validSourceId2 = await conn.oneFirst(
-          sql`insert into data_sources (project_id, type, url, import_type) values (${projectId}, 'seasketch-vector', 'https://example.com/arcgis/rest/services/bullshit/MapServer', 'upload') returning id`
+          sql`insert into data_sources (project_id, type, url, import_type, byte_length) values (${projectId}, 'seasketch-vector', 'https://example.com/arcgis/rest/services/bullshit/MapServer', 'upload', 0) returning id`
         );
         const validSourceId3 = await conn.oneFirst(
           sql`insert into data_sources (project_id, type, url) values (${projectId}, 'geojson', 'https://example.com/arcgis/rest/services/bullshit/MapServer') returning id`

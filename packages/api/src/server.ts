@@ -12,6 +12,7 @@ import ProjectInvitesPlugin from "./plugins/projectInvitesPlugin";
 import SurveyInvitesPlugin from "./plugins/surveyInvitesPlugin";
 import postgisPlugin from "@graphile/postgis";
 import CanonicalEmailPlugin from "./plugins/canonicalEmailPlugin";
+import DataSourcePlugin from "./plugins/dataSourcePlugin";
 import { getJWKS, rotateKeys } from "./auth/jwks";
 import authorizationMiddleware from "./middleware/authorizationMiddleware";
 import userAccountMiddlware from "./middleware/userAccountMiddleware";
@@ -76,18 +77,21 @@ app.get("/.well-known/jwks.json", async (req, res) => {
 app.use(currentProjectMiddlware);
 
 // Parse Bearer tokens and populate req.user with valid claims
-app.use(authorizationMiddleware, function (
-  err: Error,
-  req: express.Request,
-  res: express.Response,
-  next: (err: Error | null) => void
-) {
-  // Needed to allow requests to proceed with invalid (e.g. expired) tokens.
-  // Clients will be anonymous in that case.
-  // @ts-ignore
-  if (err.code === "invalid_token") return next();
-  return next(err);
-});
+app.use(
+  authorizationMiddleware,
+  function (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    next: (err: Error | null) => void
+  ) {
+    // Needed to allow requests to proceed with invalid (e.g. expired) tokens.
+    // Clients will be anonymous in that case.
+    // @ts-ignore
+    if (err.code === "invalid_token") return next();
+    return next(err);
+  }
+);
 
 // Create new user account if req.user is unrecognized, and assign req.user.id
 app.use(userAccountMiddlware);
@@ -140,6 +144,7 @@ app.use(
       ProjectInvitesPlugin,
       SurveyInvitesPlugin,
       CanonicalEmailPlugin,
+      DataSourcePlugin,
       orderTopicsByDateAndStickyPlugin,
       reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       extraDocumentationPlugin(graphqlSchemaModifiers.documentation),

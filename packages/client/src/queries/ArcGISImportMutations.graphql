@@ -1,0 +1,156 @@
+mutation CreateTableOfContentsItem(
+  $title: String!
+  $stableId: String!
+  $projectId: Int!
+  $isFolder: Boolean!
+  $parentStableId: String
+  $metadata: JSON
+  $bounds: [BigFloat]
+  $dataLayerId: Int
+) {
+  createTableOfContentsItem(
+    input: {
+      tableOfContentsItem: {
+        title: $title
+        stableId: $stableId
+        projectId: $projectId
+        parentStableId: $parentStableId
+        metadata: $metadata
+        bounds: $bounds
+        dataLayerId: $dataLayerId
+        isFolder: $isFolder
+      }
+    }
+  ) {
+    tableOfContentsItem {
+      id
+      title
+      stableId
+      projectId
+      parentStableId
+      isClickOffOnly
+      isDraft
+      isFolder
+      metadata
+      bounds
+      dataLayerId
+    }
+  }
+}
+
+mutation CreateArcGISDynamicDataSource(
+  $projectId: Int!
+  $url: String!
+  $attribution: String
+  $bounds: [BigFloat]
+  $queryParameters: JSON
+) {
+  createDataSource(
+    input: {
+      dataSource: {
+        projectId: $projectId
+        type: ARCGIS_VECTOR
+        url: $url
+        attribution: $attribution
+        bounds: $bounds
+        queryParameters: $queryParameters
+      }
+    }
+  ) {
+    dataSource {
+      id
+      projectId
+      type
+      url
+    }
+  }
+}
+
+mutation CreateArcGISImageSource(
+  $projectId: Int!
+  $url: String!
+  $attribution: String
+  $bounds: [BigFloat]
+  $queryParameters: JSON
+  $enableHighDPI: Boolean
+) {
+  createDataSource(
+    input: {
+      dataSource: {
+        projectId: $projectId
+        type: ARCGIS_DYNAMIC_MAPSERVER
+        url: $url
+        attribution: $attribution
+        bounds: $bounds
+        queryParameters: $queryParameters
+        useDevicePixelRatio: $enableHighDPI
+      }
+    }
+  ) {
+    dataSource {
+      id
+      url
+    }
+  }
+}
+
+mutation CreateSeaSketchVectorSource(
+  $projectId: Int!
+  $attribution: String
+  $bounds: [BigFloat]!
+  $byteLength: Int!
+  $originalSourceUrl: String
+  $importType: DataSourceImportTypes!
+  $enhancedSecurity: Boolean!
+) {
+  createDataSource(
+    input: {
+      dataSource: {
+        projectId: $projectId
+        type: SEASKETCH_VECTOR
+        attribution: $attribution
+        bounds: $bounds
+        byteLength: $byteLength
+        originalSourceUrl: $originalSourceUrl
+        importType: $importType
+        enhancedSecurity: $enhancedSecurity
+      }
+    }
+  ) {
+    dataSource {
+      id
+      projectId
+      type
+      url
+      presignedUploadUrl
+      bucketId
+      enhancedSecurity
+      objectKey
+    }
+  }
+}
+
+mutation CreateDataLayer(
+  $projectId: Int!
+  $dataSourceId: Int!
+  $mapboxGlStyles: JSON
+  $renderUnder: RenderUnderType
+  $sublayer: String
+) {
+  createDataLayer(
+    input: {
+      dataLayer: {
+        projectId: $projectId
+        dataSourceId: $dataSourceId
+        mapboxGlStyles: $mapboxGlStyles
+        renderUnder: $renderUnder
+        sublayer: $sublayer
+      }
+    }
+  ) {
+    dataLayer {
+      id
+      dataSourceId
+    }
+  }
+}

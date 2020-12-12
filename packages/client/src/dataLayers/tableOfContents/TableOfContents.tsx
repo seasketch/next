@@ -7,6 +7,7 @@ import { LayerManagerContext } from "../LayerManager";
 import VisibilityCheckbox from "./VisibilityCheckbox";
 import "./TableOfContents.css";
 import Spinner from "../../components/Spinner";
+import { TableOfContentsItem as GeneratedTableOfContentsItem } from "../../generated/graphql";
 
 export interface TableOfContentsNode {
   id: string;
@@ -17,13 +18,31 @@ export interface TableOfContentsNode {
   disabled?: boolean;
 }
 
+export type ClientTableOfContentsItem = Pick<
+  GeneratedTableOfContentsItem,
+  | "title"
+  | "showRadioChildren"
+  | "bounds"
+  | "isFolder"
+  | "isClickOffOnly"
+  | "showRadioChildren"
+  | "stableId"
+  | "parentStableId"
+> & {
+  id: number | string;
+  disabled?: boolean;
+  expanded?: boolean;
+  children?: ClientTableOfContentsItem[];
+  dataLayerId?: number | string | null;
+};
+
 interface TableOfContentsProps {
-  nodes: TableOfContentsNode[];
-  onChange: (nodes: TableOfContentsNode[]) => void;
+  nodes: ClientTableOfContentsItem[];
+  onChange: (nodes: ClientTableOfContentsItem[]) => void;
   isVirtualized?: boolean;
-  extraButtons?: (node: TableOfContentsNode) => React.ReactNode[];
+  extraButtons?: (node: ClientTableOfContentsItem) => React.ReactNode[];
   disabledMessage?: string;
-  extraClassName?: (node: TableOfContentsNode) => string | null;
+  extraClassName?: (node: ClientTableOfContentsItem) => string | null;
 }
 
 export default function TableOfContents(props: TableOfContentsProps) {
@@ -32,7 +51,10 @@ export default function TableOfContents(props: TableOfContentsProps) {
 
   const { manager, layerStates } = useContext(LayerManagerContext);
 
-  const setExpanded = (expanded: boolean, child?: TableOfContentsNode) => {
+  const setExpanded = (
+    expanded: boolean,
+    child?: ClientTableOfContentsItem
+  ) => {
     setExpansionToggled(!expanded);
     if (!child) {
       for (const child of props.nodes[0].children!) {
@@ -69,11 +91,13 @@ export default function TableOfContents(props: TableOfContentsProps) {
         style={{ height: "auto" }}
         theme={FileExplorerTheme}
         generateNodeProps={(data) => {
-          const layerState = layerStates[data.node.id];
-          const visibility =
-            data.node.type === "layer"
-              ? !!layerState?.visible
-              : folderVisibility(data.node as TableOfContentsNode, layerStates);
+          const layerState = layerStates[data.node.dataLayerId];
+          const visibility = data.node.isFolder
+            ? folderVisibility(
+                data.node as ClientTableOfContentsItem,
+                layerStates
+              )
+            : !!layerState?.visible;
           const isVisible = visibility === "mixed" || visibility;
           return {
             title: `${data.node.title}${
@@ -83,7 +107,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
             }`,
             className: `${data.node.disabled ? "opacity-50" : ""} ${
               props.extraClassName
-                ? props.extraClassName(data.node as TableOfContentsNode)
+                ? props.extraClassName(data.node as ClientTableOfContentsItem)
                 : ""
             }`,
             icons: [
@@ -93,26 +117,28 @@ export default function TableOfContents(props: TableOfContentsProps) {
                 error={!!layerState?.error}
                 onClick={() => {
                   let childIds = [];
-                  if (data.node.type === "layer") {
+                  let layerIds = [];
+                  if (!data.node.isFolder) {
                     childIds = [data.node.id];
+                    layerIds = [data.node.dataLayerId];
                   } else {
-                    childIds = getEnabledChildren(
-                      data.node as TableOfContentsNode,
+                    [childIds, layerIds] = getEnabledChildren(
+                      data.node as ClientTableOfContentsItem,
 
                       isVisible,
                       layerStates
                     );
                   }
                   if (isVisible) {
-                    manager?.hideLayers(childIds);
+                    manager?.hideLayers(layerIds);
                   } else {
-                    manager?.showLayers(childIds);
+                    manager?.showLayers(layerIds);
                   }
                 }}
                 visibility={visibility}
               />,
               ...(props.extraButtons
-                ? props.extraButtons(data.node as TableOfContentsNode)
+                ? props.extraButtons(data.node as ClientTableOfContentsItem)
                 : []),
             ],
             buttons: [
@@ -155,7 +181,7 @@ function LayerError(props: { message: string }) {
 }
 
 function folderVisibility(
-  folder: TableOfContentsNode,
+  folder: ClientTableOfContentsItem,
   layerStates: { [id: string]: { visible: boolean | "mixed" } }
 ): boolean | "mixed" {
   if (folder.children && folder.children.length) {
@@ -163,8 +189,8 @@ function folderVisibility(
     let anyOff = false;
     for (const child of folder.children) {
       let state: boolean | "mixed";
-      if (child.type === "layer") {
-        state = layerStates[child.id]?.visible || false;
+      if (!child.isFolder) {
+        state = layerStates[child.dataLayerId!]?.visible || false;
       } else {
         state = folderVisibility(child, layerStates);
       }
@@ -193,30 +219,34 @@ function folderVisibility(
 }
 
 function getEnabledChildren(
-  folder: TableOfContentsNode,
+  folder: ClientTableOfContentsItem,
   visible: boolean,
   layerStates: { [id: string]: { visible: boolean | "mixed" } }
 ) {
-  let ids: string[] = [];
+  let ids: (string | number)[] = [];
+  let layerIds: (string | number)[] = [];
   if (folder.children) {
     for (const child of folder.children) {
-      if (child.type === "folder") {
-        ids = ids.concat(getEnabledChildren(child, visible, layerStates));
+      if (child.isFolder) {
+        const values = getEnabledChildren(child, visible, layerStates);
+        ids = ids.concat(values[0]);
+        layerIds = layerIds.concat(values[1]);
       } else if (!child.disabled) {
-        const state = layerStates[child.id];
+        const state = layerStates[child.dataLayerId!];
         if ((!state && visible === false) || state?.visible === visible) {
           ids.push(child.id);
+          layerIds.push(child.dataLayerId!);
         }
       }
     }
   }
-  return ids;
+  return [ids, layerIds];
 }
 
-function hasFolders(node?: TableOfContentsNode) {
+function hasFolders(node?: ClientTableOfContentsItem) {
   if (node?.children) {
     for (const child of node.children) {
-      if (child.type === "folder") {
+      if (child.isFolder) {
         return true;
       }
     }
