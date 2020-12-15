@@ -1,7 +1,9 @@
 import React from "react";
+import { useHistory, useParams } from "react-router-dom";
 import Button from "../../../components/Button";
 import InputBlock from "../../../components/InputBlock";
 import Modal from "../../../components/Modal";
+import ProgressBar from "../../../components/ProgressBar";
 import Switch from "../../../components/Switch";
 import { RenderUnderType } from "../../../generated/graphql";
 import useProjectId from "../../../useProjectId";
@@ -24,7 +26,10 @@ export default function DynamicMapServerSettingsForm(props: {
   const { importService, ...importServiceState } = useImportArcGISService(
     props.serviceRoot
   );
+  console.log("state", importServiceState);
+  const { slug } = useParams<{ slug: string }>();
   const projectId = useProjectId();
+  const history = useHistory();
   const acceptableImageFormats = [
     "PNG",
     "PNG8",
@@ -113,18 +118,48 @@ export default function DynamicMapServerSettingsForm(props: {
         <Button
           primary={true}
           label={`Import Service`}
-          onClick={() =>
-            importService(
+          onClick={async () => {
+            await importService(
               props.layerInfo,
               props.mapServerInfo,
               projectId!,
               settings,
               "image"
-            )
-          }
+            );
+            if (!importServiceState.error) {
+              history.push(`/${slug}/admin/data`);
+            }
+          }}
         />
       </div>
-      <Modal open={importServiceState.inProgress}>Importing service</Modal>
+      <Modal
+        open={!!importServiceState.inProgress || !!importServiceState.error}
+        title="Import Image Service"
+      >
+        <div className="w-128">
+          {importServiceState.error && (
+            <>
+              <div className="mb-2 mt-4 text-red-900">
+                <h4>{importServiceState.error.name}</h4>
+                {importServiceState.error.message}
+              </div>
+              <Button
+                onClick={() => history.push(`/${slug}/admin/data`)}
+                label="Cancel"
+                className="mr-2"
+              />
+            </>
+          )}
+          {importServiceState.inProgress && (
+            <div>
+              <ProgressBar progress={importServiceState.progress!} />
+              <div className="mb-2 text-sm">
+                {importServiceState.statusMessage}
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

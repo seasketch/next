@@ -10330,6 +10330,25 @@ export type LayersAndSourcesForItemsQuery = (
   )> }
 );
 
+export type CreateFolderMutationVariables = Exact<{
+  title: Scalars['String'];
+  stableId: Scalars['String'];
+  projectId: Scalars['Int'];
+  parentStableId?: Maybe<Scalars['String']>;
+}>;
+
+
+export type CreateFolderMutation = (
+  { __typename?: 'Mutation' }
+  & { createTableOfContentsItem?: Maybe<(
+    { __typename?: 'CreateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'showRadioChildren'>
+    )> }
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -10983,6 +11002,52 @@ export function useLayersAndSourcesForItemsLazyQuery(baseOptions?: Apollo.LazyQu
 export type LayersAndSourcesForItemsQueryHookResult = ReturnType<typeof useLayersAndSourcesForItemsQuery>;
 export type LayersAndSourcesForItemsLazyQueryHookResult = ReturnType<typeof useLayersAndSourcesForItemsLazyQuery>;
 export type LayersAndSourcesForItemsQueryResult = Apollo.QueryResult<LayersAndSourcesForItemsQuery, LayersAndSourcesForItemsQueryVariables>;
+export const CreateFolderDocument = gql`
+    mutation CreateFolder($title: String!, $stableId: String!, $projectId: Int!, $parentStableId: String) {
+  createTableOfContentsItem(input: {tableOfContentsItem: {title: $title, stableId: $stableId, projectId: $projectId, parentStableId: $parentStableId, isFolder: true}}) {
+    tableOfContentsItem {
+      id
+      title
+      stableId
+      projectId
+      parentStableId
+      isClickOffOnly
+      isDraft
+      isFolder
+      showRadioChildren
+      isClickOffOnly
+    }
+  }
+}
+    `;
+export type CreateFolderMutationFn = Apollo.MutationFunction<CreateFolderMutation, CreateFolderMutationVariables>;
+
+/**
+ * __useCreateFolderMutation__
+ *
+ * To run a mutation, you first call `useCreateFolderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateFolderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createFolderMutation, { data, loading, error }] = useCreateFolderMutation({
+ *   variables: {
+ *      title: // value for 'title'
+ *      stableId: // value for 'stableId'
+ *      projectId: // value for 'projectId'
+ *      parentStableId: // value for 'parentStableId'
+ *   },
+ * });
+ */
+export function useCreateFolderMutation(baseOptions?: Apollo.MutationHookOptions<CreateFolderMutation, CreateFolderMutationVariables>) {
+        return Apollo.useMutation<CreateFolderMutation, CreateFolderMutationVariables>(CreateFolderDocument, baseOptions);
+      }
+export type CreateFolderMutationHookResult = ReturnType<typeof useCreateFolderMutation>;
+export type CreateFolderMutationResult = Apollo.MutationResult<CreateFolderMutation>;
+export type CreateFolderMutationOptions = Apollo.BaseMutationOptions<CreateFolderMutation, CreateFolderMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

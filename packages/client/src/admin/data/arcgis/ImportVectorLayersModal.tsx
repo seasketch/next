@@ -17,6 +17,7 @@ import {
   VectorSublayerSettings,
 } from "./arcgis";
 import QuotaBar from "./QuotaBar";
+import { useHistory, useParams } from "react-router-dom";
 
 interface ImportVectorLayersProps {
   layers?: LayerInfo[];
@@ -36,9 +37,12 @@ export default function ImportVectorLayersModal(
     layers,
     settings?.vectorSublayerSettings
   );
+  const history = useHistory();
+
   const { importService, ...importServiceState } = useImportArcGISService(
     props.serviceRoot
   );
+  const { slug } = useParams<{ slug: string }>();
   const projectId = useProjectId();
 
   if (!layers) {
@@ -78,8 +82,8 @@ export default function ImportVectorLayersModal(
     }
   }).length;
 
-  const onImport = () =>
-    importService(
+  const onImport = async () => {
+    const result = await importService(
       layers!.filter((l) => l.type !== "Raster Layer"),
       props.mapServerInfo!,
       projectId!,
@@ -99,6 +103,10 @@ export default function ImportVectorLayersModal(
         return total;
       }, 0)
     );
+    if (!importServiceState.error) {
+      history.push(`/${slug}/admin/data`);
+    }
+  };
 
   return (
     <Modal

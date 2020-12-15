@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 12.0 (Debian 12.0-2.pgdg100+1)
--- Dumped by pg_dump version 12.0 (Debian 12.0-2.pgdg100+1)
+-- Dumped from database version 13.0 (Debian 13.0-1.pgdg100+1)
+-- Dumped by pg_dump version 13.0 (Debian 13.0-1.pgdg100+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -35,6 +35,20 @@ CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public;
 --
 
 COMMENT ON EXTENSION citext IS 'data type for case-insensitive character strings';
+
+
+--
+-- Name: ltree; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS ltree WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION ltree; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION ltree IS 'data type for hierarchical tree-like structures';
 
 
 --
@@ -294,6 +308,27 @@ CREATE TYPE public.project_invite_options AS (
 
 
 --
+-- Name: raster_dem_encoding; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.raster_dem_encoding AS ENUM (
+    'mapbox',
+    'terrarium'
+);
+
+
+--
+-- Name: render_under_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.render_under_type AS ENUM (
+    'labels',
+    'land',
+    'none'
+);
+
+
+--
 -- Name: sketch_geometry_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -354,6 +389,89 @@ CREATE TYPE public.survey_validation_info_composite AS (
 );
 
 
+--
+-- Name: tile_scheme; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.tile_scheme AS ENUM (
+    'xyz',
+    'tms'
+);
+
+
+--
+-- Name: _delete_table_of_contents_item(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._delete_table_of_contents_item(tid integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    layer_id int;
+    source_id int;
+    layer_count int;
+  begin
+    select data_layer_id into layer_id from table_of_contents_items where id = "tid";
+    select data_source_id into source_id from data_layers where id = layer_id;
+    delete from table_of_contents_items where id = "tid";
+    delete from data_layers where id = layer_id;
+    if source_id is not null then
+      select count(id) into layer_count from data_layers where data_source_id = source_id;
+      if layer_count = 0 then
+        delete from data_sources where id = source_id;
+      end if;
+    end if;
+    return;
+  end;
+$$;
+
+
+--
+-- Name: _session_on_toc_item_acl(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._session_on_toc_item_acl(tocid integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    with test (on_acl) as (select 
+      bool_and(session_on_acl(access_control_lists.id)) as bool_and
+    from
+      access_control_lists
+    where
+      table_of_contents_item_id in (
+        select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> path --(select path from table_of_contents_items where id = tocid)
+      ) and
+      type != 'public') select on_acl = true or on_acl is null from test;
+    -- select 
+    --         true or bool_and(session_on_acl(access_control_lists.id))
+    --       from
+    --         access_control_lists
+    --       where
+    --         table_of_contents_item_id in (
+    --           select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> path
+    --         )
+  $$;
+
+
+--
+-- Name: _session_on_toc_item_acl(public.ltree); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._session_on_toc_item_acl(lpath public.ltree) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    with test (on_acl) as (select 
+      bool_and(session_on_acl(access_control_lists.id)) as bool_and
+    from
+      access_control_lists
+    where
+      table_of_contents_item_id in (
+        select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> lpath
+      ) and
+      type != 'public') select on_acl = true or (on_acl is null and lpath is not null) from test;
+  $$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -369,7 +487,8 @@ CREATE TABLE public.access_control_lists (
     sketch_class_id integer,
     forum_id_read integer,
     forum_id_write integer,
-    CONSTRAINT access_control_list_has_related_model CHECK ((((((sketch_class_id IS NOT NULL))::integer + ((forum_id_read IS NOT NULL))::integer) + ((forum_id_write IS NOT NULL))::integer) = 1))
+    table_of_contents_item_id integer,
+    CONSTRAINT access_control_list_has_related_model CHECK (((((((sketch_class_id IS NOT NULL))::integer + ((forum_id_read IS NOT NULL))::integer) + ((forum_id_write IS NOT NULL))::integer) + ((table_of_contents_item_id IS NOT NULL))::integer) = 1))
 );
 
 
@@ -666,6 +785,181 @@ BEGIN
     VALUES(new.id);
       RETURN new;
 END;
+$$;
+
+
+--
+-- Name: before_insert_or_update_data_layers_trigger(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_insert_or_update_data_layers_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  declare
+    source_type text;
+  begin
+    select type into source_type from data_sources where id = new.data_source_id;
+    if source_type is null then
+      raise 'Unknown source type. %', (new.data_source_id);
+    end if;
+    if new.sublayer is not null and source_type != 'arcgis-dynamic-mapserver' then
+      raise 'sublayer property can only be specified for layers associated with a arcgis-dynamic-mapserver source';
+    end if;
+    if source_type = 'vector' then
+      if new.source_layer is null then
+        raise 'Layers with "vector" data sources must specify a source_layer';
+      end if;
+    else
+      if new.source_layer is not null then
+        raise 'Only Layers with data_sources of type "vector" should specify a source_layer';
+      end if;
+    end if;
+    if (source_type = 'vector' or source_type = 'geojson' or source_type = 'seasketch-vector') then
+      if new.mapbox_gl_styles is null then
+        raise 'Vector layers must specify mapbox_gl_styles';
+      end if;
+    else
+      if new.mapbox_gl_styles is not null then
+        raise 'Layers with data_sources of type % should not specify mapbox_gl_styles', (source_type);
+      end if;
+    end if;
+    return new;
+  end;
+$$;
+
+
+--
+-- Name: before_insert_or_update_data_sources_trigger(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  declare
+    bucket_id text;
+  begin
+    if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' ) then
+      raise 'minzoom may only be set for tiled sources (vector, raster, raster-dem)';
+    end if;
+    if new.coordinates is null and (new.type = 'video' or new.type = 'image') then
+      raise 'coordinates must be set on image and video sources';
+    end if;
+    if new.coordinates is not null and (new.type != 'video' and new.type != 'image') then
+      raise 'coordinates property can only be set on image and video sources';
+    end if;
+    if new.maxzoom is not null and (new.type = 'image' or new.type = 'video') then
+      raise 'maxzoom cannot be set for image and video sources';
+    end if;
+    if new.url is null and (new.type = 'geojson' or new.type = 'image' or new.type = 'arcgis-dynamic-mapserver' or new.type = 'arcgis-vector') then
+      raise 'url must be set for "%" sources', (new.type);
+    end if;
+    if new.scheme is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector') then
+      raise 'scheme property is not allowed for "%" sources', (new.type);
+    end if;
+    if new.tiles is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-vector') then
+      raise 'tiles property is not allowed for "%" sources', (new.type);
+    end if;
+    if new.encoding is not null and new.type != 'raster-dem' then
+      raise 'encoding property only allowed on raster-dem sources';
+    end if;
+    if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector') then
+      raise 'tile_size property is not allowed for "%" sources', (new.type);
+    end if;
+    if (new.type != 'geojson' and new.type != 'seasketch-vector') and (new.buffer is not null or new.cluster is not null or new.cluster_max_zoom is not null or new.cluster_properties is not null or new.cluster_radius is not null or new.generate_id is not null or new.line_metrics is not null or new.promote_id is not null or new.tolerance is not null) then
+      raise 'geojson props such as buffer, cluster, generate_id, etc not allowed on % sources', (new.type);
+    end if;
+    if (new.byte_length is not null and new.type != 'seasketch-vector') then
+      raise 'byte_length can only be set on seasketch-vector sources';
+    end if;
+    if (new.type = 'seasketch-vector' and new.byte_length is null) then
+      raise 'seasketch-vector sources must have byte_length set to an approximate value';
+    end if;
+    if new.urls is not null and new.type != 'video' then
+      raise 'urls property not allowed on % sources', (new.type);
+    end if;
+    if new.query_parameters is not null and (new.type != 'arcgis-vector' and new.type != 'arcgis-dynamic-mapserver') then
+      raise 'query_parameters property not allowed on % sources', (new.type);
+    end if;
+    if new.use_device_pixel_ratio is not null and new.type != 'arcgis-dynamic-mapserver' then
+      raise 'use_device_pixel_ratio property not allowed on % sources', (new.type);
+    end if;
+    if new.import_type is not null and new.type != 'seasketch-vector' then
+      raise 'import_type property is only allowed for seasketch-vector sources';
+    end if;
+    if new.import_type is null and new.type = 'seasketch-vector' then
+      raise 'import_type property is required for seasketch-vector sources';
+    end if;
+    if new.original_source_url is not null and new.type != 'seasketch-vector' then
+      raise 'original_source_url may only be set on seasketch-vector sources';
+    end if;
+    if new.enhanced_security is not null and new.type != 'seasketch-vector' then
+      raise 'enhanced_security may only be set on seasketch-vector sources';
+    end if;
+    if new.type = 'seasketch-vector' then
+      new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
+      new.object_key = (select gen_random_uuid());
+      new.tiles = null;
+      new.url = null;
+    end if;
+    return new;
+  end;
+$$;
+
+
+--
+-- Name: before_insert_or_update_table_of_contents_items_trigger(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  begin
+    if old.is_folder != new.is_folder then
+      raise 'Cannot change is_folder. Create a new table of contents item';
+    end if;
+    if old.is_draft = false then
+      raise 'Cannot alter table of contents items after they are published';
+    end if;
+    if old is null and new.is_draft = true then -- inserting
+      -- verify that stable_id is unique among draft items
+      if (select count(id) from table_of_contents_items where stable_id = new.stable_id and is_draft = true) > 0 then
+        raise '% is not a unique stable_id.', new.stable_id;
+      end if;
+      -- set path
+      if new.parent_stable_id is null then
+        new.path = new.stable_id;
+      else
+        if (select count(id) from table_of_contents_items where is_draft = true and stable_id = new.parent_stable_id) > 0 then
+          -- set path, finding path of parent and appending to it
+          new.path = (select path from table_of_contents_items where is_draft = true and stable_id = new.parent_stable_id) || new.stable_id;
+        else
+          raise 'Cannot find parent item with stable_id=%', new.parent_stable_id;
+        end if;
+      end if;
+    end if;
+    if new.is_folder then
+      if new.data_layer_id is not null then
+        raise 'Folders cannot have data_layer_id set';
+      end if;
+      if new.metadata is not null then
+        raise 'Folders cannot have metadata set';
+      end if;
+      if new.bounds is not null then
+        raise 'Folders cannot have bounds set';
+      end if;
+    else
+      if new.data_layer_id is null then
+        raise 'data_layer_id must be set if is_folder=false';
+      end if;
+      if new.show_radio_children then
+        raise 'show_radio_children must be false if is_folder=false';
+      end if;
+      if new.is_click_off_only then
+        raise 'is_click_off_only must be false if is_folder=false';
+      end if;
+    end if;
+    return new;
+  end;
 $$;
 
 
@@ -1568,6 +1862,7 @@ CREATE TABLE public.projects (
     is_deleted boolean DEFAULT false NOT NULL,
     deleted_at timestamp with time zone,
     region public.geometry(Polygon) DEFAULT public.st_geomfromgeojson('{"coordinates":[[[-157.05324470015358,69.74201326987497],[135.18377661193057,69.74201326987497],[135.18377661193057,-43.27449014737426],[-157.05324470015358,-43.27449014737426],[-157.05324470015358,69.74201326987497]]],"type":"Polygon"}'::text) NOT NULL,
+    data_sources_bucket_id text DEFAULT 'geojson-1.seasketch-data.org'::text NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT name_min_length CHECK ((length(name) >= 4))
 );
@@ -1941,6 +2236,22 @@ $$;
 
 
 --
+-- Name: create_table_of_contents_item_acl(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_table_of_contents_item_acl() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+begin
+  insert into
+    access_control_lists(project_id, table_of_contents_item_id, type)
+    values(new.project_id, new.id, 'public'::access_control_list_type);
+      return new;
+end;
+$$;
+
+
+--
 -- Name: topics; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2055,6 +2366,61 @@ The current SeaSketch Project, which is determined by the `referer` or `x-ss-slu
 
 
 --
+-- Name: debug_toc_acl(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.debug_toc_acl(tocid integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    with test (on_acl) as (select 
+        bool_and(session_on_acl(access_control_lists.id)) as bool_and
+      from
+        access_control_lists
+      where
+        table_of_contents_item_id in (
+          select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> ((select path from table_of_contents_items where id = "tocid"))
+        ) and
+        type != 'public') select on_acl = true or on_acl is null from test;
+  --  select 
+  --     session_on_acl(access_control_lists.id)
+  --   from
+  --     access_control_lists
+  --   where
+  --     table_of_contents_item_id in (
+  --       select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> ((select path from table_of_contents_items where id = "tocid"))
+  --     )
+    -- select 
+    --         true or bool_and(session_on_acl(access_control_lists.id))
+    --       from
+    --         access_control_lists
+    --       where
+    --         table_of_contents_item_id in (
+    --           select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> path
+    --         )
+  $$;
+
+
+--
+-- Name: debug_toc_acl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.debug_toc_acl(tocid integer, project_id integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    -- select session_has_project_access(project_id) and ((select is_draft from table_of_contents_items where id = "tocid"))=false and _session_on_toc_item_acl(((select path from table_of_contents_items where id = "tocid")));
+    with test (on_acl) as (select 
+        bool_and(session_on_acl(access_control_lists.id)) as bool_and
+      from
+        access_control_lists
+      where
+        table_of_contents_item_id in (
+          select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> ((select path from table_of_contents_items where id = "tocid"))
+        ) and
+        type != 'public') select on_acl = true or on_acl is null from test;
+  $$;
+
+
+--
 -- Name: delete_project(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2076,6 +2442,41 @@ $$;
 --
 
 COMMENT ON FUNCTION public.delete_project(project_id integer, OUT project public.projects) IS 'Marks project as deleted. Will remain in database but not accessible to anyone. Function can only be accessed by project administrators.';
+
+
+--
+-- Name: delete_table_of_contents_branch(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      toc_id int;
+      root_path ltree;
+    begin
+      if session_is_admin((select project_id from table_of_contents_items where table_of_contents_items.id = "tableOfContentsItemId")) = false then
+        raise 'Permission denied. Must be a project admin';
+      end if;
+      if (select is_draft from table_of_contents_items where table_of_contents_items.id = "tableOfContentsItemId") = false then
+        raise 'Cannot delete published table of contents items';
+      end if;
+      select path into root_path from table_of_contents_items where table_of_contents_items.id = "tableOfContentsItemId";
+      for toc_id in
+        select table_of_contents_items.id from table_of_contents_items where root_path @> path and is_draft = true
+      loop
+        execute _delete_table_of_contents_item(toc_id);
+      end loop;
+      return;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION delete_table_of_contents_branch("tableOfContentsItemId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) IS 'Deletes an item from the draft table of contents, as well as all child items if it is a folder. This action will also delete all related layers and sources (if no other layers reference the source).';
 
 
 --
@@ -3323,6 +3724,581 @@ COMMENT ON FUNCTION public.projects_admins(p public.projects) IS '@simpleCollect
 
 
 --
+-- Name: data_layers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_layers (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    data_source_id integer NOT NULL,
+    source_layer text,
+    sublayer text,
+    render_under public.render_under_type DEFAULT 'labels'::public.render_under_type NOT NULL,
+    mapbox_gl_styles jsonb
+);
+
+
+--
+-- Name: TABLE data_layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.data_layers IS '
+@omit all
+Data layers represent multiple MapBox GL Style layers tied to a single source. 
+These layers could also be called "operational layers" in that they are meant to
+be overlaid on a basemap.
+
+The layers can appear tied to a TableOfContentsItem or be part of rich features 
+associated with a basemap.
+';
+
+
+--
+-- Name: COLUMN data_layers.source_layer; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.source_layer IS 'For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to.';
+
+
+--
+-- Name: COLUMN data_layers.sublayer; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.sublayer IS 'For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles is blank and this layer merely controls the display of a single sublayer when making image requests.';
+
+
+--
+-- Name: COLUMN data_layers.render_under; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.render_under IS 'Determines z-ordering of layer in relation to layers in the basemap. For this functionality to work, layers must be identified in the basemap configuration.';
+
+
+--
+-- Name: COLUMN data_layers.mapbox_gl_styles; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.mapbox_gl_styles IS '
+@name mapboxGLStyles
+JSON array of MapBox GL Style layers. Layers should not specify an id or sourceId. These will be automatically generated at runtime.
+';
+
+
+--
+-- Name: projects_data_layers_for_items(public.projects, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_data_layers_for_items(p public.projects, table_of_contents_item_ids integer[]) RETURNS SETOF public.data_layers
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      layer_ids int[];
+    begin
+      if session_is_admin(p.id) then
+        select array_agg(data_layer_id) into layer_ids from table_of_contents_items where project_id = p.id and id = any(table_of_contents_item_ids);
+      else
+        if session_has_project_access(p.id) then
+          select array_agg(data_layer_id) into layer_ids from table_of_contents_items where project_id = p.id and id = any(table_of_contents_item_ids) and _session_on_toc_item_acl(table_of_contents_items.path);
+        else
+          raise 'Access denied';
+        end if;
+      end if;
+      return query select
+        *
+      from
+        data_layers
+      where
+        id = any(layer_ids);
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION projects_data_layers_for_items(p public.projects, table_of_contents_item_ids integer[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_data_layers_for_items(p public.projects, table_of_contents_item_ids integer[]) IS '@simpleCollections only
+Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
+in conjuction with `dataSourcesForItems` to progressively load layer information
+when users request layers be displayed on the map.
+';
+
+
+--
+-- Name: data_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_sources (
+    id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    project_id integer NOT NULL,
+    type text NOT NULL,
+    attribution text,
+    bounds numeric[],
+    maxzoom integer,
+    minzoom integer,
+    url text,
+    scheme public.tile_scheme,
+    tiles text[],
+    tile_size integer,
+    encoding public.raster_dem_encoding,
+    buffer integer,
+    cluster boolean,
+    cluster_max_zoom integer,
+    cluster_properties jsonb,
+    cluster_radius integer,
+    generate_id boolean,
+    line_metrics boolean,
+    promote_id boolean,
+    tolerance numeric,
+    coordinates numeric[],
+    urls text[],
+    query_parameters jsonb,
+    use_device_pixel_ratio boolean,
+    import_type text,
+    original_source_url text,
+    enhanced_security boolean,
+    bucket_id text,
+    object_key uuid,
+    byte_length integer,
+    CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
+    CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
+);
+
+
+--
+-- Name: TABLE data_sources; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.data_sources IS '
+@omit all
+SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+to include new types to support services such as ArcGIS MapServers and content
+hosted on the SeaSketch CDN.
+
+When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+';
+
+
+--
+-- Name: COLUMN data_sources.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.id IS 'Should be used as sourceId in stylesheets.';
+
+
+--
+-- Name: COLUMN data_sources.type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.type IS 'MapBox GL source type or custom seasketch type.';
+
+
+--
+-- Name: COLUMN data_sources.attribution; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.attribution IS 'Contains an attribution to be displayed when the map is shown to a user.';
+
+
+--
+-- Name: COLUMN data_sources.bounds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.bounds IS 'An array containing the longitude and latitude of the southwest and northeast corners of the source bounding box in the following order: `[sw.lng, sw.lat, ne.lng, ne.lat]`. When this property is included in a source, no tiles outside of the given bounds are requested by Mapbox GL. This property can also be used as metadata for non-tiled sources.';
+
+
+--
+-- Name: COLUMN data_sources.maxzoom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.maxzoom IS 'For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels.';
+
+
+--
+-- Name: COLUMN data_sources.minzoom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.minzoom IS 'For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec.';
+
+
+--
+-- Name: COLUMN data_sources.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.url IS 'A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR';
+
+
+--
+-- Name: COLUMN data_sources.scheme; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.scheme IS 'For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.';
+
+
+--
+-- Name: COLUMN data_sources.tiles; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.tiles IS 'For tiled sources, a list of endpoints that can be used to retrieve tiles.';
+
+
+--
+-- Name: COLUMN data_sources.tile_size; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.tile_size IS 'The minimum visual size to display tiles for this layer. Only configurable for raster layers.';
+
+
+--
+-- Name: COLUMN data_sources.encoding; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.encoding IS 'Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default';
+
+
+--
+-- Name: COLUMN data_sources.buffer; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.buffer IS 'GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance.';
+
+
+--
+-- Name: COLUMN data_sources.cluster; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster IS '
+GeoJSON only.
+
+If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
+
+  * cluster Is true if the point is a cluster
+  * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+  * point_count Number of original points grouped into this cluster
+  * point_count_abbreviated An abbreviated point count
+';
+
+
+--
+-- Name: COLUMN data_sources.cluster_max_zoom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster_max_zoom IS 'GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).';
+
+
+--
+-- Name: COLUMN data_sources.cluster_properties; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster_properties IS 'See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties).';
+
+
+--
+-- Name: COLUMN data_sources.cluster_radius; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster_radius IS 'GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile.';
+
+
+--
+-- Name: COLUMN data_sources.generate_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.generate_id IS 'GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values.';
+
+
+--
+-- Name: COLUMN data_sources.line_metrics; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.line_metrics IS 'GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values.';
+
+
+--
+-- Name: COLUMN data_sources.promote_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.promote_id IS 'GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.`';
+
+
+--
+-- Name: COLUMN data_sources.tolerance; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.tolerance IS 'GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).';
+
+
+--
+-- Name: COLUMN data_sources.coordinates; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.coordinates IS 'Image sources only. Corners of image specified in longitude, latitude pairs.';
+
+
+--
+-- Name: COLUMN data_sources.urls; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.urls IS 'Video sources only. URLs to video content in order of preferred format.';
+
+
+--
+-- Name: COLUMN data_sources.query_parameters; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.query_parameters IS 'ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests.';
+
+
+--
+-- Name: COLUMN data_sources.use_device_pixel_ratio; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.use_device_pixel_ratio IS 'ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.';
+
+
+--
+-- Name: COLUMN data_sources.import_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.import_type IS 'For SeaSketchVector sources, identifies whether the original source comes from a direct upload or a service location like ArcGIS server';
+
+
+--
+-- Name: COLUMN data_sources.original_source_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.original_source_url IS 'For SeaSketchVector sources, identifies location of original service that hosted the data, if any. This can be used to update a layer with an updated copy of the data source if necessary.';
+
+
+--
+-- Name: COLUMN data_sources.enhanced_security; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.enhanced_security IS 'SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a different class of storage that requires a temporary security credential to access. Set during creation and cannot be changed.';
+
+
+--
+-- Name: COLUMN data_sources.bucket_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.bucket_id IS 'SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation.';
+
+
+--
+-- Name: COLUMN data_sources.object_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.object_key IS 'SEASKETCH_VECTOR sources only. S3 object key where data are stored';
+
+
+--
+-- Name: COLUMN data_sources.byte_length; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.byte_length IS 'SEASKETCH_VECTOR sources only. Approximate size of the geojson source';
+
+
+--
+-- Name: projects_data_sources_for_items(public.projects, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_data_sources_for_items(p public.projects, table_of_contents_item_ids integer[]) RETURNS SETOF public.data_sources
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      layer_ids int[];
+      source_ids int[];
+    begin
+      if session_is_admin(p.id) then
+        select array_agg(data_layer_id) into layer_ids from table_of_contents_items where project_id = p.id and id = any("table_of_contents_item_ids");
+      else
+        if session_has_project_access(p.id) then
+          select array_agg(data_layer_id) into layer_ids from table_of_contents_items where project_id = p.id and id = any(table_of_contents_item_ids) and _session_on_toc_item_acl(table_of_contents_items.path);
+        else
+          raise 'Access denied';
+        end if;
+      end if;
+      select array_agg(distinct(data_source_id)) into source_ids from data_layers where id = any(layer_ids);
+      return query select
+        *
+      from
+        data_sources
+      where
+        id = any(source_ids);
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION projects_data_sources_for_items(p public.projects, table_of_contents_item_ids integer[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_data_sources_for_items(p public.projects, table_of_contents_item_ids integer[]) IS '@simpleCollections only
+Retrieve DataSources for a given set of TableOfContentsItem IDs. Should be used
+in conjuction with `dataLayersForItems` to progressively load layer information
+when users request layers be displayed on the map.
+';
+
+
+--
+-- Name: table_of_contents_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.table_of_contents_items (
+    id integer NOT NULL,
+    path public.ltree NOT NULL,
+    stable_id text NOT NULL,
+    parent_stable_id text,
+    is_draft boolean DEFAULT true NOT NULL,
+    project_id integer NOT NULL,
+    title text NOT NULL,
+    is_folder boolean DEFAULT true NOT NULL,
+    show_radio_children boolean DEFAULT false NOT NULL,
+    is_click_off_only boolean DEFAULT false NOT NULL,
+    metadata jsonb,
+    bounds numeric[],
+    data_layer_id integer,
+    CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000)))
+);
+
+
+--
+-- Name: TABLE table_of_contents_items; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.table_of_contents_items IS '
+@omit all
+TableOfContentsItems represent a tree-view of folders and operational layers 
+that can be added to the map. Both layers and folders may be nested into other 
+folders for organization, and each folder has its own access control list.
+
+Items that represent data layers have a `DataLayer` relation, which in turn has
+a reference to a `DataSource`. Usually these relations should be fetched in 
+batch only once the layer is turned on, using the 
+`dataLayersAndSourcesByLayerId` query.
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.path; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.path IS '
+@omit
+ltree-compatible, period delimited list of ancestor stable_ids
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.stable_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.stable_id IS '
+The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
+should be used with a custom alphabet that excludes dashes and has a lenght of 
+9. The purpose of the stable_id is to control the nesting arrangement of items
+and provide a stable reference for layer visibility settings and map bookmarks.
+When published, the id primary key property of the item will change but not the 
+stable_id.
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.parent_stable_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.parent_stable_id IS '
+stable_id of the parent folder, if any. This property cannot be changed 
+directly. To rearrange items into folders, use the 
+`updateTableOfContentsItemParent` mutation.
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_draft; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.is_draft IS 'Identifies whether this item is part of the draft table of contents edited by admin or the static public version. This property cannot be changed. Rather, use the `publishTableOfContents()` mutation';
+
+
+--
+-- Name: COLUMN table_of_contents_items.title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.title IS 'Name used in the table of contents rendering';
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_folder; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.is_folder IS 'If not a folder, the item is a layer-type and must have a data_layer_id';
+
+
+--
+-- Name: COLUMN table_of_contents_items.show_radio_children; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.show_radio_children IS 'If set, children of this folder will appear as radio options so that only one may be toggle at a time';
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_click_off_only; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.is_click_off_only IS 'If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off';
+
+
+--
+-- Name: COLUMN table_of_contents_items.metadata; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.metadata IS 'DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders';
+
+
+--
+-- Name: COLUMN table_of_contents_items.bounds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.bounds IS 'If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy]';
+
+
+--
+-- Name: COLUMN table_of_contents_items.data_layer_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.data_layer_id IS 'If is_folder=false, a DataLayers visibility will be controlled by this item';
+
+
+--
+-- Name: projects_draft_table_of_contents_items(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_draft_table_of_contents_items(p public.projects) RETURNS SETOF public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+    select
+      table_of_contents_items.*
+    from
+      table_of_contents_items
+    where
+      table_of_contents_items.project_id = p.id and table_of_contents_items.is_draft = true;
+  $$;
+
+
+--
+-- Name: FUNCTION projects_draft_table_of_contents_items(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_draft_table_of_contents_items(p public.projects) IS '
+@simpleCollections only
+Draft layer lists, accessible only to admins. Make edits to the layer list and
+then use the `publishTableOfContents` mutation when it is ready for end-users.
+';
+
+
+--
 -- Name: projects_invite(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3675,6 +4651,32 @@ $$;
 
 
 --
+-- Name: projects_table_of_contents_items(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_table_of_contents_items(p public.projects) RETURNS SETOF public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+    select
+      table_of_contents_items.*
+    from
+      table_of_contents_items
+    where
+      table_of_contents_items.project_id = p.id and table_of_contents_items.is_draft = false;
+  $$;
+
+
+--
+-- Name: FUNCTION projects_table_of_contents_items(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_table_of_contents_items(p public.projects) IS '
+@simpleCollections only
+Public layer list. Cannot be edited directly.
+';
+
+
+--
 -- Name: projects_unapproved_participant_count(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3795,6 +4797,256 @@ COMMENT ON FUNCTION public.projects_users_banned_from_forums(project public.proj
 @simpleCollections only
 List of all banned users. Listing only accessible to admins.
 ';
+
+
+--
+-- Name: publish_table_of_contents(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SETOF public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      lid int;
+      item table_of_contents_items;
+      source_id int;
+      copied_source_id int;
+      acl_type access_control_list_type;
+      acl_id int;
+      orig_acl_id int;
+      new_toc_id int;
+    begin
+      -- check permissions
+      -- if session_is_admin("projectId") = false then
+      --   raise 'Permission denied. Must be a project admin';
+      -- end if;
+      -- delete existing published table of contents items, layers, and sources
+      delete from data_sources where id in (
+        select 
+          data_source_id 
+        from
+          data_layers
+        inner JOIN
+          table_of_contents_items
+        on
+          data_layers.id = table_of_contents_items.data_layer_id
+        where
+          table_of_contents_items.project_id = "projectId" and
+          is_draft = false
+      );
+      delete from data_layers where id in (
+        select 
+          data_layer_id 
+        from 
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = false
+      );
+      delete from 
+        table_of_contents_items 
+      where 
+        project_id = "projectId" and 
+        is_draft = false;
+
+      -- one-by-one, copy related layers and link table of contents items
+      for item in 
+        select 
+          * 
+        from 
+          table_of_contents_items 
+        where 
+          is_draft = true and 
+          project_id = "projectId"
+      loop
+        if item.is_folder = false then
+          insert into data_layers (
+            project_id,
+            data_source_id,
+            source_layer,
+            sublayer,
+            render_under,
+            mapbox_gl_styles
+          )
+            select "projectId", 
+              data_source_id, 
+              source_layer, 
+              sublayer, 
+              render_under, 
+              mapbox_gl_styles from data_layers
+            where id = item.data_layer_id
+          returning id into lid;
+        else
+          lid = item.data_layer_id;
+        end if;        
+        insert into table_of_contents_items (
+          is_draft,
+          project_id,
+          path,
+          stable_id,
+          parent_stable_id,
+          title,
+          is_folder,
+          show_radio_children,
+          is_click_off_only,
+          metadata,
+          bounds,
+          data_layer_id
+        ) values (
+          false,
+          "projectId",
+          item.path,
+          item.stable_id,
+          item.parent_stable_id,
+          item.title,
+          item.is_folder,
+          item.show_radio_children,
+          item.is_click_off_only,
+          item.metadata,
+          item.bounds,
+          lid
+        ) returning id into new_toc_id;
+        select 
+          type, id into acl_type, orig_acl_id 
+        from 
+          access_control_lists 
+        where 
+          table_of_contents_item_id = (
+            select 
+              id 
+            from 
+              table_of_contents_items 
+            where is_draft = true and stable_id = item.stable_id
+          );
+        -- copy access control list settings
+        if acl_type != 'public' then
+          update 
+            access_control_lists 
+          set type = acl_type 
+          where table_of_contents_item_id = new_toc_id 
+          returning id into acl_id;
+          if acl_type = 'group' then
+            insert into 
+              access_control_list_groups (
+                access_control_list_id, 
+                group_id
+              ) 
+            select 
+              acl_id, 
+              group_id 
+            from 
+              access_control_list_groups 
+            where 
+              access_control_list_id = orig_acl_id;
+          end if;
+        end if;
+      end loop;
+      -- one-by-one, copy related sources and update foreign keys of layers
+      for source_id in
+        select distinct(data_source_id) from data_layers where id in (
+          select 
+            data_layer_id 
+          from 
+            table_of_contents_items 
+          where 
+            is_draft = false and 
+            project_id = "projectId" and 
+            is_folder = false
+        )
+      loop
+        -- TODO: This function will have to be updated whenever the schema 
+        -- changes since these columns are hard coded... no way around it.
+        insert into data_sources (
+          project_id,
+          type,
+          attribution,
+          bounds,
+          maxzoom,
+          minzoom,
+          url,
+          scheme,
+          tiles,
+          tile_size,
+          encoding,
+          buffer,
+          cluster,
+          cluster_max_zoom,
+          cluster_properties,
+          cluster_radius,
+          generate_id,
+          line_metrics,
+          promote_id,
+          tolerance,
+          coordinates,
+          urls,
+          query_parameters,
+          use_device_pixel_ratio,
+          import_type,
+          original_source_url,
+          enhanced_security,
+          bucket_id,
+          object_key,
+          byte_length
+        )
+          select 
+            "projectId", 
+          type,
+          attribution,
+          bounds,
+          maxzoom,
+          minzoom,
+          url,
+          scheme,
+          tiles,
+          tile_size,
+          encoding,
+          buffer,
+          cluster,
+          cluster_max_zoom,
+          cluster_properties,
+          cluster_radius,
+          generate_id,
+          line_metrics,
+          promote_id,
+          tolerance,
+          coordinates,
+          urls,
+          query_parameters,
+          use_device_pixel_ratio,
+          import_type,
+          original_source_url,
+          enhanced_security,
+          bucket_id,
+          object_key,
+          byte_length
+          from 
+            data_sources 
+          where
+            id = source_id
+          returning id into copied_source_id;
+        update 
+          data_layers 
+        set data_source_id = copied_source_id 
+        where 
+          data_source_id = source_id and
+          data_layers.id in ((
+            select distinct(data_layer_id) from table_of_contents_items where is_draft = false and 
+            project_id = "projectId" and 
+            is_folder = false
+          ));
+      end loop;
+      -- return items
+      return query select * from table_of_contents_items 
+        where project_id = "projectId" and is_draft = false;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION publish_table_of_contents("projectId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.publish_table_of_contents("projectId" integer) IS 'Copies all table of contents items, related layers, sources, and access control lists to create a new table of contents that will be displayed to project users.';
 
 
 --
@@ -4510,8 +5762,8 @@ CREATE TABLE public.forums (
     project_id integer NOT NULL,
     name text NOT NULL,
     "position" integer DEFAULT 0,
-    archived boolean DEFAULT false,
-    description text
+    description text,
+    archived boolean DEFAULT false
 );
 
 
@@ -4542,17 +5794,17 @@ COMMENT ON COLUMN public.forums."position" IS 'Sets position of this forum in th
 
 
 --
--- Name: COLUMN forums.archived; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.forums.archived IS 'Archived forums will only be accessible by project administrators from the admin dashboard. This is an alternative to deleting a forum.';
-
-
---
 -- Name: COLUMN forums.description; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.forums.description IS 'Optional description of the forum to be displayed to project users.';
+
+
+--
+-- Name: COLUMN forums.archived; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.forums.archived IS 'Archived forums will only be accessible by project administrators from the admin dashboard. This is an alternative to deleting a forum.';
 
 
 --
@@ -5520,6 +6772,49 @@ The list of invited groups can be accessed via `Survey.invitedGroups`.
 
 
 --
+-- Name: update_table_of_contents_item_parent(integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "parentStableId" text) RETURNS public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+      parent_path ltree;
+      current_path ltree;
+      item table_of_contents_items;
+    begin
+      select project_id into pid from table_of_contents_items where id = "itemId" and is_draft = true;
+      if pid is null then
+        raise 'Could not find draft item with id = %', "itemId";
+      end if;
+      select path into current_path from table_of_contents_items where id = "itemId" and is_draft = true;
+      if session_is_admin(pid) = false then
+        raise 'Permission denied';
+      end if;
+      select path into parent_path from table_of_contents_items where is_draft = true and project_id = pid and stable_id = "parentStableId";
+      if parent_path is null then
+        raise 'Could not find valid parent with stable_id=%', "parentStableId";
+      else
+        update 
+          table_of_contents_items 
+        set path = parent_path || subpath(path, nlevel(current_path)-1) 
+        where path <@ current_path;
+      end if;
+      select * into item from table_of_contents_items where id = "itemId";
+      return item;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION update_table_of_contents_item_parent("itemId" integer, "parentStableId" text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "parentStableId" text) IS 'Changes the stable_parent_id of the given item. Use to nest items under folders, or move them to the root of the tree by setting parent_stable_id to null';
+
+
+--
 -- Name: users_banned_from_forums(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5710,6 +7005,80 @@ community standards.
 COMMENT ON COLUMN public.community_guidelines.content IS '
 JSON contents are expected to be used with a system like DraftJS on the client.
 ';
+
+
+--
+-- Name: data_layers_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.data_layers ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.data_layers_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: data_source_import_types; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_source_import_types (
+    type text NOT NULL,
+    description text
+);
+
+
+--
+-- Name: TABLE data_source_import_types; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.data_source_import_types IS '@enum';
+
+
+--
+-- Name: data_source_types; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_source_types (
+    type text NOT NULL,
+    description text
+);
+
+
+--
+-- Name: TABLE data_source_types; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.data_source_types IS '@enum';
+
+
+--
+-- Name: data_sources_buckets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_sources_buckets (
+    bucket text NOT NULL,
+    name text NOT NULL,
+    region text NOT NULL,
+    location public.geometry(Point,4326) NOT NULL
+);
+
+
+--
+-- Name: data_sources_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.data_sources ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.data_sources_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
 
 
 --
@@ -6209,6 +7578,20 @@ ALTER TABLE public.surveys ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY 
 
 
 --
+-- Name: table_of_contents_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.table_of_contents_items ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.table_of_contents_items_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: topic_notification_unsubscribes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6300,11 +7683,59 @@ ALTER TABLE ONLY public.access_control_lists
 
 
 --
+-- Name: access_control_lists access_control_lists_table_of_contents_item_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_table_of_contents_item_id_key UNIQUE (table_of_contents_item_id);
+
+
+--
 -- Name: community_guidelines community_guidelines_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.community_guidelines
     ADD CONSTRAINT community_guidelines_pkey PRIMARY KEY (project_id);
+
+
+--
+-- Name: data_layers data_layers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_layers
+    ADD CONSTRAINT data_layers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: data_source_import_types data_source_import_types_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_source_import_types
+    ADD CONSTRAINT data_source_import_types_pkey PRIMARY KEY (type);
+
+
+--
+-- Name: data_source_types data_source_types_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_source_types
+    ADD CONSTRAINT data_source_types_pkey PRIMARY KEY (type);
+
+
+--
+-- Name: data_sources_buckets data_sources_buckets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_sources_buckets
+    ADD CONSTRAINT data_sources_buckets_pkey PRIMARY KEY (bucket);
+
+
+--
+-- Name: data_sources data_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_sources
+    ADD CONSTRAINT data_sources_pkey PRIMARY KEY (id);
 
 
 --
@@ -6579,6 +8010,22 @@ ALTER TABLE ONLY public.surveys
 
 
 --
+-- Name: table_of_contents_items table_of_contents_items_data_layer_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.table_of_contents_items
+    ADD CONSTRAINT table_of_contents_items_data_layer_id_key UNIQUE (data_layer_id);
+
+
+--
+-- Name: table_of_contents_items table_of_contents_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.table_of_contents_items
+    ADD CONSTRAINT table_of_contents_items_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: topic_notification_unsubscribes topic_notification_unsubscribes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6656,24 +8103,10 @@ CREATE UNIQUE INDEX access_control_lists_forum_id_read_idx ON public.access_cont
 
 
 --
--- Name: access_control_lists_forum_id_read_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_forum_id_read_idx1 ON public.access_control_lists USING btree (forum_id_read) WHERE (forum_id_read IS NOT NULL);
-
-
---
 -- Name: access_control_lists_forum_id_write_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX access_control_lists_forum_id_write_idx ON public.access_control_lists USING btree (forum_id_write) WHERE (forum_id_write IS NOT NULL);
-
-
---
--- Name: access_control_lists_forum_id_write_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_forum_id_write_idx1 ON public.access_control_lists USING btree (forum_id_write) WHERE (forum_id_write IS NOT NULL);
 
 
 --
@@ -6688,6 +8121,34 @@ CREATE INDEX access_control_lists_project_id_idx ON public.access_control_lists 
 --
 
 CREATE UNIQUE INDEX access_control_lists_sketch_class_id_idx ON public.access_control_lists USING btree (sketch_class_id) WHERE (sketch_class_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_table_of_contents_item_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_table_of_contents_item_id_idx ON public.access_control_lists USING btree (table_of_contents_item_id) WHERE (table_of_contents_item_id IS NOT NULL);
+
+
+--
+-- Name: data_layers_data_source_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_layers_data_source_id_idx ON public.data_layers USING btree (data_source_id);
+
+
+--
+-- Name: data_layers_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_layers_project_id_idx ON public.data_layers USING btree (project_id);
+
+
+--
+-- Name: data_sources_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_sources_project_id_idx ON public.data_sources USING btree (project_id);
 
 
 --
@@ -6887,6 +8348,13 @@ CREATE INDEX project_slugs ON public.projects USING btree (slug);
 
 
 --
+-- Name: projects_data_sources_bucket_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX projects_data_sources_bucket_id_idx ON public.projects USING btree (data_sources_bucket_id);
+
+
+--
 -- Name: sketch_classes_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7013,6 +8481,20 @@ CREATE INDEX surveys_project_id_idx ON public.surveys USING btree (project_id);
 
 
 --
+-- Name: table_of_contents_items_is_draft_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX table_of_contents_items_is_draft_idx ON public.table_of_contents_items USING btree (is_draft);
+
+
+--
+-- Name: table_of_contents_items_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX table_of_contents_items_project_id_idx ON public.table_of_contents_items USING btree (project_id);
+
+
+--
 -- Name: topic_notification_unsubscribes_topic_id_user_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7066,6 +8548,27 @@ CREATE TRIGGER after_remove_user_from_group_update_survey_invites AFTER DELETE O
 --
 
 CREATE TRIGGER after_response_submission AFTER INSERT OR UPDATE ON public.survey_responses FOR EACH ROW EXECUTE FUNCTION public.after_response_submission();
+
+
+--
+-- Name: data_layers before_insert_or_update_data_layers; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_or_update_data_layers BEFORE INSERT OR UPDATE ON public.data_layers FOR EACH ROW EXECUTE FUNCTION public.before_insert_or_update_data_layers_trigger();
+
+
+--
+-- Name: data_sources before_insert_or_update_data_sources; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_or_update_data_sources BEFORE INSERT OR UPDATE ON public.data_sources FOR EACH ROW EXECUTE FUNCTION public.before_insert_or_update_data_sources_trigger();
+
+
+--
+-- Name: table_of_contents_items before_insert_or_update_table_of_contents_items; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_or_update_table_of_contents_items BEFORE INSERT OR UPDATE ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger();
 
 
 --
@@ -7188,6 +8691,13 @@ CREATE TRIGGER trig_create_sketch_class_acl AFTER INSERT ON public.sketch_classe
 
 
 --
+-- Name: table_of_contents_items trig_create_table_of_contents_item_acl; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trig_create_table_of_contents_item_acl AFTER INSERT ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.create_table_of_contents_item_acl();
+
+
+--
 -- Name: access_control_list_groups access_control_list_groups_access_control_list_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7212,27 +8722,11 @@ ALTER TABLE ONLY public.access_control_lists
 
 
 --
--- Name: access_control_lists access_control_lists_forum_id_read_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.access_control_lists
-    ADD CONSTRAINT access_control_lists_forum_id_read_fkey1 FOREIGN KEY (forum_id_read) REFERENCES public.forums(id) ON DELETE CASCADE;
-
-
---
 -- Name: access_control_lists access_control_lists_forum_id_write_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.access_control_lists
     ADD CONSTRAINT access_control_lists_forum_id_write_fkey FOREIGN KEY (forum_id_write) REFERENCES public.forums(id) ON DELETE CASCADE;
-
-
---
--- Name: access_control_lists access_control_lists_forum_id_write_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.access_control_lists
-    ADD CONSTRAINT access_control_lists_forum_id_write_fkey1 FOREIGN KEY (forum_id_write) REFERENCES public.forums(id) ON DELETE CASCADE;
 
 
 --
@@ -7252,6 +8746,14 @@ ALTER TABLE ONLY public.access_control_lists
 
 
 --
+-- Name: access_control_lists access_control_lists_table_of_contents_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
+
+
+--
 -- Name: community_guidelines community_guidelines_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7267,6 +8769,68 @@ COMMENT ON CONSTRAINT community_guidelines_project_id_fkey ON public.community_g
 @foreignFieldName communityGuidelines
 Community Guidelines for this project when using the discussion forums.
 ';
+
+
+--
+-- Name: data_layers data_layers_data_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_layers
+    ADD CONSTRAINT data_layers_data_source_id_fkey FOREIGN KEY (data_source_id) REFERENCES public.data_sources(id);
+
+
+--
+-- Name: data_layers data_layers_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_layers
+    ADD CONSTRAINT data_layers_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: CONSTRAINT data_layers_project_id_fkey ON data_layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT data_layers_project_id_fkey ON public.data_layers IS '@omit';
+
+
+--
+-- Name: data_sources data_sources_bucket_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_sources
+    ADD CONSTRAINT data_sources_bucket_id_fkey FOREIGN KEY (bucket_id) REFERENCES public.data_sources_buckets(bucket) ON DELETE CASCADE;
+
+
+--
+-- Name: data_sources data_sources_import_type_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_sources
+    ADD CONSTRAINT data_sources_import_type_fkey FOREIGN KEY (import_type) REFERENCES public.data_source_import_types(type) ON DELETE CASCADE;
+
+
+--
+-- Name: data_sources data_sources_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_sources
+    ADD CONSTRAINT data_sources_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: CONSTRAINT data_sources_project_id_fkey ON data_sources; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT data_sources_project_id_fkey ON public.data_sources IS '@omit';
+
+
+--
+-- Name: data_sources data_sources_type_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_sources
+    ADD CONSTRAINT data_sources_type_fkey FOREIGN KEY (type) REFERENCES public.data_source_types(type) ON DELETE CASCADE;
 
 
 --
@@ -7523,6 +9087,14 @@ ALTER TABLE ONLY public.project_participants
 
 
 --
+-- Name: projects projects_data_sources_bucket_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.projects
+    ADD CONSTRAINT projects_data_sources_bucket_id_fkey FOREIGN KEY (data_sources_bucket_id) REFERENCES public.data_sources_buckets(bucket);
+
+
+--
 -- Name: sketch_classes sketch_classes_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7751,6 +9323,29 @@ ALTER TABLE ONLY public.surveys
 
 
 --
+-- Name: table_of_contents_items table_of_contents_items_data_layer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.table_of_contents_items
+    ADD CONSTRAINT table_of_contents_items_data_layer_id_fkey FOREIGN KEY (data_layer_id) REFERENCES public.data_layers(id);
+
+
+--
+-- Name: table_of_contents_items table_of_contents_items_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.table_of_contents_items
+    ADD CONSTRAINT table_of_contents_items_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: CONSTRAINT table_of_contents_items_project_id_fkey ON table_of_contents_items; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT table_of_contents_items_project_id_fkey ON public.table_of_contents_items IS '@omit';
+
+
+--
 -- Name: topic_notification_unsubscribes topic_notification_unsubscribes_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7798,23 +9393,6 @@ COMMENT ON CONSTRAINT user_profiles_user_id_fkey ON public.user_profiles IS '@om
 
 
 --
--- Name: postgraphile_watch_ddl; Type: EVENT TRIGGER; Schema: -; Owner: -
---
-
-CREATE EVENT TRIGGER postgraphile_watch_ddl ON ddl_command_end
-         WHEN TAG IN ('ALTER AGGREGATE', 'ALTER DOMAIN', 'ALTER EXTENSION', 'ALTER FOREIGN TABLE', 'ALTER FUNCTION', 'ALTER POLICY', 'ALTER SCHEMA', 'ALTER TABLE', 'ALTER TYPE', 'ALTER VIEW', 'COMMENT', 'CREATE AGGREGATE', 'CREATE DOMAIN', 'CREATE EXTENSION', 'CREATE FOREIGN TABLE', 'CREATE FUNCTION', 'CREATE INDEX', 'CREATE POLICY', 'CREATE RULE', 'CREATE SCHEMA', 'CREATE TABLE', 'CREATE TABLE AS', 'CREATE VIEW', 'DROP AGGREGATE', 'DROP DOMAIN', 'DROP EXTENSION', 'DROP FOREIGN TABLE', 'DROP FUNCTION', 'DROP INDEX', 'DROP OWNED', 'DROP POLICY', 'DROP RULE', 'DROP SCHEMA', 'DROP TABLE', 'DROP TYPE', 'DROP VIEW', 'GRANT', 'REVOKE', 'SELECT INTO')
-   EXECUTE FUNCTION postgraphile_watch.notify_watchers_ddl();
-
-
---
--- Name: postgraphile_watch_drop; Type: EVENT TRIGGER; Schema: -; Owner: -
---
-
-CREATE EVENT TRIGGER postgraphile_watch_drop ON sql_drop
-   EXECUTE FUNCTION postgraphile_watch.notify_watchers_drop();
-
-
---
 -- Name: access_control_lists; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -7835,11 +9413,15 @@ CREATE POLICY access_control_lists_update ON public.access_control_lists FOR UPD
    FROM public.sketch_classes
   WHERE (sketch_classes.id = access_control_lists.sketch_class_id))) OR public.session_is_admin(( SELECT forums.project_id
    FROM public.forums
-  WHERE ((forums.id = access_control_lists.forum_id_read) OR (forums.id = access_control_lists.forum_id_write)))))) WITH CHECK ((public.session_is_admin(( SELECT sketch_classes.project_id
+  WHERE ((forums.id = access_control_lists.forum_id_read) OR (forums.id = access_control_lists.forum_id_write)))) OR public.session_is_admin(( SELECT table_of_contents_items.project_id
+   FROM public.table_of_contents_items
+  WHERE (table_of_contents_items.id = access_control_lists.table_of_contents_item_id))))) WITH CHECK ((public.session_is_admin(( SELECT sketch_classes.project_id
    FROM public.sketch_classes
   WHERE (sketch_classes.id = access_control_lists.sketch_class_id))) OR public.session_is_admin(( SELECT forums.project_id
    FROM public.forums
-  WHERE ((forums.id = access_control_lists.forum_id_read) OR (forums.id = access_control_lists.forum_id_write))))));
+  WHERE ((forums.id = access_control_lists.forum_id_read) OR (forums.id = access_control_lists.forum_id_write)))) OR public.session_is_admin(( SELECT table_of_contents_items.project_id
+   FROM public.table_of_contents_items
+  WHERE (table_of_contents_items.id = access_control_lists.table_of_contents_item_id)))));
 
 
 --
@@ -7860,6 +9442,86 @@ CREATE POLICY community_guidelines_admin ON public.community_guidelines TO seask
 --
 
 CREATE POLICY community_guidelines_select ON public.community_guidelines FOR SELECT TO seasketch_user USING (public.session_has_project_access(project_id));
+
+
+--
+-- Name: data_layers; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.data_layers ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: data_layers data_layers_delete; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY data_layers_delete ON public.data_layers FOR DELETE USING (public.session_is_admin(project_id));
+
+
+--
+-- Name: data_layers data_layers_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY data_layers_insert ON public.data_layers FOR INSERT WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: data_layers data_layers_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY data_layers_select ON public.data_layers FOR SELECT USING ((public.session_is_admin(project_id) OR public._session_on_toc_item_acl(( SELECT table_of_contents_items.path
+   FROM public.table_of_contents_items
+  WHERE ((table_of_contents_items.is_draft = false) AND (table_of_contents_items.data_layer_id = data_layers.id))))));
+
+
+--
+-- Name: data_layers data_layers_update; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY data_layers_update ON public.data_layers FOR UPDATE USING ((public.session_is_admin(project_id) AND ( SELECT (( SELECT 1
+           FROM public.table_of_contents_items
+          WHERE ((table_of_contents_items.data_layer_id = data_layers.id) AND (table_of_contents_items.is_draft = false))) IS NULL)))) WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: data_sources; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.data_sources ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: data_sources data_sources_delete; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY data_sources_delete ON public.data_sources FOR DELETE USING (public.session_is_admin(project_id));
+
+
+--
+-- Name: data_sources data_sources_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY data_sources_insert ON public.data_sources FOR INSERT WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: data_sources data_sources_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY data_sources_select ON public.data_sources FOR SELECT USING ((public.session_is_admin(project_id) OR public._session_on_toc_item_acl(( SELECT table_of_contents_items.path
+   FROM public.table_of_contents_items
+  WHERE ((table_of_contents_items.is_draft = false) AND (table_of_contents_items.data_layer_id = ( SELECT data_layers.id
+           FROM public.data_layers
+          WHERE (data_layers.data_source_id = data_sources.id))))))));
+
+
+--
+-- Name: data_sources data_sources_update; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY data_sources_update ON public.data_sources FOR UPDATE USING ((public.session_is_admin(project_id) AND ( SELECT (( SELECT 1
+           FROM public.table_of_contents_items
+          WHERE ((table_of_contents_items.data_layer_id = ( SELECT data_layers.id
+                   FROM public.data_layers
+                  WHERE (data_layers.data_source_id = data_sources.id))) AND (table_of_contents_items.is_draft = false))) IS NULL)))) WITH CHECK (public.session_is_admin(project_id));
 
 
 --
@@ -8266,6 +9928,26 @@ CREATE POLICY surveys_select ON public.surveys FOR SELECT TO anon USING ((public
 
 
 --
+-- Name: table_of_contents_items; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.table_of_contents_items ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: table_of_contents_items table_of_contents_items_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY table_of_contents_items_admin ON public.table_of_contents_items USING (public.session_is_admin(project_id)) WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: table_of_contents_items table_of_contents_items_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY table_of_contents_items_select ON public.table_of_contents_items FOR SELECT TO anon USING ((public.session_has_project_access(project_id) AND (is_draft = false) AND public._session_on_toc_item_acl(path)));
+
+
+--
 -- Name: topics; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -8508,6 +10190,104 @@ REVOKE ALL ON FUNCTION public.gidx_out(public.gidx) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION lquery_in(cstring); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lquery_in(cstring) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lquery_out(public.lquery); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lquery_out(public.lquery) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lquery_recv(internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lquery_recv(internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lquery_send(public.lquery); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lquery_send(public.lquery) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_in(cstring); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_in(cstring) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_out(public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_out(public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_recv(internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_recv(internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_send(public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_send(public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_gist_in(cstring); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_gist_in(cstring) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_gist_out(public.ltree_gist); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_gist_out(public.ltree_gist) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltxtq_in(cstring); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltxtq_in(cstring) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltxtq_out(public.ltxtquery); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltxtq_out(public.ltxtquery) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltxtq_recv(internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltxtq_recv(internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltxtq_send(public.ltxtquery); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltxtq_send(public.ltxtquery) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION spheroid_in(cstring); Type: ACL; Schema: public; Owner: -
 --
 
@@ -8522,10 +10302,171 @@ REVOKE ALL ON FUNCTION public.spheroid_out(public.spheroid) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION gen_random_uuid(); Type: ACL; Schema: pg_catalog; Owner: -
+--
+
+GRANT ALL ON FUNCTION pg_catalog.gen_random_uuid() TO anon;
+
+
+--
 -- Name: FUNCTION texticregexeq(text, text); Type: ACL; Schema: pg_catalog; Owner: -
 --
 
 GRANT ALL ON FUNCTION pg_catalog.texticregexeq(text, text) TO anon;
+
+
+--
+-- Name: FUNCTION _delete_table_of_contents_item(tid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._delete_table_of_contents_item(tid integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _lt_q_regex(public.ltree[], public.lquery[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._lt_q_regex(public.ltree[], public.lquery[]) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _lt_q_rregex(public.lquery[], public.ltree[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._lt_q_rregex(public.lquery[], public.ltree[]) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltq_extract_regex(public.ltree[], public.lquery); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltq_extract_regex(public.ltree[], public.lquery) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltq_regex(public.ltree[], public.lquery); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltq_regex(public.ltree[], public.lquery) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltq_rregex(public.lquery, public.ltree[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltq_rregex(public.lquery, public.ltree[]) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_compress(internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_compress(internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_consistent(internal, public.ltree[], smallint, oid, internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_consistent(internal, public.ltree[], smallint, oid, internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_extract_isparent(public.ltree[], public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_extract_isparent(public.ltree[], public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_extract_risparent(public.ltree[], public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_extract_risparent(public.ltree[], public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_gist_options(internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_gist_options(internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_isparent(public.ltree[], public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_isparent(public.ltree[], public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_penalty(internal, internal, internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_penalty(internal, internal, internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_picksplit(internal, internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_picksplit(internal, internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_r_isparent(public.ltree, public.ltree[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_r_isparent(public.ltree, public.ltree[]) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_r_risparent(public.ltree, public.ltree[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_r_risparent(public.ltree, public.ltree[]) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_risparent(public.ltree[], public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_risparent(public.ltree[], public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_same(public.ltree_gist, public.ltree_gist, internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_same(public.ltree_gist, public.ltree_gist, internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltree_union(internal, internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltree_union(internal, internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltxtq_exec(public.ltree[], public.ltxtquery); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltxtq_exec(public.ltree[], public.ltxtquery) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltxtq_extract_exec(public.ltree[], public.ltxtquery); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltxtq_extract_exec(public.ltree[], public.ltxtquery) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _ltxtq_rexec(public.ltxtquery, public.ltree[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._ltxtq_rexec(public.ltxtquery, public.ltree[]) FROM PUBLIC;
 
 
 --
@@ -8575,6 +10516,22 @@ REVOKE ALL ON FUNCTION public._postgis_selectivity(tbl regclass, att_name text, 
 --
 
 REVOKE ALL ON FUNCTION public._postgis_stats(tbl regclass, att_name text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _session_on_toc_item_acl(tocid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._session_on_toc_item_acl(tocid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public._session_on_toc_item_acl(tocid integer) TO anon;
+
+
+--
+-- Name: FUNCTION _session_on_toc_item_acl(lpath public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._session_on_toc_item_acl(lpath public.ltree) FROM PUBLIC;
+GRANT ALL ON FUNCTION public._session_on_toc_item_acl(lpath public.ltree) TO anon;
 
 
 --
@@ -8979,6 +10936,27 @@ REVOKE ALL ON FUNCTION public.armor(bytea, text[], text[]) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.auto_create_profile() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION before_insert_or_update_data_layers_trigger(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_insert_or_update_data_layers_trigger() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION before_insert_or_update_data_sources_trigger(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_insert_or_update_data_sources_trigger() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION before_insert_or_update_table_of_contents_items_trigger(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_insert_or_update_table_of_contents_items_trigger() FROM PUBLIC;
 
 
 --
@@ -9486,6 +11464,14 @@ GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
 
 
 --
+-- Name: COLUMN projects.data_sources_bucket_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -9559,6 +11545,13 @@ GRANT ALL ON FUNCTION public.create_survey_invites("surveyId" integer, "includeP
 
 
 --
+-- Name: FUNCTION create_table_of_contents_item_acl(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_table_of_contents_item_acl() FROM PUBLIC;
+
+
+--
 -- Name: TABLE topics; Type: ACL; Schema: public; Owner: -
 --
 
@@ -9618,6 +11611,22 @@ REVOKE ALL ON FUNCTION public.dearmor(text) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION debug_toc_acl(tocid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.debug_toc_acl(tocid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.debug_toc_acl(tocid integer) TO anon;
+
+
+--
+-- Name: FUNCTION debug_toc_acl(tocid integer, project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.debug_toc_acl(tocid integer, project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.debug_toc_acl(tocid integer, project_id integer) TO anon;
+
+
+--
 -- Name: FUNCTION decrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -9637,6 +11646,14 @@ REVOKE ALL ON FUNCTION public.decrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.delete_project(project_id integer, OUT project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.delete_project(project_id integer, OUT project public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION delete_table_of_contents_branch("tableOfContentsItemId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) TO seasketch_user;
 
 
 --
@@ -10632,6 +12649,20 @@ REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION index(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.index(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION index(public.ltree, public.ltree, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.index(public.ltree, public.ltree, integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION initialize_blank_sketch_class_form(sketch_class_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -10729,6 +12760,62 @@ REVOKE ALL ON FUNCTION public.jsonb(public.geometry) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION lca(public.ltree[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lca(public.ltree[]) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lca(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lca(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lca(public.ltree, public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lca(public.ltree, public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lca(public.ltree, public.ltree, public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lca(public.ltree, public.ltree, public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lca(public.ltree, public.ltree, public.ltree, public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lca(public.ltree, public.ltree, public.ltree, public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lca(public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lca(public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lca(public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lca(public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lca(public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lca(public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION leave_project(project_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -10769,6 +12856,203 @@ REVOKE ALL ON FUNCTION public.lockrow(text, text, text, text, timestamp without 
 --
 
 REVOKE ALL ON FUNCTION public.longtransactionsenabled() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lt_q_regex(public.ltree, public.lquery[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lt_q_regex(public.ltree, public.lquery[]) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION lt_q_rregex(public.lquery[], public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.lt_q_rregex(public.lquery[], public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltq_regex(public.ltree, public.lquery); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltq_regex(public.ltree, public.lquery) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltq_rregex(public.lquery, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltq_rregex(public.lquery, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree2text(public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree2text(public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_addltree(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_addltree(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_addtext(public.ltree, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_addtext(public.ltree, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_cmp(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_cmp(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_compress(internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_compress(internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_consistent(internal, public.ltree, smallint, oid, internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_consistent(internal, public.ltree, smallint, oid, internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_decompress(internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_decompress(internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_eq(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_eq(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_ge(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_ge(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_gist_options(internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_gist_options(internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_gt(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_gt(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_isparent(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_isparent(public.ltree, public.ltree) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.ltree_isparent(public.ltree, public.ltree) TO anon;
+
+
+--
+-- Name: FUNCTION ltree_le(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_le(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_lt(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_lt(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_ne(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_ne(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_penalty(internal, internal, internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_penalty(internal, internal, internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_picksplit(internal, internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_picksplit(internal, internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_risparent(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_risparent(public.ltree, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_same(public.ltree_gist, public.ltree_gist, internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_same(public.ltree_gist, public.ltree_gist, internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_textadd(text, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_textadd(text, public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltree_union(internal, internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltree_union(internal, internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltreeparentsel(internal, oid, internal, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltreeparentsel(internal, oid, internal, integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltxtq_exec(public.ltree, public.ltxtquery); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltxtq_exec(public.ltree, public.ltxtquery) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION ltxtq_rexec(public.ltxtquery, public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.ltxtq_rexec(public.ltxtquery, public.ltree) FROM PUBLIC;
 
 
 --
@@ -10880,6 +13164,13 @@ GRANT UPDATE(geom) ON TABLE public.sketches TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.my_sketches("projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.my_sketches("projectId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION nlevel(public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.nlevel(public.ltree) FROM PUBLIC;
 
 
 --
@@ -11604,6 +13895,294 @@ GRANT ALL ON FUNCTION public.projects_admins(p public.projects) TO seasketch_use
 
 
 --
+-- Name: TABLE data_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.data_layers TO anon;
+GRANT ALL ON TABLE public.data_layers TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_data_layers_for_items(p public.projects, table_of_contents_item_ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_data_layers_for_items(p public.projects, table_of_contents_item_ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_data_layers_for_items(p public.projects, table_of_contents_item_ids integer[]) TO anon;
+
+
+--
+-- Name: TABLE data_sources; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.data_sources TO anon;
+GRANT SELECT,INSERT,DELETE ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.attribution; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(attribution) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.maxzoom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(maxzoom) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.minzoom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(minzoom) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(url) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.scheme; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(scheme) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.tiles; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(tiles) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.tile_size; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(tile_size) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.encoding; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(encoding) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.buffer; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(buffer) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster_max_zoom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster_max_zoom) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster_properties; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster_properties) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster_radius; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster_radius) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.generate_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(generate_id) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.line_metrics; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(line_metrics) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.promote_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(promote_id) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.tolerance; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(tolerance) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.coordinates; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(coordinates) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.urls; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(urls) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.query_parameters; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(query_parameters) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.use_device_pixel_ratio; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_data_sources_for_items(p public.projects, table_of_contents_item_ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_data_sources_for_items(p public.projects, table_of_contents_item_ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_data_sources_for_items(p public.projects, table_of_contents_item_ids integer[]) TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.path; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(path) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.stable_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(stable_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(stable_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.parent_stable_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(parent_stable_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(parent_stable_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_draft; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_draft) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.project_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(project_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(project_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.title; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(title),UPDATE(title) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(title) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_folder; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(is_folder) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(is_folder) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.show_radio_children; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(show_radio_children),UPDATE(show_radio_children) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(show_radio_children) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_click_off_only; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(is_click_off_only),UPDATE(is_click_off_only) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(is_click_off_only) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.metadata; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(metadata),UPDATE(metadata) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(metadata) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.bounds; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(bounds),UPDATE(bounds) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(bounds) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.data_layer_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(data_layer_id),UPDATE(data_layer_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(data_layer_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: FUNCTION projects_draft_table_of_contents_items(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_draft_table_of_contents_items(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_draft_table_of_contents_items(p public.projects) TO anon;
+
+
+--
 -- Name: FUNCTION projects_invite(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -11700,6 +14279,14 @@ GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.proj
 
 
 --
+-- Name: FUNCTION projects_table_of_contents_items(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_table_of_contents_items(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_table_of_contents_items(p public.projects) TO anon;
+
+
+--
 -- Name: FUNCTION projects_unapproved_participant_count(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -11729,6 +14316,14 @@ GRANT ALL ON FUNCTION public.projects_url(p public.projects) TO anon;
 
 REVOKE ALL ON FUNCTION public.projects_users_banned_from_forums(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_users_banned_from_forums(project public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION publish_table_of_contents("projectId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.publish_table_of_contents("projectId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.publish_table_of_contents("projectId" integer) TO seasketch_user;
 
 
 --
@@ -12066,17 +14661,17 @@ GRANT UPDATE("position") ON TABLE public.forums TO seasketch_user;
 
 
 --
--- Name: COLUMN forums.archived; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(archived) ON TABLE public.forums TO seasketch_user;
-
-
---
 -- Name: COLUMN forums.description; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(description) ON TABLE public.forums TO seasketch_user;
+
+
+--
+-- Name: COLUMN forums.archived; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(archived) ON TABLE public.forums TO seasketch_user;
 
 
 --
@@ -14949,6 +17544,27 @@ REVOKE ALL ON FUNCTION public.strpos(public.citext, public.citext) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION subltree(public.ltree, integer, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.subltree(public.ltree, integer, integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION subpath(public.ltree, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.subpath(public.ltree, integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION subpath(public.ltree, integer, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.subpath(public.ltree, integer, integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION survey_group_ids(id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15032,6 +17648,13 @@ GRANT ALL ON FUNCTION public.template_forms() TO anon;
 
 REVOKE ALL ON FUNCTION public.text(public.geometry) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.text(public.geometry) TO anon;
+
+
+--
+-- Name: FUNCTION text2ltree(text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.text2ltree(text) FROM PUBLIC;
 
 
 --
@@ -15162,6 +17785,14 @@ REVOKE ALL ON FUNCTION public.update_survey_group_invites(surveyid integer) FROM
 
 REVOKE ALL ON FUNCTION public.update_survey_invited_groups("surveyId" integer, "groupIds" integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_survey_invited_groups("surveyId" integer, "groupIds" integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_table_of_contents_item_parent("itemId" integer, "parentStableId" text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "parentStableId" text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "parentStableId" text) TO seasketch_user;
 
 
 --
@@ -15444,6 +18075,27 @@ GRANT UPDATE(content) ON TABLE public.community_guidelines TO seasketch_user;
 
 
 --
+-- Name: TABLE data_source_import_types; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.data_source_import_types TO anon;
+
+
+--
+-- Name: TABLE data_source_types; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.data_source_types TO anon;
+
+
+--
+-- Name: TABLE data_sources_buckets; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.data_sources_buckets TO anon;
+
+
+--
 -- Name: TABLE email_notification_preferences; Type: ACL; Schema: public; Owner: -
 --
 
@@ -15526,6 +18178,23 @@ GRANT INSERT,DELETE ON TABLE public.survey_invited_groups TO seasketch_user;
 --
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE ALL ON FUNCTIONS  FROM PUBLIC;
+
+
+--
+-- Name: postgraphile_watch_ddl; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER postgraphile_watch_ddl ON ddl_command_end
+         WHEN TAG IN ('ALTER AGGREGATE', 'ALTER DOMAIN', 'ALTER EXTENSION', 'ALTER FOREIGN TABLE', 'ALTER FUNCTION', 'ALTER POLICY', 'ALTER SCHEMA', 'ALTER TABLE', 'ALTER TYPE', 'ALTER VIEW', 'COMMENT', 'CREATE AGGREGATE', 'CREATE DOMAIN', 'CREATE EXTENSION', 'CREATE FOREIGN TABLE', 'CREATE FUNCTION', 'CREATE INDEX', 'CREATE POLICY', 'CREATE RULE', 'CREATE SCHEMA', 'CREATE TABLE', 'CREATE TABLE AS', 'CREATE VIEW', 'DROP AGGREGATE', 'DROP DOMAIN', 'DROP EXTENSION', 'DROP FOREIGN TABLE', 'DROP FUNCTION', 'DROP INDEX', 'DROP OWNED', 'DROP POLICY', 'DROP RULE', 'DROP SCHEMA', 'DROP TABLE', 'DROP TYPE', 'DROP VIEW', 'GRANT', 'REVOKE', 'SELECT INTO')
+   EXECUTE FUNCTION postgraphile_watch.notify_watchers_ddl();
+
+
+--
+-- Name: postgraphile_watch_drop; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER postgraphile_watch_drop ON sql_drop
+   EXECUTE FUNCTION postgraphile_watch.notify_watchers_drop();
 
 
 --

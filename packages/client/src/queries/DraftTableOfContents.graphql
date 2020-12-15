@@ -63,3 +63,35 @@ query layersAndSourcesForItems(
     }
   }
 }
+
+mutation CreateFolder(
+  $title: String!
+  $stableId: String!
+  $projectId: Int!
+  $parentStableId: String
+) {
+  createTableOfContentsItem(
+    input: {
+      tableOfContentsItem: {
+        title: $title
+        stableId: $stableId
+        projectId: $projectId
+        parentStableId: $parentStableId
+        isFolder: true
+      }
+    }
+  ) {
+    tableOfContentsItem {
+      id
+      title
+      stableId
+      projectId
+      parentStableId
+      isClickOffOnly
+      isDraft
+      isFolder
+      showRadioChildren
+      isClickOffOnly
+    }
+  }
+}

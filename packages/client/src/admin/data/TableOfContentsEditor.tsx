@@ -12,30 +12,38 @@ import {
   TableOfContentsItem,
   useDraftTableOfContentsQuery,
   useLayersAndSourcesForItemsQuery,
+  useCreateFolderMutation,
+  DraftTableOfContentsDocument,
 } from "../../generated/graphql";
+import useProjectId from "../../useProjectId";
+import { generateStableId } from "./arcgis/arcgis";
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
   const { slug } = useParams<{ slug: string }>();
   const { manager } = useContext(LayerManagerContext);
-  const { data, loading, error, refetch } = useDraftTableOfContentsQuery({
+  const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },
   });
+  const projectId = useProjectId();
   const [treeItems, setTreeItems] = useState<ClientTableOfContentsItem[]>([]);
+  const [createFolder, createFolderState] = useCreateFolderMutation();
 
   useEffect(() => {
-    if (data?.projectBySlug?.draftTableOfContentsItems) {
-      setTreeItems(nestItems(data.projectBySlug.draftTableOfContentsItems));
+    if (tocQuery.data?.projectBySlug?.draftTableOfContentsItems) {
+      setTreeItems(
+        nestItems(tocQuery.data.projectBySlug.draftTableOfContentsItems)
+      );
     } else {
       setTreeItems([]);
     }
-  }, [data?.projectBySlug?.draftTableOfContentsItems]);
+  }, [tocQuery.data?.projectBySlug?.draftTableOfContentsItems]);
 
   const layersAndSources = useLayersAndSourcesForItemsQuery({
     variables: {
       slug,
       tableOfContentsItemIds:
-        data?.projectBySlug?.draftTableOfContentsItems?.map(
+        tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.map(
           (item) => item.id
         ) || [],
     },
@@ -72,13 +80,44 @@ export default function TableOfContentsEditor() {
           >
             Add data
           </Link>
-          <button className="bg-white rounded shadow-sm border-grey-500 border px-2 py-0.5 text-sm mx-2">
+          <button
+            className="bg-white rounded shadow-sm border-grey-500 border px-2 py-0.5 text-sm mx-2"
+            onClick={async () => {
+              const folderName = window.prompt("Folder name");
+              if (folderName && folderName.length) {
+                try {
+                  const response = await createFolder({
+                    variables: {
+                      projectId: projectId!,
+                      stableId: generateStableId(),
+                      title: folderName,
+                    },
+                  });
+                  // tocQuery.updateQuery((prev) => {
+
+                  //   tocQuery.data!.projectBySlug!.draftTableOfContentsItems!.unshift(
+                  //     response.data!.createTableOfContentsItem!
+                  //       .tableOfContentsItem!
+                  //   );
+                  //   return {
+                  //     ...tocQuery.data,
+                  //   };
+                  // });
+                  // TODO: make this a bit more efficient. Right now the whole
+                  // list has to be refreshed along with data layers and sources
+                  tocQuery.refetch();
+                } catch (e) {
+                  alert(e.message);
+                }
+              }
+            }}
+          >
             Add folder
           </button>
         </div>
       </header>
       <div className="flex-1 overflow-y-scroll p-4 pt-16">
-        {loading && <Spinner />}
+        {tocQuery.loading && <Spinner />}
         <TableOfContents onChange={(e) => setTreeItems(e)} nodes={treeItems} />
       </div>
     </div>
