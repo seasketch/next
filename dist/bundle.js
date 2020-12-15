@@ -289,22 +289,17 @@ var MapBoxGLEsriSources = (function (exports) {
         await fetchData(url, params, featureCollection, onError, abortController || new AbortController(), onPageReceived, disablePagination, pageSize, bytesLimit);
         return featureCollection;
     }
-    async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIds) {
+    async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount) {
         bytesReceived = bytesReceived || 0;
         const decoder = new TextDecoder("utf-8");
         params.set("returnIdsOnly", "false");
         if (featureCollection.features.length > 0) {
-            if (objectIds) {
-                const nextPageObjectIds = objectIds.slice(0, pageSize);
-                params.delete("where");
-                params.delete("resultOffset");
-                params.delete("resultRecordCount");
-                params.set("objectIds", nextPageObjectIds.join(","));
-            }
-            else {
-                params.set("resultOffset", featureCollection.features.length.toString());
-                params.set("resultRecordCount", pageSize.toString());
-            }
+            params.delete("where");
+            params.delete("resultOffset");
+            params.delete("resultRecordCount");
+            params.set("orderByFields", objectIdFieldName);
+            const lastFeature = featureCollection.features[featureCollection.features.length - 1];
+            params.set("where", `${objectIdFieldName}>${lastFeature.id}`);
         }
         const response = await fetch(`${baseUrl}/query?${params.toString()}`, {
             mode: "cors",
@@ -318,43 +313,31 @@ var MapBoxGLEsriSources = (function (exports) {
         }
         const fc = JSON.parse(str);
         if (fc.error) {
-            if (/pagination/i.test(fc.error.message)) {
-                params.delete("resultOffset");
-                params.delete("resultRecordCount");
-                params.set("returnIdsOnly", "true");
-                try {
-                    const r = await fetch(`${baseUrl}/query?${params.toString()}`, {
-                        mode: "cors",
-                        signal: abortController.signal,
-                    });
-                    const featureIds = featureCollection.features.map((f) => f.id);
-                    const objectIdParameters = await r.json();
-                    await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdParameters.objectIds.filter((id) => featureIds.indexOf(id) === -1));
-                }
-                catch (e) {
-                    return onError(e);
-                }
-            }
-            else {
-                return onError(new Error(fc.error.message));
-            }
+            return onError(new Error(fc.error.message));
         }
         else {
             featureCollection.features.push(...fc.features);
-            if (onPageReceived) {
-                onPageReceived(bytesReceived, featureCollection.features.length, 0);
-            }
-            if (objectIds) {
-                let priorLength = objectIds.length;
-                const featureIds = fc.features.map((f) => f.id);
-                objectIds = objectIds.filter((id) => featureIds.indexOf(id) === -1);
-                if (priorLength <= objectIds.length) {
-                    const e = new Error("Feature id's coming from server do not match those requested");
-                    return onError(e);
+            if (fc.exceededTransferLimit) {
+                if (!objectIdFieldName) {
+                    params.set("returnIdsOnly", "true");
+                    try {
+                        const r = await fetch(`${baseUrl}/query?${params.toString()}`, {
+                            mode: "cors",
+                            signal: abortController.signal,
+                        });
+                        const featureIds = featureCollection.features.map((f) => f.id);
+                        const objectIdParameters = await r.json();
+                        expectedFeatureCount = objectIdParameters.objectIds.length;
+                        objectIdFieldName = objectIdParameters.objectIdFieldName;
+                    }
+                    catch (e) {
+                        return onError(e);
+                    }
                 }
-            }
-            if (fc.exceededTransferLimit || (objectIds && objectIds.length)) {
-                await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIds);
+                if (onPageReceived) {
+                    onPageReceived(bytesReceived, featureCollection.features.length, expectedFeatureCount);
+                }
+                await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount);
             }
         }
         return bytesReceived;
