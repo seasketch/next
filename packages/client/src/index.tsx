@@ -21,6 +21,7 @@ function Auth0ProviderWithRouter(props: any) {
         history.replace(location);
       }}
       scope="openid profile email permissions"
+      cacheLocation="localstorage"
     >
       {props.children}
     </Auth0Provider>
