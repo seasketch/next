@@ -2,3 +2,4 @@
 **/.DS_Store
 **/dist/*
 NOTES.md
+**/.env
