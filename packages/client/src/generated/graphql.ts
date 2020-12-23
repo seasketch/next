@@ -4422,11 +4422,7 @@ export type Mutation = {
   updateTableOfContentsItemByDataLayerId?: Maybe<UpdateTableOfContentsItemPayload>;
   /** Updates a single `TableOfContentsItem` using its globally unique id and a patch. */
   updateTableOfContentsItemByNodeId?: Maybe<UpdateTableOfContentsItemPayload>;
-  /**
-   * Changes the stable_parent_id of the given item. Use to nest items under
-   * folders, or move them to the root of the tree by setting parent_stable_id to null
-   */
-  updateTableOfContentsItemParent?: Maybe<UpdateTableOfContentsItemParentPayload>;
+  updateTableOfContentsItemChildren?: Maybe<UpdateTableOfContentsItemChildrenPayload>;
   /** Updates a single `Topic` using a unique key and a patch. */
   updateTopic?: Maybe<UpdateTopicPayload>;
   /** Updates a single `Topic` using its globally unique id and a patch. */
@@ -5305,8 +5301,8 @@ export type MutationUpdateTableOfContentsItemByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateTableOfContentsItemParentArgs = {
-  input: UpdateTableOfContentsItemParentInput;
+export type MutationUpdateTableOfContentsItemChildrenArgs = {
+  input: UpdateTableOfContentsItemChildrenInput;
 };
 
 
@@ -8616,6 +8612,8 @@ export type TableOfContentsItem = Node & {
   projectId: Scalars['Int'];
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
+  /** Position in the layer list */
+  sortIndex: Scalars['Int'];
   /**
    * The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
    * should be used with a custom alphabet that excludes dashes and has a lenght of 
@@ -9863,6 +9861,30 @@ export type UpdateTableOfContentsItemByNodeIdInput = {
   patch: TableOfContentsItemPatch;
 };
 
+/** All input for the `updateTableOfContentsItemChildren` mutation. */
+export type UpdateTableOfContentsItemChildrenInput = {
+  childIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  parentId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `updateTableOfContentsItemChildren` mutation. */
+export type UpdateTableOfContentsItemChildrenPayload = {
+  __typename?: 'UpdateTableOfContentsItemChildrenPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+};
+
 /** All input for the `updateTableOfContentsItem` mutation. */
 export type UpdateTableOfContentsItemInput = {
   /**
@@ -9873,40 +9895,6 @@ export type UpdateTableOfContentsItemInput = {
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `TableOfContentsItem` being updated. */
   patch: TableOfContentsItemPatch;
-};
-
-/** All input for the `updateTableOfContentsItemParent` mutation. */
-export type UpdateTableOfContentsItemParentInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  itemId?: Maybe<Scalars['Int']>;
-  parentStableId?: Maybe<Scalars['String']>;
-};
-
-/** The output of our `updateTableOfContentsItemParent` mutation. */
-export type UpdateTableOfContentsItemParentPayload = {
-  __typename?: 'UpdateTableOfContentsItemParentPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
-  dataLayer?: Maybe<DataLayer>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  tableOfContentsItem?: Maybe<TableOfContentsItem>;
-  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
-  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
-};
-
-
-/** The output of our `updateTableOfContentsItemParent` mutation. */
-export type UpdateTableOfContentsItemParentPayloadTableOfContentsItemEdgeArgs = {
-  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
 /** The output of our update `TableOfContentsItem` mutation. */
@@ -10298,9 +10286,10 @@ export type DraftTableOfContentsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
+    & Pick<Project, 'id'>
     & { draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren'>
+      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren' | 'bounds' | 'sortIndex'>
       & { acl?: Maybe<(
         { __typename?: 'Acl' }
         & Pick<Acl, 'type'>
@@ -10344,8 +10333,38 @@ export type CreateFolderMutation = (
     { __typename?: 'CreateTableOfContentsItemPayload' }
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'showRadioChildren'>
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'showRadioChildren' | 'sortIndex'>
     )> }
+  )> }
+);
+
+export type DeleteBranchMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteBranchMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteTableOfContentsBranch?: Maybe<(
+    { __typename?: 'DeleteTableOfContentsBranchPayload' }
+    & Pick<DeleteTableOfContentsBranchPayload, 'clientMutationId'>
+  )> }
+);
+
+export type UpdateTableOfContentsItemChildrenMutationVariables = Exact<{
+  id?: Maybe<Scalars['Int']>;
+  childIds: Array<Maybe<Scalars['Int']>>;
+}>;
+
+
+export type UpdateTableOfContentsItemChildrenMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTableOfContentsItemChildren?: Maybe<(
+    { __typename?: 'UpdateTableOfContentsItemChildrenPayload' }
+    & { tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'sortIndex' | 'parentStableId'>
+    )>> }
   )> }
 );
 
@@ -10887,6 +10906,7 @@ export type CurrentProjectMetadataQueryResult = Apollo.QueryResult<CurrentProjec
 export const DraftTableOfContentsDocument = gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
+    id
     draftTableOfContentsItems {
       id
       dataLayerId
@@ -10899,6 +10919,8 @@ export const DraftTableOfContentsDocument = gql`
       stableId
       parentStableId
       showRadioChildren
+      bounds
+      sortIndex
     }
   }
 }
@@ -11016,6 +11038,7 @@ export const CreateFolderDocument = gql`
       isFolder
       showRadioChildren
       isClickOffOnly
+      sortIndex
     }
   }
 }
@@ -11048,6 +11071,75 @@ export function useCreateFolderMutation(baseOptions?: Apollo.MutationHookOptions
 export type CreateFolderMutationHookResult = ReturnType<typeof useCreateFolderMutation>;
 export type CreateFolderMutationResult = Apollo.MutationResult<CreateFolderMutation>;
 export type CreateFolderMutationOptions = Apollo.BaseMutationOptions<CreateFolderMutation, CreateFolderMutationVariables>;
+export const DeleteBranchDocument = gql`
+    mutation DeleteBranch($id: Int!) {
+  deleteTableOfContentsBranch(input: {tableOfContentsItemId: $id}) {
+    clientMutationId
+  }
+}
+    `;
+export type DeleteBranchMutationFn = Apollo.MutationFunction<DeleteBranchMutation, DeleteBranchMutationVariables>;
+
+/**
+ * __useDeleteBranchMutation__
+ *
+ * To run a mutation, you first call `useDeleteBranchMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteBranchMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteBranchMutation, { data, loading, error }] = useDeleteBranchMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteBranchMutation(baseOptions?: Apollo.MutationHookOptions<DeleteBranchMutation, DeleteBranchMutationVariables>) {
+        return Apollo.useMutation<DeleteBranchMutation, DeleteBranchMutationVariables>(DeleteBranchDocument, baseOptions);
+      }
+export type DeleteBranchMutationHookResult = ReturnType<typeof useDeleteBranchMutation>;
+export type DeleteBranchMutationResult = Apollo.MutationResult<DeleteBranchMutation>;
+export type DeleteBranchMutationOptions = Apollo.BaseMutationOptions<DeleteBranchMutation, DeleteBranchMutationVariables>;
+export const UpdateTableOfContentsItemChildrenDocument = gql`
+    mutation UpdateTableOfContentsItemChildren($id: Int, $childIds: [Int]!) {
+  updateTableOfContentsItemChildren(input: {parentId: $id, childIds: $childIds}) {
+    tableOfContentsItems {
+      id
+      sortIndex
+      parentStableId
+    }
+  }
+}
+    `;
+export type UpdateTableOfContentsItemChildrenMutationFn = Apollo.MutationFunction<UpdateTableOfContentsItemChildrenMutation, UpdateTableOfContentsItemChildrenMutationVariables>;
+
+/**
+ * __useUpdateTableOfContentsItemChildrenMutation__
+ *
+ * To run a mutation, you first call `useUpdateTableOfContentsItemChildrenMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateTableOfContentsItemChildrenMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateTableOfContentsItemChildrenMutation, { data, loading, error }] = useUpdateTableOfContentsItemChildrenMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      childIds: // value for 'childIds'
+ *   },
+ * });
+ */
+export function useUpdateTableOfContentsItemChildrenMutation(baseOptions?: Apollo.MutationHookOptions<UpdateTableOfContentsItemChildrenMutation, UpdateTableOfContentsItemChildrenMutationVariables>) {
+        return Apollo.useMutation<UpdateTableOfContentsItemChildrenMutation, UpdateTableOfContentsItemChildrenMutationVariables>(UpdateTableOfContentsItemChildrenDocument, baseOptions);
+      }
+export type UpdateTableOfContentsItemChildrenMutationHookResult = ReturnType<typeof useUpdateTableOfContentsItemChildrenMutation>;
+export type UpdateTableOfContentsItemChildrenMutationResult = Apollo.MutationResult<UpdateTableOfContentsItemChildrenMutation>;
+export type UpdateTableOfContentsItemChildrenMutationOptions = Apollo.BaseMutationOptions<UpdateTableOfContentsItemChildrenMutation, UpdateTableOfContentsItemChildrenMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

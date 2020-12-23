@@ -561,7 +561,7 @@ describe("Data validation", () => {
             "text"
           )}, 0) returning bucket_id, object_key, tiles, url
               `);
-          expect(bucket_id).toBe(1);
+          expect(bucket_id).toBe("geojson-1.seasketch-data.org");
           expect((object_key as string).length).toBeGreaterThan(20);
           expect(tiles).toBe(null);
           expect(url).toBe(null);

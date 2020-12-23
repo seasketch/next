@@ -778,6 +778,7 @@ export function treeDataFromLayerList(layers: LayerInfo[]) {
       isClickOffOnly: false,
       showRadioChildren: false,
       stableId: "root",
+      sortIndex: 0,
     },
   };
   const root = nodesBySublayer["root"];
@@ -794,6 +795,7 @@ export function treeDataFromLayerList(layers: LayerInfo[]) {
         stableId: layer.generatedId,
         dataLayerId:
           layer.type !== "Group Layer" ? layer.generatedId : undefined,
+        sortIndex: layer.id,
       };
       nodesBySublayer[layer.id.toString()] = node;
       if (layer.parentLayer && layer.parentLayer.id !== -1) {
@@ -989,7 +991,7 @@ export function useImportArcGISService(serviceRoot?: string) {
                         "x-amz-tagging": source.enhancedSecurity
                           ? "enhancedSecurity=YES"
                           : "",
-                        "cache-control": "max-age=31557600",
+                        "cache-control": "max-age=31536000, immutable",
                       },
                       onUploadProgress: (event) => {
                         const layerProgress = Math.round(

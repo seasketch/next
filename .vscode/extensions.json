@@ -8,6 +8,7 @@
     "esbenp.prettier-vscode",
     "bradymholt.pgformatter",
     "apollographql.vscode-apollo",
-    "ms-azuretools.vscode-docker"
+    "ms-azuretools.vscode-docker",
+    "bradlc.vscode-tailwindcss"
   ]
 }

@@ -5,6 +5,7 @@ import {
   ErrorEvent,
   Source,
   RasterDemSource,
+  AnyLayer,
 } from "mapbox-gl";
 
 import {
@@ -112,7 +113,7 @@ class LayerManager {
   private basemapLandLayerId: string = "land";
   private basemapLabelsLayerId: string = "road-label";
   private setState: Dispatch<SetStateAction<LayerManagerContext>>;
-  private map?: Map;
+  map?: Map;
   private updateStateDebouncerReference?: NodeJS.Timeout;
   private sourceCache: {
     [id: string]: ArcGISDynamicMapServiceInstance | ArcGISVectorSourceInstance;
@@ -464,7 +465,7 @@ class LayerManager {
                 ...layers[i],
                 id: `${layer.id}-${i}`,
                 source: layer.dataSourceId.toString(),
-              });
+              } as AnyLayer);
             }
           }
         });

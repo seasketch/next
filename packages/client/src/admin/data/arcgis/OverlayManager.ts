@@ -5,7 +5,7 @@ import {
   ArcGISVectorSourceOptions,
 } from "@seasketch/mapbox-gl-esri-sources";
 import { ImageList } from "@seasketch/mapbox-gl-esri-sources/dist/src/ImageList";
-import { ImageSource, Layer, Map } from "mapbox-gl";
+import { AnyLayer, ImageSource, Layer, Map } from "mapbox-gl";
 import { v4 as uuid } from "uuid";
 
 interface Overlay {
@@ -29,7 +29,7 @@ interface ArcGISVectorSourceOverlay extends Overlay {
   url: string;
   options: ArcGISVectorSourceOptions;
   imageList: ImageList;
-  layers: Layer[];
+  layers: AnyLayer[];
   finalAddedLayers?: Layer[];
 }
 
@@ -184,13 +184,14 @@ export default class OverlayManager {
     this.visibleLayersIds[overlayId] = [];
   }
 
-  private addLayersForOverlay(overlayId: string, layers: Layer[]) {
+  private addLayersForOverlay(overlayId: string, layers: AnyLayer[]) {
     this.visibleLayersIds[overlayId] = this.visibleLayersIds[overlayId] || [];
     for (var i = 0; i < layers.length; i++) {
       const layer = layers[i];
       const id = overlayId + "-layer-" + i;
       this.map.addLayer({
         ...layer,
+        // @ts-ignore
         source: overlayId,
         id,
       });
@@ -209,7 +210,7 @@ export default class OverlayManager {
         overlay.url,
         overlay.options as ArcGISDynamicMapServiceOptions
       );
-      const layer: Layer = {
+      const layer: AnyLayer = {
         source: instance.id,
         id: instance.id + "-raster-layer",
         type: "raster",

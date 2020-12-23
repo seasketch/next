@@ -6000,17 +6000,12 @@ type Mutation {
     """
     input: UpdateTableOfContentsItemByNodeIdInput!
   ): UpdateTableOfContentsItemPayload
-
-  """
-  Changes the stable_parent_id of the given item. Use to nest items under
-  folders, or move them to the root of the tree by setting parent_stable_id to null
-  """
-  updateTableOfContentsItemParent(
+  updateTableOfContentsItemChildren(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: UpdateTableOfContentsItemParentInput!
-  ): UpdateTableOfContentsItemParentPayload
+    input: UpdateTableOfContentsItemChildrenInput!
+  ): UpdateTableOfContentsItemChildrenPayload
 
   """Updates a single `Topic` using a unique key and a patch."""
   updateTopic(
@@ -8944,6 +8939,9 @@ type TableOfContentsItem implements Node {
   """
   showRadioChildren: Boolean!
 
+  """Position in the layer list"""
+  sortIndex: Int!
+
   """
   The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
   should be used with a custom alphabet that excludes dashes and has a lenght of 
@@ -10538,6 +10536,33 @@ input UpdateTableOfContentsItemByNodeIdInput {
   patch: TableOfContentsItemPatch!
 }
 
+"""All input for the `updateTableOfContentsItemChildren` mutation."""
+input UpdateTableOfContentsItemChildrenInput {
+  childIds: [Int]
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  parentId: Int
+}
+
+"""The output of our `updateTableOfContentsItemChildren` mutation."""
+type UpdateTableOfContentsItemChildrenPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItems: [TableOfContentsItem!]
+}
+
 """All input for the `updateTableOfContentsItem` mutation."""
 input UpdateTableOfContentsItemInput {
   """
@@ -10551,43 +10576,6 @@ input UpdateTableOfContentsItemInput {
   An object where the defined keys will be set on the `TableOfContentsItem` being updated.
   """
   patch: TableOfContentsItemPatch!
-}
-
-"""All input for the `updateTableOfContentsItemParent` mutation."""
-input UpdateTableOfContentsItemParentInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  itemId: Int
-  parentStableId: String
-}
-
-"""The output of our `updateTableOfContentsItemParent` mutation."""
-type UpdateTableOfContentsItemParentPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
-  """
-  dataLayer: DataLayer
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  tableOfContentsItem: TableOfContentsItem
-
-  """An edge for our `TableOfContentsItem`. May be used by Relay 1."""
-  tableOfContentsItemEdge(
-    """The method to use when ordering `TableOfContentsItem`."""
-    orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): TableOfContentsItemsEdge
 }
 
 """The output of our update `TableOfContentsItem` mutation."""

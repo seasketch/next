@@ -6,7 +6,7 @@ import {
   useArcGISServiceSettings,
   useMapServerInfo,
 } from "./arcgis";
-import { Map } from "mapbox-gl";
+import { AnyLayer, Map } from "mapbox-gl";
 import { ArcGISVectorSourceOptions } from "@seasketch/mapbox-gl-esri-sources";
 import DefinitionList from "../../../components/DefinitionList";
 import Switch from "../../../components/Switch";
@@ -72,7 +72,7 @@ export default function MapServerColumn(props: {
               type: "ArcGISVectorSource",
               url: `${props.item.url}/${sublayerId}`,
               imageList: layerInfo.imageList,
-              layers: layerInfo.mapboxLayers,
+              layers: layerInfo.mapboxLayers as AnyLayer[],
               options: {
                 supportsPagination:
                   layerInfo.advancedQueryCapabilities.supportsPagination,

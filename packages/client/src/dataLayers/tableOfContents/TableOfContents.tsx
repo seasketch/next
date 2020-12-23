@@ -1,5 +1,5 @@
-import React, { Children, useCallback, useContext, useState } from "react";
-import SortableTree from "react-sortable-tree";
+import React, { Children, ReactNode, useCallback, useContext, useRef, useState } from "react";
+import SortableTree, { FullTree, NodeData, OnMovePreviousAndNextLocation } from "react-sortable-tree";
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 import "react-sortable-tree/style.css";
@@ -8,6 +8,8 @@ import VisibilityCheckbox from "./VisibilityCheckbox";
 import "./TableOfContents.css";
 import Spinner from "../../components/Spinner";
 import { TableOfContentsItem as GeneratedTableOfContentsItem } from "../../generated/graphql";
+import { Menu, useContextMenu } from "react-contexify";
+import "react-contexify/dist/ReactContexify.css";
 
 export interface TableOfContentsNode {
   id: string;
@@ -28,6 +30,7 @@ export type ClientTableOfContentsItem = Pick<
   | "showRadioChildren"
   | "stableId"
   | "parentStableId"
+  | "sortIndex"
 > & {
   id: number | string;
   disabled?: boolean;
@@ -43,12 +46,22 @@ interface TableOfContentsProps {
   extraButtons?: (node: ClientTableOfContentsItem) => React.ReactNode[];
   disabledMessage?: string;
   extraClassName?: (node: ClientTableOfContentsItem) => string | null;
+  contextMenuId?: string;
+  contextMenuItems?: ReactNode[];
+  /** defaults to false */
+  canDrag?: boolean;
+  onMoveNode?: (data: NodeData & FullTree & OnMovePreviousAndNextLocation) => void
+  hideExpandAll?: boolean;
 }
 
 export default function TableOfContents(props: TableOfContentsProps) {
   const [expansionToggled, setExpansionToggled] = useState(true);
-  const showFolderToggle = hasFolders(props.nodes[0]);
-
+  const showFolderToggle = hasFolders(props.nodes[0]) && !props.hideExpandAll;
+  const [selectedItemId, setSelectedItemId] = useState<string>();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { show } = useContextMenu({
+    id: props.contextMenuId || "none",
+  });
   const { manager, layerStates } = useContext(LayerManagerContext);
 
   const setExpanded = (
@@ -72,7 +85,19 @@ export default function TableOfContents(props: TableOfContentsProps) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
+      { props.contextMenuItems && <Menu id={props.contextMenuId!} animation={false} onHidden={() => {
+        // const prevId = selectedItemId;
+        // console.log('prevId', prevId);
+        // setTimeout(() => {
+        //   console.log('selectedItemId', selectedItemId);
+        //   if (selectedItemId === prevId) {
+            setSelectedItemId(undefined)
+        //   }
+        // }, 500);
+      }}>
+        {props.contextMenuItems}
+      </Menu> }
       {showFolderToggle && (
         <div className="z-10 p-0 absolute top-0 left-32 text-gray-500">
           <button
@@ -84,10 +109,12 @@ export default function TableOfContents(props: TableOfContentsProps) {
         </div>
       )}
       <SortableTree
-        canDrag={false}
+        canDrag={!!props.canDrag}
         isVirtualized={!!props.isVirtualized}
         onChange={props.onChange}
         treeData={props.nodes}
+        onMoveNode={props.onMoveNode}
+        canNodeHaveChildren={(node) => !!node.isFolder}
         style={{ height: "auto" }}
         theme={FileExplorerTheme}
         generateNodeProps={(data) => {
@@ -99,17 +126,38 @@ export default function TableOfContents(props: TableOfContentsProps) {
               )
             : !!layerState?.visible;
           const isVisible = visibility === "mixed" || visibility;
+          const selected = data.node.id.toString() === selectedItemId;
           return {
-            title: `${data.node.title}${
-              data.node.disabled && props.disabledMessage
+            style: {
+              border: selected ? "1px solid inset rgba(0,0,0,0.05)" : "none"
+            },
+            title: <span onContextMenu={(e) => {
+              if (props.contextMenuId) {
+                // e.preventDefault();
+                // @ts-ignore
+                window.document.getSelection().removeAllRanges();
+                const options = {
+                  props: {
+                    foo: 'bar',
+                    item: data.node,
+                  },
+                };
+                console.log('show', e, options);
+                show(e, options);
+                setTimeout(() => {
+                  setSelectedItemId(data.node.id.toString());
+                }, 8);
+              }
+            }}>{data.node.title}
+              {data.node.disabled && props.disabledMessage
                 ? " " + props.disabledMessage
                 : ""
-            }`,
+            }</span>,
             className: `${data.node.disabled ? "opacity-50" : ""} ${
               props.extraClassName
                 ? props.extraClassName(data.node as ClientTableOfContentsItem)
                 : ""
-            }`,
+            } ${selected ? 'bg-cool-gray-100 pl-2 -ml-2' : ''}`,
             icons: [
               <VisibilityCheckbox
                 id={data.node.id}

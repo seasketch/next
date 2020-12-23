@@ -1,5 +1,6 @@
 query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
+    id
     draftTableOfContentsItems {
       id
       dataLayerId
@@ -12,6 +13,8 @@ query DraftTableOfContents($slug: String!) {
       stableId
       parentStableId
       showRadioChildren
+      bounds
+      sortIndex
     }
   }
 }
@@ -92,6 +95,28 @@ mutation CreateFolder(
       isFolder
       showRadioChildren
       isClickOffOnly
+      sortIndex
+    }
+  }
+}
+
+mutation DeleteBranch($id: Int!) {
+  deleteTableOfContentsBranch(input: {
+    tableOfContentsItemId: $id
+  }) {
+    clientMutationId
+  }
+}
+
+mutation UpdateTableOfContentsItemChildren($id: Int, $childIds: [Int]!) {
+  updateTableOfContentsItemChildren(input: {
+    parentId: $id
+    childIds: $childIds
+  }) {
+    tableOfContentsItems {
+      id
+      sortIndex
+      parentStableId
     }
   }
 }

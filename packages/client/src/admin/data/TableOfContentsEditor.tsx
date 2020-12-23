@@ -1,5 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
+import { Item, Menu, Separator } from "react-contexify";
 import { Link, useParams } from "react-router-dom";
+import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import {
   LayerManagerContext,
@@ -14,9 +16,11 @@ import {
   useLayersAndSourcesForItemsQuery,
   useCreateFolderMutation,
   DraftTableOfContentsDocument,
+  useUpdateTableOfContentsItemChildrenMutation
 } from "../../generated/graphql";
 import useProjectId from "../../useProjectId";
 import { generateStableId } from "./arcgis/arcgis";
+import DeleteTableOfContentsItemModal from "./DeleteTableOfContentsItemModal";
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
@@ -28,7 +32,9 @@ export default function TableOfContentsEditor() {
   const projectId = useProjectId();
   const [treeItems, setTreeItems] = useState<ClientTableOfContentsItem[]>([]);
   const [createFolder, createFolderState] = useCreateFolderMutation();
-
+  const [itemForDeletion, setItemForDeletion] = useState<ClientTableOfContentsItem>();
+  const [updateChildrenMutation, updateChildrenMutationState] = useUpdateTableOfContentsItemChildrenMutation();
+  
   useEffect(() => {
     if (tocQuery.data?.projectBySlug?.draftTableOfContentsItems) {
       setTreeItems(
@@ -116,9 +122,40 @@ export default function TableOfContentsEditor() {
           </button>
         </div>
       </header>
-      <div className="flex-1 overflow-y-scroll p-4 pt-16">
+      <div className="flex-1 overflow-y-scroll p-4 pt-16" onContextMenu={(e) => e.preventDefault()}>
         {tocQuery.loading && <Spinner />}
-        <TableOfContents onChange={(e) => setTreeItems(e)} nodes={treeItems} />
+        <TableOfContents hideExpandAll={true} onMoveNode={async (data) => {
+          // let 
+          const newParentId = data.nextParentNode?.id;
+          let children: number[];
+          if (data.nextParentNode && data.nextParentNode.children && Array.isArray(data.nextParentNode.children)) {
+            children = data.nextParentNode.children.map((item) => item.id);
+          } else {
+            children = data.treeData.map((item) => item.id);
+          }
+          // console.log('newParentStableId', newParentStableId, 'was', data.node.parentStableId);
+          await updateChildrenMutation({
+            variables: {
+              id: newParentId,
+              childIds: children
+            }
+          });
+
+        }} canDrag={true} onChange={(e) => setTreeItems(e)} nodes={treeItems} contextMenuId="layers-toc-editor" contextMenuItems={[
+          <Item key="zoom-to" hidden={(args) => {
+            return args.props.item.isFolder || !args.props.item.bounds
+          }} className="text-sm hover:bg-primary-500" onClick={(args) => {
+            const bounds = args.props.item.bounds.map((coord: string) => parseFloat(coord));
+            manager?.map?.fitBounds(bounds, {
+              padding: 40
+            })
+          }}>Zoom To</Item>,
+          <Item key="1" className="text-sm">Edit</Item>,
+          <Item key="2" className="text-sm" onClick={(args) => {
+            setItemForDeletion(args.props.item);
+          }}>Delete</Item>
+        ]} />
+        <DeleteTableOfContentsItemModal item={itemForDeletion} onRequestClose={() => setItemForDeletion(undefined)} onDelete={async () => await tocQuery.refetch()} />
       </div>
     </div>
   );
@@ -134,6 +171,7 @@ function nestItems(
     | "id"
     | "stableId"
     | "parentStableId"
+    | "sortIndex"
   > & { dataLayerId?: number | string | null })[]
 ) {
   const output: ClientTableOfContentsItem[] = [];
@@ -144,7 +182,8 @@ function nestItems(
       ...(item.isFolder ? { children: [], expanded: false } : {}),
     };
   }
-  for (const item of Object.values(lookup)) {
+  console.log(Object.values(lookup).map((item) => ({title: item.title, sortIndex: item.sortIndex})));
+  for (const item of Object.values(lookup).sort(bySortIndexAndId)) {
     if (item.parentStableId) {
       const parent = lookup[item.parentStableId];
       if (parent) {
@@ -155,4 +194,11 @@ function nestItems(
     }
   }
   return output;
+}
+
+function bySortIndexAndId(a: ClientTableOfContentsItem, b: ClientTableOfContentsItem): number {
+  // return (a.sortIndex)
+  const sortIndexA = a.sortIndex || 0;
+  const sortIndexB = b.sortIndex || 0;
+  return sortIndexA - sortIndexB;
 }

@@ -39,3 +39,7 @@
   pointer-events: none;
   opacity: 0.5;
 }
+
+.react-contexify__item:not(.react-contexify__item--disabled):hover > .react-contexify__item__content {
+  background-color: rgb(46, 115, 182) !important;
+}
