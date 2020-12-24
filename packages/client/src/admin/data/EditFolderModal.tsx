@@ -139,137 +139,136 @@ export default function EditFolderModal({
       }
     >
       {loading && <Spinner />}
-      {folder ||
-        (!!createNew && (
-          <div className={`w-96 md:w-144`}>
-            <h2 className="text-lg font-semibold mb-4">
-              {createNew ? "New Folder" : "Edit Folder"}
-            </h2>
-            <form onSubmit={onSave}>
-              <div className="max-w-xs">
-                <TextInput
-                  autoFocus
-                  error={error ? error.message : undefined}
-                  id="folder-name"
-                  label="Name"
-                  disabled={loading || isLoading}
-                  value={state.title}
-                  onChange={(val) =>
-                    setState((prev) => ({
-                      ...prev,
-                      title: val,
-                    }))
-                  }
-                />
-              </div>
-              <fieldset className="mt-6 mb-8">
-                <legend className="text-sm font-medium text-gray-700">
-                  Folder type
-                </legend>
-                <div className="mt-2 space-y-4 pr-8 pl-2">
-                  <div className="relative flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        onChange={() => updateType(FolderType.DEFAULT)}
-                        checked={state.folderType === FolderType.DEFAULT}
-                        id={FolderType.DEFAULT.toString()}
-                        name={FolderType.DEFAULT.toString()}
-                        type="radio"
-                        className="focus:ring-blue-400 h-4 w-4 text-primary-500 border-gray-300"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label
-                        htmlFor={FolderType.DEFAULT.toString()}
-                        className="font-medium text-gray-700"
-                      >
-                        Default
-                      </label>
-                      <p className="text-gray-500">
-                        Folder can be expanded and layers within can be toggled
-                        individually.
-                      </p>
-                    </div>
+      {(folder || !!createNew) && (
+        <div className={`w-96 md:w-144`}>
+          <h2 className="text-lg font-semibold mb-4">
+            {createNew ? "New Folder" : "Edit Folder"}
+          </h2>
+          <form onSubmit={onSave}>
+            <div className="max-w-xs">
+              <TextInput
+                autoFocus
+                error={error ? error.message : undefined}
+                id="folder-name"
+                label="Name"
+                disabled={loading || isLoading}
+                value={state.title}
+                onChange={(val) =>
+                  setState((prev) => ({
+                    ...prev,
+                    title: val,
+                  }))
+                }
+              />
+            </div>
+            <fieldset className="mt-6 mb-8">
+              <legend className="text-sm font-medium text-gray-700">
+                Folder type
+              </legend>
+              <div className="mt-2 space-y-4 pr-8 pl-2">
+                <div className="relative flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      onChange={() => updateType(FolderType.DEFAULT)}
+                      checked={state.folderType === FolderType.DEFAULT}
+                      id={FolderType.DEFAULT.toString()}
+                      name={FolderType.DEFAULT.toString()}
+                      type="radio"
+                      className="focus:ring-blue-400 h-4 w-4 text-primary-500 border-gray-300"
+                    />
                   </div>
-                  <div className="relative flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        onChange={() => updateType(FolderType.CLICK_OFF_ONLY)}
-                        checked={state.folderType === FolderType.CLICK_OFF_ONLY}
-                        id={FolderType.CLICK_OFF_ONLY.toString()}
-                        name={FolderType.CLICK_OFF_ONLY.toString()}
-                        type="radio"
-                        className="focus:ring-blue-400 h-4 w-4 text-primary-500 border-gray-300"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label
-                        htmlFor={FolderType.CLICK_OFF_ONLY.toString()}
-                        className="font-medium text-gray-700"
-                      >
-                        Check-off only
-                      </label>
-                      <p className="text-gray-500">
-                        Folders of this type do not enable users to turn on all
-                        layers at once. They can use the folder to toggle all
-                        layers <i>off</i>.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="relative flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        onChange={() => updateType(FolderType.HIDE_CHILDREN)}
-                        checked={state.folderType === FolderType.HIDE_CHILDREN}
-                        id={FolderType.HIDE_CHILDREN.toString()}
-                        name={FolderType.HIDE_CHILDREN.toString()}
-                        type="radio"
-                        className="focus:ring-blue-400 h-4 w-4 text-primary-500 border-gray-300"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label
-                        htmlFor={FolderType.HIDE_CHILDREN.toString()}
-                        className="font-medium text-gray-700"
-                      >
-                        Hidden children
-                      </label>
-                      <p className="text-gray-500">
-                        Folders of this type cannot be expanded to reveal the
-                        layers within. This can be used to make multiple layers
-                        appear as one in the table of contents.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="relative flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        onChange={() => updateType(FolderType.RADIO_CHILDREN)}
-                        checked={state.folderType === FolderType.RADIO_CHILDREN}
-                        id={FolderType.RADIO_CHILDREN.toString()}
-                        name={FolderType.RADIO_CHILDREN.toString()}
-                        type="radio"
-                        className="focus:ring-blue-400 h-4 w-4 text-primary-500 border-gray-300"
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label
-                        htmlFor={FolderType.RADIO_CHILDREN.toString()}
-                        className="font-medium text-gray-700"
-                      >
-                        Radio children
-                      </label>
-                      <p className="text-gray-500">
-                        Only a single item within this folder can be turned on
-                        at one time.
-                      </p>
-                    </div>
+                  <div className="ml-3 text-sm">
+                    <label
+                      htmlFor={FolderType.DEFAULT.toString()}
+                      className="font-medium text-gray-700"
+                    >
+                      Default
+                    </label>
+                    <p className="text-gray-500">
+                      Folder can be expanded and layers within can be toggled
+                      individually.
+                    </p>
                   </div>
                 </div>
-              </fieldset>
-            </form>
-          </div>
-        ))}
+                <div className="relative flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      onChange={() => updateType(FolderType.CLICK_OFF_ONLY)}
+                      checked={state.folderType === FolderType.CLICK_OFF_ONLY}
+                      id={FolderType.CLICK_OFF_ONLY.toString()}
+                      name={FolderType.CLICK_OFF_ONLY.toString()}
+                      type="radio"
+                      className="focus:ring-blue-400 h-4 w-4 text-primary-500 border-gray-300"
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label
+                      htmlFor={FolderType.CLICK_OFF_ONLY.toString()}
+                      className="font-medium text-gray-700"
+                    >
+                      Check-off only
+                    </label>
+                    <p className="text-gray-500">
+                      Folders of this type do not enable users to turn on all
+                      layers at once. They can use the folder to toggle all
+                      layers <i>off</i>.
+                    </p>
+                  </div>
+                </div>
+                <div className="relative flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      onChange={() => updateType(FolderType.HIDE_CHILDREN)}
+                      checked={state.folderType === FolderType.HIDE_CHILDREN}
+                      id={FolderType.HIDE_CHILDREN.toString()}
+                      name={FolderType.HIDE_CHILDREN.toString()}
+                      type="radio"
+                      className="focus:ring-blue-400 h-4 w-4 text-primary-500 border-gray-300"
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label
+                      htmlFor={FolderType.HIDE_CHILDREN.toString()}
+                      className="font-medium text-gray-700"
+                    >
+                      Hidden children
+                    </label>
+                    <p className="text-gray-500">
+                      Folders of this type cannot be expanded to reveal the
+                      layers within. This can be used to make multiple layers
+                      appear as one in the table of contents.
+                    </p>
+                  </div>
+                </div>
+                <div className="relative flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      onChange={() => updateType(FolderType.RADIO_CHILDREN)}
+                      checked={state.folderType === FolderType.RADIO_CHILDREN}
+                      id={FolderType.RADIO_CHILDREN.toString()}
+                      name={FolderType.RADIO_CHILDREN.toString()}
+                      type="radio"
+                      className="focus:ring-blue-400 h-4 w-4 text-primary-500 border-gray-300"
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label
+                      htmlFor={FolderType.RADIO_CHILDREN.toString()}
+                      className="font-medium text-gray-700"
+                    >
+                      Radio children
+                    </label>
+                    <p className="text-gray-500">
+                      Only a single item within this folder can be turned on at
+                      one time.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+          </form>
+        </div>
+      )}
     </Modal>
   );
 }
