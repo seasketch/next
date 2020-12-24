@@ -17,6 +17,7 @@ export interface TextInputOptions {
   disabled?: boolean;
   onChange?: (value: string) => any;
   inputChildNode?: React.ReactNode;
+  autoFocus?: boolean;
 }
 
 export default function TextInput(props: TextInputOptions) {
@@ -58,15 +59,17 @@ export default function TextInput(props: TextInputOptions) {
 
       <div className="mt-1 relative rounded-md shadow-sm">
         <input
+          autoFocus={!!props.autoFocus}
+          type="text"
           id={id}
           onChange={(e) => onChange && onChange(e.target.value)}
           disabled={disabled}
           required={required}
-          className={`form-input block w-full ${
+          className={`block w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 ${
             error || state === "SAVING" || (state === "SAVED" && showSaved)
               ? `pr-10`
               : `pr-4`
-          } sm:text-sm sm:leading-5 ${
+          } ${
             error &&
             "border-red-300 text-red-900 placeholder-red-300 focus:border-red-300 focus:shadow-outline-red"
           } ${disabled && "text-gray-600 bg-gray-100"}`}

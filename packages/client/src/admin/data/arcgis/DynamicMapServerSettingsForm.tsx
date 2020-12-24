@@ -26,7 +26,6 @@ export default function DynamicMapServerSettingsForm(props: {
   const { importService, ...importServiceState } = useImportArcGISService(
     props.serviceRoot
   );
-  console.log("state", importServiceState);
   const { slug } = useParams<{ slug: string }>();
   const projectId = useProjectId();
   const history = useHistory();
@@ -109,7 +108,7 @@ export default function DynamicMapServerSettingsForm(props: {
         If your basemaps are configured to identify these special layers, you
         can render this service underneath labels or land.
       </InputBlock>
-      <div className="mt-6 mb-5 bg-cool-gray-100 rounded py-2 px-4 pb-3">
+      <div className="mt-6 mb-5 bg-gray-100 rounded py-2 px-4 pb-3">
         <h3 className="font-medium">Import Service</h3>
         <p className="text-sm text-gray-600 mt-1 mb-2">
           Please review the layer list and exclude any that you do not wish to

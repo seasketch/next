@@ -370,7 +370,7 @@ function AccessControlSettings() {
                           ? accessControl === "PUBLIC"
                           : data?.projectBySlug?.accessControl === "PUBLIC"
                       }
-                      className="form-radio h-4 w-4 text-primary-500 transition duration-150 ease-in-out"
+                      className="form-radio h-4 w-4 text-primary-500 transition duration-150 ease-in-out focus:ring focus:ring-blue-200"
                     />
                   </div>
                   <div
@@ -406,7 +406,7 @@ function AccessControlSettings() {
                               "ADMINS_ONLY"
                         }
                         type="radio"
-                        className="form-radio h-4 w-4 text-primary-500 transition duration-150 ease-in-out"
+                        className="form-radio h-4 w-4 text-primary-500 focus:ring focus:ring-blue-200 transition duration-150 ease-in-out"
                       />
                     </div>
                     <div className="ml-3 text-sm leading-5">
@@ -438,7 +438,7 @@ function AccessControlSettings() {
                               "INVITE_ONLY"
                         }
                         type="radio"
-                        className="form-radio h-4 w-4 text-primary-500 transition duration-150 ease-in-out"
+                        className="form-radio h-4 w-4 text-primary-500 transition duration-150 focus:ring focus:ring-blue-200 ease-in-out"
                       />
                     </div>
                     <div className="ml-3 text-sm leading-5">
@@ -632,7 +632,7 @@ function MapExtentSettings() {
             <button
               className={`${
                 drawing ? "hidden" : ""
-              } sm:absolute sm:top-28 mt-2 sm:mt-0 sm:left-10 cursor-pointer inline-flex items-center px-4 py-2 border border-gray-400 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:text-gray-800 active:bg-gray-50 transition ease-in-out duration-150`}
+              } sm:absolute sm:top-28 mt-2 sm:mt-0 sm:left-10 cursor-pointer inline-flex items-center px-4 py-2 border border-gray-400 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:text-gray-500 focus:ring focus:ring-blue-200 active:text-gray-800 active:bg-gray-50 transition ease-in-out duration-150`}
               onClick={onRedrawBounds}
             >
               {t("Redraw Bounds")}

@@ -439,13 +439,13 @@ export function FeatureLayerSettings(props: {
                                 index % 2 === 0 ? "bg-white" : "bg-gray-50"
                               }
                             >
-                              <td className="px-6 py-4 whitespace-no-wrap text-sm leading-5 font-medium text-gray-900">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm leading-5 font-medium text-gray-900">
                                 {field.alias}
                               </td>
-                              <td className="px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-500">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm leading-5 text-gray-500">
                                 {esriFieldTypesToTileJSONTypes[field.type]}
                               </td>
-                              <td className="px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-500 text-center">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm leading-5 text-gray-500 text-center">
                                 {field.type === "esriFieldTypeOID" ? (
                                   "Required"
                                 ) : (

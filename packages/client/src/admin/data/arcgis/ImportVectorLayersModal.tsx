@@ -127,7 +127,7 @@ export default function ImportVectorLayersModal(
       }}
       title="Import Vector Layers"
       footer={
-        <div className="p-6 bg-cool-gray-100 border-t">
+        <div className="p-6 bg-gray-100 border-t">
           {remaining > 0 ? (
             <>
               Analyzing layer {pendingIndex + 1} of {layers.length}{" "}
@@ -242,10 +242,10 @@ export default function ImportVectorLayersModal(
                   index % 2 !== 0 ? "bg-white" : "bg-gray-50"
                 }`}
               >
-                <div className="flex-1 px-6 py-4 whitespace-no-wrap text-sm leading-5 font-medium text-gray-900 truncate">
+                <div className="flex-1 px-6 py-4 whitespace-nowrap text-sm leading-5 font-medium text-gray-900 truncate">
                   <span className="truncate">{layer.name}</span>
                 </div>
-                <div className="w-20 px-6 py-4 whitespace-no-wrap text-sm leading-5 text-right pr-0 text-gray-500">
+                <div className="w-20 px-6 py-4 whitespace-nowrap text-sm leading-5 text-right pr-0 text-gray-500">
                   {status?.loading &&
                     status.loadedFeatures &&
                     status.estimatedFeatures && (
@@ -259,7 +259,7 @@ export default function ImportVectorLayersModal(
                     )}
                 </div>
 
-                <div className="w-32 text-right px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-500 align-middle flex justify-end">
+                <div className="w-32 text-right px-6 py-4 whitespace-nowrap text-sm leading-5 text-gray-500 align-middle flex justify-end">
                   {status ? (
                     status.loading ? (
                       <>

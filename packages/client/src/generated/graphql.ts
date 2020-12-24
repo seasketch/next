@@ -8585,6 +8585,7 @@ export type TableOfContentsItem = Node & {
   dataLayer?: Maybe<DataLayer>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
+  hideChildren: Scalars['Boolean'];
   id: Scalars['Int'];
   /**
    * If set, folders with this property cannot be toggled in order to activate all
@@ -8648,6 +8649,7 @@ export type TableOfContentsItemInput = {
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
+  hideChildren?: Maybe<Scalars['Boolean']>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
    * their children. Toggles can only be used to toggle children off
@@ -8685,6 +8687,7 @@ export type TableOfContentsItemPatch = {
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
+  hideChildren?: Maybe<Scalars['Boolean']>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
    * their children. Toggles can only be used to toggle children off
@@ -10289,7 +10292,7 @@ export type DraftTableOfContentsQuery = (
     & Pick<Project, 'id'>
     & { draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren' | 'bounds' | 'sortIndex'>
+      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren' | 'bounds' | 'sortIndex' | 'hideChildren'>
       & { acl?: Maybe<(
         { __typename?: 'Acl' }
         & Pick<Acl, 'type'>
@@ -10324,6 +10327,9 @@ export type CreateFolderMutationVariables = Exact<{
   stableId: Scalars['String'];
   projectId: Scalars['Int'];
   parentStableId?: Maybe<Scalars['String']>;
+  isClickOffOnly?: Maybe<Scalars['Boolean']>;
+  showRadioChildren?: Maybe<Scalars['Boolean']>;
+  hideChildren?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -10333,7 +10339,7 @@ export type CreateFolderMutation = (
     { __typename?: 'CreateTableOfContentsItemPayload' }
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'showRadioChildren' | 'sortIndex'>
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'showRadioChildren' | 'sortIndex' | 'hideChildren'>
     )> }
   )> }
 );
@@ -10365,6 +10371,40 @@ export type UpdateTableOfContentsItemChildrenMutation = (
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'sortIndex' | 'parentStableId'>
     )>> }
+  )> }
+);
+
+export type GetFolderQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetFolderQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'isClickOffOnly' | 'showRadioChildren' | 'title' | 'hideChildren'>
+  )> }
+);
+
+export type UpdateFolderMutationVariables = Exact<{
+  id: Scalars['Int'];
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  isClickOffOnly?: Maybe<Scalars['Boolean']>;
+  showRadioChildren?: Maybe<Scalars['Boolean']>;
+  title?: Maybe<Scalars['String']>;
+  hideChildren?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UpdateFolderMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTableOfContentsItem?: Maybe<(
+    { __typename?: 'UpdateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'isClickOffOnly' | 'showRadioChildren' | 'hideChildren' | 'title'>
+    )> }
   )> }
 );
 
@@ -10921,6 +10961,7 @@ export const DraftTableOfContentsDocument = gql`
       showRadioChildren
       bounds
       sortIndex
+      hideChildren
     }
   }
 }
@@ -11025,8 +11066,8 @@ export type LayersAndSourcesForItemsQueryHookResult = ReturnType<typeof useLayer
 export type LayersAndSourcesForItemsLazyQueryHookResult = ReturnType<typeof useLayersAndSourcesForItemsLazyQuery>;
 export type LayersAndSourcesForItemsQueryResult = Apollo.QueryResult<LayersAndSourcesForItemsQuery, LayersAndSourcesForItemsQueryVariables>;
 export const CreateFolderDocument = gql`
-    mutation CreateFolder($title: String!, $stableId: String!, $projectId: Int!, $parentStableId: String) {
-  createTableOfContentsItem(input: {tableOfContentsItem: {title: $title, stableId: $stableId, projectId: $projectId, parentStableId: $parentStableId, isFolder: true}}) {
+    mutation CreateFolder($title: String!, $stableId: String!, $projectId: Int!, $parentStableId: String, $isClickOffOnly: Boolean, $showRadioChildren: Boolean, $hideChildren: Boolean) {
+  createTableOfContentsItem(input: {tableOfContentsItem: {title: $title, stableId: $stableId, projectId: $projectId, parentStableId: $parentStableId, isFolder: true, isClickOffOnly: $isClickOffOnly, showRadioChildren: $showRadioChildren, hideChildren: $hideChildren}}) {
     tableOfContentsItem {
       id
       title
@@ -11039,6 +11080,7 @@ export const CreateFolderDocument = gql`
       showRadioChildren
       isClickOffOnly
       sortIndex
+      hideChildren
     }
   }
 }
@@ -11062,6 +11104,9 @@ export type CreateFolderMutationFn = Apollo.MutationFunction<CreateFolderMutatio
  *      stableId: // value for 'stableId'
  *      projectId: // value for 'projectId'
  *      parentStableId: // value for 'parentStableId'
+ *      isClickOffOnly: // value for 'isClickOffOnly'
+ *      showRadioChildren: // value for 'showRadioChildren'
+ *      hideChildren: // value for 'hideChildren'
  *   },
  * });
  */
@@ -11140,6 +11185,88 @@ export function useUpdateTableOfContentsItemChildrenMutation(baseOptions?: Apoll
 export type UpdateTableOfContentsItemChildrenMutationHookResult = ReturnType<typeof useUpdateTableOfContentsItemChildrenMutation>;
 export type UpdateTableOfContentsItemChildrenMutationResult = Apollo.MutationResult<UpdateTableOfContentsItemChildrenMutation>;
 export type UpdateTableOfContentsItemChildrenMutationOptions = Apollo.BaseMutationOptions<UpdateTableOfContentsItemChildrenMutation, UpdateTableOfContentsItemChildrenMutationVariables>;
+export const GetFolderDocument = gql`
+    query GetFolder($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    bounds
+    isClickOffOnly
+    showRadioChildren
+    title
+    hideChildren
+  }
+}
+    `;
+
+/**
+ * __useGetFolderQuery__
+ *
+ * To run a query within a React component, call `useGetFolderQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetFolderQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetFolderQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetFolderQuery(baseOptions?: Apollo.QueryHookOptions<GetFolderQuery, GetFolderQueryVariables>) {
+        return Apollo.useQuery<GetFolderQuery, GetFolderQueryVariables>(GetFolderDocument, baseOptions);
+      }
+export function useGetFolderLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetFolderQuery, GetFolderQueryVariables>) {
+          return Apollo.useLazyQuery<GetFolderQuery, GetFolderQueryVariables>(GetFolderDocument, baseOptions);
+        }
+export type GetFolderQueryHookResult = ReturnType<typeof useGetFolderQuery>;
+export type GetFolderLazyQueryHookResult = ReturnType<typeof useGetFolderLazyQuery>;
+export type GetFolderQueryResult = Apollo.QueryResult<GetFolderQuery, GetFolderQueryVariables>;
+export const UpdateFolderDocument = gql`
+    mutation UpdateFolder($id: Int!, $bounds: [BigFloat], $isClickOffOnly: Boolean, $showRadioChildren: Boolean, $title: String, $hideChildren: Boolean) {
+  updateTableOfContentsItem(input: {id: $id, patch: {bounds: $bounds, isClickOffOnly: $isClickOffOnly, showRadioChildren: $showRadioChildren, title: $title, hideChildren: $hideChildren}}) {
+    tableOfContentsItem {
+      id
+      bounds
+      isClickOffOnly
+      showRadioChildren
+      hideChildren
+      title
+    }
+  }
+}
+    `;
+export type UpdateFolderMutationFn = Apollo.MutationFunction<UpdateFolderMutation, UpdateFolderMutationVariables>;
+
+/**
+ * __useUpdateFolderMutation__
+ *
+ * To run a mutation, you first call `useUpdateFolderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFolderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFolderMutation, { data, loading, error }] = useUpdateFolderMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      bounds: // value for 'bounds'
+ *      isClickOffOnly: // value for 'isClickOffOnly'
+ *      showRadioChildren: // value for 'showRadioChildren'
+ *      title: // value for 'title'
+ *      hideChildren: // value for 'hideChildren'
+ *   },
+ * });
+ */
+export function useUpdateFolderMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFolderMutation, UpdateFolderMutationVariables>) {
+        return Apollo.useMutation<UpdateFolderMutation, UpdateFolderMutationVariables>(UpdateFolderDocument, baseOptions);
+      }
+export type UpdateFolderMutationHookResult = ReturnType<typeof useUpdateFolderMutation>;
+export type UpdateFolderMutationResult = Apollo.MutationResult<UpdateFolderMutation>;
+export type UpdateFolderMutationOptions = Apollo.BaseMutationOptions<UpdateFolderMutation, UpdateFolderMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

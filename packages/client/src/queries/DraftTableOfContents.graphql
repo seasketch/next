@@ -15,6 +15,7 @@ query DraftTableOfContents($slug: String!) {
       showRadioChildren
       bounds
       sortIndex
+      hideChildren
     }
   }
 }
@@ -72,6 +73,9 @@ mutation CreateFolder(
   $stableId: String!
   $projectId: Int!
   $parentStableId: String
+  $isClickOffOnly: Boolean
+  $showRadioChildren: Boolean
+  $hideChildren: Boolean
 ) {
   createTableOfContentsItem(
     input: {
@@ -81,6 +85,9 @@ mutation CreateFolder(
         projectId: $projectId
         parentStableId: $parentStableId
         isFolder: true
+        isClickOffOnly: $isClickOffOnly
+        showRadioChildren: $showRadioChildren
+        hideChildren: $hideChildren
       }
     }
   ) {
@@ -96,27 +103,67 @@ mutation CreateFolder(
       showRadioChildren
       isClickOffOnly
       sortIndex
+      hideChildren
     }
   }
 }
 
 mutation DeleteBranch($id: Int!) {
-  deleteTableOfContentsBranch(input: {
-    tableOfContentsItemId: $id
-  }) {
+  deleteTableOfContentsBranch(input: { tableOfContentsItemId: $id }) {
     clientMutationId
   }
 }
 
 mutation UpdateTableOfContentsItemChildren($id: Int, $childIds: [Int]!) {
-  updateTableOfContentsItemChildren(input: {
-    parentId: $id
-    childIds: $childIds
-  }) {
+  updateTableOfContentsItemChildren(
+    input: { parentId: $id, childIds: $childIds }
+  ) {
     tableOfContentsItems {
       id
       sortIndex
       parentStableId
+    }
+  }
+}
+
+query GetFolder($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    bounds
+    isClickOffOnly
+    showRadioChildren
+    title
+    hideChildren
+  }
+}
+
+mutation UpdateFolder(
+  $id: Int!
+  $bounds: [BigFloat]
+  $isClickOffOnly: Boolean
+  $showRadioChildren: Boolean
+  $title: String
+  $hideChildren: Boolean
+) {
+  updateTableOfContentsItem(
+    input: {
+      id: $id
+      patch: {
+        bounds: $bounds
+        isClickOffOnly: $isClickOffOnly
+        showRadioChildren: $showRadioChildren
+        title: $title
+        hideChildren: $hideChildren
+      }
+    }
+  ) {
+    tableOfContentsItem {
+      id
+      bounds
+      isClickOffOnly
+      showRadioChildren
+      hideChildren
+      title
     }
   }
 }

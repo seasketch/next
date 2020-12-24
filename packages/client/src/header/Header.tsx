@@ -55,7 +55,7 @@ export default function Header(props: { projectMode?: boolean }) {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             {props.projectMode && (
-              <div className="flex-shrink-0 flex items-center text-lg text-cool-gray-200 pr-4 mr-4 border-r border-gray-700">
+              <div className="flex-shrink-0 flex items-center text-lg text-gray-200 pr-4 mr-4 border-r border-gray-700">
                 {/* <img
                   className="block h-10 mr-2"
                   style={{ width: 47 }}
@@ -66,7 +66,7 @@ export default function Header(props: { projectMode?: boolean }) {
               </div>
             )}
             <Link to="/">
-              <div className="flex-shrink-0 flex items-center text-lg text-cool-gray-200">
+              <div className="flex-shrink-0 flex items-center text-lg text-gray-200">
                 <img
                   className="block h-10 mr-2"
                   style={{ width: props.projectMode ? 37 : 47, height: "auto" }}
@@ -135,7 +135,7 @@ export default function Header(props: { projectMode?: boolean }) {
                   }`}
                 >
                   <div
-                    className="rounded-md bg-white shadow-xs"
+                    className="rounded-md bg-white ring-1 ring-black ring-opacity-5"
                     role="menu"
                     aria-orientation="vertical"
                     aria-labelledby="options-menu"

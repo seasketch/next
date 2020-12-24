@@ -24,7 +24,7 @@ const Modal: React.FunctionComponent<ModalProps> = ({
   return (
     <AnimatePresence>
       {open && (
-        <div className={`fixed z-10 inset-0 overflow-y-hidden h-screen`}>
+        <div className={`fixed z-50 inset-0 overflow-y-hidden h-screen`}>
           <div className="flex items-end justify-center h-screen sm:px-4 sm:pb-20 text-center sm:block sm:p-0">
             <motion.div
               className="fixed inset-0"
@@ -106,7 +106,9 @@ const Modal: React.FunctionComponent<ModalProps> = ({
                   {children}
                 </div>
                 {footer && (
-                  <div className="w-full flex-0 self-end">{footer}</div>
+                  <div className="w-full flex-0 self-end bg-cool-gray-50 p-4 text-left">
+                    {footer}
+                  </div>
                 )}
               </div>
             </motion.div>

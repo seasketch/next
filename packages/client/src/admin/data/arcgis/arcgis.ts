@@ -779,6 +779,7 @@ export function treeDataFromLayerList(layers: LayerInfo[]) {
       showRadioChildren: false,
       stableId: "root",
       sortIndex: 0,
+      hideChildren: false,
     },
   };
   const root = nodesBySublayer["root"];
@@ -796,6 +797,7 @@ export function treeDataFromLayerList(layers: LayerInfo[]) {
         dataLayerId:
           layer.type !== "Group Layer" ? layer.generatedId : undefined,
         sortIndex: layer.id,
+        hideChildren: false,
       };
       nodesBySublayer[layer.id.toString()] = node;
       if (layer.parentLayer && layer.parentLayer.id !== -1) {

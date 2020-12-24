@@ -12,7 +12,7 @@ export default function VectorFeatureLayerSettingsForm(props: {
   const { settings, updateSettings } = props;
   return (
     <div>
-      <div className="mt-6 mb-5 bg-cool-gray-100 rounded py-2 px-4 pb-3">
+      <div className="mt-6 mb-5 bg-gray-100 rounded py-2 px-4 pb-3">
         <h3 className="font-medium">Import Layers</h3>
         <p className="text-sm text-gray-600 mt-1 mb-2">
           Before importing vector sources, SeaSketch will these vector sources

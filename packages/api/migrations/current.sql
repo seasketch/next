@@ -197,3 +197,14 @@ CREATE or replace FUNCTION public.before_insert_or_update_table_of_contents_item
     return new;
   end;
 $$;
+
+
+alter table table_of_contents_items add column if not exists hide_children boolean not null default false;
+
+grant update (hide_children) on table_of_contents_items to seasketch_user;
+grant insert (hide_children) on table_of_contents_items to seasketch_user;
+grant select (hide_children) on table_of_contents_items to seasketch_user;
+
+
+ALTER TABLE table_of_contents_items
+  ADD CONSTRAINT titlechk CHECK (char_length(title) > 0);

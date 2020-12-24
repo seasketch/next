@@ -8895,6 +8895,7 @@ type TableOfContentsItem implements Node {
   If is_folder=false, a DataLayers visibility will be controlled by this item
   """
   dataLayerId: Int
+  hideChildren: Boolean!
   id: Int!
 
   """
@@ -8986,6 +8987,7 @@ input TableOfContentsItemInput {
   If is_folder=false, a DataLayers visibility will be controlled by this item
   """
   dataLayerId: Int
+  hideChildren: Boolean
 
   """
   If set, folders with this property cannot be toggled in order to activate all
@@ -9045,6 +9047,7 @@ input TableOfContentsItemPatch {
   If is_folder=false, a DataLayers visibility will be controlled by this item
   """
   dataLayerId: Int
+  hideChildren: Boolean
 
   """
   If set, folders with this property cannot be toggled in order to activate all

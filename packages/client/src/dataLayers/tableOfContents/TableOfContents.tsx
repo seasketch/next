@@ -1,5 +1,20 @@
-import React, { Children, ReactNode, useCallback, useContext, useRef, useState } from "react";
-import SortableTree, { FullTree, NodeData, OnMovePreviousAndNextLocation } from "react-sortable-tree";
+import React, {
+  Children,
+  ReactNode,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from "react";
+import SortableTree, {
+  changeNodeAtPath,
+  FullTree,
+  NodeData,
+  OnMovePreviousAndNextLocation,
+  OnVisibilityToggleData,
+  TreeIndex,
+  TreeNode,
+} from "react-sortable-tree";
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 import "react-sortable-tree/style.css";
@@ -31,6 +46,7 @@ export type ClientTableOfContentsItem = Pick<
   | "stableId"
   | "parentStableId"
   | "sortIndex"
+  | "hideChildren"
 > & {
   id: number | string;
   disabled?: boolean;
@@ -50,8 +66,11 @@ interface TableOfContentsProps {
   contextMenuItems?: ReactNode[];
   /** defaults to false */
   canDrag?: boolean;
-  onMoveNode?: (data: NodeData & FullTree & OnMovePreviousAndNextLocation) => void
+  onMoveNode?: (
+    data: NodeData & FullTree & OnMovePreviousAndNextLocation
+  ) => void;
   hideExpandAll?: boolean;
+  onVisibilityToggle?: (data: OnVisibilityToggleData) => void;
 }
 
 export default function TableOfContents(props: TableOfContentsProps) {
@@ -86,18 +105,17 @@ export default function TableOfContents(props: TableOfContentsProps) {
 
   return (
     <div className="relative" ref={containerRef}>
-      { props.contextMenuItems && <Menu id={props.contextMenuId!} animation={false} onHidden={() => {
-        // const prevId = selectedItemId;
-        // console.log('prevId', prevId);
-        // setTimeout(() => {
-        //   console.log('selectedItemId', selectedItemId);
-        //   if (selectedItemId === prevId) {
-            setSelectedItemId(undefined)
-        //   }
-        // }, 500);
-      }}>
-        {props.contextMenuItems}
-      </Menu> }
+      {props.contextMenuItems && (
+        <Menu
+          id={props.contextMenuId!}
+          animation={false}
+          onHidden={() => {
+            setSelectedItemId(undefined);
+          }}
+        >
+          {props.contextMenuItems}
+        </Menu>
+      )}
       {showFolderToggle && (
         <div className="z-10 p-0 absolute top-0 left-32 text-gray-500">
           <button
@@ -109,6 +127,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
         </div>
       )}
       <SortableTree
+        onVisibilityToggle={props.onVisibilityToggle}
         canDrag={!!props.canDrag}
         isVirtualized={!!props.isVirtualized}
         onChange={props.onChange}
@@ -117,6 +136,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
         canNodeHaveChildren={(node) => !!node.isFolder}
         style={{ height: "auto" }}
         theme={FileExplorerTheme}
+        getNodeKey={(data) => data.node.id}
         generateNodeProps={(data) => {
           const layerState = layerStates[data.node.dataLayerId];
           const visibility = data.node.isFolder
@@ -127,41 +147,79 @@ export default function TableOfContents(props: TableOfContentsProps) {
             : !!layerState?.visible;
           const isVisible = visibility === "mixed" || visibility;
           const selected = data.node.id.toString() === selectedItemId;
+          const inRadioFolder = data.parentNode?.showRadioChildren;
           return {
             style: {
-              border: selected ? "1px solid inset rgba(0,0,0,0.05)" : "none"
+              border: selected ? "1px solid inset rgba(0,0,0,0.05)" : "none",
             },
-            title: <span onContextMenu={(e) => {
-              if (props.contextMenuId) {
-                // e.preventDefault();
-                // @ts-ignore
-                window.document.getSelection().removeAllRanges();
-                const options = {
-                  props: {
-                    foo: 'bar',
-                    item: data.node,
-                  },
-                };
-                console.log('show', e, options);
-                show(e, options);
-                setTimeout(() => {
-                  setSelectedItemId(data.node.id.toString());
-                }, 8);
-              }
-            }}>{data.node.title}
-              {data.node.disabled && props.disabledMessage
-                ? " " + props.disabledMessage
-                : ""
-            }</span>,
+            toggleChildrenVisibility: data.node.hideChildren
+              ? undefined
+              : ({
+                  node,
+                  path,
+                }: {
+                  node: TreeIndex & TreeNode;
+                  path: number[];
+                }) => {
+                  // if ()
+                  const newTreeData = changeNodeAtPath({
+                    treeData: props.nodes,
+                    path: path,
+                    newNode: ({
+                      node,
+                    }: {
+                      node: ClientTableOfContentsItem;
+                    }) => ({
+                      ...node,
+                      expanded: !node.expanded,
+                    }),
+                    getNodeKey: (data: TreeIndex & TreeNode) => data.node.id,
+                  });
+
+                  props.onChange(newTreeData as ClientTableOfContentsItem[]);
+                },
+            title: (
+              <span
+                onContextMenu={(e) => {
+                  if (props.contextMenuId) {
+                    // e.preventDefault();
+                    // @ts-ignore
+                    window.document.getSelection().removeAllRanges();
+                    const options = {
+                      props: {
+                        foo: "bar",
+                        item: data.node,
+                      },
+                    };
+                    show(e, options);
+                    setTimeout(() => {
+                      setSelectedItemId(data.node.id.toString());
+                    }, 8);
+                  }
+                }}
+              >
+                {data.node.title}
+                {data.node.disabled && props.disabledMessage
+                  ? " " + props.disabledMessage
+                  : ""}
+              </span>
+            ),
+
             className: `${data.node.disabled ? "opacity-50" : ""} ${
               props.extraClassName
                 ? props.extraClassName(data.node as ClientTableOfContentsItem)
                 : ""
-            } ${selected ? 'bg-cool-gray-100 pl-2 -ml-2' : ''}`,
+            } ${selected ? "bg-gray-100 pl-2 -ml-2" : ""} ${
+              data.node.hideChildren ? "hideChildren" : ""
+            }`,
             icons: [
               <VisibilityCheckbox
                 id={data.node.id}
-                disabled={data.node.disabled}
+                radio={!!inRadioFolder}
+                disabled={
+                  data.node.disabled ||
+                  (!visibility && data.node.isClickOffOnly)
+                }
                 error={!!layerState?.error}
                 onClick={() => {
                   let childIds = [];
@@ -180,6 +238,30 @@ export default function TableOfContents(props: TableOfContentsProps) {
                   if (isVisible) {
                     manager?.hideLayers(layerIds);
                   } else {
+                    // TODO: handle radio siblings
+                    if (
+                      data.parentNode &&
+                      data.parentNode.showRadioChildren &&
+                      data.parentNode.children &&
+                      Array.isArray(data.parentNode.children)
+                    ) {
+                      for (const sibling of data.parentNode.children.filter(
+                        (item) => item.id !== data.node.id
+                      )) {
+                        let [childIds, layerIds] = getEnabledChildren(
+                          sibling as ClientTableOfContentsItem,
+                          false,
+                          layerStates
+                        );
+                        if (
+                          !sibling.isFolder &&
+                          layerStates[sibling.dataLayerId.toString()]?.visible
+                        ) {
+                          layerIds.push(sibling.dataLayerId);
+                        }
+                        manager?.hideLayers(layerIds.map((n) => n.toString()));
+                      }
+                    }
                     manager?.showLayers(layerIds);
                   }
                 }}
@@ -274,12 +356,20 @@ function getEnabledChildren(
   let ids: (string | number)[] = [];
   let layerIds: (string | number)[] = [];
   if (folder.children) {
-    for (const child of folder.children) {
-      if (child.isFolder) {
+    let children = folder.children;
+    if (!visible && folder.showRadioChildren) {
+      if (children[0]) {
+        children = [children[0]];
+      } else {
+        children = [];
+      }
+    }
+    for (const child of children) {
+      if (child.isFolder && (!child.isClickOffOnly || visible)) {
         const values = getEnabledChildren(child, visible, layerStates);
         ids = ids.concat(values[0]);
         layerIds = layerIds.concat(values[1]);
-      } else if (!child.disabled) {
+      } else if (!child.isFolder && !child.disabled) {
         const state = layerStates[child.dataLayerId!];
         if ((!state && visible === false) || state?.visible === visible) {
           ids.push(child.id);

@@ -19,6 +19,8 @@ export interface ButtonProps {
   href?: string;
   children?: React.ReactNode;
   autofocus?: boolean;
+  /* Override default styles on button */
+  buttonClassName?: string;
 }
 
 export default function Button(props: ButtonProps) {
@@ -51,7 +53,9 @@ export default function Button(props: ButtonProps) {
       className={`ml-3 inline-block inset-y-0 items-center pointer-events-none transition-opacity duration-500 opacity-50`}
     >
       <svg
-        className={`animate-spin h-5 w-5 ${props.primary ? "text-white" : "text-gray-500"}`}
+        className={`animate-spin h-5 w-5 ${
+          props.primary ? "text-white" : "text-gray-500"
+        }`}
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
@@ -78,12 +82,18 @@ export default function Button(props: ButtonProps) {
       onClick={props.disabled ? undefined : onClick}
     >
       {props.labelFor ? (
-        <label htmlFor={props.labelFor} className={buttonClassName}>
+        <label
+          htmlFor={props.labelFor}
+          className={`${buttonClassName} ${props.buttonClassName}`}
+        >
           {label}
           {props.loading && spinner}
         </label>
       ) : (
-        <button autoFocus={props.autofocus} className={buttonClassName}>
+        <button
+          autoFocus={props.autofocus}
+          className={`${buttonClassName} ${props.buttonClassName}`}
+        >
           {label}
           {props.loading && spinner}
         </button>

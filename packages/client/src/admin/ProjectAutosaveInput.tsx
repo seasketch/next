@@ -13,8 +13,11 @@ export default function ProjectAutosaveInput(props: {
   const [value, setValue] = useState(props.value);
   const debouncedValue = useDebounce(value, 500);
   const [mutation, mutationStatus] = useUpdateProjectSettingsMutation();
+  const [changeSinceError, setChangeSinceError] = useState<boolean>(false);
+
   useEffect(() => {
-    if (props.value !== debouncedValue || mutationStatus.error) {
+    if (!mutationStatus.loading && ((!mutationStatus.error && (props.value !== debouncedValue)) || (mutationStatus.error && changeSinceError))) {
+      setChangeSinceError(false);
       const variables: any = { slug: props.slug };
       variables[props.propName] = debouncedValue;
       mutation({
@@ -28,7 +31,15 @@ export default function ProjectAutosaveInput(props: {
     props.slug,
     mutation,
     mutationStatus,
+    changeSinceError
   ]);
+
+  useEffect(() => {
+    if (changeSinceError === false && mutationStatus.error) {
+      setChangeSinceError(true);
+    }
+  }, [debouncedValue]);
+
   return (
     <TextInput
       id={props.propName}

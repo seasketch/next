@@ -16,7 +16,8 @@ export default function SegmentControl(props: SegmentControlProps) {
   return (
     <div className=" bg-cool-gray-200 flex rounded-md relative border-cool-gray-200 border-2">
       <span
-        className="transition-all duration-75 text-sm rounded p-0.5 bg-white shadow-md absolute"
+        role="button"
+        className="transition-all duration-75 text-sm rounded p-0.5 bg-white shadow-md absolute focus:ring focus:ring-blue-200"
         style={{
           left: position,
           width: `${(1 / props.segments.length) * 100}%`,

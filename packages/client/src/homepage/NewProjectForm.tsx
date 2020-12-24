@@ -57,11 +57,12 @@ export default function NewProjectForm() {
             <div className="rounded-md shadow-sm">
               <input
                 id="name"
+                type="text"
                 placeholder={t("Project name")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 transition duration-150 ease-in-out sm:text-sm sm:leading-5"
+                className="block w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5"
               />
             </div>
           </div>
@@ -78,7 +79,7 @@ export default function NewProjectForm() {
                 required
                 value={slug}
                 onChange={(e) => setSlug(slugify(e.target.value.toLowerCase()))}
-                className={`flex-1 form-input block w-full min-w-0 rounded-none rounded-r-md transition duration-150 ease-in-out sm:text-sm sm:leading-5 ${
+                className={`flex-1 block w-full border-gray-300 rounded-r-md focus:border-blue-300 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 ${
                   !!data?.projectBySlug ? "bg-red-200" : ""
                 }`}
               />

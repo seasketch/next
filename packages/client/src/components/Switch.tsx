@@ -28,7 +28,7 @@ export default function Switch(props: SwitchProps) {
         } inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full ${
           !props.disabled && "cursor-pointer"
         } transition-colors ease-in-out duration-200 focus:outline-none ${
-          !props.disabled && "focus:shadow-outline"
+          !props.disabled && "focus:ring"
         } ${props.className}`}
       >
         <span
