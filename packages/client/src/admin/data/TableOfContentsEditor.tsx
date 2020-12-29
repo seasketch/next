@@ -24,6 +24,7 @@ import useProjectId from "../../useProjectId";
 import { generateStableId } from "./arcgis/arcgis";
 import DeleteTableOfContentsItemModal from "./DeleteTableOfContentsItemModal";
 import EditFolderModal from "./EditFolderModal";
+import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
@@ -35,6 +36,7 @@ export default function TableOfContentsEditor() {
   const projectId = useProjectId();
   const [treeItems, setTreeItems] = useState<ClientTableOfContentsItem[]>([]);
   const [createFolder, createFolderState] = useCreateFolderMutation();
+  const [openLayerItemId, setOpenLayerItemId] = useState<number>();
   const [createNewFolderModalOpen, setCreateNewFolderModalOpen] = useState<
     boolean
   >(false);
@@ -82,7 +84,7 @@ export default function TableOfContentsEditor() {
   }, [layersAndSources.data, manager]);
 
   return (
-    <div className="relative">
+    <div className="">
       {
         <EditFolderModal
           className="z-30"
@@ -192,9 +194,7 @@ export default function TableOfContentsEditor() {
                 let bounds: [number, number, number, number] | undefined;
                 if (args.props.item.isFolder) {
                   // bounds = null;
-                  console.log(args);
                   bounds = createBoundsRecursive(args.props.item);
-                  console.log("bounds?", bounds);
                 } else {
                   bounds = args.props.item.bounds.map((coord: string) =>
                     parseFloat(coord)
@@ -218,6 +218,20 @@ export default function TableOfContentsEditor() {
               onClick={(args) => {
                 if (args.props?.item?.isFolder) {
                   setFolderId(args.props.item.id);
+                } else {
+                  let bounds = args.props.item.bounds.map((coord: string) =>
+                    parseFloat(coord)
+                  );
+                  if (
+                    bounds &&
+                    [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")
+                  ) {
+                    manager?.map?.fitBounds(bounds, {
+                      padding: 40,
+                    });
+                  }
+                  manager?.showLayers([args.props.item.dataLayerId]);
+                  setOpenLayerItemId(args.props.item.id);
                 }
               }}
             >
@@ -248,6 +262,12 @@ export default function TableOfContentsEditor() {
           onDelete={async () => await tocQuery.refetch()}
         />
       </div>
+      {openLayerItemId && (
+        <LayerTableOfContentsItemEditor
+          onRequestClose={() => setOpenLayerItemId(undefined)}
+          itemId={openLayerItemId}
+        />
+      )}
     </div>
   );
 }

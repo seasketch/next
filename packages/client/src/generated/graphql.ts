@@ -110,6 +110,7 @@ export type AddGroupToAclInput = {
 /** The output of our `addGroupToAcl` mutation. */
 export type AddGroupToAclPayload = {
   __typename?: 'AddGroupToAclPayload';
+  acl?: Maybe<Acl>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
@@ -117,6 +118,10 @@ export type AddGroupToAclPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+  /** Reads a single `SketchClass` that is related to this `Acl`. */
+  sketchClass?: Maybe<SketchClass>;
+  /** Reads a single `TableOfContentsItem` that is related to this `Acl`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
 };
 
 /** All input for the `addUserToGroup` mutation. */
@@ -7463,6 +7468,7 @@ export type RemoveGroupFromAclInput = {
 /** The output of our `removeGroupFromAcl` mutation. */
 export type RemoveGroupFromAclPayload = {
   __typename?: 'RemoveGroupFromAclPayload';
+  acl?: Maybe<Acl>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
@@ -7470,6 +7476,10 @@ export type RemoveGroupFromAclPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+  /** Reads a single `SketchClass` that is related to this `Acl`. */
+  sketchClass?: Maybe<SketchClass>;
+  /** Reads a single `TableOfContentsItem` that is related to this `Acl`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
 };
 
 /** All input for the `removeUserFromGroup` mutation. */
@@ -10144,6 +10154,96 @@ export type UpdateProjectStorageBucketMutation = (
   )> }
 );
 
+export type GetAclQueryVariables = Exact<{
+  nodeId: Scalars['ID'];
+}>;
+
+
+export type GetAclQuery = (
+  { __typename?: 'Query' }
+  & { aclByNodeId?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'id' | 'nodeId' | 'type'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name' | 'memberCount'>
+    )>> }
+  )> }
+);
+
+export type UpdateAclTypeMutationVariables = Exact<{
+  nodeId: Scalars['ID'];
+  type: AccessControlListType;
+}>;
+
+
+export type UpdateAclTypeMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAclByNodeId?: Maybe<(
+    { __typename?: 'UpdateAclPayload' }
+    & { acl?: Maybe<(
+      { __typename?: 'Acl' }
+      & Pick<Acl, 'id' | 'nodeId' | 'type'>
+    )> }
+  )> }
+);
+
+export type AddGroupToAclMutationVariables = Exact<{
+  id: Scalars['Int'];
+  groupId: Scalars['Int'];
+}>;
+
+
+export type AddGroupToAclMutation = (
+  { __typename?: 'Mutation' }
+  & { addGroupToAcl?: Maybe<(
+    { __typename?: 'AddGroupToAclPayload' }
+    & { acl?: Maybe<(
+      { __typename?: 'Acl' }
+      & { groups?: Maybe<Array<(
+        { __typename?: 'Group' }
+        & Pick<Group, 'id' | 'name'>
+      )>> }
+    )> }
+  )> }
+);
+
+export type RemoveGroupFromAclMutationVariables = Exact<{
+  id: Scalars['Int'];
+  groupId: Scalars['Int'];
+}>;
+
+
+export type RemoveGroupFromAclMutation = (
+  { __typename?: 'Mutation' }
+  & { removeGroupFromAcl?: Maybe<(
+    { __typename?: 'RemoveGroupFromAclPayload' }
+    & { acl?: Maybe<(
+      { __typename?: 'Acl' }
+      & { groups?: Maybe<Array<(
+        { __typename?: 'Group' }
+        & Pick<Group, 'id' | 'name'>
+      )>> }
+    )> }
+  )> }
+);
+
+export type GroupsQueryVariables = Exact<{
+  projectSlug: Scalars['String'];
+}>;
+
+
+export type GroupsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & { groups: Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name' | 'memberCount'>
+    )> }
+  )> }
+);
+
 export type CreateTableOfContentsItemMutationVariables = Exact<{
   title: Scalars['String'];
   stableId: Scalars['String'];
@@ -10408,6 +10508,89 @@ export type UpdateFolderMutation = (
   )> }
 );
 
+export type GetLayerItemQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetLayerItemQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title'>
+    & { acl?: Maybe<(
+      { __typename?: 'Acl' }
+      & Pick<Acl, 'nodeId' | 'id' | 'type'>
+      & { groups?: Maybe<Array<(
+        { __typename?: 'Group' }
+        & Pick<Group, 'id' | 'name'>
+      )>> }
+    )>, dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio'>
+      )> }
+    )> }
+  )> }
+);
+
+export type UpdateTableOfContentsItemMutationVariables = Exact<{
+  id: Scalars['Int'];
+  title?: Maybe<Scalars['String']>;
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  metadata?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateTableOfContentsItemMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTableOfContentsItem?: Maybe<(
+    { __typename?: 'UpdateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'metadata' | 'title'>
+    )> }
+  )> }
+);
+
+export type UpdateLayerMutationVariables = Exact<{
+  id: Scalars['Int'];
+  renderUnder?: Maybe<RenderUnderType>;
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  sublayer?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateLayerMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataLayer?: Maybe<(
+    { __typename?: 'UpdateDataLayerPayload' }
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id' | 'renderUnder' | 'mapboxGlStyles' | 'sublayer'>
+    )> }
+  )> }
+);
+
+export type UpdateDataSourceMutationVariables = Exact<{
+  id: Scalars['Int'];
+  attribution?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateDataSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataSource?: Maybe<(
+    { __typename?: 'UpdateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio'>
+    )> }
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -10646,6 +10829,196 @@ export function useUpdateProjectStorageBucketMutation(baseOptions?: Apollo.Mutat
 export type UpdateProjectStorageBucketMutationHookResult = ReturnType<typeof useUpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationResult = Apollo.MutationResult<UpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationOptions = Apollo.BaseMutationOptions<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>;
+export const GetAclDocument = gql`
+    query GetAcl($nodeId: ID!) {
+  aclByNodeId(nodeId: $nodeId) {
+    id
+    nodeId
+    type
+    groups {
+      id
+      name
+      memberCount
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetAclQuery__
+ *
+ * To run a query within a React component, call `useGetAclQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetAclQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetAclQuery({
+ *   variables: {
+ *      nodeId: // value for 'nodeId'
+ *   },
+ * });
+ */
+export function useGetAclQuery(baseOptions?: Apollo.QueryHookOptions<GetAclQuery, GetAclQueryVariables>) {
+        return Apollo.useQuery<GetAclQuery, GetAclQueryVariables>(GetAclDocument, baseOptions);
+      }
+export function useGetAclLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetAclQuery, GetAclQueryVariables>) {
+          return Apollo.useLazyQuery<GetAclQuery, GetAclQueryVariables>(GetAclDocument, baseOptions);
+        }
+export type GetAclQueryHookResult = ReturnType<typeof useGetAclQuery>;
+export type GetAclLazyQueryHookResult = ReturnType<typeof useGetAclLazyQuery>;
+export type GetAclQueryResult = Apollo.QueryResult<GetAclQuery, GetAclQueryVariables>;
+export const UpdateAclTypeDocument = gql`
+    mutation UpdateAclType($nodeId: ID!, $type: AccessControlListType!) {
+  updateAclByNodeId(input: {nodeId: $nodeId, patch: {type: $type}}) {
+    acl {
+      id
+      nodeId
+      type
+    }
+  }
+}
+    `;
+export type UpdateAclTypeMutationFn = Apollo.MutationFunction<UpdateAclTypeMutation, UpdateAclTypeMutationVariables>;
+
+/**
+ * __useUpdateAclTypeMutation__
+ *
+ * To run a mutation, you first call `useUpdateAclTypeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateAclTypeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateAclTypeMutation, { data, loading, error }] = useUpdateAclTypeMutation({
+ *   variables: {
+ *      nodeId: // value for 'nodeId'
+ *      type: // value for 'type'
+ *   },
+ * });
+ */
+export function useUpdateAclTypeMutation(baseOptions?: Apollo.MutationHookOptions<UpdateAclTypeMutation, UpdateAclTypeMutationVariables>) {
+        return Apollo.useMutation<UpdateAclTypeMutation, UpdateAclTypeMutationVariables>(UpdateAclTypeDocument, baseOptions);
+      }
+export type UpdateAclTypeMutationHookResult = ReturnType<typeof useUpdateAclTypeMutation>;
+export type UpdateAclTypeMutationResult = Apollo.MutationResult<UpdateAclTypeMutation>;
+export type UpdateAclTypeMutationOptions = Apollo.BaseMutationOptions<UpdateAclTypeMutation, UpdateAclTypeMutationVariables>;
+export const AddGroupToAclDocument = gql`
+    mutation AddGroupToAcl($id: Int!, $groupId: Int!) {
+  addGroupToAcl(input: {aclId: $id, groupId: $groupId}) {
+    acl {
+      groups {
+        id
+        name
+      }
+    }
+  }
+}
+    `;
+export type AddGroupToAclMutationFn = Apollo.MutationFunction<AddGroupToAclMutation, AddGroupToAclMutationVariables>;
+
+/**
+ * __useAddGroupToAclMutation__
+ *
+ * To run a mutation, you first call `useAddGroupToAclMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddGroupToAclMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addGroupToAclMutation, { data, loading, error }] = useAddGroupToAclMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      groupId: // value for 'groupId'
+ *   },
+ * });
+ */
+export function useAddGroupToAclMutation(baseOptions?: Apollo.MutationHookOptions<AddGroupToAclMutation, AddGroupToAclMutationVariables>) {
+        return Apollo.useMutation<AddGroupToAclMutation, AddGroupToAclMutationVariables>(AddGroupToAclDocument, baseOptions);
+      }
+export type AddGroupToAclMutationHookResult = ReturnType<typeof useAddGroupToAclMutation>;
+export type AddGroupToAclMutationResult = Apollo.MutationResult<AddGroupToAclMutation>;
+export type AddGroupToAclMutationOptions = Apollo.BaseMutationOptions<AddGroupToAclMutation, AddGroupToAclMutationVariables>;
+export const RemoveGroupFromAclDocument = gql`
+    mutation RemoveGroupFromAcl($id: Int!, $groupId: Int!) {
+  removeGroupFromAcl(input: {aclId: $id, groupId: $groupId}) {
+    acl {
+      groups {
+        id
+        name
+      }
+    }
+  }
+}
+    `;
+export type RemoveGroupFromAclMutationFn = Apollo.MutationFunction<RemoveGroupFromAclMutation, RemoveGroupFromAclMutationVariables>;
+
+/**
+ * __useRemoveGroupFromAclMutation__
+ *
+ * To run a mutation, you first call `useRemoveGroupFromAclMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRemoveGroupFromAclMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [removeGroupFromAclMutation, { data, loading, error }] = useRemoveGroupFromAclMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      groupId: // value for 'groupId'
+ *   },
+ * });
+ */
+export function useRemoveGroupFromAclMutation(baseOptions?: Apollo.MutationHookOptions<RemoveGroupFromAclMutation, RemoveGroupFromAclMutationVariables>) {
+        return Apollo.useMutation<RemoveGroupFromAclMutation, RemoveGroupFromAclMutationVariables>(RemoveGroupFromAclDocument, baseOptions);
+      }
+export type RemoveGroupFromAclMutationHookResult = ReturnType<typeof useRemoveGroupFromAclMutation>;
+export type RemoveGroupFromAclMutationResult = Apollo.MutationResult<RemoveGroupFromAclMutation>;
+export type RemoveGroupFromAclMutationOptions = Apollo.BaseMutationOptions<RemoveGroupFromAclMutation, RemoveGroupFromAclMutationVariables>;
+export const GroupsDocument = gql`
+    query Groups($projectSlug: String!) {
+  projectBySlug(slug: $projectSlug) {
+    groups {
+      id
+      name
+      memberCount
+    }
+  }
+}
+    `;
+
+/**
+ * __useGroupsQuery__
+ *
+ * To run a query within a React component, call `useGroupsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGroupsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGroupsQuery({
+ *   variables: {
+ *      projectSlug: // value for 'projectSlug'
+ *   },
+ * });
+ */
+export function useGroupsQuery(baseOptions?: Apollo.QueryHookOptions<GroupsQuery, GroupsQueryVariables>) {
+        return Apollo.useQuery<GroupsQuery, GroupsQueryVariables>(GroupsDocument, baseOptions);
+      }
+export function useGroupsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GroupsQuery, GroupsQueryVariables>) {
+          return Apollo.useLazyQuery<GroupsQuery, GroupsQueryVariables>(GroupsDocument, baseOptions);
+        }
+export type GroupsQueryHookResult = ReturnType<typeof useGroupsQuery>;
+export type GroupsLazyQueryHookResult = ReturnType<typeof useGroupsLazyQuery>;
+export type GroupsQueryResult = Apollo.QueryResult<GroupsQuery, GroupsQueryVariables>;
 export const CreateTableOfContentsItemDocument = gql`
     mutation CreateTableOfContentsItem($title: String!, $stableId: String!, $projectId: Int!, $isFolder: Boolean!, $parentStableId: String, $metadata: JSON, $bounds: [BigFloat], $dataLayerId: Int) {
   createTableOfContentsItem(input: {tableOfContentsItem: {title: $title, stableId: $stableId, projectId: $projectId, parentStableId: $parentStableId, metadata: $metadata, bounds: $bounds, dataLayerId: $dataLayerId, isFolder: $isFolder}}) {
@@ -11267,6 +11640,240 @@ export function useUpdateFolderMutation(baseOptions?: Apollo.MutationHookOptions
 export type UpdateFolderMutationHookResult = ReturnType<typeof useUpdateFolderMutation>;
 export type UpdateFolderMutationResult = Apollo.MutationResult<UpdateFolderMutation>;
 export type UpdateFolderMutationOptions = Apollo.BaseMutationOptions<UpdateFolderMutation, UpdateFolderMutationVariables>;
+export const GetLayerItemDocument = gql`
+    query GetLayerItem($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    acl {
+      nodeId
+      id
+      type
+      groups {
+        id
+        name
+      }
+    }
+    bounds
+    dataLayerId
+    metadata
+    parentStableId
+    projectId
+    stableId
+    title
+    dataLayer {
+      id
+      mapboxGlStyles
+      renderUnder
+      sourceLayer
+      sublayer
+      dataSource {
+        id
+        attribution
+        bounds
+        bucketId
+        buffer
+        byteLength
+        cluster
+        clusterMaxZoom
+        clusterProperties
+        clusterRadius
+        coordinates
+        createdAt
+        encoding
+        enhancedSecurity
+        generateId
+        importType
+        lineMetrics
+        maxzoom
+        minzoom
+        objectKey
+        originalSourceUrl
+        promoteId
+        queryParameters
+        scheme
+        tiles
+        tileSize
+        tolerance
+        type
+        url
+        urls
+        useDevicePixelRatio
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetLayerItemQuery__
+ *
+ * To run a query within a React component, call `useGetLayerItemQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetLayerItemQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetLayerItemQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetLayerItemQuery(baseOptions?: Apollo.QueryHookOptions<GetLayerItemQuery, GetLayerItemQueryVariables>) {
+        return Apollo.useQuery<GetLayerItemQuery, GetLayerItemQueryVariables>(GetLayerItemDocument, baseOptions);
+      }
+export function useGetLayerItemLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetLayerItemQuery, GetLayerItemQueryVariables>) {
+          return Apollo.useLazyQuery<GetLayerItemQuery, GetLayerItemQueryVariables>(GetLayerItemDocument, baseOptions);
+        }
+export type GetLayerItemQueryHookResult = ReturnType<typeof useGetLayerItemQuery>;
+export type GetLayerItemLazyQueryHookResult = ReturnType<typeof useGetLayerItemLazyQuery>;
+export type GetLayerItemQueryResult = Apollo.QueryResult<GetLayerItemQuery, GetLayerItemQueryVariables>;
+export const UpdateTableOfContentsItemDocument = gql`
+    mutation UpdateTableOfContentsItem($id: Int!, $title: String, $bounds: [BigFloat], $metadata: JSON) {
+  updateTableOfContentsItem(input: {id: $id, patch: {title: $title, bounds: $bounds, metadata: $metadata}}) {
+    tableOfContentsItem {
+      id
+      bounds
+      metadata
+      title
+    }
+  }
+}
+    `;
+export type UpdateTableOfContentsItemMutationFn = Apollo.MutationFunction<UpdateTableOfContentsItemMutation, UpdateTableOfContentsItemMutationVariables>;
+
+/**
+ * __useUpdateTableOfContentsItemMutation__
+ *
+ * To run a mutation, you first call `useUpdateTableOfContentsItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateTableOfContentsItemMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateTableOfContentsItemMutation, { data, loading, error }] = useUpdateTableOfContentsItemMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      title: // value for 'title'
+ *      bounds: // value for 'bounds'
+ *      metadata: // value for 'metadata'
+ *   },
+ * });
+ */
+export function useUpdateTableOfContentsItemMutation(baseOptions?: Apollo.MutationHookOptions<UpdateTableOfContentsItemMutation, UpdateTableOfContentsItemMutationVariables>) {
+        return Apollo.useMutation<UpdateTableOfContentsItemMutation, UpdateTableOfContentsItemMutationVariables>(UpdateTableOfContentsItemDocument, baseOptions);
+      }
+export type UpdateTableOfContentsItemMutationHookResult = ReturnType<typeof useUpdateTableOfContentsItemMutation>;
+export type UpdateTableOfContentsItemMutationResult = Apollo.MutationResult<UpdateTableOfContentsItemMutation>;
+export type UpdateTableOfContentsItemMutationOptions = Apollo.BaseMutationOptions<UpdateTableOfContentsItemMutation, UpdateTableOfContentsItemMutationVariables>;
+export const UpdateLayerDocument = gql`
+    mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String) {
+  updateDataLayer(input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer}}) {
+    dataLayer {
+      id
+      renderUnder
+      mapboxGlStyles
+      sublayer
+    }
+  }
+}
+    `;
+export type UpdateLayerMutationFn = Apollo.MutationFunction<UpdateLayerMutation, UpdateLayerMutationVariables>;
+
+/**
+ * __useUpdateLayerMutation__
+ *
+ * To run a mutation, you first call `useUpdateLayerMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateLayerMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateLayerMutation, { data, loading, error }] = useUpdateLayerMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      renderUnder: // value for 'renderUnder'
+ *      mapboxGlStyles: // value for 'mapboxGlStyles'
+ *      sublayer: // value for 'sublayer'
+ *   },
+ * });
+ */
+export function useUpdateLayerMutation(baseOptions?: Apollo.MutationHookOptions<UpdateLayerMutation, UpdateLayerMutationVariables>) {
+        return Apollo.useMutation<UpdateLayerMutation, UpdateLayerMutationVariables>(UpdateLayerDocument, baseOptions);
+      }
+export type UpdateLayerMutationHookResult = ReturnType<typeof useUpdateLayerMutation>;
+export type UpdateLayerMutationResult = Apollo.MutationResult<UpdateLayerMutation>;
+export type UpdateLayerMutationOptions = Apollo.BaseMutationOptions<UpdateLayerMutation, UpdateLayerMutationVariables>;
+export const UpdateDataSourceDocument = gql`
+    mutation UpdateDataSource($id: Int!, $attribution: String) {
+  updateDataSource(input: {id: $id, patch: {attribution: $attribution}}) {
+    dataSource {
+      id
+      attribution
+      bounds
+      bucketId
+      buffer
+      byteLength
+      cluster
+      clusterMaxZoom
+      clusterProperties
+      clusterRadius
+      coordinates
+      createdAt
+      encoding
+      enhancedSecurity
+      generateId
+      importType
+      lineMetrics
+      maxzoom
+      minzoom
+      objectKey
+      originalSourceUrl
+      promoteId
+      queryParameters
+      scheme
+      tiles
+      tileSize
+      tolerance
+      type
+      url
+      urls
+      useDevicePixelRatio
+    }
+  }
+}
+    `;
+export type UpdateDataSourceMutationFn = Apollo.MutationFunction<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>;
+
+/**
+ * __useUpdateDataSourceMutation__
+ *
+ * To run a mutation, you first call `useUpdateDataSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateDataSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateDataSourceMutation, { data, loading, error }] = useUpdateDataSourceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      attribution: // value for 'attribution'
+ *   },
+ * });
+ */
+export function useUpdateDataSourceMutation(baseOptions?: Apollo.MutationHookOptions<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>) {
+        return Apollo.useMutation<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>(UpdateDataSourceDocument, baseOptions);
+      }
+export type UpdateDataSourceMutationHookResult = ReturnType<typeof useUpdateDataSourceMutation>;
+export type UpdateDataSourceMutationResult = Apollo.MutationResult<UpdateDataSourceMutation>;
+export type UpdateDataSourceMutationOptions = Apollo.BaseMutationOptions<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

@@ -72,6 +72,8 @@ input AddGroupToAclInput {
 
 """The output of our `addGroupToAcl` mutation."""
 type AddGroupToAclPayload {
+  acl: Acl
+
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
@@ -82,6 +84,12 @@ type AddGroupToAclPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+
+  """Reads a single `SketchClass` that is related to this `Acl`."""
+  sketchClass: SketchClass
+
+  """Reads a single `TableOfContentsItem` that is related to this `Acl`."""
+  tableOfContentsItem: TableOfContentsItem
 }
 
 """All input for the `addUserToGroup` mutation."""
@@ -7453,6 +7461,8 @@ input RemoveGroupFromAclInput {
 
 """The output of our `removeGroupFromAcl` mutation."""
 type RemoveGroupFromAclPayload {
+  acl: Acl
+
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
@@ -7463,6 +7473,12 @@ type RemoveGroupFromAclPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+
+  """Reads a single `SketchClass` that is related to this `Acl`."""
+  sketchClass: SketchClass
+
+  """Reads a single `TableOfContentsItem` that is related to this `Acl`."""
+  tableOfContentsItem: TableOfContentsItem
 }
 
 """All input for the `removeUserFromGroup` mutation."""

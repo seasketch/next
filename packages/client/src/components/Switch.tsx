@@ -18,6 +18,7 @@ export default function Switch(props: SwitchProps) {
         onKeyDown={(e) => {
           if (props.onClick && (e.key === "Enter" || e.key === " ")) {
             props.onClick();
+            e.preventDefault();
           }
         }}
         role="switch"

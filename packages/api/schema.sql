@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 13.0 (Debian 13.0-1.pgdg100+1)
--- Dumped by pg_dump version 13.0 (Debian 13.0-1.pgdg100+1)
+-- Dumped from database version 13.1 (Debian 13.1-1.pgdg100+1)
+-- Dumped by pg_dump version 13.1 (Debian 13.1-1.pgdg100+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -76,7 +76,7 @@ CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA public;
 -- Name: EXTENSION postgis; Type: COMMENT; Schema: -; Owner: -
 --
 
-COMMENT ON EXTENSION postgis IS 'PostGIS geometry, geography, and raster spatial types and functions';
+COMMENT ON EXTENSION postgis IS 'PostGIS geometry and geography spatial types and functions';
 
 
 --
@@ -427,33 +427,6 @@ $$;
 
 
 --
--- Name: _session_on_toc_item_acl(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public._session_on_toc_item_acl(tocid integer) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    with test (on_acl) as (select 
-      bool_and(session_on_acl(access_control_lists.id)) as bool_and
-    from
-      access_control_lists
-    where
-      table_of_contents_item_id in (
-        select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> path --(select path from table_of_contents_items where id = tocid)
-      ) and
-      type != 'public') select on_acl = true or on_acl is null from test;
-    -- select 
-    --         true or bool_and(session_on_acl(access_control_lists.id))
-    --       from
-    --         access_control_lists
-    --       where
-    --         table_of_contents_item_id in (
-    --           select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> path
-    --         )
-  $$;
-
-
---
 -- Name: _session_on_toc_item_acl(public.ltree); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -470,6 +443,13 @@ CREATE FUNCTION public._session_on_toc_item_acl(lpath public.ltree) RETURNS bool
       ) and
       type != 'public') select on_acl = true or (on_acl is null and lpath is not null) from test;
   $$;
+
+
+--
+-- Name: FUNCTION _session_on_toc_item_acl(lpath public.ltree); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._session_on_toc_item_acl(lpath public.ltree) IS '@omit';
 
 
 SET default_tablespace = '';
@@ -581,11 +561,12 @@ COMMENT ON FUNCTION public.access_control_lists_groups(acl public.access_control
 -- Name: add_group_to_acl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) RETURNS void
+CREATE FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) RETURNS public.access_control_lists
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     DECLARE
       pid int;
+      acl access_control_lists;
     BEGIN
       select project_id into pid from access_control_lists where id = "aclId";
       if session_is_admin(pid) then
@@ -593,6 +574,8 @@ CREATE FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) RETU
       else
         raise exception 'Must be an administrator';
       end if;
+      select * into acl from access_control_lists where id = "aclId";
+      return acl;
     END
   $$;
 
@@ -895,7 +878,7 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.enhanced_security is not null and new.type != 'seasketch-vector' then
       raise 'enhanced_security may only be set on seasketch-vector sources';
     end if;
-    if new.type = 'seasketch-vector' then
+    if old is not null and new.type = 'seasketch-vector' then
       new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
       new.object_key = (select gen_random_uuid());
       new.tiles = null;
@@ -919,6 +902,9 @@ CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger()
     end if;
     if old.is_draft = false then
       raise 'Cannot alter table of contents items after they are published';
+    end if;
+    if new.sort_index is null then
+      new.sort_index = (select coalesce(max(sort_index), -1) + 1 from table_of_contents_items where is_draft = true and project_id = new.project_id and parent_stable_id = new.parent_stable_id or (parent_stable_id is null and new.parent_stable_id is null));
     end if;
     if old is null and new.is_draft = true then -- inserting
       -- verify that stable_id is unique among draft items
@@ -2363,61 +2349,6 @@ $$;
 COMMENT ON FUNCTION public.current_project() IS '
 The current SeaSketch Project, which is determined by the `referer` or `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
 ';
-
-
---
--- Name: debug_toc_acl(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.debug_toc_acl(tocid integer) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    with test (on_acl) as (select 
-        bool_and(session_on_acl(access_control_lists.id)) as bool_and
-      from
-        access_control_lists
-      where
-        table_of_contents_item_id in (
-          select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> ((select path from table_of_contents_items where id = "tocid"))
-        ) and
-        type != 'public') select on_acl = true or on_acl is null from test;
-  --  select 
-  --     session_on_acl(access_control_lists.id)
-  --   from
-  --     access_control_lists
-  --   where
-  --     table_of_contents_item_id in (
-  --       select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> ((select path from table_of_contents_items where id = "tocid"))
-  --     )
-    -- select 
-    --         true or bool_and(session_on_acl(access_control_lists.id))
-    --       from
-    --         access_control_lists
-    --       where
-    --         table_of_contents_item_id in (
-    --           select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> path
-    --         )
-  $$;
-
-
---
--- Name: debug_toc_acl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.debug_toc_acl(tocid integer, project_id integer) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    -- select session_has_project_access(project_id) and ((select is_draft from table_of_contents_items where id = "tocid"))=false and _session_on_toc_item_acl(((select path from table_of_contents_items where id = "tocid")));
-    with test (on_acl) as (select 
-        bool_and(session_on_acl(access_control_lists.id)) as bool_and
-      from
-        access_control_lists
-      where
-        table_of_contents_item_id in (
-          select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> ((select path from table_of_contents_items where id = "tocid"))
-        ) and
-        type != 'public') select on_acl = true or on_acl is null from test;
-  $$;
 
 
 --
@@ -4159,7 +4090,10 @@ CREATE TABLE public.table_of_contents_items (
     metadata jsonb,
     bounds numeric[],
     data_layer_id integer,
-    CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000)))
+    sort_index integer NOT NULL,
+    hide_children boolean DEFAULT false NOT NULL,
+    CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
+    CONSTRAINT titlechk CHECK ((char_length(title) > 0))
 );
 
 
@@ -4269,6 +4203,13 @@ COMMENT ON COLUMN public.table_of_contents_items.bounds IS 'If set, users will b
 --
 
 COMMENT ON COLUMN public.table_of_contents_items.data_layer_id IS 'If is_folder=false, a DataLayers visibility will be controlled by this item';
+
+
+--
+-- Name: COLUMN table_of_contents_items.sort_index; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.sort_index IS 'Position in the layer list';
 
 
 --
@@ -5053,11 +4994,12 @@ COMMENT ON FUNCTION public.publish_table_of_contents("projectId" integer) IS 'Co
 -- Name: remove_group_from_acl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.remove_group_from_acl("aclId" integer, "groupId" integer) RETURNS void
+CREATE FUNCTION public.remove_group_from_acl("aclId" integer, "groupId" integer) RETURNS public.access_control_lists
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     DECLARE
       pid int;
+      acl access_control_lists;
     BEGIN
       select project_id into pid from access_control_lists where id = "aclId";
       if session_is_admin(pid) then
@@ -5065,6 +5007,8 @@ CREATE FUNCTION public.remove_group_from_acl("aclId" integer, "groupId" integer)
       else
         raise exception 'Must be an administrator';
       end if;
+      select * into acl from access_control_lists where id = "aclId";
+      return acl;
     END
   $$;
 
@@ -6772,10 +6716,72 @@ The list of invited groups can be accessed via `Survey.invitedGroups`.
 
 
 --
+-- Name: update_table_of_contents_item_children(integer, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_table_of_contents_item_children("parentId" integer, "childIds" integer[]) RETURNS SETOF public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      "parentStableId" text;
+      "maxRootSortIndex" int;
+      "projectId" int;
+      item table_of_contents_items;
+    begin
+      select project_id into "projectId" from table_of_contents_items where id = "parentId" or id = "childIds"[1] limit 1;
+      if "projectId" is null then
+        raise 'Could not find draft item with id = %', "parentId";
+      end if;
+      if session_is_admin("projectId") = false then
+        raise 'Permission denied';
+      end if;
+      if (select count(id) from table_of_contents_items where project_id != "projectId" and id = any("childIds")) > 0 then
+        raise 'Permission denied. Not all items in project';
+      end if;
+      select stable_id into "parentStableId" from table_of_contents_items where id = "parentId";
+      -- clear any parent id associations for children that are no longer in the list (unrooted)
+      select max(sort_index) into "maxRootSortIndex" from table_of_contents_items where is_draft = true and project_id = "projectId" and parent_stable_id = null;
+      -- update paths, sort index of "unrooted" items
+      for item in select * from table_of_contents_items where parent_stable_id = "parentStableId" and is_draft = true and id != any("childIds") loop
+        "maxRootSortIndex" = "maxRootSortIndex" + 1;
+        perform update_table_of_contents_item_position(item.id, null, "maxRootSortIndex");
+      end loop;
+      -- Update position (parent & sort_index) of listed children
+      for i in array_lower("childIds", 1)..array_upper("childIds", 1) loop
+        perform update_table_of_contents_item_position("childIds"[i], "parentStableId", i - 1);
+      end loop;
+      -- select * into children from table_of_contents_items where id = any("childIds");
+      -- return children;
+      return query select * from table_of_contents_items where id = any("childIds");
+    end;
+$$;
+
+
+--
 -- Name: update_table_of_contents_item_parent(integer, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "parentStableId" text) RETURNS public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      return update_table_of_contents_item_position("itemId", "parentStableId", 0);
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION update_table_of_contents_item_parent("itemId" integer, "parentStableId" text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "parentStableId" text) IS '@omit';
+
+
+--
+-- Name: update_table_of_contents_item_position(integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_table_of_contents_item_position("itemId" integer, "parentStableId" text, "sortIndex" integer) RETURNS public.table_of_contents_items
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -6788,17 +6794,27 @@ CREATE FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "p
       if pid is null then
         raise 'Could not find draft item with id = %', "itemId";
       end if;
-      select path into current_path from table_of_contents_items where id = "itemId" and is_draft = true;
       if session_is_admin(pid) = false then
         raise 'Permission denied';
       end if;
-      select path into parent_path from table_of_contents_items where is_draft = true and project_id = pid and stable_id = "parentStableId";
-      if parent_path is null then
-        raise 'Could not find valid parent with stable_id=%', "parentStableId";
+      select path into current_path from table_of_contents_items where id = "itemId" and is_draft = true;
+
+      update table_of_contents_items set parent_stable_id = "parentStableId", sort_index = "sortIndex" where id = "itemId";
+      -- TODO: handle movement of item into the root
+      if "parentStableId" is not null then
+        select path into parent_path from table_of_contents_items where is_draft = true and project_id = pid and stable_id = "parentStableId";
+        if parent_path is null then
+          raise 'Could not find valid parent with stable_id=%', "parentStableId";
+        else
+          update 
+            table_of_contents_items 
+          set path = parent_path || subpath(path, nlevel(current_path)-1) 
+          where path <@ current_path;
+        end if;
       else
         update 
           table_of_contents_items 
-        set path = parent_path || subpath(path, nlevel(current_path)-1) 
+        set path = subpath(path, nlevel(current_path)-1) 
         where path <@ current_path;
       end if;
       select * into item from table_of_contents_items where id = "itemId";
@@ -6808,10 +6824,10 @@ CREATE FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "p
 
 
 --
--- Name: FUNCTION update_table_of_contents_item_parent("itemId" integer, "parentStableId" text); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION update_table_of_contents_item_position("itemId" integer, "parentStableId" text, "sortIndex" integer); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "parentStableId" text) IS 'Changes the stable_parent_id of the given item. Use to nest items under folders, or move them to the root of the tree by setting parent_stable_id to null';
+COMMENT ON FUNCTION public.update_table_of_contents_item_position("itemId" integer, "parentStableId" text, "sortIndex" integer) IS '@omit';
 
 
 --
@@ -10519,14 +10535,6 @@ REVOKE ALL ON FUNCTION public._postgis_stats(tbl regclass, att_name text, text) 
 
 
 --
--- Name: FUNCTION _session_on_toc_item_acl(tocid integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public._session_on_toc_item_acl(tocid integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public._session_on_toc_item_acl(tocid integer) TO anon;
-
-
---
 -- Name: FUNCTION _session_on_toc_item_acl(lpath public.ltree); Type: ACL; Schema: public; Owner: -
 --
 
@@ -10777,6 +10785,13 @@ REVOKE ALL ON FUNCTION public._st_overlaps(geom1 public.geometry, geom2 public.g
 --
 
 REVOKE ALL ON FUNCTION public._st_pointoutside(public.geography) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _st_sortablehash(geom public.geometry); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._st_sortablehash(geom public.geometry) FROM PUBLIC;
 
 
 --
@@ -11608,22 +11623,6 @@ GRANT ALL ON FUNCTION public.current_project() TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.dearmor(text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION debug_toc_acl(tocid integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.debug_toc_acl(tocid integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.debug_toc_acl(tocid integer) TO anon;
-
-
---
--- Name: FUNCTION debug_toc_acl(tocid integer, project_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.debug_toc_acl(tocid integer, project_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.debug_toc_acl(tocid integer, project_id integer) TO anon;
 
 
 --
@@ -13672,6 +13671,13 @@ REVOKE ALL ON FUNCTION public.postgis_lib_build_date() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION postgis_lib_revision(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.postgis_lib_revision() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION postgis_lib_version(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -14172,6 +14178,20 @@ GRANT SELECT(bounds) ON TABLE public.table_of_contents_items TO anon;
 
 GRANT INSERT(data_layer_id),UPDATE(data_layer_id) ON TABLE public.table_of_contents_items TO seasketch_user;
 GRANT SELECT(data_layer_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.sort_index; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(sort_index) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.hide_children; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(hide_children),INSERT(hide_children),UPDATE(hide_children) ON TABLE public.table_of_contents_items TO seasketch_user;
 
 
 --
@@ -15040,6 +15060,20 @@ REVOKE ALL ON FUNCTION public.st_asewkt(public.geometry) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION st_asewkt(public.geography, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_asewkt(public.geography, integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION st_asewkt(public.geometry, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_asewkt(public.geometry, integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION st_asgeojson(text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15441,6 +15475,13 @@ REVOKE ALL ON FUNCTION public.st_collect(geom1 public.geometry, geom2 public.geo
 
 
 --
+-- Name: FUNCTION st_collectionextract(public.geometry); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_collectionextract(public.geometry) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION st_collectionextract(public.geometry, integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15589,10 +15630,10 @@ REVOKE ALL ON FUNCTION public.st_dfullywithin(geom1 public.geometry, geom2 publi
 
 
 --
--- Name: FUNCTION st_difference(geom1 public.geometry, geom2 public.geometry); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION st_difference(geom1 public.geometry, geom2 public.geometry, gridsize double precision); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.st_difference(geom1 public.geometry, geom2 public.geometry) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.st_difference(geom1 public.geometry, geom2 public.geometry, gridsize double precision) FROM PUBLIC;
 
 
 --
@@ -15820,31 +15861,31 @@ REVOKE ALL ON FUNCTION public.st_force2d(public.geometry) FROM PUBLIC;
 
 
 --
--- Name: FUNCTION st_force3d(public.geometry); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION st_force3d(geom public.geometry, zvalue double precision); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.st_force3d(public.geometry) FROM PUBLIC;
-
-
---
--- Name: FUNCTION st_force3dm(public.geometry); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.st_force3dm(public.geometry) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.st_force3d(geom public.geometry, zvalue double precision) FROM PUBLIC;
 
 
 --
--- Name: FUNCTION st_force3dz(public.geometry); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION st_force3dm(geom public.geometry, mvalue double precision); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.st_force3dz(public.geometry) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.st_force3dm(geom public.geometry, mvalue double precision) FROM PUBLIC;
 
 
 --
--- Name: FUNCTION st_force4d(public.geometry); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION st_force3dz(geom public.geometry, zvalue double precision); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.st_force4d(public.geometry) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.st_force3dz(geom public.geometry, zvalue double precision) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION st_force4d(geom public.geometry, zvalue double precision, mvalue double precision); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_force4d(geom public.geometry, zvalue double precision, mvalue double precision) FROM PUBLIC;
 
 
 --
@@ -16142,6 +16183,20 @@ REVOKE ALL ON FUNCTION public.st_hausdorffdistance(geom1 public.geometry, geom2 
 
 
 --
+-- Name: FUNCTION st_hexagon(size double precision, cell_i integer, cell_j integer, origin public.geometry); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_hexagon(size double precision, cell_i integer, cell_j integer, origin public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION st_hexagongrid(size double precision, bounds public.geometry, OUT geom public.geometry, OUT i integer, OUT j integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_hexagongrid(size double precision, bounds public.geometry, OUT geom public.geometry, OUT i integer, OUT j integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION st_interiorringn(public.geometry, integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16170,10 +16225,10 @@ REVOKE ALL ON FUNCTION public.st_intersection(public.geography, public.geography
 
 
 --
--- Name: FUNCTION st_intersection(geom1 public.geometry, geom2 public.geometry); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION st_intersection(geom1 public.geometry, geom2 public.geometry, gridsize double precision); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.st_intersection(geom1 public.geometry, geom2 public.geometry) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.st_intersection(geom1 public.geometry, geom2 public.geometry, gridsize double precision) FROM PUBLIC;
 
 
 --
@@ -16552,6 +16607,13 @@ REVOKE ALL ON FUNCTION public.st_makevalid(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_maxdistance(geom1 public.geometry, geom2 public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION st_maximuminscribedcircle(public.geometry, OUT center public.geometry, OUT nearest public.geometry, OUT radius double precision); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_maximuminscribedcircle(public.geometry, OUT center public.geometry, OUT nearest public.geometry, OUT radius double precision) FROM PUBLIC;
 
 
 --
@@ -17024,6 +17086,13 @@ REVOKE ALL ON FUNCTION public.st_quantizecoordinates(g public.geometry, prec_x i
 
 
 --
+-- Name: FUNCTION st_reduceprecision(geom public.geometry, gridsize double precision); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_reduceprecision(geom public.geometry, gridsize double precision) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION st_relate(geom1 public.geometry, geom2 public.geometry); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17276,6 +17345,20 @@ REVOKE ALL ON FUNCTION public.st_split(geom1 public.geometry, geom2 public.geome
 
 
 --
+-- Name: FUNCTION st_square(size double precision, cell_i integer, cell_j integer, origin public.geometry); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_square(size double precision, cell_i integer, cell_j integer, origin public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION st_squaregrid(size double precision, bounds public.geometry, OUT geom public.geometry, OUT i integer, OUT j integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_squaregrid(size double precision, bounds public.geometry, OUT geom public.geometry, OUT i integer, OUT j integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION st_srid(geog public.geography); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17299,10 +17382,10 @@ REVOKE ALL ON FUNCTION public.st_startpoint(public.geometry) FROM PUBLIC;
 
 
 --
--- Name: FUNCTION st_subdivide(geom public.geometry, maxvertices integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION st_subdivide(geom public.geometry, maxvertices integer, gridsize double precision); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.st_subdivide(geom public.geometry, maxvertices integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.st_subdivide(geom public.geometry, maxvertices integer, gridsize double precision) FROM PUBLIC;
 
 
 --
@@ -17327,10 +17410,10 @@ REVOKE ALL ON FUNCTION public.st_swapordinates(geom public.geometry, ords cstrin
 
 
 --
--- Name: FUNCTION st_symdifference(geom1 public.geometry, geom2 public.geometry); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION st_symdifference(geom1 public.geometry, geom2 public.geometry, gridsize double precision); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.st_symdifference(geom1 public.geometry, geom2 public.geometry) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.st_symdifference(geom1 public.geometry, geom2 public.geometry, gridsize double precision) FROM PUBLIC;
 
 
 --
@@ -17341,10 +17424,10 @@ REVOKE ALL ON FUNCTION public.st_symmetricdifference(geom1 public.geometry, geom
 
 
 --
--- Name: FUNCTION st_tileenvelope(zoom integer, x integer, y integer, bounds public.geometry); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION st_tileenvelope(zoom integer, x integer, y integer, bounds public.geometry, margin double precision); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.st_tileenvelope(zoom integer, x integer, y integer, bounds public.geometry) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.st_tileenvelope(zoom integer, x integer, y integer, bounds public.geometry, margin double precision) FROM PUBLIC;
 
 
 --
@@ -17404,10 +17487,10 @@ REVOKE ALL ON FUNCTION public.st_transscale(public.geometry, double precision, d
 
 
 --
--- Name: FUNCTION st_unaryunion(public.geometry); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION st_unaryunion(public.geometry, gridsize double precision); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.st_unaryunion(public.geometry) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.st_unaryunion(public.geometry, gridsize double precision) FROM PUBLIC;
 
 
 --
@@ -17422,6 +17505,13 @@ REVOKE ALL ON FUNCTION public.st_union(public.geometry[]) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_union(geom1 public.geometry, geom2 public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION st_union(geom1 public.geometry, geom2 public.geometry, gridsize double precision); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_union(geom1 public.geometry, geom2 public.geometry, gridsize double precision) FROM PUBLIC;
 
 
 --
@@ -17788,11 +17878,27 @@ GRANT ALL ON FUNCTION public.update_survey_invited_groups("surveyId" integer, "g
 
 
 --
+-- Name: FUNCTION update_table_of_contents_item_children("parentId" integer, "childIds" integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_table_of_contents_item_children("parentId" integer, "childIds" integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_table_of_contents_item_children("parentId" integer, "childIds" integer[]) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION update_table_of_contents_item_parent("itemId" integer, "parentStableId" text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "parentStableId" text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_table_of_contents_item_parent("itemId" integer, "parentStableId" text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_table_of_contents_item_position("itemId" integer, "parentStableId" text, "sortIndex" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_table_of_contents_item_position("itemId" integer, "parentStableId" text, "sortIndex" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_table_of_contents_item_position("itemId" integer, "parentStableId" text, "sortIndex" integer) TO seasketch_user;
 
 
 --
@@ -18050,6 +18156,13 @@ REVOKE ALL ON FUNCTION public.st_polygonize(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_union(public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION st_union(public.geometry, double precision); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_union(public.geometry, double precision) FROM PUBLIC;
 
 
 --

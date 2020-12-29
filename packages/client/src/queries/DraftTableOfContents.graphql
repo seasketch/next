@@ -167,3 +167,149 @@ mutation UpdateFolder(
     }
   }
 }
+
+query GetLayerItem($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    acl {
+      nodeId
+      id
+      type
+      groups {
+        id
+        name
+      }
+    }
+    bounds
+    dataLayerId
+    metadata
+    parentStableId
+    projectId
+    stableId
+    title
+    dataLayer {
+      id
+      mapboxGlStyles
+      renderUnder
+      sourceLayer
+      sublayer
+      dataSource {
+        id
+        attribution
+        bounds
+        bucketId
+        buffer
+        byteLength
+        cluster
+        clusterMaxZoom
+        clusterProperties
+        clusterRadius
+        coordinates
+        createdAt
+        encoding
+        enhancedSecurity
+        generateId
+        importType
+        lineMetrics
+        maxzoom
+        minzoom
+        objectKey
+        originalSourceUrl
+        promoteId
+        queryParameters
+        scheme
+        tiles
+        tileSize
+        tolerance
+        type
+        url
+        urls
+        useDevicePixelRatio
+      }
+    }
+  }
+}
+
+mutation UpdateTableOfContentsItem(
+  $id: Int!
+  $title: String
+  $bounds: [BigFloat]
+  $metadata: JSON
+) {
+  updateTableOfContentsItem(
+    input: {
+      id: $id
+      patch: { title: $title, bounds: $bounds, metadata: $metadata }
+    }
+  ) {
+    tableOfContentsItem {
+      id
+      bounds
+      metadata
+      title
+    }
+  }
+}
+
+mutation UpdateLayer(
+  $id: Int!
+  $renderUnder: RenderUnderType
+  $mapboxGlStyles: JSON
+  $sublayer: String
+) {
+  updateDataLayer(
+    input: {
+      id: $id
+      patch: {
+        renderUnder: $renderUnder
+        mapboxGlStyles: $mapboxGlStyles
+        sublayer: $sublayer
+      }
+    }
+  ) {
+    dataLayer {
+      id
+      renderUnder
+      mapboxGlStyles
+      sublayer
+    }
+  }
+}
+
+mutation UpdateDataSource($id: Int!, $attribution: String) {
+  updateDataSource(input: { id: $id, patch: { attribution: $attribution } }) {
+    dataSource {
+      id
+      attribution
+      bounds
+      bucketId
+      buffer
+      byteLength
+      cluster
+      clusterMaxZoom
+      clusterProperties
+      clusterRadius
+      coordinates
+      createdAt
+      encoding
+      enhancedSecurity
+      generateId
+      importType
+      lineMetrics
+      maxzoom
+      minzoom
+      objectKey
+      originalSourceUrl
+      promoteId
+      queryParameters
+      scheme
+      tiles
+      tileSize
+      tolerance
+      type
+      url
+      urls
+      useDevicePixelRatio
+    }
+  }
+}

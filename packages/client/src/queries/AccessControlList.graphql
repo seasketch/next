@@ -1,0 +1,54 @@
+query GetAcl($nodeId: ID!) {
+  aclByNodeId(nodeId: $nodeId) {
+    id
+    nodeId
+    type
+    groups {
+      id
+      name
+      memberCount
+    }
+  }
+}
+
+mutation UpdateAclType($nodeId: ID!, $type: AccessControlListType!) {
+  updateAclByNodeId(input: { nodeId: $nodeId, patch: { type: $type } }) {
+    acl {
+      id
+      nodeId
+      type
+    }
+  }
+}
+
+mutation AddGroupToAcl($id: Int!, $groupId: Int!) {
+  addGroupToAcl(input: { aclId: $id, groupId: $groupId }) {
+    acl {
+      groups {
+        id
+        name
+      }
+    }
+  }
+}
+
+mutation RemoveGroupFromAcl($id: Int!, $groupId: Int!) {
+  removeGroupFromAcl(input: { aclId: $id, groupId: $groupId }) {
+    acl {
+      groups {
+        id
+        name
+      }
+    }
+  }
+}
+
+query Groups($projectSlug: String!) {
+  projectBySlug(slug: $projectSlug) {
+    groups {
+      id
+      name
+      memberCount
+    }
+  }
+}

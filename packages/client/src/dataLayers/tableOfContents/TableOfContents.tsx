@@ -127,7 +127,6 @@ export default function TableOfContents(props: TableOfContentsProps) {
         </div>
       )}
       <SortableTree
-        onVisibilityToggle={props.onVisibilityToggle}
         canDrag={!!props.canDrag}
         isVirtualized={!!props.isVirtualized}
         onChange={props.onChange}
@@ -177,6 +176,17 @@ export default function TableOfContents(props: TableOfContentsProps) {
                   });
 
                   props.onChange(newTreeData as ClientTableOfContentsItem[]);
+
+                  if (props.onVisibilityToggle) {
+                    props.onVisibilityToggle({
+                      treeData: props.nodes,
+                      node: node,
+                      // @ts-ignore
+                      expanded: !node.expanded,
+                      // @ts-ignore
+                      path: path,
+                    });
+                  }
                 },
             title: (
               <span
