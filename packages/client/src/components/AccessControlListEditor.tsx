@@ -55,14 +55,6 @@ export default function AccessControlListEditor(props: { nodeId: string }) {
     }
   }, [data]);
 
-  console.log("selectedGroups", selectedGroups);
-
-  // useEffect(() => {
-  //   if (!props.mutationStatus.loading && props.value !== state) {
-  //     setState(props.value);
-  //   }
-  // }, [props.value, props.mutationStatus]);
-
   return (
     <RadioGroup
       value={state || data?.aclByNodeId?.type}

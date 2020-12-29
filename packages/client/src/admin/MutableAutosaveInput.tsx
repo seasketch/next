@@ -17,6 +17,7 @@ export default function MutableAutosaveInput(props: {
   mutationStatus: MutationResult<any>;
   /** variables that should always be assigned when calling mutation */
   variables?: any;
+  autofocus?: boolean;
 }) {
   const [value, setValue] = useState(props.value);
   const debouncedValue = useDebounce(value, 500);
@@ -54,6 +55,7 @@ export default function MutableAutosaveInput(props: {
 
   return (
     <TextInput
+      autoFocus={props.autofocus}
       description={props.description}
       id={props.propName}
       label={props.label}

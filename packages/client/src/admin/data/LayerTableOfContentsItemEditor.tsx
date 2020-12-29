@@ -42,8 +42,8 @@ export default function LayerTableOfContentsItemEditor(
       style={{ height: "calc(100%)" }}
     >
       <div className="">
-        <div
-          className="bg-gray-300 float-right rounded-full p-1 cursor-pointer"
+        <button
+          className="bg-gray-300 float-right rounded-full p-1 cursor-pointer focus:ring-blue-300"
           onClick={props.onRequestClose}
         >
           <svg
@@ -60,7 +60,7 @@ export default function LayerTableOfContentsItemEditor(
               d="M6 18L18 6M6 6l12 12"
             />
           </svg>
-        </div>
+        </button>
         <h4 className="font-medium text-gray-500 mb-2">Edit Layer</h4>
       </div>
       {!item && <Spinner />}
@@ -68,6 +68,7 @@ export default function LayerTableOfContentsItemEditor(
         <>
           <div className="md:max-w-sm mt-5">
             <MutableAutosaveInput
+              autofocus
               mutation={mutateItem}
               mutationStatus={mutateItemState}
               propName="title"

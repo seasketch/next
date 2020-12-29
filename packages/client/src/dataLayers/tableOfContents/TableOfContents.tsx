@@ -22,18 +22,24 @@ import { LayerManagerContext } from "../LayerManager";
 import VisibilityCheckbox from "./VisibilityCheckbox";
 import "./TableOfContents.css";
 import Spinner from "../../components/Spinner";
-import { TableOfContentsItem as GeneratedTableOfContentsItem } from "../../generated/graphql";
+import {
+  AccessControlListType,
+  TableOfContentsItem as GeneratedTableOfContentsItem,
+} from "../../generated/graphql";
 import { Menu, useContextMenu } from "react-contexify";
 import "react-contexify/dist/ReactContexify.css";
 
-export interface TableOfContentsNode {
-  id: string;
-  type: "folder" | "layer";
-  title: string;
-  children?: TableOfContentsNode[];
-  expanded: boolean;
-  disabled?: boolean;
-}
+// export interface TableOfContentsNode {
+//   id: string;
+//   type: "folder" | "layer";
+//   title: string;
+//   children?: TableOfContentsNode[];
+//   expanded: boolean;
+//   disabled?: boolean;
+//   acl?: {
+//     type: AccessControlListType;
+//   };
+// }
 
 export type ClientTableOfContentsItem = Pick<
   GeneratedTableOfContentsItem,
@@ -47,6 +53,7 @@ export type ClientTableOfContentsItem = Pick<
   | "parentStableId"
   | "sortIndex"
   | "hideChildren"
+  | "acl"
 > & {
   id: number | string;
   disabled?: boolean;
@@ -291,6 +298,26 @@ export default function TableOfContents(props: TableOfContentsProps) {
                   display: layerState?.loading ? "inline-block" : "none",
                 }}
               />,
+              ...(props.canDrag &&
+              data.node.acl?.type &&
+              data.node.acl.type !== AccessControlListType.Public
+                ? [
+                    <span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="text-gray-400 -mb-0.5 h-4 w-4"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </span>,
+                  ]
+                : []),
             ],
           };
         }}

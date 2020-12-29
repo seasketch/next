@@ -124,7 +124,7 @@ export default function RadioGroup<T>(props: RadioGroupProps<T>) {
                 id={`item-${item.value}`}
                 name={`item-${item.value}`}
                 type="radio"
-                className="focus:ring-primary-500 h-4 w-4 text-primary-500 cursor-pointer border-gray-300"
+                className="focus:ring-blue-300 h-4 w-4 text-primary-500 cursor-pointer border-gray-300"
                 checked={props.value === item.value}
                 onChange={() => {
                   if (props.onChange) {

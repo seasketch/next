@@ -10,10 +10,7 @@ import area from "@turf/area";
 import bbox from "@turf/bbox";
 import geobuf from "geobuf";
 import Pbf from "pbf";
-import {
-  ClientTableOfContentsItem,
-  TableOfContentsNode,
-} from "../../../dataLayers/tableOfContents/TableOfContents";
+import { ClientTableOfContentsItem } from "../../../dataLayers/tableOfContents/TableOfContents";
 import { FeatureCollection } from "geojson";
 import Worker from "../../../workers/index";
 import {

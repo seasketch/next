@@ -10395,7 +10395,7 @@ export type DraftTableOfContentsQuery = (
       & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren' | 'bounds' | 'sortIndex' | 'hideChildren'>
       & { acl?: Maybe<(
         { __typename?: 'Acl' }
-        & Pick<Acl, 'type'>
+        & Pick<Acl, 'id' | 'type'>
       )> }
     )>> }
   )> }
@@ -11325,6 +11325,7 @@ export const DraftTableOfContentsDocument = gql`
       dataLayerId
       title
       acl {
+        id
         type
       }
       isClickOffOnly
