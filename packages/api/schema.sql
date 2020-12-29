@@ -878,7 +878,7 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.enhanced_security is not null and new.type != 'seasketch-vector' then
       raise 'enhanced_security may only be set on seasketch-vector sources';
     end if;
-    if old is not null and new.type = 'seasketch-vector' then
+    if old is null and new.type = 'seasketch-vector' then
       new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
       new.object_key = (select gen_random_uuid());
       new.tiles = null;
