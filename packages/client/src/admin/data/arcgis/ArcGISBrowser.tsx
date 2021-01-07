@@ -31,6 +31,7 @@ import {
   useLayerManager,
   ClientDataLayer,
   ClientDataSource,
+  ClientSprite,
 } from "../../../dataLayers/LayerManager";
 import TableOfContents, {
   ClientTableOfContentsItem,
@@ -553,6 +554,7 @@ function dynamicServiceSourceFromSettings(
       format: serviceSettings.imageFormat,
       transparent: "true",
     },
+    interactivitySettings: [],
   };
 }
 
@@ -571,6 +573,7 @@ function vectorSourceFromSettings(
       outFields: settings?.outFields || "*",
       geometryPrecision: settings?.geometryPrecision,
     },
+    interactivitySettings: [],
   };
 }
 
@@ -578,6 +581,21 @@ function vectorLayerFromSettings(
   layer: LayerInfo,
   settings?: VectorSublayerSettings
 ): ClientDataLayer {
+  const imageSetJSON = layer.imageList.toJSON();
+  let sprites: ClientSprite[] = [];
+  if (imageSetJSON.length) {
+    for (const imageSet of imageSetJSON) {
+      sprites.push({
+        id: imageSet.id,
+        spriteImages: imageSet.images.map((i) => ({
+          height: i.height,
+          width: i.width,
+          dataUri: i.dataURI,
+          pixelRatio: i.pixelRatio,
+        })),
+      });
+    }
+  }
   return {
     id: layer.generatedId,
     dataSourceId: layer.generatedId,
@@ -585,6 +603,7 @@ function vectorLayerFromSettings(
     mapboxGlStyles: JSON.stringify(
       settings?.mapboxLayers || layer.mapboxLayers
     ),
+    sprites: sprites.length ? sprites : undefined,
   };
 }
 

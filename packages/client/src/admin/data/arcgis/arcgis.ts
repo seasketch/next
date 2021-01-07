@@ -22,9 +22,16 @@ import {
   DraftTableOfContentsDocument,
   RenderUnderType,
   useCreateArcGisImageSourceMutation,
+  useGetOrCreateSpriteMutation,
+  useAddImageToSpriteMutation,
+  GetOrCreateSpriteMutation,
+  Exact,
+  AddImageToSpriteMutation,
 } from "../../../generated/graphql";
 import { customAlphabet } from "nanoid";
 import { default as axios } from "axios";
+import { ClientSprite } from "../../../dataLayers/LayerManager";
+import { MutationFunctionOptions } from "@apollo/client";
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 const nanoId = customAlphabet(alphabet, 9);
@@ -855,6 +862,8 @@ export function useImportArcGISService(serviceRoot?: string) {
     createArcGISImageSource,
     createArcGISImageSourceState,
   ] = useCreateArcGisImageSourceMutation();
+  const [createSprite, createSpriteState] = useGetOrCreateSpriteMutation();
+  const [addImageToSprite] = useAddImageToSpriteMutation();
   const [state, setState] = useState<ImportArcGISServiceState>({
     inProgress: false,
     importService: async (
@@ -1050,16 +1059,37 @@ export function useImportArcGISService(serviceRoot?: string) {
                   progress += 1000;
                 }
 
-                // Create the layer
-
                 // remove source and id from gl-style layers (generated at runtime)
-                const glStyles =
+                let glStyles =
                   layerSettings?.mapboxLayers || layer.mapboxLayers || [];
                 for (const style of glStyles) {
                   delete style.id;
                   delete style.source;
                 }
 
+                let idReplacements: { [oldId: string]: string } = {};
+                if (
+                  !isDynamic &&
+                  layer.imageList &&
+                  layer.imageList.toJSON().length > 0
+                ) {
+                  // upload any sprites if needed
+                  setState((prev) => {
+                    return {
+                      ...prev,
+                      statusMessage: `Creating sprites for "${layer.name}".`,
+                    };
+                  });
+                  idReplacements = await getOrCreateSpritesFromImageSet(
+                    layer.imageList,
+                    projectId,
+                    createSprite,
+                    addImageToSprite
+                  );
+                }
+
+                glStyles = replaceSpriteIds(glStyles, idReplacements);
+                // Create the layer
                 const dataLayerData = await createDataLayer({
                   variables: {
                     projectId,
@@ -1230,4 +1260,131 @@ export function useImportArcGISService(serviceRoot?: string) {
   }, [serviceRoot]);
 
   return state;
+}
+
+export async function createImageBlobFromDataURI(
+  width: number,
+  height: number,
+  dataURI: string
+): Promise<Blob> {
+  return new Promise((resolve) => {
+    fetch(dataURI)
+      .then((res) => res.blob())
+      .then((blob) => resolve(blob));
+  });
+}
+
+export function replaceSpriteIds(
+  glStyles: any[],
+  idReplacements: { [oldId: string]: string }
+) {
+  // console.log("replace ids", idReplacements, glStyles);
+  let stringified = JSON.stringify(glStyles);
+  for (const oldId in idReplacements) {
+    stringified = stringified.replaceAll(
+      oldId,
+      `seasketch://sprites/${idReplacements[oldId]}`
+    );
+  }
+  return JSON.parse(stringified);
+}
+
+export async function getOrCreateSpritesFromImageSet(
+  imageList: ImageList,
+  projectId: number,
+  createSprite: (
+    options?:
+      | MutationFunctionOptions<
+          GetOrCreateSpriteMutation,
+          Exact<{
+            height: number;
+            width: number;
+            pixelRatio: number;
+            projectId: number;
+            smallestImage: any;
+          }>
+        >
+      | undefined
+  ) => Promise<any>,
+  addImageToSprite: (
+    options?:
+      | MutationFunctionOptions<
+          AddImageToSpriteMutation,
+          Exact<{
+            spriteId: number;
+            width: number;
+            height: number;
+            pixelRatio: number;
+            image: any;
+          }>
+        >
+      | undefined
+  ) => Promise<any>
+): Promise<{ [oldId: string]: string }> {
+  const replacementIds: { [oldId: string]: string } = {};
+  const imageSetJSON = imageList.toJSON();
+  if (imageSetJSON.length) {
+    for (const imageSet of imageSetJSON) {
+      const dpi1Image = imageSet.images.find((i) => i.pixelRatio === 1);
+      if (!dpi1Image) {
+        throw new Error("Sprite does not contain any images with dpi=1");
+      }
+      const blob = await createImageBlobFromDataURI(
+        dpi1Image.width,
+        dpi1Image.height,
+        dpi1Image.dataURI
+      );
+      const result = await createSprite({
+        variables: {
+          height: dpi1Image.height,
+          width: dpi1Image.width,
+          pixelRatio: dpi1Image.pixelRatio,
+          projectId: projectId,
+          smallestImage: blob,
+        },
+      });
+      if (!result.data?.getOrCreateSprite) {
+        throw new Error("Failed to create initial sprite");
+      }
+      replacementIds[
+        imageSet.id.toString()
+      ] = result.data.getOrCreateSprite.id.toString();
+      let sprite = result.data.getOrCreateSprite;
+      await Promise.all(
+        imageSet.images
+          .filter((i) => i.pixelRatio !== 1)
+          .map(async (image) => {
+            if (
+              !sprite.spriteImages.find(
+                (i: { pixelRatio: number }) => i.pixelRatio === image.pixelRatio
+              )
+            ) {
+              const blob = await createImageBlobFromDataURI(
+                image.width,
+                image.height,
+                image.dataURI
+              );
+              try {
+                let r = await addImageToSprite({
+                  variables: {
+                    spriteId: sprite.id,
+                    width: image.width,
+                    height: image.height,
+                    pixelRatio: image.pixelRatio,
+                    image: blob,
+                  },
+                });
+                if (!r.data?.addImageToSprite) {
+                  throw new Error("Failed to add image to sprite");
+                }
+                sprite = r.data.addImageToSprite;
+              } catch (e) {
+                throw new Error("Problem creating sprite. " + e.message);
+              }
+            }
+          })
+      );
+    }
+  }
+  return replacementIds;
 }

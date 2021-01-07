@@ -22,7 +22,10 @@ export default [
       table: string;
       column: string;
       tags: string[];
-    }) => schema === "public" && table === "projects" && column === "logo_url",
+    }) =>
+      schema === "public" &&
+      ((table === "projects" && column === "logo_url") ||
+        (table === "sprites" && column === "url")),
     resolve: resolveLogoUrlUpload,
   },
 ];
@@ -45,7 +48,7 @@ async function savePublicImage(
   } else if (mimetype === "image/gif") {
     ext = "gif";
   }
-  const key = `${uuid()}${ext}`;
+  const key = `${uuid()}.${ext}`;
   const url = `https://${process.env.PUBLIC_UPLOADS_DOMAIN}/${key}`;
   const { writeStream, promise } = uploadStream(key, mimetype);
   if (

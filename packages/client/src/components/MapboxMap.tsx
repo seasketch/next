@@ -1,5 +1,10 @@
 import mapboxgl, { ErrorEvent, Map, MapDataEvent } from "mapbox-gl";
-import React, { useEffect, useState, useRef } from "react";
+import ReactDOM from "react-dom";
+import React, { useEffect, useState, useRef, useContext } from "react";
+import {
+  LayerManagerContext,
+  useLayerManager,
+} from "../dataLayers/LayerManager";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -9,6 +14,7 @@ export interface OverlayMapProps {
 export default function OverlayMap(props: OverlayMapProps) {
   const [map, setMap] = useState<Map>();
   const mapContainer = useRef<HTMLDivElement>(null);
+  const layerManager = useContext(LayerManagerContext);
 
   useEffect(() => {
     mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
@@ -56,8 +62,41 @@ export default function OverlayMap(props: OverlayMapProps) {
   }, [map]);
 
   return (
-    <div className={`flex-1 bg-gray-900 ${props.className}`} ref={mapContainer}>
-      Map
+    <div
+      className={`flex-1 bg-gray-900 ${props.className} relative`}
+      ref={mapContainer}
+    >
+      <div className="flex align-middle justify-center absolute top-2 z-10 w-full">
+        {layerManager.bannerMessages?.length ? (
+          <div
+            className="mb-2 rounded-md text-sm bg-white bg-opacity-70 p-2"
+            dangerouslySetInnerHTML={{
+              __html: layerManager.bannerMessages.join(","),
+            }}
+          />
+        ) : null}
+      </div>
+      {layerManager.tooltip ? (
+        <Tooltip x={layerManager.tooltip.x} y={layerManager.tooltip.y}>
+          <div
+            dangerouslySetInnerHTML={{
+              __html: layerManager.tooltip.messages.join(","),
+            }}
+          ></div>
+        </Tooltip>
+      ) : null}
     </div>
+  );
+}
+
+function Tooltip(props: { x: number; y: number; children: React.ReactNode }) {
+  return ReactDOM.createPortal(
+    <div
+      className="absolute z-10 bg-white p-1 px-2 shadow rounded text-sm"
+      style={{ left: props.x + 15, top: props.y + 15 }}
+    >
+      {props.children}
+    </div>,
+    document.getElementById("tooltip-container")!
   );
 }

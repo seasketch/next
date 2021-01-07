@@ -121,7 +121,7 @@ export default function RadioGroup<T>(props: RadioGroupProps<T>) {
           >
             <div className="flex items-center h-5">
               <input
-                id={`item-${item.value}`}
+                id={`${props.legend || ""}-item-${item.value}`}
                 name={`item-${item.value}`}
                 type="radio"
                 className="focus:ring-blue-300 h-4 w-4 text-primary-500 cursor-pointer border-gray-300"
@@ -134,13 +134,15 @@ export default function RadioGroup<T>(props: RadioGroupProps<T>) {
               />
             </div>
             <label
-              htmlFor={`item-${item.value}`}
+              htmlFor={`${props.legend || ""}-item-${item.value}`}
               className="ml-3 flex flex-col cursor-pointer"
             >
               {/* <!-- On: "text-indigo-900", Off: "text-gray-900" --> */}
               <span className="block text-sm font-medium">{item.label}</span>
               {/* <!-- On: "text-indigo-700", Off: "text-gray-500" --> */}
-              <span className="block text-sm">{item.description}</span>
+              <span className="block text-sm text-gray-500">
+                {item.description}
+              </span>
               <div
                 className="cursor-default"
                 onClick={(e) => e.preventDefault()}
@@ -174,27 +176,29 @@ export function MutableRadioGroup<T>(
   }, [props.value, props.mutationStatus]);
 
   return (
-    <RadioGroup
-      value={state}
-      items={props.items}
-      legend={props.legend}
-      onChange={(value) => {
-        setState(value);
-        props.mutate({
-          variables: {
-            ...props.variables,
-            [props.propName]: value,
-          },
-        });
-      }}
-      error={props.mutationStatus.error?.message}
-      state={
-        props.mutationStatus.called
-          ? props.mutationStatus.loading
-            ? "SAVING"
-            : "SAVED"
-          : "NONE"
-      }
-    />
+    <form>
+      <RadioGroup
+        value={state}
+        items={props.items}
+        legend={props.legend}
+        onChange={(value) => {
+          setState(value);
+          props.mutate({
+            variables: {
+              ...props.variables,
+              [props.propName]: value,
+            },
+          });
+        }}
+        error={props.mutationStatus.error?.message}
+        state={
+          props.mutationStatus.called
+            ? props.mutationStatus.loading
+              ? "SAVING"
+              : "SAVED"
+            : "NONE"
+        }
+      />
+    </form>
   );
 }

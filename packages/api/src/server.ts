@@ -12,7 +12,9 @@ import ProjectInvitesPlugin from "./plugins/projectInvitesPlugin";
 import SurveyInvitesPlugin from "./plugins/surveyInvitesPlugin";
 import postgisPlugin from "@graphile/postgis";
 import CanonicalEmailPlugin from "./plugins/canonicalEmailPlugin";
+import SanitizeInteractivityTemplatesPlugin from "./plugins/sanitizeInteractivityTemplatesPlugin";
 import DataSourcePlugin from "./plugins/dataSourcePlugin";
+import SpritesPlugin from "./plugins/spritesPlugin";
 import { getJWKS, rotateKeys } from "./auth/jwks";
 import authorizationMiddleware from "./middleware/authorizationMiddleware";
 import userAccountMiddlware from "./middleware/userAccountMiddleware";
@@ -145,9 +147,11 @@ app.use(
       SurveyInvitesPlugin,
       CanonicalEmailPlugin,
       DataSourcePlugin,
+      SanitizeInteractivityTemplatesPlugin,
       orderTopicsByDateAndStickyPlugin,
       reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
+      SpritesPlugin,
     ],
     graphileBuildOptions: {
       pgOmitListSuffix: true,

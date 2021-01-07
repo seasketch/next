@@ -119,6 +119,18 @@ CREATE TYPE public.access_control_list_type AS ENUM (
 
 
 --
+-- Name: cursor_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.cursor_type AS ENUM (
+    'AUTO',
+    'DEFAULT',
+    'POINTER',
+    'CROSSHAIR'
+);
+
+
+--
 -- Name: email; Type: DOMAIN; Schema: public; Owner: -
 --
 
@@ -201,6 +213,19 @@ CREATE TYPE public.form_template_type AS ENUM (
 --
 
 COMMENT ON TYPE public.form_template_type IS 'Indicates which features should use the form as a template';
+
+
+--
+-- Name: interactivity_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.interactivity_type AS ENUM (
+    'BANNER',
+    'TOOLTIP',
+    'POPUP',
+    'FIXED_BLOCK',
+    'NONE'
+);
 
 
 --
@@ -348,6 +373,17 @@ CREATE TYPE public.sketch_geometry_type AS ENUM (
 CREATE TYPE public.sort_by_direction AS ENUM (
     'ASC',
     'DESC'
+);
+
+
+--
+-- Name: sprite_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.sprite_type AS ENUM (
+    'icon',
+    'fill',
+    'line'
 );
 
 
@@ -588,6 +624,78 @@ COMMENT ON FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) 
 
 
 --
+-- Name: sprites; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sprites (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    type public.sprite_type,
+    md5 text NOT NULL
+);
+
+
+--
+-- Name: TABLE sprites; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sprites IS '
+@omit all
+@simpleCollections only
+Image sprites for use in Mapbox GL Styles. The database holds metadata about the sprite, the actual images are in cloud storage referenced by the URL parameter. 
+';
+
+
+--
+-- Name: COLUMN sprites.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sprites.project_id IS 'If unset, sprite will be available for use in all projects';
+
+
+--
+-- Name: COLUMN sprites.type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sprites.type IS 'Optional. Indicates whether the image is intended for use with particular GL Styles';
+
+
+--
+-- Name: COLUMN sprites.md5; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sprites.md5 IS 'Hash of lowest-dpi image in the set (pixelRatio=1). Useful for de-duplicating symbols that have been imported multiple times';
+
+
+--
+-- Name: add_image_to_sprite(integer, integer, integer, integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.add_image_to_sprite("spriteId" integer, "pixelRatio" integer, width integer, height integer, image text) RETURNS public.sprites
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      sprite sprites;
+    begin
+    if session_is_admin((select project_id from sprites where id = "spriteId")) then
+      insert into sprite_images (sprite_id, pixel_ratio, width, height, url) values ("spriteId", "pixelRatio", width, height, image);
+      select * into sprite from sprites where id = "spriteId";
+      return sprite;
+    else
+      raise 'Not authorized';
+    end if;
+    end;
+$$;
+
+
+--
+-- Name: FUNCTION add_image_to_sprite("spriteId" integer, "pixelRatio" integer, width integer, height integer, image text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.add_image_to_sprite("spriteId" integer, "pixelRatio" integer, width integer, height integer, image text) IS '@omit';
+
+
+--
 -- Name: add_user_to_group(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -678,6 +786,37 @@ CREATE FUNCTION public.add_valid_child_sketch_class(parent integer, child intege
 COMMENT ON FUNCTION public.add_valid_child_sketch_class(parent integer, child integer) IS '
 Add a SketchClass to the list of valid children for a Collection-type SketchClass.
 ';
+
+
+--
+-- Name: after_data_source_insert(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_data_source_insert() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      if new.type != 'vector' then
+        insert into interactivity_settings (data_source_id) values (new.id);
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: after_data_source_insert_create_interaction_settings_trigger(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_data_source_insert_create_interaction_settings_trigger() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      if new.type != 'vector' then
+        insert into interactivity_settings (data_source_id) values (new.id);
+      end if;
+      return new;
+    end;
+  $$;
 
 
 --
@@ -2148,6 +2287,45 @@ $$;
 
 
 --
+-- Name: create_sprite(integer, text, public.sprite_type, integer, integer, integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) RETURNS public.sprites
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    sprite sprites;
+  begin
+    if session_is_admin("projectId") = false then
+      raise 'Not authorized';
+    end if;
+    if _pixel_ratio != 1 then
+      raise 'New sprites can only be created with an image with a pixel_ratio of 1';
+    end if;
+    if _url is null then
+      raise 'Must be called with a url';
+    end if;
+    if _md5 is null then
+      raise 'Must be called with an md5 hash';
+    end if;
+    select * into sprite from sprites where sprites.md5 = _md5 limit 1;
+    if sprite is null then
+      insert into sprites (project_id, type, md5) values ("projectId", _type, _md5) returning * into sprite;
+    end if;
+    insert into sprite_images (sprite_id, pixel_ratio, width, height, url) values (sprite.id, _pixel_ratio, _width, _height, _url);
+    return sprite;
+  end;
+$$;
+
+
+--
+-- Name: FUNCTION create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) IS '@omit';
+
+
+--
 -- Name: survey_invites; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2349,6 +2527,90 @@ $$;
 COMMENT ON FUNCTION public.current_project() IS '
 The current SeaSketch Project, which is determined by the `referer` or `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
 ';
+
+
+--
+-- Name: data_layers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_layers (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    data_source_id integer NOT NULL,
+    source_layer text,
+    sublayer text,
+    render_under public.render_under_type DEFAULT 'labels'::public.render_under_type NOT NULL,
+    mapbox_gl_styles jsonb
+);
+
+
+--
+-- Name: TABLE data_layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.data_layers IS '
+@omit all
+Data layers represent multiple MapBox GL Style layers tied to a single source. 
+These layers could also be called "operational layers" in that they are meant to
+be overlaid on a basemap.
+
+The layers can appear tied to a TableOfContentsItem or be part of rich features 
+associated with a basemap.
+';
+
+
+--
+-- Name: COLUMN data_layers.source_layer; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.source_layer IS 'For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to.';
+
+
+--
+-- Name: COLUMN data_layers.sublayer; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.sublayer IS 'For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles is blank and this layer merely controls the display of a single sublayer when making image requests.';
+
+
+--
+-- Name: COLUMN data_layers.render_under; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.render_under IS 'Determines z-ordering of layer in relation to layers in the basemap. For this functionality to work, layers must be identified in the basemap configuration.';
+
+
+--
+-- Name: COLUMN data_layers.mapbox_gl_styles; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.mapbox_gl_styles IS '
+@name mapboxGLStyles
+JSON array of MapBox GL Style layers. Layers should not specify an id or sourceId. These will be automatically generated at runtime.
+';
+
+
+--
+-- Name: data_layers_sprites(public.data_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_layers_sprites(l public.data_layers) RETURNS SETOF public.sprites
+    LANGUAGE sql STABLE
+    AS $$
+  select * from sprites where id in (
+      select i::int from (
+        select 
+          unnest(regexp_matches(l.mapbox_gl_styles::text, 'seasketch://sprites/([^"]+)', 'g')) i 
+      ) t)
+    ;
+$$;
+
+
+--
+-- Name: FUNCTION data_layers_sprites(l public.data_layers); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.data_layers_sprites(l public.data_layers) IS '@simpleCollections only';
 
 
 --
@@ -3655,67 +3917,6 @@ COMMENT ON FUNCTION public.projects_admins(p public.projects) IS '@simpleCollect
 
 
 --
--- Name: data_layers; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.data_layers (
-    id integer NOT NULL,
-    project_id integer NOT NULL,
-    data_source_id integer NOT NULL,
-    source_layer text,
-    sublayer text,
-    render_under public.render_under_type DEFAULT 'labels'::public.render_under_type NOT NULL,
-    mapbox_gl_styles jsonb
-);
-
-
---
--- Name: TABLE data_layers; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.data_layers IS '
-@omit all
-Data layers represent multiple MapBox GL Style layers tied to a single source. 
-These layers could also be called "operational layers" in that they are meant to
-be overlaid on a basemap.
-
-The layers can appear tied to a TableOfContentsItem or be part of rich features 
-associated with a basemap.
-';
-
-
---
--- Name: COLUMN data_layers.source_layer; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_layers.source_layer IS 'For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to.';
-
-
---
--- Name: COLUMN data_layers.sublayer; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_layers.sublayer IS 'For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles is blank and this layer merely controls the display of a single sublayer when making image requests.';
-
-
---
--- Name: COLUMN data_layers.render_under; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_layers.render_under IS 'Determines z-ordering of layer in relation to layers in the basemap. For this functionality to work, layers must be identified in the basemap configuration.';
-
-
---
--- Name: COLUMN data_layers.mapbox_gl_styles; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_layers.mapbox_gl_styles IS '
-@name mapboxGLStyles
-JSON array of MapBox GL Style layers. Layers should not specify an id or sourceId. These will be automatically generated at runtime.
-';
-
-
---
 -- Name: projects_data_layers_for_items(public.projects, integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4092,6 +4293,7 @@ CREATE TABLE public.table_of_contents_items (
     data_layer_id integer,
     sort_index integer NOT NULL,
     hide_children boolean DEFAULT false NOT NULL,
+    enable_download boolean DEFAULT true NOT NULL,
     CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
     CONSTRAINT titlechk CHECK ((char_length(title) > 0))
 );
@@ -4758,10 +4960,27 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
       new_toc_id int;
     begin
       -- check permissions
-      -- if session_is_admin("projectId") = false then
-      --   raise 'Permission denied. Must be a project admin';
-      -- end if;
-      -- delete existing published table of contents items, layers, and sources
+      if session_is_admin("projectId") = false then
+        raise 'Permission denied. Must be a project admin';
+      end if;
+      -- delete existing published table of contents items, layers, sources, and interactivity settings
+      delete from 
+        interactivity_settings 
+      where
+        data_source_id in (
+          select 
+            data_source_id 
+          from
+            data_layers
+          inner JOIN
+            table_of_contents_items
+          on
+            data_layers.id = table_of_contents_items.data_layer_id
+          where
+            table_of_contents_items.project_id = "projectId" and
+            is_draft = false
+        );
+
       delete from data_sources where id in (
         select 
           data_source_id 
@@ -4819,7 +5038,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           returning id into lid;
         else
           lid = item.data_layer_id;
-        end if;        
+        end if;
+        -- TODO: this will have to be modified with the addition of any columns
         insert into table_of_contents_items (
           is_draft,
           project_id,
@@ -4965,6 +5185,26 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           where
             id = source_id
           returning id into copied_source_id;
+        -- copy any interactivity settings
+        insert into interactivity_settings (
+          data_source_id,
+          source_layer,
+          type,
+          short_template,
+          long_template,
+          cursor
+        ) select
+          copied_source_id,
+          source_layer,
+          type,
+          short_template,
+          long_template,
+          cursor
+        from
+          interactivity_settings
+        where
+          data_source_id = source_id;
+        -- update data_layers that should now reference the copy
         update 
           data_layers 
         set data_source_id = copied_source_id 
@@ -7264,6 +7504,45 @@ ALTER TABLE public.forums ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 
 --
+-- Name: interactivity_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.interactivity_settings (
+    id integer NOT NULL,
+    data_source_id integer NOT NULL,
+    source_layer text,
+    type public.interactivity_type DEFAULT 'NONE'::public.interactivity_type NOT NULL,
+    short_template text,
+    long_template text,
+    cursor public.cursor_type DEFAULT 'AUTO'::public.cursor_type NOT NULL
+);
+
+
+--
+-- Name: TABLE interactivity_settings; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.interactivity_settings IS '
+@simpleCollections only
+@omit all
+';
+
+
+--
+-- Name: interactivity_settings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.interactivity_settings ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.interactivity_settings_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: invite_emails_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -7512,6 +7791,73 @@ ALTER TABLE public.sketch_folders ALTER COLUMN id ADD GENERATED BY DEFAULT AS ID
 
 ALTER TABLE public.sketches ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME public.sketches_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: sprite_images; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sprite_images (
+    sprite_id integer NOT NULL,
+    pixel_ratio integer DEFAULT 1 NOT NULL,
+    width integer NOT NULL,
+    height integer NOT NULL,
+    url text NOT NULL,
+    CONSTRAINT sprite_images_height_check CHECK (((height > 0) AND (height <= 1024))),
+    CONSTRAINT sprite_images_width_check CHECK (((width > 0) AND (width <= 1024)))
+);
+
+
+--
+-- Name: TABLE sprite_images; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sprite_images IS '
+@omit all
+@simpleCollections only
+';
+
+
+--
+-- Name: COLUMN sprite_images.pixel_ratio; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sprite_images.pixel_ratio IS 'Device pixel ratio a copy of this image supports. 2x would be for "retina" devices. Multiple records may point to the same sprite id, but each must have a unique combination of id, pixel_ratio, and data_layer_id.';
+
+
+--
+-- Name: COLUMN sprite_images.width; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sprite_images.width IS 'Must be <= 1024';
+
+
+--
+-- Name: COLUMN sprite_images.height; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sprite_images.height IS 'Must be <= 1024';
+
+
+--
+-- Name: COLUMN sprite_images.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sprite_images.url IS 'Supports multipart Upload operations';
+
+
+--
+-- Name: sprites_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.sprites ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.sprites_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -7819,6 +8165,22 @@ ALTER TABLE ONLY public.forums
 
 
 --
+-- Name: interactivity_settings interactivity_settings_data_source_id_source_layer_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interactivity_settings
+    ADD CONSTRAINT interactivity_settings_data_source_id_source_layer_key UNIQUE (data_source_id, source_layer);
+
+
+--
+-- Name: interactivity_settings interactivity_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interactivity_settings
+    ADD CONSTRAINT interactivity_settings_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: invite_emails invite_emails_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7983,6 +8345,30 @@ ALTER TABLE ONLY public.sketch_folders
 
 ALTER TABLE ONLY public.sketches
     ADD CONSTRAINT sketches_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sprite_images sprite_images_sprite_id_pixel_ratio_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sprite_images
+    ADD CONSTRAINT sprite_images_sprite_id_pixel_ratio_key UNIQUE (sprite_id, pixel_ratio);
+
+
+--
+-- Name: sprites sprites_md5_project_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sprites
+    ADD CONSTRAINT sprites_md5_project_id_key UNIQUE (md5, project_id);
+
+
+--
+-- Name: sprites sprites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sprites
+    ADD CONSTRAINT sprites_pkey PRIMARY KEY (id);
 
 
 --
@@ -8207,6 +8593,20 @@ CREATE INDEX forms_sketch_class_id_idx ON public.forms USING btree (sketch_class
 --
 
 CREATE INDEX forums_project_id_idx ON public.forums USING btree (project_id);
+
+
+--
+-- Name: interactivity_settings_data_source_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX interactivity_settings_data_source_id ON public.interactivity_settings USING btree (data_source_id);
+
+
+--
+-- Name: interactivity_settings_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX interactivity_settings_type ON public.interactivity_settings USING btree (type);
 
 
 --
@@ -8441,6 +8841,20 @@ CREATE INDEX sketches_user_id_sketch_class_id_idx ON public.sketches USING btree
 
 
 --
+-- Name: sprite_images_sprite_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sprite_images_sprite_id_idx ON public.sprite_images USING btree (sprite_id);
+
+
+--
+-- Name: sprites_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sprites_project_id_idx ON public.sprites USING btree (project_id);
+
+
+--
 -- Name: survey_invited_groups_group_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8543,6 +8957,13 @@ CREATE INDEX users_sub ON public.users USING btree (sub);
 --
 
 CREATE TRIGGER after_add_user_to_group_update_survey_invites AFTER INSERT ON public.project_group_members FOR EACH ROW EXECUTE FUNCTION public.add_user_to_group_update_survey_invites_trigger();
+
+
+--
+-- Name: data_sources after_data_source_insert_create_interaction_settings; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER after_data_source_insert_create_interaction_settings AFTER INSERT ON public.data_sources FOR EACH ROW EXECUTE FUNCTION public.after_data_source_insert_create_interaction_settings_trigger();
 
 
 --
@@ -8939,6 +9360,14 @@ COMMENT ON CONSTRAINT forums_project_id_fkey ON public.forums IS '@simpleCollect
 
 
 --
+-- Name: interactivity_settings interactivity_settings_data_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.interactivity_settings
+    ADD CONSTRAINT interactivity_settings_data_source_id_fkey FOREIGN KEY (data_source_id) REFERENCES public.data_sources(id) ON DELETE CASCADE;
+
+
+--
 -- Name: invite_emails invite_emails_project_invite_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9249,6 +9678,22 @@ COMMENT ON CONSTRAINT sketches_sketch_class_id_fkey ON public.sketches IS '@omit
 
 ALTER TABLE ONLY public.sketches
     ADD CONSTRAINT sketches_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: sprite_images sprite_images_sprite_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sprite_images
+    ADD CONSTRAINT sprite_images_sprite_id_fkey FOREIGN KEY (sprite_id) REFERENCES public.sprites(id) ON DELETE CASCADE;
+
+
+--
+-- Name: sprites sprites_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sprites
+    ADD CONSTRAINT sprites_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -9640,6 +10085,32 @@ CREATE POLICY forums_select ON public.forums FOR SELECT USING ((public.session_h
 
 
 --
+-- Name: interactivity_settings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.interactivity_settings ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: interactivity_settings interactivity_settings_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY interactivity_settings_admin ON public.interactivity_settings USING (public.session_is_admin(( SELECT data_sources.project_id
+   FROM public.data_sources
+  WHERE (data_sources.id = interactivity_settings.data_source_id)))) WITH CHECK (public.session_is_admin(( SELECT data_sources.project_id
+   FROM public.data_sources
+  WHERE (data_sources.id = interactivity_settings.data_source_id))));
+
+
+--
+-- Name: interactivity_settings interactivity_settings_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY interactivity_settings_select ON public.interactivity_settings USING (public.session_has_project_access(( SELECT data_sources.project_id
+   FROM public.data_sources
+  WHERE (data_sources.id = interactivity_settings.data_source_id))));
+
+
+--
 -- Name: invite_emails; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -9831,6 +10302,36 @@ CREATE POLICY sketches_select ON public.sketches FOR SELECT USING (public.it_me(
 --
 
 CREATE POLICY sketches_updated ON public.sketches FOR UPDATE USING (public.it_me(user_id)) WITH CHECK (public.it_me(user_id));
+
+
+--
+-- Name: sprite_images; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.sprite_images ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: sprite_images sprite_images_read; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY sprite_images_read ON public.sprite_images FOR SELECT USING (((( SELECT sprites.project_id
+   FROM public.sprites
+  WHERE (sprites.id = sprite_images.sprite_id)) IS NULL) OR public.session_has_project_access(( SELECT sprites.project_id
+   FROM public.sprites
+  WHERE (sprites.id = sprite_images.sprite_id)))));
+
+
+--
+-- Name: sprites; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.sprites ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: sprites sprites_read; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY sprites_read ON public.sprites FOR SELECT USING (((project_id IS NULL) OR public.session_has_project_access(project_id)));
 
 
 --
@@ -10860,6 +11361,21 @@ GRANT ALL ON FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer
 
 
 --
+-- Name: TABLE sprites; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.sprites TO anon;
+
+
+--
+-- Name: FUNCTION add_image_to_sprite("spriteId" integer, "pixelRatio" integer, width integer, height integer, image text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.add_image_to_sprite("spriteId" integer, "pixelRatio" integer, width integer, height integer, image text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.add_image_to_sprite("spriteId" integer, "pixelRatio" integer, width integer, height integer, image text) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION add_user_to_group("groupId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -10908,6 +11424,20 @@ REVOKE ALL ON FUNCTION public.addgeometrycolumn(schema_name character varying, t
 --
 
 REVOKE ALL ON FUNCTION public.addgeometrycolumn(catalog_name character varying, schema_name character varying, table_name character varying, column_name character varying, new_srid_in integer, new_type character varying, new_dim integer, use_typmod boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_data_source_insert(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_data_source_insert() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_data_source_insert_create_interaction_settings_trigger(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_data_source_insert_create_interaction_settings_trigger() FROM PUBLIC;
 
 
 --
@@ -11538,6 +12068,14 @@ REVOKE ALL ON FUNCTION public.create_sketch_class_acl() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) TO seasketch_user;
+
+
+--
 -- Name: TABLE survey_invites; Type: ACL; Schema: public; Owner: -
 --
 
@@ -11616,6 +12154,22 @@ REVOKE ALL ON FUNCTION public.crypt(text, text) FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.current_project() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.current_project() TO anon;
+
+
+--
+-- Name: TABLE data_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.data_layers TO anon;
+GRANT ALL ON TABLE public.data_layers TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_layers_sprites(l public.data_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) TO anon;
 
 
 --
@@ -13901,14 +14455,6 @@ GRANT ALL ON FUNCTION public.projects_admins(p public.projects) TO seasketch_use
 
 
 --
--- Name: TABLE data_layers; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.data_layers TO anon;
-GRANT ALL ON TABLE public.data_layers TO seasketch_user;
-
-
---
 -- Name: FUNCTION projects_data_layers_for_items(p public.projects, table_of_contents_item_ids integer[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -14192,6 +14738,14 @@ GRANT SELECT(sort_index) ON TABLE public.table_of_contents_items TO anon;
 --
 
 GRANT SELECT(hide_children),INSERT(hide_children),UPDATE(hide_children) ON TABLE public.table_of_contents_items TO seasketch_user;
+
+
+--
+-- Name: COLUMN table_of_contents_items.enable_download; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(enable_download) ON TABLE public.table_of_contents_items TO anon;
+GRANT INSERT(enable_download),UPDATE(enable_download) ON TABLE public.table_of_contents_items TO seasketch_user;
 
 
 --
@@ -18252,6 +18806,14 @@ GRANT UPDATE(operator) ON TABLE public.form_conditional_rendering_rules TO seask
 
 
 --
+-- Name: TABLE interactivity_settings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.interactivity_settings TO anon;
+GRANT INSERT,UPDATE ON TABLE public.interactivity_settings TO seasketch_user;
+
+
+--
 -- Name: TABLE jwks; Type: ACL; Schema: public; Owner: -
 --
 
@@ -18277,6 +18839,13 @@ GRANT ALL ON TABLE public.project_invite_groups TO seasketch_user;
 --
 
 GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
+
+
+--
+-- Name: TABLE sprite_images; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.sprite_images TO anon;
 
 
 --

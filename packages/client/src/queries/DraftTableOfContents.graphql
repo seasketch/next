@@ -17,6 +17,7 @@ query DraftTableOfContents($slug: String!) {
       bounds
       sortIndex
       hideChildren
+      enableDownload
     }
   }
 }
@@ -57,8 +58,28 @@ query layersAndSourcesForItems(
       url
       urls
       useDevicePixelRatio
+      interactivitySettings {
+        dataSourceId
+        id
+        cursor
+        longTemplate
+        shortTemplate
+        sourceLayer
+        type
+      }
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
+      sprites {
+        id
+        spriteImages {
+          pixelRatio
+          height
+          width
+          url
+        }
+        type
+      }
+
       dataSourceId
       id
       mapboxGlStyles
@@ -105,6 +126,7 @@ mutation CreateFolder(
       isClickOffOnly
       sortIndex
       hideChildren
+      enableDownload
     }
   }
 }
@@ -188,12 +210,23 @@ query GetLayerItem($id: Int!) {
     projectId
     stableId
     title
+    enableDownload
     dataLayer {
       id
       mapboxGlStyles
       renderUnder
       sourceLayer
       sublayer
+      sprites {
+        id
+        spriteImages {
+          pixelRatio
+          height
+          width
+          url
+        }
+        type
+      }
       dataSource {
         id
         attribution
@@ -252,6 +285,17 @@ mutation UpdateTableOfContentsItem(
   }
 }
 
+mutation UpdateEnableDownload($id: Int!, $enableDownload: Boolean) {
+  updateTableOfContentsItem(
+    input: { id: $id, patch: { enableDownload: $enableDownload } }
+  ) {
+    tableOfContentsItem {
+      id
+      enableDownload
+    }
+  }
+}
+
 mutation UpdateLayer(
   $id: Int!
   $renderUnder: RenderUnderType
@@ -273,6 +317,16 @@ mutation UpdateLayer(
       renderUnder
       mapboxGlStyles
       sublayer
+      sprites {
+        id
+        spriteImages {
+          pixelRatio
+          height
+          width
+          url
+        }
+        type
+      }
     }
   }
 }
@@ -312,5 +366,61 @@ mutation UpdateDataSource($id: Int!, $attribution: String) {
       urls
       useDevicePixelRatio
     }
+  }
+}
+
+query InteractivitySettingsForSource($sourceId: Int!) {
+  dataSource(id: $sourceId) {
+    id
+    interactivitySettings {
+      cursor
+      dataSourceId
+      id
+      longTemplate
+      shortTemplate
+      sourceLayer
+      type
+    }
+  }
+}
+
+mutation UpdateInteractivitySettings(
+  $id: Int!
+  $type: InteractivityType
+  $cursor: CursorType
+  $longTemplate: String
+  $shortTemplate: String
+) {
+  updateInteractivitySetting(
+    input: {
+      id: $id
+      patch: {
+        type: $type
+        cursor: $cursor
+        longTemplate: $longTemplate
+        shortTemplate: $shortTemplate
+      }
+    }
+  ) {
+    interactivitySetting {
+      id
+      type
+      cursor
+      dataSourceId
+      longTemplate
+      shortTemplate
+      sourceLayer
+    }
+  }
+}
+
+query DataSourceUrlProperties($id: Int!) {
+  dataSource(id: $id) {
+    id
+    type
+    bucketId
+    objectKey
+    url
+    originalSourceUrl
   }
 }

@@ -4,7 +4,9 @@ import {
   ImageSource,
   RasterSource,
   VectorSource,
+  Map,
 } from "mapbox-gl";
+import { ClientDataSource } from "../LayerManager";
 import { SeaSketchSourceBaseOptions } from "./Base";
 
 export type MapBoxSource = (
@@ -15,3 +17,18 @@ export type MapBoxSource = (
   | VectorSource
 ) &
   SeaSketchSourceBaseOptions;
+
+export function updateGeoJSONSource(
+  prev: ClientDataSource,
+  next: ClientDataSource,
+  map: Map
+) {
+  if (prev.attribution !== next.attribution) {
+    map.removeSource(prev.id.toString());
+    map.addSource(prev.id.toString(), {
+      attribution: next.attribution || undefined,
+      type: "geojson",
+      data: `https://${next.bucketId}/${next.objectKey}`,
+    });
+  }
+}

@@ -154,3 +154,91 @@ mutation CreateDataLayer(
     }
   }
 }
+
+# mutation CreateSprite(
+#   $spriteId: String!
+#   $dataLayerId: Int!
+#   $width: Int!
+#   $height: Int!
+#   $pixelRatio: Int!
+#   $url: Upload!
+# ) {
+#   createSprite(
+#     input: {
+#       sprite: {
+#         spriteId: $spriteId
+#         width: $width
+#         height: $height
+#         pixelRatio: $pixelRatio
+#         dataLayerId: $dataLayerId
+#         url: $url
+#       }
+#     }
+#   ) {
+#     sprite {
+#       width
+#       height
+#       spriteId
+#       id
+#       url
+#       dataLayerId
+#       pixelRatio
+#     }
+#   }
+# }
+
+mutation GetOrCreateSprite(
+  $height: Int!
+  $width: Int!
+  $pixelRatio: Int!
+  $projectId: Int!
+  $smallestImage: Upload!
+) {
+  getOrCreateSprite(
+    height: $height
+    pixelRatio: $pixelRatio
+    projectId: $projectId
+    smallestImage: $smallestImage
+    width: $width
+  ) {
+    id
+    md5
+    projectId
+    type
+    spriteImages {
+      spriteId
+      height
+      pixelRatio
+      url
+      width
+    }
+  }
+}
+
+mutation AddImageToSprite(
+  $spriteId: Int!
+  $width: Int!
+  $height: Int!
+  $pixelRatio: Int!
+  $image: Upload!
+) {
+  addImageToSprite(
+    height: $height
+    width: $width
+    pixelRatio: $pixelRatio
+    spriteId: $spriteId
+    image: $image
+  ) {
+    id
+    md5
+    projectId
+    type
+    spriteImages {
+      spriteId
+      height
+      pixelRatio
+      url
+      width
+    }
+  }
+}

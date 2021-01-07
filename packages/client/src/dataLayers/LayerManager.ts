@@ -6,8 +6,11 @@ import {
   Source,
   RasterDemSource,
   AnyLayer,
+  MapMouseEvent,
+  Popup,
 } from "mapbox-gl";
-
+import Mustache from "mustache";
+import { Feature } from "geojson";
 import {
   createContext,
   Dispatch,
@@ -25,7 +28,7 @@ import {
   updateArcGISVectorSource,
   isArcGISVectorSourceLoading,
 } from "./sourceTypes/ArcGISVectorSource";
-import { MapBoxSource } from "./sourceTypes/MapBoxSource";
+import { MapBoxSource, updateGeoJSONSource } from "./sourceTypes/MapBoxSource";
 import { WMSSource } from "./sourceTypes/WMSSource";
 import {
   ArcGISDynamicMapService as ArcGISDynamicMapServiceInstance,
@@ -34,10 +37,16 @@ import {
   styleForFeatureLayer,
 } from "@seasketch/mapbox-gl-esri-sources";
 import {
+  CursorType,
   DataLayer,
   DataSource as GeneratedDataSource,
   DataSourceTypes,
+  InteractivitySetting,
+  InteractivityType,
+  Sprite,
+  SpriteImage,
 } from "../generated/graphql";
+import { rejects } from "assert";
 
 interface LayerState {
   visible: true;
@@ -93,7 +102,37 @@ export type ClientDataSource = Pick<
   id: string | number;
   /** Can be used for arcgis vector services */
   bytesLimit?: number;
+  interactivitySettings?: Pick<
+    InteractivitySetting,
+    | "cursor"
+    | "id"
+    | "longTemplate"
+    | "shortTemplate"
+    | "dataSourceId"
+    | "sourceLayer"
+    | "type"
+  >[];
 };
+
+const mustacheHelpers = {
+  round: () => (text: string, render: (str: string) => string) => {
+    return `${Math.round(parseFloat(render(text)))}`;
+  },
+  round1Digit: () => (text: string, render: (str: string) => string) => {
+    return `${Math.round(parseFloat(render(text)) * 10) / 10}`;
+  },
+  round2Digits: () => (text: string, render: (str: string) => string) => {
+    return `${Math.round(parseFloat(render(text)) * 100) / 100}`;
+  },
+};
+
+export type ClientSprite = {
+  spriteImages: ({ dataUri?: string; url?: string } & Pick<
+    SpriteImage,
+    "height" | "width" | "pixelRatio"
+  >)[];
+  id: string | number;
+} & Pick<Sprite, "type">;
 
 export type ClientDataLayer = Pick<
   DataLayer,
@@ -103,6 +142,7 @@ export type ClientDataLayer = Pick<
   id: string | number;
   /** IDs from the server are Int. Temporary client IDs are UUID v4 */
   dataSourceId: string | number;
+  sprites?: ClientSprite[];
 };
 
 class LayerManager {
@@ -112,6 +152,7 @@ class LayerManager {
   private visibleLayers: { [id: string]: LayerState } = {};
   private basemapLandLayerId: string = "land";
   private basemapLabelsLayerId: string = "road-label";
+  private previousInteractionTarget?: string;
   private setState: Dispatch<SetStateAction<LayerManagerContext>>;
   map?: Map;
   private updateStateDebouncerReference?: NodeJS.Timeout;
@@ -121,6 +162,19 @@ class LayerManager {
   private dirtyMapServices: string[] = [];
   private updateMapServicesDebouncerReference?: NodeJS.Timeout;
   private updateSourcesStateDebouncerReference?: NodeJS.Timeout;
+  private updateInteractivitySettingsDebouncerReference?: NodeJS.Timeout;
+  private debouncedMouseMoveListenerReference?: NodeJS.Timeout;
+  private interactiveLayerIds: string[] = [];
+  private activeInteractivitySettings: Pick<
+    InteractivitySetting,
+    | "id"
+    | "dataSourceId"
+    | "type"
+    | "cursor"
+    | "longTemplate"
+    | "shortTemplate"
+    | "sourceLayer"
+  >[] = [];
   private dynamicArcGISStyles: {
     [sourceId: string]: Promise<{
       imageList: ImageList;
@@ -138,13 +192,29 @@ class LayerManager {
       this.map.off("error", this.onMapError);
       this.map.off("data", this.onMapDataEvent);
       this.map.off("dataloading", this.onMapDataEvent);
+      this.map.off("mouseout", this.onMouseOut);
+      this.map.off("click", this.onMouseClick);
     }
     // add event listeners
     this.map = map;
     this.map.on("error", this.onMapError);
     this.map.on("data", this.onMapDataEvent);
     this.map.on("dataloading", this.onMapDataEvent);
+    this.map.on("mouseout", this.onMouseOut);
+    this.map.on("click", this.onMouseClick);
   }
+
+  onMouseOut = () => {
+    setTimeout(() => {
+      delete this.previousInteractionTarget;
+      this.setState((prev) => ({
+        ...prev,
+        tooltip: undefined,
+        bannerMessages: [],
+        fixedBlocks: [],
+      }));
+    }, 7);
+  };
 
   onMapDataEvent = (
     event: MapDataEvent & { source: Source; sourceId: string }
@@ -166,6 +236,32 @@ class LayerManager {
     }
   };
 
+  onMouseClick = (e: MapMouseEvent) => {
+    const features = this.map!.queryRenderedFeatures(e.point, {
+      layers: this.interactiveLayerIds,
+    });
+    const top = features[0];
+    if (top) {
+      const popupSetting = this.activeInteractivitySettings.find(
+        (i) =>
+          i.type === InteractivityType.Popup &&
+          i.dataSourceId.toString() === top.source &&
+          (!top.sourceLayer || top.sourceLayer === i.sourceLayer)
+      );
+      if (popupSetting) {
+        var popup = new Popup({ closeOnClick: true, closeButton: false })
+          .setLngLat([e.lngLat.lng, e.lngLat.lat])
+          .setHTML(
+            Mustache.render(popupSetting.longTemplate || "", {
+              ...mustacheHelpers,
+              ...top.properties,
+            })
+          )
+          .addTo(this.map!);
+      }
+    }
+  };
+
   onMapError = (event: ErrorEvent & { sourceId?: string }) => {
     if (event.sourceId && event.sourceId !== "composite") {
       let anySet = false;
@@ -181,6 +277,177 @@ class LayerManager {
       }
     }
   };
+
+  updateInteractivitySettings() {
+    const sourceIds: (number | string)[] = [];
+    let interactiveLayerIds: string[] = [];
+    // for each visible source, collect interactivitySettings
+    for (const id in this.visibleLayers) {
+      const layer = this.layers[id];
+      const source = this.clientDataSources.find(
+        (s) => s.id === layer.dataSourceId
+      );
+      if (
+        source?.interactivitySettings &&
+        source.interactivitySettings.find(
+          (i) => i.type !== InteractivityType.None
+        )
+      ) {
+        for (
+          var i = 0;
+          i < JSON.parse(layer.mapboxGlStyles || "[]").length;
+          i++
+        ) {
+          interactiveLayerIds.push(`${layer.id}-${i}`);
+        }
+      }
+      if (sourceIds.indexOf(layer.dataSourceId) === -1) {
+        sourceIds.push(layer.dataSourceId);
+      }
+    }
+    const interactivitySettings: Pick<
+      InteractivitySetting,
+      | "id"
+      | "dataSourceId"
+      | "cursor"
+      | "longTemplate"
+      | "shortTemplate"
+      | "type"
+      | "sourceLayer"
+    >[] = [];
+    for (const id of sourceIds) {
+      const source = this.clientDataSources.find((source) => source.id === id);
+      if (source && source.interactivitySettings?.length) {
+        for (const setting of source.interactivitySettings) {
+          if (setting.type !== InteractivityType.None) {
+            interactivitySettings.push(setting);
+          }
+        }
+      }
+    }
+    this.activeInteractivitySettings = interactivitySettings;
+    this.interactiveLayerIds = interactiveLayerIds;
+    if (this.activeInteractivitySettings.length) {
+      this.map?.on("mousemove", this.debouncedMouseMoveListener);
+    } else {
+      this.map?.off("mousemove", this.debouncedMouseMoveListener);
+    }
+  }
+
+  debouncedMouseMoveListener = (e: MapMouseEvent, backoff = 4) => {
+    if (this.debouncedMouseMoveListenerReference) {
+      clearTimeout(this.debouncedMouseMoveListenerReference);
+    }
+    this.debouncedMouseMoveListenerReference = setTimeout(() => {
+      delete this.debouncedMouseMoveListenerReference;
+      this.mouseMoveListener(e);
+    }, backoff);
+  };
+
+  mouseMoveListener = (e: MapMouseEvent) => {
+    const features = this.map!.queryRenderedFeatures(e.point, {
+      layers: this.interactiveLayerIds,
+    });
+
+    const clear = () => {
+      this.map!.getCanvas().style.cursor = "";
+      this.setState((prev) => ({
+        ...prev,
+        bannerMessages: [],
+        tooltip: undefined,
+        fixedBlocks: [],
+      }));
+      delete this.previousInteractionTarget;
+    };
+    if (features.length) {
+      const top = features[0];
+      const interactivitySetting = this.activeInteractivitySettings.find(
+        (s) => s.dataSourceId.toString() === top.source
+      );
+      if (interactivitySetting) {
+        let cursor = "";
+        this.map!.getCanvas().style.cursor = cursor;
+        let bannerMessages: string[] = [];
+        let tooltip: Tooltip | undefined = undefined;
+        let fixedBlocks: string[] = [];
+        switch (interactivitySetting.type) {
+          case InteractivityType.Banner:
+            cursor = "default";
+            bannerMessages = [
+              Mustache.render(interactivitySetting.shortTemplate || "", {
+                ...mustacheHelpers,
+                ...(top.properties || {}),
+              }),
+            ];
+            break;
+          case InteractivityType.Tooltip:
+            cursor = "default";
+            tooltip = {
+              x: e.originalEvent.x,
+              y: e.originalEvent.y,
+              messages: [
+                Mustache.render(interactivitySetting.shortTemplate || "", {
+                  ...mustacheHelpers,
+                  ...(top.properties || {}),
+                }),
+              ],
+            };
+            break;
+          case InteractivityType.Popup:
+            cursor = "pointer";
+            break;
+          case InteractivityType.FixedBlock:
+            cursor = "pointer";
+            fixedBlocks = [
+              Mustache.render(interactivitySetting.longTemplate || "", {
+                ...mustacheHelpers,
+                ...(top.properties || {}),
+              }),
+            ];
+            break;
+          default:
+            break;
+        }
+        if (interactivitySetting.cursor !== "AUTO") {
+          cursor = interactivitySetting.cursor.toString().toLowerCase();
+        }
+        this.map!.getCanvas().style.cursor = cursor;
+        const currentInteractionTarget = `${top.id}-${interactivitySetting.id}`;
+        if (
+          this.previousInteractionTarget === currentInteractionTarget &&
+          (interactivitySetting.type === InteractivityType.Banner ||
+            interactivitySetting.type === InteractivityType.FixedBlock ||
+            interactivitySetting.type === InteractivityType.Popup)
+        ) {
+          // Don't waste cycles on a state update
+        } else {
+          this.previousInteractionTarget = currentInteractionTarget;
+          this.setState((prev) => {
+            return {
+              ...prev,
+              bannerMessages,
+              tooltip,
+              fixedBlocks,
+            };
+          });
+        }
+      } else {
+        clear();
+      }
+    } else {
+      clear();
+    }
+  };
+
+  debouncedUpdateInteractivitySettings(backoff = 8) {
+    if (this.updateInteractivitySettingsDebouncerReference) {
+      clearTimeout(this.updateInteractivitySettingsDebouncerReference);
+    }
+    this.updateInteractivitySettingsDebouncerReference = setTimeout(() => {
+      delete this.updateInteractivitySettingsDebouncerReference;
+      this.updateInteractivitySettings();
+    }, backoff);
+  }
 
   debouncedUpdateSourceStates(backoff = 10) {
     if (this.updateSourcesStateDebouncerReference) {
@@ -308,6 +575,7 @@ class LayerManager {
       this.removeLayer(layer);
     }
     // replace internal sources list with the new one
+    const oldClientDataSources = this.clientDataSources;
     this.clientDataSources = sources.map((source) => {
       return {
         ...source,
@@ -317,6 +585,27 @@ class LayerManager {
             : source.queryParameters,
       };
     });
+
+    // for each source on the map, check for updates
+    for (const oldConfig of oldClientDataSources) {
+      const newConfig = this.clientDataSources.find(
+        (config) => config.id === oldConfig.id
+      );
+      if (
+        newConfig &&
+        this.map?.getSource(oldConfig.id.toString()) &&
+        areEqualShallow(newConfig, oldConfig) === false
+      ) {
+        // need to update
+        if (
+          newConfig.type === DataSourceTypes.Geojson ||
+          newConfig.type === DataSourceTypes.SeasketchVector
+        ) {
+          updateGeoJSONSource(oldConfig, newConfig, this.map!);
+        }
+      }
+    }
+
     // this.clearSourceCache();
     // replace internal layers list
     this.layers = {};
@@ -423,11 +712,16 @@ class LayerManager {
 
   showLayers(layerIds: string[]) {
     for (const id of layerIds) {
-      this.addLayer(this.layers[id]);
+      const layer = this.layers[id];
+      if (layer) {
+        this.addLayer(this.layers[id]);
+      } else {
+        // maybe not loaded yet?
+      }
     }
   }
 
-  private addLayer(layer: ClientDataLayer) {
+  private async addLayer(layer: ClientDataLayer) {
     if (!this.map) {
       throw new Error(`Map instance not set`);
     }
@@ -471,6 +765,9 @@ class LayerManager {
         });
         this.debouncedUpdateState();
       } else {
+        if (layer.sprites && layer.sprites.length) {
+          await this.addSprites(layer.sprites);
+        }
         const mapboxLayers = JSON.parse(layer.mapboxGlStyles || "[]");
         if (mapboxLayers.length) {
           for (var i = 0; i < mapboxLayers?.length; i++) {
@@ -491,6 +788,48 @@ class LayerManager {
         visible: true,
       };
       this.debouncedUpdateState();
+    }
+    this.debouncedUpdateInteractivitySettings();
+  }
+
+  private async addSprites(sprites: ClientSprite[]) {
+    // get unique sprite ids
+
+    for (const sprite of sprites) {
+      if (!this.map!.hasImage(`seasketch://sprites/${sprite.id}`)) {
+        this.addSprite(sprite);
+      }
+    }
+  }
+
+  async addSprite(sprite: ClientSprite) {
+    let spriteImage = sprite.spriteImages.find(
+      (i) => window.devicePixelRatio === i.pixelRatio
+    );
+    if (!spriteImage) {
+      spriteImage = sprite.spriteImages[0];
+    }
+    if (spriteImage.dataUri) {
+      const image = await createImage(
+        spriteImage.width,
+        spriteImage.height,
+        spriteImage.dataUri
+      );
+      this.map?.addImage(`seasketch://sprites/${sprite.id}`, image, {
+        pixelRatio: spriteImage.pixelRatio,
+      });
+    } else if (spriteImage.url) {
+      const image = await loadImage(
+        spriteImage.width,
+        spriteImage.height,
+        spriteImage.url,
+        this.map!
+      );
+      this.map!.addImage(`seasketch://sprites/${sprite.id}`, image, {
+        pixelRatio: spriteImage.pixelRatio,
+      });
+    } else {
+      throw new Error(`Sprite id=${sprite.id} missing both dataUri and url`);
     }
   }
 
@@ -541,6 +880,7 @@ class LayerManager {
     }
     delete this.visibleLayers[layer.id];
     this.debouncedUpdateState();
+    this.debouncedUpdateInteractivitySettings();
   }
 
   private debouncedUpdateState() {
@@ -601,7 +941,6 @@ class LayerManager {
               "ArcGISDynamicMapServices must be initialized with initial sublayers"
             );
           }
-          console.log("sourceConfig", sourceConfig);
           const instance = new ArcGISDynamicMapServiceInstance(
             this.map,
             sourceConfig.id.toString(),
@@ -620,6 +959,7 @@ class LayerManager {
           const source = {
             type: "geojson",
             data: `https://${sourceConfig.bucketId}/${sourceConfig.objectKey}`,
+            attribution: sourceConfig.attribution,
           };
           // @ts-ignore
           this.map.addSource(sourceConfig.id.toString(), source);
@@ -713,18 +1053,33 @@ class LayerManager {
 
 export default LayerManager;
 
+interface Tooltip {
+  x: number;
+  y: number;
+  messages: string[];
+}
+
 interface LayerManagerContext {
   layerStates: { [id: string]: LayerState };
   manager?: LayerManager;
+  bannerMessages: string[];
+  tooltip?: Tooltip;
+  fixedBlocks: string[];
 }
 
 export function useLayerManager() {
-  const [state, setState] = useState<LayerManagerContext>({ layerStates: {} });
+  const [state, setState] = useState<LayerManagerContext>({
+    layerStates: {},
+    bannerMessages: [],
+    fixedBlocks: [],
+  });
   useEffect(() => {
     const manager = new LayerManager(setState);
     const newState = {
       manager,
       layerStates: {},
+      bannerMessages: [],
+      fixedBlocks: [],
     };
     setState(newState);
   }, []);
@@ -734,4 +1089,51 @@ export function useLayerManager() {
 export const LayerManagerContext = createContext<LayerManagerContext>({
   layerStates: {},
   manager: new LayerManager((state) => {}),
+  bannerMessages: [],
+  fixedBlocks: [],
 });
+
+function areEqualShallow(a: any, b: any) {
+  for (var key in a) {
+    if (!(key in b) || a[key] !== b[key]) {
+      return false;
+    }
+  }
+  for (var key in b) {
+    if (!(key in a) || a[key] !== b[key]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function createImage(
+  width: number,
+  height: number,
+  dataURI: string
+): Promise<HTMLImageElement> {
+  return new Promise((resolve) => {
+    const image = new Image(width, height);
+    image.src = dataURI;
+    image.onload = () => {
+      resolve(image);
+    };
+  });
+}
+
+async function loadImage(
+  width: number,
+  height: number,
+  url: string,
+  map: mapboxgl.Map
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    map.loadImage(url, (error: Error | undefined, image: any) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(image);
+      }
+    });
+  });
+}

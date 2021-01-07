@@ -638,6 +638,40 @@ type CreateGroupPayload {
   query: Query
 }
 
+"""All input for the create `InteractivitySetting` mutation."""
+input CreateInteractivitySettingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `InteractivitySetting` to be created by this mutation."""
+  interactivitySetting: InteractivitySettingInput!
+}
+
+"""The output of our create `InteractivitySetting` mutation."""
+type CreateInteractivitySettingPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `DataSource` that is related to this `InteractivitySetting`.
+  """
+  dataSource: DataSource
+
+  """The `InteractivitySetting` that was created by this mutation."""
+  interactivitySetting: InteractivitySetting
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `createPost` mutation."""
 input CreatePostInput {
   """
@@ -1102,6 +1136,13 @@ type CreateTopicPayload {
 """A location in a connection that can be used for resuming pagination."""
 scalar Cursor
 
+enum CursorType {
+  AUTO
+  CROSSHAIR
+  DEFAULT
+  POINTER
+}
+
 """
 Data layers represent multiple MapBox GL Style layers tied to a single source. 
 These layers could also be called "operational layers" in that they are meant to
@@ -1140,6 +1181,15 @@ type DataLayer implements Node {
   For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to.
   """
   sourceLayer: String
+
+  """Reads and enables pagination through a set of `Sprite`."""
+  sprites(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Sprite!]
 
   """
   For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
@@ -1436,6 +1486,23 @@ type DataSource implements Node {
   a direct upload or a service location like ArcGIS server
   """
   importType: DataSourceImportTypes
+
+  """Reads and enables pagination through a set of `InteractivitySetting`."""
+  interactivitySettings(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: InteractivitySettingCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `InteractivitySetting`."""
+    orderBy: [InteractivitySettingsOrderBy!]
+  ): [InteractivitySetting!]!
 
   """
   GeoJSON only. Whether to calculate line distance metrics. This is required for
@@ -4369,6 +4436,86 @@ type InitializeSurveyFormFromTemplatePayload {
   survey: Survey
 }
 
+type InteractivitySetting implements Node {
+  cursor: CursorType!
+
+  """
+  Reads a single `DataSource` that is related to this `InteractivitySetting`.
+  """
+  dataSource: DataSource
+  dataSourceId: Int!
+  id: Int!
+  longTemplate: String
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  shortTemplate: String
+  sourceLayer: String
+  type: InteractivityType!
+}
+
+"""
+A condition to be used against `InteractivitySetting` object types. All fields
+are tested for equality and combined with a logical ‘and.’
+"""
+input InteractivitySettingCondition {
+  """Checks for equality with the object’s `dataSourceId` field."""
+  dataSourceId: Int
+
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `type` field."""
+  type: InteractivityType
+}
+
+"""An input for mutations affecting `InteractivitySetting`"""
+input InteractivitySettingInput {
+  cursor: CursorType
+  dataSourceId: Int!
+  id: Int
+  longTemplate: String
+  shortTemplate: String
+  sourceLayer: String
+  type: InteractivityType
+}
+
+"""
+Represents an update to a `InteractivitySetting`. Fields that are set will be updated.
+"""
+input InteractivitySettingPatch {
+  cursor: CursorType
+  dataSourceId: Int
+  id: Int
+  longTemplate: String
+  shortTemplate: String
+  sourceLayer: String
+  type: InteractivityType
+}
+
+"""Methods to use when ordering `InteractivitySetting`."""
+enum InteractivitySettingsOrderBy {
+  DATA_SOURCE_ID_ASC
+  DATA_SOURCE_ID_DESC
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  TYPE_ASC
+  TYPE_DESC
+}
+
+enum InteractivityType {
+  BANNER
+  FIXED_BLOCK
+  NONE
+  POPUP
+  TOOLTIP
+}
+
 """
 Invite emails can be associated with either a project or survey invitation. 
 Project invite emails are sent by direct admin action, going into a QUEUED state
@@ -4667,6 +4814,7 @@ type Mutation {
     """
     input: AddGroupToAclInput!
   ): AddGroupToAclPayload
+  addImageToSprite(height: Int!, image: Upload!, pixelRatio: Int!, spriteId: Int!, width: Int!): Sprite
 
   """
   Add the given user to a group. Must be an administrator of the project.
@@ -4824,6 +4972,14 @@ type Mutation {
     """
     input: CreateGroupInput!
   ): CreateGroupPayload
+
+  """Creates a single `InteractivitySetting`."""
+  createInteractivitySetting(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateInteractivitySettingInput!
+  ): CreateInteractivitySettingPayload
 
   """
   Must have write permission for the specified forum. Create reply to a
@@ -5335,6 +5491,21 @@ type Mutation {
   ): EnableForumPostingPayload
 
   """
+  Use to create new sprites. If an existing sprite in the database for this
+  project has a matching md5 hash no new Sprite will be created.
+  """
+  getOrCreateSprite(
+    height: Int!
+    pixelRatio: Int!
+    projectId: Int!
+
+    """Provide the lowest-dpi version of the sprite"""
+    smallestImage: Upload!
+    type: String
+    width: Int!
+  ): Sprite
+
+  """
   Give a user admin access to a project. User must have already joined the project and shared their user profile.
   """
   grantAdminAccess(
@@ -5768,6 +5939,36 @@ type Mutation {
     """
     input: UpdateGroupByProjectIdAndNameInput!
   ): UpdateGroupPayload
+
+  """
+  Updates a single `InteractivitySetting` using a unique key and a patch.
+  """
+  updateInteractivitySetting(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateInteractivitySettingInput!
+  ): UpdateInteractivitySettingPayload
+
+  """
+  Updates a single `InteractivitySetting` using a unique key and a patch.
+  """
+  updateInteractivitySettingByDataSourceIdAndSourceLayer(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateInteractivitySettingByDataSourceIdAndSourceLayerInput!
+  ): UpdateInteractivitySettingPayload
+
+  """
+  Updates a single `InteractivitySetting` using its globally unique id and a patch.
+  """
+  updateInteractivitySettingByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateInteractivitySettingByNodeIdInput!
+  ): UpdateInteractivitySettingPayload
 
   """
   Updates the contents of the post. Can only be used by the author for 5 minutes after posting.
@@ -6537,6 +6738,23 @@ type Project implements Node {
   """
   slug: String!
 
+  """Reads and enables pagination through a set of `Sprite`."""
+  sprites(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SpriteCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `Sprite`."""
+    orderBy: [SpritesOrderBy!]
+  ): [Sprite!]!
+
   """Listing of all Surveys accessible to the current user."""
   surveys(
     """
@@ -7128,6 +7346,16 @@ type Query implements Node {
     nodeId: ID!
   ): Group
   groupByProjectIdAndName(name: String!, projectId: Int!): Group
+  interactivitySetting(id: Int!): InteractivitySetting
+  interactivitySettingByDataSourceIdAndSourceLayer(dataSourceId: Int!, sourceLayer: String!): InteractivitySetting
+
+  """Reads a single `InteractivitySetting` using its globally unique `ID`."""
+  interactivitySettingByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `InteractivitySetting`.
+    """
+    nodeId: ID!
+  ): InteractivitySetting
 
   """Reads a single `InviteEmail` using its globally unique `ID`."""
   inviteEmailByNodeId(
@@ -7309,6 +7537,15 @@ type Query implements Node {
     """
     nodeId: ID!
   ): SketchFolder
+  sprite(id: Int!): Sprite
+  spriteByMd5AndProjectId(md5: String!, projectId: Int!): Sprite
+
+  """Reads a single `Sprite` using its globally unique `ID`."""
+  spriteByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Sprite`."""
+    nodeId: ID!
+  ): Sprite
+  spriteImageBySpriteIdAndPixelRatio(pixelRatio: Int!, spriteId: Int!): SpriteImage
 
   """
   Note that when requesting a survey and related resources (project, forms &
@@ -8300,6 +8537,125 @@ enum SortByDirection {
   DESC
 }
 
+"""
+Image sprites for use in Mapbox GL Styles. The database holds metadata about the
+sprite, the actual images are in cloud storage referenced by the URL parameter. 
+
+"""
+type Sprite implements Node {
+  id: Int!
+
+  """
+  Hash of lowest-dpi image in the set (pixelRatio=1). Useful for de-duplicating
+  symbols that have been imported multiple times
+  """
+  md5: String!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `Project` that is related to this `Sprite`."""
+  project: Project
+
+  """If unset, sprite will be available for use in all projects"""
+  projectId: Int!
+
+  """Reads and enables pagination through a set of `SpriteImage`."""
+  spriteImages(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SpriteImageCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `SpriteImage`."""
+    orderBy: [SpriteImagesOrderBy!]
+  ): [SpriteImage!]!
+
+  """
+  Optional. Indicates whether the image is intended for use with particular GL Styles
+  """
+  type: SpriteType
+}
+
+"""
+A condition to be used against `Sprite` object types. All fields are tested for equality and combined with a logical ‘and.’
+"""
+input SpriteCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `md5` field."""
+  md5: String
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+}
+
+type SpriteImage {
+  """Must be <= 1024"""
+  height: Int!
+
+  """
+  Device pixel ratio a copy of this image supports. 2x would be for "retina"
+  devices. Multiple records may point to the same sprite id, but each must have
+  a unique combination of id, pixel_ratio, and data_layer_id.
+  """
+  pixelRatio: Int!
+
+  """Reads a single `Sprite` that is related to this `SpriteImage`."""
+  sprite: Sprite
+  spriteId: Int!
+
+  """Supports multipart Upload operations"""
+  url: String!
+
+  """Must be <= 1024"""
+  width: Int!
+}
+
+"""
+A condition to be used against `SpriteImage` object types. All fields are tested
+for equality and combined with a logical ‘and.’
+"""
+input SpriteImageCondition {
+  """Checks for equality with the object’s `spriteId` field."""
+  spriteId: Int
+}
+
+"""Methods to use when ordering `SpriteImage`."""
+enum SpriteImagesOrderBy {
+  NATURAL
+  SPRITE_ID_ASC
+  SPRITE_ID_DESC
+}
+
+"""Methods to use when ordering `Sprite`."""
+enum SpritesOrderBy {
+  ID_ASC
+  ID_DESC
+  MD5_ASC
+  MD5_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+}
+
+enum SpriteType {
+  FILL
+  ICON
+  LINE
+}
+
 type Survey implements Node {
   """
   PUBLIC or INVITE_ONLY
@@ -8911,6 +9267,7 @@ type TableOfContentsItem implements Node {
   If is_folder=false, a DataLayers visibility will be controlled by this item
   """
   dataLayerId: Int
+  enableDownload: Boolean!
   hideChildren: Boolean!
   id: Int!
 
@@ -9003,6 +9360,7 @@ input TableOfContentsItemInput {
   If is_folder=false, a DataLayers visibility will be controlled by this item
   """
   dataLayerId: Int
+  enableDownload: Boolean
   hideChildren: Boolean
 
   """
@@ -9063,6 +9421,7 @@ input TableOfContentsItemPatch {
   If is_folder=false, a DataLayers visibility will be controlled by this item
   """
   dataLayerId: Int
+  enableDownload: Boolean
   hideChildren: Boolean
 
   """
@@ -9834,6 +10193,80 @@ type UpdateGroupPayload {
 
   """Reads a single `Project` that is related to this `Group`."""
   project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""
+All input for the `updateInteractivitySettingByDataSourceIdAndSourceLayer` mutation.
+"""
+input UpdateInteractivitySettingByDataSourceIdAndSourceLayerInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  dataSourceId: Int!
+
+  """
+  An object where the defined keys will be set on the `InteractivitySetting` being updated.
+  """
+  patch: InteractivitySettingPatch!
+  sourceLayer: String!
+}
+
+"""All input for the `updateInteractivitySettingByNodeId` mutation."""
+input UpdateInteractivitySettingByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `InteractivitySetting` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `InteractivitySetting` being updated.
+  """
+  patch: InteractivitySettingPatch!
+}
+
+"""All input for the `updateInteractivitySetting` mutation."""
+input UpdateInteractivitySettingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `InteractivitySetting` being updated.
+  """
+  patch: InteractivitySettingPatch!
+}
+
+"""The output of our update `InteractivitySetting` mutation."""
+type UpdateInteractivitySettingPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `DataSource` that is related to this `InteractivitySetting`.
+  """
+  dataSource: DataSource
+
+  """The `InteractivitySetting` that was updated by this mutation."""
+  interactivitySetting: InteractivitySetting
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

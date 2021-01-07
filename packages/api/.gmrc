@@ -1,6 +1,6 @@
 {
   "databaseOwner": "postgres",
-  "rootConnectionString": "postgres://postgres:password@localhost:54321/seasketch",
+  "rootConnectionString": "postgres://postgres:password@localhost:54321/postgres",
   "connectionString": "postgres://postgres:password@localhost:54321/seasketch",
   "shadowConnectionString": "postgres://postgres:password@localhost:54321/seasketch_shadow",
   "pgSettings": {

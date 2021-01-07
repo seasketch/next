@@ -4,10 +4,7 @@ import { Item, Menu, Separator } from "react-contexify";
 import { Link, useParams } from "react-router-dom";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
-import {
-  LayerManagerContext,
-  useLayerManager,
-} from "../../dataLayers/LayerManager";
+import { LayerManagerContext } from "../../dataLayers/LayerManager";
 import TableOfContents, {
   ClientTableOfContentsItem,
 } from "../../dataLayers/tableOfContents/TableOfContents";
@@ -79,6 +76,7 @@ export default function TableOfContentsEditor() {
     const layers = layersAndSources?.data?.projectBySlug?.dataLayersForItems;
     const sources = layersAndSources?.data?.projectBySlug?.dataSourcesForItems;
     if (layers && sources && manager) {
+      // @ts-ignore
       manager.reset(sources, layers);
     }
   }, [layersAndSources.data, manager]);
@@ -196,9 +194,11 @@ export default function TableOfContentsEditor() {
                   // bounds = null;
                   bounds = createBoundsRecursive(args.props.item);
                 } else {
-                  bounds = args.props.item.bounds.map((coord: string) =>
-                    parseFloat(coord)
-                  );
+                  if (args.props.item.bounds) {
+                    bounds = args.props.item.bounds.map((coord: string) =>
+                      parseFloat(coord)
+                    );
+                  }
                 }
                 if (
                   bounds &&
@@ -219,16 +219,19 @@ export default function TableOfContentsEditor() {
                 if (args.props?.item?.isFolder) {
                   setFolderId(args.props.item.id);
                 } else {
-                  let bounds = args.props.item.bounds.map((coord: string) =>
-                    parseFloat(coord)
-                  );
-                  if (
-                    bounds &&
-                    [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")
-                  ) {
-                    manager?.map?.fitBounds(bounds, {
-                      padding: 40,
-                    });
+                  if (args.props.item.bounds) {
+                    let bounds = args.props.item.bounds.map((coord: string) =>
+                      parseFloat(coord)
+                    );
+                    if (
+                      bounds &&
+                      [180.0, 90.0, -180.0, -90.0].join(",") !==
+                        bounds.join(",")
+                    ) {
+                      manager?.map?.fitBounds(bounds, {
+                        padding: 40,
+                      });
+                    }
                   }
                   manager?.showLayers([args.props.item.dataLayerId]);
                   setOpenLayerItemId(args.props.item.id);

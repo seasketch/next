@@ -602,6 +602,33 @@ export type CreateGroupPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the create `InteractivitySetting` mutation. */
+export type CreateInteractivitySettingInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `InteractivitySetting` to be created by this mutation. */
+  interactivitySetting: InteractivitySettingInput;
+};
+
+/** The output of our create `InteractivitySetting` mutation. */
+export type CreateInteractivitySettingPayload = {
+  __typename?: 'CreateInteractivitySettingPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSource` that is related to this `InteractivitySetting`. */
+  dataSource?: Maybe<DataSource>;
+  /** The `InteractivitySetting` that was created by this mutation. */
+  interactivitySetting?: Maybe<InteractivitySetting>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `createPost` mutation. */
 export type CreatePostInput = {
   /**
@@ -1021,6 +1048,13 @@ export type CreateTopicPayloadTopicEdgeArgs = {
 };
 
 
+export enum CursorType {
+  Auto = 'AUTO',
+  Crosshair = 'CROSSHAIR',
+  Default = 'DEFAULT',
+  Pointer = 'POINTER'
+}
+
 /**
  * Data layers represent multiple MapBox GL Style layers tied to a single source. 
  * These layers could also be called "operational layers" in that they are meant to
@@ -1050,6 +1084,8 @@ export type DataLayer = Node & {
   renderUnder: RenderUnderType;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `Sprite`. */
+  sprites?: Maybe<Array<Sprite>>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
@@ -1063,6 +1099,20 @@ export type DataLayer = Node & {
    * @deprecated Please use tableOfContentsItem instead
    */
   tableOfContentsItemsConnection: TableOfContentsItemsConnection;
+};
+
+
+/**
+ * Data layers represent multiple MapBox GL Style layers tied to a single source. 
+ * These layers could also be called "operational layers" in that they are meant to
+ * be overlaid on a basemap.
+ * 
+ * The layers can appear tied to a TableOfContentsItem or be part of rich features 
+ * associated with a basemap.
+ */
+export type DataLayerSpritesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -1263,6 +1313,8 @@ export type DataSource = Node & {
    * a direct upload or a service location like ArcGIS server
    */
   importType?: Maybe<DataSourceImportTypes>;
+  /** Reads and enables pagination through a set of `InteractivitySetting`. */
+  interactivitySettings: Array<InteractivitySetting>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
@@ -1340,6 +1392,21 @@ export type DataSourceDataLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<DataLayersOrderBy>>;
+};
+
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ * 
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
+export type DataSourceInteractivitySettingsArgs = {
+  condition?: Maybe<InteractivitySettingCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<InteractivitySettingsOrderBy>>;
 };
 
 export enum DataSourceImportTypes {
@@ -3780,6 +3847,77 @@ export type InitializeSurveyFormFromTemplatePayloadFormEdgeArgs = {
   orderBy?: Maybe<Array<FormsOrderBy>>;
 };
 
+export type InteractivitySetting = Node & {
+  __typename?: 'InteractivitySetting';
+  cursor: CursorType;
+  /** Reads a single `DataSource` that is related to this `InteractivitySetting`. */
+  dataSource?: Maybe<DataSource>;
+  dataSourceId: Scalars['Int'];
+  id: Scalars['Int'];
+  longTemplate?: Maybe<Scalars['String']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  shortTemplate?: Maybe<Scalars['String']>;
+  sourceLayer?: Maybe<Scalars['String']>;
+  type: InteractivityType;
+};
+
+/**
+ * A condition to be used against `InteractivitySetting` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type InteractivitySettingCondition = {
+  /** Checks for equality with the object’s `dataSourceId` field. */
+  dataSourceId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `type` field. */
+  type?: Maybe<InteractivityType>;
+};
+
+/** An input for mutations affecting `InteractivitySetting` */
+export type InteractivitySettingInput = {
+  cursor?: Maybe<CursorType>;
+  dataSourceId: Scalars['Int'];
+  id?: Maybe<Scalars['Int']>;
+  longTemplate?: Maybe<Scalars['String']>;
+  shortTemplate?: Maybe<Scalars['String']>;
+  sourceLayer?: Maybe<Scalars['String']>;
+  type?: Maybe<InteractivityType>;
+};
+
+/** Represents an update to a `InteractivitySetting`. Fields that are set will be updated. */
+export type InteractivitySettingPatch = {
+  cursor?: Maybe<CursorType>;
+  dataSourceId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
+  longTemplate?: Maybe<Scalars['String']>;
+  shortTemplate?: Maybe<Scalars['String']>;
+  sourceLayer?: Maybe<Scalars['String']>;
+  type?: Maybe<InteractivityType>;
+};
+
+/** Methods to use when ordering `InteractivitySetting`. */
+export enum InteractivitySettingsOrderBy {
+  DataSourceIdAsc = 'DATA_SOURCE_ID_ASC',
+  DataSourceIdDesc = 'DATA_SOURCE_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  TypeAsc = 'TYPE_ASC',
+  TypeDesc = 'TYPE_DESC'
+}
+
+export enum InteractivityType {
+  Banner = 'BANNER',
+  FixedBlock = 'FIXED_BLOCK',
+  None = 'NONE',
+  Popup = 'POPUP',
+  Tooltip = 'TOOLTIP'
+}
+
 /**
  * Invite emails can be associated with either a project or survey invitation. 
  * Project invite emails are sent by direct admin action, going into a QUEUED state
@@ -4024,6 +4162,7 @@ export type Mutation = {
   __typename?: 'Mutation';
   /** Add a group to a given access control list. Must be an administrator. */
   addGroupToAcl?: Maybe<AddGroupToAclPayload>;
+  addImageToSprite?: Maybe<Sprite>;
   /** Add the given user to a group. Must be an administrator of the project. */
   addUserToGroup?: Maybe<AddUserToGroupPayload>;
   /** Add a SketchClass to the list of valid children for a Collection-type SketchClass. */
@@ -4077,6 +4216,8 @@ export type Mutation = {
   createForum?: Maybe<CreateForumPayload>;
   /** Creates a single `Group`. */
   createGroup?: Maybe<CreateGroupPayload>;
+  /** Creates a single `InteractivitySetting`. */
+  createInteractivitySetting?: Maybe<CreateInteractivitySettingPayload>;
   /**
    * Must have write permission for the specified forum. Create reply to a
    * discussion topic. `message` must be JSON, something like the output of DraftJS.
@@ -4222,6 +4363,11 @@ export type Mutation = {
   disableForumPosting?: Maybe<DisableForumPostingPayload>;
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
+  /**
+   * Use to create new sprites. If an existing sprite in the database for this
+   * project has a matching md5 hash no new Sprite will be created.
+   */
+  getOrCreateSprite?: Maybe<Sprite>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   /**
@@ -4365,6 +4511,12 @@ export type Mutation = {
   updateGroupByNodeId?: Maybe<UpdateGroupPayload>;
   /** Updates a single `Group` using a unique key and a patch. */
   updateGroupByProjectIdAndName?: Maybe<UpdateGroupPayload>;
+  /** Updates a single `InteractivitySetting` using a unique key and a patch. */
+  updateInteractivitySetting?: Maybe<UpdateInteractivitySettingPayload>;
+  /** Updates a single `InteractivitySetting` using a unique key and a patch. */
+  updateInteractivitySettingByDataSourceIdAndSourceLayer?: Maybe<UpdateInteractivitySettingPayload>;
+  /** Updates a single `InteractivitySetting` using its globally unique id and a patch. */
+  updateInteractivitySettingByNodeId?: Maybe<UpdateInteractivitySettingPayload>;
   /** Updates the contents of the post. Can only be used by the author for 5 minutes after posting. */
   updatePost?: Maybe<UpdatePostPayload>;
   /** Updates a single `Profile` using a unique key and a patch. */
@@ -4438,6 +4590,16 @@ export type Mutation = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationAddGroupToAclArgs = {
   input: AddGroupToAclInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationAddImageToSpriteArgs = {
+  height: Scalars['Int'];
+  image: Scalars['Upload'];
+  pixelRatio: Scalars['Int'];
+  spriteId: Scalars['Int'];
+  width: Scalars['Int'];
 };
 
 
@@ -4534,6 +4696,12 @@ export type MutationCreateForumArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateGroupArgs = {
   input: CreateGroupInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateInteractivitySettingArgs = {
+  input: CreateInteractivitySettingInput;
 };
 
 
@@ -4892,6 +5060,17 @@ export type MutationEnableForumPostingArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetOrCreateSpriteArgs = {
+  height: Scalars['Int'];
+  pixelRatio: Scalars['Int'];
+  projectId: Scalars['Int'];
+  smallestImage: Scalars['Upload'];
+  type?: Maybe<Scalars['String']>;
+  width: Scalars['Int'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationGrantAdminAccessArgs = {
   input: GrantAdminAccessInput;
 };
@@ -5140,6 +5319,24 @@ export type MutationUpdateGroupByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateGroupByProjectIdAndNameArgs = {
   input: UpdateGroupByProjectIdAndNameInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateInteractivitySettingArgs = {
+  input: UpdateInteractivitySettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateInteractivitySettingByDataSourceIdAndSourceLayerArgs = {
+  input: UpdateInteractivitySettingByDataSourceIdAndSourceLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateInteractivitySettingByNodeIdArgs = {
+  input: UpdateInteractivitySettingByNodeIdInput;
 };
 
 
@@ -5616,6 +5813,8 @@ export type Project = Node & {
   sketchClasses: Array<SketchClass>;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
+  /** Reads and enables pagination through a set of `Sprite`. */
+  sprites: Array<Sprite>;
   /** Listing of all Surveys accessible to the current user. */
   surveys: Array<Survey>;
   /** Public layer list. Cannot be edited directly. */
@@ -5777,6 +5976,18 @@ export type ProjectSketchClassesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectSpritesArgs = {
+  condition?: Maybe<SpriteCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SpritesOrderBy>>;
 };
 
 
@@ -6195,6 +6406,10 @@ export type Query = Node & {
   /** Reads a single `Group` using its globally unique `ID`. */
   groupByNodeId?: Maybe<Group>;
   groupByProjectIdAndName?: Maybe<Group>;
+  interactivitySetting?: Maybe<InteractivitySetting>;
+  interactivitySettingByDataSourceIdAndSourceLayer?: Maybe<InteractivitySetting>;
+  /** Reads a single `InteractivitySetting` using its globally unique `ID`. */
+  interactivitySettingByNodeId?: Maybe<InteractivitySetting>;
   /** Reads a single `InviteEmail` using its globally unique `ID`. */
   inviteEmailByNodeId?: Maybe<InviteEmail>;
   /** Access the current session's User. The user is determined by the access token embedded in the `Authorization` header. */
@@ -6246,6 +6461,11 @@ export type Query = Node & {
   sketchFolder?: Maybe<SketchFolder>;
   /** Reads a single `SketchFolder` using its globally unique `ID`. */
   sketchFolderByNodeId?: Maybe<SketchFolder>;
+  sprite?: Maybe<Sprite>;
+  spriteByMd5AndProjectId?: Maybe<Sprite>;
+  /** Reads a single `Sprite` using its globally unique `ID`. */
+  spriteByNodeId?: Maybe<Sprite>;
+  spriteImageBySpriteIdAndPixelRatio?: Maybe<SpriteImage>;
   /**
    * Note that when requesting a survey and related resources (project, forms &
    * fields) from an invite link when anonymous, the `x-ss-survey-invite-token`
@@ -6777,6 +6997,55 @@ export type QueryGroupByProjectIdAndNameArgs = {
  * for each database table. These are unlikely to be needed often but may possibly 
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
+export type QueryInteractivitySettingArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryInteractivitySettingByDataSourceIdAndSourceLayerArgs = {
+  dataSourceId: Scalars['Int'];
+  sourceLayer: Scalars['String'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryInteractivitySettingByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
 export type QueryInviteEmailByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
@@ -7135,6 +7404,72 @@ export type QuerySketchFolderArgs = {
  */
 export type QuerySketchFolderByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QuerySpriteArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QuerySpriteByMd5AndProjectIdArgs = {
+  md5: Scalars['String'];
+  projectId: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QuerySpriteByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QuerySpriteImageBySpriteIdAndPixelRatioArgs = {
+  pixelRatio: Scalars['Int'];
+  spriteId: Scalars['Int'];
 };
 
 
@@ -8147,6 +8482,106 @@ export enum SortByDirection {
   Desc = 'DESC'
 }
 
+/**
+ * Image sprites for use in Mapbox GL Styles. The database holds metadata about the
+ * sprite, the actual images are in cloud storage referenced by the URL parameter. 
+ */
+export type Sprite = Node & {
+  __typename?: 'Sprite';
+  id: Scalars['Int'];
+  /**
+   * Hash of lowest-dpi image in the set (pixelRatio=1). Useful for de-duplicating
+   * symbols that have been imported multiple times
+   */
+  md5: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `Sprite`. */
+  project?: Maybe<Project>;
+  /** If unset, sprite will be available for use in all projects */
+  projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `SpriteImage`. */
+  spriteImages: Array<SpriteImage>;
+  /** Optional. Indicates whether the image is intended for use with particular GL Styles */
+  type?: Maybe<SpriteType>;
+};
+
+
+/**
+ * Image sprites for use in Mapbox GL Styles. The database holds metadata about the
+ * sprite, the actual images are in cloud storage referenced by the URL parameter. 
+ */
+export type SpriteSpriteImagesArgs = {
+  condition?: Maybe<SpriteImageCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SpriteImagesOrderBy>>;
+};
+
+/** A condition to be used against `Sprite` object types. All fields are tested for equality and combined with a logical ‘and.’ */
+export type SpriteCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `md5` field. */
+  md5?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+export type SpriteImage = {
+  __typename?: 'SpriteImage';
+  /** Must be <= 1024 */
+  height: Scalars['Int'];
+  /**
+   * Device pixel ratio a copy of this image supports. 2x would be for "retina"
+   * devices. Multiple records may point to the same sprite id, but each must have
+   * a unique combination of id, pixel_ratio, and data_layer_id.
+   */
+  pixelRatio: Scalars['Int'];
+  /** Reads a single `Sprite` that is related to this `SpriteImage`. */
+  sprite?: Maybe<Sprite>;
+  spriteId: Scalars['Int'];
+  /** Supports multipart Upload operations */
+  url: Scalars['String'];
+  /** Must be <= 1024 */
+  width: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `SpriteImage` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type SpriteImageCondition = {
+  /** Checks for equality with the object’s `spriteId` field. */
+  spriteId?: Maybe<Scalars['Int']>;
+};
+
+/** Methods to use when ordering `SpriteImage`. */
+export enum SpriteImagesOrderBy {
+  Natural = 'NATURAL',
+  SpriteIdAsc = 'SPRITE_ID_ASC',
+  SpriteIdDesc = 'SPRITE_ID_DESC'
+}
+
+/** Methods to use when ordering `Sprite`. */
+export enum SpritesOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Md5Asc = 'MD5_ASC',
+  Md5Desc = 'MD5_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
+export enum SpriteType {
+  Fill = 'FILL',
+  Icon = 'ICON',
+  Line = 'LINE'
+}
+
 export type Survey = Node & {
   __typename?: 'Survey';
   /** PUBLIC or INVITE_ONLY */
@@ -8595,6 +9030,7 @@ export type TableOfContentsItem = Node & {
   dataLayer?: Maybe<DataLayer>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
+  enableDownload: Scalars['Boolean'];
   hideChildren: Scalars['Boolean'];
   id: Scalars['Int'];
   /**
@@ -8659,6 +9095,7 @@ export type TableOfContentsItemInput = {
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
+  enableDownload?: Maybe<Scalars['Boolean']>;
   hideChildren?: Maybe<Scalars['Boolean']>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
@@ -8697,6 +9134,7 @@ export type TableOfContentsItemPatch = {
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
+  enableDownload?: Maybe<Scalars['Boolean']>;
   hideChildren?: Maybe<Scalars['Boolean']>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
@@ -9293,6 +9731,60 @@ export type UpdateGroupPayload = {
   group?: Maybe<Group>;
   /** Reads a single `Project` that is related to this `Group`. */
   project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `updateInteractivitySettingByDataSourceIdAndSourceLayer` mutation. */
+export type UpdateInteractivitySettingByDataSourceIdAndSourceLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataSourceId: Scalars['Int'];
+  /** An object where the defined keys will be set on the `InteractivitySetting` being updated. */
+  patch: InteractivitySettingPatch;
+  sourceLayer: Scalars['String'];
+};
+
+/** All input for the `updateInteractivitySettingByNodeId` mutation. */
+export type UpdateInteractivitySettingByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `InteractivitySetting` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `InteractivitySetting` being updated. */
+  patch: InteractivitySettingPatch;
+};
+
+/** All input for the `updateInteractivitySetting` mutation. */
+export type UpdateInteractivitySettingInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `InteractivitySetting` being updated. */
+  patch: InteractivitySettingPatch;
+};
+
+/** The output of our update `InteractivitySetting` mutation. */
+export type UpdateInteractivitySettingPayload = {
+  __typename?: 'UpdateInteractivitySettingPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSource` that is related to this `InteractivitySetting`. */
+  dataSource?: Maybe<DataSource>;
+  /** The `InteractivitySetting` that was updated by this mutation. */
+  interactivitySetting?: Maybe<InteractivitySetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -10350,6 +10842,48 @@ export type CreateDataLayerMutation = (
   )> }
 );
 
+export type GetOrCreateSpriteMutationVariables = Exact<{
+  height: Scalars['Int'];
+  width: Scalars['Int'];
+  pixelRatio: Scalars['Int'];
+  projectId: Scalars['Int'];
+  smallestImage: Scalars['Upload'];
+}>;
+
+
+export type GetOrCreateSpriteMutation = (
+  { __typename?: 'Mutation' }
+  & { getOrCreateSprite?: Maybe<(
+    { __typename?: 'Sprite' }
+    & Pick<Sprite, 'id' | 'md5' | 'projectId' | 'type'>
+    & { spriteImages: Array<(
+      { __typename?: 'SpriteImage' }
+      & Pick<SpriteImage, 'spriteId' | 'height' | 'pixelRatio' | 'url' | 'width'>
+    )> }
+  )> }
+);
+
+export type AddImageToSpriteMutationVariables = Exact<{
+  spriteId: Scalars['Int'];
+  width: Scalars['Int'];
+  height: Scalars['Int'];
+  pixelRatio: Scalars['Int'];
+  image: Scalars['Upload'];
+}>;
+
+
+export type AddImageToSpriteMutation = (
+  { __typename?: 'Mutation' }
+  & { addImageToSprite?: Maybe<(
+    { __typename?: 'Sprite' }
+    & Pick<Sprite, 'id' | 'md5' | 'projectId' | 'type'>
+    & { spriteImages: Array<(
+      { __typename?: 'SpriteImage' }
+      & Pick<SpriteImage, 'spriteId' | 'height' | 'pixelRatio' | 'url' | 'width'>
+    )> }
+  )> }
+);
+
 export type CreateProjectMutationVariables = Exact<{
   name: Scalars['String'];
   slug: Scalars['String'];
@@ -10392,7 +10926,7 @@ export type DraftTableOfContentsQuery = (
     & Pick<Project, 'id'>
     & { draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren' | 'bounds' | 'sortIndex' | 'hideChildren'>
+      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren' | 'bounds' | 'sortIndex' | 'hideChildren' | 'enableDownload'>
       & { acl?: Maybe<(
         { __typename?: 'Acl' }
         & Pick<Acl, 'id' | 'type'>
@@ -10415,9 +10949,21 @@ export type LayersAndSourcesForItemsQuery = (
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
       & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio'>
+      & { interactivitySettings: Array<(
+        { __typename?: 'InteractivitySetting' }
+        & Pick<InteractivitySetting, 'dataSourceId' | 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'sourceLayer' | 'type'>
+      )> }
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
+      & { sprites?: Maybe<Array<(
+        { __typename?: 'Sprite' }
+        & Pick<Sprite, 'id' | 'type'>
+        & { spriteImages: Array<(
+          { __typename?: 'SpriteImage' }
+          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
+        )> }
+      )>> }
     )>> }
   )> }
 );
@@ -10439,7 +10985,7 @@ export type CreateFolderMutation = (
     { __typename?: 'CreateTableOfContentsItemPayload' }
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'showRadioChildren' | 'sortIndex' | 'hideChildren'>
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'showRadioChildren' | 'sortIndex' | 'hideChildren' | 'enableDownload'>
     )> }
   )> }
 );
@@ -10517,7 +11063,7 @@ export type GetLayerItemQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title'>
+    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload'>
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
       & Pick<Acl, 'nodeId' | 'id' | 'type'>
@@ -10528,7 +11074,14 @@ export type GetLayerItemQuery = (
     )>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
-      & { dataSource?: Maybe<(
+      & { sprites?: Maybe<Array<(
+        { __typename?: 'Sprite' }
+        & Pick<Sprite, 'id' | 'type'>
+        & { spriteImages: Array<(
+          { __typename?: 'SpriteImage' }
+          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
+        )> }
+      )>>, dataSource?: Maybe<(
         { __typename?: 'DataSource' }
         & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio'>
       )> }
@@ -10555,6 +11108,23 @@ export type UpdateTableOfContentsItemMutation = (
   )> }
 );
 
+export type UpdateEnableDownloadMutationVariables = Exact<{
+  id: Scalars['Int'];
+  enableDownload?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UpdateEnableDownloadMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTableOfContentsItem?: Maybe<(
+    { __typename?: 'UpdateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'enableDownload'>
+    )> }
+  )> }
+);
+
 export type UpdateLayerMutationVariables = Exact<{
   id: Scalars['Int'];
   renderUnder?: Maybe<RenderUnderType>;
@@ -10570,6 +11140,14 @@ export type UpdateLayerMutation = (
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'id' | 'renderUnder' | 'mapboxGlStyles' | 'sublayer'>
+      & { sprites?: Maybe<Array<(
+        { __typename?: 'Sprite' }
+        & Pick<Sprite, 'id' | 'type'>
+        & { spriteImages: Array<(
+          { __typename?: 'SpriteImage' }
+          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
+        )> }
+      )>> }
     )> }
   )> }
 );
@@ -10588,6 +11166,56 @@ export type UpdateDataSourceMutation = (
       { __typename?: 'DataSource' }
       & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio'>
     )> }
+  )> }
+);
+
+export type InteractivitySettingsForSourceQueryVariables = Exact<{
+  sourceId: Scalars['Int'];
+}>;
+
+
+export type InteractivitySettingsForSourceQuery = (
+  { __typename?: 'Query' }
+  & { dataSource?: Maybe<(
+    { __typename?: 'DataSource' }
+    & Pick<DataSource, 'id'>
+    & { interactivitySettings: Array<(
+      { __typename?: 'InteractivitySetting' }
+      & Pick<InteractivitySetting, 'cursor' | 'dataSourceId' | 'id' | 'longTemplate' | 'shortTemplate' | 'sourceLayer' | 'type'>
+    )> }
+  )> }
+);
+
+export type UpdateInteractivitySettingsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  type?: Maybe<InteractivityType>;
+  cursor?: Maybe<CursorType>;
+  longTemplate?: Maybe<Scalars['String']>;
+  shortTemplate?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateInteractivitySettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateInteractivitySetting?: Maybe<(
+    { __typename?: 'UpdateInteractivitySettingPayload' }
+    & { interactivitySetting?: Maybe<(
+      { __typename?: 'InteractivitySetting' }
+      & Pick<InteractivitySetting, 'id' | 'type' | 'cursor' | 'dataSourceId' | 'longTemplate' | 'shortTemplate' | 'sourceLayer'>
+    )> }
+  )> }
+);
+
+export type DataSourceUrlPropertiesQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DataSourceUrlPropertiesQuery = (
+  { __typename?: 'Query' }
+  & { dataSource?: Maybe<(
+    { __typename?: 'DataSource' }
+    & Pick<DataSource, 'id' | 'type' | 'bucketId' | 'objectKey' | 'url' | 'originalSourceUrl'>
   )> }
 );
 
@@ -11237,6 +11865,98 @@ export function useCreateDataLayerMutation(baseOptions?: Apollo.MutationHookOpti
 export type CreateDataLayerMutationHookResult = ReturnType<typeof useCreateDataLayerMutation>;
 export type CreateDataLayerMutationResult = Apollo.MutationResult<CreateDataLayerMutation>;
 export type CreateDataLayerMutationOptions = Apollo.BaseMutationOptions<CreateDataLayerMutation, CreateDataLayerMutationVariables>;
+export const GetOrCreateSpriteDocument = gql`
+    mutation GetOrCreateSprite($height: Int!, $width: Int!, $pixelRatio: Int!, $projectId: Int!, $smallestImage: Upload!) {
+  getOrCreateSprite(height: $height, pixelRatio: $pixelRatio, projectId: $projectId, smallestImage: $smallestImage, width: $width) {
+    id
+    md5
+    projectId
+    type
+    spriteImages {
+      spriteId
+      height
+      pixelRatio
+      url
+      width
+    }
+  }
+}
+    `;
+export type GetOrCreateSpriteMutationFn = Apollo.MutationFunction<GetOrCreateSpriteMutation, GetOrCreateSpriteMutationVariables>;
+
+/**
+ * __useGetOrCreateSpriteMutation__
+ *
+ * To run a mutation, you first call `useGetOrCreateSpriteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGetOrCreateSpriteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [getOrCreateSpriteMutation, { data, loading, error }] = useGetOrCreateSpriteMutation({
+ *   variables: {
+ *      height: // value for 'height'
+ *      width: // value for 'width'
+ *      pixelRatio: // value for 'pixelRatio'
+ *      projectId: // value for 'projectId'
+ *      smallestImage: // value for 'smallestImage'
+ *   },
+ * });
+ */
+export function useGetOrCreateSpriteMutation(baseOptions?: Apollo.MutationHookOptions<GetOrCreateSpriteMutation, GetOrCreateSpriteMutationVariables>) {
+        return Apollo.useMutation<GetOrCreateSpriteMutation, GetOrCreateSpriteMutationVariables>(GetOrCreateSpriteDocument, baseOptions);
+      }
+export type GetOrCreateSpriteMutationHookResult = ReturnType<typeof useGetOrCreateSpriteMutation>;
+export type GetOrCreateSpriteMutationResult = Apollo.MutationResult<GetOrCreateSpriteMutation>;
+export type GetOrCreateSpriteMutationOptions = Apollo.BaseMutationOptions<GetOrCreateSpriteMutation, GetOrCreateSpriteMutationVariables>;
+export const AddImageToSpriteDocument = gql`
+    mutation AddImageToSprite($spriteId: Int!, $width: Int!, $height: Int!, $pixelRatio: Int!, $image: Upload!) {
+  addImageToSprite(height: $height, width: $width, pixelRatio: $pixelRatio, spriteId: $spriteId, image: $image) {
+    id
+    md5
+    projectId
+    type
+    spriteImages {
+      spriteId
+      height
+      pixelRatio
+      url
+      width
+    }
+  }
+}
+    `;
+export type AddImageToSpriteMutationFn = Apollo.MutationFunction<AddImageToSpriteMutation, AddImageToSpriteMutationVariables>;
+
+/**
+ * __useAddImageToSpriteMutation__
+ *
+ * To run a mutation, you first call `useAddImageToSpriteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddImageToSpriteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addImageToSpriteMutation, { data, loading, error }] = useAddImageToSpriteMutation({
+ *   variables: {
+ *      spriteId: // value for 'spriteId'
+ *      width: // value for 'width'
+ *      height: // value for 'height'
+ *      pixelRatio: // value for 'pixelRatio'
+ *      image: // value for 'image'
+ *   },
+ * });
+ */
+export function useAddImageToSpriteMutation(baseOptions?: Apollo.MutationHookOptions<AddImageToSpriteMutation, AddImageToSpriteMutationVariables>) {
+        return Apollo.useMutation<AddImageToSpriteMutation, AddImageToSpriteMutationVariables>(AddImageToSpriteDocument, baseOptions);
+      }
+export type AddImageToSpriteMutationHookResult = ReturnType<typeof useAddImageToSpriteMutation>;
+export type AddImageToSpriteMutationResult = Apollo.MutationResult<AddImageToSpriteMutation>;
+export type AddImageToSpriteMutationOptions = Apollo.BaseMutationOptions<AddImageToSpriteMutation, AddImageToSpriteMutationVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
@@ -11336,6 +12056,7 @@ export const DraftTableOfContentsDocument = gql`
       bounds
       sortIndex
       hideChildren
+      enableDownload
     }
   }
 }
@@ -11400,8 +12121,27 @@ export const LayersAndSourcesForItemsDocument = gql`
       url
       urls
       useDevicePixelRatio
+      interactivitySettings {
+        dataSourceId
+        id
+        cursor
+        longTemplate
+        shortTemplate
+        sourceLayer
+        type
+      }
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
+      sprites {
+        id
+        spriteImages {
+          pixelRatio
+          height
+          width
+          url
+        }
+        type
+      }
       dataSourceId
       id
       mapboxGlStyles
@@ -11455,6 +12195,7 @@ export const CreateFolderDocument = gql`
       isClickOffOnly
       sortIndex
       hideChildren
+      enableDownload
     }
   }
 }
@@ -11661,12 +12402,23 @@ export const GetLayerItemDocument = gql`
     projectId
     stableId
     title
+    enableDownload
     dataLayer {
       id
       mapboxGlStyles
       renderUnder
       sourceLayer
       sublayer
+      sprites {
+        id
+        spriteImages {
+          pixelRatio
+          height
+          width
+          url
+        }
+        type
+      }
       dataSource {
         id
         attribution
@@ -11770,6 +12522,42 @@ export function useUpdateTableOfContentsItemMutation(baseOptions?: Apollo.Mutati
 export type UpdateTableOfContentsItemMutationHookResult = ReturnType<typeof useUpdateTableOfContentsItemMutation>;
 export type UpdateTableOfContentsItemMutationResult = Apollo.MutationResult<UpdateTableOfContentsItemMutation>;
 export type UpdateTableOfContentsItemMutationOptions = Apollo.BaseMutationOptions<UpdateTableOfContentsItemMutation, UpdateTableOfContentsItemMutationVariables>;
+export const UpdateEnableDownloadDocument = gql`
+    mutation UpdateEnableDownload($id: Int!, $enableDownload: Boolean) {
+  updateTableOfContentsItem(input: {id: $id, patch: {enableDownload: $enableDownload}}) {
+    tableOfContentsItem {
+      id
+      enableDownload
+    }
+  }
+}
+    `;
+export type UpdateEnableDownloadMutationFn = Apollo.MutationFunction<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>;
+
+/**
+ * __useUpdateEnableDownloadMutation__
+ *
+ * To run a mutation, you first call `useUpdateEnableDownloadMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateEnableDownloadMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateEnableDownloadMutation, { data, loading, error }] = useUpdateEnableDownloadMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      enableDownload: // value for 'enableDownload'
+ *   },
+ * });
+ */
+export function useUpdateEnableDownloadMutation(baseOptions?: Apollo.MutationHookOptions<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>) {
+        return Apollo.useMutation<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>(UpdateEnableDownloadDocument, baseOptions);
+      }
+export type UpdateEnableDownloadMutationHookResult = ReturnType<typeof useUpdateEnableDownloadMutation>;
+export type UpdateEnableDownloadMutationResult = Apollo.MutationResult<UpdateEnableDownloadMutation>;
+export type UpdateEnableDownloadMutationOptions = Apollo.BaseMutationOptions<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>;
 export const UpdateLayerDocument = gql`
     mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String) {
   updateDataLayer(input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer}}) {
@@ -11778,6 +12566,16 @@ export const UpdateLayerDocument = gql`
       renderUnder
       mapboxGlStyles
       sublayer
+      sprites {
+        id
+        spriteImages {
+          pixelRatio
+          height
+          width
+          url
+        }
+        type
+      }
     }
   }
 }
@@ -11875,6 +12673,130 @@ export function useUpdateDataSourceMutation(baseOptions?: Apollo.MutationHookOpt
 export type UpdateDataSourceMutationHookResult = ReturnType<typeof useUpdateDataSourceMutation>;
 export type UpdateDataSourceMutationResult = Apollo.MutationResult<UpdateDataSourceMutation>;
 export type UpdateDataSourceMutationOptions = Apollo.BaseMutationOptions<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>;
+export const InteractivitySettingsForSourceDocument = gql`
+    query InteractivitySettingsForSource($sourceId: Int!) {
+  dataSource(id: $sourceId) {
+    id
+    interactivitySettings {
+      cursor
+      dataSourceId
+      id
+      longTemplate
+      shortTemplate
+      sourceLayer
+      type
+    }
+  }
+}
+    `;
+
+/**
+ * __useInteractivitySettingsForSourceQuery__
+ *
+ * To run a query within a React component, call `useInteractivitySettingsForSourceQuery` and pass it any options that fit your needs.
+ * When your component renders, `useInteractivitySettingsForSourceQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useInteractivitySettingsForSourceQuery({
+ *   variables: {
+ *      sourceId: // value for 'sourceId'
+ *   },
+ * });
+ */
+export function useInteractivitySettingsForSourceQuery(baseOptions?: Apollo.QueryHookOptions<InteractivitySettingsForSourceQuery, InteractivitySettingsForSourceQueryVariables>) {
+        return Apollo.useQuery<InteractivitySettingsForSourceQuery, InteractivitySettingsForSourceQueryVariables>(InteractivitySettingsForSourceDocument, baseOptions);
+      }
+export function useInteractivitySettingsForSourceLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<InteractivitySettingsForSourceQuery, InteractivitySettingsForSourceQueryVariables>) {
+          return Apollo.useLazyQuery<InteractivitySettingsForSourceQuery, InteractivitySettingsForSourceQueryVariables>(InteractivitySettingsForSourceDocument, baseOptions);
+        }
+export type InteractivitySettingsForSourceQueryHookResult = ReturnType<typeof useInteractivitySettingsForSourceQuery>;
+export type InteractivitySettingsForSourceLazyQueryHookResult = ReturnType<typeof useInteractivitySettingsForSourceLazyQuery>;
+export type InteractivitySettingsForSourceQueryResult = Apollo.QueryResult<InteractivitySettingsForSourceQuery, InteractivitySettingsForSourceQueryVariables>;
+export const UpdateInteractivitySettingsDocument = gql`
+    mutation UpdateInteractivitySettings($id: Int!, $type: InteractivityType, $cursor: CursorType, $longTemplate: String, $shortTemplate: String) {
+  updateInteractivitySetting(input: {id: $id, patch: {type: $type, cursor: $cursor, longTemplate: $longTemplate, shortTemplate: $shortTemplate}}) {
+    interactivitySetting {
+      id
+      type
+      cursor
+      dataSourceId
+      longTemplate
+      shortTemplate
+      sourceLayer
+    }
+  }
+}
+    `;
+export type UpdateInteractivitySettingsMutationFn = Apollo.MutationFunction<UpdateInteractivitySettingsMutation, UpdateInteractivitySettingsMutationVariables>;
+
+/**
+ * __useUpdateInteractivitySettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateInteractivitySettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateInteractivitySettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateInteractivitySettingsMutation, { data, loading, error }] = useUpdateInteractivitySettingsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      type: // value for 'type'
+ *      cursor: // value for 'cursor'
+ *      longTemplate: // value for 'longTemplate'
+ *      shortTemplate: // value for 'shortTemplate'
+ *   },
+ * });
+ */
+export function useUpdateInteractivitySettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateInteractivitySettingsMutation, UpdateInteractivitySettingsMutationVariables>) {
+        return Apollo.useMutation<UpdateInteractivitySettingsMutation, UpdateInteractivitySettingsMutationVariables>(UpdateInteractivitySettingsDocument, baseOptions);
+      }
+export type UpdateInteractivitySettingsMutationHookResult = ReturnType<typeof useUpdateInteractivitySettingsMutation>;
+export type UpdateInteractivitySettingsMutationResult = Apollo.MutationResult<UpdateInteractivitySettingsMutation>;
+export type UpdateInteractivitySettingsMutationOptions = Apollo.BaseMutationOptions<UpdateInteractivitySettingsMutation, UpdateInteractivitySettingsMutationVariables>;
+export const DataSourceUrlPropertiesDocument = gql`
+    query DataSourceUrlProperties($id: Int!) {
+  dataSource(id: $id) {
+    id
+    type
+    bucketId
+    objectKey
+    url
+    originalSourceUrl
+  }
+}
+    `;
+
+/**
+ * __useDataSourceUrlPropertiesQuery__
+ *
+ * To run a query within a React component, call `useDataSourceUrlPropertiesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDataSourceUrlPropertiesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDataSourceUrlPropertiesQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDataSourceUrlPropertiesQuery(baseOptions?: Apollo.QueryHookOptions<DataSourceUrlPropertiesQuery, DataSourceUrlPropertiesQueryVariables>) {
+        return Apollo.useQuery<DataSourceUrlPropertiesQuery, DataSourceUrlPropertiesQueryVariables>(DataSourceUrlPropertiesDocument, baseOptions);
+      }
+export function useDataSourceUrlPropertiesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DataSourceUrlPropertiesQuery, DataSourceUrlPropertiesQueryVariables>) {
+          return Apollo.useLazyQuery<DataSourceUrlPropertiesQuery, DataSourceUrlPropertiesQueryVariables>(DataSourceUrlPropertiesDocument, baseOptions);
+        }
+export type DataSourceUrlPropertiesQueryHookResult = ReturnType<typeof useDataSourceUrlPropertiesQuery>;
+export type DataSourceUrlPropertiesLazyQueryHookResult = ReturnType<typeof useDataSourceUrlPropertiesLazyQuery>;
+export type DataSourceUrlPropertiesQueryResult = Apollo.QueryResult<DataSourceUrlPropertiesQuery, DataSourceUrlPropertiesQueryVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

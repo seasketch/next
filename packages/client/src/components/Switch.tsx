@@ -3,7 +3,7 @@ import React from "react";
 export interface SwitchProps {
   isToggled?: boolean;
   disabled?: boolean;
-  onClick?: () => void;
+  onClick?: (val: boolean) => void;
   className?: string;
 }
 
@@ -14,10 +14,14 @@ export default function Switch(props: SwitchProps) {
     >
       <span
         aria-checked={props.isToggled}
-        onClick={props.onClick}
+        onClick={() => {
+          if (props.onClick) {
+            props.onClick(!props.isToggled);
+          }
+        }}
         onKeyDown={(e) => {
           if (props.onClick && (e.key === "Enter" || e.key === " ")) {
-            props.onClick();
+            props.onClick(!props.isToggled);
             e.preventDefault();
           }
         }}
