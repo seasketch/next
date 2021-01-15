@@ -60,6 +60,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         const errors = validate({
           version: 8,
           name: "SeaSketch",
+          glyphs: "https://seasketch/{range}/{fontstack}",
           layers: styleJSON.map((layer: any, index: number) => ({
             ...layer,
             source: "1",

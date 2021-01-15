@@ -919,6 +919,7 @@ CREATE FUNCTION public.before_insert_or_update_data_layers_trigger() RETURNS tri
     AS $$
   declare
     source_type text;
+    max_z int;
   begin
     select type into source_type from data_sources where id = new.data_source_id;
     if source_type is null then
@@ -944,6 +945,14 @@ CREATE FUNCTION public.before_insert_or_update_data_layers_trigger() RETURNS tri
       if new.mapbox_gl_styles is not null then
         raise 'Layers with data_sources of type % should not specify mapbox_gl_styles', (source_type);
       end if;
+    end if;
+    if old is null then
+      -- assign a z-index
+      select max(z_index) + 1 into max_z from data_layers where project_id = new.project_id;
+      if max_z is null then
+        max_z = 0;
+      end if;
+      new.z_index = max_z;
     end if;
     return new;
   end;
@@ -2540,7 +2549,8 @@ CREATE TABLE public.data_layers (
     source_layer text,
     sublayer text,
     render_under public.render_under_type DEFAULT 'labels'::public.render_under_type NOT NULL,
-    mapbox_gl_styles jsonb
+    mapbox_gl_styles jsonb,
+    z_index integer DEFAULT 0 NOT NULL
 );
 
 
@@ -3993,6 +4003,7 @@ CREATE TABLE public.data_sources (
     bucket_id text,
     object_key uuid,
     byte_length integer,
+    supports_dynamic_layers boolean DEFAULT true NOT NULL,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -4229,6 +4240,13 @@ COMMENT ON COLUMN public.data_sources.object_key IS 'SEASKETCH_VECTOR sources on
 --
 
 COMMENT ON COLUMN public.data_sources.byte_length IS 'SEASKETCH_VECTOR sources only. Approximate size of the geojson source';
+
+
+--
+-- Name: COLUMN data_sources.supports_dynamic_layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.supports_dynamic_layers IS 'ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings.';
 
 
 --
@@ -5026,14 +5044,17 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             source_layer,
             sublayer,
             render_under,
-            mapbox_gl_styles
+            mapbox_gl_styles,
+            z_index
           )
             select "projectId", 
               data_source_id, 
               source_layer, 
               sublayer, 
               render_under, 
-              mapbox_gl_styles from data_layers
+              mapbox_gl_styles,
+              z_index
+            from data_layers
             where id = item.data_layer_id
           returning id into lid;
         else
@@ -5147,7 +5168,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           enhanced_security,
           bucket_id,
           object_key,
-          byte_length
+          byte_length,
+          supports_dynamic_layers
         )
           select 
             "projectId", 
@@ -5179,7 +5201,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           enhanced_security,
           bucket_id,
           object_key,
-          byte_length
+          byte_length,
+          supports_dynamic_layers
           from 
             data_sources 
           where
@@ -7068,6 +7091,33 @@ CREATE FUNCTION public.update_table_of_contents_item_position("itemId" integer, 
 --
 
 COMMENT ON FUNCTION public.update_table_of_contents_item_position("itemId" integer, "parentStableId" text, "sortIndex" integer) IS '@omit';
+
+
+--
+-- Name: update_z_indexes(integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_z_indexes("dataLayerIds" integer[]) RETURNS SETOF public.data_layers
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    z int;
+    pid int;
+  begin
+    if (select count(distinct(project_id)) from data_layers where id = any("dataLayerIds")) > 1 then
+      raise 'Denied. Attempting to modify more than one project.';
+    end if;
+    if (session_is_admin((select project_id from data_layers where id = any("dataLayerIds") limit 1))) != true then
+      raise 'Unauthorized';
+    end if;
+    z = 0;
+    for i in array_lower("dataLayerIds", 1)..array_upper("dataLayerIds", 1) loop
+      z = z + 1;
+      update data_layers set z_index = z where id = "dataLayerIds"[i];
+    end loop;
+    return query (select * from data_layers where id = any("dataLayerIds"));
+  end
+$$;
 
 
 --
@@ -12165,6 +12215,14 @@ GRANT ALL ON TABLE public.data_layers TO seasketch_user;
 
 
 --
+-- Name: COLUMN data_layers.z_index; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(z_index) ON TABLE public.data_layers TO anon;
+GRANT UPDATE(z_index) ON TABLE public.data_layers TO seasketch_user;
+
+
+--
 -- Name: FUNCTION data_layers_sprites(l public.data_layers); Type: ACL; Schema: public; Owner: -
 --
 
@@ -14615,6 +14673,14 @@ GRANT UPDATE(query_parameters) ON TABLE public.data_sources TO seasketch_user;
 --
 
 GRANT UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.supports_dynamic_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(supports_dynamic_layers) ON TABLE public.data_sources TO anon;
+GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
@@ -18453,6 +18519,14 @@ GRANT ALL ON FUNCTION public.update_table_of_contents_item_parent("itemId" integ
 
 REVOKE ALL ON FUNCTION public.update_table_of_contents_item_position("itemId" integer, "parentStableId" text, "sortIndex" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_table_of_contents_item_position("itemId" integer, "parentStableId" text, "sortIndex" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_z_indexes("dataLayerIds" integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_z_indexes("dataLayerIds" integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_z_indexes("dataLayerIds" integer[]) TO seasketch_user;
 
 
 --

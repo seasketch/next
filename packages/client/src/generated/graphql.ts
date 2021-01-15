@@ -27,7 +27,7 @@ export type Scalars = {
   Email: any;
   /** The `GeoJSON` scalar type represents GeoJSON values as specified by[RFC 7946](https://tools.ietf.org/html/rfc7946). */
   GeoJSON: any;
-  /** A JavaScript object encoded in the JSON format as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
+  /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSON: any;
   /** The `Upload` scalar type represents a file upload. */
   Upload: any;
@@ -1099,6 +1099,7 @@ export type DataLayer = Node & {
    * @deprecated Please use tableOfContentsItem instead
    */
   tableOfContentsItemsConnection: TableOfContentsItemsConnection;
+  zIndex: Scalars['Int'];
 };
 
 
@@ -1170,6 +1171,7 @@ export type DataLayerInput = {
    * making image requests.
    */
   sublayer?: Maybe<Scalars['String']>;
+  zIndex?: Maybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `DataLayer`. Fields that are set will be updated. */
@@ -1195,6 +1197,7 @@ export type DataLayerPatch = {
    * making image requests.
    */
   sublayer?: Maybe<Scalars['String']>;
+  zIndex?: Maybe<Scalars['Int']>;
 };
 
 /** A connection to a list of `DataLayer` values. */
@@ -1356,6 +1359,8 @@ export type DataSource = Node & {
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
    */
   scheme?: Maybe<TileScheme>;
+  /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
+  supportsDynamicLayers: Scalars['Boolean'];
   /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
   tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
@@ -1525,6 +1530,8 @@ export type DataSourceInput = {
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
    */
   scheme?: Maybe<TileScheme>;
+  /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
+  supportsDynamicLayers?: Maybe<Scalars['Boolean']>;
   /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
   tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
@@ -1619,6 +1626,8 @@ export type DataSourcePatch = {
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
    */
   scheme?: Maybe<TileScheme>;
+  /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
+  supportsDynamicLayers?: Maybe<Scalars['Boolean']>;
   /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
   tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
@@ -4584,6 +4593,7 @@ export type Mutation = {
   updateTopic?: Maybe<UpdateTopicPayload>;
   /** Updates a single `Topic` using its globally unique id and a patch. */
   updateTopicByNodeId?: Maybe<UpdateTopicPayload>;
+  updateZIndexes?: Maybe<UpdateZIndexesPayload>;
 };
 
 
@@ -5517,6 +5527,12 @@ export type MutationUpdateTopicArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTopicByNodeIdArgs = {
   input: UpdateTopicByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateZIndexesArgs = {
+  input: UpdateZIndexesInput;
 };
 
 /** An object with a globally unique `ID`. */
@@ -10475,6 +10491,29 @@ export type UpdateTopicPayloadTopicEdgeArgs = {
   orderBy?: Maybe<Array<TopicsOrderBy>>;
 };
 
+/** All input for the `updateZIndexes` mutation. */
+export type UpdateZIndexesInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataLayerIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `updateZIndexes` mutation. */
+export type UpdateZIndexesPayload = {
+  __typename?: 'UpdateZIndexesPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataLayers?: Maybe<Array<DataLayer>>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 
 /**
  * The SeaSketch User type is quite sparse since authentication is handled by Auth0
@@ -10786,6 +10825,7 @@ export type CreateArcGisImageSourceMutationVariables = Exact<{
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   queryParameters?: Maybe<Scalars['JSON']>;
   enableHighDPI?: Maybe<Scalars['Boolean']>;
+  supportsDynamicLayers: Scalars['Boolean'];
 }>;
 
 
@@ -10837,7 +10877,7 @@ export type CreateDataLayerMutation = (
     { __typename?: 'CreateDataLayerPayload' }
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'dataSourceId'>
+      & Pick<DataLayer, 'id' | 'dataSourceId' | 'zIndex'>
     )> }
   )> }
 );
@@ -10948,14 +10988,14 @@ export type LayersAndSourcesForItemsQuery = (
     & Pick<Project, 'id'>
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio'>
+      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
       & { interactivitySettings: Array<(
         { __typename?: 'InteractivitySetting' }
         & Pick<InteractivitySetting, 'dataSourceId' | 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'sourceLayer' | 'type'>
       )> }
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
+      & Pick<DataLayer, 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -11073,7 +11113,7 @@ export type GetLayerItemQuery = (
       )>> }
     )>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
+      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -11083,7 +11123,7 @@ export type GetLayerItemQuery = (
         )> }
       )>>, dataSource?: Maybe<(
         { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio'>
+        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
       )> }
     )> }
   )> }
@@ -11139,7 +11179,7 @@ export type UpdateLayerMutation = (
     { __typename?: 'UpdateDataLayerPayload' }
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'renderUnder' | 'mapboxGlStyles' | 'sublayer'>
+      & Pick<DataLayer, 'id' | 'zIndex' | 'renderUnder' | 'mapboxGlStyles' | 'sublayer'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -11164,7 +11204,7 @@ export type UpdateDataSourceMutation = (
     { __typename?: 'UpdateDataSourcePayload' }
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio'>
+      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
     )> }
   )> }
 );
@@ -11216,6 +11256,39 @@ export type DataSourceUrlPropertiesQuery = (
   & { dataSource?: Maybe<(
     { __typename?: 'DataSource' }
     & Pick<DataSource, 'id' | 'type' | 'bucketId' | 'objectKey' | 'url' | 'originalSourceUrl'>
+  )> }
+);
+
+export type UpdateZIndexesMutationVariables = Exact<{
+  dataLayerIds: Array<Maybe<Scalars['Int']>>;
+}>;
+
+
+export type UpdateZIndexesMutation = (
+  { __typename?: 'Mutation' }
+  & { updateZIndexes?: Maybe<(
+    { __typename?: 'UpdateZIndexesPayload' }
+    & { dataLayers?: Maybe<Array<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id' | 'zIndex'>
+    )>> }
+  )> }
+);
+
+export type UpdateRenderUnderTypeMutationVariables = Exact<{
+  layerId: Scalars['Int'];
+  renderUnder?: Maybe<RenderUnderType>;
+}>;
+
+
+export type UpdateRenderUnderTypeMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataLayer?: Maybe<(
+    { __typename?: 'UpdateDataLayerPayload' }
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id' | 'renderUnder'>
+    )> }
   )> }
 );
 
@@ -11740,8 +11813,8 @@ export type CreateArcGisDynamicDataSourceMutationHookResult = ReturnType<typeof 
 export type CreateArcGisDynamicDataSourceMutationResult = Apollo.MutationResult<CreateArcGisDynamicDataSourceMutation>;
 export type CreateArcGisDynamicDataSourceMutationOptions = Apollo.BaseMutationOptions<CreateArcGisDynamicDataSourceMutation, CreateArcGisDynamicDataSourceMutationVariables>;
 export const CreateArcGisImageSourceDocument = gql`
-    mutation CreateArcGISImageSource($projectId: Int!, $url: String!, $attribution: String, $bounds: [BigFloat], $queryParameters: JSON, $enableHighDPI: Boolean) {
-  createDataSource(input: {dataSource: {projectId: $projectId, type: ARCGIS_DYNAMIC_MAPSERVER, url: $url, attribution: $attribution, bounds: $bounds, queryParameters: $queryParameters, useDevicePixelRatio: $enableHighDPI}}) {
+    mutation CreateArcGISImageSource($projectId: Int!, $url: String!, $attribution: String, $bounds: [BigFloat], $queryParameters: JSON, $enableHighDPI: Boolean, $supportsDynamicLayers: Boolean!) {
+  createDataSource(input: {dataSource: {projectId: $projectId, type: ARCGIS_DYNAMIC_MAPSERVER, url: $url, attribution: $attribution, bounds: $bounds, queryParameters: $queryParameters, useDevicePixelRatio: $enableHighDPI, supportsDynamicLayers: $supportsDynamicLayers}}) {
     dataSource {
       id
       url
@@ -11770,6 +11843,7 @@ export type CreateArcGisImageSourceMutationFn = Apollo.MutationFunction<CreateAr
  *      bounds: // value for 'bounds'
  *      queryParameters: // value for 'queryParameters'
  *      enableHighDPI: // value for 'enableHighDPI'
+ *      supportsDynamicLayers: // value for 'supportsDynamicLayers'
  *   },
  * });
  */
@@ -11832,6 +11906,7 @@ export const CreateDataLayerDocument = gql`
     dataLayer {
       id
       dataSourceId
+      zIndex
     }
   }
 }
@@ -12121,6 +12196,7 @@ export const LayersAndSourcesForItemsDocument = gql`
       url
       urls
       useDevicePixelRatio
+      supportsDynamicLayers
       interactivitySettings {
         dataSourceId
         id
@@ -12142,6 +12218,7 @@ export const LayersAndSourcesForItemsDocument = gql`
         }
         type
       }
+      zIndex
       dataSourceId
       id
       mapboxGlStyles
@@ -12405,6 +12482,7 @@ export const GetLayerItemDocument = gql`
     enableDownload
     dataLayer {
       id
+      zIndex
       mapboxGlStyles
       renderUnder
       sourceLayer
@@ -12451,6 +12529,7 @@ export const GetLayerItemDocument = gql`
         url
         urls
         useDevicePixelRatio
+        supportsDynamicLayers
       }
     }
   }
@@ -12563,6 +12642,7 @@ export const UpdateLayerDocument = gql`
   updateDataLayer(input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer}}) {
     dataLayer {
       id
+      zIndex
       renderUnder
       mapboxGlStyles
       sublayer
@@ -12643,6 +12723,7 @@ export const UpdateDataSourceDocument = gql`
       url
       urls
       useDevicePixelRatio
+      supportsDynamicLayers
     }
   }
 }
@@ -12797,6 +12878,77 @@ export function useDataSourceUrlPropertiesLazyQuery(baseOptions?: Apollo.LazyQue
 export type DataSourceUrlPropertiesQueryHookResult = ReturnType<typeof useDataSourceUrlPropertiesQuery>;
 export type DataSourceUrlPropertiesLazyQueryHookResult = ReturnType<typeof useDataSourceUrlPropertiesLazyQuery>;
 export type DataSourceUrlPropertiesQueryResult = Apollo.QueryResult<DataSourceUrlPropertiesQuery, DataSourceUrlPropertiesQueryVariables>;
+export const UpdateZIndexesDocument = gql`
+    mutation UpdateZIndexes($dataLayerIds: [Int]!) {
+  updateZIndexes(input: {dataLayerIds: $dataLayerIds}) {
+    dataLayers {
+      id
+      zIndex
+    }
+  }
+}
+    `;
+export type UpdateZIndexesMutationFn = Apollo.MutationFunction<UpdateZIndexesMutation, UpdateZIndexesMutationVariables>;
+
+/**
+ * __useUpdateZIndexesMutation__
+ *
+ * To run a mutation, you first call `useUpdateZIndexesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateZIndexesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateZIndexesMutation, { data, loading, error }] = useUpdateZIndexesMutation({
+ *   variables: {
+ *      dataLayerIds: // value for 'dataLayerIds'
+ *   },
+ * });
+ */
+export function useUpdateZIndexesMutation(baseOptions?: Apollo.MutationHookOptions<UpdateZIndexesMutation, UpdateZIndexesMutationVariables>) {
+        return Apollo.useMutation<UpdateZIndexesMutation, UpdateZIndexesMutationVariables>(UpdateZIndexesDocument, baseOptions);
+      }
+export type UpdateZIndexesMutationHookResult = ReturnType<typeof useUpdateZIndexesMutation>;
+export type UpdateZIndexesMutationResult = Apollo.MutationResult<UpdateZIndexesMutation>;
+export type UpdateZIndexesMutationOptions = Apollo.BaseMutationOptions<UpdateZIndexesMutation, UpdateZIndexesMutationVariables>;
+export const UpdateRenderUnderTypeDocument = gql`
+    mutation UpdateRenderUnderType($layerId: Int!, $renderUnder: RenderUnderType) {
+  updateDataLayer(input: {id: $layerId, patch: {renderUnder: $renderUnder}}) {
+    dataLayer {
+      id
+      renderUnder
+    }
+  }
+}
+    `;
+export type UpdateRenderUnderTypeMutationFn = Apollo.MutationFunction<UpdateRenderUnderTypeMutation, UpdateRenderUnderTypeMutationVariables>;
+
+/**
+ * __useUpdateRenderUnderTypeMutation__
+ *
+ * To run a mutation, you first call `useUpdateRenderUnderTypeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateRenderUnderTypeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateRenderUnderTypeMutation, { data, loading, error }] = useUpdateRenderUnderTypeMutation({
+ *   variables: {
+ *      layerId: // value for 'layerId'
+ *      renderUnder: // value for 'renderUnder'
+ *   },
+ * });
+ */
+export function useUpdateRenderUnderTypeMutation(baseOptions?: Apollo.MutationHookOptions<UpdateRenderUnderTypeMutation, UpdateRenderUnderTypeMutationVariables>) {
+        return Apollo.useMutation<UpdateRenderUnderTypeMutation, UpdateRenderUnderTypeMutationVariables>(UpdateRenderUnderTypeDocument, baseOptions);
+      }
+export type UpdateRenderUnderTypeMutationHookResult = ReturnType<typeof useUpdateRenderUnderTypeMutation>;
+export type UpdateRenderUnderTypeMutationResult = Apollo.MutationResult<UpdateRenderUnderTypeMutation>;
+export type UpdateRenderUnderTypeMutationOptions = Apollo.BaseMutationOptions<UpdateRenderUnderTypeMutation, UpdateRenderUnderTypeMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

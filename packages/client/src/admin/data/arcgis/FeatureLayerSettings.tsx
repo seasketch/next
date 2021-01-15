@@ -394,7 +394,7 @@ export function FeatureLayerSettings(props: {
             >
               <option value={RenderUnderType.None}>Cover basemap</option>
               <option value={RenderUnderType.Labels}>Under labels</option>
-              <option value={RenderUnderType.Land}>Under land</option>
+              {/* <option value={RenderUnderType.Land}>Under land</option> */}
             </select>
           }
         >

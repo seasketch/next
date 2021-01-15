@@ -58,6 +58,7 @@ query layersAndSourcesForItems(
       url
       urls
       useDevicePixelRatio
+      supportsDynamicLayers
       interactivitySettings {
         dataSourceId
         id
@@ -79,7 +80,7 @@ query layersAndSourcesForItems(
         }
         type
       }
-
+      zIndex
       dataSourceId
       id
       mapboxGlStyles
@@ -213,6 +214,7 @@ query GetLayerItem($id: Int!) {
     enableDownload
     dataLayer {
       id
+      zIndex
       mapboxGlStyles
       renderUnder
       sourceLayer
@@ -259,6 +261,7 @@ query GetLayerItem($id: Int!) {
         url
         urls
         useDevicePixelRatio
+        supportsDynamicLayers
       }
     }
   }
@@ -314,6 +317,7 @@ mutation UpdateLayer(
   ) {
     dataLayer {
       id
+      zIndex
       renderUnder
       mapboxGlStyles
       sublayer
@@ -365,6 +369,7 @@ mutation UpdateDataSource($id: Int!, $attribution: String) {
       url
       urls
       useDevicePixelRatio
+      supportsDynamicLayers
     }
   }
 }
@@ -422,5 +427,25 @@ query DataSourceUrlProperties($id: Int!) {
     objectKey
     url
     originalSourceUrl
+  }
+}
+
+mutation UpdateZIndexes($dataLayerIds: [Int]!) {
+  updateZIndexes(input: { dataLayerIds: $dataLayerIds }) {
+    dataLayers {
+      id
+      zIndex
+    }
+  }
+}
+
+mutation UpdateRenderUnderType($layerId: Int!, $renderUnder: RenderUnderType) {
+  updateDataLayer(
+    input: { id: $layerId, patch: { renderUnder: $renderUnder } }
+  ) {
+    dataLayer {
+      id
+      renderUnder
+    }
   }
 }

@@ -49,3 +49,16 @@ code {
   font-size: 12px;
   font-weight: bold;
 }
+
+.ZIndexEditor .rst__collapseButton {
+  display: none;
+}
+
+.rst__row.basemap .rst__rowContents {
+  background-color: rgb(241, 241, 241);
+  border-style: dashed;
+}
+
+/* .ZIndexEditor > .rst__tree > .rst__node > .rst__lineFullVertical {
+  display: none;
+} */

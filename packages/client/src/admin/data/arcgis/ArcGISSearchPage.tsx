@@ -69,7 +69,7 @@ export default function ArcGISSearchPage({
             id="arcgis"
             value={inputUrl}
             onChange={(e) => setInputUrl(e.target.value)}
-            className="form-input block w-full rounded-none rounded-l-md transition ease-in-out duration-150 sm:text-sm"
+            className="p-2 block w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5"
             placeholder="https://example.com/argis/rest/services"
           />
         </div>

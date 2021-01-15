@@ -73,6 +73,7 @@ mutation CreateArcGISImageSource(
   $bounds: [BigFloat]
   $queryParameters: JSON
   $enableHighDPI: Boolean
+  $supportsDynamicLayers: Boolean!
 ) {
   createDataSource(
     input: {
@@ -84,6 +85,7 @@ mutation CreateArcGISImageSource(
         bounds: $bounds
         queryParameters: $queryParameters
         useDevicePixelRatio: $enableHighDPI
+        supportsDynamicLayers: $supportsDynamicLayers
       }
     }
   ) {
@@ -151,6 +153,7 @@ mutation CreateDataLayer(
     dataLayer {
       id
       dataSourceId
+      zIndex
     }
   }
 }

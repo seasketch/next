@@ -21,7 +21,7 @@ export default function OverlayMap(props: OverlayMapProps) {
     if (!map) {
       const mapInstance = new mapboxgl.Map({
         container: mapContainer.current!,
-        style: "mapbox://styles/mapbox/streets-v11", // stylesheet location
+        style: "mapbox://styles/underbluewaters/ckjt51pq400be19mvalqmrumc", // stylesheet location
         // style: "mapbox://styles/mapbox/satellite-streets-v11", // stylesheet location
         center: [1.9, 18.7],
         zoom: 0.09527381899319892,

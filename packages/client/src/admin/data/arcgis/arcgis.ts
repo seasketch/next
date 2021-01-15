@@ -1030,10 +1030,10 @@ export function useImportArcGISService(serviceRoot?: string) {
                       statusMessage: `Creating source for "${layer.name}"`,
                     };
                   });
-                  let queryParameters = JSON.stringify({
+                  let queryParameters = {
                     geometryPrecision: layerSettings?.geometryPrecision || 6,
                     outFields: layerSettings?.outFields || "*",
-                  });
+                  };
                   const latLngBounds = extentToLatLngBounds(layer.extent);
                   bounds = latLngBounds
                     ? [
@@ -1094,9 +1094,7 @@ export function useImportArcGISService(serviceRoot?: string) {
                   variables: {
                     projectId,
                     dataSourceId: sourceId!,
-                    mapboxGlStyles: !isDynamic
-                      ? JSON.stringify(glStyles)
-                      : null,
+                    mapboxGlStyles: !isDynamic ? glStyles : null,
                     // @ts-ignore
                     renderUnder: layerSettings?.renderUnder?.toUpperCase(),
                     // sublayer: isDynamic ? layer.id.toString() : undefined,
@@ -1185,6 +1183,7 @@ export function useImportArcGISService(serviceRoot?: string) {
                     ]
                   : null,
                 enableHighDPI: settings.enableHighDpi,
+                supportsDynamicLayers: mapServerInfo.supportsDynamicLayers,
               },
             });
             imageSourceId = sourceResponse.data!.createDataSource!.dataSource!

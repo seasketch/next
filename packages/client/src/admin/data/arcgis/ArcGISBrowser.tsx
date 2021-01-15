@@ -110,6 +110,7 @@ export default function ArcGISBrowser() {
             sublayer: layer.id.toString(),
             dataSourceId: serviceData.mapServerInfo.generatedId,
             renderUnder: serviceSettings.renderUnder || RenderUnderType.Labels,
+            zIndex: layer.id,
           });
         } else if (layer.type !== "Raster Layer") {
           const vectorSettings = serviceSettings.vectorSublayerSettings.find(
@@ -555,6 +556,7 @@ function dynamicServiceSourceFromSettings(
       transparent: "true",
     },
     interactivitySettings: [],
+    supportsDynamicLayers: serviceData.mapServerInfo.supportsDynamicLayers,
   };
 }
 
@@ -574,6 +576,7 @@ function vectorSourceFromSettings(
       geometryPrecision: settings?.geometryPrecision,
     },
     interactivitySettings: [],
+    supportsDynamicLayers: false,
   };
 }
 
@@ -600,10 +603,9 @@ function vectorLayerFromSettings(
     id: layer.generatedId,
     dataSourceId: layer.generatedId,
     renderUnder: settings?.renderUnder || RenderUnderType.Labels,
-    mapboxGlStyles: JSON.stringify(
-      settings?.mapboxLayers || layer.mapboxLayers
-    ),
+    mapboxGlStyles: settings?.mapboxLayers || layer.mapboxLayers,
     sprites: sprites.length ? sprites : undefined,
+    zIndex: layer.id,
   };
 }
 

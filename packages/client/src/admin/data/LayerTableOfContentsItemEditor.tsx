@@ -84,7 +84,10 @@ export default function LayerTableOfContentsItemEditor(
       updateGLStyleMutation({
         variables: {
           id: layer!.id,
-          mapboxGlStyles: debouncedStyle,
+          mapboxGlStyles:
+            typeof debouncedStyle === "string"
+              ? JSON.parse(debouncedStyle)
+              : debouncedStyle,
         },
       });
     }
@@ -299,13 +302,13 @@ export default function LayerTableOfContentsItemEditor(
                     "Display this layer under any text labels on the basemap."
                   ),
                 },
-                {
-                  value: RenderUnderType.Land,
-                  label: t("Show Under Land"),
-                  description: t(
-                    "Useful when you want to present data that may not have a matching shoreline."
-                  ),
-                },
+                // {
+                //   value: RenderUnderType.Land,
+                //   label: t("Show Under Land"),
+                //   description: t(
+                //     "Useful when you want to present data that may not have a matching shoreline."
+                //   ),
+                // },
                 {
                   value: RenderUnderType.None,
                   label: t("Cover Basemap"),
@@ -342,11 +345,11 @@ export default function LayerTableOfContentsItemEditor(
                 </p>
                 <GLStyleEditor
                   dataLayerId={layer?.id}
-                  initialStyle={JSON.stringify(
-                    JSON.parse(layer!.mapboxGlStyles!),
-                    null,
-                    "  "
-                  )}
+                  initialStyle={
+                    typeof layer!.mapboxGlStyles! === "string"
+                      ? layer!.mapboxGlStyles
+                      : JSON.stringify(layer!.mapboxGlStyles!, null, "  ")
+                  }
                   geometryType={"Polygon"}
                   onChange={(newStyle) => {
                     client.writeFragment({
@@ -357,7 +360,7 @@ export default function LayerTableOfContentsItemEditor(
                         }
                       `,
                       data: {
-                        mapboxGlStyles: newStyle,
+                        mapboxGlStyles: JSON.parse(newStyle),
                       },
                     });
                     setStyle(newStyle);

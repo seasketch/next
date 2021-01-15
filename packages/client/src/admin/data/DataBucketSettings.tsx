@@ -63,9 +63,8 @@ function DataBucketSettings(props: { className?: string }) {
           {
             type: "Feature",
             properties: {},
-            geometry: JSON.parse(
-              buckets.data.projectBySlug.dataSourcesBucket.location.geojson
-            ),
+            geometry:
+              buckets.data.projectBySlug.dataSourcesBucket.location.geojson,
           },
         ],
       });
@@ -85,7 +84,7 @@ function DataBucketSettings(props: { className?: string }) {
       };
       for (const bucket of buckets.data.dataSourcesBucketsConnection?.nodes ||
         []) {
-        const geometry = JSON.parse(bucket.location.geojson) as Point;
+        const geometry = bucket.location.geojson as Point;
         const feature = {
           id: bucket.bucket,
           type: "Feature",
@@ -111,9 +110,8 @@ function DataBucketSettings(props: { className?: string }) {
             {
               type: "Feature",
               properties: {},
-              geometry: JSON.parse(
-                buckets.data.projectBySlug!.dataSourcesBucket!.location.geojson
-              ),
+              geometry: buckets.data.projectBySlug!.dataSourcesBucket!.location
+                .geojson,
             },
           ],
         },
@@ -168,30 +166,6 @@ function DataBucketSettings(props: { className?: string }) {
       window.map = map;
     }
   }, [map, buckets.data]);
-
-  // useEffect(() => {
-  //   if (data && map && draw && draw.getAll().features.length === 0) {
-  //     const feature = {
-  //       type: "Feature",
-  //       id: 1,
-  //       properties: {},
-  //       geometry: JSON.parse(data.projectBySlug?.region.geojson),
-  //     };
-  //     draw.add(feature);
-  //     draw.changeMode("static");
-  //     const box = bbox(feature);
-  //     map.fitBounds(
-  //       [
-  //         [box[0], box[1]],
-  //         [box[2], box[3]],
-  //       ],
-  //       { padding: 20, duration: 0 }
-  //     );
-  //     // zoomToFeature(feature, map);
-  //     draw.changeMode("static");
-  //     setDrawing(false);
-  //   }
-  // }, [data, map, draw]);
 
   return (
     <>

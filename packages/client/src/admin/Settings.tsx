@@ -591,7 +591,7 @@ function MapExtentSettings() {
         type: "Feature",
         id: 1,
         properties: {},
-        geometry: JSON.parse(data.projectBySlug?.region.geojson),
+        geometry: data.projectBySlug?.region.geojson,
       };
       draw.add(feature);
       draw.changeMode("static");

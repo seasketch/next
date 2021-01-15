@@ -43,6 +43,7 @@ import {
   DataSourceTypes,
   InteractivitySetting,
   InteractivityType,
+  RenderUnderType,
   Sprite,
   SpriteImage,
 } from "../generated/graphql";
@@ -97,6 +98,7 @@ export type ClientDataSource = Pick<
   | "url"
   | "urls"
   | "useDevicePixelRatio"
+  | "supportsDynamicLayers"
 > & {
   /** IDs from the server are Int. Temporary client IDs are UUID v4 */
   id: string | number;
@@ -113,6 +115,8 @@ export type ClientDataSource = Pick<
     | "type"
   >[];
 };
+
+const UNDER_LABELS_POSITION = "admin-0-boundary-disputed";
 
 const mustacheHelpers = {
   round: () => (text: string, render: (str: string) => string) => {
@@ -136,7 +140,7 @@ export type ClientSprite = {
 
 export type ClientDataLayer = Pick<
   DataLayer,
-  "mapboxGlStyles" | "renderUnder" | "sourceLayer" | "sublayer"
+  "mapboxGlStyles" | "renderUnder" | "sourceLayer" | "sublayer" | "zIndex"
 > & {
   /** IDs from the server are Int. Temporary client IDs are UUID v4 */
   id: string | number;
@@ -147,6 +151,7 @@ export type ClientDataLayer = Pick<
 
 class LayerManager {
   private clientDataSources: ClientDataSource[] = [];
+  private layersByZIndex: (number | string)[] = [];
   private layers: { [layerId: string]: ClientDataLayer } = {};
   private layersBySourceId: { [sourceId: string]: ClientDataLayer[] } = {};
   private visibleLayers: { [id: string]: LayerState } = {};
@@ -293,11 +298,7 @@ class LayerManager {
           (i) => i.type !== InteractivityType.None
         )
       ) {
-        for (
-          var i = 0;
-          i < JSON.parse(layer.mapboxGlStyles || "[]").length;
-          i++
-        ) {
+        for (var i = 0; i < (layer.mapboxGlStyles || []).length; i++) {
           interactiveLayerIds.push(`${layer.id}-${i}`);
         }
       }
@@ -534,26 +535,25 @@ class LayerManager {
       ) {
         throw new Error(`Existing layer had no mapboxGlStyles property`);
       }
-      for (
-        var i = 0;
-        i < JSON.parse(existingLayer.mapboxGlStyles)?.length;
-        i++
-      ) {
+      for (var i = 0; i < existingLayer.mapboxGlStyles?.length; i++) {
         this.map.removeLayer(`${existingLayer.id}-${i}`);
       }
       if (!layer.mapboxGlStyles || !layer.mapboxGlStyles.length) {
         throw new Error(`Replacement layer had no mapboxLayer property`);
       }
-      const glLayers = JSON.parse(layer.mapboxGlStyles);
+      const glLayers = layer.mapboxGlStyles;
       if (!Array.isArray(glLayers) || glLayers.length === 0) {
         throw new Error("mapboxGlStyles contains no layers");
       }
       for (var i = 0; i < glLayers.length; i++) {
-        this.map.addLayer({
-          ...glLayers[i],
-          id: `${layer.id}-${i}`,
-          source: layer.dataSourceId,
-        });
+        this.map.addLayer(
+          {
+            ...glLayers[i],
+            id: `${layer.id}-${i}`,
+            source: layer.dataSourceId,
+          },
+          this.getZPosition(layer)
+        );
       }
     } else {
       // do nothing
@@ -619,6 +619,46 @@ class LayerManager {
     }
     // add visible layers and associated sources to map
     this.setVisibleLayers(oldVisibleLayers.filter((id) => id in this.layers));
+
+    const sortedLayers = [...layers];
+    // sortedLayers.sort((a, b) => b.zIndex - a.zIndex);
+    sortedLayers.sort((a, b) => {
+      if (
+        a.renderUnder === RenderUnderType.Labels &&
+        b.renderUnder !== RenderUnderType.Labels
+      ) {
+        return 1;
+      } else if (
+        b.renderUnder === RenderUnderType.Labels &&
+        a.renderUnder !== RenderUnderType.Labels
+      ) {
+        return -1;
+      } else {
+        return a.zIndex - b.zIndex;
+      }
+    });
+    // Need to make sure these are layer ids and not ids of layers to accomadate sublayers
+    const layerIds = [];
+
+    let labelsLayerInserted = false;
+    for (const layer of sortedLayers) {
+      if (
+        !labelsLayerInserted &&
+        layer.renderUnder === RenderUnderType.Labels
+      ) {
+        labelsLayerInserted = true;
+        layerIds.push(UNDER_LABELS_POSITION);
+      }
+      if (layer.sublayer) {
+        const specialId = idForSublayer(layer);
+        if (layerIds.indexOf(specialId) === -1) {
+          layerIds.push(specialId);
+        }
+      } else {
+        layerIds.push(`${layer.id}-0`);
+      }
+    }
+    this.layersByZIndex = layerIds;
   }
 
   setVisibleLayers(layerIds: string[]) {
@@ -716,7 +756,10 @@ class LayerManager {
       if (layer) {
         this.addLayer(this.layers[id]);
       } else {
-        // maybe not loaded yet?
+        // maybe not loaded yet? Not sure whether to show an exception here
+        console.warn(
+          `Layer information not available for loading yet. id=${id}`
+        );
       }
     }
   }
@@ -753,14 +796,21 @@ class LayerManager {
         ).then(({ layers, imageList }) => {
           // check if still visible
           imageList.addToMap(this.map!);
+          let zPosition = this.getZPosition(layer);
           if (this.visibleLayers[layer.id]?.visible) {
             for (var i = 0; i < layers.length; i++) {
-              this.map!.addLayer({
-                ...layers[i],
-                id: `${layer.id}-${i}`,
-                source: layer.dataSourceId.toString(),
-              } as AnyLayer);
+              this.map!.addLayer(
+                {
+                  ...layers[i],
+                  id: `${layer.id}-${i}`,
+                  source: layer.dataSourceId.toString(),
+                } as AnyLayer,
+                zPosition
+              );
             }
+            this.visibleLayers[layer.id] = {
+              ...this.visibleLayers[layer.id],
+            };
           }
         });
         this.debouncedUpdateState();
@@ -768,14 +818,18 @@ class LayerManager {
         if (layer.sprites && layer.sprites.length) {
           await this.addSprites(layer.sprites);
         }
-        const mapboxLayers = JSON.parse(layer.mapboxGlStyles || "[]");
+        const mapboxLayers = layer.mapboxGlStyles || [];
+        let zPosition = this.getZPosition(layer);
         if (mapboxLayers.length) {
           for (var i = 0; i < mapboxLayers?.length; i++) {
-            this.map.addLayer({
-              ...mapboxLayers[i],
-              id: `${layer.id}-${i}`,
-              source: layer.dataSourceId.toString(),
-            });
+            this.map.addLayer(
+              {
+                ...mapboxLayers[i],
+                id: `${layer.id}-${i}`,
+                source: layer.dataSourceId.toString(),
+              },
+              zPosition
+            );
           }
         } else {
           throw new Error(
@@ -790,6 +844,32 @@ class LayerManager {
       this.debouncedUpdateState();
     }
     this.debouncedUpdateInteractivitySettings();
+  }
+
+  private getZPosition(layer: ClientDataLayer): string | undefined {
+    const layerId = layer.sublayer
+      ? `${layer.dataSourceId}-image`
+      : `${layer.id}-0`;
+    let layerPosition = this.layersByZIndex.indexOf(layerId);
+    // Find the next visible layer that this layer should appear under
+    while (layerPosition-- > -1) {
+      const layerAbove = this.layersByZIndex[layerPosition];
+      if (layerAbove) {
+        let visibleLayer = this.map!.getLayer(layerAbove.toString());
+        if (!!visibleLayer) {
+          return layerAbove.toString();
+        }
+      }
+    }
+    // RenderUnderLand is not supported at this time as it isn't compatible with the way mapbox baselayers typically are set up.
+    if (
+      layer.renderUnder === RenderUnderType.Labels ||
+      layer.renderUnder === RenderUnderType.Land
+    ) {
+      return UNDER_LABELS_POSITION;
+    } else {
+      return undefined;
+    }
   }
 
   private async addSprites(sprites: ClientSprite[]) {
@@ -853,7 +933,7 @@ class LayerManager {
     } else {
       let mapboxLayers: MapBoxLayer[];
       if (layer.mapboxGlStyles) {
-        mapboxLayers = JSON.parse(layer.mapboxGlStyles);
+        mapboxLayers = layer.mapboxGlStyles;
       } else {
         if (this.dynamicArcGISStyles[layer.dataSourceId]) {
           const style = await this.dynamicArcGISStyles[layer.dataSourceId];
@@ -951,6 +1031,7 @@ class LayerManager {
               },
               useDevicePixelRatio: !!sourceConfig.useDevicePixelRatio,
               layers: initialSublayers.map((s) => ({ sublayer: parseInt(s) })),
+              supportsDynamicLayers: sourceConfig.supportsDynamicLayers,
             }
           );
           this.sourceCache[sourceConfig.id] = instance;
@@ -993,7 +1074,9 @@ class LayerManager {
       sublayersBySource[dirty] = [];
     }
     this.dirtyMapServices = [];
-    for (const layer of Object.values(this.layers)) {
+    for (const layer of Object.values(this.layers).sort(
+      (a, b) => a.zIndex - b.zIndex
+    )) {
       if (
         sublayersBySource[layer.dataSourceId] &&
         this.visibleLayers[layer.id]
@@ -1002,7 +1085,7 @@ class LayerManager {
       }
     }
     for (const sourceId in sublayersBySource) {
-      const layerId = `${sourceId}-layer`;
+      const layerId = `${sourceId}-image`;
       if (sublayersBySource[sourceId].length === 0) {
         // remove the source
         const layer = this.map.getLayer(layerId);
@@ -1027,6 +1110,7 @@ class LayerManager {
           source.updateLayers(
             sublayersBySource[sourceId].map((id) => ({
               sublayer: parseInt(id),
+              opacity: 1,
             }))
           );
         } else {
@@ -1035,17 +1119,26 @@ class LayerManager {
             sublayersBySource[sourceId]
           ) as ArcGISDynamicMapServiceInstance;
         }
-        const layer = this.map.getLayer(layerId);
-        if (!layer) {
-          this.map.addLayer({
-            id: layerId,
+        // const layer = this.map.getLayer(layerId);
+        this.map.removeLayer(layerId);
+        // if (!layer) {
+        // get layer with lowest z index
+        const top = this.layersBySourceId[sourceId].sort(
+          (a, b) => a.zIndex - b.zIndex
+        )[0];
+
+        this.map.addLayer(
+          {
+            id: sourceId + "-image",
             source: sourceId,
             type: "raster",
             paint: {
               "raster-fade-duration": 0,
             },
-          });
-        }
+          },
+          this.getZPosition(top)
+        );
+        // }
       }
     }
   }
@@ -1136,4 +1229,12 @@ async function loadImage(
       }
     });
   });
+}
+
+function idForSublayer(layer: ClientDataLayer) {
+  if (layer.sublayer === null || layer.sublayer === undefined) {
+    throw new Error(`Layer is not a sublayer. id=${layer.id}`);
+  } else {
+    return `${layer.dataSourceId}-image`;
+  }
 }

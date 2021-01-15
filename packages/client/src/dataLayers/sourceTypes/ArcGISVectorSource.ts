@@ -45,7 +45,7 @@ export function updateArcGISVectorSource(
     const removedLayers: Layer[] = [];
     for (const layer of layers) {
       if (layer.mapboxGlStyles) {
-        const mapboxLayers = JSON.parse(layer.mapboxGlStyles);
+        const mapboxLayers = layer.mapboxGlStyles;
         for (var i = 0; i < mapboxLayers.length; i++) {
           const lid = `${prev.id}-${i}`;
           const l = map.getLayer(lid);
@@ -69,7 +69,7 @@ export function updateArcGISVectorSource(
     );
 
     for (const layer of layers) {
-      const mapboxLayers = JSON.parse(layer.mapboxGlStyles || "[]");
+      const mapboxLayers = layer.mapboxGlStyles || [];
       if (mapboxLayers.length) {
         for (var i = 0; i < mapboxLayers?.length; i++) {
           map.addLayer({

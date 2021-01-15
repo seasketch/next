@@ -32,7 +32,7 @@ export default function DataSettings() {
   });
   useEffect(() => {
     if (map && data?.projectBySlug?.region) {
-      const bounds = bbox(JSON.parse(data.projectBySlug.region.geojson)) as [
+      const bounds = bbox(data.projectBySlug.region.geojson) as [
         number,
         number,
         number,

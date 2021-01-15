@@ -22,6 +22,7 @@ import { generateStableId } from "./arcgis/arcgis";
 import DeleteTableOfContentsItemModal from "./DeleteTableOfContentsItemModal";
 import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
+import ZIndexEditor from "./ZIndexEditor";
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
@@ -32,7 +33,6 @@ export default function TableOfContentsEditor() {
   });
   const projectId = useProjectId();
   const [treeItems, setTreeItems] = useState<ClientTableOfContentsItem[]>([]);
-  const [createFolder, createFolderState] = useCreateFolderMutation();
   const [openLayerItemId, setOpenLayerItemId] = useState<number>();
   const [createNewFolderModalOpen, setCreateNewFolderModalOpen] = useState<
     boolean
@@ -122,22 +122,6 @@ export default function TableOfContentsEditor() {
             className="bg-white rounded shadow-sm border-grey-500 border px-2 py-0.5 text-sm mx-2"
             onClick={async () => {
               setCreateNewFolderModalOpen(true);
-
-              // const folderName = window.prompt("Folder name");
-              // if (folderName && folderName.length) {
-              //   try {
-              //     const response = await createFolder({
-              //       variables: {
-              //         projectId: projectId!,
-              //         stableId: generateStableId(),
-              //         title: folderName,
-              //       },
-              //     });
-              //     tocQuery.refetch();
-              //   } catch (e) {
-              //     alert(e.message);
-              //   }
-              // }
             }}
           >
             Add folder
@@ -149,116 +133,134 @@ export default function TableOfContentsEditor() {
         onContextMenu={(e) => e.preventDefault()}
       >
         {tocQuery.loading && <Spinner />}
-        <TableOfContents
-          hideExpandAll={true}
-          onMoveNode={async (data) => {
-            // let
-            const newParentId = data.nextParentNode?.id;
-            let children: number[];
-            if (
-              data.nextParentNode &&
-              data.nextParentNode.children &&
-              Array.isArray(data.nextParentNode.children)
-            ) {
-              children = data.nextParentNode.children.map((item) => item.id);
-            } else {
-              children = data.treeData.map((item) => item.id);
-            }
-            if (newParentId && !expansionState[newParentId]) {
-              setExpansionState((prev) => ({
-                ...prev,
-                [newParentId]: true,
-              }));
-            }
-            await updateChildrenMutation({
-              variables: {
-                id: newParentId,
-                childIds: children,
-              },
-            });
-          }}
-          canDrag={true}
-          onChange={(e) => setTreeItems(e)}
-          nodes={treeItems}
-          contextMenuId="layers-toc-editor"
-          contextMenuItems={[
-            <Item
-              key="zoom-to"
-              hidden={(args) => {
-                return !args.props.item.isFolder && !args.props.item.bounds;
-              }}
-              className="text-sm hover:bg-primary-500"
-              onClick={(args) => {
-                let bounds: [number, number, number, number] | undefined;
-                if (args.props.item.isFolder) {
-                  // bounds = null;
-                  bounds = createBoundsRecursive(args.props.item);
-                } else {
-                  if (args.props.item.bounds) {
-                    bounds = args.props.item.bounds.map((coord: string) =>
-                      parseFloat(coord)
-                    );
-                  }
-                }
-                if (
-                  bounds &&
-                  [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")
-                ) {
-                  manager?.map?.fitBounds(bounds, {
-                    padding: 40,
-                  });
-                }
-              }}
-            >
-              Zoom To
-            </Item>,
-            <Item
-              key="1"
-              className="text-sm"
-              onClick={(args) => {
-                if (args.props?.item?.isFolder) {
-                  setFolderId(args.props.item.id);
-                } else {
-                  if (args.props.item.bounds) {
-                    let bounds = args.props.item.bounds.map((coord: string) =>
-                      parseFloat(coord)
-                    );
-                    if (
-                      bounds &&
-                      [180.0, 90.0, -180.0, -90.0].join(",") !==
-                        bounds.join(",")
-                    ) {
-                      manager?.map?.fitBounds(bounds, {
-                        padding: 40,
-                      });
+        {selectedView === "tree" && (
+          <TableOfContents
+            hideExpandAll={true}
+            onMoveNode={async (data) => {
+              // let
+              const newParentId = data.nextParentNode?.id;
+              let children: number[];
+              if (
+                data.nextParentNode &&
+                data.nextParentNode.children &&
+                Array.isArray(data.nextParentNode.children)
+              ) {
+                children = data.nextParentNode.children.map((item) => item.id);
+              } else {
+                children = data.treeData.map((item) => item.id);
+              }
+              if (newParentId && !expansionState[newParentId]) {
+                setExpansionState((prev) => ({
+                  ...prev,
+                  [newParentId]: true,
+                }));
+              }
+              await updateChildrenMutation({
+                variables: {
+                  id: newParentId,
+                  childIds: children,
+                },
+              });
+            }}
+            canDrag={true}
+            onChange={(e) => setTreeItems(e)}
+            nodes={treeItems}
+            contextMenuId="layers-toc-editor"
+            contextMenuItems={[
+              <Item
+                key="zoom-to"
+                hidden={(args) => {
+                  return !args.props.item.isFolder && !args.props.item.bounds;
+                }}
+                className="text-sm hover:bg-primary-500"
+                onClick={(args) => {
+                  let bounds: [number, number, number, number] | undefined;
+                  if (args.props.item.isFolder) {
+                    // bounds = null;
+                    bounds = createBoundsRecursive(args.props.item);
+                  } else {
+                    if (args.props.item.bounds) {
+                      bounds = args.props.item.bounds.map((coord: string) =>
+                        parseFloat(coord)
+                      );
                     }
                   }
-                  manager?.showLayers([args.props.item.dataLayerId]);
-                  setOpenLayerItemId(args.props.item.id);
-                }
-              }}
-            >
-              Edit
-            </Item>,
-            <Item
-              key="2"
-              className="text-sm"
-              onClick={(args) => {
-                setItemForDeletion(args.props.item);
-              }}
-            >
-              Delete
-            </Item>,
-          ]}
-          onVisibilityToggle={(data) => {
-            setExpansionState((prev) => {
-              return {
-                ...prev,
-                [data.node.id]: data.expanded,
-              };
-            });
-          }}
-        />
+                  if (
+                    bounds &&
+                    [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")
+                  ) {
+                    manager?.map?.fitBounds(bounds, {
+                      padding: 40,
+                    });
+                  }
+                }}
+              >
+                Zoom To
+              </Item>,
+              <Item
+                key="1"
+                className="text-sm"
+                onClick={(args) => {
+                  if (args.props?.item?.isFolder) {
+                    setFolderId(args.props.item.id);
+                  } else {
+                    if (args.props.item.bounds) {
+                      let bounds = args.props.item.bounds.map((coord: string) =>
+                        parseFloat(coord)
+                      );
+                      if (
+                        bounds &&
+                        [180.0, 90.0, -180.0, -90.0].join(",") !==
+                          bounds.join(",")
+                      ) {
+                        manager?.map?.fitBounds(bounds, {
+                          padding: 40,
+                        });
+                      }
+                    }
+                    manager?.showLayers([args.props.item.dataLayerId]);
+                    setOpenLayerItemId(args.props.item.id);
+                  }
+                }}
+              >
+                Edit
+              </Item>,
+              <Item
+                key="2"
+                className="text-sm"
+                onClick={(args) => {
+                  setItemForDeletion(args.props.item);
+                }}
+              >
+                Delete
+              </Item>,
+            ]}
+            onVisibilityToggle={(data) => {
+              setExpansionState((prev) => {
+                return {
+                  ...prev,
+                  [data.node.id]: data.expanded,
+                };
+              });
+            }}
+          />
+        )}
+        {selectedView === "order" && (
+          <ZIndexEditor
+            // @ts-ignore
+            tableOfContentsItems={
+              tocQuery.data?.projectBySlug?.draftTableOfContentsItems
+            }
+            // @ts-ignore
+            dataLayers={
+              layersAndSources.data?.projectBySlug?.dataLayersForItems
+            }
+            // @ts-ignore
+            dataSources={
+              layersAndSources.data?.projectBySlug?.dataSourcesForItems
+            }
+          />
+        )}
         <DeleteTableOfContentsItemModal
           item={itemForDeletion}
           onRequestClose={() => setItemForDeletion(undefined)}

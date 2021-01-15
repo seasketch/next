@@ -111,6 +111,11 @@ app.use(
   })
 );
 
+app.use(function (req, res, next) {
+  res.header("Access-Control-Max-Age", "600");
+  next();
+});
+
 app.use(
   postgraphile(pool, "public", {
     ownerConnectionString: process.env.OWNER_DATABASE_URL,
@@ -121,6 +126,7 @@ app.use(
     ignoreRBAC: false,
     ignoreIndexes: false,
     enableCors: true,
+    dynamicJson: true,
     setofFunctionsContainNulls: false,
     pgSettings: async (req: IncomingRequest) => {
       // These session vars will be added to each postgres transaction
