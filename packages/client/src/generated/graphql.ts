@@ -11255,7 +11255,7 @@ export type DataSourceUrlPropertiesQuery = (
   { __typename?: 'Query' }
   & { dataSource?: Maybe<(
     { __typename?: 'DataSource' }
-    & Pick<DataSource, 'id' | 'type' | 'bucketId' | 'objectKey' | 'url' | 'originalSourceUrl'>
+    & Pick<DataSource, 'id' | 'type' | 'bucketId' | 'objectKey' | 'url' | 'originalSourceUrl' | 'queryParameters'>
   )> }
 );
 
@@ -11288,6 +11288,23 @@ export type UpdateRenderUnderTypeMutation = (
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'id' | 'renderUnder'>
+    )> }
+  )> }
+);
+
+export type UpdateQueryParametersMutationVariables = Exact<{
+  sourceId: Scalars['Int'];
+  queryParameters: Scalars['JSON'];
+}>;
+
+
+export type UpdateQueryParametersMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataSource?: Maybe<(
+    { __typename?: 'UpdateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'queryParameters'>
     )> }
   )> }
 );
@@ -12849,6 +12866,7 @@ export const DataSourceUrlPropertiesDocument = gql`
     objectKey
     url
     originalSourceUrl
+    queryParameters
   }
 }
     `;
@@ -12949,6 +12967,42 @@ export function useUpdateRenderUnderTypeMutation(baseOptions?: Apollo.MutationHo
 export type UpdateRenderUnderTypeMutationHookResult = ReturnType<typeof useUpdateRenderUnderTypeMutation>;
 export type UpdateRenderUnderTypeMutationResult = Apollo.MutationResult<UpdateRenderUnderTypeMutation>;
 export type UpdateRenderUnderTypeMutationOptions = Apollo.BaseMutationOptions<UpdateRenderUnderTypeMutation, UpdateRenderUnderTypeMutationVariables>;
+export const UpdateQueryParametersDocument = gql`
+    mutation UpdateQueryParameters($sourceId: Int!, $queryParameters: JSON!) {
+  updateDataSource(input: {id: $sourceId, patch: {queryParameters: $queryParameters}}) {
+    dataSource {
+      id
+      queryParameters
+    }
+  }
+}
+    `;
+export type UpdateQueryParametersMutationFn = Apollo.MutationFunction<UpdateQueryParametersMutation, UpdateQueryParametersMutationVariables>;
+
+/**
+ * __useUpdateQueryParametersMutation__
+ *
+ * To run a mutation, you first call `useUpdateQueryParametersMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateQueryParametersMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateQueryParametersMutation, { data, loading, error }] = useUpdateQueryParametersMutation({
+ *   variables: {
+ *      sourceId: // value for 'sourceId'
+ *      queryParameters: // value for 'queryParameters'
+ *   },
+ * });
+ */
+export function useUpdateQueryParametersMutation(baseOptions?: Apollo.MutationHookOptions<UpdateQueryParametersMutation, UpdateQueryParametersMutationVariables>) {
+        return Apollo.useMutation<UpdateQueryParametersMutation, UpdateQueryParametersMutationVariables>(UpdateQueryParametersDocument, baseOptions);
+      }
+export type UpdateQueryParametersMutationHookResult = ReturnType<typeof useUpdateQueryParametersMutation>;
+export type UpdateQueryParametersMutationResult = Apollo.MutationResult<UpdateQueryParametersMutation>;
+export type UpdateQueryParametersMutationOptions = Apollo.BaseMutationOptions<UpdateQueryParametersMutation, UpdateQueryParametersMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

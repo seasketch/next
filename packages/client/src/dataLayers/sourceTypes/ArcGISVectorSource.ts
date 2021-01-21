@@ -33,6 +33,7 @@ export function updateArcGISVectorSource(
   //   );
   // }
 
+  console.log("state, prev", state, prev, instance);
   if (
     prev.bytesLimit !== state.bytesLimit ||
     prev.queryParameters.geometryPrecision !==
@@ -41,19 +42,7 @@ export function updateArcGISVectorSource(
   ) {
     // Source option changes cannot be implemented by the instance, so the source
     // has to be removed (along with it's layers) and recreated
-
-    const removedLayers: Layer[] = [];
-    for (const layer of layers) {
-      if (layer.mapboxGlStyles) {
-        const mapboxLayers = layer.mapboxGlStyles;
-        for (var i = 0; i < mapboxLayers.length; i++) {
-          const lid = `${prev.id}-${i}`;
-          const l = map.getLayer(lid);
-          removedLayers.push(l);
-          map.removeLayer(lid);
-        }
-      }
-    }
+    console.log("removing source and replacing");
 
     if (!state.url) throw new Error("Url not set on ArcGISVector data source");
 
@@ -67,21 +56,6 @@ export function updateArcGISVectorSource(
         bytesLimit: state.bytesLimit,
       }
     );
-
-    for (const layer of layers) {
-      const mapboxLayers = layer.mapboxGlStyles || [];
-      if (mapboxLayers.length) {
-        for (var i = 0; i < mapboxLayers?.length; i++) {
-          map.addLayer({
-            ...mapboxLayers[i],
-            id: `${layer.id}-${i}`,
-            source: layer.dataSourceId,
-          });
-        }
-      } else {
-        throw new Error(`mapboxLayers prop not present on layer ${layer.id}`);
-      }
-    }
   }
 
   return instance;

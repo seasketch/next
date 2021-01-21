@@ -10,6 +10,7 @@ import {
   DataSourceTypes,
   DataSourceImportTypes,
   useUpdateEnableDownloadMutation,
+  useUpdateQueryParametersMutation,
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 import TableOfContentsItemAutosaveInput from "./TableOfContentsItemAutosaveInput";
@@ -26,6 +27,7 @@ import GLStyleEditor from "./GLStyleEditor";
 import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
 import SaveStateIndicator from "../../components/SaveStateIndicator";
+import InputBlock from "../../components/InputBlock";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -43,6 +45,10 @@ export default function LayerTableOfContentsItemEditor(
   });
   const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation();
   const [mutateSource, mutateSourceState] = useUpdateDataSourceMutation();
+  const [
+    updateQueryParameters,
+    updateQueryParametersState,
+  ] = useUpdateQueryParametersMutation();
   const [mutateLayer, mutateLayerState] = useUpdateLayerMutation();
   const [
     updateGLStyleMutation,
@@ -243,7 +249,82 @@ export default function LayerTableOfContentsItemEditor(
                     </dl>
                   </>
                 )}
+                {source?.type === DataSourceTypes.ArcgisVector && (
+                  <>
+                    <dl className="sm:divide-y sm:divide-gray-200">
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                        <dt className="text-sm font-medium text-gray-500">
+                          <Trans ns={["admin"]}>Source Type</Trans>
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                          <Trans ns={["admin"]}>
+                            Vector data hosted on ArcGIS Server
+                          </Trans>
+                        </dd>
+                      </div>
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                        <dt className="text-sm font-medium text-gray-500">
+                          <Trans ns={["admin"]}>Source Server</Trans>
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 truncate">
+                          <a
+                            target="_blank"
+                            className="text-primary-600 underline"
+                            href={source.url!}
+                          >
+                            {source
+                              .url!.replace("https://", "")
+                              .replace("http://", "")}
+                          </a>
+                        </dd>
+                      </div>
+                    </dl>
+                  </>
+                )}
               </div>
+              {source?.type === DataSourceTypes.ArcgisVector && (
+                <InputBlock
+                  className="mt-4 text-sm"
+                  title="Geometry Precision"
+                  input={
+                    <select
+                      id="geometryPrecision"
+                      // className="form-select rounded block w-full pl-3 pr-8 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 sm:text-sm sm:leading-5"
+                      className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500 pr-8"
+                      value={source.queryParameters.geometryPrecision}
+                      disabled={updateQueryParametersState.loading}
+                      onChange={(e) => {
+                        const queryParameters = {
+                          ...source.queryParameters,
+                          geometryPrecision: e.target.value,
+                        };
+                        client.writeFragment({
+                          id: `DataSource:${source.id}`,
+                          fragment: gql`
+                            fragment NewQueryParameters on DataSource {
+                              queryParameters
+                            }
+                          `,
+                          data: {
+                            queryParameters,
+                          },
+                        });
+                        updateQueryParameters({
+                          variables: {
+                            sourceId: source.id,
+                            queryParameters,
+                          },
+                        });
+                      }}
+                    >
+                      <option value="5">1 m</option>
+                      <option value="6">10 cm</option>
+                    </select>
+                  }
+                >
+                  Using a lower level of precision reduces download size
+                </InputBlock>
+              )}
               {source?.type === DataSourceTypes.Geojson ||
                 (source?.type === DataSourceTypes.SeasketchVector && (
                   <div className="mt-5">

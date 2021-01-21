@@ -99,9 +99,9 @@ export default function DynamicMapServerSettingsForm(props: {
               });
             }}
           >
-            <option value={"none"}>Cover basemap</option>
-            <option value={"labels"}>Under labels</option>
-            <option value={"land"}>Under land</option>
+            <option value={"NONE"}>Cover basemap</option>
+            <option value={"LABELS"}>Under labels</option>
+            {/* <option value={"land"}>Under land</option> */}
           </select>
         }
       >

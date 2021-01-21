@@ -147,8 +147,18 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
             ...items.slice(index),
           ];
           break;
+        } else if (items.indexOf(item) === items.length - 1) {
+          items.push({
+            id: "labels",
+            title: t("Basemap Labels"),
+            zIndex: item.zIndex + 0.5,
+            preventDrag: true,
+            isBasemapLayer: true,
+          });
+          break;
         }
       }
+
       setTreeState(items);
     }
   }, [props.dataLayers, props.tableOfContentsItems]);

@@ -23,6 +23,7 @@ export default function useSourcePropertyNames(sourceId: number) {
           objectKey,
           url,
           originalSourceUrl,
+          queryParameters,
         } = propsQuery.data.dataSource;
         if (type === DataSourceTypes.SeasketchVector) {
           fetch(`https://${bucketId}/${objectKey}`)
@@ -36,6 +37,27 @@ export default function useSourcePropertyNames(sourceId: number) {
                 example = data as Feature;
               }
               setNames(Object.keys(example.properties || {}));
+            });
+        } else if (type === DataSourceTypes.ArcgisVector) {
+          fetch(`${url}?f=json`)
+            .then((r) => r.json())
+            .then((data: any) => {
+              if (data.fields && data.fields.length) {
+                let fieldNames: string[] = data.fields.map((f: any) =>
+                  f.name.toString()
+                );
+                if (
+                  queryParameters &&
+                  queryParameters.outFields &&
+                  queryParameters.outFields !== "*"
+                ) {
+                  const allowedFields = queryParameters.outFields.split(",");
+                  fieldNames = fieldNames.filter(
+                    (name) => allowedFields.indexOf(name) !== -1
+                  );
+                }
+                setNames(fieldNames);
+              }
             });
         }
       }

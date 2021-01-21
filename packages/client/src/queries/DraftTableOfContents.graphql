@@ -427,6 +427,7 @@ query DataSourceUrlProperties($id: Int!) {
     objectKey
     url
     originalSourceUrl
+    queryParameters
   }
 }
 
@@ -446,6 +447,17 @@ mutation UpdateRenderUnderType($layerId: Int!, $renderUnder: RenderUnderType) {
     dataLayer {
       id
       renderUnder
+    }
+  }
+}
+
+mutation UpdateQueryParameters($sourceId: Int!, $queryParameters: JSON!) {
+  updateDataSource(
+    input: { id: $sourceId, patch: { queryParameters: $queryParameters } }
+  ) {
+    dataSource {
+      id
+      queryParameters
     }
   }
 }

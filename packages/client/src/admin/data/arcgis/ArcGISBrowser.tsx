@@ -121,7 +121,12 @@ export default function ArcGISBrowser() {
       }
       layerManager.manager.reset(sources, layers);
     }
-  }, [serviceData, serviceSettings?.sourceType]);
+  }, [
+    serviceData,
+    serviceSettings?.sourceType,
+    serviceSettings?.renderUnder,
+    serviceSettings?.enableHighDpi,
+  ]);
 
   useEffect(() => {
     if (
@@ -130,7 +135,7 @@ export default function ArcGISBrowser() {
       serviceSettings &&
       serviceSettings.sourceType === "arcgis-dynamic-mapservice"
     ) {
-      layerManager.manager.updateSource(
+      layerManager.manager.updateArcGISDynamicMapServiceSource(
         dynamicServiceSourceFromSettings(serviceData, serviceSettings)
       );
     }
@@ -173,7 +178,9 @@ export default function ArcGISBrowser() {
         return ids;
       };
       const collectedVisibleLayers = collectIds([], data[0]);
-      layerManager.manager.setVisibleLayers(collectedVisibleLayers);
+      setTimeout(() => {
+        layerManager.manager!.setVisibleLayers(collectedVisibleLayers);
+      }, 50);
     }
   }, [serviceData, layerManager.manager]);
 
@@ -508,7 +515,9 @@ export default function ArcGISBrowser() {
                         selectedFeatureLayer,
                         layerSettings
                       );
-                      layerManager.manager!.updateSource(source);
+                      layerManager.manager!.updateArcGISDynamicMapServiceSource(
+                        source
+                      );
                       layerManager.manager!.updateLayer(
                         vectorLayerFromSettings(
                           selectedFeatureLayer,
