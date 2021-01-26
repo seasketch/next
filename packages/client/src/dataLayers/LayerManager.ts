@@ -31,6 +31,7 @@ import {
 import { MapBoxSource, updateGeoJSONSource } from "./sourceTypes/MapBoxSource";
 import { WMSSource } from "./sourceTypes/WMSSource";
 import {
+  ArcGISDynamicMapService,
   ArcGISDynamicMapService as ArcGISDynamicMapServiceInstance,
   ArcGISVectorSource as ArcGISVectorSourceInstance,
   ImageList,
@@ -48,6 +49,7 @@ import {
   SpriteImage,
 } from "../generated/graphql";
 import { rejects } from "assert";
+import { identifyLayers } from "../admin/data/arcgis/arcgis";
 
 interface LayerState {
   visible: true;
@@ -104,16 +106,6 @@ export type ClientDataSource = Pick<
   id: string | number;
   /** Can be used for arcgis vector services */
   bytesLimit?: number;
-  interactivitySettings?: Pick<
-    InteractivitySetting,
-    | "cursor"
-    | "id"
-    | "longTemplate"
-    | "shortTemplate"
-    | "dataSourceId"
-    | "sourceLayer"
-    | "type"
-  >[];
 };
 
 const UNDER_LABELS_POSITION = "admin-0-boundary-disputed";
@@ -147,6 +139,10 @@ export type ClientDataLayer = Pick<
   /** IDs from the server are Int. Temporary client IDs are UUID v4 */
   dataSourceId: string | number;
   sprites?: ClientSprite[];
+  interactivitySettings?: Pick<
+    InteractivitySetting,
+    "cursor" | "id" | "longTemplate" | "shortTemplate" | "type"
+  >;
 };
 
 class LayerManager {
@@ -169,17 +165,12 @@ class LayerManager {
   private updateSourcesStateDebouncerReference?: NodeJS.Timeout;
   private updateInteractivitySettingsDebouncerReference?: NodeJS.Timeout;
   private debouncedMouseMoveListenerReference?: NodeJS.Timeout;
-  private interactiveLayerIds: string[] = [];
-  private activeInteractivitySettings: Pick<
-    InteractivitySetting,
-    | "id"
-    | "dataSourceId"
-    | "type"
-    | "cursor"
-    | "longTemplate"
-    | "shortTemplate"
-    | "sourceLayer"
-  >[] = [];
+  private interactiveVectorLayerIds: string[] = [];
+  private interactiveImageLayerIds: string[] = [];
+  // private activeInteractivitySettings: Pick<
+  //   InteractivitySetting,
+  //   "id" | "type" | "cursor" | "longTemplate" | "shortTemplate"
+  // >[] = [];
   private dynamicArcGISStyles: {
     [sourceId: string]: Promise<{
       imageList: ImageList;
@@ -280,31 +271,137 @@ class LayerManager {
     }
   };
 
-  onMouseClick = (e: MapMouseEvent) => {
+  onMouseClick = async (e: MapMouseEvent) => {
+    if (this.popupAbortController) {
+      this.popupAbortController.abort();
+      delete this.popupAbortController;
+    }
     const features = this.map!.queryRenderedFeatures(e.point, {
-      layers: this.interactiveLayerIds,
+      layers: this.interactiveVectorLayerIds,
     });
     const top = features[0];
+    let vectorPopupOpened: ClientDataLayer | undefined;
     if (top) {
-      const popupSetting = this.activeInteractivitySettings.find(
-        (i) =>
-          i.type === InteractivityType.Popup &&
-          i.dataSourceId.toString() === top.source &&
-          (!top.sourceLayer || top.sourceLayer === i.sourceLayer)
-      );
-      if (popupSetting) {
+      const dataLayer = this.layers[top.layer.id.split("-")[0]];
+      if (!dataLayer) {
+        console.warn(
+          `Could not find interactive dataLayer with id=${
+            top.layer.id.split("-")[0]
+          }`
+        );
+        return;
+      }
+      const interactivitySetting = dataLayer.interactivitySettings;
+      if (
+        interactivitySetting &&
+        interactivitySetting.type === InteractivityType.Popup
+      ) {
         var popup = new Popup({ closeOnClick: true, closeButton: false })
           .setLngLat([e.lngLat.lng, e.lngLat.lat])
           .setHTML(
-            Mustache.render(popupSetting.longTemplate || "", {
+            Mustache.render(interactivitySetting.longTemplate || "", {
               ...mustacheHelpers,
               ...top.properties,
             })
           )
           .addTo(this.map!);
+        vectorPopupOpened = dataLayer;
+      }
+    }
+    if (!vectorPopupOpened) {
+      // Are any image layers active that support identify tools?
+      const interactiveImageLayers = this.interactiveImageLayerIds.map(
+        (id) => this.layers[id]
+      );
+      interactiveImageLayers.sort((a, b) => a.zIndex - b.zIndex);
+      if (interactiveImageLayers.length) {
+        this.openImageServicePopups(
+          [e.lngLat.lng, e.lngLat.lat],
+          interactiveImageLayers
+        );
       }
     }
   };
+
+  popupAbortController: AbortController | undefined;
+
+  async openImageServicePopups(
+    position: [number, number],
+    layers: ClientDataLayer[]
+  ) {
+    if (this.popupAbortController) {
+      this.popupAbortController.abort();
+      delete this.popupAbortController;
+    }
+    this.popupAbortController = new AbortController();
+    const requests: { sublayers: string[]; source: ClientDataSource }[] = [];
+    for (const layer of layers) {
+      let existingRequest = requests.find(
+        (r) => r.source.id === layer.dataSourceId
+      );
+      if (!existingRequest) {
+        const source = this.clientDataSources.find(
+          (s) => s.id === layer.dataSourceId
+        );
+        if (!source) {
+          throw new Error(`Could not find source id=${layer.dataSourceId}`);
+        }
+        existingRequest = {
+          sublayers: [],
+          source: source,
+        };
+        requests.push(existingRequest);
+      }
+      existingRequest.sublayers.push(layer.sublayer!);
+    }
+    const bounds = this.map!.getBounds();
+    const extent = [
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth(),
+    ] as [number, number, number, number];
+    const width = this.map!.getCanvas().width;
+    const height = this.map!.getCanvas().height;
+    const dpi = window.devicePixelRatio * 96;
+    this.map!.getCanvas().style.cursor = "progress";
+    const data = await Promise.all(
+      requests.map((request) => {
+        return identifyLayers(
+          position,
+          request.source,
+          request.sublayers,
+          extent,
+          width,
+          height,
+          dpi,
+          this.popupAbortController
+        );
+      })
+    );
+    this.map!.getCanvas().style.cursor = "";
+    if (!this.popupAbortController.signal.aborted) {
+      for (const sublayerData of data) {
+        if (sublayerData.length) {
+          const interactivitySetting = layers.find(
+            (l) =>
+              l.sublayer?.toString() === sublayerData[0].sublayer.toString() &&
+              l.dataSourceId === sublayerData[0].sourceId
+          )?.interactivitySettings;
+          var popup = new Popup({ closeOnClick: true, closeButton: false })
+            .setLngLat(position)
+            .setHTML(
+              Mustache.render(interactivitySetting!.longTemplate || "", {
+                ...mustacheHelpers,
+                ...sublayerData[0].attributes,
+              })
+            )
+            .addTo(this.map!);
+          break;
+        }
+      }
+    }
+  }
 
   onMapError = (event: ErrorEvent & { sourceId?: string }) => {
     if (event.sourceId && event.sourceId !== "composite") {
@@ -324,51 +421,29 @@ class LayerManager {
 
   async updateInteractivitySettings() {
     const sourceIds: (number | string)[] = [];
-    let interactiveLayerIds: string[] = [];
+    let interactiveVectorLayerIds: string[] = [];
+    let interactiveImageLayerIds: string[] = [];
     // for each visible source, collect interactivitySettings
     for (const id in this.visibleLayers) {
+      console.log("update", id, this.layers[id]);
       const layer = this.layers[id];
-      const source = this.clientDataSources.find(
-        (s) => s.id === layer.dataSourceId
-      );
       if (
-        source?.interactivitySettings &&
-        source.interactivitySettings.find(
-          (i) => i.type !== InteractivityType.None
-        )
+        layer?.interactivitySettings &&
+        layer.interactivitySettings.type !== InteractivityType.None
       ) {
-        const mapboxLayerIds = await this.getLayerIdsForClientLayer(layer);
-        for (const layerId of mapboxLayerIds) {
-          interactiveLayerIds.push(layerId);
-        }
-      }
-      if (sourceIds.indexOf(layer.dataSourceId) === -1) {
-        sourceIds.push(layer.dataSourceId);
-      }
-    }
-    const interactivitySettings: Pick<
-      InteractivitySetting,
-      | "id"
-      | "dataSourceId"
-      | "cursor"
-      | "longTemplate"
-      | "shortTemplate"
-      | "type"
-      | "sourceLayer"
-    >[] = [];
-    for (const id of sourceIds) {
-      const source = this.clientDataSources.find((source) => source.id === id);
-      if (source && source.interactivitySettings?.length) {
-        for (const setting of source.interactivitySettings) {
-          if (setting.type !== InteractivityType.None) {
-            interactivitySettings.push(setting);
+        if (!layer.sublayer) {
+          const mapboxLayerIds = await this.getLayerIdsForClientLayer(layer);
+          for (const layerId of mapboxLayerIds) {
+            interactiveVectorLayerIds.push(layerId);
           }
+        } else {
+          interactiveImageLayerIds.push(id);
         }
       }
     }
-    this.activeInteractivitySettings = interactivitySettings;
-    this.interactiveLayerIds = interactiveLayerIds;
-    if (this.activeInteractivitySettings.length) {
+    this.interactiveVectorLayerIds = interactiveVectorLayerIds;
+    this.interactiveImageLayerIds = interactiveImageLayerIds;
+    if (this.interactiveVectorLayerIds.length) {
       this.map?.on("mousemove", this.debouncedMouseMoveListener);
     } else {
       this.map?.off("mousemove", this.debouncedMouseMoveListener);
@@ -388,7 +463,7 @@ class LayerManager {
   mouseMoveListener = (e: MapMouseEvent) => {
     // console.log("layerIds", this.interactiveLayerIds);
     const features = this.map!.queryRenderedFeatures(e.point, {
-      layers: this.interactiveLayerIds,
+      layers: this.interactiveVectorLayerIds,
     });
 
     const clear = () => {
@@ -403,9 +478,16 @@ class LayerManager {
     };
     if (features.length) {
       const top = features[0];
-      const interactivitySetting = this.activeInteractivitySettings.find(
-        (s) => s.dataSourceId.toString() === top.source
-      );
+      const dataLayer = this.layers[top.layer.id.split("-")[0]];
+      if (!dataLayer) {
+        console.warn(
+          `Could not find interactive dataLayer with id=${
+            top.layer.id.split("-")[0]
+          }`
+        );
+        return;
+      }
+      const interactivitySetting = dataLayer.interactivitySettings;
       if (interactivitySetting) {
         let cursor = "";
         this.map!.getCanvas().style.cursor = cursor;
@@ -669,6 +751,8 @@ class LayerManager {
             this.map
           );
           this.sourceCache[newConfig.id] = updatedInstance;
+        } else if (newConfig.type === DataSourceTypes.ArcgisDynamicMapserver) {
+          this.updateArcGISDynamicMapServiceSource(newConfig);
         }
       }
     }
@@ -1309,4 +1393,10 @@ function idForSublayer(layer: ClientDataLayer) {
   } else {
     return `${layer.dataSourceId}-image`;
   }
+}
+
+function isArcGISDynamicService(
+  source: any
+): source is ArcGISDynamicMapService {
+  return typeof source.updateUseDevicePixelRatio === "function";
 }

@@ -804,22 +804,6 @@ CREATE FUNCTION public.after_data_source_insert() RETURNS trigger
 
 
 --
--- Name: after_data_source_insert_create_interaction_settings_trigger(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.after_data_source_insert_create_interaction_settings_trigger() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    begin
-      if new.type != 'vector' then
-        insert into interactivity_settings (data_source_id) values (new.id);
-      end if;
-      return new;
-    end;
-  $$;
-
-
---
 -- Name: after_post_insert(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1165,6 +1149,25 @@ CREATE FUNCTION public.before_invite_emails_update() RETURNS trigger
     return new;
   end;
 $$;
+
+
+--
+-- Name: before_layer_insert_create_interactivity_settings_func(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_layer_insert_create_interactivity_settings_func() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      iid int;
+    begin
+      if new.interactivity_settings_id is null then
+        insert into interactivity_settings (type) values ('NONE') returning id into iid;
+        new.interactivity_settings_id = iid;
+      end if;
+      return new;
+    end;
+  $$;
 
 
 --
@@ -2550,7 +2553,8 @@ CREATE TABLE public.data_layers (
     sublayer text,
     render_under public.render_under_type DEFAULT 'labels'::public.render_under_type NOT NULL,
     mapbox_gl_styles jsonb,
-    z_index integer DEFAULT 0 NOT NULL
+    z_index integer DEFAULT 0 NOT NULL,
+    interactivity_settings_id integer NOT NULL
 );
 
 
@@ -2598,6 +2602,13 @@ COMMENT ON COLUMN public.data_layers.mapbox_gl_styles IS '
 @name mapboxGLStyles
 JSON array of MapBox GL Style layers. Layers should not specify an id or sourceId. These will be automatically generated at runtime.
 ';
+
+
+--
+-- Name: COLUMN data_layers.interactivity_settings_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.interactivity_settings_id IS '@omit create';
 
 
 --
@@ -4976,6 +4987,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
       acl_id int;
       orig_acl_id int;
       new_toc_id int;
+      new_interactivity_settings_id int;
     begin
       -- check permissions
       if session_is_admin("projectId") = false then
@@ -4985,9 +4997,9 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
       delete from 
         interactivity_settings 
       where
-        data_source_id in (
+        id in (
           select 
-            data_source_id 
+            data_layers.interactivity_settings_id
           from
             data_layers
           inner JOIN
@@ -4999,7 +5011,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             is_draft = false
         );
 
-      delete from data_sources where id in (
+      delete from data_sources where data_sources.id in (
         select 
           data_source_id 
         from
@@ -5038,6 +5050,28 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           project_id = "projectId"
       loop
         if item.is_folder = false then
+          -- copy interactivity settings first
+          insert into interactivity_settings (
+            type,
+            short_template,
+            long_template,
+            cursor
+          ) select
+              type,
+              short_template,
+              long_template,
+              cursor
+            from
+              interactivity_settings
+            where
+              interactivity_settings.id = (
+                select interactivity_settings_id from data_layers where data_layers.id = item.data_layer_id
+              )
+            returning
+              id
+            into
+              new_interactivity_settings_id;
+
           insert into data_layers (
             project_id,
             data_source_id,
@@ -5045,17 +5079,19 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             sublayer,
             render_under,
             mapbox_gl_styles,
-            z_index
+            interactivity_settings_id
           )
-            select "projectId", 
-              data_source_id, 
-              source_layer, 
-              sublayer, 
-              render_under, 
-              mapbox_gl_styles,
-              z_index
-            from data_layers
-            where id = item.data_layer_id
+          select "projectId", 
+            data_source_id, 
+            source_layer, 
+            sublayer, 
+            render_under, 
+            mapbox_gl_styles,
+            new_interactivity_settings_id
+          from 
+            data_layers
+          where 
+            id = item.data_layer_id
           returning id into lid;
         else
           lid = item.data_layer_id;
@@ -5168,8 +5204,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           enhanced_security,
           bucket_id,
           object_key,
-          byte_length,
-          supports_dynamic_layers
+          byte_length
         )
           select 
             "projectId", 
@@ -5201,32 +5236,12 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           enhanced_security,
           bucket_id,
           object_key,
-          byte_length,
-          supports_dynamic_layers
+          byte_length
           from 
             data_sources 
           where
             id = source_id
           returning id into copied_source_id;
-        -- copy any interactivity settings
-        insert into interactivity_settings (
-          data_source_id,
-          source_layer,
-          type,
-          short_template,
-          long_template,
-          cursor
-        ) select
-          copied_source_id,
-          source_layer,
-          type,
-          short_template,
-          long_template,
-          cursor
-        from
-          interactivity_settings
-        where
-          data_source_id = source_id;
         -- update data_layers that should now reference the copy
         update 
           data_layers 
@@ -7559,8 +7574,6 @@ ALTER TABLE public.forums ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 CREATE TABLE public.interactivity_settings (
     id integer NOT NULL,
-    data_source_id integer NOT NULL,
-    source_layer text,
     type public.interactivity_type DEFAULT 'NONE'::public.interactivity_type NOT NULL,
     short_template text,
     long_template text,
@@ -8111,6 +8124,14 @@ ALTER TABLE ONLY public.community_guidelines
 
 
 --
+-- Name: data_layers data_layers_interactivity_settings_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_layers
+    ADD CONSTRAINT data_layers_interactivity_settings_id_key UNIQUE (interactivity_settings_id);
+
+
+--
 -- Name: data_layers data_layers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8212,14 +8233,6 @@ ALTER TABLE ONLY public.forms
 
 ALTER TABLE ONLY public.forums
     ADD CONSTRAINT forums_pkey PRIMARY KEY (id);
-
-
---
--- Name: interactivity_settings interactivity_settings_data_source_id_source_layer_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.interactivity_settings
-    ADD CONSTRAINT interactivity_settings_data_source_id_source_layer_key UNIQUE (data_source_id, source_layer);
 
 
 --
@@ -8590,6 +8603,34 @@ CREATE INDEX data_layers_data_source_id_idx ON public.data_layers USING btree (d
 
 
 --
+-- Name: data_layers_interactivity_settings_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_layers_interactivity_settings_id_idx ON public.data_layers USING btree (interactivity_settings_id);
+
+
+--
+-- Name: data_layers_interactivity_settings_id_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_layers_interactivity_settings_id_idx1 ON public.data_layers USING btree (interactivity_settings_id);
+
+
+--
+-- Name: data_layers_interactivity_settings_id_idx2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_layers_interactivity_settings_id_idx2 ON public.data_layers USING btree (interactivity_settings_id);
+
+
+--
+-- Name: data_layers_interactivity_settings_id_idx3; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_layers_interactivity_settings_id_idx3 ON public.data_layers USING btree (interactivity_settings_id);
+
+
+--
 -- Name: data_layers_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8643,13 +8684,6 @@ CREATE INDEX forms_sketch_class_id_idx ON public.forms USING btree (sketch_class
 --
 
 CREATE INDEX forums_project_id_idx ON public.forums USING btree (project_id);
-
-
---
--- Name: interactivity_settings_data_source_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX interactivity_settings_data_source_id ON public.interactivity_settings USING btree (data_source_id);
 
 
 --
@@ -9010,13 +9044,6 @@ CREATE TRIGGER after_add_user_to_group_update_survey_invites AFTER INSERT ON pub
 
 
 --
--- Name: data_sources after_data_source_insert_create_interaction_settings; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER after_data_source_insert_create_interaction_settings AFTER INSERT ON public.data_sources FOR EACH ROW EXECUTE FUNCTION public.after_data_source_insert_create_interaction_settings_trigger();
-
-
---
 -- Name: posts after_post_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -9070,6 +9097,13 @@ CREATE TRIGGER before_invite_emails_insert_trigger BEFORE INSERT ON public.invit
 --
 
 CREATE TRIGGER before_invite_emails_update_trigger BEFORE UPDATE ON public.invite_emails FOR EACH ROW EXECUTE FUNCTION public.before_invite_emails_update();
+
+
+--
+-- Name: data_layers before_layer_insert_create_interactivity_settings; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_layer_insert_create_interactivity_settings BEFORE INSERT ON public.data_layers FOR EACH ROW EXECUTE FUNCTION public.before_layer_insert_create_interactivity_settings_func();
 
 
 --
@@ -9267,6 +9301,14 @@ ALTER TABLE ONLY public.data_layers
 
 
 --
+-- Name: data_layers data_layers_interactivity_settings_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_layers
+    ADD CONSTRAINT data_layers_interactivity_settings_id_fkey FOREIGN KEY (interactivity_settings_id) REFERENCES public.interactivity_settings(id);
+
+
+--
 -- Name: data_layers data_layers_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9407,14 +9449,6 @@ ALTER TABLE ONLY public.forums
 --
 
 COMMENT ON CONSTRAINT forums_project_id_fkey ON public.forums IS '@simpleCollections only';
-
-
---
--- Name: interactivity_settings interactivity_settings_data_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.interactivity_settings
-    ADD CONSTRAINT interactivity_settings_data_source_id_fkey FOREIGN KEY (data_source_id) REFERENCES public.data_sources(id) ON DELETE CASCADE;
 
 
 --
@@ -10144,20 +10178,20 @@ ALTER TABLE public.interactivity_settings ENABLE ROW LEVEL SECURITY;
 -- Name: interactivity_settings interactivity_settings_admin; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY interactivity_settings_admin ON public.interactivity_settings USING (public.session_is_admin(( SELECT data_sources.project_id
-   FROM public.data_sources
-  WHERE (data_sources.id = interactivity_settings.data_source_id)))) WITH CHECK (public.session_is_admin(( SELECT data_sources.project_id
-   FROM public.data_sources
-  WHERE (data_sources.id = interactivity_settings.data_source_id))));
+CREATE POLICY interactivity_settings_admin ON public.interactivity_settings USING (public.session_is_admin(( SELECT data_layers.project_id
+   FROM public.data_layers
+  WHERE (data_layers.interactivity_settings_id = data_layers.id)))) WITH CHECK (public.session_is_admin(( SELECT data_layers.project_id
+   FROM public.data_layers
+  WHERE (data_layers.interactivity_settings_id = data_layers.id))));
 
 
 --
 -- Name: interactivity_settings interactivity_settings_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY interactivity_settings_select ON public.interactivity_settings USING (public.session_has_project_access(( SELECT data_sources.project_id
-   FROM public.data_sources
-  WHERE (data_sources.id = interactivity_settings.data_source_id))));
+CREATE POLICY interactivity_settings_select ON public.interactivity_settings USING (public.session_has_project_access(( SELECT data_layers.project_id
+   FROM public.data_layers
+  WHERE (data_layers.interactivity_settings_id = data_layers.id))));
 
 
 --
@@ -11484,13 +11518,6 @@ REVOKE ALL ON FUNCTION public.after_data_source_insert() FROM PUBLIC;
 
 
 --
--- Name: FUNCTION after_data_source_insert_create_interaction_settings_trigger(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.after_data_source_insert_create_interaction_settings_trigger() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION after_post_insert(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -11566,6 +11593,13 @@ REVOKE ALL ON FUNCTION public.before_invite_emails_insert() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.before_invite_emails_update() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION before_layer_insert_create_interactivity_settings_func(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_layer_insert_create_interactivity_settings_func() FROM PUBLIC;
 
 
 --

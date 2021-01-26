@@ -33,7 +33,6 @@ export function updateArcGISVectorSource(
   //   );
   // }
 
-  console.log("state, prev", state, prev, instance);
   if (
     prev.bytesLimit !== state.bytesLimit ||
     prev.queryParameters.geometryPrecision !==
@@ -42,7 +41,6 @@ export function updateArcGISVectorSource(
   ) {
     // Source option changes cannot be implemented by the instance, so the source
     // has to be removed (along with it's layers) and recreated
-    console.log("removing source and replacing");
 
     if (!state.url) throw new Error("Url not set on ArcGISVector data source");
 

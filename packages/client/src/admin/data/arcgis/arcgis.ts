@@ -27,10 +27,16 @@ import {
   GetOrCreateSpriteMutation,
   Exact,
   AddImageToSpriteMutation,
+  DataSourceTypes,
+  useUpdateInteractivitySettingsMutation,
 } from "../../../generated/graphql";
 import { customAlphabet } from "nanoid";
 import { default as axios } from "axios";
-import { ClientSprite } from "../../../dataLayers/LayerManager";
+import {
+  ClientDataLayer,
+  ClientDataSource,
+  ClientSprite,
+} from "../../../dataLayers/LayerManager";
 import { MutationFunctionOptions } from "@apollo/client";
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
@@ -862,6 +868,10 @@ export function useImportArcGISService(serviceRoot?: string) {
     createArcGISImageSource,
     createArcGISImageSourceState,
   ] = useCreateArcGisImageSourceMutation();
+  const [
+    updateInteractivitySettings,
+    updateInteractivitySettingsState,
+  ] = useUpdateInteractivitySettingsMutation();
   const [createSprite, createSpriteState] = useGetOrCreateSpriteMutation();
   const [addImageToSprite] = useAddImageToSpriteMutation();
   const [state, setState] = useState<ImportArcGISServiceState>({
@@ -1102,6 +1112,30 @@ export function useImportArcGISService(serviceRoot?: string) {
                 });
                 dataLayerId = dataLayerData.data!.createDataLayer!.dataLayer!
                   .id;
+                const interactivitySettingsId =
+                  dataLayerData.data?.createDataLayer?.dataLayer
+                    ?.interactivitySettings?.id;
+                if (interactivitySettingsId) {
+                  await updateInteractivitySettings({
+                    variables: {
+                      id: interactivitySettingsId,
+                      shortTemplate: `${layer.name}`,
+                      longTemplate: `
+<b>${layer.name}</b>
+<table>
+  ${layer.fields
+    .map(
+      (field) => `<tr>
+    <td>${field.name}</td>
+    <td>{{${field.name}}}</td>
+  </tr>`
+    )
+    .join("\n")}
+</table>
+                      `,
+                    },
+                  });
+                }
               } else {
                 // create dataLayers for the current sublayer
                 const dataLayerData = await createDataLayer({
@@ -1116,6 +1150,30 @@ export function useImportArcGISService(serviceRoot?: string) {
                 });
                 dataLayerId = dataLayerData.data!.createDataLayer!.dataLayer!
                   .id;
+                const interactivitySettingsId =
+                  dataLayerData.data?.createDataLayer?.dataLayer
+                    ?.interactivitySettings?.id;
+                if (interactivitySettingsId) {
+                  await updateInteractivitySettings({
+                    variables: {
+                      id: interactivitySettingsId,
+                      shortTemplate: `${layer.name}`,
+                      longTemplate: `
+<b>${layer.name}</b>
+<table>
+  ${layer.fields
+    .map(
+      (field) => `<tr>
+    <td>${field.name}</td>
+    <td>{{${field.name}}}</td>
+  </tr>`
+    )
+    .join("\n")}
+</table>
+                        `,
+                    },
+                  });
+                }
               }
 
               // Create the table of contents item
@@ -1386,4 +1444,49 @@ export async function getOrCreateSpritesFromImageSet(
     }
   }
   return replacementIds;
+}
+
+export async function identifyLayers(
+  position: [number, number],
+  source: ClientDataSource,
+  sublayers: string[],
+  mapBounds: [number, number, number, number],
+  width: number,
+  height: number,
+  dpi: number,
+  abortController?: AbortController
+): Promise<
+  { sourceId: number; sublayer: string; attributes: { [key: string]: any } }[]
+> {
+  if (source.type === DataSourceTypes.ArcgisDynamicMapserver) {
+    console.log("start fetching");
+    const response = await fetch(
+      `${source.url}/identify?f=json&tolerance=${2}&mapExtent=${mapBounds.join(
+        ","
+      )}&imageDisplay=${width},${height},${dpi}&geometryType=esriGeometryPoint&geometry={x:${
+        position[0]
+      }, y: ${
+        position[1]
+      }}&sr=4326&returnGeometry=false&layers=all:${sublayers.join(",")}`,
+      {
+        signal: abortController?.signal,
+      }
+    );
+    const data: any = await response.json();
+    console.log("json", data);
+    if (data.results) {
+      return data.results.map((record: any) => {
+        return {
+          sourceId: source.id,
+          sublayer: record.layerId,
+          attributes: record.attributes,
+        };
+      });
+    } else {
+      console.warn("Unrecognized response from identify");
+      return [];
+    }
+  } else {
+    throw new Error("Not supported");
+  }
 }

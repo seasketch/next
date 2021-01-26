@@ -59,17 +59,15 @@ query layersAndSourcesForItems(
       urls
       useDevicePixelRatio
       supportsDynamicLayers
+    }
+    dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
-        dataSourceId
         id
         cursor
         longTemplate
         shortTemplate
-        sourceLayer
         type
       }
-    }
-    dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       sprites {
         id
         spriteImages {
@@ -229,6 +227,7 @@ query GetLayerItem($id: Int!) {
         }
         type
       }
+      dataSourceId
       dataSource {
         id
         attribution
@@ -374,16 +373,15 @@ mutation UpdateDataSource($id: Int!, $attribution: String) {
   }
 }
 
-query InteractivitySettingsForSource($sourceId: Int!) {
-  dataSource(id: $sourceId) {
+query InteractivitySettingsForLayer($layerId: Int!) {
+  dataLayer(id: $layerId) {
     id
+    sourceLayer
     interactivitySettings {
       cursor
-      dataSourceId
       id
       longTemplate
       shortTemplate
-      sourceLayer
       type
     }
   }
@@ -411,10 +409,8 @@ mutation UpdateInteractivitySettings(
       id
       type
       cursor
-      dataSourceId
       longTemplate
       shortTemplate
-      sourceLayer
     }
   }
 }
@@ -458,6 +454,23 @@ mutation UpdateQueryParameters($sourceId: Int!, $queryParameters: JSON!) {
     dataSource {
       id
       queryParameters
+    }
+  }
+}
+
+mutation UpdateEnableHighDPIRequests(
+  $sourceId: Int!
+  $useDevicePixelRatio: Boolean!
+) {
+  updateDataSource(
+    input: {
+      id: $sourceId
+      patch: { useDevicePixelRatio: $useDevicePixelRatio }
+    }
+  ) {
+    dataSource {
+      id
+      useDevicePixelRatio
     }
   }
 }

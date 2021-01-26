@@ -7,7 +7,10 @@ import { GeoJSON, FeatureCollection, Feature } from "geojson";
 
 const cache: { [sourceId: number]: string[] } = {};
 
-export default function useSourcePropertyNames(sourceId: number) {
+export default function useSourcePropertyNames(
+  sourceId: number,
+  sublayer?: string | null
+) {
   const propsQuery = useDataSourceUrlPropertiesQuery({
     variables: {
       id: sourceId,
@@ -40,6 +43,27 @@ export default function useSourcePropertyNames(sourceId: number) {
             });
         } else if (type === DataSourceTypes.ArcgisVector) {
           fetch(`${url}?f=json`)
+            .then((r) => r.json())
+            .then((data: any) => {
+              if (data.fields && data.fields.length) {
+                let fieldNames: string[] = data.fields.map((f: any) =>
+                  f.name.toString()
+                );
+                if (
+                  queryParameters &&
+                  queryParameters.outFields &&
+                  queryParameters.outFields !== "*"
+                ) {
+                  const allowedFields = queryParameters.outFields.split(",");
+                  fieldNames = fieldNames.filter(
+                    (name) => allowedFields.indexOf(name) !== -1
+                  );
+                }
+                setNames(fieldNames);
+              }
+            });
+        } else if (type === DataSourceTypes.ArcgisDynamicMapserver) {
+          fetch(`${url}/${sublayer}?f=json`)
             .then((r) => r.json())
             .then((data: any) => {
               if (data.fields && data.fields.length) {

@@ -353,6 +353,8 @@ export type CreateDataLayerPayload = {
   dataLayerEdge?: Maybe<DataLayersEdge>;
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
+  /** Reads a single `InteractivitySetting` that is related to this `DataLayer`. */
+  interactivitySettings?: Maybe<InteractivitySetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -621,8 +623,6 @@ export type CreateInteractivitySettingPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `DataSource` that is related to this `InteractivitySetting`. */
-  dataSource?: Maybe<DataSource>;
   /** The `InteractivitySetting` that was created by this mutation. */
   interactivitySetting?: Maybe<InteractivitySetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -1069,6 +1069,9 @@ export type DataLayer = Node & {
   dataSource?: Maybe<DataSource>;
   dataSourceId: Scalars['Int'];
   id: Scalars['Int'];
+  /** Reads a single `InteractivitySetting` that is related to this `DataLayer`. */
+  interactivitySettings?: Maybe<InteractivitySetting>;
+  interactivitySettingsId: Scalars['Int'];
   /**
    * JSON array of MapBox GL Style layers. Layers should not specify an id or
    * sourceId. These will be automatically generated at runtime.
@@ -1144,6 +1147,8 @@ export type DataLayerCondition = {
   dataSourceId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `interactivitySettingsId` field. */
+  interactivitySettingsId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
 };
@@ -1178,6 +1183,7 @@ export type DataLayerInput = {
 export type DataLayerPatch = {
   dataSourceId?: Maybe<Scalars['Int']>;
   id?: Maybe<Scalars['Int']>;
+  interactivitySettingsId?: Maybe<Scalars['Int']>;
   /**
    * JSON array of MapBox GL Style layers. Layers should not specify an id or
    * sourceId. These will be automatically generated at runtime.
@@ -1228,6 +1234,8 @@ export enum DataLayersOrderBy {
   DataSourceIdDesc = 'DATA_SOURCE_ID_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
+  InteractivitySettingsIdAsc = 'INTERACTIVITY_SETTINGS_ID_ASC',
+  InteractivitySettingsIdDesc = 'INTERACTIVITY_SETTINGS_ID_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
@@ -1316,8 +1324,6 @@ export type DataSource = Node & {
    * a direct upload or a service location like ArcGIS server
    */
   importType?: Maybe<DataSourceImportTypes>;
-  /** Reads and enables pagination through a set of `InteractivitySetting`. */
-  interactivitySettings: Array<InteractivitySetting>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
@@ -1397,21 +1403,6 @@ export type DataSourceDataLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<DataLayersOrderBy>>;
-};
-
-
-/**
- * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
- * to include new types to support services such as ArcGIS MapServers and content
- * hosted on the SeaSketch CDN.
- * 
- * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
- */
-export type DataSourceInteractivitySettingsArgs = {
-  condition?: Maybe<InteractivitySettingCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<InteractivitySettingsOrderBy>>;
 };
 
 export enum DataSourceImportTypes {
@@ -1789,6 +1780,16 @@ export type DeleteCommunityGuidelinePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `deleteDataLayerByInteractivitySettingsId` mutation. */
+export type DeleteDataLayerByInteractivitySettingsIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  interactivitySettingsId: Scalars['Int'];
+};
+
 /** All input for the `deleteDataLayerByNodeId` mutation. */
 export type DeleteDataLayerByNodeIdInput = {
   /**
@@ -1825,6 +1826,8 @@ export type DeleteDataLayerPayload = {
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
   deletedDataLayerNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `InteractivitySetting` that is related to this `DataLayer`. */
+  interactivitySettings?: Maybe<InteractivitySetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -3859,65 +3862,49 @@ export type InitializeSurveyFormFromTemplatePayloadFormEdgeArgs = {
 export type InteractivitySetting = Node & {
   __typename?: 'InteractivitySetting';
   cursor: CursorType;
-  /** Reads a single `DataSource` that is related to this `InteractivitySetting`. */
-  dataSource?: Maybe<DataSource>;
-  dataSourceId: Scalars['Int'];
+  /** Reads a single `DataLayer` that is related to this `InteractivitySetting`. */
+  dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
+  /**
+   * Reads and enables pagination through a set of `DataLayer`.
+   * @deprecated Please use dataLayerByInteractivitySettingsId instead
+   */
+  dataLayersByInteractivitySettingsIdConnection: DataLayersConnection;
   id: Scalars['Int'];
   longTemplate?: Maybe<Scalars['String']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   shortTemplate?: Maybe<Scalars['String']>;
-  sourceLayer?: Maybe<Scalars['String']>;
   type: InteractivityType;
 };
 
-/**
- * A condition to be used against `InteractivitySetting` object types. All fields
- * are tested for equality and combined with a logical ‘and.’
- */
-export type InteractivitySettingCondition = {
-  /** Checks for equality with the object’s `dataSourceId` field. */
-  dataSourceId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `type` field. */
-  type?: Maybe<InteractivityType>;
+
+export type InteractivitySettingDataLayersByInteractivitySettingsIdConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<DataLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<DataLayersOrderBy>>;
 };
 
 /** An input for mutations affecting `InteractivitySetting` */
 export type InteractivitySettingInput = {
   cursor?: Maybe<CursorType>;
-  dataSourceId: Scalars['Int'];
   id?: Maybe<Scalars['Int']>;
   longTemplate?: Maybe<Scalars['String']>;
   shortTemplate?: Maybe<Scalars['String']>;
-  sourceLayer?: Maybe<Scalars['String']>;
   type?: Maybe<InteractivityType>;
 };
 
 /** Represents an update to a `InteractivitySetting`. Fields that are set will be updated. */
 export type InteractivitySettingPatch = {
   cursor?: Maybe<CursorType>;
-  dataSourceId?: Maybe<Scalars['Int']>;
   id?: Maybe<Scalars['Int']>;
   longTemplate?: Maybe<Scalars['String']>;
   shortTemplate?: Maybe<Scalars['String']>;
-  sourceLayer?: Maybe<Scalars['String']>;
   type?: Maybe<InteractivityType>;
 };
-
-/** Methods to use when ordering `InteractivitySetting`. */
-export enum InteractivitySettingsOrderBy {
-  DataSourceIdAsc = 'DATA_SOURCE_ID_ASC',
-  DataSourceIdDesc = 'DATA_SOURCE_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  TypeAsc = 'TYPE_ASC',
-  TypeDesc = 'TYPE_DESC'
-}
 
 export enum InteractivityType {
   Banner = 'BANNER',
@@ -4279,6 +4266,8 @@ export type Mutation = {
   deleteCommunityGuidelineByNodeId?: Maybe<DeleteCommunityGuidelinePayload>;
   /** Deletes a single `DataLayer` using a unique key. */
   deleteDataLayer?: Maybe<DeleteDataLayerPayload>;
+  /** Deletes a single `DataLayer` using a unique key. */
+  deleteDataLayerByInteractivitySettingsId?: Maybe<DeleteDataLayerPayload>;
   /** Deletes a single `DataLayer` using its globally unique id. */
   deleteDataLayerByNodeId?: Maybe<DeleteDataLayerPayload>;
   /** Deletes a single `DataSource` using a unique key. */
@@ -4494,6 +4483,8 @@ export type Mutation = {
   updateCommunityGuidelineByNodeId?: Maybe<UpdateCommunityGuidelinePayload>;
   /** Updates a single `DataLayer` using a unique key and a patch. */
   updateDataLayer?: Maybe<UpdateDataLayerPayload>;
+  /** Updates a single `DataLayer` using a unique key and a patch. */
+  updateDataLayerByInteractivitySettingsId?: Maybe<UpdateDataLayerPayload>;
   /** Updates a single `DataLayer` using its globally unique id and a patch. */
   updateDataLayerByNodeId?: Maybe<UpdateDataLayerPayload>;
   /** Updates a single `DataSource` using a unique key and a patch. */
@@ -4522,8 +4513,6 @@ export type Mutation = {
   updateGroupByProjectIdAndName?: Maybe<UpdateGroupPayload>;
   /** Updates a single `InteractivitySetting` using a unique key and a patch. */
   updateInteractivitySetting?: Maybe<UpdateInteractivitySettingPayload>;
-  /** Updates a single `InteractivitySetting` using a unique key and a patch. */
-  updateInteractivitySettingByDataSourceIdAndSourceLayer?: Maybe<UpdateInteractivitySettingPayload>;
   /** Updates a single `InteractivitySetting` using its globally unique id and a patch. */
   updateInteractivitySettingByNodeId?: Maybe<UpdateInteractivitySettingPayload>;
   /** Updates the contents of the post. Can only be used by the author for 5 minutes after posting. */
@@ -4808,6 +4797,12 @@ export type MutationDeleteCommunityGuidelineByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteDataLayerArgs = {
   input: DeleteDataLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteDataLayerByInteractivitySettingsIdArgs = {
+  input: DeleteDataLayerByInteractivitySettingsIdInput;
 };
 
 
@@ -5255,6 +5250,12 @@ export type MutationUpdateDataLayerArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateDataLayerByInteractivitySettingsIdArgs = {
+  input: UpdateDataLayerByInteractivitySettingsIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateDataLayerByNodeIdArgs = {
   input: UpdateDataLayerByNodeIdInput;
 };
@@ -5335,12 +5336,6 @@ export type MutationUpdateGroupByProjectIdAndNameArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateInteractivitySettingArgs = {
   input: UpdateInteractivitySettingInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateInteractivitySettingByDataSourceIdAndSourceLayerArgs = {
-  input: UpdateInteractivitySettingByDataSourceIdAndSourceLayerInput;
 };
 
 
@@ -6391,6 +6386,7 @@ export type Query = Node & {
    */
   currentProject?: Maybe<Project>;
   dataLayer?: Maybe<DataLayer>;
+  dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
   /** Reads a single `DataLayer` using its globally unique `ID`. */
   dataLayerByNodeId?: Maybe<DataLayer>;
   dataSource?: Maybe<DataSource>;
@@ -6423,7 +6419,6 @@ export type Query = Node & {
   groupByNodeId?: Maybe<Group>;
   groupByProjectIdAndName?: Maybe<Group>;
   interactivitySetting?: Maybe<InteractivitySetting>;
-  interactivitySettingByDataSourceIdAndSourceLayer?: Maybe<InteractivitySetting>;
   /** Reads a single `InteractivitySetting` using its globally unique `ID`. */
   interactivitySettingByNodeId?: Maybe<InteractivitySetting>;
   /** Reads a single `InviteEmail` using its globally unique `ID`. */
@@ -6650,6 +6645,22 @@ export type QueryCommunityGuidelineByNodeIdArgs = {
  */
 export type QueryDataLayerArgs = {
   id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryDataLayerByInteractivitySettingsIdArgs = {
+  interactivitySettingsId: Scalars['Int'];
 };
 
 
@@ -7015,23 +7026,6 @@ export type QueryGroupByProjectIdAndNameArgs = {
  */
 export type QueryInteractivitySettingArgs = {
   id: Scalars['Int'];
-};
-
-
-/**
- * Most relevant root-level queries are listed first, which concern getting 
- * the currently logged-in user (`me`) and project (`currentProject`). 
- * There are also cross-project resources such as form templates and of 
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- * 
- * Postgraphile also automatically generates a variety of accessor queries 
- * for each database table. These are unlikely to be needed often but may possibly 
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
-export type QueryInteractivitySettingByDataSourceIdAndSourceLayerArgs = {
-  dataSourceId: Scalars['Int'];
-  sourceLayer: Scalars['String'];
 };
 
 
@@ -9416,6 +9410,18 @@ export type UpdateCommunityGuidelinePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `updateDataLayerByInteractivitySettingsId` mutation. */
+export type UpdateDataLayerByInteractivitySettingsIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  interactivitySettingsId: Scalars['Int'];
+  /** An object where the defined keys will be set on the `DataLayer` being updated. */
+  patch: DataLayerPatch;
+};
+
 /** All input for the `updateDataLayerByNodeId` mutation. */
 export type UpdateDataLayerByNodeIdInput = {
   /**
@@ -9455,6 +9461,8 @@ export type UpdateDataLayerPayload = {
   dataLayerEdge?: Maybe<DataLayersEdge>;
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
+  /** Reads a single `InteractivitySetting` that is related to this `DataLayer`. */
+  interactivitySettings?: Maybe<InteractivitySetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -9751,19 +9759,6 @@ export type UpdateGroupPayload = {
   query?: Maybe<Query>;
 };
 
-/** All input for the `updateInteractivitySettingByDataSourceIdAndSourceLayer` mutation. */
-export type UpdateInteractivitySettingByDataSourceIdAndSourceLayerInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  dataSourceId: Scalars['Int'];
-  /** An object where the defined keys will be set on the `InteractivitySetting` being updated. */
-  patch: InteractivitySettingPatch;
-  sourceLayer: Scalars['String'];
-};
-
 /** All input for the `updateInteractivitySettingByNodeId` mutation. */
 export type UpdateInteractivitySettingByNodeIdInput = {
   /**
@@ -9797,8 +9792,6 @@ export type UpdateInteractivitySettingPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `DataSource` that is related to this `InteractivitySetting`. */
-  dataSource?: Maybe<DataSource>;
   /** The `InteractivitySetting` that was updated by this mutation. */
   interactivitySetting?: Maybe<InteractivitySetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -10878,6 +10871,10 @@ export type CreateDataLayerMutation = (
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'id' | 'dataSourceId' | 'zIndex'>
+      & { interactivitySettings?: Maybe<(
+        { __typename?: 'InteractivitySetting' }
+        & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type'>
+      )> }
     )> }
   )> }
 );
@@ -10989,14 +10986,13 @@ export type LayersAndSourcesForItemsQuery = (
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
       & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
-      & { interactivitySettings: Array<(
-        { __typename?: 'InteractivitySetting' }
-        & Pick<InteractivitySetting, 'dataSourceId' | 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'sourceLayer' | 'type'>
-      )> }
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
-      & { sprites?: Maybe<Array<(
+      & { interactivitySettings?: Maybe<(
+        { __typename?: 'InteractivitySetting' }
+        & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type'>
+      )>, sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
         & { spriteImages: Array<(
@@ -11113,7 +11109,7 @@ export type GetLayerItemQuery = (
       )>> }
     )>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
+      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'dataSourceId'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -11209,19 +11205,19 @@ export type UpdateDataSourceMutation = (
   )> }
 );
 
-export type InteractivitySettingsForSourceQueryVariables = Exact<{
-  sourceId: Scalars['Int'];
+export type InteractivitySettingsForLayerQueryVariables = Exact<{
+  layerId: Scalars['Int'];
 }>;
 
 
-export type InteractivitySettingsForSourceQuery = (
+export type InteractivitySettingsForLayerQuery = (
   { __typename?: 'Query' }
-  & { dataSource?: Maybe<(
-    { __typename?: 'DataSource' }
-    & Pick<DataSource, 'id'>
-    & { interactivitySettings: Array<(
+  & { dataLayer?: Maybe<(
+    { __typename?: 'DataLayer' }
+    & Pick<DataLayer, 'id' | 'sourceLayer'>
+    & { interactivitySettings?: Maybe<(
       { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'cursor' | 'dataSourceId' | 'id' | 'longTemplate' | 'shortTemplate' | 'sourceLayer' | 'type'>
+      & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type'>
     )> }
   )> }
 );
@@ -11241,7 +11237,7 @@ export type UpdateInteractivitySettingsMutation = (
     { __typename?: 'UpdateInteractivitySettingPayload' }
     & { interactivitySetting?: Maybe<(
       { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'id' | 'type' | 'cursor' | 'dataSourceId' | 'longTemplate' | 'shortTemplate' | 'sourceLayer'>
+      & Pick<InteractivitySetting, 'id' | 'type' | 'cursor' | 'longTemplate' | 'shortTemplate'>
     )> }
   )> }
 );
@@ -11305,6 +11301,23 @@ export type UpdateQueryParametersMutation = (
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
       & Pick<DataSource, 'id' | 'queryParameters'>
+    )> }
+  )> }
+);
+
+export type UpdateEnableHighDpiRequestsMutationVariables = Exact<{
+  sourceId: Scalars['Int'];
+  useDevicePixelRatio: Scalars['Boolean'];
+}>;
+
+
+export type UpdateEnableHighDpiRequestsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataSource?: Maybe<(
+    { __typename?: 'UpdateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'useDevicePixelRatio'>
     )> }
   )> }
 );
@@ -11924,6 +11937,13 @@ export const CreateDataLayerDocument = gql`
       id
       dataSourceId
       zIndex
+      interactivitySettings {
+        cursor
+        id
+        longTemplate
+        shortTemplate
+        type
+      }
     }
   }
 }
@@ -12214,17 +12234,15 @@ export const LayersAndSourcesForItemsDocument = gql`
       urls
       useDevicePixelRatio
       supportsDynamicLayers
+    }
+    dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
-        dataSourceId
         id
         cursor
         longTemplate
         shortTemplate
-        sourceLayer
         type
       }
-    }
-    dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       sprites {
         id
         spriteImages {
@@ -12514,6 +12532,7 @@ export const GetLayerItemDocument = gql`
         }
         type
       }
+      dataSourceId
       dataSource {
         id
         attribution
@@ -12771,17 +12790,16 @@ export function useUpdateDataSourceMutation(baseOptions?: Apollo.MutationHookOpt
 export type UpdateDataSourceMutationHookResult = ReturnType<typeof useUpdateDataSourceMutation>;
 export type UpdateDataSourceMutationResult = Apollo.MutationResult<UpdateDataSourceMutation>;
 export type UpdateDataSourceMutationOptions = Apollo.BaseMutationOptions<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>;
-export const InteractivitySettingsForSourceDocument = gql`
-    query InteractivitySettingsForSource($sourceId: Int!) {
-  dataSource(id: $sourceId) {
+export const InteractivitySettingsForLayerDocument = gql`
+    query InteractivitySettingsForLayer($layerId: Int!) {
+  dataLayer(id: $layerId) {
     id
+    sourceLayer
     interactivitySettings {
       cursor
-      dataSourceId
       id
       longTemplate
       shortTemplate
-      sourceLayer
       type
     }
   }
@@ -12789,30 +12807,30 @@ export const InteractivitySettingsForSourceDocument = gql`
     `;
 
 /**
- * __useInteractivitySettingsForSourceQuery__
+ * __useInteractivitySettingsForLayerQuery__
  *
- * To run a query within a React component, call `useInteractivitySettingsForSourceQuery` and pass it any options that fit your needs.
- * When your component renders, `useInteractivitySettingsForSourceQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useInteractivitySettingsForLayerQuery` and pass it any options that fit your needs.
+ * When your component renders, `useInteractivitySettingsForLayerQuery` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useInteractivitySettingsForSourceQuery({
+ * const { data, loading, error } = useInteractivitySettingsForLayerQuery({
  *   variables: {
- *      sourceId: // value for 'sourceId'
+ *      layerId: // value for 'layerId'
  *   },
  * });
  */
-export function useInteractivitySettingsForSourceQuery(baseOptions?: Apollo.QueryHookOptions<InteractivitySettingsForSourceQuery, InteractivitySettingsForSourceQueryVariables>) {
-        return Apollo.useQuery<InteractivitySettingsForSourceQuery, InteractivitySettingsForSourceQueryVariables>(InteractivitySettingsForSourceDocument, baseOptions);
+export function useInteractivitySettingsForLayerQuery(baseOptions?: Apollo.QueryHookOptions<InteractivitySettingsForLayerQuery, InteractivitySettingsForLayerQueryVariables>) {
+        return Apollo.useQuery<InteractivitySettingsForLayerQuery, InteractivitySettingsForLayerQueryVariables>(InteractivitySettingsForLayerDocument, baseOptions);
       }
-export function useInteractivitySettingsForSourceLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<InteractivitySettingsForSourceQuery, InteractivitySettingsForSourceQueryVariables>) {
-          return Apollo.useLazyQuery<InteractivitySettingsForSourceQuery, InteractivitySettingsForSourceQueryVariables>(InteractivitySettingsForSourceDocument, baseOptions);
+export function useInteractivitySettingsForLayerLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<InteractivitySettingsForLayerQuery, InteractivitySettingsForLayerQueryVariables>) {
+          return Apollo.useLazyQuery<InteractivitySettingsForLayerQuery, InteractivitySettingsForLayerQueryVariables>(InteractivitySettingsForLayerDocument, baseOptions);
         }
-export type InteractivitySettingsForSourceQueryHookResult = ReturnType<typeof useInteractivitySettingsForSourceQuery>;
-export type InteractivitySettingsForSourceLazyQueryHookResult = ReturnType<typeof useInteractivitySettingsForSourceLazyQuery>;
-export type InteractivitySettingsForSourceQueryResult = Apollo.QueryResult<InteractivitySettingsForSourceQuery, InteractivitySettingsForSourceQueryVariables>;
+export type InteractivitySettingsForLayerQueryHookResult = ReturnType<typeof useInteractivitySettingsForLayerQuery>;
+export type InteractivitySettingsForLayerLazyQueryHookResult = ReturnType<typeof useInteractivitySettingsForLayerLazyQuery>;
+export type InteractivitySettingsForLayerQueryResult = Apollo.QueryResult<InteractivitySettingsForLayerQuery, InteractivitySettingsForLayerQueryVariables>;
 export const UpdateInteractivitySettingsDocument = gql`
     mutation UpdateInteractivitySettings($id: Int!, $type: InteractivityType, $cursor: CursorType, $longTemplate: String, $shortTemplate: String) {
   updateInteractivitySetting(input: {id: $id, patch: {type: $type, cursor: $cursor, longTemplate: $longTemplate, shortTemplate: $shortTemplate}}) {
@@ -12820,10 +12838,8 @@ export const UpdateInteractivitySettingsDocument = gql`
       id
       type
       cursor
-      dataSourceId
       longTemplate
       shortTemplate
-      sourceLayer
     }
   }
 }
@@ -13003,6 +13019,42 @@ export function useUpdateQueryParametersMutation(baseOptions?: Apollo.MutationHo
 export type UpdateQueryParametersMutationHookResult = ReturnType<typeof useUpdateQueryParametersMutation>;
 export type UpdateQueryParametersMutationResult = Apollo.MutationResult<UpdateQueryParametersMutation>;
 export type UpdateQueryParametersMutationOptions = Apollo.BaseMutationOptions<UpdateQueryParametersMutation, UpdateQueryParametersMutationVariables>;
+export const UpdateEnableHighDpiRequestsDocument = gql`
+    mutation UpdateEnableHighDPIRequests($sourceId: Int!, $useDevicePixelRatio: Boolean!) {
+  updateDataSource(input: {id: $sourceId, patch: {useDevicePixelRatio: $useDevicePixelRatio}}) {
+    dataSource {
+      id
+      useDevicePixelRatio
+    }
+  }
+}
+    `;
+export type UpdateEnableHighDpiRequestsMutationFn = Apollo.MutationFunction<UpdateEnableHighDpiRequestsMutation, UpdateEnableHighDpiRequestsMutationVariables>;
+
+/**
+ * __useUpdateEnableHighDpiRequestsMutation__
+ *
+ * To run a mutation, you first call `useUpdateEnableHighDpiRequestsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateEnableHighDpiRequestsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateEnableHighDpiRequestsMutation, { data, loading, error }] = useUpdateEnableHighDpiRequestsMutation({
+ *   variables: {
+ *      sourceId: // value for 'sourceId'
+ *      useDevicePixelRatio: // value for 'useDevicePixelRatio'
+ *   },
+ * });
+ */
+export function useUpdateEnableHighDpiRequestsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateEnableHighDpiRequestsMutation, UpdateEnableHighDpiRequestsMutationVariables>) {
+        return Apollo.useMutation<UpdateEnableHighDpiRequestsMutation, UpdateEnableHighDpiRequestsMutationVariables>(UpdateEnableHighDpiRequestsDocument, baseOptions);
+      }
+export type UpdateEnableHighDpiRequestsMutationHookResult = ReturnType<typeof useUpdateEnableHighDpiRequestsMutation>;
+export type UpdateEnableHighDpiRequestsMutationResult = Apollo.MutationResult<UpdateEnableHighDpiRequestsMutation>;
+export type UpdateEnableHighDpiRequestsMutationOptions = Apollo.BaseMutationOptions<UpdateEnableHighDpiRequestsMutation, UpdateEnableHighDpiRequestsMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

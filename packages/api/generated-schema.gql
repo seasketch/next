@@ -370,6 +370,11 @@ type CreateDataLayerPayload {
   dataSource: DataSource
 
   """
+  Reads a single `InteractivitySetting` that is related to this `DataLayer`.
+  """
+  interactivitySettings: InteractivitySetting
+
+  """
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
@@ -657,11 +662,6 @@ type CreateInteractivitySettingPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-
-  """
-  Reads a single `DataSource` that is related to this `InteractivitySetting`.
-  """
-  dataSource: DataSource
 
   """The `InteractivitySetting` that was created by this mutation."""
   interactivitySetting: InteractivitySetting
@@ -1159,6 +1159,12 @@ type DataLayer implements Node {
   id: Int!
 
   """
+  Reads a single `InteractivitySetting` that is related to this `DataLayer`.
+  """
+  interactivitySettings: InteractivitySetting
+  interactivitySettingsId: Int!
+
+  """
   JSON array of MapBox GL Style layers. Layers should not specify an id or
   sourceId. These will be automatically generated at runtime.
   
@@ -1245,6 +1251,9 @@ input DataLayerCondition {
   """Checks for equality with the object’s `id` field."""
   id: Int
 
+  """Checks for equality with the object’s `interactivitySettingsId` field."""
+  interactivitySettingsId: Int
+
   """Checks for equality with the object’s `projectId` field."""
   projectId: Int
 }
@@ -1288,6 +1297,7 @@ Represents an update to a `DataLayer`. Fields that are set will be updated.
 input DataLayerPatch {
   dataSourceId: Int
   id: Int
+  interactivitySettingsId: Int
 
   """
   JSON array of MapBox GL Style layers. Layers should not specify an id or
@@ -1349,6 +1359,8 @@ enum DataLayersOrderBy {
   DATA_SOURCE_ID_DESC
   ID_ASC
   ID_DESC
+  INTERACTIVITY_SETTINGS_ID_ASC
+  INTERACTIVITY_SETTINGS_ID_DESC
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
@@ -1489,23 +1501,6 @@ type DataSource implements Node {
   a direct upload or a service location like ArcGIS server
   """
   importType: DataSourceImportTypes
-
-  """Reads and enables pagination through a set of `InteractivitySetting`."""
-  interactivitySettings(
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: InteractivitySettingCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-
-    """The method to use when ordering `InteractivitySetting`."""
-    orderBy: [InteractivitySettingsOrderBy!]
-  ): [InteractivitySetting!]!
 
   """
   GeoJSON only. Whether to calculate line distance metrics. This is required for
@@ -2128,6 +2123,16 @@ type DeleteCommunityGuidelinePayload {
   query: Query
 }
 
+"""All input for the `deleteDataLayerByInteractivitySettingsId` mutation."""
+input DeleteDataLayerByInteractivitySettingsIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  interactivitySettingsId: Int!
+}
+
 """All input for the `deleteDataLayerByNodeId` mutation."""
 input DeleteDataLayerByNodeIdInput {
   """
@@ -2172,6 +2177,11 @@ type DeleteDataLayerPayload {
   """Reads a single `DataSource` that is related to this `DataLayer`."""
   dataSource: DataSource
   deletedDataLayerNodeId: ID
+
+  """
+  Reads a single `InteractivitySetting` that is related to this `DataLayer`.
+  """
+  interactivitySettings: InteractivitySetting
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -4458,10 +4468,38 @@ type InteractivitySetting implements Node {
   cursor: CursorType!
 
   """
-  Reads a single `DataSource` that is related to this `InteractivitySetting`.
+  Reads a single `DataLayer` that is related to this `InteractivitySetting`.
   """
-  dataSource: DataSource
-  dataSourceId: Int!
+  dataLayerByInteractivitySettingsId: DataLayer
+
+  """Reads and enables pagination through a set of `DataLayer`."""
+  dataLayersByInteractivitySettingsIdConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: DataLayerCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `DataLayer`."""
+    orderBy: [DataLayersOrderBy!] = [PRIMARY_KEY_ASC]
+  ): DataLayersConnection! @deprecated(reason: "Please use dataLayerByInteractivitySettingsId instead")
   id: Int!
   longTemplate: String
 
@@ -4470,33 +4508,15 @@ type InteractivitySetting implements Node {
   """
   nodeId: ID!
   shortTemplate: String
-  sourceLayer: String
   type: InteractivityType!
-}
-
-"""
-A condition to be used against `InteractivitySetting` object types. All fields
-are tested for equality and combined with a logical ‘and.’
-"""
-input InteractivitySettingCondition {
-  """Checks for equality with the object’s `dataSourceId` field."""
-  dataSourceId: Int
-
-  """Checks for equality with the object’s `id` field."""
-  id: Int
-
-  """Checks for equality with the object’s `type` field."""
-  type: InteractivityType
 }
 
 """An input for mutations affecting `InteractivitySetting`"""
 input InteractivitySettingInput {
   cursor: CursorType
-  dataSourceId: Int!
   id: Int
   longTemplate: String
   shortTemplate: String
-  sourceLayer: String
   type: InteractivityType
 }
 
@@ -4505,25 +4525,10 @@ Represents an update to a `InteractivitySetting`. Fields that are set will be up
 """
 input InteractivitySettingPatch {
   cursor: CursorType
-  dataSourceId: Int
   id: Int
   longTemplate: String
   shortTemplate: String
-  sourceLayer: String
   type: InteractivityType
-}
-
-"""Methods to use when ordering `InteractivitySetting`."""
-enum InteractivitySettingsOrderBy {
-  DATA_SOURCE_ID_ASC
-  DATA_SOURCE_ID_DESC
-  ID_ASC
-  ID_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
-  TYPE_ASC
-  TYPE_DESC
 }
 
 enum InteractivityType {
@@ -5147,6 +5152,14 @@ type Mutation {
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
     input: DeleteDataLayerInput!
+  ): DeleteDataLayerPayload
+
+  """Deletes a single `DataLayer` using a unique key."""
+  deleteDataLayerByInteractivitySettingsId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteDataLayerByInteractivitySettingsIdInput!
   ): DeleteDataLayerPayload
 
   """Deletes a single `DataLayer` using its globally unique id."""
@@ -5846,6 +5859,14 @@ type Mutation {
     input: UpdateDataLayerInput!
   ): UpdateDataLayerPayload
 
+  """Updates a single `DataLayer` using a unique key and a patch."""
+  updateDataLayerByInteractivitySettingsId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateDataLayerByInteractivitySettingsIdInput!
+  ): UpdateDataLayerPayload
+
   """Updates a single `DataLayer` using its globally unique id and a patch."""
   updateDataLayerByNodeId(
     """
@@ -5966,16 +5987,6 @@ type Mutation {
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
     input: UpdateInteractivitySettingInput!
-  ): UpdateInteractivitySettingPayload
-
-  """
-  Updates a single `InteractivitySetting` using a unique key and a patch.
-  """
-  updateInteractivitySettingByDataSourceIdAndSourceLayer(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateInteractivitySettingByDataSourceIdAndSourceLayerInput!
   ): UpdateInteractivitySettingPayload
 
   """
@@ -7243,6 +7254,7 @@ type Query implements Node {
   """
   currentProject: Project
   dataLayer(id: Int!): DataLayer
+  dataLayerByInteractivitySettingsId(interactivitySettingsId: Int!): DataLayer
 
   """Reads a single `DataLayer` using its globally unique `ID`."""
   dataLayerByNodeId(
@@ -7371,7 +7383,6 @@ type Query implements Node {
   ): Group
   groupByProjectIdAndName(name: String!, projectId: Int!): Group
   interactivitySetting(id: Int!): InteractivitySetting
-  interactivitySettingByDataSourceIdAndSourceLayer(dataSourceId: Int!, sourceLayer: String!): InteractivitySetting
 
   """Reads a single `InteractivitySetting` using its globally unique `ID`."""
   interactivitySettingByNodeId(
@@ -9802,6 +9813,21 @@ type UpdateCommunityGuidelinePayload {
   query: Query
 }
 
+"""All input for the `updateDataLayerByInteractivitySettingsId` mutation."""
+input UpdateDataLayerByInteractivitySettingsIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  interactivitySettingsId: Int!
+
+  """
+  An object where the defined keys will be set on the `DataLayer` being updated.
+  """
+  patch: DataLayerPatch!
+}
+
 """All input for the `updateDataLayerByNodeId` mutation."""
 input UpdateDataLayerByNodeIdInput {
   """
@@ -9855,6 +9881,11 @@ type UpdateDataLayerPayload {
 
   """Reads a single `DataSource` that is related to this `DataLayer`."""
   dataSource: DataSource
+
+  """
+  Reads a single `InteractivitySetting` that is related to this `DataLayer`.
+  """
+  interactivitySettings: InteractivitySetting
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -10224,24 +10255,6 @@ type UpdateGroupPayload {
   query: Query
 }
 
-"""
-All input for the `updateInteractivitySettingByDataSourceIdAndSourceLayer` mutation.
-"""
-input UpdateInteractivitySettingByDataSourceIdAndSourceLayerInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  dataSourceId: Int!
-
-  """
-  An object where the defined keys will be set on the `InteractivitySetting` being updated.
-  """
-  patch: InteractivitySettingPatch!
-  sourceLayer: String!
-}
-
 """All input for the `updateInteractivitySettingByNodeId` mutation."""
 input UpdateInteractivitySettingByNodeIdInput {
   """
@@ -10283,11 +10296,6 @@ type UpdateInteractivitySettingPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-
-  """
-  Reads a single `DataSource` that is related to this `InteractivitySetting`.
-  """
-  dataSource: DataSource
 
   """The `InteractivitySetting` that was updated by this mutation."""
   interactivitySetting: InteractivitySetting

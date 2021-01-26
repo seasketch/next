@@ -564,7 +564,7 @@ function dynamicServiceSourceFromSettings(
       format: serviceSettings.imageFormat,
       transparent: "true",
     },
-    interactivitySettings: [],
+    // interactivitySettings: [],
     supportsDynamicLayers: serviceData.mapServerInfo.supportsDynamicLayers,
   };
 }
@@ -584,7 +584,7 @@ function vectorSourceFromSettings(
       outFields: settings?.outFields || "*",
       geometryPrecision: settings?.geometryPrecision,
     },
-    interactivitySettings: [],
+    // interactivitySettings: [],
     supportsDynamicLayers: false,
   };
 }

@@ -11,6 +11,7 @@ import {
   DataSourceImportTypes,
   useUpdateEnableDownloadMutation,
   useUpdateQueryParametersMutation,
+  useUpdateEnableHighDpiRequestsMutation,
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 import TableOfContentsItemAutosaveInput from "./TableOfContentsItemAutosaveInput";
@@ -58,6 +59,10 @@ export default function LayerTableOfContentsItemEditor(
     updateEnableDownload,
     updateEnableDownloadState,
   ] = useUpdateEnableDownloadMutation();
+  const [
+    updateEnableHighDpiRequests,
+    updateEnableHighDpiRequestsState,
+  ] = useUpdateEnableHighDpiRequestsMutation();
 
   const item = data?.tableOfContentsItem;
   const [downloadEnabled, setDownloadEnabled] = useState<boolean>();
@@ -281,6 +286,57 @@ export default function LayerTableOfContentsItemEditor(
                     </dl>
                   </>
                 )}
+                {source?.type === DataSourceTypes.ArcgisDynamicMapserver && (
+                  <>
+                    <dl className="sm:divide-y sm:divide-gray-200">
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                        <dt className="text-sm font-medium text-gray-500">
+                          <Trans ns={["admin"]}>Source Type</Trans>
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                          <Trans ns={["admin"]}>
+                            ArcGIS Dynamic Map Service
+                          </Trans>
+                        </dd>
+                      </div>
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                        <dt className="text-sm font-medium text-gray-500">
+                          <Trans ns={["admin"]}>Source Server</Trans>
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 truncate">
+                          <a
+                            target="_blank"
+                            className="text-primary-600 underline"
+                            href={source.url!}
+                          >
+                            {source
+                              .url!.replace("https://", "")
+                              .replace("http://", "")}
+                          </a>
+                        </dd>
+                      </div>
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                        <dt className="text-sm font-medium text-gray-500">
+                          <Trans ns={["admin"]}>Dynamic Layers</Trans>
+                        </dt>
+                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                          {source.supportsDynamicLayers ? (
+                            <Trans ns={["admin"]}>
+                              Supported. Users can control layer visibility,
+                              opacity, and ordering.
+                            </Trans>
+                          ) : (
+                            <Trans ns={["admin"]}>
+                              <b>Unsupported</b>. Users will not be able to
+                              control the visibility and ordering of individual
+                              layers.
+                            </Trans>
+                          )}
+                        </dd>
+                      </div>
+                    </dl>
+                  </>
+                )}
               </div>
               {source?.type === DataSourceTypes.ArcgisVector && (
                 <InputBlock
@@ -357,13 +413,97 @@ export default function LayerTableOfContentsItemEditor(
                     </p>
                   </div>
                 ))}
+              {source?.type === DataSourceTypes.ArcgisDynamicMapserver && (
+                <>
+                  <InputBlock
+                    title="Enable High-DPI Requests"
+                    className="mt-4 text-sm"
+                    input={
+                      <Switch
+                        isToggled={!!source.useDevicePixelRatio}
+                        onClick={(value) => {
+                          client.writeFragment({
+                            id: `DataSource:${source.id}`,
+                            fragment: gql`
+                              fragment UpdateHighDPI on DataSource {
+                                useDevicePixelRatio
+                              }
+                            `,
+                            data: {
+                              useDevicePixelRatio: value,
+                            },
+                          });
+                          updateEnableHighDpiRequests({
+                            variables: {
+                              sourceId: source.id,
+                              useDevicePixelRatio: value,
+                            },
+                          });
+                        }}
+                      />
+                    }
+                  >
+                    Request higher resolution images when the user has a
+                    "Retina" or 4k display. Maps will be much more detailed, but
+                    it demands more of the data server.
+                  </InputBlock>
+                  <InputBlock
+                    className="mt-4 text-sm"
+                    title="Image Format"
+                    input={
+                      <select
+                        id="imageFormat"
+                        className="rounded form-select block w-full pl-3 pr-4 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 sm:text-sm sm:leading-5"
+                        value={source.queryParameters?.format || "PNG"}
+                        onChange={(e) => {
+                          client.writeFragment({
+                            id: `DataSource:${source.id}`,
+                            fragment: gql`
+                              fragment UpdateFormat on DataSource {
+                                queryParameters
+                              }
+                            `,
+                            data: {
+                              queryParameters: {
+                                ...source.queryParameters,
+                                format: e.target.value,
+                              },
+                            },
+                          });
+                          updateQueryParameters({
+                            variables: {
+                              sourceId: source.id,
+                              queryParameters: {
+                                ...source.queryParameters,
+                                format: e.target.value,
+                              },
+                            },
+                          });
+                        }}
+                      >
+                        {["PNG", "PNG8", "PNG24", "PNG32", "GIF", "JPG"].map(
+                          (f) => (
+                            <option key={f} value={f}>
+                              {f.toLocaleLowerCase()}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    }
+                  >
+                    Imagery data looks best using <code>jpg</code>, for others{" "}
+                    <code>png</code> is a good choice.
+                  </InputBlock>
+                </>
+              )}
             </div>
           </div>
           <div className="mt-5">
             {source && layer && (
               <InteractivitySettings
-                sourceId={source.id}
-                sourceLayer={layer.sourceLayer}
+                layerId={layer.id}
+                dataSourceId={layer.dataSourceId}
+                sublayer={layer.sublayer}
               />
             )}
           </div>

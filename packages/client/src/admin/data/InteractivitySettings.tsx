@@ -6,7 +6,7 @@ import TextInput from "../../components/TextInput";
 import {
   InteractivitySetting,
   InteractivityType,
-  useInteractivitySettingsForSourceQuery,
+  useInteractivitySettingsForLayerQuery,
   useUpdateInteractivitySettingsMutation,
 } from "../../generated/graphql";
 import MutableAutosaveInput from "../MutableAutosaveInput";
@@ -19,6 +19,7 @@ import "codemirror/addon/lint/lint.css";
 import sanitizeHtml from "sanitize-html";
 import Button from "../../components/Button";
 import useSourcePropertyNames from "./useSourcePropertyNames";
+import { ClientDataLayer } from "../../dataLayers/LayerManager";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -26,27 +27,26 @@ require("codemirror/mode/xml/xml");
 require("codemirror/mode/handlebars/handlebars");
 
 export default function InteractivitySettings({
-  sourceId,
-  sourceLayer,
+  layerId,
+  dataSourceId,
+  sublayer,
 }: {
-  sourceId: number;
-  sourceLayer?: string | null;
+  layerId: number;
+  dataSourceId: number;
+  sublayer?: string | null;
 }) {
-  const { data, loading, error } = useInteractivitySettingsForSourceQuery({
+  const { data, loading, error } = useInteractivitySettingsForLayerQuery({
     variables: {
-      sourceId,
+      layerId,
     },
   });
   const [type, setType] = useState<InteractivityType>();
 
   const [mutate, mutationState] = useUpdateInteractivitySettingsMutation();
 
-  const settings = data?.dataSource?.interactivitySettings.find(
-    (setting) =>
-      setting.dataSourceId === sourceId && setting.sourceLayer === sourceLayer
-  );
+  const settings = data?.dataLayer?.interactivitySettings;
 
-  const attributeNames = useSourcePropertyNames(sourceId);
+  const attributeNames = useSourcePropertyNames(dataSourceId, sublayer);
   const [shortTemplate, setShortTemplate] = useState(settings?.shortTemplate);
   const [longTemplate, setLongTemplate] = useState(settings?.longTemplate);
 
@@ -132,39 +132,44 @@ export default function InteractivitySettings({
               label: "None",
               value: InteractivityType.None,
             },
-            {
-              label: "Banner",
-              description:
-                "Short text can be displayed towards the top of the map when the user hovers over features.",
-              value: InteractivityType.Banner,
-              children: (
-                <TemplateEditor
-                  type={InteractivityType.Banner}
-                  selectedType={selectedType}
-                  propName={"shortTemplate"}
-                  templateValue={shortTemplate || undefined}
-                  onSave={sanitizeTemplate}
-                  onChange={(value) => setShortTemplate(value)}
-                  attributeNames={attributeNames}
-                />
-              ),
-            },
-            {
-              label: "Tooltip",
-              description: "Short text is displayed next to the mouse cursor.",
-              value: InteractivityType.Tooltip,
-              children: (
-                <TemplateEditor
-                  type={InteractivityType.Tooltip}
-                  selectedType={selectedType}
-                  propName={"shortTemplate"}
-                  templateValue={shortTemplate || undefined}
-                  onSave={sanitizeTemplate}
-                  onChange={(value) => setShortTemplate(value)}
-                  attributeNames={attributeNames}
-                />
-              ),
-            },
+            ...(!sublayer
+              ? [
+                  {
+                    label: "Banner",
+                    description:
+                      "Short text can be displayed towards the top of the map when the user hovers over features.",
+                    value: InteractivityType.Banner,
+                    children: (
+                      <TemplateEditor
+                        type={InteractivityType.Banner}
+                        selectedType={selectedType}
+                        propName={"shortTemplate"}
+                        templateValue={shortTemplate || undefined}
+                        onSave={sanitizeTemplate}
+                        onChange={(value) => setShortTemplate(value)}
+                        attributeNames={attributeNames}
+                      />
+                    ),
+                  },
+                  {
+                    label: "Tooltip",
+                    description:
+                      "Short text is displayed next to the mouse cursor.",
+                    value: InteractivityType.Tooltip,
+                    children: (
+                      <TemplateEditor
+                        type={InteractivityType.Tooltip}
+                        selectedType={selectedType}
+                        propName={"shortTemplate"}
+                        templateValue={shortTemplate || undefined}
+                        onSave={sanitizeTemplate}
+                        onChange={(value) => setShortTemplate(value)}
+                        attributeNames={attributeNames}
+                      />
+                    ),
+                  },
+                ]
+              : []),
             {
               label: "Popup",
               description:

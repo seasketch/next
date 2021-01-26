@@ -154,6 +154,13 @@ mutation CreateDataLayer(
       id
       dataSourceId
       zIndex
+      interactivitySettings {
+        cursor
+        id
+        longTemplate
+        shortTemplate
+        type
+      }
     }
   }
 }
