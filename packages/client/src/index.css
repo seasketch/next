@@ -62,3 +62,68 @@ code {
 /* .ZIndexEditor > .rst__tree > .rst__node > .rst__lineFullVertical {
   display: none;
 } */
+
+.ProseMirror h1 {
+  font-size: 2rem;
+  /* line-height: 2.5rem; */
+  color: rgba(17, 24, 39, var(--tw-text-opacity));
+  font-weight: 800;
+  /* border-bottom: 2px solid #efefef; */
+}
+
+.ProseMirror h2 {
+  /* margin-top: 0.5rem; */
+  font-size: 1.5rem;
+  /* line-height: 2.5rem; */
+  color: rgba(17, 24, 39, var(--tw-text-opacity));
+  font-weight: 500;
+  /* border-bottom: 2px solid #efefef; */
+}
+
+.ProseMirror h3 {
+  /* margin-top: 0.5rem; */
+  color: rgba(17, 24, 39, var(--tw-text-opacity));
+  /* line-height: 1.5rem; */
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.ProseMirror[contenteditable]:focus {
+  outline: 0px solid transparent;
+}
+
+.ProseMirror a {
+  color: rgb(49, 115, 201);
+  text-decoration: underline;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 2em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.ProseMirror ul {
+  list-style: disc;
+}
+
+.ProseMirror ol {
+  list-style: decimal;
+}
+
+.ProseMirror ul ul {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  list-style: circle;
+}
+
+.ProseMirror ol ol {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  list-style: lower-alpha;
+}
+
+.ProseMirror p:empty {
+  height: 1em;
+}

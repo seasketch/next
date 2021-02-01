@@ -540,6 +540,7 @@ export default function ArcGISBrowser() {
               settings={serviceSettings}
               open={modalOpen}
               onRequestClose={() => setModalOpen(false)}
+              mapServerInfo={mapServerInfo.data?.mapServerInfo!}
             />
           </div>
         </LayerManagerContext.Provider>
@@ -593,7 +594,7 @@ function vectorLayerFromSettings(
   layer: LayerInfo,
   settings?: VectorSublayerSettings
 ): ClientDataLayer {
-  const imageSetJSON = layer.imageList.toJSON();
+  const imageSetJSON = layer.imageList ? layer.imageList.toJSON() : [];
   let sprites: ClientSprite[] = [];
   if (imageSetJSON.length) {
     for (const imageSet of imageSetJSON) {

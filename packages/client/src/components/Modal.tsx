@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ReactElement, ReactNode, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface ModalProps {
@@ -7,7 +7,7 @@ interface ModalProps {
   disableEscapeKeyDown?: boolean;
   disableBackdropClick?: boolean;
   footer?: ReactNode;
-  title?: string;
+  title?: string | ReactNode;
   className?: string;
 }
 
@@ -22,7 +22,8 @@ const Modal: React.FunctionComponent<ModalProps> = ({
   className,
 }) => {
   return (
-    <AnimatePresence>
+    // <AnimatePresence>
+    <div>
       {open && (
         <div className={`fixed z-50 inset-0 overflow-y-hidden h-screen`}>
           <div className="flex items-end justify-center h-screen sm:px-4 sm:pb-20 text-center sm:block sm:p-0">
@@ -98,7 +99,11 @@ const Modal: React.FunctionComponent<ModalProps> = ({
             >
               <div className="flex flex-col max-h-full">
                 {title && (
-                  <div className="w-full text-lg p-6 flex-0 border-b">
+                  <div
+                    className={`w-full text-lg ${
+                      typeof title === "string" ? "p-6" : ""
+                    } flex-0 border-b`}
+                  >
                     {title}
                   </div>
                 )}
@@ -115,7 +120,8 @@ const Modal: React.FunctionComponent<ModalProps> = ({
           </div>
         </div>
       )}
-    </AnimatePresence>
+    </div>
+    // </AnimatePresence>
   );
 };
 

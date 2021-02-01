@@ -5,6 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import { LayerManagerContext } from "../../dataLayers/LayerManager";
+import MetadataModal from "../../dataLayers/MetadataModal";
 import TableOfContents, {
   ClientTableOfContentsItem,
 } from "../../dataLayers/tableOfContents/TableOfContents";
@@ -22,6 +23,7 @@ import { generateStableId } from "./arcgis/arcgis";
 import DeleteTableOfContentsItemModal from "./DeleteTableOfContentsItemModal";
 import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
+import MetadataEditor from "./MetadataEditor";
 import ZIndexEditor from "./ZIndexEditor";
 
 export default function TableOfContentsEditor() {
@@ -48,6 +50,8 @@ export default function TableOfContentsEditor() {
     [id: number]: boolean;
   }>("toc-editor-expansion-state", {});
   const [folderId, setFolderId] = useState<number>();
+  const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
+  const [openMetadataViewerId, setOpenMetadataViewerId] = useState<number>();
 
   useEffect(() => {
     if (tocQuery.data?.projectBySlug?.draftTableOfContentsItems) {
@@ -227,6 +231,26 @@ export default function TableOfContentsEditor() {
               </Item>,
               <Item
                 key="2"
+                hidden={(args) => args.props?.item?.isFolder}
+                className="text-sm"
+                onClick={(args) => {
+                  setOpenMetadataViewerId(args.props.item.id);
+                }}
+              >
+                Metadata
+              </Item>,
+              <Item
+                key="3"
+                hidden={(args) => args.props?.item?.isFolder}
+                className="text-sm"
+                onClick={(args) => {
+                  setOpenMetadataItemId(args.props.item.id);
+                }}
+              >
+                Edit Metadata
+              </Item>,
+              <Item
+                key="4"
                 className="text-sm"
                 onClick={(args) => {
                   setItemForDeletion(args.props.item);
@@ -271,6 +295,18 @@ export default function TableOfContentsEditor() {
         <LayerTableOfContentsItemEditor
           onRequestClose={() => setOpenLayerItemId(undefined)}
           itemId={openLayerItemId}
+        />
+      )}
+      {openMetadataItemId && (
+        <MetadataEditor
+          id={openMetadataItemId}
+          onRequestClose={() => setOpenMetadataItemId(undefined)}
+        />
+      )}
+      {openMetadataViewerId && (
+        <MetadataModal
+          id={openMetadataViewerId}
+          onRequestClose={() => setOpenMetadataViewerId(undefined)}
         />
       )}
     </div>

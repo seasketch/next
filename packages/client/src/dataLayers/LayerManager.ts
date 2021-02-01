@@ -425,7 +425,6 @@ class LayerManager {
     let interactiveImageLayerIds: string[] = [];
     // for each visible source, collect interactivitySettings
     for (const id in this.visibleLayers) {
-      console.log("update", id, this.layers[id]);
       const layer = this.layers[id];
       if (
         layer?.interactivitySettings &&
@@ -461,7 +460,6 @@ class LayerManager {
   };
 
   mouseMoveListener = (e: MapMouseEvent) => {
-    // console.log("layerIds", this.interactiveLayerIds);
     const features = this.map!.queryRenderedFeatures(e.point, {
       layers: this.interactiveVectorLayerIds,
     });

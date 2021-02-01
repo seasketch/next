@@ -242,11 +242,17 @@ export default function LayerTableOfContentsItemEditor(
                             <Trans ns={["admin"]}>Download</Trans>
                           </button>
                           |
-                          <button className="font-semibold text-primary-600 px-2">
+                          <button
+                            disabled
+                            className="font-semibold text-gray-400 px-2"
+                          >
                             <Trans ns={["admin"]}>Upload</Trans>
                           </button>
                           |
-                          <button className="font-semibold text-primary-600 px-2">
+                          <button
+                            disabled
+                            className="font-semibold text-gray-400 px-2"
+                          >
                             <Trans ns={["admin"]}>Update from ArcGIS</Trans>
                           </button>
                         </dd>

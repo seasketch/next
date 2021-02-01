@@ -474,3 +474,21 @@ mutation UpdateEnableHighDPIRequests(
     }
   }
 }
+
+query GetMetadata($itemId: Int!) {
+  tableOfContentsItem(id: $itemId) {
+    id
+    metadata
+  }
+}
+
+mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
+  updateTableOfContentsItem(
+    input: { id: $itemId, patch: { metadata: $metadata } }
+  ) {
+    tableOfContentsItem {
+      id
+      metadata
+    }
+  }
+}

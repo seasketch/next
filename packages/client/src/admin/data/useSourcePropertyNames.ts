@@ -32,7 +32,6 @@ export default function useSourcePropertyNames(
           fetch(`https://${bucketId}/${objectKey}`)
             .then((r) => r.json())
             .then((data: GeoJSON) => {
-              console.log("featureCollection");
               let example: Feature;
               if (data.type === "FeatureCollection") {
                 example = data.features[0];

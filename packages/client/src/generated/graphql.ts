@@ -11322,6 +11322,36 @@ export type UpdateEnableHighDpiRequestsMutation = (
   )> }
 );
 
+export type GetMetadataQueryVariables = Exact<{
+  itemId: Scalars['Int'];
+}>;
+
+
+export type GetMetadataQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'metadata'>
+  )> }
+);
+
+export type UpdateMetadataMutationVariables = Exact<{
+  itemId: Scalars['Int'];
+  metadata: Scalars['JSON'];
+}>;
+
+
+export type UpdateMetadataMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTableOfContentsItem?: Maybe<(
+    { __typename?: 'UpdateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'metadata'>
+    )> }
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13055,6 +13085,76 @@ export function useUpdateEnableHighDpiRequestsMutation(baseOptions?: Apollo.Muta
 export type UpdateEnableHighDpiRequestsMutationHookResult = ReturnType<typeof useUpdateEnableHighDpiRequestsMutation>;
 export type UpdateEnableHighDpiRequestsMutationResult = Apollo.MutationResult<UpdateEnableHighDpiRequestsMutation>;
 export type UpdateEnableHighDpiRequestsMutationOptions = Apollo.BaseMutationOptions<UpdateEnableHighDpiRequestsMutation, UpdateEnableHighDpiRequestsMutationVariables>;
+export const GetMetadataDocument = gql`
+    query GetMetadata($itemId: Int!) {
+  tableOfContentsItem(id: $itemId) {
+    id
+    metadata
+  }
+}
+    `;
+
+/**
+ * __useGetMetadataQuery__
+ *
+ * To run a query within a React component, call `useGetMetadataQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetMetadataQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetMetadataQuery({
+ *   variables: {
+ *      itemId: // value for 'itemId'
+ *   },
+ * });
+ */
+export function useGetMetadataQuery(baseOptions?: Apollo.QueryHookOptions<GetMetadataQuery, GetMetadataQueryVariables>) {
+        return Apollo.useQuery<GetMetadataQuery, GetMetadataQueryVariables>(GetMetadataDocument, baseOptions);
+      }
+export function useGetMetadataLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetMetadataQuery, GetMetadataQueryVariables>) {
+          return Apollo.useLazyQuery<GetMetadataQuery, GetMetadataQueryVariables>(GetMetadataDocument, baseOptions);
+        }
+export type GetMetadataQueryHookResult = ReturnType<typeof useGetMetadataQuery>;
+export type GetMetadataLazyQueryHookResult = ReturnType<typeof useGetMetadataLazyQuery>;
+export type GetMetadataQueryResult = Apollo.QueryResult<GetMetadataQuery, GetMetadataQueryVariables>;
+export const UpdateMetadataDocument = gql`
+    mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
+  updateTableOfContentsItem(input: {id: $itemId, patch: {metadata: $metadata}}) {
+    tableOfContentsItem {
+      id
+      metadata
+    }
+  }
+}
+    `;
+export type UpdateMetadataMutationFn = Apollo.MutationFunction<UpdateMetadataMutation, UpdateMetadataMutationVariables>;
+
+/**
+ * __useUpdateMetadataMutation__
+ *
+ * To run a mutation, you first call `useUpdateMetadataMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateMetadataMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateMetadataMutation, { data, loading, error }] = useUpdateMetadataMutation({
+ *   variables: {
+ *      itemId: // value for 'itemId'
+ *      metadata: // value for 'metadata'
+ *   },
+ * });
+ */
+export function useUpdateMetadataMutation(baseOptions?: Apollo.MutationHookOptions<UpdateMetadataMutation, UpdateMetadataMutationVariables>) {
+        return Apollo.useMutation<UpdateMetadataMutation, UpdateMetadataMutationVariables>(UpdateMetadataDocument, baseOptions);
+      }
+export type UpdateMetadataMutationHookResult = ReturnType<typeof useUpdateMetadataMutation>;
+export type UpdateMetadataMutationResult = Apollo.MutationResult<UpdateMetadataMutation>;
+export type UpdateMetadataMutationOptions = Apollo.BaseMutationOptions<UpdateMetadataMutation, UpdateMetadataMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

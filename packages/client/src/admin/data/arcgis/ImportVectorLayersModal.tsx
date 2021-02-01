@@ -22,7 +22,7 @@ import { useHistory, useParams } from "react-router-dom";
 interface ImportVectorLayersProps {
   layers?: LayerInfo[];
   settings?: ArcGISServiceSettings;
-  mapServerInfo?: MapServerCatalogInfo;
+  mapServerInfo: MapServerCatalogInfo;
   open: boolean;
   serviceRoot?: string;
   onRequestClose: () => void;
@@ -85,7 +85,7 @@ export default function ImportVectorLayersModal(
   const onImport = async () => {
     const result = await importService(
       layers!.filter((l) => l.type !== "Raster Layer"),
-      props.mapServerInfo!,
+      props.mapServerInfo,
       projectId!,
       props.settings!,
       "vector",

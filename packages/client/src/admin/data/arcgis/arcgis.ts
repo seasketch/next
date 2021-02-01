@@ -912,7 +912,10 @@ export function useImportArcGISService(serviceRoot?: string) {
 
         const stableIds: { [sublayer: number]: string } = {};
         const saved: { [sublayer: number]: boolean } = {};
-        const saveItem = async (layer: LayerInfo) => {
+        const saveItem = async (
+          layer: LayerInfo,
+          mapServerInfo: MapServerCatalogInfo
+        ) => {
           if (state.abortController && state.abortController.signal.aborted) {
             return;
           }
@@ -922,7 +925,8 @@ export function useImportArcGISService(serviceRoot?: string) {
             let parentStableId: string | undefined = undefined;
             if (layer.parentLayer && layer.parentLayer.id !== -1) {
               parentStableId = await saveItem(
-                layerInfo.find((l) => l.id === layer.parentLayer!.id)!
+                layerInfo.find((l) => l.id === layer.parentLayer!.id)!,
+                mapServerInfo
               );
             }
             const id = nanoId();
@@ -982,7 +986,11 @@ export function useImportArcGISService(serviceRoot?: string) {
                   const { data } = await createSeaSketchVectorSource({
                     variables: {
                       projectId,
-                      attribution: layer.copyrightText,
+                      attribution:
+                        contentOrFalse(layer.copyrightText) ||
+                        contentOrFalse(mapServerInfo.copyrightText) ||
+                        contentOrFalse(mapServerInfo.documentInfo.Author) ||
+                        null,
                       bounds: bounds,
                       byteLength: byteLength(stringifiedJSON),
                       enhancedSecurity: false,
@@ -1058,7 +1066,11 @@ export function useImportArcGISService(serviceRoot?: string) {
                     variables: {
                       projectId,
                       url: layer.url,
-                      attribution: layer.copyrightText,
+                      attribution:
+                        contentOrFalse(layer.copyrightText) ||
+                        contentOrFalse(mapServerInfo.copyrightText) ||
+                        contentOrFalse(mapServerInfo.documentInfo.Author) ||
+                        null,
                       bounds: bounds,
                       queryParameters: queryParameters,
                     },
@@ -1191,6 +1203,11 @@ export function useImportArcGISService(serviceRoot?: string) {
                   isFolder: false,
                   dataLayerId: dataLayerId,
                   bounds,
+                  metadata: generateMetadataForLayer(
+                    mapServerInfo,
+                    layer,
+                    !layerSettings || layerSettings.importType === "geojson"
+                  ),
                 },
               });
             }
@@ -1230,8 +1247,9 @@ export function useImportArcGISService(serviceRoot?: string) {
                 projectId,
                 url: mapServerInfo.url,
                 attribution:
-                  mapServerInfo.copyrightText ||
-                  mapServerInfo.documentInfo.Author,
+                  contentOrFalse(mapServerInfo.copyrightText) ||
+                  contentOrFalse(mapServerInfo.documentInfo.Author) ||
+                  null,
                 bounds: latLngBounds
                   ? [
                       latLngBounds[0][0],
@@ -1267,7 +1285,7 @@ export function useImportArcGISService(serviceRoot?: string) {
             };
           });
           try {
-            await saveItem(layer);
+            await saveItem(layer, mapServerInfo);
           } catch (e) {
             error = e;
             break;
@@ -1335,7 +1353,6 @@ export function replaceSpriteIds(
   glStyles: any[],
   idReplacements: { [oldId: string]: string }
 ) {
-  // console.log("replace ids", idReplacements, glStyles);
   let stringified = JSON.stringify(glStyles);
   for (const oldId in idReplacements) {
     stringified = stringified.replaceAll(
@@ -1459,9 +1476,8 @@ export async function identifyLayers(
   { sourceId: number; sublayer: string; attributes: { [key: string]: any } }[]
 > {
   if (source.type === DataSourceTypes.ArcgisDynamicMapserver) {
-    console.log("start fetching");
     const response = await fetch(
-      `${source.url}/identify?f=json&tolerance=${2}&mapExtent=${mapBounds.join(
+      `${source.url}/identify?f=json&tolerance=${4}&mapExtent=${mapBounds.join(
         ","
       )}&imageDisplay=${width},${height},${dpi}&geometryType=esriGeometryPoint&geometry={x:${
         position[0]
@@ -1473,7 +1489,6 @@ export async function identifyLayers(
       }
     );
     const data: any = await response.json();
-    console.log("json", data);
     if (data.results) {
       return data.results.map((record: any) => {
         return {
@@ -1488,5 +1503,139 @@ export async function identifyLayers(
     }
   } else {
     throw new Error("Not supported");
+  }
+}
+
+export function generateMetadataForLayer(
+  mapServerInfo: MapServerCatalogInfo,
+  layer: LayerInfo,
+  hostedOnSeaSketch: boolean
+) {
+  const attribution =
+    contentOrFalse(layer.copyrightText) ||
+    contentOrFalse(mapServerInfo.copyrightText) ||
+    contentOrFalse(mapServerInfo.documentInfo.Author);
+  const description = pickDescription(mapServerInfo, layer);
+  let keywords =
+    mapServerInfo.documentInfo.Keywords &&
+    mapServerInfo.documentInfo.Keywords.length
+      ? mapServerInfo.documentInfo.Keywords.split(",")
+      : [];
+  return {
+    type: "doc",
+    content: [
+      {
+        type: "heading",
+        attrs: { level: 1 },
+        content: [{ type: "text", text: layer.name }],
+      },
+      ...(description
+        ? [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: description,
+                },
+              ],
+            },
+          ]
+        : []),
+      ...(attribution
+        ? [
+            { type: "paragraph" },
+            {
+              type: "heading",
+              attrs: { level: 3 },
+              content: [{ type: "text", text: "Attribution" }],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: attribution,
+                },
+              ],
+            },
+          ]
+        : []),
+      ...(keywords && keywords.length
+        ? [
+            { type: "paragraph" },
+            {
+              type: "heading",
+              attrs: { level: 3 },
+              content: [
+                {
+                  type: "text",
+                  text: "Keywords",
+                },
+              ],
+            },
+            {
+              type: "bullet_list",
+              marks: [],
+              attrs: {},
+              content: keywords.map((word) => ({
+                type: "list_item",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: word }],
+                  },
+                ],
+              })),
+            },
+          ]
+        : []),
+      { type: "paragraph" },
+      {
+        type: "heading",
+        attrs: { level: 3 },
+        content: [
+          {
+            type: "text",
+            text: hostedOnSeaSketch ? "Original Source" : "Source Server",
+          },
+        ],
+      },
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            marks: [
+              {
+                type: "link",
+                attrs: {
+                  href: layer.url,
+                  title: "ArcGIS Server",
+                },
+              },
+            ],
+            text: layer.url,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function pickDescription(info: MapServerCatalogInfo, layer?: LayerInfo) {
+  return (
+    contentOrFalse(layer?.description) ||
+    contentOrFalse(info.description) ||
+    contentOrFalse(info.documentInfo.Subject) ||
+    contentOrFalse(info.documentInfo.Comments)
+  );
+}
+
+function contentOrFalse(str?: string) {
+  if (str && str.length > 0) {
+    return str;
+  } else {
+    return false;
   }
 }
