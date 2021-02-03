@@ -386,23 +386,6 @@ export async function verifyOnlyProjectGroupMembersCanAccessResource(
       const groupId = await createGroup(conn, projectId, "group a", [userA]);
       const groupBId = await createGroup(conn, projectId, "group b", [userB]);
       const id = await fn(conn, projectId, groupId, adminId);
-      // userA in group a can select object
-      await clearSession(conn);
-      await createSession(conn, userA, true, false, projectId);
-      let count = await conn.oneFirst(
-        sql`select count(id) from ${sql.identifier([
-          tableName,
-        ])} where id = ${id}`
-      );
-      expect(count).toBe(1);
-      // userB cannot
-      await createSession(conn, userB, true, false, projectId);
-      count = await conn.oneFirst(
-        sql`select count(id) from ${sql.identifier([
-          tableName,
-        ])} where id = ${id}`
-      );
-      expect(count).toBe(0);
       // admin can select object
       await createSession(conn, adminId, true, false, projectId);
       let selectedId = await conn.oneFirst(
@@ -411,6 +394,23 @@ export async function verifyOnlyProjectGroupMembersCanAccessResource(
       expect(selectedId).toBe(id);
       // nonParticipant cannot
       await createSession(conn, nonParticipant, true, false, projectId);
+      let count = await conn.oneFirst(
+        sql`select count(id) from ${sql.identifier([
+          tableName,
+        ])} where id = ${id}`
+      );
+      expect(count).toBe(0);
+      // userA in group a can select object
+      await clearSession(conn);
+      await createSession(conn, userA, true, false, projectId);
+      count = await conn.oneFirst(
+        sql`select count(id) from ${sql.identifier([
+          tableName,
+        ])} where id = ${id}`
+      );
+      expect(count).toBe(1);
+      // userB cannot
+      await createSession(conn, userB, true, false, projectId);
       count = await conn.oneFirst(
         sql`select count(id) from ${sql.identifier([
           tableName,
@@ -502,9 +502,9 @@ export function sleep(time: number) {
 export const asPg = (pool: DatabaseTransactionConnectionType) => {
   return {
     query: (query: string, values?: any[]) => {
-      return (pool.query(sql`${raw(query, values)}`) as unknown) as Promise<
-        QueryResult
-      >;
+      return (pool.query(
+        sql`${raw(query, values)}`
+      ) as unknown) as Promise<QueryResult>;
     },
   };
 };

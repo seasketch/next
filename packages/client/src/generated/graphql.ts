@@ -53,6 +53,7 @@ export enum AccessControlListType {
  */
 export type Acl = Node & {
   __typename?: 'Acl';
+  basemapId?: Maybe<Scalars['Int']>;
   forumIdRead?: Maybe<Scalars['Int']>;
   forumIdWrite?: Maybe<Scalars['Int']>;
   /**
@@ -193,6 +194,282 @@ export type ApproveParticipantPayload = {
   query?: Maybe<Query>;
 };
 
+export type Basemap = Node & {
+  __typename?: 'Basemap';
+  /**
+   * Optional attribution to show at the bottom of the map. Will be overriden by
+   * the attribution specified in the gl-style in the case of MAPBOX types.
+   */
+  attribution?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `BasemapInteractivitySetting`. */
+  basemapInteractivitySettings: Array<BasemapInteractivitySetting>;
+  id: Scalars['Int'];
+  /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
+  labelsLayerId?: Maybe<Scalars['String']>;
+  /** Label shown in the basemap picker interface */
+  name: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads and enables pagination through a set of `OptionalBasemapLayer`. */
+  optionalBasemapLayers: Array<OptionalBasemapLayer>;
+  /** Reads a single `Project` that is related to this `Basemap`. */
+  project?: Maybe<Project>;
+  /**
+   * If not set, the basemap will be considered a "Shared Basemap" that can be
+   * added to any project. Otherwise it is private to the given proejct. Only
+   * superusers can create Shared Basemaps.
+   */
+  projectId?: Maybe<Scalars['Int']>;
+  /** Reads and enables pagination through a set of `ProjectsSharedBasemap`. */
+  projectsSharedBasemapsConnection: ProjectsSharedBasemapsConnection;
+  terrainExaggeration: Scalars['BigFloat'];
+  terrainMaxZoom: Scalars['Int'];
+  /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
+  terrainOptional: Scalars['Boolean'];
+  terrainTileSize: Scalars['Int'];
+  /**
+   * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
+   * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
+   */
+  terrainUrl?: Maybe<Scalars['String']>;
+  terrainVisibilityDefault: Scalars['Boolean'];
+  /** Square thumbnail will be used to identify the basemap */
+  thumbnail: Scalars['String'];
+  /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
+  tileSize: Scalars['Int'];
+  type: BasemapType;
+  /**
+   * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
+   * mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
+   * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
+   */
+  url: Scalars['String'];
+};
+
+
+export type BasemapBasemapInteractivitySettingsArgs = {
+  condition?: Maybe<BasemapInteractivitySettingCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<BasemapInteractivitySettingsOrderBy>>;
+};
+
+
+export type BasemapOptionalBasemapLayersArgs = {
+  condition?: Maybe<OptionalBasemapLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OptionalBasemapLayersOrderBy>>;
+};
+
+
+export type BasemapProjectsSharedBasemapsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ProjectsSharedBasemapCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+};
+
+/** A condition to be used against `Basemap` object types. All fields are tested for equality and combined with a logical ‘and.’ */
+export type BasemapCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `Basemap` */
+export type BasemapInput = {
+  /**
+   * Optional attribution to show at the bottom of the map. Will be overriden by
+   * the attribution specified in the gl-style in the case of MAPBOX types.
+   */
+  attribution?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['Int']>;
+  /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
+  labelsLayerId?: Maybe<Scalars['String']>;
+  /** Label shown in the basemap picker interface */
+  name: Scalars['String'];
+  /**
+   * If not set, the basemap will be considered a "Shared Basemap" that can be
+   * added to any project. Otherwise it is private to the given proejct. Only
+   * superusers can create Shared Basemaps.
+   */
+  projectId?: Maybe<Scalars['Int']>;
+  terrainExaggeration?: Maybe<Scalars['BigFloat']>;
+  terrainMaxZoom?: Maybe<Scalars['Int']>;
+  /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
+  terrainOptional?: Maybe<Scalars['Boolean']>;
+  terrainTileSize?: Maybe<Scalars['Int']>;
+  /**
+   * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
+   * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
+   */
+  terrainUrl?: Maybe<Scalars['String']>;
+  terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
+  /** Square thumbnail will be used to identify the basemap */
+  thumbnail: Scalars['String'];
+  /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
+  tileSize?: Maybe<Scalars['Int']>;
+  type: BasemapType;
+  /**
+   * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
+   * mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
+   * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
+   */
+  url: Scalars['String'];
+};
+
+/** Used to specify hover effects and popups for vector layers within a basemap. Only works for MAPBOX-type basemaps. */
+export type BasemapInteractivitySetting = Node & {
+  __typename?: 'BasemapInteractivitySetting';
+  /** Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`. */
+  basemap?: Maybe<Basemap>;
+  basemapId: Scalars['Int'];
+  cursor: CursorType;
+  id: Scalars['Int'];
+  /** Interactivity could apply to more than one layer. */
+  layers: Array<Maybe<Scalars['String']>>;
+  longTemplate?: Maybe<Scalars['String']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Mustache template populated with feature attributes. Used for popup and fixed-block types. */
+  shortTemplate?: Maybe<Scalars['String']>;
+  type: InteractivityType;
+};
+
+/**
+ * A condition to be used against `BasemapInteractivitySetting` object types. All
+ * fields are tested for equality and combined with a logical ‘and.’
+ */
+export type BasemapInteractivitySettingCondition = {
+  /** Checks for equality with the object’s `basemapId` field. */
+  basemapId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `BasemapInteractivitySetting` */
+export type BasemapInteractivitySettingInput = {
+  basemapId: Scalars['Int'];
+  cursor?: Maybe<CursorType>;
+  id?: Maybe<Scalars['Int']>;
+  /** Interactivity could apply to more than one layer. */
+  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
+  longTemplate?: Maybe<Scalars['String']>;
+  /** Mustache template populated with feature attributes. Used for popup and fixed-block types. */
+  shortTemplate?: Maybe<Scalars['String']>;
+  type?: Maybe<InteractivityType>;
+};
+
+/** Represents an update to a `BasemapInteractivitySetting`. Fields that are set will be updated. */
+export type BasemapInteractivitySettingPatch = {
+  basemapId?: Maybe<Scalars['Int']>;
+  cursor?: Maybe<CursorType>;
+  id?: Maybe<Scalars['Int']>;
+  /** Interactivity could apply to more than one layer. */
+  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
+  longTemplate?: Maybe<Scalars['String']>;
+  /** Mustache template populated with feature attributes. Used for popup and fixed-block types. */
+  shortTemplate?: Maybe<Scalars['String']>;
+  type?: Maybe<InteractivityType>;
+};
+
+/** Methods to use when ordering `BasemapInteractivitySetting`. */
+export enum BasemapInteractivitySettingsOrderBy {
+  BasemapIdAsc = 'BASEMAP_ID_ASC',
+  BasemapIdDesc = 'BASEMAP_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+/** Represents an update to a `Basemap`. Fields that are set will be updated. */
+export type BasemapPatch = {
+  /**
+   * Optional attribution to show at the bottom of the map. Will be overriden by
+   * the attribution specified in the gl-style in the case of MAPBOX types.
+   */
+  attribution?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['Int']>;
+  /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
+  labelsLayerId?: Maybe<Scalars['String']>;
+  /** Label shown in the basemap picker interface */
+  name?: Maybe<Scalars['String']>;
+  /**
+   * If not set, the basemap will be considered a "Shared Basemap" that can be
+   * added to any project. Otherwise it is private to the given proejct. Only
+   * superusers can create Shared Basemaps.
+   */
+  projectId?: Maybe<Scalars['Int']>;
+  terrainExaggeration?: Maybe<Scalars['BigFloat']>;
+  terrainMaxZoom?: Maybe<Scalars['Int']>;
+  /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
+  terrainOptional?: Maybe<Scalars['Boolean']>;
+  terrainTileSize?: Maybe<Scalars['Int']>;
+  /**
+   * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
+   * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
+   */
+  terrainUrl?: Maybe<Scalars['String']>;
+  terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
+  /** Square thumbnail will be used to identify the basemap */
+  thumbnail?: Maybe<Scalars['String']>;
+  /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
+  tileSize?: Maybe<Scalars['Int']>;
+  type?: Maybe<BasemapType>;
+  /**
+   * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
+   * mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
+   * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
+   */
+  url?: Maybe<Scalars['String']>;
+};
+
+/** A connection to a list of `Basemap` values. */
+export type BasemapsConnection = {
+  __typename?: 'BasemapsConnection';
+  /** A list of edges which contains the `Basemap` and cursor to aid in pagination. */
+  edges: Array<BasemapsEdge>;
+  /** A list of `Basemap` objects. */
+  nodes: Array<Basemap>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `Basemap` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `Basemap` edge in the connection. */
+export type BasemapsEdge = {
+  __typename?: 'BasemapsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `Basemap` at the end of the edge. */
+  node: Basemap;
+};
+
+/** Methods to use when ordering `Basemap`. */
+export enum BasemapsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
+/** SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style. */
+export enum BasemapType {
+  Mapbox = 'MAPBOX',
+  RasterUrlTemplate = 'RASTER_URL_TEMPLATE'
+}
+
 
 
 /**
@@ -299,6 +576,68 @@ export type ConfirmProjectInviteWithVerifiedEmailPayload = {
   integer?: Maybe<Scalars['Int']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the create `Basemap` mutation. */
+export type CreateBasemapInput = {
+  /** The `Basemap` to be created by this mutation. */
+  basemap: BasemapInput;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** All input for the create `BasemapInteractivitySetting` mutation. */
+export type CreateBasemapInteractivitySettingInput = {
+  /** The `BasemapInteractivitySetting` to be created by this mutation. */
+  basemapInteractivitySetting: BasemapInteractivitySettingInput;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our create `BasemapInteractivitySetting` mutation. */
+export type CreateBasemapInteractivitySettingPayload = {
+  __typename?: 'CreateBasemapInteractivitySettingPayload';
+  /** Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`. */
+  basemap?: Maybe<Basemap>;
+  /** The `BasemapInteractivitySetting` that was created by this mutation. */
+  basemapInteractivitySetting?: Maybe<BasemapInteractivitySetting>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** The output of our create `Basemap` mutation. */
+export type CreateBasemapPayload = {
+  __typename?: 'CreateBasemapPayload';
+  /** The `Basemap` that was created by this mutation. */
+  basemap?: Maybe<Basemap>;
+  /** An edge for our `Basemap`. May be used by Relay 1. */
+  basemapEdge?: Maybe<BasemapsEdge>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Project` that is related to this `Basemap`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `Basemap` mutation. */
+export type CreateBasemapPayloadBasemapEdgeArgs = {
+  orderBy?: Maybe<Array<BasemapsOrderBy>>;
 };
 
 /** All input for the create `CommunityGuideline` mutation. */
@@ -629,6 +968,33 @@ export type CreateInteractivitySettingPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the create `OptionalBasemapLayer` mutation. */
+export type CreateOptionalBasemapLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OptionalBasemapLayer` to be created by this mutation. */
+  optionalBasemapLayer: OptionalBasemapLayerInput;
+};
+
+/** The output of our create `OptionalBasemapLayer` mutation. */
+export type CreateOptionalBasemapLayerPayload = {
+  __typename?: 'CreateOptionalBasemapLayerPayload';
+  /** Reads a single `Basemap` that is related to this `OptionalBasemapLayer`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OptionalBasemapLayer` that was created by this mutation. */
+  optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `createPost` mutation. */
 export type CreatePostInput = {
   /**
@@ -758,6 +1124,41 @@ export type CreateProjectPayload = {
 /** The output of our `createProject` mutation. */
 export type CreateProjectPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+/** All input for the create `ProjectsSharedBasemap` mutation. */
+export type CreateProjectsSharedBasemapInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `ProjectsSharedBasemap` to be created by this mutation. */
+  projectsSharedBasemap: ProjectsSharedBasemapInput;
+};
+
+/** The output of our create `ProjectsSharedBasemap` mutation. */
+export type CreateProjectsSharedBasemapPayload = {
+  __typename?: 'CreateProjectsSharedBasemapPayload';
+  /** Reads a single `Basemap` that is related to this `ProjectsSharedBasemap`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `ProjectsSharedBasemap` that was created by this mutation. */
+  projectsSharedBasemap?: Maybe<ProjectsSharedBasemap>;
+  /** An edge for our `ProjectsSharedBasemap`. May be used by Relay 1. */
+  projectsSharedBasemapEdge?: Maybe<ProjectsSharedBasemapsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `ProjectsSharedBasemap` mutation. */
+export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 /** All input for the create `SketchClass` mutation. */
@@ -1742,6 +2143,90 @@ export enum DataSourceTypes {
 }
 
 
+/** All input for the `deleteBasemapByNodeId` mutation. */
+export type DeleteBasemapByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `Basemap` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteBasemap` mutation. */
+export type DeleteBasemapInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** All input for the `deleteBasemapInteractivitySettingByNodeId` mutation. */
+export type DeleteBasemapInteractivitySettingByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `BasemapInteractivitySetting` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteBasemapInteractivitySetting` mutation. */
+export type DeleteBasemapInteractivitySettingInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `BasemapInteractivitySetting` mutation. */
+export type DeleteBasemapInteractivitySettingPayload = {
+  __typename?: 'DeleteBasemapInteractivitySettingPayload';
+  /** Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`. */
+  basemap?: Maybe<Basemap>;
+  /** The `BasemapInteractivitySetting` that was deleted by this mutation. */
+  basemapInteractivitySetting?: Maybe<BasemapInteractivitySetting>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedBasemapInteractivitySettingNodeId?: Maybe<Scalars['ID']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** The output of our delete `Basemap` mutation. */
+export type DeleteBasemapPayload = {
+  __typename?: 'DeleteBasemapPayload';
+  /** The `Basemap` that was deleted by this mutation. */
+  basemap?: Maybe<Basemap>;
+  /** An edge for our `Basemap`. May be used by Relay 1. */
+  basemapEdge?: Maybe<BasemapsEdge>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedBasemapNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `Project` that is related to this `Basemap`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our delete `Basemap` mutation. */
+export type DeleteBasemapPayloadBasemapEdgeArgs = {
+  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+};
+
 /** All input for the `deleteCommunityGuidelineByNodeId` mutation. */
 export type DeleteCommunityGuidelineByNodeIdInput = {
   /**
@@ -2141,6 +2626,44 @@ export type DeleteGroupPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `deleteOptionalBasemapLayerByNodeId` mutation. */
+export type DeleteOptionalBasemapLayerByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `OptionalBasemapLayer` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteOptionalBasemapLayer` mutation. */
+export type DeleteOptionalBasemapLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `OptionalBasemapLayer` mutation. */
+export type DeleteOptionalBasemapLayerPayload = {
+  __typename?: 'DeleteOptionalBasemapLayerPayload';
+  /** Reads a single `Basemap` that is related to this `OptionalBasemapLayer`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedOptionalBasemapLayerNodeId?: Maybe<Scalars['ID']>;
+  /** The `OptionalBasemapLayer` that was deleted by this mutation. */
+  optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `deletePostByNodeId` mutation. */
 export type DeletePostByNodeIdInput = {
   /**
@@ -2300,6 +2823,42 @@ export type DeleteProjectPayload = {
 /** The output of our `deleteProject` mutation. */
 export type DeleteProjectPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+/** All input for the `deleteProjectsSharedBasemapByBasemapIdAndProjectId` mutation. */
+export type DeleteProjectsSharedBasemapByBasemapIdAndProjectIdInput = {
+  basemapId: Scalars['Int'];
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+};
+
+/** The output of our delete `ProjectsSharedBasemap` mutation. */
+export type DeleteProjectsSharedBasemapPayload = {
+  __typename?: 'DeleteProjectsSharedBasemapPayload';
+  /** Reads a single `Basemap` that is related to this `ProjectsSharedBasemap`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedProjectsSharedBasemapNodeId?: Maybe<Scalars['ID']>;
+  /** The `ProjectsSharedBasemap` that was deleted by this mutation. */
+  projectsSharedBasemap?: Maybe<ProjectsSharedBasemap>;
+  /** An edge for our `ProjectsSharedBasemap`. May be used by Relay 1. */
+  projectsSharedBasemapEdge?: Maybe<ProjectsSharedBasemapsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our delete `ProjectsSharedBasemap` mutation. */
+export type DeleteProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 /** All input for the `deleteSketchByNodeId` mutation. */
@@ -4196,6 +4755,10 @@ export type Mutation = {
    * wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
    */
   confirmProjectInviteWithVerifiedEmail?: Maybe<ConfirmProjectInviteWithVerifiedEmailPayload>;
+  /** Creates a single `Basemap`. */
+  createBasemap?: Maybe<CreateBasemapPayload>;
+  /** Creates a single `BasemapInteractivitySetting`. */
+  createBasemapInteractivitySetting?: Maybe<CreateBasemapInteractivitySettingPayload>;
   /** Creates a single `CommunityGuideline`. */
   createCommunityGuideline?: Maybe<CreateCommunityGuidelinePayload>;
   /** Creates a single `DataLayer`. */
@@ -4214,6 +4777,8 @@ export type Mutation = {
   createGroup?: Maybe<CreateGroupPayload>;
   /** Creates a single `InteractivitySetting`. */
   createInteractivitySetting?: Maybe<CreateInteractivitySettingPayload>;
+  /** Creates a single `OptionalBasemapLayer`. */
+  createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
   /**
    * Must have write permission for the specified forum. Create reply to a
    * discussion topic. `message` must be JSON, something like the output of DraftJS.
@@ -4239,6 +4804,8 @@ export type Mutation = {
    * More details on project invite management [can be found in the wiki](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management).
    */
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
+  /** Creates a single `ProjectsSharedBasemap`. */
+  createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
   /** Creates a single `Sketch`. */
   createSketch?: Maybe<CreateSketchPayload>;
   /** Creates a single `SketchClass`. */
@@ -4260,6 +4827,14 @@ export type Mutation = {
    * output of DraftJS.
    */
   createTopic?: Maybe<CreateTopicPayload>;
+  /** Deletes a single `Basemap` using a unique key. */
+  deleteBasemap?: Maybe<DeleteBasemapPayload>;
+  /** Deletes a single `Basemap` using its globally unique id. */
+  deleteBasemapByNodeId?: Maybe<DeleteBasemapPayload>;
+  /** Deletes a single `BasemapInteractivitySetting` using a unique key. */
+  deleteBasemapInteractivitySetting?: Maybe<DeleteBasemapInteractivitySettingPayload>;
+  /** Deletes a single `BasemapInteractivitySetting` using its globally unique id. */
+  deleteBasemapInteractivitySettingByNodeId?: Maybe<DeleteBasemapInteractivitySettingPayload>;
   /** Deletes a single `CommunityGuideline` using a unique key. */
   deleteCommunityGuideline?: Maybe<DeleteCommunityGuidelinePayload>;
   /** Deletes a single `CommunityGuideline` using its globally unique id. */
@@ -4300,6 +4875,10 @@ export type Mutation = {
   deleteGroupByNodeId?: Maybe<DeleteGroupPayload>;
   /** Deletes a single `Group` using a unique key. */
   deleteGroupByProjectIdAndName?: Maybe<DeleteGroupPayload>;
+  /** Deletes a single `OptionalBasemapLayer` using a unique key. */
+  deleteOptionalBasemapLayer?: Maybe<DeleteOptionalBasemapLayerPayload>;
+  /** Deletes a single `OptionalBasemapLayer` using its globally unique id. */
+  deleteOptionalBasemapLayerByNodeId?: Maybe<DeleteOptionalBasemapLayerPayload>;
   /** Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting. */
   deletePost?: Maybe<DeletePostPayload>;
   /** Deletes a single `Post` using its globally unique id. */
@@ -4317,6 +4896,8 @@ export type Mutation = {
   deleteProjectInviteByNodeId?: Maybe<DeleteProjectInvitePayload>;
   /** Deletes a single `ProjectInviteGroup` using a unique key. */
   deleteProjectInviteGroupByInviteIdAndGroupId?: Maybe<DeleteProjectInviteGroupPayload>;
+  /** Deletes a single `ProjectsSharedBasemap` using a unique key. */
+  deleteProjectsSharedBasemapByBasemapIdAndProjectId?: Maybe<DeleteProjectsSharedBasemapPayload>;
   /** Deletes a single `Sketch` using a unique key. */
   deleteSketch?: Maybe<DeleteSketchPayload>;
   /** Deletes a single `Sketch` using its globally unique id. */
@@ -4471,12 +5052,24 @@ export type Mutation = {
   setTopicSticky?: Maybe<SetTopicStickyPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAcl?: Maybe<UpdateAclPayload>;
+  /** Updates a single `Acl` using a unique key and a patch. */
+  updateAclByBasemapId?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using its globally unique id and a patch. */
   updateAclByNodeId?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAclBySketchClassId?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAclByTableOfContentsItemId?: Maybe<UpdateAclPayload>;
+  /** Updates a single `Basemap` using a unique key and a patch. */
+  updateBasemap?: Maybe<UpdateBasemapPayload>;
+  /** Updates a single `Basemap` using its globally unique id and a patch. */
+  updateBasemapByNodeId?: Maybe<UpdateBasemapPayload>;
+  /** Updates a single `BasemapInteractivitySetting` using a unique key and a patch. */
+  updateBasemapInteractivitySetting?: Maybe<UpdateBasemapInteractivitySettingPayload>;
+  /** Updates a single `BasemapInteractivitySetting` using its globally unique id and a patch. */
+  updateBasemapInteractivitySettingByNodeId?: Maybe<UpdateBasemapInteractivitySettingPayload>;
+  /** Update the group_label for multiple OptionalBasemapLayers */
+  updateBasemapLayerRadioGroupLabel?: Maybe<UpdateBasemapLayerRadioGroupLabelPayload>;
   /** Updates a single `CommunityGuideline` using a unique key and a patch. */
   updateCommunityGuideline?: Maybe<UpdateCommunityGuidelinePayload>;
   /** Updates a single `CommunityGuideline` using its globally unique id and a patch. */
@@ -4515,6 +5108,10 @@ export type Mutation = {
   updateInteractivitySetting?: Maybe<UpdateInteractivitySettingPayload>;
   /** Updates a single `InteractivitySetting` using its globally unique id and a patch. */
   updateInteractivitySettingByNodeId?: Maybe<UpdateInteractivitySettingPayload>;
+  /** Updates a single `OptionalBasemapLayer` using a unique key and a patch. */
+  updateOptionalBasemapLayer?: Maybe<UpdateOptionalBasemapLayerPayload>;
+  /** Updates a single `OptionalBasemapLayer` using its globally unique id and a patch. */
+  updateOptionalBasemapLayerByNodeId?: Maybe<UpdateOptionalBasemapLayerPayload>;
   /** Updates the contents of the post. Can only be used by the author for 5 minutes after posting. */
   updatePost?: Maybe<UpdatePostPayload>;
   /** Updates a single `Profile` using a unique key and a patch. */
@@ -4533,6 +5130,8 @@ export type Mutation = {
   updateProjectInviteByNodeId?: Maybe<UpdateProjectInvitePayload>;
   /** Updates a single `ProjectInviteGroup` using a unique key and a patch. */
   updateProjectInviteGroupByInviteIdAndGroupId?: Maybe<UpdateProjectInviteGroupPayload>;
+  /** Updates a single `ProjectsSharedBasemap` using a unique key and a patch. */
+  updateProjectsSharedBasemapByBasemapIdAndProjectId?: Maybe<UpdateProjectsSharedBasemapPayload>;
   /** Updates a single `Sketch` using a unique key and a patch. */
   updateSketch?: Maybe<UpdateSketchPayload>;
   /** Updates a single `Sketch` using its globally unique id and a patch. */
@@ -4645,6 +5244,18 @@ export type MutationConfirmProjectInviteWithVerifiedEmailArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateBasemapArgs = {
+  input: CreateBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateBasemapInteractivitySettingArgs = {
+  input: CreateBasemapInteractivitySettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateCommunityGuidelineArgs = {
   input: CreateCommunityGuidelineInput;
 };
@@ -4705,6 +5316,12 @@ export type MutationCreateInteractivitySettingArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOptionalBasemapLayerArgs = {
+  input: CreateOptionalBasemapLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreatePostArgs = {
   input: CreatePostInput;
 };
@@ -4725,6 +5342,12 @@ export type MutationCreateProjectInviteGroupArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectInvitesArgs = {
   input: CreateProjectInvitesInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateProjectsSharedBasemapArgs = {
+  input: CreateProjectsSharedBasemapInput;
 };
 
 
@@ -4779,6 +5402,30 @@ export type MutationCreateTableOfContentsItemArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateTopicArgs = {
   input: CreateTopicInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteBasemapArgs = {
+  input: DeleteBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteBasemapByNodeIdArgs = {
+  input: DeleteBasemapByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteBasemapInteractivitySettingArgs = {
+  input: DeleteBasemapInteractivitySettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteBasemapInteractivitySettingByNodeIdArgs = {
+  input: DeleteBasemapInteractivitySettingByNodeIdInput;
 };
 
 
@@ -4903,6 +5550,18 @@ export type MutationDeleteGroupByProjectIdAndNameArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteOptionalBasemapLayerArgs = {
+  input: DeleteOptionalBasemapLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteOptionalBasemapLayerByNodeIdArgs = {
+  input: DeleteOptionalBasemapLayerByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeletePostArgs = {
   input: DeletePostInput;
 };
@@ -4941,6 +5600,12 @@ export type MutationDeleteProjectInviteByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteProjectInviteGroupByInviteIdAndGroupIdArgs = {
   input: DeleteProjectInviteGroupByInviteIdAndGroupIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
+  input: DeleteProjectsSharedBasemapByBasemapIdAndProjectIdInput;
 };
 
 
@@ -5214,6 +5879,12 @@ export type MutationUpdateAclArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateAclByBasemapIdArgs = {
+  input: UpdateAclByBasemapIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclByNodeIdArgs = {
   input: UpdateAclByNodeIdInput;
 };
@@ -5228,6 +5899,36 @@ export type MutationUpdateAclBySketchClassIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclByTableOfContentsItemIdArgs = {
   input: UpdateAclByTableOfContentsItemIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateBasemapArgs = {
+  input: UpdateBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateBasemapByNodeIdArgs = {
+  input: UpdateBasemapByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateBasemapInteractivitySettingArgs = {
+  input: UpdateBasemapInteractivitySettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateBasemapInteractivitySettingByNodeIdArgs = {
+  input: UpdateBasemapInteractivitySettingByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateBasemapLayerRadioGroupLabelArgs = {
+  input: UpdateBasemapLayerRadioGroupLabelInput;
 };
 
 
@@ -5346,6 +6047,18 @@ export type MutationUpdateInteractivitySettingByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateOptionalBasemapLayerArgs = {
+  input: UpdateOptionalBasemapLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateOptionalBasemapLayerByNodeIdArgs = {
+  input: UpdateOptionalBasemapLayerByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdatePostArgs = {
   input: UpdatePostInput;
 };
@@ -5396,6 +6109,12 @@ export type MutationUpdateProjectInviteByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectInviteGroupByInviteIdAndGroupIdArgs = {
   input: UpdateProjectInviteGroupByInviteIdAndGroupIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
+  input: UpdateProjectsSharedBasemapByBasemapIdAndProjectIdInput;
 };
 
 
@@ -5535,6 +6254,123 @@ export type Node = {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
 };
+
+/** Available only for MapBox GL Style-based basemaps. Specifies optional components of the basemap that can be shown or hidden. */
+export type OptionalBasemapLayer = Node & {
+  __typename?: 'OptionalBasemapLayer';
+  /** Reads a single `Basemap` that is related to this `OptionalBasemapLayer`. */
+  basemap?: Maybe<Basemap>;
+  basemapId: Scalars['Int'];
+  defaultVisibility: Scalars['Boolean'];
+  description?: Maybe<Scalars['String']>;
+  /**
+   * If RADIO or SELECT group_type is specified, this label will be used for the
+   * form input. It also specifies _which_ group this option should be shown for.
+   * Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for
+   * multiple options at once.
+   */
+  groupLabel?: Maybe<Scalars['String']>;
+  /**
+   * Specify RADIO or SELECT if this option should be presented as a group of
+   * options. Useful for mutually exclusive views like different years for the same
+   * dataset, or a heatmap display of density for multiple species where a single
+   * species must be chosen from a list. If left null, the option will be treated as standalone.
+   */
+  groupType: OptionalBasemapLayersGroupType;
+  id: Scalars['Int'];
+  /** IDs for layers in the gl style that will be toggled by this option. */
+  layers: Array<Maybe<Scalars['String']>>;
+  /** JSON representation of a ProseMirror document with layer metadata. */
+  metadata?: Maybe<Scalars['JSON']>;
+  /** Label that will be given in the UI */
+  name: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+};
+
+/**
+ * A condition to be used against `OptionalBasemapLayer` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type OptionalBasemapLayerCondition = {
+  /** Checks for equality with the object’s `basemapId` field. */
+  basemapId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `OptionalBasemapLayer` */
+export type OptionalBasemapLayerInput = {
+  basemapId: Scalars['Int'];
+  defaultVisibility?: Maybe<Scalars['Boolean']>;
+  description?: Maybe<Scalars['String']>;
+  /**
+   * If RADIO or SELECT group_type is specified, this label will be used for the
+   * form input. It also specifies _which_ group this option should be shown for.
+   * Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for
+   * multiple options at once.
+   */
+  groupLabel?: Maybe<Scalars['String']>;
+  /**
+   * Specify RADIO or SELECT if this option should be presented as a group of
+   * options. Useful for mutually exclusive views like different years for the same
+   * dataset, or a heatmap display of density for multiple species where a single
+   * species must be chosen from a list. If left null, the option will be treated as standalone.
+   */
+  groupType?: Maybe<OptionalBasemapLayersGroupType>;
+  id?: Maybe<Scalars['Int']>;
+  /** IDs for layers in the gl style that will be toggled by this option. */
+  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** JSON representation of a ProseMirror document with layer metadata. */
+  metadata?: Maybe<Scalars['JSON']>;
+  /** Label that will be given in the UI */
+  name: Scalars['String'];
+};
+
+/** Represents an update to a `OptionalBasemapLayer`. Fields that are set will be updated. */
+export type OptionalBasemapLayerPatch = {
+  basemapId?: Maybe<Scalars['Int']>;
+  defaultVisibility?: Maybe<Scalars['Boolean']>;
+  description?: Maybe<Scalars['String']>;
+  /**
+   * If RADIO or SELECT group_type is specified, this label will be used for the
+   * form input. It also specifies _which_ group this option should be shown for.
+   * Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for
+   * multiple options at once.
+   */
+  groupLabel?: Maybe<Scalars['String']>;
+  /**
+   * Specify RADIO or SELECT if this option should be presented as a group of
+   * options. Useful for mutually exclusive views like different years for the same
+   * dataset, or a heatmap display of density for multiple species where a single
+   * species must be chosen from a list. If left null, the option will be treated as standalone.
+   */
+  groupType?: Maybe<OptionalBasemapLayersGroupType>;
+  id?: Maybe<Scalars['Int']>;
+  /** IDs for layers in the gl style that will be toggled by this option. */
+  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** JSON representation of a ProseMirror document with layer metadata. */
+  metadata?: Maybe<Scalars['JSON']>;
+  /** Label that will be given in the UI */
+  name?: Maybe<Scalars['String']>;
+};
+
+export enum OptionalBasemapLayersGroupType {
+  None = 'NONE',
+  Radio = 'RADIO',
+  Select = 'SELECT'
+}
+
+/** Methods to use when ordering `OptionalBasemapLayer`. */
+export enum OptionalBasemapLayersOrderBy {
+  BasemapIdAsc = 'BASEMAP_ID_ASC',
+  BasemapIdDesc = 'BASEMAP_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
 
 /** Information about pagination in a connection. */
 export type PageInfo = {
@@ -5704,6 +6540,10 @@ export type Project = Node & {
   adminCount?: Maybe<Scalars['Int']>;
   /** Listing of all users who have admin access. */
   admins?: Maybe<Array<User>>;
+  /** Reads and enables pagination through a set of `Basemap`. */
+  basemaps?: Maybe<Array<Basemap>>;
+  /** Reads and enables pagination through a set of `Basemap`. */
+  basemapsConnection: BasemapsConnection;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   /**
@@ -5852,6 +6692,31 @@ export type Project = Node & {
 export type ProjectAdminsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectBasemapsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectBasemapsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<BasemapCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<BasemapsOrderBy>>;
 };
 
 
@@ -6336,6 +7201,64 @@ export enum ProjectsOrderBy {
   SlugDesc = 'SLUG_DESC'
 }
 
+export type ProjectsSharedBasemap = {
+  __typename?: 'ProjectsSharedBasemap';
+  /** Reads a single `Basemap` that is related to this `ProjectsSharedBasemap`. */
+  basemap?: Maybe<Basemap>;
+  basemapId: Scalars['Int'];
+  projectId: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `ProjectsSharedBasemap` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type ProjectsSharedBasemapCondition = {
+  /** Checks for equality with the object’s `basemapId` field. */
+  basemapId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `ProjectsSharedBasemap` */
+export type ProjectsSharedBasemapInput = {
+  basemapId: Scalars['Int'];
+  projectId: Scalars['Int'];
+};
+
+/** Represents an update to a `ProjectsSharedBasemap`. Fields that are set will be updated. */
+export type ProjectsSharedBasemapPatch = {
+  basemapId?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `ProjectsSharedBasemap` values. */
+export type ProjectsSharedBasemapsConnection = {
+  __typename?: 'ProjectsSharedBasemapsConnection';
+  /** A list of edges which contains the `ProjectsSharedBasemap` and cursor to aid in pagination. */
+  edges: Array<ProjectsSharedBasemapsEdge>;
+  /** A list of `ProjectsSharedBasemap` objects. */
+  nodes: Array<ProjectsSharedBasemap>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `ProjectsSharedBasemap` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `ProjectsSharedBasemap` edge in the connection. */
+export type ProjectsSharedBasemapsEdge = {
+  __typename?: 'ProjectsSharedBasemapsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `ProjectsSharedBasemap` at the end of the edge. */
+  node: ProjectsSharedBasemap;
+};
+
+/** Methods to use when ordering `ProjectsSharedBasemap`. */
+export enum ProjectsSharedBasemapsOrderBy {
+  BasemapIdAsc = 'BASEMAP_ID_ASC',
+  BasemapIdDesc = 'BASEMAP_ID_DESC',
+  Natural = 'NATURAL'
+}
+
 /** All input for the `publishTableOfContents` mutation. */
 export type PublishTableOfContentsInput = {
   /**
@@ -6373,10 +7296,19 @@ export type PublishTableOfContentsPayload = {
 export type Query = Node & {
   __typename?: 'Query';
   acl?: Maybe<Acl>;
+  aclByBasemapId?: Maybe<Acl>;
   /** Reads a single `Acl` using its globally unique `ID`. */
   aclByNodeId?: Maybe<Acl>;
   aclBySketchClassId?: Maybe<Acl>;
   aclByTableOfContentsItemId?: Maybe<Acl>;
+  basemap?: Maybe<Basemap>;
+  /** Reads a single `Basemap` using its globally unique `ID`. */
+  basemapByNodeId?: Maybe<Basemap>;
+  basemapInteractivitySetting?: Maybe<BasemapInteractivitySetting>;
+  /** Reads a single `BasemapInteractivitySetting` using its globally unique `ID`. */
+  basemapInteractivitySettingByNodeId?: Maybe<BasemapInteractivitySetting>;
+  /** Reads and enables pagination through a set of `Basemap`. */
+  basemapsConnection?: Maybe<BasemapsConnection>;
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
   communityGuidelineByNodeId?: Maybe<CommunityGuideline>;
@@ -6429,6 +7361,9 @@ export type Query = Node & {
   node?: Maybe<Node>;
   /** The root query type must be a `Node` to work well with Relay 1 mutations. This just resolves to `query`. */
   nodeId: Scalars['ID'];
+  optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
+  /** Reads a single `OptionalBasemapLayer` using its globally unique `ID`. */
+  optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
   post?: Maybe<Post>;
   /** Reads a single `Post` using its globally unique `ID`. */
   postByNodeId?: Maybe<Post>;
@@ -6457,12 +7392,16 @@ export type Query = Node & {
    * that an efficient listing can be made of the hundreds of SeaSketch Projects.
    */
   projectsConnection?: Maybe<ProjectsConnection>;
+  projectsSharedBasemapByBasemapIdAndProjectId?: Maybe<ProjectsSharedBasemap>;
+  /** Reads and enables pagination through a set of `ProjectsSharedBasemap`. */
+  projectsSharedBasemapsConnection?: Maybe<ProjectsSharedBasemapsConnection>;
   /**
    * Exposes the root query type nested one level down. This is helpful for Relay 1
    * which can only query top level fields if they are in a particular form.
    */
   query: Query;
   sessionIsBannedFromPosting?: Maybe<Scalars['Boolean']>;
+  sharedBasemaps?: Maybe<Basemap>;
   sketch?: Maybe<Sketch>;
   /** Reads a single `Sketch` using its globally unique `ID`. */
   sketchByNodeId?: Maybe<Sketch>;
@@ -6563,6 +7502,22 @@ export type QueryAclArgs = {
  * for each database table. These are unlikely to be needed often but may possibly 
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
+export type QueryAclByBasemapIdArgs = {
+  basemapId: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
 export type QueryAclByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
@@ -6597,6 +7552,92 @@ export type QueryAclBySketchClassIdArgs = {
  */
 export type QueryAclByTableOfContentsItemIdArgs = {
   tableOfContentsItemId: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryBasemapArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryBasemapByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryBasemapInteractivitySettingArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryBasemapInteractivitySettingByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryBasemapsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<BasemapCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<BasemapsOrderBy>>;
 };
 
 
@@ -7088,6 +8129,38 @@ export type QueryNodeArgs = {
  * for each database table. These are unlikely to be needed often but may possibly 
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
+export type QueryOptionalBasemapLayerArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryOptionalBasemapLayerByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
 export type QueryPostArgs = {
   id: Scalars['Int'];
 };
@@ -7302,6 +8375,45 @@ export type QueryProjectsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
+  basemapId: Scalars['Int'];
+  projectId: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryProjectsSharedBasemapsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ProjectsSharedBasemapCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 
@@ -9302,6 +10414,18 @@ export enum TopicsOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+/** All input for the `updateAclByBasemapId` mutation. */
+export type UpdateAclByBasemapIdInput = {
+  basemapId: Scalars['Int'];
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** An object where the defined keys will be set on the `Acl` being updated. */
+  patch: AclPatch;
+};
+
 /** All input for the `updateAclByNodeId` mutation. */
 export type UpdateAclByNodeIdInput = {
   /**
@@ -9367,6 +10491,123 @@ export type UpdateAclPayload = {
   sketchClass?: Maybe<SketchClass>;
   /** Reads a single `TableOfContentsItem` that is related to this `Acl`. */
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
+};
+
+/** All input for the `updateBasemapByNodeId` mutation. */
+export type UpdateBasemapByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `Basemap` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `Basemap` being updated. */
+  patch: BasemapPatch;
+};
+
+/** All input for the `updateBasemap` mutation. */
+export type UpdateBasemapInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `Basemap` being updated. */
+  patch: BasemapPatch;
+};
+
+/** All input for the `updateBasemapInteractivitySettingByNodeId` mutation. */
+export type UpdateBasemapInteractivitySettingByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `BasemapInteractivitySetting` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `BasemapInteractivitySetting` being updated. */
+  patch: BasemapInteractivitySettingPatch;
+};
+
+/** All input for the `updateBasemapInteractivitySetting` mutation. */
+export type UpdateBasemapInteractivitySettingInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `BasemapInteractivitySetting` being updated. */
+  patch: BasemapInteractivitySettingPatch;
+};
+
+/** The output of our update `BasemapInteractivitySetting` mutation. */
+export type UpdateBasemapInteractivitySettingPayload = {
+  __typename?: 'UpdateBasemapInteractivitySettingPayload';
+  /** Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`. */
+  basemap?: Maybe<Basemap>;
+  /** The `BasemapInteractivitySetting` that was updated by this mutation. */
+  basemapInteractivitySetting?: Maybe<BasemapInteractivitySetting>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `updateBasemapLayerRadioGroupLabel` mutation. */
+export type UpdateBasemapLayerRadioGroupLabelInput = {
+  basemapId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  newLabel?: Maybe<Scalars['String']>;
+  oldLabel?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateBasemapLayerRadioGroupLabel` mutation. */
+export type UpdateBasemapLayerRadioGroupLabelPayload = {
+  __typename?: 'UpdateBasemapLayerRadioGroupLabelPayload';
+  /** Reads a single `Basemap` that is related to this `OptionalBasemapLayer`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** The output of our update `Basemap` mutation. */
+export type UpdateBasemapPayload = {
+  __typename?: 'UpdateBasemapPayload';
+  /** The `Basemap` that was updated by this mutation. */
+  basemap?: Maybe<Basemap>;
+  /** An edge for our `Basemap`. May be used by Relay 1. */
+  basemapEdge?: Maybe<BasemapsEdge>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Project` that is related to this `Basemap`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our update `Basemap` mutation. */
+export type UpdateBasemapPayloadBasemapEdgeArgs = {
+  orderBy?: Maybe<Array<BasemapsOrderBy>>;
 };
 
 /** All input for the `updateCommunityGuidelineByNodeId` mutation. */
@@ -9798,6 +11039,47 @@ export type UpdateInteractivitySettingPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `updateOptionalBasemapLayerByNodeId` mutation. */
+export type UpdateOptionalBasemapLayerByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `OptionalBasemapLayer` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `OptionalBasemapLayer` being updated. */
+  patch: OptionalBasemapLayerPatch;
+};
+
+/** All input for the `updateOptionalBasemapLayer` mutation. */
+export type UpdateOptionalBasemapLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `OptionalBasemapLayer` being updated. */
+  patch: OptionalBasemapLayerPatch;
+};
+
+/** The output of our update `OptionalBasemapLayer` mutation. */
+export type UpdateOptionalBasemapLayerPayload = {
+  __typename?: 'UpdateOptionalBasemapLayerPayload';
+  /** Reads a single `Basemap` that is related to this `OptionalBasemapLayer`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OptionalBasemapLayer` that was updated by this mutation. */
+  optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `updatePost` mutation. */
 export type UpdatePostInput = {
   /**
@@ -10016,6 +11298,43 @@ export type UpdateProjectPayload = {
 /** The output of our update `Project` mutation. */
 export type UpdateProjectPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+/** All input for the `updateProjectsSharedBasemapByBasemapIdAndProjectId` mutation. */
+export type UpdateProjectsSharedBasemapByBasemapIdAndProjectIdInput = {
+  basemapId: Scalars['Int'];
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** An object where the defined keys will be set on the `ProjectsSharedBasemap` being updated. */
+  patch: ProjectsSharedBasemapPatch;
+  projectId: Scalars['Int'];
+};
+
+/** The output of our update `ProjectsSharedBasemap` mutation. */
+export type UpdateProjectsSharedBasemapPayload = {
+  __typename?: 'UpdateProjectsSharedBasemapPayload';
+  /** Reads a single `Basemap` that is related to this `ProjectsSharedBasemap`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `ProjectsSharedBasemap` that was updated by this mutation. */
+  projectsSharedBasemap?: Maybe<ProjectsSharedBasemap>;
+  /** An edge for our `ProjectsSharedBasemap`. May be used by Relay 1. */
+  projectsSharedBasemapEdge?: Maybe<ProjectsSharedBasemapsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our update `ProjectsSharedBasemap` mutation. */
+export type UpdateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 /** All input for the `updateSketchByNodeId` mutation. */

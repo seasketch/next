@@ -119,6 +119,23 @@ CREATE TYPE public.access_control_list_type AS ENUM (
 
 
 --
+-- Name: basemap_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.basemap_type AS ENUM (
+    'MAPBOX',
+    'RASTER_URL_TEMPLATE'
+);
+
+
+--
+-- Name: TYPE basemap_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TYPE public.basemap_type IS 'SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style.';
+
+
+--
 -- Name: cursor_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -273,6 +290,17 @@ COMMENT ON TYPE public.invite_status IS 'Invite status is derived from feedback 
 CREATE TYPE public.invite_stats AS (
 	status public.invite_status,
 	count integer
+);
+
+
+--
+-- Name: optional_basemap_layers_group_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.optional_basemap_layers_group_type AS ENUM (
+    'NONE',
+    'RADIO',
+    'SELECT'
 );
 
 
@@ -504,7 +532,8 @@ CREATE TABLE public.access_control_lists (
     forum_id_read integer,
     forum_id_write integer,
     table_of_contents_item_id integer,
-    CONSTRAINT access_control_list_has_related_model CHECK (((((((sketch_class_id IS NOT NULL))::integer + ((forum_id_read IS NOT NULL))::integer) + ((forum_id_write IS NOT NULL))::integer) + ((table_of_contents_item_id IS NOT NULL))::integer) = 1))
+    basemap_id integer,
+    CONSTRAINT access_control_list_has_related_model CHECK ((((((((sketch_class_id IS NOT NULL))::integer + ((forum_id_read IS NOT NULL))::integer) + ((forum_id_write IS NOT NULL))::integer) + ((table_of_contents_item_id IS NOT NULL))::integer) + ((basemap_id IS NOT NULL))::integer) = 1))
 );
 
 
@@ -1463,6 +1492,22 @@ COMMENT ON FUNCTION public.can_digitize(scid integer) IS '@omit';
 
 
 --
+-- Name: check_optional_basemap_layers_columns(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.check_optional_basemap_layers_columns() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  begin
+    if new.group_type != 'NONE'::optional_basemap_layers_group_type and new.group_label is null then
+      raise 'group_label must be set unless group_type is NONE';
+    end if;
+    return new;
+  end;
+$$;
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1687,6 +1732,24 @@ invite. Outstanding (or confirmed) invites can be accessed via the
 
 More details on how to handle invites can be found [on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
 ';
+
+
+--
+-- Name: create_basemap_acl(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_basemap_acl() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+begin
+  if new.project_id is not null then
+  insert into
+    access_control_lists(project_id, basemap_id, type)
+    values(new.project_id, new.id, 'public'::access_control_list_type);
+  end if;
+  return new;
+end;
+$$;
 
 
 --
@@ -3935,6 +3998,128 @@ CREATE FUNCTION public.projects_admins(p public.projects) RETURNS SETOF public.u
 --
 
 COMMENT ON FUNCTION public.projects_admins(p public.projects) IS '@simpleCollections only';
+
+
+--
+-- Name: basemaps; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.basemaps (
+    id integer NOT NULL,
+    project_id integer,
+    name text NOT NULL,
+    type public.basemap_type NOT NULL,
+    url text NOT NULL,
+    tile_size integer DEFAULT 256 NOT NULL,
+    labels_layer_id text,
+    thumbnail text NOT NULL,
+    attribution text,
+    terrain_url text,
+    terrain_tile_size integer DEFAULT 512 NOT NULL,
+    terrain_max_zoom integer DEFAULT 14 NOT NULL,
+    terrain_optional boolean DEFAULT true NOT NULL,
+    terrain_visibility_default boolean DEFAULT true NOT NULL,
+    terrain_exaggeration numeric DEFAULT 1 NOT NULL
+);
+
+
+--
+-- Name: COLUMN basemaps.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.project_id IS 'If not set, the basemap will be considered a "Shared Basemap" that can be added to any project. Otherwise it is private to the given proejct. Only superusers can create Shared Basemaps.';
+
+
+--
+-- Name: COLUMN basemaps.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.name IS 'Label shown in the basemap picker interface';
+
+
+--
+-- Name: COLUMN basemaps.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.url IS 'For MAPBOX types, this can be a mapbox://-style url or a link to a custom mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)';
+
+
+--
+-- Name: COLUMN basemaps.tile_size; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.tile_size IS 'For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)';
+
+
+--
+-- Name: COLUMN basemaps.labels_layer_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.labels_layer_id IS 'Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.';
+
+
+--
+-- Name: COLUMN basemaps.thumbnail; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.thumbnail IS 'Square thumbnail will be used to identify the basemap';
+
+
+--
+-- Name: COLUMN basemaps.attribution; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.attribution IS 'Optional attribution to show at the bottom of the map. Will be overriden by the attribution specified in the gl-style in the case of MAPBOX types.';
+
+
+--
+-- Name: COLUMN basemaps.terrain_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.terrain_url IS 'Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).';
+
+
+--
+-- Name: COLUMN basemaps.terrain_optional; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.terrain_optional IS 'If set to false, terrain will always be on. Otherwise the user will be given a toggle switch.';
+
+
+--
+-- Name: projects_basemaps(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_basemaps(project public.projects) RETURNS SETOF public.basemaps
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select 
+      * 
+    from 
+      basemaps 
+    where 
+      session_has_project_access(project.id) and 
+      (
+        basemaps.project_id = project.id or 
+        basemaps.id in (
+          select 
+            basemap_id 
+          from 
+            projects_shared_basemaps 
+          where 
+            projects_shared_basemaps.project_id = project.id
+        )
+      );
+  $$;
+
+
+--
+-- Name: FUNCTION projects_basemaps(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_basemaps(project public.projects) IS '
+@simpleCollections only
+';
 
 
 --
@@ -6198,6 +6383,26 @@ Admins can use this mutation to place topics at the top of the forum listing.
 
 
 --
+-- Name: shared_basemaps(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.shared_basemaps() RETURNS public.basemaps
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from basemaps where project_id is null;
+  $$;
+
+
+--
+-- Name: FUNCTION shared_basemaps(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.shared_basemaps() IS '
+@simpleCollections only
+';
+
+
+--
 -- Name: sketch_classes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6811,6 +7016,97 @@ COMMENT ON FUNCTION public.unsubscribed("userId" integer) IS '@omit';
 
 
 --
+-- Name: optional_basemap_layers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.optional_basemap_layers (
+    id integer NOT NULL,
+    basemap_id integer NOT NULL,
+    layers text[] DEFAULT ARRAY[]::text[] NOT NULL,
+    default_visibility boolean DEFAULT true NOT NULL,
+    name text NOT NULL,
+    description text,
+    group_type public.optional_basemap_layers_group_type DEFAULT 'NONE'::public.optional_basemap_layers_group_type NOT NULL,
+    group_label text,
+    metadata jsonb
+);
+
+
+--
+-- Name: TABLE optional_basemap_layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.optional_basemap_layers IS '
+@omit all
+@simpleCollections only
+Available only for MapBox GL Style-based basemaps. Specifies optional components of the basemap that can be shown or hidden.
+';
+
+
+--
+-- Name: COLUMN optional_basemap_layers.layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.optional_basemap_layers.layers IS 'IDs for layers in the gl style that will be toggled by this option.';
+
+
+--
+-- Name: COLUMN optional_basemap_layers.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.optional_basemap_layers.name IS 'Label that will be given in the UI';
+
+
+--
+-- Name: COLUMN optional_basemap_layers.group_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.optional_basemap_layers.group_type IS 'Specify RADIO or SELECT if this option should be presented as a group of options. Useful for mutually exclusive views like different years for the same dataset, or a heatmap display of density for multiple species where a single species must be chosen from a list. If left null, the option will be treated as standalone.';
+
+
+--
+-- Name: COLUMN optional_basemap_layers.group_label; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.optional_basemap_layers.group_label IS 'If RADIO or SELECT group_type is specified, this label will be used for the form input. It also specifies _which_ group this option should be shown for. Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for multiple options at once.';
+
+
+--
+-- Name: COLUMN optional_basemap_layers.metadata; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.optional_basemap_layers.metadata IS 'JSON representation of a ProseMirror document with layer metadata.';
+
+
+--
+-- Name: update_basemap_layer_radio_group_label(integer, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text) RETURNS public.optional_basemap_layers
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    update 
+      optional_basemap_layers 
+    set group_label = new_label 
+    where 
+      group_label = old_label and 
+      basemap_id = "basemapId" and
+      session_is_admin((select project_id from basemaps where basemaps.id = "basemapId"))
+    returning 
+      optional_basemap_layers.*;
+  $$;
+
+
+--
+-- Name: FUNCTION update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text) IS '
+Update the group_label for multiple OptionalBasemapLayers
+';
+
+
+--
 -- Name: update_post(integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7297,6 +7593,74 @@ ALTER TABLE public.access_control_lists ALTER COLUMN id ADD GENERATED BY DEFAULT
 
 
 --
+-- Name: basemap_interactivity_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.basemap_interactivity_settings (
+    id integer NOT NULL,
+    basemap_id integer NOT NULL,
+    layers text[] DEFAULT ARRAY[]::text[] NOT NULL,
+    type public.interactivity_type DEFAULT 'NONE'::public.interactivity_type NOT NULL,
+    short_template text,
+    long_template text,
+    cursor public.cursor_type DEFAULT 'AUTO'::public.cursor_type NOT NULL
+);
+
+
+--
+-- Name: TABLE basemap_interactivity_settings; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.basemap_interactivity_settings IS '
+@omit all
+@simpleCollections only
+Used to specify hover effects and popups for vector layers within a basemap. Only works for MAPBOX-type basemaps.
+';
+
+
+--
+-- Name: COLUMN basemap_interactivity_settings.layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemap_interactivity_settings.layers IS 'Interactivity could apply to more than one layer.';
+
+
+--
+-- Name: COLUMN basemap_interactivity_settings.short_template; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemap_interactivity_settings.short_template IS 'Mustache template populated with feature attributes. Used for popup and fixed-block types.';
+
+
+--
+-- Name: basemap_interactivity_settings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.basemap_interactivity_settings ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.basemap_interactivity_settings_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: basemaps_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.basemaps ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.basemaps_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: community_guidelines; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7648,6 +8012,20 @@ JSON web key set table. Design guided by https://tools.ietf.org/html/rfc7517
 
 
 --
+-- Name: optional_basemap_layers_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.optional_basemap_layers ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.optional_basemap_layers_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7800,6 +8178,16 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
+);
+
+
+--
+-- Name: projects_shared_basemaps; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.projects_shared_basemaps (
+    basemap_id integer NOT NULL,
+    project_id integer NOT NULL
 );
 
 
@@ -8092,6 +8480,14 @@ ALTER TABLE ONLY public.access_control_list_groups
 
 
 --
+-- Name: access_control_lists access_control_lists_basemap_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_basemap_id_key UNIQUE (basemap_id);
+
+
+--
 -- Name: access_control_lists access_control_lists_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8113,6 +8509,22 @@ ALTER TABLE ONLY public.access_control_lists
 
 ALTER TABLE ONLY public.access_control_lists
     ADD CONSTRAINT access_control_lists_table_of_contents_item_id_key UNIQUE (table_of_contents_item_id);
+
+
+--
+-- Name: basemap_interactivity_settings basemap_interactivity_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.basemap_interactivity_settings
+    ADD CONSTRAINT basemap_interactivity_settings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: basemaps basemaps_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.basemaps
+    ADD CONSTRAINT basemaps_pkey PRIMARY KEY (id);
 
 
 --
@@ -8260,6 +8672,14 @@ ALTER TABLE ONLY public.jwks
 
 
 --
+-- Name: optional_basemap_layers optional_basemap_layers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.optional_basemap_layers
+    ADD CONSTRAINT optional_basemap_layers_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: pending_topic_notifications pending_topic_notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8353,6 +8773,14 @@ ALTER TABLE ONLY public.projects
 
 ALTER TABLE ONLY public.projects
     ADD CONSTRAINT projects_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: projects_shared_basemaps projects_shared_basemaps_basemap_id_project_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.projects_shared_basemaps
+    ADD CONSTRAINT projects_shared_basemaps_basemap_id_project_id_key UNIQUE (basemap_id, project_id);
 
 
 --
@@ -8561,6 +8989,209 @@ CREATE INDEX access_control_list_groups_group_id_idx ON public.access_control_li
 
 
 --
+-- Name: access_control_lists_basemap_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx1 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx10; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx10 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx11; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx11 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx12; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx12 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx13; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx13 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx14; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx14 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx15; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx15 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx16; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx16 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx17; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx17 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx18; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx18 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx19; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx19 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx2 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx20; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx20 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx21; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx21 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx22; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx22 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx23; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx23 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx24; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx24 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx25; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx25 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx26; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx26 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx27; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx27 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx28; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx28 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx3; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx3 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx4; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx4 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx5; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx5 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx6; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx6 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx7; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx7 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx8; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx8 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
+-- Name: access_control_lists_basemap_id_idx9; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx9 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
 -- Name: access_control_lists_forum_id_read_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8596,6 +9227,20 @@ CREATE UNIQUE INDEX access_control_lists_table_of_contents_item_id_idx ON public
 
 
 --
+-- Name: basemap_interactivity_settings_basemap_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX basemap_interactivity_settings_basemap_id_idx ON public.basemap_interactivity_settings USING btree (basemap_id);
+
+
+--
+-- Name: basemaps_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX basemaps_project_id_idx ON public.basemaps USING btree (project_id);
+
+
+--
 -- Name: data_layers_data_source_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8628,6 +9273,13 @@ CREATE INDEX data_layers_interactivity_settings_id_idx2 ON public.data_layers US
 --
 
 CREATE INDEX data_layers_interactivity_settings_id_idx3 ON public.data_layers USING btree (interactivity_settings_id);
+
+
+--
+-- Name: data_layers_interactivity_settings_id_idx4; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_layers_interactivity_settings_id_idx4 ON public.data_layers USING btree (interactivity_settings_id);
 
 
 --
@@ -8733,6 +9385,13 @@ CREATE INDEX invite_emails_survey_invite_id_to_address_idx ON public.invite_emai
 --
 
 CREATE INDEX invite_emails_token_idx ON public.invite_emails USING btree (token);
+
+
+--
+-- Name: optional_basemap_layers_basemap_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX optional_basemap_layers_basemap_id_idx ON public.optional_basemap_layers USING btree (basemap_id);
 
 
 --
@@ -9163,6 +9822,13 @@ CREATE TRIGGER before_valid_children_insert_or_update_trigger BEFORE INSERT OR U
 
 
 --
+-- Name: optional_basemap_layers check_optional_basemap_layers; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER check_optional_basemap_layers BEFORE INSERT OR UPDATE ON public.optional_basemap_layers FOR EACH ROW EXECUTE FUNCTION public.check_optional_basemap_layers_columns();
+
+
+--
 -- Name: sketch_classes sketch_classes_prohibit_delete_t; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -9195,6 +9861,13 @@ CREATE TRIGGER trig_auto_create_notification_preferences AFTER INSERT ON public.
 --
 
 CREATE TRIGGER trig_auto_create_profile AFTER INSERT ON public.users FOR EACH ROW EXECUTE FUNCTION public.auto_create_profile();
+
+
+--
+-- Name: basemaps trig_create_basemap_acl; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trig_create_basemap_acl AFTER INSERT ON public.basemaps FOR EACH ROW EXECUTE FUNCTION public.create_basemap_acl();
 
 
 --
@@ -9272,6 +9945,22 @@ ALTER TABLE ONLY public.access_control_lists
 
 ALTER TABLE ONLY public.access_control_lists
     ADD CONSTRAINT access_control_lists_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: basemap_interactivity_settings basemap_interactivity_settings_basemap_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.basemap_interactivity_settings
+    ADD CONSTRAINT basemap_interactivity_settings_basemap_id_fkey FOREIGN KEY (basemap_id) REFERENCES public.basemaps(id) ON DELETE CASCADE;
+
+
+--
+-- Name: basemaps basemaps_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.basemaps
+    ADD CONSTRAINT basemaps_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -9484,6 +10173,14 @@ COMMENT ON CONSTRAINT invite_emails_survey_invite_id_fkey ON public.invite_email
 
 
 --
+-- Name: optional_basemap_layers optional_basemap_layers_basemap_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.optional_basemap_layers
+    ADD CONSTRAINT optional_basemap_layers_basemap_id_fkey FOREIGN KEY (basemap_id) REFERENCES public.basemaps(id) ON DELETE CASCADE;
+
+
+--
 -- Name: pending_topic_notifications pending_topic_notifications_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9621,6 +10318,22 @@ ALTER TABLE ONLY public.project_participants
 
 ALTER TABLE ONLY public.projects
     ADD CONSTRAINT projects_data_sources_bucket_id_fkey FOREIGN KEY (data_sources_bucket_id) REFERENCES public.data_sources_buckets(bucket);
+
+
+--
+-- Name: projects_shared_basemaps projects_shared_basemaps_basemap_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.projects_shared_basemaps
+    ADD CONSTRAINT projects_shared_basemaps_basemap_id_fkey FOREIGN KEY (basemap_id) REFERENCES public.basemaps(id) ON DELETE CASCADE;
+
+
+--
+-- Name: projects_shared_basemaps projects_shared_basemaps_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.projects_shared_basemaps
+    ADD CONSTRAINT projects_shared_basemaps_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -9960,13 +10673,63 @@ CREATE POLICY access_control_lists_update ON public.access_control_lists FOR UPD
    FROM public.forums
   WHERE ((forums.id = access_control_lists.forum_id_read) OR (forums.id = access_control_lists.forum_id_write)))) OR public.session_is_admin(( SELECT table_of_contents_items.project_id
    FROM public.table_of_contents_items
-  WHERE (table_of_contents_items.id = access_control_lists.table_of_contents_item_id))))) WITH CHECK ((public.session_is_admin(( SELECT sketch_classes.project_id
+  WHERE (table_of_contents_items.id = access_control_lists.table_of_contents_item_id))) OR public.session_is_admin(( SELECT basemaps.project_id
+   FROM public.basemaps
+  WHERE (basemaps.id = access_control_lists.basemap_id))))) WITH CHECK ((public.session_is_admin(( SELECT sketch_classes.project_id
    FROM public.sketch_classes
   WHERE (sketch_classes.id = access_control_lists.sketch_class_id))) OR public.session_is_admin(( SELECT forums.project_id
    FROM public.forums
   WHERE ((forums.id = access_control_lists.forum_id_read) OR (forums.id = access_control_lists.forum_id_write)))) OR public.session_is_admin(( SELECT table_of_contents_items.project_id
    FROM public.table_of_contents_items
-  WHERE (table_of_contents_items.id = access_control_lists.table_of_contents_item_id)))));
+  WHERE (table_of_contents_items.id = access_control_lists.table_of_contents_item_id))) OR public.session_is_admin(( SELECT basemaps.project_id
+   FROM public.basemaps
+  WHERE (basemaps.id = access_control_lists.basemap_id)))));
+
+
+--
+-- Name: basemap_interactivity_settings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.basemap_interactivity_settings ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: basemap_interactivity_settings basemap_interactivity_settings_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY basemap_interactivity_settings_admin ON public.basemap_interactivity_settings USING ((public.session_is_admin(( SELECT basemaps.project_id
+   FROM public.basemaps
+  WHERE (basemaps.id = basemap_interactivity_settings.basemap_id))) OR public.session_is_superuser())) WITH CHECK ((public.session_is_admin(( SELECT basemaps.project_id
+   FROM public.basemaps
+  WHERE (basemaps.id = basemap_interactivity_settings.basemap_id))) OR public.session_is_superuser()));
+
+
+--
+-- Name: basemap_interactivity_settings basemap_interactivity_settings_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY basemap_interactivity_settings_select ON public.basemap_interactivity_settings FOR SELECT USING (true);
+
+
+--
+-- Name: basemaps; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.basemaps ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: basemaps basemaps_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY basemaps_admin ON public.basemaps USING (public.session_is_admin(project_id)) WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: basemaps basemaps_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY basemaps_select ON public.basemaps FOR SELECT USING (((project_id IS NULL) OR (public.session_has_project_access(project_id) AND public.session_on_acl(( SELECT access_control_lists.id
+   FROM public.access_control_lists
+  WHERE (access_control_lists.basemap_id = basemaps.id))))));
 
 
 --
@@ -10213,6 +10976,30 @@ CREATE POLICY invite_emails_admin ON public.invite_emails FOR SELECT TO seasketc
 
 
 --
+-- Name: optional_basemap_layers; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.optional_basemap_layers ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: optional_basemap_layers optional_basemap_layers_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY optional_basemap_layers_admin ON public.optional_basemap_layers USING ((public.session_is_admin(( SELECT basemaps.project_id
+   FROM public.basemaps
+  WHERE (basemaps.id = optional_basemap_layers.basemap_id))) OR public.session_is_superuser())) WITH CHECK ((public.session_is_admin(( SELECT basemaps.project_id
+   FROM public.basemaps
+  WHERE (basemaps.id = optional_basemap_layers.basemap_id))) OR public.session_is_superuser()));
+
+
+--
+-- Name: optional_basemap_layers optional_basemap_layers_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY optional_basemap_layers_select ON public.optional_basemap_layers FOR SELECT USING (true);
+
+
+--
 -- Name: posts posts_delete; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -10296,6 +11083,26 @@ ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY projects_select ON public.projects FOR SELECT TO anon USING (((is_deleted = false) AND ((is_listed = true) OR (access_control = 'public'::public.project_access_control_setting) OR (public.session_is_admin(id) OR ((access_control = 'invite_only'::public.project_access_control_setting) AND public.session_is_approved_participant(id))))));
+
+
+--
+-- Name: projects_shared_basemaps; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.projects_shared_basemaps ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: projects_shared_basemaps projects_shared_basemaps_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY projects_shared_basemaps_admin ON public.projects_shared_basemaps USING (true) WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: projects_shared_basemaps projects_shared_basemaps_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY projects_shared_basemaps_select ON public.projects_shared_basemaps FOR SELECT USING (true);
 
 
 --
@@ -11730,6 +12537,13 @@ GRANT ALL ON FUNCTION public.can_digitize(scid integer) TO anon;
 
 
 --
+-- Name: FUNCTION check_optional_basemap_layers_columns(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.check_optional_basemap_layers_columns() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION checkauth(text, text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -11949,6 +12763,13 @@ REVOKE ALL ON FUNCTION public.contains_2d(public.box2df, public.geometry) FROM P
 --
 
 REVOKE ALL ON FUNCTION public.contains_2d(public.geometry, public.box2df) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION create_basemap_acl(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_basemap_acl() FROM PUBLIC;
 
 
 --
@@ -14547,6 +15368,22 @@ GRANT ALL ON FUNCTION public.projects_admins(p public.projects) TO seasketch_use
 
 
 --
+-- Name: TABLE basemaps; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.basemaps TO seasketch_user;
+GRANT SELECT ON TABLE public.basemaps TO anon;
+
+
+--
+-- Name: FUNCTION projects_basemaps(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_basemaps(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_basemaps(project public.projects) TO anon;
+
+
+--
 -- Name: FUNCTION projects_data_layers_for_items(p public.projects, table_of_contents_item_ids integer[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15378,6 +16215,14 @@ GRANT ALL ON FUNCTION public.set_topic_locked("topicId" integer, value boolean) 
 
 REVOKE ALL ON FUNCTION public.set_topic_sticky("topicId" integer, value boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.set_topic_sticky("topicId" integer, value boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION shared_basemaps(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.shared_basemaps() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.shared_basemaps() TO anon;
 
 
 --
@@ -18509,6 +19354,22 @@ GRANT ALL ON FUNCTION public.unsubscribed("userId" integer) TO graphile;
 
 
 --
+-- Name: TABLE optional_basemap_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.optional_basemap_layers TO seasketch_user;
+GRANT SELECT ON TABLE public.optional_basemap_layers TO anon;
+
+
+--
+-- Name: FUNCTION update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION update_post("postId" integer, message jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18835,6 +19696,14 @@ GRANT SELECT ON TABLE public.access_control_list_groups TO seasketch_user;
 
 
 --
+-- Name: TABLE basemap_interactivity_settings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.basemap_interactivity_settings TO seasketch_user;
+GRANT SELECT ON TABLE public.basemap_interactivity_settings TO anon;
+
+
+--
 -- Name: TABLE community_guidelines; Type: ACL; Schema: public; Owner: -
 --
 
@@ -18947,6 +19816,14 @@ GRANT ALL ON TABLE public.project_invite_groups TO seasketch_user;
 --
 
 GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
+
+
+--
+-- Name: TABLE projects_shared_basemaps; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.projects_shared_basemaps TO anon;
+GRANT ALL ON TABLE public.projects_shared_basemaps TO seasketch_user;
 
 
 --

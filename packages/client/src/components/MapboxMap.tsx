@@ -11,6 +11,8 @@ export interface OverlayMapProps {
   className?: string;
 }
 
+mapboxgl.prewarm();
+
 export default function OverlayMap(props: OverlayMapProps) {
   const [map, setMap] = useState<Map>();
   const mapContainer = useRef<HTMLDivElement>(null);
