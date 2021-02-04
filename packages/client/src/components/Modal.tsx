@@ -9,6 +9,7 @@ interface ModalProps {
   footer?: ReactNode;
   title?: string | ReactNode;
   className?: string;
+  zeroPadding?: boolean;
 }
 
 const Modal: React.FunctionComponent<ModalProps> = ({
@@ -20,6 +21,7 @@ const Modal: React.FunctionComponent<ModalProps> = ({
   footer,
   title,
   className,
+  zeroPadding,
 }) => {
   return (
     // <AnimatePresence>
@@ -107,7 +109,11 @@ const Modal: React.FunctionComponent<ModalProps> = ({
                     {title}
                   </div>
                 )}
-                <div className="p-4 sm:p-6 flex-1 overflow-y-scroll">
+                <div
+                  className={`${
+                    zeroPadding ? "p-0" : "p-4 sm:p-6"
+                  } flex-1 overflow-y-scroll`}
+                >
                   {children}
                 </div>
                 {footer && (

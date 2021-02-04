@@ -194,6 +194,7 @@ type Basemap implements Node {
     """The method to use when ordering `BasemapInteractivitySetting`."""
     orderBy: [BasemapInteractivitySettingsOrderBy!]
   ): [BasemapInteractivitySetting!]!
+  description: String
   id: Int!
 
   """
@@ -315,6 +316,7 @@ input BasemapInput {
   the attribution specified in the gl-style in the case of MAPBOX types.
   """
   attribution: String
+  description: String
   id: Int
 
   """
@@ -348,7 +350,7 @@ input BasemapInput {
   terrainVisibilityDefault: Boolean
 
   """Square thumbnail will be used to identify the basemap"""
-  thumbnail: String!
+  thumbnail: Upload
 
   """
   For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
@@ -461,6 +463,7 @@ input BasemapPatch {
   the attribution specified in the gl-style in the case of MAPBOX types.
   """
   attribution: String
+  description: String
   id: Int
 
   """
@@ -494,7 +497,7 @@ input BasemapPatch {
   terrainVisibilityDefault: Boolean
 
   """Square thumbnail will be used to identify the basemap"""
-  thumbnail: String
+  thumbnail: Upload
 
   """
   For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)

@@ -50,6 +50,7 @@ import {
 } from "../generated/graphql";
 import { rejects } from "assert";
 import { identifyLayers } from "../admin/data/arcgis/arcgis";
+import { fetchGlStyle } from "../useMapboxStyle";
 
 interface LayerState {
   visible: true;
@@ -167,10 +168,6 @@ class LayerManager {
   private debouncedMouseMoveListenerReference?: NodeJS.Timeout;
   private interactiveVectorLayerIds: string[] = [];
   private interactiveImageLayerIds: string[] = [];
-  // private activeInteractivitySettings: Pick<
-  //   InteractivitySetting,
-  //   "id" | "type" | "cursor" | "longTemplate" | "shortTemplate"
-  // >[] = [];
   private dynamicArcGISStyles: {
     [sourceId: string]: Promise<{
       imageList: ImageList;
@@ -180,6 +177,8 @@ class LayerManager {
 
   constructor(setState: Dispatch<SetStateAction<LayerManagerContext>>) {
     this.setState = setState;
+    // @ts-ignore
+    window.layerManager = this;
   }
 
   setMap(map: Map) {
@@ -999,8 +998,9 @@ class LayerManager {
     }
     // RenderUnderLand is not supported at this time as it isn't compatible with the way mapbox baselayers typically are set up.
     if (
-      layer.renderUnder === RenderUnderType.Labels ||
-      layer.renderUnder === RenderUnderType.Land
+      false &&
+      (layer.renderUnder === RenderUnderType.Labels ||
+        layer.renderUnder === RenderUnderType.Land)
     ) {
       return UNDER_LABELS_POSITION;
     } else {
@@ -1295,6 +1295,30 @@ class LayerManager {
         // }
       }
     }
+  }
+
+  changeBasemapTimeout: NodeJS.Timeout | null = null;
+
+  async changeBasemap(url: string) {
+    if (!this.map) {
+      throw new Error("Map not set");
+    }
+    const style = await fetchGlStyle(url);
+    if (this.changeBasemapTimeout) {
+      clearTimeout(this.changeBasemapTimeout);
+      this.changeBasemapTimeout = null;
+    }
+    this.map.setStyle({ ...style });
+
+    const reset = () => {
+      if (!this.map!.loaded) {
+        this.changeBasemapTimeout = setTimeout(reset, 5);
+      } else {
+        this._reset(this.clientDataSources, Object.values(this.layers));
+        this.changeBasemapTimeout = null;
+      }
+    };
+    this.changeBasemapTimeout = setTimeout(reset, 5);
   }
 }
 

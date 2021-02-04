@@ -19,6 +19,12 @@ Defaults.args = {
   label: "Click Me",
 };
 
+export const Small = Template.bind({});
+Small.args = {
+  small: true,
+  label: "Add data",
+};
+
 export const Primary = Template.bind({});
 Primary.args = {
   label: "Click Me",

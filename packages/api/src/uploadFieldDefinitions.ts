@@ -23,9 +23,10 @@ export default [
       column: string;
       tags: string[];
     }) =>
-      schema === "public" &&
-      ((table === "projects" && column === "logo_url") ||
-        (table === "sprites" && column === "url")),
+      (schema === "public" &&
+        ((table === "projects" && column === "logo_url") ||
+          (table === "sprites" && column === "url"))) ||
+      (table === "basemaps" && column === "thumbnail"),
     resolve: resolveLogoUrlUpload,
   },
 ];

@@ -1,0 +1,103 @@
+query GetBasemaps($projectId: Int!) {
+  project(id: $projectId) {
+    basemaps {
+      id
+      attribution
+      basemapInteractivitySettings {
+        cursor
+        id
+        layers
+        basemapId
+        longTemplate
+        shortTemplate
+        type
+      }
+      labelsLayerId
+      name
+      optionalBasemapLayers {
+        basemapId
+        id
+        defaultVisibility
+        description
+        groupLabel
+        groupType
+        layers
+        metadata
+        name
+      }
+      description
+      projectId
+      terrainExaggeration
+      terrainMaxZoom
+      terrainOptional
+      terrainTileSize
+      terrainUrl
+      terrainVisibilityDefault
+      thumbnail
+      tileSize
+      type
+      url
+    }
+  }
+}
+
+mutation CreateBasemap(
+  $projectId: Int
+  $name: String!
+  $thumbnail: Upload!
+  $tileSize: Int
+  $type: BasemapType!
+  $url: String!
+) {
+  createBasemap(
+    input: {
+      basemap: {
+        projectId: $projectId
+        name: $name
+        thumbnail: $thumbnail
+        tileSize: $tileSize
+        type: $type
+        url: $url
+      }
+    }
+  ) {
+    basemap {
+      id
+      attribution
+      basemapInteractivitySettings {
+        cursor
+        id
+        layers
+        basemapId
+        longTemplate
+        shortTemplate
+        type
+      }
+      labelsLayerId
+      name
+      optionalBasemapLayers {
+        basemapId
+        id
+        defaultVisibility
+        description
+        groupLabel
+        groupType
+        layers
+        metadata
+        name
+      }
+      description
+      projectId
+      terrainExaggeration
+      terrainMaxZoom
+      terrainOptional
+      terrainTileSize
+      terrainUrl
+      terrainVisibilityDefault
+      thumbnail
+      tileSize
+      type
+      url
+    }
+  }
+}

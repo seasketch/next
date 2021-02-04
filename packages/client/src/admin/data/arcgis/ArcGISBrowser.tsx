@@ -18,7 +18,7 @@ import {
   ArcGISBrowserColumnProps,
 } from "./ArcGISBrowserColumn";
 import Spinner from "../../../components/Spinner";
-import OverlayMap from "../../../components/MapboxMap";
+import MapboxMap from "../../../components/MapboxMap";
 import OutgoingLinkIcon from "../../../components/OutgoingLinkIcon";
 import ArcGISServiceMetadata from "./ArcGISServiceMetadata";
 import SegmentControl from "../../../components/SegmentControl";
@@ -281,7 +281,7 @@ export default function ArcGISBrowser() {
       <>
         <LayerManagerContext.Provider value={layerManager}>
           <div className="flex flex-col h-full">
-            <OverlayMap
+            <MapboxMap
               onLoad={(map) => {
                 layerManager.manager!.setMap(map);
                 setMap(map);
@@ -600,7 +600,7 @@ function vectorLayerFromSettings(
     for (const imageSet of imageSetJSON) {
       sprites.push({
         id: imageSet.id,
-        spriteImages: imageSet.images.map((i) => ({
+        spriteImages: imageSet.images.map((i: any) => ({
           height: i.height,
           width: i.width,
           dataUri: i.dataURI,

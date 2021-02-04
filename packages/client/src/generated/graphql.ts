@@ -203,6 +203,7 @@ export type Basemap = Node & {
   attribution?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `BasemapInteractivitySetting`. */
   basemapInteractivitySettings: Array<BasemapInteractivitySetting>;
+  description?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
@@ -288,6 +289,7 @@ export type BasemapInput = {
    * the attribution specified in the gl-style in the case of MAPBOX types.
    */
   attribution?: Maybe<Scalars['String']>;
+  description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
@@ -311,7 +313,7 @@ export type BasemapInput = {
   terrainUrl?: Maybe<Scalars['String']>;
   terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
   /** Square thumbnail will be used to identify the basemap */
-  thumbnail: Scalars['String'];
+  thumbnail?: Maybe<Scalars['Upload']>;
   /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
   tileSize?: Maybe<Scalars['Int']>;
   type: BasemapType;
@@ -396,6 +398,7 @@ export type BasemapPatch = {
    * the attribution specified in the gl-style in the case of MAPBOX types.
    */
   attribution?: Maybe<Scalars['String']>;
+  description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
@@ -419,7 +422,7 @@ export type BasemapPatch = {
   terrainUrl?: Maybe<Scalars['String']>;
   terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
   /** Square thumbnail will be used to identify the basemap */
-  thumbnail?: Maybe<Scalars['String']>;
+  thumbnail?: Maybe<Scalars['Upload']>;
   /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
   tileSize?: Maybe<Scalars['Int']>;
   type?: Maybe<BasemapType>;
@@ -12240,6 +12243,57 @@ export type AddImageToSpriteMutation = (
   )> }
 );
 
+export type GetBasemapsQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type GetBasemapsQuery = (
+  { __typename?: 'Query' }
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & { basemaps?: Maybe<Array<(
+      { __typename?: 'Basemap' }
+      & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
+      & { basemapInteractivitySettings: Array<(
+        { __typename?: 'BasemapInteractivitySetting' }
+        & Pick<BasemapInteractivitySetting, 'cursor' | 'id' | 'layers' | 'basemapId' | 'longTemplate' | 'shortTemplate' | 'type'>
+      )>, optionalBasemapLayers: Array<(
+        { __typename?: 'OptionalBasemapLayer' }
+        & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'groupLabel' | 'groupType' | 'layers' | 'metadata' | 'name'>
+      )> }
+    )>> }
+  )> }
+);
+
+export type CreateBasemapMutationVariables = Exact<{
+  projectId?: Maybe<Scalars['Int']>;
+  name: Scalars['String'];
+  thumbnail: Scalars['Upload'];
+  tileSize?: Maybe<Scalars['Int']>;
+  type: BasemapType;
+  url: Scalars['String'];
+}>;
+
+
+export type CreateBasemapMutation = (
+  { __typename?: 'Mutation' }
+  & { createBasemap?: Maybe<(
+    { __typename?: 'CreateBasemapPayload' }
+    & { basemap?: Maybe<(
+      { __typename?: 'Basemap' }
+      & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
+      & { basemapInteractivitySettings: Array<(
+        { __typename?: 'BasemapInteractivitySetting' }
+        & Pick<BasemapInteractivitySetting, 'cursor' | 'id' | 'layers' | 'basemapId' | 'longTemplate' | 'shortTemplate' | 'type'>
+      )>, optionalBasemapLayers: Array<(
+        { __typename?: 'OptionalBasemapLayer' }
+        & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'groupLabel' | 'groupType' | 'layers' | 'metadata' | 'name'>
+      )> }
+    )> }
+  )> }
+);
+
 export type CreateProjectMutationVariables = Exact<{
   name: Scalars['String'];
   slug: Scalars['String'];
@@ -13418,6 +13472,150 @@ export function useAddImageToSpriteMutation(baseOptions?: Apollo.MutationHookOpt
 export type AddImageToSpriteMutationHookResult = ReturnType<typeof useAddImageToSpriteMutation>;
 export type AddImageToSpriteMutationResult = Apollo.MutationResult<AddImageToSpriteMutation>;
 export type AddImageToSpriteMutationOptions = Apollo.BaseMutationOptions<AddImageToSpriteMutation, AddImageToSpriteMutationVariables>;
+export const GetBasemapsDocument = gql`
+    query GetBasemaps($projectId: Int!) {
+  project(id: $projectId) {
+    basemaps {
+      id
+      attribution
+      basemapInteractivitySettings {
+        cursor
+        id
+        layers
+        basemapId
+        longTemplate
+        shortTemplate
+        type
+      }
+      labelsLayerId
+      name
+      optionalBasemapLayers {
+        basemapId
+        id
+        defaultVisibility
+        description
+        groupLabel
+        groupType
+        layers
+        metadata
+        name
+      }
+      description
+      projectId
+      terrainExaggeration
+      terrainMaxZoom
+      terrainOptional
+      terrainTileSize
+      terrainUrl
+      terrainVisibilityDefault
+      thumbnail
+      tileSize
+      type
+      url
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetBasemapsQuery__
+ *
+ * To run a query within a React component, call `useGetBasemapsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetBasemapsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetBasemapsQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useGetBasemapsQuery(baseOptions?: Apollo.QueryHookOptions<GetBasemapsQuery, GetBasemapsQueryVariables>) {
+        return Apollo.useQuery<GetBasemapsQuery, GetBasemapsQueryVariables>(GetBasemapsDocument, baseOptions);
+      }
+export function useGetBasemapsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetBasemapsQuery, GetBasemapsQueryVariables>) {
+          return Apollo.useLazyQuery<GetBasemapsQuery, GetBasemapsQueryVariables>(GetBasemapsDocument, baseOptions);
+        }
+export type GetBasemapsQueryHookResult = ReturnType<typeof useGetBasemapsQuery>;
+export type GetBasemapsLazyQueryHookResult = ReturnType<typeof useGetBasemapsLazyQuery>;
+export type GetBasemapsQueryResult = Apollo.QueryResult<GetBasemapsQuery, GetBasemapsQueryVariables>;
+export const CreateBasemapDocument = gql`
+    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!) {
+  createBasemap(input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url}}) {
+    basemap {
+      id
+      attribution
+      basemapInteractivitySettings {
+        cursor
+        id
+        layers
+        basemapId
+        longTemplate
+        shortTemplate
+        type
+      }
+      labelsLayerId
+      name
+      optionalBasemapLayers {
+        basemapId
+        id
+        defaultVisibility
+        description
+        groupLabel
+        groupType
+        layers
+        metadata
+        name
+      }
+      description
+      projectId
+      terrainExaggeration
+      terrainMaxZoom
+      terrainOptional
+      terrainTileSize
+      terrainUrl
+      terrainVisibilityDefault
+      thumbnail
+      tileSize
+      type
+      url
+    }
+  }
+}
+    `;
+export type CreateBasemapMutationFn = Apollo.MutationFunction<CreateBasemapMutation, CreateBasemapMutationVariables>;
+
+/**
+ * __useCreateBasemapMutation__
+ *
+ * To run a mutation, you first call `useCreateBasemapMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateBasemapMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createBasemapMutation, { data, loading, error }] = useCreateBasemapMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      name: // value for 'name'
+ *      thumbnail: // value for 'thumbnail'
+ *      tileSize: // value for 'tileSize'
+ *      type: // value for 'type'
+ *      url: // value for 'url'
+ *   },
+ * });
+ */
+export function useCreateBasemapMutation(baseOptions?: Apollo.MutationHookOptions<CreateBasemapMutation, CreateBasemapMutationVariables>) {
+        return Apollo.useMutation<CreateBasemapMutation, CreateBasemapMutationVariables>(CreateBasemapDocument, baseOptions);
+      }
+export type CreateBasemapMutationHookResult = ReturnType<typeof useCreateBasemapMutation>;
+export type CreateBasemapMutationResult = Apollo.MutationResult<CreateBasemapMutation>;
+export type CreateBasemapMutationOptions = Apollo.BaseMutationOptions<CreateBasemapMutation, CreateBasemapMutationVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {

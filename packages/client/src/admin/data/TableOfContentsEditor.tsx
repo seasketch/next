@@ -2,6 +2,7 @@ import { LngLatBoundsLike, LngLatLike } from "mapbox-gl";
 import React, { useContext, useEffect, useState } from "react";
 import { Item, Menu, Separator } from "react-contexify";
 import { Link, useParams } from "react-router-dom";
+import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import { LayerManagerContext } from "../../dataLayers/LayerManager";
@@ -116,20 +117,34 @@ export default function TableOfContentsEditor() {
               <option value="order">Z-Order</option>
             </select>
           </div>
-          <Link
+          {/* <Link
             to={`./data/add-data`}
             className="bg-white rounded shadow-sm border-grey-500 border px-2 py-1 text-sm mx-2"
           >
             Add data
-          </Link>
-          <button
+          </Link> */}
+          <Button
+            small
+            label="Add data"
+            href={`./data/add-data`}
+            className="ml-2"
+          />
+          <Button
+            className="ml-2"
+            label="Add folder"
+            small
+            onClick={async () => {
+              setCreateNewFolderModalOpen(true);
+            }}
+          />
+          {/* <button
             className="bg-white rounded shadow-sm border-grey-500 border px-2 py-0.5 text-sm mx-2"
             onClick={async () => {
               setCreateNewFolderModalOpen(true);
             }}
           >
             Add folder
-          </button>
+          </button> */}
         </div>
       </header>
       <div

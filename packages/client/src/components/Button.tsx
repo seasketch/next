@@ -21,6 +21,7 @@ export interface ButtonProps {
   autofocus?: boolean;
   /* Override default styles on button */
   buttonClassName?: string;
+  small?: boolean;
 }
 
 export default function Button(props: ButtonProps) {
@@ -41,7 +42,11 @@ export default function Button(props: ButtonProps) {
       : props.loading
       ? "pointer-events-none"
       : "cursor-pointer"
-  } inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md ${
+  } inline-flex items-center ${
+    props.small ? "px-2 py-0.5" : "px-4 py-2"
+  } border border-gray-300 text-sm leading-5 font-medium ${
+    props.small ? "rounded" : "rounded-md"
+  } ${
     props.primary
       ? `text-white bg-primary-500 focus:outline-none focus:border-primary-600 focus:shadow-outline-blue active:bg-primary-600`
       : `text-gray-700 ${
@@ -78,7 +83,7 @@ export default function Button(props: ButtonProps) {
   );
   return (
     <span
-      className={`inline-flex rounded-md shadow-sm ${props.className}`}
+      className={`inline-flex shadow-sm ${props.className}`}
       onClick={props.disabled ? undefined : onClick}
     >
       {props.labelFor ? (
