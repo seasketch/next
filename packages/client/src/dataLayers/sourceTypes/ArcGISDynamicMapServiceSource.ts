@@ -3,7 +3,7 @@ import {
   ArcGISDynamicMapServiceOptions,
 } from "@seasketch/mapbox-gl-esri-sources";
 import { Map } from "mapbox-gl";
-import { ClientDataSource, ClientDataLayer } from "../LayerManager";
+import { ClientDataSource, ClientDataLayer } from "../MapContextManager";
 import { SeaSketchSourceBaseOptions } from "./Base";
 
 export type ArcGISDynamicMapServiceSource = {

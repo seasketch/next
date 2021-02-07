@@ -18,7 +18,7 @@ import SortableTree, {
 // @ts-ignore
 import FileExplorerTheme from "react-sortable-tree-theme-file-explorer";
 import "react-sortable-tree/style.css";
-import { LayerManagerContext } from "../LayerManager";
+import { MapContext } from "../MapContextManager";
 import VisibilityCheckbox from "./VisibilityCheckbox";
 import "./TableOfContents.css";
 import Spinner from "../../components/Spinner";
@@ -88,7 +88,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
   const { show } = useContextMenu({
     id: props.contextMenuId || "none",
   });
-  const { manager, layerStates } = useContext(LayerManagerContext);
+  const { manager, layerStates } = useContext(MapContext);
 
   const setExpanded = (
     expanded: boolean,

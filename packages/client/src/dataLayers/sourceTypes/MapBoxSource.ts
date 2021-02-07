@@ -6,7 +6,7 @@ import {
   VectorSource,
   Map,
 } from "mapbox-gl";
-import { ClientDataSource } from "../LayerManager";
+import { ClientDataSource } from "../MapContextManager";
 import { SeaSketchSourceBaseOptions } from "./Base";
 
 export type MapBoxSource = (

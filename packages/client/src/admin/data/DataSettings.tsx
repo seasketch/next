@@ -14,39 +14,36 @@ import LayerAdminSidebar from "./LayerAdminSidebar";
 import { useProjectRegionQuery } from "../../generated/graphql";
 import bbox from "@turf/bbox";
 import { Map } from "mapbox-gl";
-import {
-  LayerManagerContext,
-  useLayerManager,
-} from "../../dataLayers/LayerManager";
+import { MapContext, useMapContext } from "../../dataLayers/MapContextManager";
 const LazyArcGISBrowser = React.lazy(() => import("./arcgis/ArcGISBrowser"));
 
 export default function DataSettings() {
   const { path } = useRouteMatch();
   const { slug } = useParams<{ slug: string }>();
   const [map, setMap] = useState<Map>();
-  const layerManager = useLayerManager();
+  const mapContext = useMapContext("data-settings");
   const { data, loading, error } = useProjectRegionQuery({
     variables: {
       slug,
     },
   });
-  useEffect(() => {
-    if (map && data?.projectBySlug?.region) {
-      const bounds = bbox(data.projectBySlug.region.geojson) as [
-        number,
-        number,
-        number,
-        number
-      ];
-      map.fitBounds(bounds, { duration: 0 });
-      if (map) {
-        layerManager.manager?.setMap(map);
-      }
-    }
-  }, [map, data?.projectBySlug?.region]);
+  // useEffect(() => {
+  //   if (map && data?.projectBySlug?.region) {
+  //     const bounds = bbox(data.projectBySlug.region.geojson) as [
+  //       number,
+  //       number,
+  //       number,
+  //       number
+  //     ];
+  //     map.fitBounds(bounds, { duration: 0 });
+  //     if (map) {
+  //       mapContext.manager?.setMap(map);
+  //     }
+  //   }
+  // }, [map, data?.projectBySlug?.region]);
   return (
     <>
-      <LayerManagerContext.Provider value={layerManager}>
+      <MapContext.Provider value={mapContext}>
         <Switch>
           <Route exact path={`${path}`}>
             <div className="flex flex-row h-full">
@@ -54,12 +51,24 @@ export default function DataSettings() {
                 <LayerAdminSidebar />
               </div>
               <div className="flex-1 h-full">
-                <MapboxMap
-                  onLoad={(map) => {
-                    setMap(map);
-                  }}
-                  className="h-full"
-                />
+                {data?.projectBySlug && (
+                  <MapboxMap
+                    bounds={
+                      data?.projectBySlug
+                        ? (bbox(data.projectBySlug.region.geojson) as [
+                            number,
+                            number,
+                            number,
+                            number
+                          ])
+                        : undefined
+                    }
+                    onLoad={(map) => {
+                      setMap(map);
+                    }}
+                    className="h-full"
+                  />
+                )}
               </div>
             </div>
           </Route>
@@ -93,7 +102,7 @@ export default function DataSettings() {
             <LazyArcGISBrowser />
           </Route>
         </Switch>
-      </LayerManagerContext.Provider>
+      </MapContext.Provider>
     </>
   );
 }

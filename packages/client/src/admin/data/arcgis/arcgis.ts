@@ -36,7 +36,7 @@ import {
   ClientDataLayer,
   ClientDataSource,
   ClientSprite,
-} from "../../../dataLayers/LayerManager";
+} from "../../../dataLayers/MapContextManager";
 import { MutationFunctionOptions } from "@apollo/client";
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
@@ -1638,4 +1638,31 @@ function contentOrFalse(str?: string) {
   } else {
     return false;
   }
+}
+
+const dynamicArcGISStyles: {
+  [sourceId: string]: Promise<{
+    imageList: ImageList;
+    layers: mapboxgl.Layer[];
+  }>;
+} = {};
+/**
+ * Returns a promise that resolves to gl style information from mapbox-gl-esri-sources.
+ * Will first reference an internal cache unless skipCache is true.
+ * @param url URL to a feature layer. Should end in MapServer/\d+
+ * @param sourceId Valid gl styles must reference a data source. Provide the ID of the geojson source that will be used
+ */
+export async function getDynamicArcGISStyle(
+  url: string,
+  sourceId: string,
+  skipCache = false
+) {
+  const layers: Layer[] = [];
+  if (dynamicArcGISStyles[sourceId] && !skipCache) {
+    // already working
+    return dynamicArcGISStyles[sourceId];
+  } else {
+    dynamicArcGISStyles[sourceId] = styleForFeatureLayer(url, sourceId);
+  }
+  return dynamicArcGISStyles[sourceId];
 }

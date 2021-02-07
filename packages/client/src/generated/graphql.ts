@@ -1491,6 +1491,7 @@ export type DataLayer = Node & {
   renderUnder: RenderUnderType;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
+  spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites?: Maybe<Array<Sprite>>;
   /**
@@ -1574,6 +1575,7 @@ export type DataLayerInput = {
   renderUnder?: Maybe<RenderUnderType>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
+  spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
@@ -1601,6 +1603,7 @@ export type DataLayerPatch = {
   renderUnder?: Maybe<RenderUnderType>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
+  spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
@@ -7335,6 +7338,7 @@ export type Query = Node & {
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
+  extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   form?: Maybe<Form>;
   /** Reads a single `Form` using its globally unique `ID`. */
   formByNodeId?: Maybe<Form>;
@@ -7845,6 +7849,22 @@ export type QueryEmailNotificationPreferencesConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryExtractSpriteIdsArgs = {
+  t?: Maybe<Scalars['String']>;
 };
 
 

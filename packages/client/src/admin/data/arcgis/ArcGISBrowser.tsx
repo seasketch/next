@@ -27,12 +27,12 @@ import DynamicMapServerSettingsForm from "./DynamicMapServerSettingsForm";
 import VectorFeatureLayerSettingsForm from "./VectorFeatureLayerSettingsForm";
 import { FeatureLayerSettings } from "./FeatureLayerSettings";
 import {
-  LayerManagerContext,
-  useLayerManager,
+  MapContext,
+  useMapContext,
   ClientDataLayer,
   ClientDataSource,
   ClientSprite,
-} from "../../../dataLayers/LayerManager";
+} from "../../../dataLayers/MapContextManager";
 import TableOfContents, {
   ClientTableOfContentsItem,
 } from "../../../dataLayers/tableOfContents/TableOfContents";
@@ -54,7 +54,7 @@ export default function ArcGISBrowser() {
   const mapServerInfo = useMapServerInfo(selectedMapServer);
   const [selectedFeatureLayer, setSelectedFeatureLayer] = useState<LayerInfo>();
   const serviceColumnRef = useRef<HTMLDivElement>(null);
-  const layerManager = useLayerManager();
+  const mapContext = useMapContext();
   const [treeData, setTreeData] = useState<ClientTableOfContentsItem[]>([]);
   const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
     selectedMapServer
@@ -65,7 +65,6 @@ export default function ArcGISBrowser() {
   // Update map extent when showing new services
   useEffect(() => {
     if (serviceData && map) {
-      layerManager.manager?.setMap(map);
       const extent =
         serviceData.mapServerInfo.fullExtent ||
         serviceData.mapServerInfo.initialExtent;
@@ -80,7 +79,7 @@ export default function ArcGISBrowser() {
 
   // Update sources and layers whenever settings change
   useEffect(() => {
-    if (serviceSettings && serviceData && layerManager.manager) {
+    if (serviceSettings && serviceData && mapContext.manager) {
       setTreeData(
         updateDisabledState(
           serviceSettings?.sourceType || "arcgis-dynamic-mapservice",
@@ -119,7 +118,7 @@ export default function ArcGISBrowser() {
           layers.push(vectorLayerFromSettings(layer, vectorSettings));
         }
       }
-      layerManager.manager.reset(sources, layers);
+      mapContext.manager.reset(sources, layers);
     }
   }, [
     serviceData,
@@ -131,11 +130,11 @@ export default function ArcGISBrowser() {
   useEffect(() => {
     if (
       serviceData &&
-      layerManager.manager &&
+      mapContext.manager &&
       serviceSettings &&
       serviceSettings.sourceType === "arcgis-dynamic-mapservice"
     ) {
-      layerManager.manager.updateArcGISDynamicMapServiceSource(
+      mapContext.manager.updateArcGISDynamicMapServiceSource(
         dynamicServiceSourceFromSettings(serviceData, serviceSettings)
       );
     }
@@ -146,7 +145,7 @@ export default function ArcGISBrowser() {
   ]);
 
   useEffect(() => {
-    if (serviceData && layerManager.manager && map) {
+    if (serviceData && mapContext.manager && map) {
       const data = treeDataFromLayerList(serviceData.layerInfo);
       setTreeData(
         updateDisabledState(
@@ -179,10 +178,10 @@ export default function ArcGISBrowser() {
       };
       const collectedVisibleLayers = collectIds([], data[0]);
       setTimeout(() => {
-        layerManager.manager!.setVisibleLayers(collectedVisibleLayers);
+        mapContext.manager!.setVisibleLayers(collectedVisibleLayers);
       }, 50);
     }
-  }, [serviceData, layerManager.manager]);
+  }, [serviceData, mapContext.manager]);
 
   const featureLayerSettingsRef = useRef(null);
   const numLayers =
@@ -279,11 +278,10 @@ export default function ArcGISBrowser() {
   } else {
     return (
       <>
-        <LayerManagerContext.Provider value={layerManager}>
+        <MapContext.Provider value={mapContext}>
           <div className="flex flex-col h-full">
             <MapboxMap
               onLoad={(map) => {
-                layerManager.manager!.setMap(map);
                 setMap(map);
               }}
             />
@@ -437,7 +435,7 @@ export default function ArcGISBrowser() {
                                   } else {
                                     excluded.push(node.id.toString());
                                   }
-                                  layerManager.manager?.hideLayers([
+                                  mapContext.manager?.hideLayers([
                                     node.id.toString(),
                                   ]);
                                   setServiceSettings({
@@ -515,10 +513,10 @@ export default function ArcGISBrowser() {
                         selectedFeatureLayer,
                         layerSettings
                       );
-                      layerManager.manager!.updateArcGISDynamicMapServiceSource(
+                      mapContext.manager!.updateArcGISDynamicMapServiceSource(
                         source
                       );
-                      layerManager.manager!.updateLayer(
+                      mapContext.manager!.updateLayer(
                         vectorLayerFromSettings(
                           selectedFeatureLayer,
                           layerSettings
@@ -543,7 +541,7 @@ export default function ArcGISBrowser() {
               mapServerInfo={mapServerInfo.data?.mapServerInfo!}
             />
           </div>
-        </LayerManagerContext.Provider>
+        </MapContext.Provider>
       </>
     );
   }

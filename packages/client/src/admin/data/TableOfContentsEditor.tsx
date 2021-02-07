@@ -5,7 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
-import { LayerManagerContext } from "../../dataLayers/LayerManager";
+import { MapContext } from "../../dataLayers/MapContextManager";
 import MetadataModal from "../../dataLayers/MetadataModal";
 import TableOfContents, {
   ClientTableOfContentsItem,
@@ -30,7 +30,7 @@ import ZIndexEditor from "./ZIndexEditor";
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
   const { slug } = useParams<{ slug: string }>();
-  const { manager } = useContext(LayerManagerContext);
+  const { manager } = useContext(MapContext);
   const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },
   });

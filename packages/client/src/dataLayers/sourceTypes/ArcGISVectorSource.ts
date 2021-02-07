@@ -2,7 +2,7 @@ import { ArcGISVectorSourceOptions } from "@seasketch/mapbox-gl-esri-sources";
 import { ImageSet } from "@seasketch/mapbox-gl-esri-sources/dist/src/ImageList";
 import { ArcGISVectorSource as ArcGISVectorSourceInstance } from "@seasketch/mapbox-gl-esri-sources";
 import { SeaSketchSourceBaseOptions } from "./Base";
-import { ClientDataSource, ClientDataLayer } from "../LayerManager";
+import { ClientDataSource, ClientDataLayer } from "../MapContextManager";
 import { Layer, Map } from "mapbox-gl";
 
 export type ArcGISVectorSource = {

@@ -127,3 +127,7 @@ code {
 .ProseMirror p:empty {
   height: 1em;
 }
+
+.mapboxgl-ctrl-attrib-button {
+  position: absolute !important;
+}

@@ -1,12 +1,12 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import Button from "../../components/Button";
-import { LayerManagerContext } from "../../dataLayers/LayerManager";
+import { MapContext } from "../../dataLayers/MapContextManager";
 import { Basemap, useGetBasemapsQuery } from "../../generated/graphql";
 import useProjectId from "../../useProjectId";
 import CreateBasemapModal from "./CreateBasemapModal";
 
 export default function BaseMapEditor() {
-  const managerContext = useContext(LayerManagerContext);
+  const managerContext = useContext(MapContext);
   const projectId = useProjectId();
   const { data, loading, error } = useGetBasemapsQuery({
     variables: {
@@ -15,6 +15,12 @@ export default function BaseMapEditor() {
   });
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedBasemap, setSelectedBasemap] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (data?.project?.basemaps && managerContext.manager) {
+      managerContext.manager.setBasemaps(data.project.basemaps);
+    }
+  }, [data?.project?.basemaps, managerContext.manager]);
   return (
     <div className="p-4">
       <div className="mb-4">
@@ -44,13 +50,14 @@ export default function BaseMapEditor() {
         })} */}
         {data?.project?.basemaps?.map((b) => (
           <BasemapSquareItem
-            selected={selectedBasemap === b.id}
+            selected={managerContext.selectedBasemap === b.id.toString()}
             key={b.id}
             basemap={b}
             onClick={() => {
               // if (selectedBasemap !== b.id) {
-              setSelectedBasemap(b.id);
-              managerContext.manager?.changeBasemap(b.url);
+              managerContext.manager?.setSelectedBasemap(b.id.toString());
+              // setSelectedBasemap(b.id);
+              // managerContext.manager?.changeBasemap(b.url);
               // }
             }}
           />

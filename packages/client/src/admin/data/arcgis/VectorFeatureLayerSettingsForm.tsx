@@ -2,7 +2,7 @@ import React, { useContext } from "react";
 import Button from "../../../components/Button";
 import InputBlock from "../../../components/InputBlock";
 import Switch from "../../../components/Switch";
-import { LayerManagerContext } from "../../../dataLayers/LayerManager";
+import { MapContext } from "../../../dataLayers/MapContextManager";
 import { ArcGISServiceSettings, MapServerImageFormat } from "./arcgis";
 
 export default function VectorFeatureLayerSettingsForm(props: {

@@ -2,8 +2,8 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import {
   ClientDataLayer,
   ClientDataSource,
-  LayerManagerContext,
-} from "../../dataLayers/LayerManager";
+  MapContext,
+} from "../../dataLayers/MapContextManager";
 import { ClientTableOfContentsItem } from "../../dataLayers/tableOfContents/TableOfContents";
 import "react-sortable-tree/style.css";
 import SortableTree, { TreeItem } from "react-sortable-tree";
@@ -33,7 +33,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
     updateRenderUnder,
     updateRenderUnderState,
   ] = useUpdateRenderUnderTypeMutation();
-  const { manager, layerStates } = useContext(LayerManagerContext);
+  const { manager, layerStates } = useContext(MapContext);
   let layerLookup = useRef<{ [id: string]: ClientDataLayer }>({});
 
   const lookupRenderUnder = (item: TreeItem) => {
