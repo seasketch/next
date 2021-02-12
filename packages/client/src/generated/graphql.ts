@@ -6552,6 +6552,8 @@ export type Project = Node & {
   basemapsConnection: BasemapsConnection;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
+  dataHostingQuota?: Maybe<Scalars['Int']>;
+  dataHostingQuotaUsed?: Maybe<Scalars['Int']>;
   /**
    * Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
    * in conjuction with `dataSourcesForItems` to progressively load layer information
@@ -7323,6 +7325,7 @@ export type Query = Node & {
    * `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
    */
   currentProject?: Maybe<Project>;
+  dataHostingQuotaLeft?: Maybe<Scalars['Int']>;
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
   /** Reads a single `DataLayer` using its globally unique `ID`. */
@@ -7677,6 +7680,22 @@ export type QueryCommunityGuidelineArgs = {
  */
 export type QueryCommunityGuidelineByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting 
+ * the currently logged-in user (`me`) and project (`currentProject`). 
+ * There are also cross-project resources such as form templates and of 
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ * 
+ * Postgraphile also automatically generates a variety of accessor queries 
+ * for each database table. These are unlikely to be needed often but may possibly 
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryDataHostingQuotaLeftArgs = {
+  pid?: Maybe<Scalars['Int']>;
 };
 
 
@@ -12745,6 +12764,19 @@ export type UpdateMetadataMutation = (
   )> }
 );
 
+export type ProjectHostingQuotaQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectHostingQuotaQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'dataHostingQuota' | 'dataHostingQuotaUsed'>
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -14692,6 +14724,41 @@ export function useUpdateMetadataMutation(baseOptions?: Apollo.MutationHookOptio
 export type UpdateMetadataMutationHookResult = ReturnType<typeof useUpdateMetadataMutation>;
 export type UpdateMetadataMutationResult = Apollo.MutationResult<UpdateMetadataMutation>;
 export type UpdateMetadataMutationOptions = Apollo.BaseMutationOptions<UpdateMetadataMutation, UpdateMetadataMutationVariables>;
+export const ProjectHostingQuotaDocument = gql`
+    query ProjectHostingQuota($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingQuota
+    dataHostingQuotaUsed
+  }
+}
+    `;
+
+/**
+ * __useProjectHostingQuotaQuery__
+ *
+ * To run a query within a React component, call `useProjectHostingQuotaQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectHostingQuotaQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectHostingQuotaQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectHostingQuotaQuery(baseOptions?: Apollo.QueryHookOptions<ProjectHostingQuotaQuery, ProjectHostingQuotaQueryVariables>) {
+        return Apollo.useQuery<ProjectHostingQuotaQuery, ProjectHostingQuotaQueryVariables>(ProjectHostingQuotaDocument, baseOptions);
+      }
+export function useProjectHostingQuotaLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectHostingQuotaQuery, ProjectHostingQuotaQueryVariables>) {
+          return Apollo.useLazyQuery<ProjectHostingQuotaQuery, ProjectHostingQuotaQueryVariables>(ProjectHostingQuotaDocument, baseOptions);
+        }
+export type ProjectHostingQuotaQueryHookResult = ReturnType<typeof useProjectHostingQuotaQuery>;
+export type ProjectHostingQuotaLazyQueryHookResult = ReturnType<typeof useProjectHostingQuotaLazyQuery>;
+export type ProjectHostingQuotaQueryResult = Apollo.QueryResult<ProjectHostingQuotaQuery, ProjectHostingQuotaQueryVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

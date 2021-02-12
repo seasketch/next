@@ -7,7 +7,7 @@ export interface ButtonProps {
   /* Event handler */
   onClick?: () => void;
   /* Text label for the button */
-  label: string;
+  label: string | React.ReactNode;
   /* Primary action. Uses a darker color */
   primary?: boolean;
   /* Override default styles */
@@ -22,6 +22,7 @@ export interface ButtonProps {
   /* Override default styles on button */
   buttonClassName?: string;
   small?: boolean;
+  title?: string;
 }
 
 export default function Button(props: ButtonProps) {
@@ -83,6 +84,7 @@ export default function Button(props: ButtonProps) {
   );
   return (
     <span
+      title={props.title}
       className={`inline-flex shadow-sm ${props.className}`}
       onClick={props.disabled ? undefined : onClick}
     >

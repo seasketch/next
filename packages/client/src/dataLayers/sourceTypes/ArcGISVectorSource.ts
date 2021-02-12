@@ -46,6 +46,7 @@ export function updateArcGISVectorSource(
 
     map.removeSource(prev.id.toString());
     instance = new ArcGISVectorSourceInstance(
+      // @ts-ignore
       map,
       state.id.toString(),
       state.url,

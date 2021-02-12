@@ -28,6 +28,7 @@ import {
 } from "../../generated/graphql";
 import { Menu, useContextMenu } from "react-contexify";
 import "react-contexify/dist/ReactContexify.css";
+import Button from "../../components/Button";
 
 // export interface TableOfContentsNode {
 //   id: string;
@@ -124,13 +125,55 @@ export default function TableOfContents(props: TableOfContentsProps) {
         </Menu>
       )}
       {showFolderToggle && (
-        <div className="z-10 p-0 absolute top-0 left-32 text-gray-500">
-          <button
+        <div className="z-10 p-0 absolute top-0 right-12 text-gray-500">
+          <Button
+            small
+            title="toggle all folder expansion"
+            buttonClassName="px-0 py-0"
+            className="px-0 py-0"
+            onClick={() => setExpanded(expansionToggled)}
+            label={
+              <>
+                {!expansionToggled ? (
+                  <svg
+                    className="w-4 h-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 13h6M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-4 h-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                )}
+              </>
+            }
+          />
+          {/* <button
             className="mr-2 text-sm underline"
             onClick={() => setExpanded(expansionToggled)}
           >
             {expansionToggled ? "expand all" : "collapse all"}
-          </button>
+          </button> */}
         </div>
       )}
       <SortableTree
@@ -214,6 +257,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
                     }, 8);
                   }
                 }}
+                className={data.node.disabled ? "text-gray-500" : ""}
               >
                 {data.node.title}
                 {data.node.disabled && props.disabledMessage

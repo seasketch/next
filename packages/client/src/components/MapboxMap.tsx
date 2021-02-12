@@ -45,7 +45,7 @@ export default function MapboxMap(props: OverlayMapProps) {
 
   return (
     <div
-      className={`flex-1 bg-gray-900 ${props.className} relative`}
+      className={`flex-1 bg-gray-300 ${props.className} relative`}
       ref={mapContainer}
     >
       <div className="flex align-middle justify-center absolute top-2 z-10 w-full">

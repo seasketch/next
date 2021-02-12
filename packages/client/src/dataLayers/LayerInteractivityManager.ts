@@ -80,38 +80,40 @@ export default class LayerInteractivityManager {
     const newInteractiveImageLayerIds: string[] = [];
     let newInteractiveVectorLayerIds: string[] = [];
     for (const layer of dataLayers) {
-      const source = dataSources[layer.dataSourceId];
-      if (source) {
-        if (
-          layer.interactivitySettings &&
-          layer.interactivitySettings.type !== InteractivityType.None
-        ) {
-          if (layer.sublayer) {
-            newInteractiveImageLayerIds.push(layer.id.toString());
-            newActiveImageSources[source.id] = source;
-            newActiveLayers[layer.id] = layer;
-          } else {
-            let GLStyles: Layer[];
-            if (layer.mapboxGlStyles && Array.isArray(layer.mapboxGlStyles)) {
-              GLStyles = layer.mapboxGlStyles;
+      if (layer && layer.dataSourceId) {
+        const source = dataSources[layer.dataSourceId];
+        if (source) {
+          if (
+            layer.interactivitySettings &&
+            layer.interactivitySettings.type !== InteractivityType.None
+          ) {
+            if (layer.sublayer) {
+              newInteractiveImageLayerIds.push(layer.id.toString());
+              newActiveImageSources[source.id] = source;
+              newActiveLayers[layer.id] = layer;
             } else {
-              if (source.type === DataSourceTypes.ArcgisVector) {
-                const { layers } = await getDynamicArcGISStyle(
-                  source.url!,
-                  source.id.toString()
-                );
-                GLStyles = layers;
+              let GLStyles: Layer[];
+              if (layer.mapboxGlStyles && Array.isArray(layer.mapboxGlStyles)) {
+                GLStyles = layer.mapboxGlStyles;
               } else {
-                throw new Error(
-                  `Could not find mapbox layer ids for client layer id=${layer.id}`
-                );
+                if (source.type === DataSourceTypes.ArcgisVector) {
+                  const { layers } = await getDynamicArcGISStyle(
+                    source.url!,
+                    source.id.toString()
+                  );
+                  GLStyles = layers;
+                } else {
+                  throw new Error(
+                    `Could not find mapbox layer ids for client layer id=${layer.id}`
+                  );
+                }
               }
+              newInteractiveVectorLayerIds = [
+                ...newInteractiveVectorLayerIds,
+                ...GLStyles.map((s, i) => idForLayer(layer, i)),
+              ];
+              newActiveLayers[layer.id] = layer;
             }
-            newInteractiveVectorLayerIds = [
-              ...newInteractiveVectorLayerIds,
-              ...GLStyles.map((s, i) => idForLayer(layer, i)),
-            ];
-            newActiveLayers[layer.id] = layer;
           }
         }
       }

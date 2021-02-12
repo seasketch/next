@@ -40,8 +40,17 @@ import Button from "../../../components/Button";
 import Modal from "../../../components/Modal";
 import ImportVectorLayersModal from "./ImportVectorLayersModal";
 import { settings } from "cluster";
-import ExcludeLayerToggle from "./ExcludeLayerToggle";
-import { DataSourceTypes, RenderUnderType } from "../../../generated/graphql";
+import ExcludeLayerToggle, {
+  ExcludeAddIcon,
+  ExcludeIcon,
+} from "./ExcludeLayerToggle";
+import {
+  DataSourceTypes,
+  RenderUnderType,
+  useGetBasemapsQuery,
+} from "../../../generated/graphql";
+import useProjectId from "../../../useProjectId";
+import bytes from "bytes";
 
 export default function ArcGISBrowser() {
   const [server, setServer] = useState<{
@@ -54,11 +63,17 @@ export default function ArcGISBrowser() {
   const mapServerInfo = useMapServerInfo(selectedMapServer);
   const [selectedFeatureLayer, setSelectedFeatureLayer] = useState<LayerInfo>();
   const serviceColumnRef = useRef<HTMLDivElement>(null);
-  const mapContext = useMapContext();
+  const mapContext = useMapContext(undefined, undefined, bytes("200mb"));
   const [treeData, setTreeData] = useState<ClientTableOfContentsItem[]>([]);
   const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
     selectedMapServer
   );
+  const projectId = useProjectId();
+  const basemapsData = useGetBasemapsQuery({
+    variables: {
+      projectId: projectId!,
+    },
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const serviceData = mapServerInfo.data;
 
@@ -76,6 +91,12 @@ export default function ArcGISBrowser() {
       }
     }
   }, [serviceData, map]);
+
+  useEffect(() => {
+    if (basemapsData.data && mapContext.manager) {
+      mapContext.manager.setBasemaps(basemapsData.data.project!.basemaps!);
+    }
+  }, [basemapsData.data, mapContext.manager]);
 
   // Update sources and layers whenever settings change
   useEffect(() => {
@@ -120,29 +141,24 @@ export default function ArcGISBrowser() {
       }
       mapContext.manager.reset(sources, layers);
     }
-  }, [
-    serviceData,
-    serviceSettings?.sourceType,
-    serviceSettings?.renderUnder,
-    serviceSettings?.enableHighDpi,
-  ]);
+  }, [serviceData, serviceSettings]);
 
-  useEffect(() => {
-    if (
-      serviceData &&
-      mapContext.manager &&
-      serviceSettings &&
-      serviceSettings.sourceType === "arcgis-dynamic-mapservice"
-    ) {
-      mapContext.manager.updateArcGISDynamicMapServiceSource(
-        dynamicServiceSourceFromSettings(serviceData, serviceSettings)
-      );
-    }
-  }, [
-    serviceSettings?.enableHighDpi,
-    serviceSettings?.imageFormat,
-    serviceSettings?.renderUnder,
-  ]);
+  // useEffect(() => {
+  //   if (
+  //     serviceData &&
+  //     mapContext.manager &&
+  //     serviceSettings &&
+  //     serviceSettings.sourceType === "arcgis-dynamic-mapservice"
+  //   ) {
+  //     mapContext.manager.updateArcGISDynamicMapServiceSource(
+  //       dynamicServiceSourceFromSettings(serviceData, serviceSettings)
+  //     );
+  //   }
+  // }, [
+  //   serviceSettings?.enableHighDpi,
+  //   serviceSettings?.imageFormat,
+  //   serviceSettings?.renderUnder,
+  // ]);
 
   useEffect(() => {
     if (serviceData && mapContext.manager && map) {
@@ -184,9 +200,12 @@ export default function ArcGISBrowser() {
   }, [serviceData, mapContext.manager]);
 
   const featureLayerSettingsRef = useRef(null);
-  const numLayers =
-    mapServerInfo.data?.layerInfo.filter((l) => l.type === "Feature Layer")
-      .length || 0;
+  const allFeatureLayerIds = (mapServerInfo.data?.layerInfo || [])
+    .filter((l) => l.type === "Feature Layer")
+    .map((l) => l.generatedId);
+  const allLayerIds = (mapServerInfo.data?.layerInfo || [])
+    .filter((l) => l.type !== "Group Layer")
+    .map((l) => l.generatedId);
 
   const settingsButton = (path: HTMLElement[]) => {
     for (const el of path.slice(0, 3)) {
@@ -202,8 +221,12 @@ export default function ArcGISBrowser() {
 
   const colorPicker = (path: HTMLElement[]) => {
     for (const el of path.slice(0, 5)) {
-      if (el.className.indexOf("colorpicker-body") !== -1) {
-        return true;
+      try {
+        if (el.className.indexOf("colorpicker-body") !== -1) {
+          return true;
+        }
+      } catch (e) {
+        return false;
       }
     }
     return false;
@@ -371,7 +394,36 @@ export default function ArcGISBrowser() {
                         ).
                       </p>
                     )}
-                    <div className="mt-4 mb-4">
+                    <div className="mt-4 mb-4 relative">
+                      <Button
+                        className="absolute right-0 z-10"
+                        label={
+                          serviceSettings.excludedSublayers.length ===
+                          serviceSettings.vectorSublayerSettings.length ? (
+                            <ExcludeAddIcon className="w-4 h-4 text-gray-800" />
+                          ) : (
+                            <ExcludeIcon className="w-4 h-4 text-gray-800" />
+                          )
+                        }
+                        title="Exclude all from import"
+                        small
+                        onClick={() => {
+                          const layerIds =
+                            serviceSettings.sourceType ===
+                            "arcgis-dynamic-mapservice"
+                              ? allLayerIds
+                              : allFeatureLayerIds;
+                          if (
+                            serviceSettings.excludedSublayers.length ===
+                            layerIds.length
+                          ) {
+                            serviceSettings.excludedSublayers = [];
+                          } else {
+                            serviceSettings.excludedSublayers = layerIds;
+                          }
+                          setServiceSettings({ ...serviceSettings });
+                        }}
+                      />
                       <TableOfContents
                         nodes={treeData}
                         onChange={(data) => setTreeData(data)}
@@ -472,7 +524,7 @@ export default function ArcGISBrowser() {
                           <Button
                             primary={true}
                             disabled={
-                              numLayers -
+                              allFeatureLayerIds.length -
                                 serviceSettings.excludedSublayers.length ===
                               0
                             }
@@ -482,10 +534,10 @@ export default function ArcGISBrowser() {
                                 ? "all"
                                 : ""
                             } ${
-                              numLayers -
+                              allFeatureLayerIds.length -
                               serviceSettings.excludedSublayers.length
                             } layer${
-                              numLayers -
+                              allFeatureLayerIds.length -
                                 serviceSettings.excludedSublayers.length ===
                               1
                                 ? ""
@@ -505,23 +557,27 @@ export default function ArcGISBrowser() {
                     layer={selectedFeatureLayer}
                     settings={serviceSettings}
                     updateSettings={(settings) => {
-                      setServiceSettings(settings);
-                      const layerSettings = settings.vectorSublayerSettings.find(
-                        (s) => s.sublayer === selectedFeatureLayer.id
-                      );
-                      const source = vectorSourceFromSettings(
-                        selectedFeatureLayer,
-                        layerSettings
-                      );
-                      mapContext.manager!.updateArcGISDynamicMapServiceSource(
-                        source
-                      );
-                      mapContext.manager!.updateLayer(
-                        vectorLayerFromSettings(
-                          selectedFeatureLayer,
-                          layerSettings
-                        )
-                      );
+                      setServiceSettings({ ...settings });
+                      // const layerSettings = settings.vectorSublayerSettings.find(
+                      //   (s) => s.sublayer === selectedFeatureLayer.id
+                      // );
+                      // const source = vectorSourceFromSettings(
+                      //   selectedFeatureLayer,
+                      //   layerSettings
+                      // );
+                      // if (
+                      //   source.type === DataSourceTypes.ArcgisDynamicMapserver
+                      // ) {
+                      //   mapContext.manager!.updateArcGISDynamicMapServiceSource(
+                      //     source
+                      //   );
+                      // }
+                      // mapContext.manager!.updateLayer(
+                      //   vectorLayerFromSettings(
+                      //     selectedFeatureLayer,
+                      //     layerSettings
+                      //   )
+                      // );
                     }}
                   />
                 </div>
@@ -580,7 +636,7 @@ function vectorSourceFromSettings(
     // imageSets: layer.imageList ? layer.imageList.toJSON() : [],
     bytesLimit: settings?.ignoreByteLimit ? undefined : 5000000,
     queryParameters: {
-      outFields: settings?.outFields || "*",
+      outFields: settings?.outFields,
       geometryPrecision: settings?.geometryPrecision,
     },
     // interactivitySettings: [],

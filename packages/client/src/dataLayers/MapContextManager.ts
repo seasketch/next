@@ -6,6 +6,7 @@ import mapboxgl, {
   Source,
   AnyLayer,
   Style,
+  Layer,
 } from "mapbox-gl";
 import {
   createContext,
@@ -18,6 +19,7 @@ import {
   ArcGISDynamicMapServiceSource,
   isArcGISDynamicServiceLoading,
   updateDynamicMapService,
+  urlTemplateForArcGISDynamicSource,
 } from "./sourceTypes/ArcGISDynamicMapServiceSource";
 import {
   ArcGISVectorSource,
@@ -30,6 +32,7 @@ import {
   ArcGISDynamicMapService,
   ArcGISDynamicMapService as ArcGISDynamicMapServiceInstance,
   ArcGISVectorSource as ArcGISVectorSourceInstance,
+  fetchFeatureLayerData,
 } from "@seasketch/mapbox-gl-esri-sources";
 import {
   Basemap,
@@ -44,6 +47,11 @@ import {
 import { fetchGlStyle } from "../useMapboxStyle";
 import { getDynamicArcGISStyle } from "../admin/data/arcgis/arcgis";
 import LayerInteractivityManager from "./LayerInteractivityManager";
+import ArcGISVectorSourceCache, {
+  ArcGISVectorSourceCacheEvent,
+} from "./ArcGISVectorSourceCache";
+import bytes from "bytes";
+import { FeatureCollection } from "geojson";
 
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 
@@ -96,8 +104,6 @@ export type ClientDataSource = Pick<
   bytesLimit?: number;
 };
 
-const UNDER_LABELS_POSITION = "admin-0-boundary-disputed";
-
 export type ClientSprite = {
   spriteImages: ({ dataUri?: string; url?: string } & Pick<
     SpriteImage,
@@ -147,7 +153,7 @@ class MapContextManager {
   private preferencesKey?: string;
   private ignoreLayerVisibilityState = false;
   private clientDataSources: { [dataSourceId: string]: ClientDataSource } = {};
-  private layersByZIndex: (number | string)[] = [];
+  private layersByZIndex: string[] = [];
   private layers: { [layerId: string]: ClientDataLayer } = {};
   private layersBySourceId: { [sourceId: string]: ClientDataLayer[] } = {};
   private visibleLayers: { [id: string]: LayerState } = {};
@@ -163,13 +169,16 @@ class MapContextManager {
   private updateSourcesStateDebouncerReference?: NodeJS.Timeout;
   private isReady = false;
   private initialBounds?: [number, number, number, number];
+  arcgisVectorSourceCache: ArcGISVectorSourceCache;
 
   constructor(
     initialState: MapContextInterface,
     setState: Dispatch<SetStateAction<MapContextInterface>>,
     preferencesKey?: string,
-    ignoreLayerVisibilityState?: boolean
+    ignoreLayerVisibilityState?: boolean,
+    cacheSize?: number
   ) {
+    cacheSize = cacheSize || bytes("50mb");
     this.setState = setState;
     // @ts-ignore
     window.mapContext = this;
@@ -178,13 +187,52 @@ class MapContextManager {
     this.selectedBasemapId = initialState.selectedBasemap;
     this.visibleLayers = initialState.layerStates;
     this.initialBounds = initialState.bounds;
-    // # Initialization steps
-    // 1. Retrieve list of basemaps for the project
-    // 2. Determine which basemap should be displayed (TODO: implement in useMapContext)
-    // 3. Set that basemap as selected so UI can update
-    // 4. Fetch that basemap's style
-    // 5. Calculate style that should be displayed based on basemap, visible layers, etc
-    // 6. Set that computed style and indicate to the map that it may render
+    this.arcgisVectorSourceCache = new ArcGISVectorSourceCache(
+      cacheSize,
+      (key, item) => {
+        const state = this.visibleLayers[key];
+        if (state && state.visible) {
+          const error = new Error(
+            `Active source was evicted from cache due to memory limit. Limit is ${bytes(
+              cacheSize || 0
+            )}, layer is ${bytes(item.bytes || 0)}`
+          );
+          state.error = error;
+          item.error = error;
+          delete item.bytes;
+          delete item.value;
+          this.debouncedUpdateState(1);
+          this.debouncedUpdateStyle();
+          return item;
+        }
+      }
+    );
+    this.arcgisVectorSourceCache.on(
+      "error",
+      this.onArcGISVectorSourceCacheError
+    );
+  }
+
+  private onArcGISVectorSourceCacheError = (
+    event: ArcGISVectorSourceCacheEvent
+  ) => {
+    for (const layerId of Object.keys(this.visibleLayers)) {
+      if (this.layers[layerId]?.dataSourceId?.toString() === event.key) {
+        this.visibleLayers[layerId].error = event.item.error;
+        this.visibleLayers[layerId].loading = false;
+      }
+    }
+    this.debouncedUpdateState();
+  };
+
+  /**
+   * Call whenever the context will be replaced or no longer used
+   */
+  destroy() {
+    this.arcgisVectorSourceCache.off(
+      "error",
+      this.onArcGISVectorSourceCacheError
+    );
   }
 
   /**
@@ -225,15 +273,10 @@ class MapContextManager {
       this.map,
       this.setState
     );
-    const visibleLayers: ClientDataLayer[] = [];
-    for (const id in this.visibleLayers) {
-      const state = this.visibleLayers[id];
-      if (state.visible && this.layers[id]) {
-        visibleLayers.push(this.layers[id]);
-      }
-    }
     this.interactivityManager.setVisibleLayers(
-      visibleLayers,
+      Object.keys(this.visibleLayers)
+        .filter((id) => this.visibleLayers[id]?.visible && this.layers[id])
+        .map((id) => this.layers[id]),
       this.clientDataSources
     );
 
@@ -253,7 +296,6 @@ class MapContextManager {
    * @param basemaps List of Basemap objects
    */
   setBasemaps(basemaps: ClientBasemaps[]) {
-    console.log("set basemaps");
     this.basemaps = {};
     for (const basemap of basemaps) {
       this.basemaps[basemap.id.toString()] = basemap;
@@ -281,7 +323,7 @@ class MapContextManager {
       selectedBasemap: this.selectedBasemapId,
     }));
     this.updatePreferences();
-    this.updateStyle();
+    this.debouncedUpdateStyle();
   }
 
   private updatePreferences() {
@@ -302,6 +344,18 @@ class MapContextManager {
     }
   }
 
+  private updateStyleDebouncerReference: NodeJS.Timeout | undefined;
+
+  private async debouncedUpdateStyle(backoff = 2) {
+    if (this.updateStyleDebouncerReference) {
+      clearTimeout(this.updateStyleDebouncerReference);
+    }
+    this.updateStyleDebouncerReference = setTimeout(() => {
+      delete this.updateStyleDebouncerReference;
+      this.updateStyle();
+    }, backoff);
+  }
+
   private async updateStyle() {
     if (this.map && this.selectedBasemapId) {
       const style = await this.getComputedStyle();
@@ -312,59 +366,207 @@ class MapContextManager {
   async setVisibleLayers(layerIds: string[]) {
     for (const id in this.visibleLayers) {
       if (layerIds.indexOf(id) === -1) {
-        delete this.visibleLayers[id];
+        this.hideLayerId(id);
       }
     }
     for (const id of layerIds) {
       if (layerIds.indexOf(id) === -1) {
-        this.visibleLayers[id] = {
-          loading: true,
-          visible: true,
-        };
+        this.showLayerId(id);
       }
     }
-    this.updateStyle();
+    this.debouncedUpdateState(1);
+    this.debouncedUpdateStyle();
+  }
+
+  private hideLayerId(id: string) {
+    delete this.visibleLayers[id];
+    const key = this.layers[id]?.dataSourceId?.toString();
+    if (key) {
+      this.arcgisVectorSourceCache.clearErrorsForKey(key);
+    }
+  }
+
+  private showLayerId(id: string) {
+    // this.visibleLayers[id] = {
+    //   loading: true,
+    //   visible: true,
+    // };
+    if (this.visibleLayers[id]) {
+      const state = this.visibleLayers[id];
+      if (state.error) {
+        // do nothing
+      } else {
+        if (!state.visible) {
+          state.visible = true;
+          state.loading = true;
+        }
+      }
+    } else {
+      this.visibleLayers[id] = {
+        loading: true,
+        visible: true,
+      };
+    }
   }
 
   async getComputedStyle(): Promise<Style> {
+    this.resetLayersByZIndex();
     if (!this.selectedBasemapId) {
       throw new Error("Cannot call getComputedStyle before basemaps are set");
     }
+    const labelsID = this.basemaps[this.selectedBasemapId].labelsLayerId;
     const url = this.basemaps[this.selectedBasemapId].url;
-    const baseStyle = {
-      ...(await fetchGlStyle(url)),
+    let baseStyle = await fetchGlStyle(url);
+    baseStyle = {
+      ...baseStyle,
+      layers: [...(baseStyle.layers || [])],
+      sources: { ...(baseStyle.sources || {}) },
     };
+
+    let labelsLayerIndex = baseStyle.layers?.findIndex(
+      (layer) => layer.id === labelsID
+    );
     baseStyle.sources = baseStyle.sources || {};
     baseStyle.layers = baseStyle.layers || [];
-    for (const layerId in this.visibleLayers) {
-      if (this.visibleLayers[layerId].visible) {
-        const layer = this.layers[layerId];
-        if (layer) {
-          const source = this.clientDataSources[layer.dataSourceId];
-          if (source && !baseStyle.sources[source.id.toString()]) {
-            if (source.type === DataSourceTypes.SeasketchVector) {
-              baseStyle.sources[source.id.toString()] = {
-                type: "geojson",
-                data: `https://${source.bucketId}/${source.objectKey}`,
-                attribution: source.attribution || "",
-              };
+    if (labelsLayerIndex === -1) {
+      labelsLayerIndex = baseStyle.layers.length;
+    }
+    let underLabels: any[] = baseStyle.layers.slice(0, labelsLayerIndex);
+    let overLabels: any[] = baseStyle.layers.slice(labelsLayerIndex);
+    let isUnderLabels = true;
+    let i = this.layersByZIndex.length;
+    while (i--) {
+      const layerId = this.layersByZIndex[i];
+      if (layerId === "LABELS") {
+        isUnderLabels = false;
+      } else {
+        if (this.visibleLayers[layerId]?.visible) {
+          const layer = this.layers[layerId];
+          // If layer or source are not set yet, they will be ignored
+          if (layer) {
+            const source = this.clientDataSources[layer.dataSourceId];
+            let sourceWasAdded = false;
+            if (source) {
+              // Add the source
+              if (!baseStyle.sources[source.id.toString()]) {
+                switch (source.type) {
+                  case DataSourceTypes.SeasketchVector:
+                  case DataSourceTypes.Geojson:
+                    baseStyle.sources[source.id.toString()] = {
+                      type: "geojson",
+                      data:
+                        source.type === DataSourceTypes.SeasketchVector
+                          ? `https://${source.bucketId}/${source.objectKey}`
+                          : source.url!,
+                      attribution: source.attribution || "",
+                    };
+                    sourceWasAdded = true;
+                    break;
+                  case DataSourceTypes.ArcgisVector:
+                    const request = this.arcgisVectorSourceCache.get(source);
+                    if (request.value) {
+                      baseStyle.sources[source.id.toString()] = {
+                        type: "geojson",
+                        data: request.value,
+                        attribution: source.attribution || "",
+                      };
+                      sourceWasAdded = true;
+                    } else if (request.error) {
+                      // User will need to toggle the layer off
+                      // to clear the error and try again.
+                    } else {
+                      request.promise
+                        .then((data) => {
+                          this.debouncedUpdateStyle();
+                        })
+                        .catch((e) => {
+                          // do nothing, this will be handled elsewhere
+                        });
+                    }
+                    break;
+                  default:
+                    break;
+                }
+              }
+              // Add the sprites if needed
+              if (layer.sprites?.length) {
+                this.addSprites(layer.sprites);
+              }
+              // Add the layer(s)
+              if (sourceWasAdded) {
+                if (
+                  (source.type === DataSourceTypes.SeasketchVector ||
+                    source.type === DataSourceTypes.Geojson ||
+                    source.type === DataSourceTypes.Vector ||
+                    source.type === DataSourceTypes.ArcgisVector) &&
+                  layer.mapboxGlStyles?.length
+                ) {
+                  for (let i = 0; i < layer.mapboxGlStyles.length; i++) {
+                    (isUnderLabels ? underLabels : overLabels).push({
+                      ...layer.mapboxGlStyles[i],
+                      source: source.id.toString(),
+                      id: idForLayer(layer, i),
+                    });
+                  }
+                }
+              }
             }
           }
-          if (
-            source.type === DataSourceTypes.SeasketchVector &&
-            layer.mapboxGlStyles?.length
-          ) {
-            for (let i = 0; i < layer.mapboxGlStyles.length; i++) {
-              baseStyle.layers.push({
-                ...layer.mapboxGlStyles[i],
-                source: source.id.toString(),
-                id: idForLayer(layer, i),
-              });
+        } else {
+          // Handle image sources with multiple sublayers baked in
+          if (/seasketch\/[\w\d-]+\/image/.test(layerId)) {
+            const sourceId = layerId.match(/seasketch\/([\w\d-]+)\/image/)![1];
+            if (sourceId) {
+              const source = this.clientDataSources[sourceId];
+              if (
+                source &&
+                source.type === DataSourceTypes.ArcgisDynamicMapserver
+              ) {
+                let visibleSublayers: ClientDataLayer[] = [];
+                for (const layerId in this.visibleLayers) {
+                  if (
+                    this.visibleLayers[layerId].visible &&
+                    this.layers[layerId]?.dataSourceId.toString() === sourceId
+                  ) {
+                    visibleSublayers.push(this.layers[layerId]);
+                  }
+                }
+                if (visibleSublayers.length) {
+                  visibleSublayers = visibleSublayers.sort(
+                    (a, b) => a.zIndex - b.zIndex
+                  );
+                  const { url, tileSize } = urlTemplateForArcGISDynamicSource(
+                    source,
+                    visibleSublayers.map((l) => l.sublayer!)
+                  );
+                  baseStyle.sources[source.id.toString()] = {
+                    type: "raster",
+                    tiles: [url],
+                    tileSize: tileSize,
+                    attribution: source.attribution || "",
+                    // maxzoom: source.maxzoom || undefined,
+                    // minzoom: source.minzoom || undefined,
+                    // bounds: source.bounds || undefined,
+                  };
+                  const styleLayer = {
+                    id: layerId,
+                    type: "raster",
+                    tileSize,
+                    attribution: source.attribution || "",
+                    source: source.id.toString(),
+                  } as Layer;
+                  (isUnderLabels ? underLabels : overLabels).push(styleLayer);
+
+                  // sourceWasAdded = true;
+                  // break;
+                }
+              }
             }
           }
         }
       }
     }
+    baseStyle.layers = [...underLabels, ...overLabels];
     return baseStyle;
   }
 
@@ -481,11 +683,13 @@ class MapContextManager {
     let loading = false;
     const instance = this.sourceCache[id];
     if (instance) {
-      if (instance instanceof ArcGISVectorSourceInstance) {
-        return isArcGISVectorSourceLoading(instance);
-      } else if (instance instanceof ArcGISDynamicMapServiceInstance) {
+      if (instance instanceof ArcGISDynamicMapServiceInstance) {
         return isArcGISDynamicServiceLoading(instance, this.map!);
       }
+    } else if (
+      this.clientDataSources[id].type === DataSourceTypes.ArcgisVector
+    ) {
+      return this.arcgisVectorSourceCache.isSourceLoading(id);
     } else {
       loading = !this.map!.isSourceLoaded(id);
     }
@@ -565,7 +769,8 @@ class MapContextManager {
     for (const layer of layers) {
       this.layers[layer.id] = layer;
     }
-    this.updateStyle();
+    this.debouncedUpdateStyle();
+    this.updateInteractivitySettings();
     return;
     // const oldVisibleLayers = Object.keys(this.visibleLayers);
     // // Remove any visible overlay layers and their sources
@@ -653,7 +858,7 @@ class MapContextManager {
         layer.renderUnder === RenderUnderType.Labels
       ) {
         labelsLayerInserted = true;
-        layerIds.push(UNDER_LABELS_POSITION);
+        layerIds.push("LABELS");
       }
       if (layer.sublayer) {
         const specialId = idForSublayer(layer);
@@ -661,7 +866,7 @@ class MapContextManager {
           layerIds.push(specialId);
         }
       } else {
-        layerIds.push(`${layer.id}-0`);
+        layerIds.push(layer.id.toString());
       }
     }
     this.layersByZIndex = layerIds;
@@ -669,8 +874,10 @@ class MapContextManager {
 
   hideLayers(layerIds: string[]) {
     for (const id of layerIds) {
-      this.removeLayer(this.layers[id]);
+      this.hideLayerId(id);
     }
+    this.debouncedUpdateState(1);
+    this.debouncedUpdateStyle();
   }
 
   updateArcGISDynamicMapServiceSource(source: ClientDataSource) {
@@ -714,97 +921,91 @@ class MapContextManager {
 
   showLayers(layerIds: string[]) {
     for (const id of layerIds) {
-      const layer = this.layers[id];
-      if (layer) {
-        this.addLayer(this.layers[id]);
-      } else {
-        // maybe not loaded yet? Not sure whether to show an exception here
-        console.warn(
-          `Layer information not available for loading yet. id=${id}`
-        );
-      }
+      this.showLayerId(id);
     }
+    this.debouncedUpdateState(1);
+    this.debouncedUpdateStyle();
   }
 
-  private async addLayer(layer: ClientDataLayer) {
-    if (!this.map) {
-      throw new Error(`Map instance not set`);
-    }
-    if (layer.sublayer) {
-      this.visibleLayers[layer.id] = {
-        loading: false,
-        visible: true,
-      };
-      this.debouncedUpdateState();
-      this.markMapServiceDirty(layer.dataSourceId.toString());
-    } else {
-      const source = this.getOrInitializeSource(layer.dataSourceId.toString());
-      const dataSourceConfig = this.clientDataSources[layer.dataSourceId];
-      if (!dataSourceConfig) {
-        throw new Error(
-          `Could not find data source with id = ${dataSourceConfig}`
-        );
-      }
-      if (dataSourceConfig.type === DataSourceTypes.ArcgisVector) {
-        this.visibleLayers[layer.id] = {
-          loading: true,
-          visible: true,
-        };
-        getDynamicArcGISStyle(
-          dataSourceConfig.url!,
-          dataSourceConfig.id.toString()
-        ).then(({ layers, imageList }) => {
-          // check if still visible
-          imageList.addToMap(this.map!);
-          let zPosition = this.getZPosition(layer);
-          if (this.visibleLayers[layer.id]?.visible) {
-            for (var i = 0; i < layers.length; i++) {
-              this.map!.addLayer(
-                {
-                  ...layers[i],
-                  id: idForLayer(layer, i),
-                  source: layer.dataSourceId.toString(),
-                } as AnyLayer,
-                zPosition
-              );
-            }
-            this.visibleLayers[layer.id] = {
-              ...this.visibleLayers[layer.id],
-            };
-          }
-        });
-        this.debouncedUpdateState();
-      } else {
-        if (layer.sprites && layer.sprites.length) {
-          await this.addSprites(layer.sprites);
-        }
-        const mapboxLayers = layer.mapboxGlStyles || [];
-        let zPosition = this.getZPosition(layer);
-        if (mapboxLayers.length) {
-          for (var i = 0; i < mapboxLayers?.length; i++) {
-            this.map.addLayer(
-              {
-                ...mapboxLayers[i],
-                id: idForLayer(layer, i),
-                source: layer.dataSourceId.toString(),
-              },
-              zPosition
-            );
-          }
-        } else {
-          throw new Error(
-            `mapboxGlStyles prop not present on layer ${layer.id}`
-          );
-        }
-      }
-      this.visibleLayers[layer.id] = {
-        loading: false,
-        visible: true,
-      };
-      this.debouncedUpdateState();
-    }
-    this.updateInteractivitySettings();
-  }
+  // private async addLayer(layer: ClientDataLayer) {
+  //   if (!this.map) {
+  //     throw new Error(`Map instance not set`);
+  //   }
+  //   if (layer.sublayer) {
+  //     this.visibleLayers[layer.id] = {
+  //       loading: false,
+  //       visible: true,
+  //     };
+  //     this.debouncedUpdateState();
+  //     this.markMapServiceDirty(layer.dataSourceId.toString());
+  //   } else {
+  //     const source = this.getOrInitializeSource(layer.dataSourceId.toString());
+  //     const dataSourceConfig = this.clientDataSources[layer.dataSourceId];
+  //     if (!dataSourceConfig) {
+  //       throw new Error(
+  //         `Could not find data source with id = ${dataSourceConfig}`
+  //       );
+  //     }
+  //     if (dataSourceConfig.type === DataSourceTypes.ArcgisVector) {
+  //       this.visibleLayers[layer.id] = {
+  //         loading: true,
+  //         visible: true,
+  //       };
+  //       getDynamicArcGISStyle(
+  //         dataSourceConfig.url!,
+  //         dataSourceConfig.id.toString()
+  //       ).then(({ layers, imageList }) => {
+  //         // check if still visible
+  //         imageList.addToMap(this.map!);
+  //         let zPosition = this.getZPosition(layer);
+  //         if (this.visibleLayers[layer.id]?.visible) {
+  //           for (var i = 0; i < layers.length; i++) {
+  //             this.map!.addLayer(
+  //               {
+  //                 ...layers[i],
+  //                 id: idForLayer(layer, i),
+  //                 source: layer.dataSourceId.toString(),
+  //               } as AnyLayer,
+  //               zPosition
+  //             );
+  //           }
+  //           this.visibleLayers[layer.id] = {
+  //             ...this.visibleLayers[layer.id],
+  //           };
+  //         }
+  //       });
+  //       this.debouncedUpdateState();
+  //     } else {
+  //       if (layer.sprites && layer.sprites.length) {
+  //         await this.addSprites(layer.sprites);
+  //       }
+  //       const mapboxLayers = layer.mapboxGlStyles || [];
+  //       let zPosition = this.getZPosition(layer);
+  //       if (mapboxLayers.length) {
+  //         for (var i = 0; i < mapboxLayers?.length; i++) {
+  //           this.map.addLayer(
+  //             {
+  //               ...mapboxLayers[i],
+  //               id: idForLayer(layer, i),
+  //               source: layer.dataSourceId.toString(),
+  //             },
+  //             zPosition
+  //           );
+  //         }
+  //       } else {
+  //         throw new Error(
+  //           `mapboxGlStyles prop not present on layer ${layer.id}`
+  //         );
+  //       }
+  //     }
+  //     this.visibleLayers[layer.id] = {
+  //       loading: false,
+  //       visible: true,
+  //     };
+  //     this.debouncedUpdateState();
+  //   }
+  //   this.updateInteractivitySettings();
+  // }
 
   private getZPosition(layer: ClientDataLayer): string | undefined {
     const layerId = idForLayer(layer, 0);
@@ -825,7 +1026,7 @@ class MapContextManager {
       (layer.renderUnder === RenderUnderType.Labels ||
         layer.renderUnder === RenderUnderType.Land)
     ) {
-      return UNDER_LABELS_POSITION;
+      return "LABELS";
     } else {
       return undefined;
     }
@@ -835,7 +1036,11 @@ class MapContextManager {
     // get unique sprite ids
 
     for (const sprite of sprites) {
-      if (!this.map!.hasImage(`seasketch://sprites/${sprite.id}`)) {
+      const spriteId =
+        typeof sprite.id === "string"
+          ? sprite.id
+          : `seasketch://sprites/${sprite.id}`;
+      if (!this.map!.hasImage(spriteId)) {
         this.addSprite(sprite);
       }
     }
@@ -848,13 +1053,18 @@ class MapContextManager {
     if (!spriteImage) {
       spriteImage = sprite.spriteImages[0];
     }
+    const spriteId =
+      typeof sprite.id === "string"
+        ? sprite.id
+        : `seasketch://sprites/${sprite.id}`;
+
     if (spriteImage.dataUri) {
       const image = await createImage(
         spriteImage.width,
         spriteImage.height,
         spriteImage.dataUri
       );
-      this.map?.addImage(`seasketch://sprites/${sprite.id}`, image, {
+      this.map?.addImage(spriteId, image, {
         pixelRatio: spriteImage.pixelRatio,
       });
     } else if (spriteImage.url) {
@@ -864,7 +1074,7 @@ class MapContextManager {
         spriteImage.url,
         this.map!
       );
-      this.map!.addImage(`seasketch://sprites/${sprite.id}`, image, {
+      this.map!.addImage(spriteId, image, {
         pixelRatio: spriteImage.pixelRatio,
       });
     } else {
@@ -872,49 +1082,49 @@ class MapContextManager {
     }
   }
 
-  private async removeLayer(layer: ClientDataLayer) {
-    if (!this.map) {
-      throw new Error(`Map instance not set`);
-    }
-    if (layer.sublayer) {
-      this.markMapServiceDirty(layer.dataSourceId.toString());
-    } else {
-      let mapboxLayers: MapBoxLayer[];
-      if (layer.mapboxGlStyles) {
-        mapboxLayers = layer.mapboxGlStyles;
-      } else {
-        const style = await getDynamicArcGISStyle(
-          this.clientDataSources[layer.dataSourceId]!.url!,
-          layer.dataSourceId.toString()
-        );
-        mapboxLayers = style.layers || [];
-      }
-      if (this.visibleLayers[layer.id] && mapboxLayers.length) {
-        for (var i = 0; i < mapboxLayers?.length; i++) {
-          this.map.removeLayer(idForLayer(layer, i));
-        }
-      }
-      const sourceInstance = this.sourceCache[layer.dataSourceId];
-      if (
-        this.visibleLayers[layer.id] &&
-        sourceInstance &&
-        sourceInstance instanceof ArcGISVectorSourceInstance &&
-        this.visibleLayers[layer.id].error
-      ) {
-        delete this.sourceCache[layer.dataSourceId];
-        this.map.removeSource(layer.dataSourceId.toString());
-      }
-    }
-    delete this.visibleLayers[layer.id];
-    this.debouncedUpdateState();
-    this.updateInteractivitySettings();
-  }
+  // private async removeLayer(layer: ClientDataLayer) {
+  //   if (!this.map) {
+  //     throw new Error(`Map instance not set`);
+  //   }
+  //   if (layer.sublayer) {
+  //     this.markMapServiceDirty(layer.dataSourceId.toString());
+  //   } else {
+  //     let mapboxLayers: MapBoxLayer[];
+  //     if (layer.mapboxGlStyles) {
+  //       mapboxLayers = layer.mapboxGlStyles;
+  //     } else {
+  //       const style = await getDynamicArcGISStyle(
+  //         this.clientDataSources[layer.dataSourceId]!.url!,
+  //         layer.dataSourceId.toString()
+  //       );
+  //       mapboxLayers = style.layers || [];
+  //     }
+  //     if (this.visibleLayers[layer.id] && mapboxLayers.length) {
+  //       for (var i = 0; i < mapboxLayers?.length; i++) {
+  //         this.map.removeLayer(idForLayer(layer, i));
+  //       }
+  //     }
+  //     const sourceInstance = this.sourceCache[layer.dataSourceId];
+  //     if (
+  //       this.visibleLayers[layer.id] &&
+  //       sourceInstance &&
+  //       sourceInstance instanceof ArcGISVectorSourceInstance &&
+  //       this.visibleLayers[layer.id].error
+  //     ) {
+  //       delete this.sourceCache[layer.dataSourceId];
+  //       this.map.removeSource(layer.dataSourceId.toString());
+  //     }
+  //   }
+  //   delete this.visibleLayers[layer.id];
+  //   this.debouncedUpdateState();
+  //   this.updateInteractivitySettings();
+  // }
 
-  private debouncedUpdateState() {
+  private debouncedUpdateState(backoff = 5) {
     if (this.updateStateDebouncerReference) {
       clearTimeout(this.updateStateDebouncerReference);
     }
-    this.updateStateDebouncerReference = setTimeout(this.updateState, 5);
+    this.updateStateDebouncerReference = setTimeout(this.updateState, backoff);
   }
 
   private updateState = () => {
@@ -924,6 +1134,7 @@ class MapContextManager {
       layerStates: { ...this.visibleLayers },
     }));
     this.updatePreferences();
+    this.updateInteractivitySettings();
   };
 
   private getOrInitializeSource(id: string, initialSublayers?: string[]) {
@@ -945,6 +1156,7 @@ class MapContextManager {
         }
         if (sourceConfig.type === DataSourceTypes.ArcgisVector) {
           const instance = new ArcGISVectorSourceInstance(
+            // @ts-ignore
             this.map,
             sourceConfig.id.toString(),
             sourceConfig.url!,
@@ -968,6 +1180,7 @@ class MapContextManager {
             );
           }
           const instance = new ArcGISDynamicMapServiceInstance(
+            // @ts-ignore
             this.map,
             sourceConfig.id.toString(),
             sourceConfig.url!,
@@ -1166,7 +1379,8 @@ export interface MapContextInterface {
  */
 export function useMapContext(
   preferencesKey?: string,
-  ignoreLayerVisibilityState?: boolean
+  ignoreLayerVisibilityState?: boolean,
+  cacheSize?: number
 ) {
   let initialState: MapContextInterface = {
     layerStates: {},
@@ -1194,7 +1408,9 @@ export function useMapContext(
     const manager = new MapContextManager(
       initialState,
       setState,
-      preferencesKey
+      preferencesKey,
+      ignoreLayerVisibilityState,
+      cacheSize
     );
     const newState = {
       ...state,
@@ -1280,7 +1496,10 @@ function isArcGISDynamicService(
  * @param layer ClientDataLayer
  * @param styleLayerIndex ClientDataLayers' gl style contains multiple layers. You must specify the index of the layer to generate an ID
  */
-export function idForLayer(layer: ClientDataLayer, styleLayerIndex?: number) {
+export function idForLayer(
+  layer: Pick<ClientDataLayer, "id" | "sublayer" | "dataSourceId">,
+  styleLayerIndex?: number
+) {
   if (layer.sublayer === null || layer.sublayer === undefined) {
     if (styleLayerIndex === undefined) {
       throw new Error(
@@ -1311,4 +1530,15 @@ export function layerIdFromStyleLayerId(id: string) {
 
 function idForImageSource(sourceId: number | string) {
   return `seasketch/${sourceId}/image`;
+}
+
+const layerIdRE = /seasketch/g;
+function isSeaSketchLayerId(id: string) {
+  return layerIdRE.test(id);
+}
+
+function isPromise(
+  object: Promise<FeatureCollection> | FeatureCollection
+): object is Promise<FeatureCollection> {
+  return "then" in object && typeof object.then === "function";
 }

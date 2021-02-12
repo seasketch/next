@@ -117,7 +117,7 @@ const Modal: React.FunctionComponent<ModalProps> = ({
                   {children}
                 </div>
                 {footer && (
-                  <div className="w-full flex-0 self-end bg-cool-gray-50 p-4 text-left">
+                  <div className="w-full flex-0 self-end bg-cool-gray-50 p-4 text-left border-t ">
                     {footer}
                   </div>
                 )}

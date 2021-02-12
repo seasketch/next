@@ -71,6 +71,7 @@ export function FeatureLayerSettings(props: {
   const [styleErrors, setStyleErrors] = useState<Error[]>([]);
   const [jsonErrors, setJsonErrors] = useState<boolean>(false);
   const sizeData = useFeatureLayerSizeData(
+    layer.generatedId,
     layer.url,
     settings.vectorSublayerSettings.find((s) => s.sublayer === layer.id)!
   );
@@ -181,6 +182,8 @@ export function FeatureLayerSettings(props: {
             <span className="text-2xl">
               {sizeData.data ? (
                 bytes(sizeData.data.geoJsonBytes)
+              ) : sizeData.error ? (
+                `Error: ${sizeData.error.message}`
               ) : (
                 <Spinner className="w-5 h-5" />
               )}
@@ -191,16 +194,16 @@ export function FeatureLayerSettings(props: {
           </div>
           <div>
             download time <Lightning className="text-gray-400 inline" />{" "}
-            {downloadTime(77, sizeData.data?.gzipBytes)} /{" "}
-            {downloadTime(35, sizeData.data?.gzipBytes)} /{" "}
-            {downloadTime(18, sizeData.data?.gzipBytes)} seconds
+            {downloadTime(20, sizeData.data?.gzipBytes)} -{" "}
+            {downloadTime(20 / 4, sizeData.data?.gzipBytes)} seconds when hosted
+            on SeaSketch
           </div>
           <div>
             {sizeData?.data?.objects || 0} features,{" "}
             {sizeData.data?.attributes || 0} attributes,{" "}
             {Math.round(sizeData.data?.areaKm || 0)} sq kilometers
           </div>
-          {(sizeData.data?.geoJsonBytes || 0) > VECTOR_BYTES_LIMIT ? (
+          {/* {(sizeData.data?.geoJsonBytes || 0) > VECTOR_BYTES_LIMIT ? (
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-2">
               <div className="flex">
                 <div className="flex-shrink-0">
@@ -237,7 +240,7 @@ export function FeatureLayerSettings(props: {
                 </div>
               </div>
             </div>
-          ) : null}
+          ) : null} */}
         </div>
         <div className="py-2">
           <h3 className="font-medium text-sm py-2">Data Source Options</h3>
@@ -377,7 +380,7 @@ export function FeatureLayerSettings(props: {
           uploads.
         </InputBlock>
 
-        <InputBlock
+        {/* <InputBlock
           className="mt-4 text-sm"
           title="Rendering order"
           input={
@@ -394,13 +397,12 @@ export function FeatureLayerSettings(props: {
             >
               <option value={RenderUnderType.None}>Cover basemap</option>
               <option value={RenderUnderType.Labels}>Under labels</option>
-              {/* <option value={RenderUnderType.Land}>Under land</option> */}
             </select>
           }
         >
           If your basemaps are configured to identify these special layers, you
           can render this service underneath labels or land.
-        </InputBlock>
+        </InputBlock> */}
 
         <div className="py-2">
           <h3 className="font-medium text-sm py-2">Included Fields</h3>
@@ -577,7 +579,10 @@ function downloadTime(mbps: number, sizeBytes?: number) {
   if (!sizeBytes) {
     return "--";
   } else {
-    const seconds = sizeBytes / ((mbps * 1000_000) / 8);
+    const seconds =
+      sizeBytes / ((mbps * 1000_000) / 8) +
+      // general latency of s3 -> cloudflare
+      0.12;
     if (seconds > 4) {
       return Math.round(seconds).toString();
     } else if (seconds < 0.06) {

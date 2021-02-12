@@ -7569,6 +7569,8 @@ type Project implements Node {
 
   """Reads a single `CommunityGuideline` that is related to this `Project`."""
   communityGuidelines: CommunityGuideline
+  dataHostingQuota: Int
+  dataHostingQuotaUsed: Int
 
   """
   Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
@@ -8452,6 +8454,7 @@ type Query implements Node {
   
   """
   currentProject: Project
+  dataHostingQuotaLeft(pid: Int): Int
   dataLayer(id: Int!): DataLayer
   dataLayerByInteractivitySettingsId(interactivitySettingsId: Int!): DataLayer
 

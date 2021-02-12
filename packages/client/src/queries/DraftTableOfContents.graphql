@@ -492,3 +492,11 @@ mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
     }
   }
 }
+
+query ProjectHostingQuota($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingQuota
+    dataHostingQuotaUsed
+  }
+}

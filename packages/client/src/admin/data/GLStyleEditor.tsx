@@ -44,7 +44,7 @@ interface GLStyleEditorProps {
 
 export default function GLStyleEditor(props: GLStyleEditorProps) {
   const [style, setStyle] = useState<string>(props.initialStyle || "");
-  const debouncedStyle = useDebounce(style, 100);
+  const debouncedStyle = useDebounce(style, 50);
   const [styleErrors, setStyleErrors] = useState<Error[]>([]);
   const [jsonErrors, setJsonErrors] = useState<boolean>(false);
   const [resettingStyle, setResettingStyle] = useState(false);

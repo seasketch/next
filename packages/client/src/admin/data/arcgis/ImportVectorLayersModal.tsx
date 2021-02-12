@@ -18,6 +18,7 @@ import {
 } from "./arcgis";
 import QuotaBar from "./QuotaBar";
 import { useHistory, useParams } from "react-router-dom";
+import { useProjectHostingQuotaQuery } from "../../../generated/graphql";
 
 interface ImportVectorLayersProps {
   layers?: LayerInfo[];
@@ -44,6 +45,11 @@ export default function ImportVectorLayersModal(
   );
   const { slug } = useParams<{ slug: string }>();
   const projectId = useProjectId();
+  const quotaRequest = useProjectHostingQuotaQuery({
+    variables: {
+      slug,
+    },
+  });
 
   if (!layers) {
     return null;
@@ -61,8 +67,11 @@ export default function ImportVectorLayersModal(
     }
   }
 
-  const quota = 1_240_000_000;
-  const remainingQuota = 920_000_000;
+  const quota = quotaRequest.data?.projectBySlug?.dataHostingQuota || 524288000;
+  const remainingQuota = quotaRequest.data?.projectBySlug
+    ? quotaRequest.data.projectBySlug.dataHostingQuota! -
+      quotaRequest.data.projectBySlug.dataHostingQuotaUsed!
+    : 524288000;
 
   const remaining = layers.filter(
     (layer) =>
@@ -127,7 +136,7 @@ export default function ImportVectorLayersModal(
       }}
       title="Import Vector Layers"
       footer={
-        <div className="p-6 bg-gray-100 border-t">
+        <div className="">
           {remaining > 0 ? (
             <>
               Analyzing layer {pendingIndex + 1} of {layers.length}{" "}
