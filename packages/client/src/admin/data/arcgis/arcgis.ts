@@ -1,5 +1,12 @@
 import { Layer, LngLatBoundsLike } from "mapbox-gl";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { Symbol } from "arcgis-rest-api";
 import { ImageList } from "@seasketch/mapbox-gl-esri-sources";
 import { styleForFeatureLayer } from "@seasketch/mapbox-gl-esri-sources";
@@ -30,16 +37,21 @@ import {
   DataSourceTypes,
   useUpdateInteractivitySettingsMutation,
 } from "../../../generated/graphql";
+// import nanoid from "nanoid";
 import { customAlphabet } from "nanoid";
 import { default as axios } from "axios";
 import {
   ClientDataLayer,
   ClientDataSource,
   ClientSprite,
-} from "../../../dataLayers/LayerManager";
+  MapContext,
+  useMapContext,
+} from "../../../dataLayers/MapContextManager";
 import { MutationFunctionOptions } from "@apollo/client";
+import { ArcGISVectorSourceCacheEvent } from "../../../dataLayers/ArcGISVectorSourceCache";
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+
 const nanoId = customAlphabet(alphabet, 9);
 
 export function generateStableId() {
@@ -518,30 +530,52 @@ interface FeatureLayerSizeInfo {
 }
 
 export function useFeatureLayerSizeData(
+  id: string,
   url: string,
   settings?: VectorSublayerSettings
 ) {
   const [data, setData] = useState<FeatureLayerSizeInfo>();
   const [loading, setLoading] = useState<boolean>();
   const [error, setError] = useState<Error>();
+  const mapContext = useContext(MapContext);
+  const cache = mapContext.manager?.arcgisVectorSourceCache;
 
-  function updateStats() {
-    if (url) {
+  async function updateStats() {
+    if (url && cache) {
       const key = makeFeatureLayerSizeDataCacheKey(url, settings);
       if (featureLayerSizeDataCache[key]) {
         setData(featureLayerSizeDataCache[key]);
       } else {
-        setLoading(true);
-        fetchFeatureSizeDetails(
+        const item = cache.get({
           url,
-          new AbortController(),
-          settings,
-          undefined
-        ).then((data) => {
+          id,
+          type: DataSourceTypes.ArcgisVector,
+          queryParameters: {
+            geometryPrecision: settings?.geometryPrecision,
+            outFields: settings?.outFields,
+          },
+        });
+        if (item.value) {
+          const data = await layerData(item.value);
           featureLayerSizeDataCache[key] = data;
           setData(data);
+        } else if (item.error) {
           setLoading(false);
-        });
+          setError(item.error);
+        } else {
+          setLoading(true);
+          item.promise
+            .then(async (featureCollection) => {
+              const data = await layerData(featureCollection);
+              featureLayerSizeDataCache[key] = data;
+              setData(data);
+            })
+            .catch((e) => {
+              // do nothing
+              setError(e);
+              setLoading(false);
+            });
+        }
       }
     } else {
       setLoading(false);
@@ -549,10 +583,12 @@ export function useFeatureLayerSizeData(
   }
 
   useEffect(() => {
-    setData(undefined);
-    setError(undefined);
-    updateStats();
-  }, [settings?.geometryPrecision, url]);
+    if (cache) {
+      setData(undefined);
+      setError(undefined);
+      updateStats();
+    }
+  }, [settings?.geometryPrecision, settings?.outFields, cache, url, id]);
   return {
     data,
     loading,
@@ -560,53 +596,60 @@ export function useFeatureLayerSizeData(
   };
 }
 
-async function fetchFeatureSizeDetails(
-  url: string,
-  controller: AbortController,
-  layerSettings?: VectorSublayerSettings,
-  loadedBytesCallback?: (
-    bytes: number,
-    loadedFeatures?: number,
-    estimatedFeatures?: number
-  ) => void
+async function layerData(
+  featureCollection: any,
+  layerSettings?: VectorSublayerSettings
 ) {
-  return await fetchFeatureLayerData(
-    url,
-    layerSettings?.outFields || "*",
-    (e: Error) => {
-      // setLoading(false);
-      // setError(e);
-      throw e;
-    },
-    layerSettings?.geometryPrecision || 6,
-    controller,
-    loadedBytesCallback
-  ).then((featureCollection: any) => {
-    const str = JSON.stringify(featureCollection);
-    const geoJsonBytes = byteLength(str);
-    const box = bboxPolygon(bbox(featureCollection));
-    const sqMeters = area(box);
-    const areaKm = sqMeters / 1000000;
-    // const gSize = gzipSize.sync(str);
-    const gSize = 0;
+  const str = JSON.stringify(featureCollection);
+  const geoJsonBytes = byteLength(str);
+  const box = bboxPolygon(bbox(featureCollection));
+  const sqMeters = area(box);
+  const areaKm = sqMeters / 1000000;
+  const gSize = await worker.gzippedSize(str);
 
-    const warnings = calculateWarnings(
-      featureCollection.features.length,
-      geoJsonBytes,
-      layerSettings
-    );
+  const warnings = calculateWarnings(
+    featureCollection.features.length,
+    geoJsonBytes,
+    layerSettings
+  );
 
-    return {
-      geoJsonBytes,
-      areaKm,
-      gzipBytes: gSize,
-      objects: featureCollection.features.length,
-      attributes: Object.keys(
-        (featureCollection.features[0] || { properties: {} }).properties
-      ).length,
-      warnings,
-    };
-  });
+  return {
+    geoJsonBytes,
+    areaKm,
+    gzipBytes: gSize,
+    objects: featureCollection.features.length,
+    attributes: Object.keys(
+      (featureCollection.features[0] || { properties: {} }).properties
+    ).length,
+    warnings,
+  };
+}
+
+function syncLayerData(
+  featureCollection: any,
+  layerSettings?: VectorSublayerSettings
+) {
+  const str = JSON.stringify(featureCollection);
+  const geoJsonBytes = byteLength(str);
+  const box = bboxPolygon(bbox(featureCollection));
+  const sqMeters = area(box);
+  const areaKm = sqMeters / 1000000;
+
+  const warnings = calculateWarnings(
+    featureCollection.features.length,
+    geoJsonBytes,
+    layerSettings
+  );
+
+  return {
+    geoJsonBytes,
+    areaKm,
+    objects: featureCollection.features.length,
+    attributes: Object.keys(
+      (featureCollection.features[0] || { properties: {} }).properties
+    ).length,
+    warnings,
+  };
 }
 
 function calculateWarnings(
@@ -659,6 +702,7 @@ export function useVectorSublayerStatus(
   layers?: LayerInfo[],
   settings?: VectorSublayerSettings[]
 ) {
+  const mapContext = useContext(MapContext);
   const [state, setState] = useState<{
     [id: string]: {
       error?: Error;
@@ -666,105 +710,221 @@ export function useVectorSublayerStatus(
       loadedBytes?: number;
       loadedFeatures?: number;
       estimatedFeatures?: number;
-      data?: FeatureLayerSizeInfo;
+      data?: Pick<
+        FeatureLayerSizeInfo,
+        "areaKm" | "attributes" | "geoJsonBytes" | "objects" | "warnings"
+      >;
     };
   }>({});
   const [controller, setController] = useState(new AbortController());
+  const onError = (event: ArcGISVectorSourceCacheEvent) => {
+    const layer = layers?.find((lyr) => lyr.generatedId === event.key);
+    if (layer) {
+      setState((prev) => ({
+        ...prev,
+        [layer.generatedId]: {
+          loading: false,
+          error: event.item.error,
+        },
+      }));
+    }
+  };
+  const onData = (event: ArcGISVectorSourceCacheEvent) => {
+    const layer = layers?.find((lyr) => lyr.generatedId === event.key);
+    if (layer) {
+      setState((prev) => ({
+        ...prev,
+        [layer.generatedId]: {
+          data: syncLayerData(event.item.value),
+          loading: false,
+          error: undefined,
+          loadedBytes: event.item.bytes,
+          loadedFeatures: event.item.loadedFeatures,
+          estimatedFeatures: event.item.estimatedFeatures,
+        },
+      }));
+    }
+  };
+  const onProgress = (event: ArcGISVectorSourceCacheEvent) => {
+    const layer = layers?.find((lyr) => lyr.generatedId === event.key);
+    if (layer) {
+      setState((prev) => ({
+        ...prev,
+        [layer.generatedId]: {
+          loading: true,
+          loadedBytes: event.item.bytes,
+          loadedFeatures: event.item.loadedFeatures,
+          estimatedFeatures: event.item.estimatedFeatures,
+        },
+      }));
+    }
+  };
+
+  useEffect(() => {
+    if (mapContext.manager?.arcgisVectorSourceCache) {
+      mapContext.manager.arcgisVectorSourceCache.on("error", onError);
+      mapContext.manager.arcgisVectorSourceCache.on("data", onData);
+      mapContext.manager.arcgisVectorSourceCache.on("progress", onProgress);
+      return () => {
+        mapContext.manager?.arcgisVectorSourceCache.off("error", onError);
+        mapContext.manager?.arcgisVectorSourceCache.off("data", onData);
+        mapContext.manager?.arcgisVectorSourceCache.off("progress", onProgress);
+      };
+    }
+  }, [mapContext.manager, onError, onData, onProgress]);
+
   useEffect(() => {
     setState({});
-    if (begin) {
+    if (begin && mapContext.manager) {
       (async () => {
         for (const layer of layers || []) {
           if (layer.type === "Feature Layer") {
             const layerSettings = settings?.find(
               (s) => s.sublayer === layer.id
             );
-            const key = makeFeatureLayerSizeDataCacheKey(
-              layer.url,
-              layerSettings
-            );
-            if (!controller.signal.aborted) {
-              if (featureLayerSizeDataCache[key]) {
-                // recalculate warnings in case settings changed
-                const data = featureLayerSizeDataCache[key];
-                data.warnings = calculateWarnings(
-                  data.objects,
-                  data.geoJsonBytes,
-                  layerSettings
-                );
-
+            const item = mapContext.manager?.arcgisVectorSourceCache.get({
+              id: layer.generatedId,
+              url: layer.url,
+              type: DataSourceTypes.ArcgisVector,
+              queryParameters: {
+                outFields: layerSettings?.outFields,
+                geometryPrecision: layerSettings?.geometryPrecision,
+              },
+            });
+            if (item?.value) {
+              setState((prev) => ({
+                ...prev,
+                [layer.generatedId]: {
+                  data: syncLayerData(item.value),
+                  loading: false,
+                  error: undefined,
+                  loadedBytes: item.bytes,
+                  loadedFeatures: item.loadedFeatures,
+                  estimatedFeatures: item.estimatedFeatures,
+                },
+              }));
+            } else if (item) {
+              setState((prev) => ({
+                ...prev,
+                [layer.generatedId]: {
+                  loading: true,
+                  error: undefined,
+                  loadedBytes: 0,
+                  loadedFeatures: 0,
+                },
+              }));
+              try {
+                await item.promise;
+              } catch (e) {
                 setState((prev) => ({
                   ...prev,
                   [layer.generatedId]: {
-                    data,
                     loading: false,
-                    error: undefined,
+                    error: e,
                   },
                 }));
-              } else {
-                setState((prev) => ({
-                  ...prev,
-                  [layer.generatedId]: {
-                    loading: true,
-                  },
-                }));
-                try {
-                  const data = await fetchFeatureSizeDetails(
-                    layer.url,
-                    controller,
-                    layerSettings,
-                    (bytes, loadedFeatures, estimatedFeatures) => {
-                      setState((prev) => ({
-                        ...prev,
-                        [layer.generatedId]: {
-                          loading: true,
-                          loadedBytes: bytes,
-                          loadedFeatures,
-                          estimatedFeatures,
-                        },
-                      }));
-                    }
-                  );
-
-                  setState((prev) => {
-                    return {
-                      ...prev,
-                      [layer.generatedId]: {
-                        loading: false,
-                        data,
-                      },
-                    };
-                  });
-                  featureLayerSizeDataCache[key] = data;
-                } catch (e) {
-                  setState((prev) => {
-                    return {
-                      ...prev,
-                      [layer.generatedId]: {
-                        error: e,
-                      },
-                    };
-                  });
-                }
               }
             } else {
-              // setState({});
+              // do nothing
             }
           }
         }
       })();
     }
-    return () => {
-      controller.abort();
-      setController(new AbortController());
-    };
-  }, [layers, settings, begin]);
+  }, [layers, settings, begin, mapContext.manager]);
+
+  //     (async () => {
+  //       for (const layer of layers || []) {
+  //         if (layer.type === "Feature Layer") {
+  //           const layerSettings = settings?.find(
+  //             (s) => s.sublayer === layer.id
+  //           );
+  //           const key = makeFeatureLayerSizeDataCacheKey(
+  //             layer.url,
+  //             layerSettings
+  //           );
+  //           if (!controller.signal.aborted) {
+  //             if (featureLayerSizeDataCache[key]) {
+  //               // recalculate warnings in case settings changed
+  //               const data = featureLayerSizeDataCache[key];
+  //               data.warnings = calculateWarnings(
+  //                 data.objects,
+  //                 data.geoJsonBytes,
+  //                 layerSettings
+  //               );
+
+  //               setState((prev) => ({
+  //                 ...prev,
+  //                 [layer.generatedId]: {
+  //                   data,
+  //                   loading: false,
+  //                   error: undefined,
+  //                 },
+  //               }));
+  //             } else {
+  //               setState((prev) => ({
+  //                 ...prev,
+  //                 [layer.generatedId]: {
+  //                   loading: true,
+  //                 },
+  //               }));
+  //               try {
+  //                 const data = await fetchFeatureSizeDetails(
+  //                   layer.url,
+  //                   controller,
+  //                   layerSettings,
+  //                   (bytes, loadedFeatures, estimatedFeatures) => {
+  //                     setState((prev) => ({
+  //                       ...prev,
+  //                       [layer.generatedId]: {
+  //                         loading: true,
+  //                         loadedBytes: bytes,
+  //                         loadedFeatures,
+  //                         estimatedFeatures,
+  //                       },
+  //                     }));
+  //                   }
+  //                 );
+
+  //                 setState((prev) => {
+  //                   return {
+  //                     ...prev,
+  //                     [layer.generatedId]: {
+  //                       loading: false,
+  //                       data,
+  //                     },
+  //                   };
+  //                 });
+  //                 featureLayerSizeDataCache[key] = data;
+  //               } catch (e) {
+  //                 setState((prev) => {
+  //                   return {
+  //                     ...prev,
+  //                     [layer.generatedId]: {
+  //                       error: e,
+  //                     },
+  //                   };
+  //                 });
+  //               }
+  //             }
+  //           } else {
+  //             // setState({});
+  //           }
+  //         }
+  //       }
+  //     })();
+  //   }
+  //   return () => {
+  //     controller.abort();
+  //     setController(new AbortController());
+  //   };
+  // }, [layers, settings, begin, mapContext.manager]);
 
   return { layerStatus: state, abortController: controller };
 }
 
 // https://stackoverflow.com/a/23329386/299467
-function byteLength(str: string) {
+export function byteLength(str: string) {
   // returns the byte length of an utf8 string
   var s = str.length;
   for (var i = str.length - 1; i >= 0; i--) {
@@ -874,6 +1034,7 @@ export function useImportArcGISService(serviceRoot?: string) {
   ] = useUpdateInteractivitySettingsMutation();
   const [createSprite, createSpriteState] = useGetOrCreateSpriteMutation();
   const [addImageToSprite] = useAddImageToSpriteMutation();
+  const mapContext = useContext(MapContext);
   const [state, setState] = useState<ImportArcGISServiceState>({
     inProgress: false,
     importService: async (
@@ -914,7 +1075,8 @@ export function useImportArcGISService(serviceRoot?: string) {
         const saved: { [sublayer: number]: boolean } = {};
         const saveItem = async (
           layer: LayerInfo,
-          mapServerInfo: MapServerCatalogInfo
+          mapServerInfo: MapServerCatalogInfo,
+          containerFolderId?: string
         ) => {
           if (state.abortController && state.abortController.signal.aborted) {
             return;
@@ -928,6 +1090,8 @@ export function useImportArcGISService(serviceRoot?: string) {
                 layerInfo.find((l) => l.id === layer.parentLayer!.id)!,
                 mapServerInfo
               );
+            } else {
+              parentStableId = containerFolderId;
             }
             const id = nanoId();
             let bounds: number[] | undefined;
@@ -965,14 +1129,21 @@ export function useImportArcGISService(serviceRoot?: string) {
                     };
                   });
 
-                  const featureCollection = await fetchFeatureLayerData(
-                    layer.url,
-                    layerSettings?.outFields || "*",
-                    (e) => {
-                      throw e;
-                    },
-                    layerSettings?.geometryPrecision || 6
+                  const cacheItem = mapContext.manager!.arcgisVectorSourceCache.get(
+                    {
+                      type: DataSourceTypes.ArcgisVector,
+                      id: layer.generatedId,
+                      url: layer.url,
+                      queryParameters: {
+                        outFields: layerSettings?.outFields,
+                        geometryPrecision: layerSettings?.geometryPrecision,
+                      },
+                    }
                   );
+                  if (!cacheItem.value) {
+                    await cacheItem.promise;
+                  }
+                  const featureCollection = cacheItem.value;
 
                   bounds = bbox(featureCollection);
 
@@ -1197,9 +1368,7 @@ export function useImportArcGISService(serviceRoot?: string) {
                   parentStableId:
                     layer.parentLayer && layer.parentLayer.id !== -1
                       ? stableIds[layer.parentLayer.id]
-                      : undefined,
-                  // TODO: add metadata json document
-                  // metadata: ,
+                      : parentStableId,
                   isFolder: false,
                   dataLayerId: dataLayerId,
                   bounds,
@@ -1269,9 +1438,36 @@ export function useImportArcGISService(serviceRoot?: string) {
           }
         }
 
-        for (const layer of dataLayers.filter(
+        const layers = dataLayers.filter(
           (l) => settings.excludedSublayers.indexOf(l.generatedId) === -1
-        )) {
+        );
+        let folderStableId: string | undefined;
+        // If vector import, create containing folder first
+        if (layers.length > 1) {
+          const folderName =
+            mapServerInfo.documentInfo.Title ||
+            mapServerInfo.documentInfo.Subject ||
+            mapServerInfo.serviceDescription ||
+            "New Import";
+          setState((prev) => {
+            return {
+              ...prev,
+              progress: 0,
+              statusMessage: `Creating folder "${folderName}"`,
+            };
+          });
+          folderStableId = nanoId();
+          await createTableOfContentsItem({
+            variables: {
+              title: folderName,
+              stableId: folderStableId,
+              projectId,
+              isFolder: true,
+            },
+          });
+        }
+
+        for (const layer of layers) {
           // check first if item has any children
           if (state.abortController && state.abortController.signal.aborted) {
             return;
@@ -1285,7 +1481,7 @@ export function useImportArcGISService(serviceRoot?: string) {
             };
           });
           try {
-            await saveItem(layer, mapServerInfo);
+            await saveItem(layer, mapServerInfo, folderStableId);
           } catch (e) {
             error = e;
             break;
@@ -1638,4 +1834,31 @@ function contentOrFalse(str?: string) {
   } else {
     return false;
   }
+}
+
+const dynamicArcGISStyles: {
+  [sourceId: string]: Promise<{
+    imageList: ImageList;
+    layers: mapboxgl.Layer[];
+  }>;
+} = {};
+/**
+ * Returns a promise that resolves to gl style information from mapbox-gl-esri-sources.
+ * Will first reference an internal cache unless skipCache is true.
+ * @param url URL to a feature layer. Should end in MapServer/\d+
+ * @param sourceId Valid gl styles must reference a data source. Provide the ID of the geojson source that will be used
+ */
+export async function getDynamicArcGISStyle(
+  url: string,
+  sourceId: string,
+  skipCache = false
+) {
+  const layers: Layer[] = [];
+  if (dynamicArcGISStyles[sourceId] && !skipCache) {
+    // already working
+    return dynamicArcGISStyles[sourceId];
+  } else {
+    dynamicArcGISStyles[sourceId] = styleForFeatureLayer(url, sourceId);
+  }
+  return dynamicArcGISStyles[sourceId];
 }

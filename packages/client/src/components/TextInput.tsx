@@ -72,7 +72,7 @@ export default function TextInput(props: TextInputOptions) {
           } ${
             error &&
             "border-red-300 text-red-900 placeholder-red-300 focus:border-red-300 focus:shadow-outline-red"
-          } ${disabled && "text-gray-600 bg-gray-100"}`}
+          } ${disabled && "text-gray-500 bg-gray-100"}`}
           placeholder={placeholder}
           value={value}
           aria-invalid={error ? "true" : "false"}

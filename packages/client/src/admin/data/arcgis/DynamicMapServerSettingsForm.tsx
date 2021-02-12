@@ -84,7 +84,7 @@ export default function DynamicMapServerSettingsForm(props: {
         Imagery data looks best using <code>jpg</code>, for others{" "}
         <code>png</code> is a good choice.
       </InputBlock>
-      <InputBlock
+      {/* <InputBlock
         className="mt-4 text-sm"
         title="Rendering order"
         input={
@@ -101,13 +101,12 @@ export default function DynamicMapServerSettingsForm(props: {
           >
             <option value={"NONE"}>Cover basemap</option>
             <option value={"LABELS"}>Under labels</option>
-            {/* <option value={"land"}>Under land</option> */}
           </select>
         }
       >
         If your basemaps are configured to identify these special layers, you
         can render this service underneath labels or land.
-      </InputBlock>
+      </InputBlock> */}
       <div className="mt-6 mb-5 bg-gray-100 rounded py-2 px-4 pb-3">
         <h3 className="font-medium">Import Service</h3>
         <p className="text-sm text-gray-600 mt-1 mb-2">

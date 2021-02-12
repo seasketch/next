@@ -1723,6 +1723,7 @@ type DataLayer implements Node {
   For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to.
   """
   sourceLayer: String
+  spriteIds: [Int]
 
   """Reads and enables pagination through a set of `Sprite`."""
   sprites(
@@ -1817,6 +1818,7 @@ input DataLayerInput {
   For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to.
   """
   sourceLayer: String
+  spriteIds: [Int]
 
   """
   For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
@@ -1853,6 +1855,7 @@ input DataLayerPatch {
   For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to.
   """
   sourceLayer: String
+  spriteIds: [Int]
 
   """
   For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
@@ -7566,6 +7569,8 @@ type Project implements Node {
 
   """Reads a single `CommunityGuideline` that is related to this `Project`."""
   communityGuidelines: CommunityGuideline
+  dataHostingQuota: Int
+  dataHostingQuotaUsed: Int
 
   """
   Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
@@ -8449,6 +8454,7 @@ type Query implements Node {
   
   """
   currentProject: Project
+  dataHostingQuotaLeft(pid: Int): Int
   dataLayer(id: Int!): DataLayer
   dataLayerByInteractivitySettingsId(interactivitySettingsId: Int!): DataLayer
 
@@ -8536,6 +8542,7 @@ type Query implements Node {
     """The method to use when ordering `EmailNotificationPreference`."""
     orderBy: [EmailNotificationPreferencesOrderBy!] = [NATURAL]
   ): EmailNotificationPreferencesConnection
+  extractSpriteIds(t: String): [Int]
   form(id: Int!): Form
 
   """Reads a single `Form` using its globally unique `ID`."""

@@ -31,23 +31,31 @@ function useMapboxStyle(styleUrl?: string) {
   return state;
 }
 
+const fetchedStyles: { [url: string]: Promise<Style> } = {};
+
 async function fetchGlStyle(url: string) {
-  if (/mapbox:\/\//.test(url)) {
-    url = `https://api.mapbox.com/styles/v1/${
-      url.split("mapbox://styles/")[1]
-    }?access_token=${TOKEN}`;
+  const id = url;
+  if (fetchedStyles[id]) {
+    return fetchedStyles[id];
+  } else {
+    if (/mapbox:\/\//.test(url)) {
+      url = `https://api.mapbox.com/styles/v1/${
+        url.split("mapbox://styles/")[1]
+      }?access_token=${TOKEN}`;
+    }
+    fetchedStyles[id] = fetch(url)
+      .then((res) => res.json())
+      .then((style) => {
+        if (style.version && style.sources) {
+          return style as Style;
+        } else {
+          throw new Error(
+            "Returned JSON does not appear to be a Mapbox GL Style"
+          );
+        }
+      });
+    return fetchedStyles[id];
   }
-  return fetch(url)
-    .then((res) => res.json())
-    .then((style) => {
-      if (style.version && style.sources) {
-        return style as Style;
-      } else {
-        throw new Error(
-          "Returned JSON does not appear to be a Mapbox GL Style"
-        );
-      }
-    });
 }
 
 export { useMapboxStyle, fetchGlStyle };

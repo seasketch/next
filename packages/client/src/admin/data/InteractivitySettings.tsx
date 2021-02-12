@@ -19,7 +19,7 @@ import "codemirror/addon/lint/lint.css";
 import sanitizeHtml from "sanitize-html";
 import Button from "../../components/Button";
 import useSourcePropertyNames from "./useSourcePropertyNames";
-import { ClientDataLayer } from "../../dataLayers/LayerManager";
+import { ClientDataLayer } from "../../dataLayers/MapContextManager";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");

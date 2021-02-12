@@ -2605,6 +2605,42 @@ The current SeaSketch Project, which is determined by the `referer` or `x-ss-slu
 
 
 --
+-- Name: data_hosting_quota(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_hosting_quota(p public.projects) RETURNS integer
+    LANGUAGE sql STABLE
+    AS $$
+    select 500000000;
+  $$;
+
+
+--
+-- Name: data_hosting_quota_left(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_hosting_quota_left(pid integer) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select projects_data_hosting_quota(projects.*) - projects_data_hosting_quota_used(projects.*) from projects where id = pid;
+  $$;
+
+
+--
+-- Name: extract_sprite_ids(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.extract_sprite_ids(t text) RETURNS integer[]
+    LANGUAGE sql IMMUTABLE
+    AS $$
+      select array(select i::int from (
+        select 
+          unnest(regexp_matches(t, 'seasketch://sprites/([^"]+)', 'g')) i 
+      ) t)
+  $$;
+
+
+--
 -- Name: data_layers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2617,7 +2653,8 @@ CREATE TABLE public.data_layers (
     render_under public.render_under_type DEFAULT 'labels'::public.render_under_type NOT NULL,
     mapbox_gl_styles jsonb,
     z_index integer DEFAULT 0 NOT NULL,
-    interactivity_settings_id integer NOT NULL
+    interactivity_settings_id integer NOT NULL,
+    sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_styles)::text)) STORED
 );
 
 
@@ -2684,7 +2721,7 @@ CREATE FUNCTION public.data_layers_sprites(l public.data_layers) RETURNS SETOF p
   select * from sprites where id in (
       select i::int from (
         select 
-          unnest(regexp_matches(l.mapbox_gl_styles::text, 'seasketch://sprites/([^"]+)', 'g')) i 
+          unnest(l.sprite_ids) i 
       ) t)
     ;
 $$;
@@ -4019,7 +4056,8 @@ CREATE TABLE public.basemaps (
     terrain_max_zoom integer DEFAULT 14 NOT NULL,
     terrain_optional boolean DEFAULT true NOT NULL,
     terrain_visibility_default boolean DEFAULT true NOT NULL,
-    terrain_exaggeration numeric DEFAULT 1 NOT NULL
+    terrain_exaggeration numeric DEFAULT 1 NOT NULL,
+    description text
 );
 
 
@@ -4120,6 +4158,46 @@ CREATE FUNCTION public.projects_basemaps(project public.projects) RETURNS SETOF 
 COMMENT ON FUNCTION public.projects_basemaps(project public.projects) IS '
 @simpleCollections only
 ';
+
+
+--
+-- Name: projects_data_hosting_quota(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_data_hosting_quota(p public.projects) RETURNS integer
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    begin
+    if session_is_admin(p.id) != true then
+      raise 'Permission denied';
+    end if;
+    return (select 524288000);
+    end;
+  $$;
+
+
+--
+-- Name: projects_data_hosting_quota_used(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_data_hosting_quota_used(p public.projects) RETURNS integer
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      sum_bytes bigint;
+      quota int;
+    begin
+    if session_is_admin(p.id) != true then
+      raise 'Permission denied';
+    end if;
+    select sum(byte_length) into sum_bytes from data_sources where project_id = p.id;
+    select projects_data_hosting_quota(p) into quota;
+    if sum_bytes < quota then
+      return sum_bytes;
+    end if;
+    return quota;
+    end;
+  $$;
 
 
 --
@@ -9143,6 +9221,13 @@ CREATE UNIQUE INDEX access_control_lists_basemap_id_idx28 ON public.access_contr
 
 
 --
+-- Name: access_control_lists_basemap_id_idx29; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX access_control_lists_basemap_id_idx29 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
+
+
+--
 -- Name: access_control_lists_basemap_id_idx3; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10807,7 +10892,7 @@ CREATE POLICY data_sources_delete ON public.data_sources FOR DELETE USING (publi
 -- Name: data_sources data_sources_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY data_sources_insert ON public.data_sources FOR INSERT WITH CHECK (public.session_is_admin(project_id));
+CREATE POLICY data_sources_insert ON public.data_sources FOR INSERT WITH CHECK ((public.session_is_admin(project_id) AND (public.data_hosting_quota_left(project_id) > 0)));
 
 
 --
@@ -10952,9 +11037,7 @@ CREATE POLICY interactivity_settings_admin ON public.interactivity_settings USIN
 -- Name: interactivity_settings interactivity_settings_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY interactivity_settings_select ON public.interactivity_settings USING (public.session_has_project_access(( SELECT data_layers.project_id
-   FROM public.data_layers
-  WHERE (data_layers.interactivity_settings_id = data_layers.id))));
+CREATE POLICY interactivity_settings_select ON public.interactivity_settings FOR SELECT USING (true);
 
 
 --
@@ -11205,11 +11288,7 @@ ALTER TABLE public.sprite_images ENABLE ROW LEVEL SECURITY;
 -- Name: sprite_images sprite_images_read; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY sprite_images_read ON public.sprite_images FOR SELECT USING (((( SELECT sprites.project_id
-   FROM public.sprites
-  WHERE (sprites.id = sprite_images.sprite_id)) IS NULL) OR public.session_has_project_access(( SELECT sprites.project_id
-   FROM public.sprites
-  WHERE (sprites.id = sprite_images.sprite_id)))));
+CREATE POLICY sprite_images_read ON public.sprite_images FOR SELECT USING (true);
 
 
 --
@@ -11222,7 +11301,7 @@ ALTER TABLE public.sprites ENABLE ROW LEVEL SECURITY;
 -- Name: sprites sprites_read; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY sprites_read ON public.sprites FOR SELECT USING (((project_id IS NULL) OR public.session_has_project_access(project_id)));
+CREATE POLICY sprites_read ON public.sprites FOR SELECT USING (true);
 
 
 --
@@ -13062,6 +13141,29 @@ GRANT ALL ON FUNCTION public.current_project() TO anon;
 
 
 --
+-- Name: FUNCTION data_hosting_quota(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_hosting_quota(p public.projects) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION data_hosting_quota_left(pid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_hosting_quota_left(pid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_hosting_quota_left(pid integer) TO anon;
+
+
+--
+-- Name: FUNCTION extract_sprite_ids(t text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.extract_sprite_ids(t text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.extract_sprite_ids(t text) TO anon;
+
+
+--
 -- Name: TABLE data_layers; Type: ACL; Schema: public; Owner: -
 --
 
@@ -13075,6 +13177,13 @@ GRANT ALL ON TABLE public.data_layers TO seasketch_user;
 
 GRANT SELECT(z_index) ON TABLE public.data_layers TO anon;
 GRANT UPDATE(z_index) ON TABLE public.data_layers TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_layers.sprite_ids; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(sprite_ids) ON TABLE public.data_layers TO anon;
 
 
 --
@@ -15381,6 +15490,24 @@ GRANT SELECT ON TABLE public.basemaps TO anon;
 
 REVOKE ALL ON FUNCTION public.projects_basemaps(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_basemaps(project public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_data_hosting_quota(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_data_hosting_quota(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_data_hosting_quota(p public.projects) TO anon;
+GRANT ALL ON FUNCTION public.projects_data_hosting_quota(p public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_data_hosting_quota_used(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_data_hosting_quota_used(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_data_hosting_quota_used(p public.projects) TO anon;
+GRANT ALL ON FUNCTION public.projects_data_hosting_quota_used(p public.projects) TO seasketch_user;
 
 
 --
