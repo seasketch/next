@@ -387,10 +387,6 @@ class MapContextManager {
   }
 
   private showLayerId(id: string) {
-    // this.visibleLayers[id] = {
-    //   loading: true,
-    //   visible: true,
-    // };
     if (this.visibleLayers[id]) {
       const state = this.visibleLayers[id];
       if (state.error) {
@@ -537,13 +533,14 @@ class MapContextManager {
                   );
                   const { url, tileSize } = urlTemplateForArcGISDynamicSource(
                     source,
-                    visibleSublayers.map((l) => l.sublayer!)
+                    visibleSublayers.map((l) => ({ sublayer: l.sublayer! }))
                   );
                   baseStyle.sources[source.id.toString()] = {
                     type: "raster",
                     tiles: [url],
                     tileSize: tileSize,
                     attribution: source.attribution || "",
+                    // Doesn't like these...
                     // maxzoom: source.maxzoom || undefined,
                     // minzoom: source.minzoom || undefined,
                     // bounds: source.bounds || undefined,
@@ -551,8 +548,6 @@ class MapContextManager {
                   const styleLayer = {
                     id: layerId,
                     type: "raster",
-                    tileSize,
-                    attribution: source.attribution || "",
                     source: source.id.toString(),
                   } as Layer;
                   (isUnderLabels ? underLabels : overLabels).push(styleLayer);
@@ -696,55 +691,6 @@ class MapContextManager {
     return loading;
   }
 
-  updateLayer(layer: ClientDataLayer) {
-    if (!this.map) {
-      throw new Error(`Map instance not set`);
-    }
-    const existingLayer = this.layers[layer.id];
-    if (!existingLayer) {
-      throw new Error(`Layer with id ${layer.id} not found`);
-    }
-    this.layers[layer.id] = layer;
-    const sourceLayers = this.layersBySourceId[existingLayer.dataSourceId];
-    this.layersBySourceId[existingLayer.dataSourceId] = [
-      ...sourceLayers.filter((l) => l.id !== layer.id),
-      layer,
-    ];
-    if (existingLayer.renderUnder !== layer.renderUnder) {
-      this.resetLayersByZIndex();
-    }
-    if (this.visibleLayers[layer.id]) {
-      if (
-        !existingLayer.mapboxGlStyles ||
-        !existingLayer.mapboxGlStyles.length
-      ) {
-        throw new Error(`Existing layer had no mapboxGlStyles property`);
-      }
-      for (var i = 0; i < existingLayer.mapboxGlStyles?.length; i++) {
-        this.map.removeLayer(idForLayer(existingLayer, i));
-      }
-      if (!layer.mapboxGlStyles || !layer.mapboxGlStyles.length) {
-        throw new Error(`Replacement layer had no mapboxLayer property`);
-      }
-      const glLayers = layer.mapboxGlStyles;
-      if (!Array.isArray(glLayers) || glLayers.length === 0) {
-        throw new Error("mapboxGlStyles contains no layers");
-      }
-      for (var i = 0; i < glLayers.length; i++) {
-        this.map.addLayer(
-          {
-            ...glLayers[i],
-            id: idForLayer(layer, i),
-            source: layer.dataSourceId,
-          },
-          this.getZPosition(layer)
-        );
-      }
-    } else {
-      // do nothing
-    }
-  }
-
   highlightLayer(layerId: string) {}
 
   private resetPromise: Promise<any> | undefined;
@@ -772,62 +718,6 @@ class MapContextManager {
     this.debouncedUpdateStyle();
     this.updateInteractivitySettings();
     return;
-    // const oldVisibleLayers = Object.keys(this.visibleLayers);
-    // // Remove any visible overlay layers and their sources
-    // await Promise.all(
-    //   Object.values(this.layers).map((layer) => this.removeLayer(layer))
-    // );
-    // // replace internal sources list with the new one
-    // const oldClientDataSources = this.clientDataSources;
-    // this.clientDataSources = {};
-    // for (const source of sources) {
-    //   this.clientDataSources[source.id] = source;
-    // }
-
-    // // for each source on the map, check for updates
-    // for (const oldConfig of Object.values(oldClientDataSources)) {
-    //   const newConfig = this.clientDataSources[oldConfig.id];
-    //   if (
-    //     newConfig &&
-    //     this.map?.getSource(oldConfig.id.toString()) &&
-    //     areEqualShallow(newConfig, oldConfig) === false
-    //   ) {
-    //     // need to update
-    //     if (
-    //       newConfig.type === DataSourceTypes.Geojson ||
-    //       newConfig.type === DataSourceTypes.SeasketchVector
-    //     ) {
-    //       updateGeoJSONSource(oldConfig, newConfig, this.map!);
-    //     } else if (newConfig.type === DataSourceTypes.ArcgisVector) {
-    //       // this.updateSource(newConfig);
-    //       const updatedInstance = updateArcGISVectorSource(
-    //         oldConfig,
-    //         newConfig,
-    //         this.sourceCache[newConfig.id] as ArcGISVectorSourceInstance,
-    //         layers,
-    //         this.map
-    //       );
-    //       this.sourceCache[newConfig.id] = updatedInstance;
-    //     } else if (newConfig.type === DataSourceTypes.ArcgisDynamicMapserver) {
-    //       this.updateArcGISDynamicMapServiceSource(newConfig);
-    //     }
-    //   }
-    // }
-
-    // // this.clearSourceCache();
-    // // replace internal layers list
-    // this.layers = {};
-    // this.layersBySourceId = {};
-    // for (const layer of layers) {
-    //   this.layers[layer.id] = layer;
-    //   if (!this.layersBySourceId[layer.dataSourceId]) {
-    //     this.layersBySourceId[layer.dataSourceId] = [];
-    //   }
-    //   this.layersBySourceId[layer.dataSourceId].push(layer);
-    // }
-    // // add visible layers and associated sources to map
-    // this.resetLayersByZIndex();
-    // this.setVisibleLayers(oldVisibleLayers.filter((id) => id in this.layers));
   }
 
   private resetLayersByZIndex() {
@@ -880,156 +770,12 @@ class MapContextManager {
     this.debouncedUpdateStyle();
   }
 
-  updateArcGISDynamicMapServiceSource(source: ClientDataSource) {
-    if (!this.map) {
-      throw new Error(`Map instance not set`);
-    }
-    if (source.type !== DataSourceTypes.ArcgisDynamicMapserver) {
-      throw new Error(`Called with source of type ${source.type}`);
-    }
-    const existingSource = this.clientDataSources[source.id];
-    if (!existingSource) {
-      throw new Error(`Existing source with id ${source.id} not found.`);
-    }
-    this.resetLayersByZIndex();
-    let instance = this.sourceCache[source.id];
-    if (!instance) {
-      // not visible, just replace
-      this.clientDataSources[source.id] = source;
-    } else {
-      if (source.type !== existingSource.type) {
-        throw new Error(
-          "Replacing source with a different type not yet supported"
-        );
-      } else {
-        const layers = Object.values(this.layers).filter(
-          (l) => l.dataSourceId === source.id && this.visibleLayers[l.id]
-        );
-        // update source
-        instance = updateDynamicMapService(
-          existingSource,
-          source,
-          instance as ArcGISDynamicMapServiceInstance,
-          layers,
-          this.map
-        );
-        this.sourceCache[source.id] = instance;
-        this.clientDataSources[source.id] = source;
-      }
-    }
-  }
-
   showLayers(layerIds: string[]) {
     for (const id of layerIds) {
       this.showLayerId(id);
     }
     this.debouncedUpdateState(1);
     this.debouncedUpdateStyle();
-  }
-
-  // private async addLayer(layer: ClientDataLayer) {
-  //   if (!this.map) {
-  //     throw new Error(`Map instance not set`);
-  //   }
-  //   if (layer.sublayer) {
-  //     this.visibleLayers[layer.id] = {
-  //       loading: false,
-  //       visible: true,
-  //     };
-  //     this.debouncedUpdateState();
-  //     this.markMapServiceDirty(layer.dataSourceId.toString());
-  //   } else {
-  //     const source = this.getOrInitializeSource(layer.dataSourceId.toString());
-  //     const dataSourceConfig = this.clientDataSources[layer.dataSourceId];
-  //     if (!dataSourceConfig) {
-  //       throw new Error(
-  //         `Could not find data source with id = ${dataSourceConfig}`
-  //       );
-  //     }
-  //     if (dataSourceConfig.type === DataSourceTypes.ArcgisVector) {
-  //       this.visibleLayers[layer.id] = {
-  //         loading: true,
-  //         visible: true,
-  //       };
-  //       getDynamicArcGISStyle(
-  //         dataSourceConfig.url!,
-  //         dataSourceConfig.id.toString()
-  //       ).then(({ layers, imageList }) => {
-  //         // check if still visible
-  //         imageList.addToMap(this.map!);
-  //         let zPosition = this.getZPosition(layer);
-  //         if (this.visibleLayers[layer.id]?.visible) {
-  //           for (var i = 0; i < layers.length; i++) {
-  //             this.map!.addLayer(
-  //               {
-  //                 ...layers[i],
-  //                 id: idForLayer(layer, i),
-  //                 source: layer.dataSourceId.toString(),
-  //               } as AnyLayer,
-  //               zPosition
-  //             );
-  //           }
-  //           this.visibleLayers[layer.id] = {
-  //             ...this.visibleLayers[layer.id],
-  //           };
-  //         }
-  //       });
-  //       this.debouncedUpdateState();
-  //     } else {
-  //       if (layer.sprites && layer.sprites.length) {
-  //         await this.addSprites(layer.sprites);
-  //       }
-  //       const mapboxLayers = layer.mapboxGlStyles || [];
-  //       let zPosition = this.getZPosition(layer);
-  //       if (mapboxLayers.length) {
-  //         for (var i = 0; i < mapboxLayers?.length; i++) {
-  //           this.map.addLayer(
-  //             {
-  //               ...mapboxLayers[i],
-  //               id: idForLayer(layer, i),
-  //               source: layer.dataSourceId.toString(),
-  //             },
-  //             zPosition
-  //           );
-  //         }
-  //       } else {
-  //         throw new Error(
-  //           `mapboxGlStyles prop not present on layer ${layer.id}`
-  //         );
-  //       }
-  //     }
-  //     this.visibleLayers[layer.id] = {
-  //       loading: false,
-  //       visible: true,
-  //     };
-  //     this.debouncedUpdateState();
-  //   }
-  //   this.updateInteractivitySettings();
-  // }
-
-  private getZPosition(layer: ClientDataLayer): string | undefined {
-    const layerId = idForLayer(layer, 0);
-    let layerPosition = this.layersByZIndex.indexOf(layerId);
-    // Find the next visible layer that this layer should appear under
-    while (layerPosition-- > -1) {
-      const layerAbove = this.layersByZIndex[layerPosition];
-      if (layerAbove) {
-        let visibleLayer = this.map!.getLayer(layerAbove.toString());
-        if (!!visibleLayer) {
-          return layerAbove.toString();
-        }
-      }
-    }
-    // RenderUnderLand is not supported at this time as it isn't compatible with the way mapbox baselayers typically are set up.
-    if (
-      false &&
-      (layer.renderUnder === RenderUnderType.Labels ||
-        layer.renderUnder === RenderUnderType.Land)
-    ) {
-      return "LABELS";
-    } else {
-      return undefined;
-    }
   }
 
   private async addSprites(sprites: ClientSprite[]) {
@@ -1082,44 +828,6 @@ class MapContextManager {
     }
   }
 
-  // private async removeLayer(layer: ClientDataLayer) {
-  //   if (!this.map) {
-  //     throw new Error(`Map instance not set`);
-  //   }
-  //   if (layer.sublayer) {
-  //     this.markMapServiceDirty(layer.dataSourceId.toString());
-  //   } else {
-  //     let mapboxLayers: MapBoxLayer[];
-  //     if (layer.mapboxGlStyles) {
-  //       mapboxLayers = layer.mapboxGlStyles;
-  //     } else {
-  //       const style = await getDynamicArcGISStyle(
-  //         this.clientDataSources[layer.dataSourceId]!.url!,
-  //         layer.dataSourceId.toString()
-  //       );
-  //       mapboxLayers = style.layers || [];
-  //     }
-  //     if (this.visibleLayers[layer.id] && mapboxLayers.length) {
-  //       for (var i = 0; i < mapboxLayers?.length; i++) {
-  //         this.map.removeLayer(idForLayer(layer, i));
-  //       }
-  //     }
-  //     const sourceInstance = this.sourceCache[layer.dataSourceId];
-  //     if (
-  //       this.visibleLayers[layer.id] &&
-  //       sourceInstance &&
-  //       sourceInstance instanceof ArcGISVectorSourceInstance &&
-  //       this.visibleLayers[layer.id].error
-  //     ) {
-  //       delete this.sourceCache[layer.dataSourceId];
-  //       this.map.removeSource(layer.dataSourceId.toString());
-  //     }
-  //   }
-  //   delete this.visibleLayers[layer.id];
-  //   this.debouncedUpdateState();
-  //   this.updateInteractivitySettings();
-  // }
-
   private debouncedUpdateState(backoff = 5) {
     if (this.updateStateDebouncerReference) {
       clearTimeout(this.updateStateDebouncerReference);
@@ -1136,217 +844,6 @@ class MapContextManager {
     this.updatePreferences();
     this.updateInteractivitySettings();
   };
-
-  private getOrInitializeSource(id: string, initialSublayers?: string[]) {
-    if (!this.map) {
-      throw new Error(`Map instance not set`);
-    }
-    const instance = this.sourceCache[id];
-    if (instance) {
-      return instance;
-    } else {
-      const config = this.map.getSource(id);
-      if (config) {
-        return config;
-      } else {
-        // Need to add source to the map
-        const sourceConfig = this.clientDataSources[id];
-        if (!sourceConfig) {
-          throw new Error(`Could not find source with id ${id}`);
-        }
-        if (sourceConfig.type === DataSourceTypes.ArcgisVector) {
-          const instance = new ArcGISVectorSourceInstance(
-            // @ts-ignore
-            this.map,
-            sourceConfig.id.toString(),
-            sourceConfig.url!,
-            sourceConfig.queryParameters
-          );
-
-          // TODO: put imageSets back in
-
-          // if (sourceConfig.imageSets && sourceConfig.imageSets.length) {
-          //   const imageList = new ImageList(undefined, sourceConfig.imageSets);
-          //   imageList.addToMap(this.map);
-          // }
-          this.sourceCache[sourceConfig.id] = instance;
-          return instance;
-        } else if (
-          sourceConfig.type === DataSourceTypes.ArcgisDynamicMapserver
-        ) {
-          if (!initialSublayers) {
-            throw new Error(
-              "ArcGISDynamicMapServices must be initialized with initial sublayers"
-            );
-          }
-          const instance = new ArcGISDynamicMapServiceInstance(
-            // @ts-ignore
-            this.map,
-            sourceConfig.id.toString(),
-            sourceConfig.url!,
-            {
-              queryParameters: {
-                ...sourceConfig.queryParameters,
-              },
-              useDevicePixelRatio: !!sourceConfig.useDevicePixelRatio,
-              layers: initialSublayers.map((s) => ({ sublayer: parseInt(s) })),
-              supportsDynamicLayers: sourceConfig.supportsDynamicLayers,
-            }
-          );
-          this.sourceCache[sourceConfig.id] = instance;
-          return instance;
-        } else if (sourceConfig.type === DataSourceTypes.SeasketchVector) {
-          const source = {
-            type: "geojson",
-            data: `https://${sourceConfig.bucketId}/${sourceConfig.objectKey}`,
-            attribution: sourceConfig.attribution,
-          };
-          // @ts-ignore
-          this.map.addSource(sourceConfig.id.toString(), source);
-          return source;
-        } else {
-          throw new Error("not ready for this type");
-        }
-      }
-    }
-  }
-
-  private markMapServiceDirty(id: string) {
-    if (this.dirtyMapServices.indexOf(id) === -1) {
-      this.dirtyMapServices.push(id);
-    }
-    if (this.updateMapServicesDebouncerReference) {
-      clearTimeout(this.updateMapServicesDebouncerReference);
-    }
-    this.updateMapServicesDebouncerReference = setTimeout(() => {
-      delete this.updateMapServicesDebouncerReference;
-      this.updateMapServices();
-    }, 2);
-  }
-
-  private async updateZIndexForImageSource(sourceId: string) {
-    if (!this.map) {
-      throw new Error(`Map instance not set`);
-    }
-    const layerId = idForImageSource(sourceId);
-    const layer = this.map.getLayer(layerId);
-    if (layer) {
-      await this.map.removeLayer(layerId);
-      // if (!layer) {
-      // get layer with lowest z index
-      const top = this.layersBySourceId[sourceId].sort(
-        (a, b) => a.zIndex - b.zIndex
-      )[0];
-
-      this.map.addLayer(layer, this.getZPosition(top));
-    }
-  }
-
-  private updateMapServices() {
-    if (!this.map) {
-      throw new Error(`Map instance not set`);
-    }
-    const sublayersBySource: { [sourceId: string]: string[] } = {};
-    for (const dirty of this.dirtyMapServices) {
-      sublayersBySource[dirty] = [];
-    }
-    this.dirtyMapServices = [];
-    for (const layer of Object.values(this.layers).sort(
-      (a, b) => a.zIndex - b.zIndex
-    )) {
-      if (
-        sublayersBySource[layer.dataSourceId] &&
-        this.visibleLayers[layer.id]
-      ) {
-        sublayersBySource[layer.dataSourceId].push(layer.sublayer!);
-      }
-    }
-    for (const sourceId in sublayersBySource) {
-      const layerId = idForImageSource(sourceId);
-      if (sublayersBySource[sourceId].length === 0) {
-        // remove the source
-        const layer = this.map.getLayer(layerId);
-        if (layer) {
-          this.map.removeLayer(layerId);
-          const source = this.sourceCache[sourceId] as
-            | ArcGISDynamicMapServiceInstance
-            | undefined;
-          if (source) {
-            // remove the source. TODO: in the future maybe just pause it?
-            source.destroy();
-            this.map.removeSource(sourceId);
-            delete this.sourceCache[sourceId];
-          }
-        }
-      } else {
-        // Add or update the source
-        let source = this.sourceCache[sourceId] as
-          | ArcGISDynamicMapServiceInstance
-          | undefined;
-        if (source) {
-          source.updateLayers(
-            sublayersBySource[sourceId].map((id) => ({
-              sublayer: parseInt(id),
-              opacity: 1,
-            }))
-          );
-        } else {
-          source = this.getOrInitializeSource(
-            sourceId,
-            sublayersBySource[sourceId]
-          ) as ArcGISDynamicMapServiceInstance;
-        }
-        // const layer = this.map.getLayer(layerId);
-        this.map.removeLayer(layerId);
-        // if (!layer) {
-        // get layer with lowest z index
-        const top = this.layersBySourceId[sourceId].sort(
-          (a, b) => a.zIndex - b.zIndex
-        )[0];
-
-        this.map.addLayer(
-          {
-            id: idForImageSource(sourceId),
-            source: sourceId,
-            type: "raster",
-            paint: {
-              "raster-fade-duration": 0,
-            },
-          },
-          this.getZPosition(top)
-        );
-        // }
-      }
-    }
-  }
-
-  changeBasemapTimeout: NodeJS.Timeout | null = null;
-
-  async changeBasemap(url: string) {
-    if (!this.map) {
-      return;
-      // throw new Error("Map not set");
-    }
-    const style = await fetchGlStyle(url);
-    if (this.changeBasemapTimeout) {
-      clearTimeout(this.changeBasemapTimeout);
-      this.changeBasemapTimeout = null;
-    }
-    this.map.setStyle({ ...style });
-
-    const reset = () => {
-      if (!this.map!.loaded) {
-        this.changeBasemapTimeout = setTimeout(reset, 5);
-      } else {
-        this._reset(
-          Object.values(this.clientDataSources),
-          Object.values(this.layers)
-        );
-        this.changeBasemapTimeout = null;
-      }
-    };
-    this.changeBasemapTimeout = setTimeout(reset, 5);
-  }
 }
 
 export default MapContextManager;

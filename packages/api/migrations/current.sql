@@ -55,3 +55,18 @@ drop policy if exists data_sources_insert on data_sources;
 create policy data_sources_insert on data_sources for insert with check (
   session_is_admin(project_id) and data_hosting_quota_left(project_id) > 0
 );
+
+drop policy if exists interactivity_settings_select on interactivity_settings;
+drop policy if exists interactivity_settings_read on interactivity_settings;
+create policy interactivity_settings_select on interactivity_settings for select using (true);
+-- CREATE POLICY interactivity_settings_select ON interactivity_settings USING (session_has_project_access(( SELECT data_layers.project_id
+--    FROM public.data_layers
+--   WHERE (data_layers.interactivity_settings_id = data_layers.id))));
+
+grant select on interactivity_settings to anon;
+
+-- comment on interactivity_settings is '
+-- @omit all
+-- @simpleCollection only
+-- @omit 
+-- ';
