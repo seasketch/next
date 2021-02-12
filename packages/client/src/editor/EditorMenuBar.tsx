@@ -164,14 +164,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
               props.view!.state,
               props.view?.dispatch
             );
-            //   console.log(
-            //     "node",
-            //     props.state!.doc.nodeAt(props.state!.selection.anchor)
-            //   );
-            //   setLinkModalState({
-            //     href: linkMarks[0].attrs.href,
-            //     title: linkMarks[0].attrs.title,
-            //   });
           } else {
             setLinkModalState({
               href: "https://",

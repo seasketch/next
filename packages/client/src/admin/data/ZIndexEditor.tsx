@@ -27,6 +27,7 @@ interface ZIndexEditorProps {
 export default function ZIndexEditor(props: ZIndexEditorProps) {
   const { t } = useTranslation(["admin"]);
   const [treeState, setTreeState] = useState<TreeItem[]>();
+  const [expandedItems, setExpandedItems] = useState<(number | string)[]>([]);
   const client = useApolloClient();
   const [updateZIndexes, updateZIndexesState] = useUpdateZIndexesMutation();
   const [
@@ -69,19 +70,18 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
             const source = props.dataSources?.find(
               (s) => s.id === layer.dataSourceId
             );
-            let parent = items.find(
-              (i) => i.id === "source" + layer.dataSourceId
-            );
+            const parentId = "source" + layer.dataSourceId;
+            let parent = items.find((i) => i.id === parentId);
             if (!parent) {
               parent = {
-                id: "source" + layer.dataSourceId,
+                id: parentId,
                 title: t("Image Service"),
 
                 subtitle:
                   source?.supportsDynamicLayers === false
                     ? t("Dynamic layers are unsupported.")
                     : t("Dynamic layers are supported."),
-                expanded: true,
+                expanded: expandedItems.indexOf(parentId) !== -1,
                 zIndex: 999999999,
                 children: [],
               };
@@ -168,14 +168,21 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
     const zIndexes: { [layerId: number]: number } = {};
     const layerIdsInOrder: number[] = [];
     let underLabels = false;
+    const expandedIds: number[] = [];
     for (const item of treeData) {
       if (item.id === "labels") {
         underLabels = true;
       } else {
         if (item.children) {
+          if (item.expanded) {
+            expandedIds.push(item.id);
+          }
           for (const child of item.children as TreeItem[]) {
             zIndexes[child.id] = currentIndex++;
             layerIdsInOrder.push(child.id);
+            if (child.expanded) {
+              expandedIds.push(child.id);
+            }
             if (
               (underLabels &&
                 lookupRenderUnder(child) !== RenderUnderType.Labels) ||
@@ -210,6 +217,9 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
         } else {
           zIndexes[item.id] = currentIndex++;
           layerIdsInOrder.push(item.id);
+          if (item.expanded) {
+            expandedIds.push(item.id);
+          }
           const lyr = layerLookup.current[item.id];
           if (
             (underLabels &&
@@ -242,8 +252,9 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
           }
         }
       }
-      setTreeState(treeData);
     }
+    setExpandedItems(expandedIds);
+    setTreeState([...treeData]);
 
     for (const layerId in zIndexes) {
       client.writeFragment({
@@ -273,7 +284,11 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
       <SortableTree
         treeData={treeState || []}
         onChange={onChange}
+        getNodeKey={(data) => data.node.id}
         isVirtualized={false}
+        // onVisibilityToggle={(data) => {
+        //   setTreeState(data.treeData);
+        // }}
         canNodeHaveChildren={(node) => !!node.children}
         canDrop={(data) => {
           if (!data.prevParent && data.nextParent) {

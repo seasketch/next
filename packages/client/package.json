@@ -115,11 +115,7 @@
     "eject": "react-scripts eject",
     "extract-translations": "NODE_ENV=development npx babel -f .babelrc 'src/**/*.{js,jsx,ts,tsx}' > /dev/null && echo 'Translations extracted to extractedTranslations/'",
     "graphql:codegen": "graphql-codegen --config codegen.yml --watch 'src/**/*.tsx'",
-    "build:style": "tailwind build src/index.css -o src/tailwind.css",
-    "prestorybook": "npm run build:style",
-    "prestart": "npm run build:style",
     "start": "craco start",
-    "prebuild": "npm run build:style",
     "storybook": "start-storybook -p 6006 -s public",
     "build-storybook": "build-storybook -s public"
   },

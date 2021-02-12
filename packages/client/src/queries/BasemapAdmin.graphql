@@ -101,3 +101,62 @@ mutation CreateBasemap(
     }
   }
 }
+
+query GetBasemap($id: Int!) {
+  basemap(id: $id) {
+    id
+    attribution
+    basemapInteractivitySettings {
+      basemapId
+      cursor
+      id
+      layers
+      longTemplate
+      shortTemplate
+      type
+    }
+    description
+    labelsLayerId
+    name
+    optionalBasemapLayers {
+      basemapId
+      defaultVisibility
+      description
+      groupLabel
+      groupType
+      id
+      layers
+      metadata
+      name
+    }
+    projectId
+    terrainExaggeration
+    terrainMaxZoom
+    terrainOptional
+    terrainTileSize
+    terrainUrl
+    terrainVisibilityDefault
+    thumbnail
+    tileSize
+    type
+    url
+  }
+}
+
+mutation UpdateBasemap($id: Int!, $name: String) {
+  updateBasemap(input: { id: $id, patch: { name: $name } }) {
+    basemap {
+      name
+      id
+    }
+  }
+}
+
+mutation UpdateBasemapLabelsLayer($id: Int!, $layer: String) {
+  updateBasemap(input: { id: $id, patch: { labelsLayerId: $layer } }) {
+    basemap {
+      id
+      labelsLayerId
+    }
+  }
+}

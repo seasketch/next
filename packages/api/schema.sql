@@ -2605,6 +2605,28 @@ The current SeaSketch Project, which is determined by the `referer` or `x-ss-slu
 
 
 --
+-- Name: data_hosting_quota(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_hosting_quota(p public.projects) RETURNS integer
+    LANGUAGE sql STABLE
+    AS $$
+    select 500000000;
+  $$;
+
+
+--
+-- Name: data_hosting_quota_left(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_hosting_quota_left(pid integer) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select projects_data_hosting_quota(projects.*) - projects_data_hosting_quota_used(projects.*) from projects where id = pid;
+  $$;
+
+
+--
 -- Name: extract_sprite_ids(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4136,6 +4158,46 @@ CREATE FUNCTION public.projects_basemaps(project public.projects) RETURNS SETOF 
 COMMENT ON FUNCTION public.projects_basemaps(project public.projects) IS '
 @simpleCollections only
 ';
+
+
+--
+-- Name: projects_data_hosting_quota(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_data_hosting_quota(p public.projects) RETURNS integer
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    begin
+    if session_is_admin(p.id) != true then
+      raise 'Permission denied';
+    end if;
+    return (select 524288000);
+    end;
+  $$;
+
+
+--
+-- Name: projects_data_hosting_quota_used(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_data_hosting_quota_used(p public.projects) RETURNS integer
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      sum_bytes bigint;
+      quota int;
+    begin
+    if session_is_admin(p.id) != true then
+      raise 'Permission denied';
+    end if;
+    select sum(byte_length) into sum_bytes from data_sources where project_id = p.id;
+    select projects_data_hosting_quota(p) into quota;
+    if sum_bytes < quota then
+      return sum_bytes;
+    end if;
+    return quota;
+    end;
+  $$;
 
 
 --
@@ -10830,7 +10892,7 @@ CREATE POLICY data_sources_delete ON public.data_sources FOR DELETE USING (publi
 -- Name: data_sources data_sources_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY data_sources_insert ON public.data_sources FOR INSERT WITH CHECK (public.session_is_admin(project_id));
+CREATE POLICY data_sources_insert ON public.data_sources FOR INSERT WITH CHECK ((public.session_is_admin(project_id) AND (public.data_hosting_quota_left(project_id) > 0)));
 
 
 --
@@ -10975,9 +11037,7 @@ CREATE POLICY interactivity_settings_admin ON public.interactivity_settings USIN
 -- Name: interactivity_settings interactivity_settings_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY interactivity_settings_select ON public.interactivity_settings USING (public.session_has_project_access(( SELECT data_layers.project_id
-   FROM public.data_layers
-  WHERE (data_layers.interactivity_settings_id = data_layers.id))));
+CREATE POLICY interactivity_settings_select ON public.interactivity_settings FOR SELECT USING (true);
 
 
 --
@@ -13078,6 +13138,21 @@ REVOKE ALL ON FUNCTION public.crypt(text, text) FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.current_project() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.current_project() TO anon;
+
+
+--
+-- Name: FUNCTION data_hosting_quota(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_hosting_quota(p public.projects) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION data_hosting_quota_left(pid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_hosting_quota_left(pid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_hosting_quota_left(pid integer) TO anon;
 
 
 --
@@ -15415,6 +15490,24 @@ GRANT SELECT ON TABLE public.basemaps TO anon;
 
 REVOKE ALL ON FUNCTION public.projects_basemaps(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_basemaps(project public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_data_hosting_quota(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_data_hosting_quota(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_data_hosting_quota(p public.projects) TO anon;
+GRANT ALL ON FUNCTION public.projects_data_hosting_quota(p public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_data_hosting_quota_used(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_data_hosting_quota_used(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_data_hosting_quota_used(p public.projects) TO anon;
+GRANT ALL ON FUNCTION public.projects_data_hosting_quota_used(p public.projects) TO seasketch_user;
 
 
 --

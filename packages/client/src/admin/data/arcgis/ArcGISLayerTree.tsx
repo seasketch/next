@@ -132,7 +132,6 @@ export function ArcGISLayerTree(props: ArcGISLayerTreeProps) {
                   rasterLayer={rowInfo.node.layerData.type === "Raster Layer"}
                   id={rowInfo.node.layerData.id}
                   onChange={(id, isChecked) => {
-                    console.log(rowInfo.node);
                     const newState = {
                       ...nodeStates,
                     };
@@ -213,7 +212,6 @@ function VisibilityCheckbox(props: {
       // @ts-ignore
       indeterminate={(visibility === "mixed").toString()}
       onChange={(e) => {
-        console.log(nodeData);
         if (props.onChange) {
           props.onChange(props.id, !!e.target.checked);
         }

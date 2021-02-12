@@ -12333,6 +12333,60 @@ export type CreateBasemapMutation = (
   )> }
 );
 
+export type GetBasemapQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetBasemapQuery = (
+  { __typename?: 'Query' }
+  & { basemap?: Maybe<(
+    { __typename?: 'Basemap' }
+    & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
+    & { basemapInteractivitySettings: Array<(
+      { __typename?: 'BasemapInteractivitySetting' }
+      & Pick<BasemapInteractivitySetting, 'basemapId' | 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
+    )>, optionalBasemapLayers: Array<(
+      { __typename?: 'OptionalBasemapLayer' }
+      & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'groupLabel' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
+    )> }
+  )> }
+);
+
+export type UpdateBasemapMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateBasemapMutation = (
+  { __typename?: 'Mutation' }
+  & { updateBasemap?: Maybe<(
+    { __typename?: 'UpdateBasemapPayload' }
+    & { basemap?: Maybe<(
+      { __typename?: 'Basemap' }
+      & Pick<Basemap, 'name' | 'id'>
+    )> }
+  )> }
+);
+
+export type UpdateBasemapLabelsLayerMutationVariables = Exact<{
+  id: Scalars['Int'];
+  layer?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateBasemapLabelsLayerMutation = (
+  { __typename?: 'Mutation' }
+  & { updateBasemap?: Maybe<(
+    { __typename?: 'UpdateBasemapPayload' }
+    & { basemap?: Maybe<(
+      { __typename?: 'Basemap' }
+      & Pick<Basemap, 'id' | 'labelsLayerId'>
+    )> }
+  )> }
+);
+
 export type CreateProjectMutationVariables = Exact<{
   name: Scalars['String'];
   slug: Scalars['String'];
@@ -13668,6 +13722,146 @@ export function useCreateBasemapMutation(baseOptions?: Apollo.MutationHookOption
 export type CreateBasemapMutationHookResult = ReturnType<typeof useCreateBasemapMutation>;
 export type CreateBasemapMutationResult = Apollo.MutationResult<CreateBasemapMutation>;
 export type CreateBasemapMutationOptions = Apollo.BaseMutationOptions<CreateBasemapMutation, CreateBasemapMutationVariables>;
+export const GetBasemapDocument = gql`
+    query GetBasemap($id: Int!) {
+  basemap(id: $id) {
+    id
+    attribution
+    basemapInteractivitySettings {
+      basemapId
+      cursor
+      id
+      layers
+      longTemplate
+      shortTemplate
+      type
+    }
+    description
+    labelsLayerId
+    name
+    optionalBasemapLayers {
+      basemapId
+      defaultVisibility
+      description
+      groupLabel
+      groupType
+      id
+      layers
+      metadata
+      name
+    }
+    projectId
+    terrainExaggeration
+    terrainMaxZoom
+    terrainOptional
+    terrainTileSize
+    terrainUrl
+    terrainVisibilityDefault
+    thumbnail
+    tileSize
+    type
+    url
+  }
+}
+    `;
+
+/**
+ * __useGetBasemapQuery__
+ *
+ * To run a query within a React component, call `useGetBasemapQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetBasemapQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetBasemapQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetBasemapQuery(baseOptions?: Apollo.QueryHookOptions<GetBasemapQuery, GetBasemapQueryVariables>) {
+        return Apollo.useQuery<GetBasemapQuery, GetBasemapQueryVariables>(GetBasemapDocument, baseOptions);
+      }
+export function useGetBasemapLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetBasemapQuery, GetBasemapQueryVariables>) {
+          return Apollo.useLazyQuery<GetBasemapQuery, GetBasemapQueryVariables>(GetBasemapDocument, baseOptions);
+        }
+export type GetBasemapQueryHookResult = ReturnType<typeof useGetBasemapQuery>;
+export type GetBasemapLazyQueryHookResult = ReturnType<typeof useGetBasemapLazyQuery>;
+export type GetBasemapQueryResult = Apollo.QueryResult<GetBasemapQuery, GetBasemapQueryVariables>;
+export const UpdateBasemapDocument = gql`
+    mutation UpdateBasemap($id: Int!, $name: String) {
+  updateBasemap(input: {id: $id, patch: {name: $name}}) {
+    basemap {
+      name
+      id
+    }
+  }
+}
+    `;
+export type UpdateBasemapMutationFn = Apollo.MutationFunction<UpdateBasemapMutation, UpdateBasemapMutationVariables>;
+
+/**
+ * __useUpdateBasemapMutation__
+ *
+ * To run a mutation, you first call `useUpdateBasemapMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateBasemapMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateBasemapMutation, { data, loading, error }] = useUpdateBasemapMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useUpdateBasemapMutation(baseOptions?: Apollo.MutationHookOptions<UpdateBasemapMutation, UpdateBasemapMutationVariables>) {
+        return Apollo.useMutation<UpdateBasemapMutation, UpdateBasemapMutationVariables>(UpdateBasemapDocument, baseOptions);
+      }
+export type UpdateBasemapMutationHookResult = ReturnType<typeof useUpdateBasemapMutation>;
+export type UpdateBasemapMutationResult = Apollo.MutationResult<UpdateBasemapMutation>;
+export type UpdateBasemapMutationOptions = Apollo.BaseMutationOptions<UpdateBasemapMutation, UpdateBasemapMutationVariables>;
+export const UpdateBasemapLabelsLayerDocument = gql`
+    mutation UpdateBasemapLabelsLayer($id: Int!, $layer: String) {
+  updateBasemap(input: {id: $id, patch: {labelsLayerId: $layer}}) {
+    basemap {
+      id
+      labelsLayerId
+    }
+  }
+}
+    `;
+export type UpdateBasemapLabelsLayerMutationFn = Apollo.MutationFunction<UpdateBasemapLabelsLayerMutation, UpdateBasemapLabelsLayerMutationVariables>;
+
+/**
+ * __useUpdateBasemapLabelsLayerMutation__
+ *
+ * To run a mutation, you first call `useUpdateBasemapLabelsLayerMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateBasemapLabelsLayerMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateBasemapLabelsLayerMutation, { data, loading, error }] = useUpdateBasemapLabelsLayerMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      layer: // value for 'layer'
+ *   },
+ * });
+ */
+export function useUpdateBasemapLabelsLayerMutation(baseOptions?: Apollo.MutationHookOptions<UpdateBasemapLabelsLayerMutation, UpdateBasemapLabelsLayerMutationVariables>) {
+        return Apollo.useMutation<UpdateBasemapLabelsLayerMutation, UpdateBasemapLabelsLayerMutationVariables>(UpdateBasemapLabelsLayerDocument, baseOptions);
+      }
+export type UpdateBasemapLabelsLayerMutationHookResult = ReturnType<typeof useUpdateBasemapLabelsLayerMutation>;
+export type UpdateBasemapLabelsLayerMutationResult = Apollo.MutationResult<UpdateBasemapLabelsLayerMutation>;
+export type UpdateBasemapLabelsLayerMutationOptions = Apollo.BaseMutationOptions<UpdateBasemapLabelsLayerMutation, UpdateBasemapLabelsLayerMutationVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {

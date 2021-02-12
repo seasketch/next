@@ -8,7 +8,7 @@ import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import { ApolloProvider, ApolloClient, InMemoryCache } from "@apollo/client";
 import { createUploadLink } from "apollo-upload-client";
 import { setContext } from "@apollo/client/link/context";
-import "./tailwind.css";
+// import "./tailwind.css";
 import { BrowserRouter as Router, useHistory } from "react-router-dom";
 
 function Auth0ProviderWithRouter(props: any) {

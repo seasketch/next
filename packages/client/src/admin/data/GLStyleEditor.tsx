@@ -110,25 +110,11 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           colorpicker: {
             mode: "edit",
           },
-          // @ts-ignore
-          onMouseOver: (cm, e) => {
-            console.log("onMouseOVer", cm, e);
-          },
-          // json: true,
+          json: true,
         }}
         editorDidMount={(editor, value) => {
           // fix for colors not immediately showing up
           editor.refresh();
-        }}
-        // @ts-ignore
-        onMouseOver={(cm, e) => {
-          console.log("onMouseOVer", cm, e);
-        }}
-        onContextMenu={(cm, b) => {
-          // @ts-ignore
-          window.cm = cm;
-          console.log("onContextMEnu", cm, b);
-          console.log(b.target.innerHTML);
         }}
         onBeforeChange={(editor, data, value) => {
           setStyle(value);

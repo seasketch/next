@@ -163,6 +163,11 @@ export default function CreateBasemapModal({
               </div>
               <div className="mb-2">
                 <TextInput
+                  placeholder={
+                    state.type === BasemapType.Mapbox
+                      ? "mapbox://styles/mapbox/satellite-v9"
+                      : "https://example.com/wms?bbox={bbox-epsg-3857}&request=GetMap&format=image/png&service=WMS&version=1.1.1&srs=EPSG:3857&width=256&height=256&layers=example"
+                  }
                   inputChildNode={
                     mapboxStyleInfo.loading ? (
                       <div className="absolute right-2 top-2">

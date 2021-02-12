@@ -50,13 +50,13 @@ code {
   font-weight: bold;
 }
 
-.ZIndexEditor .rst__collapseButton {
+/* .ZIndexEditor .rst__collapseButton {
   display: none;
-}
+} */
 
 .rst__row.basemap .rst__rowContents {
   background-color: rgb(241, 241, 241);
-  border-style: dashed;
+  border-style: solid;
 }
 
 /* .ZIndexEditor > .rst__tree > .rst__node > .rst__lineFullVertical {
@@ -130,4 +130,10 @@ code {
 
 .mapboxgl-ctrl-attrib-button {
   position: absolute !important;
+}
+
+input::placeholder {
+  /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: rgba(0, 0, 0, 0.3);
+  opacity: 1; /* Firefox */
 }

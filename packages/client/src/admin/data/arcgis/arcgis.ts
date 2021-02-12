@@ -1034,6 +1034,7 @@ export function useImportArcGISService(serviceRoot?: string) {
   ] = useUpdateInteractivitySettingsMutation();
   const [createSprite, createSpriteState] = useGetOrCreateSpriteMutation();
   const [addImageToSprite] = useAddImageToSpriteMutation();
+  const mapContext = useContext(MapContext);
   const [state, setState] = useState<ImportArcGISServiceState>({
     inProgress: false,
     importService: async (
@@ -1074,7 +1075,8 @@ export function useImportArcGISService(serviceRoot?: string) {
         const saved: { [sublayer: number]: boolean } = {};
         const saveItem = async (
           layer: LayerInfo,
-          mapServerInfo: MapServerCatalogInfo
+          mapServerInfo: MapServerCatalogInfo,
+          containerFolderId?: string
         ) => {
           if (state.abortController && state.abortController.signal.aborted) {
             return;
@@ -1088,6 +1090,8 @@ export function useImportArcGISService(serviceRoot?: string) {
                 layerInfo.find((l) => l.id === layer.parentLayer!.id)!,
                 mapServerInfo
               );
+            } else {
+              parentStableId = containerFolderId;
             }
             const id = nanoId();
             let bounds: number[] | undefined;
@@ -1125,14 +1129,21 @@ export function useImportArcGISService(serviceRoot?: string) {
                     };
                   });
 
-                  const featureCollection = await fetchFeatureLayerData(
-                    layer.url,
-                    layerSettings?.outFields || "*",
-                    (e) => {
-                      throw e;
-                    },
-                    layerSettings?.geometryPrecision || 6
+                  const cacheItem = mapContext.manager!.arcgisVectorSourceCache.get(
+                    {
+                      type: DataSourceTypes.ArcgisVector,
+                      id: layer.generatedId,
+                      url: layer.url,
+                      queryParameters: {
+                        outFields: layerSettings?.outFields,
+                        geometryPrecision: layerSettings?.geometryPrecision,
+                      },
+                    }
                   );
+                  if (!cacheItem.value) {
+                    await cacheItem.promise;
+                  }
+                  const featureCollection = cacheItem.value;
 
                   bounds = bbox(featureCollection);
 
@@ -1357,9 +1368,7 @@ export function useImportArcGISService(serviceRoot?: string) {
                   parentStableId:
                     layer.parentLayer && layer.parentLayer.id !== -1
                       ? stableIds[layer.parentLayer.id]
-                      : undefined,
-                  // TODO: add metadata json document
-                  // metadata: ,
+                      : parentStableId,
                   isFolder: false,
                   dataLayerId: dataLayerId,
                   bounds,
@@ -1429,9 +1438,36 @@ export function useImportArcGISService(serviceRoot?: string) {
           }
         }
 
-        for (const layer of dataLayers.filter(
+        const layers = dataLayers.filter(
           (l) => settings.excludedSublayers.indexOf(l.generatedId) === -1
-        )) {
+        );
+        let folderStableId: string | undefined;
+        // If vector import, create containing folder first
+        if (layers.length > 1) {
+          const folderName =
+            mapServerInfo.documentInfo.Title ||
+            mapServerInfo.documentInfo.Subject ||
+            mapServerInfo.serviceDescription ||
+            "New Import";
+          setState((prev) => {
+            return {
+              ...prev,
+              progress: 0,
+              statusMessage: `Creating folder "${folderName}"`,
+            };
+          });
+          folderStableId = nanoId();
+          await createTableOfContentsItem({
+            variables: {
+              title: folderName,
+              stableId: folderStableId,
+              projectId,
+              isFolder: true,
+            },
+          });
+        }
+
+        for (const layer of layers) {
           // check first if item has any children
           if (state.abortController && state.abortController.signal.aborted) {
             return;
@@ -1445,7 +1481,7 @@ export function useImportArcGISService(serviceRoot?: string) {
             };
           });
           try {
-            await saveItem(layer, mapServerInfo);
+            await saveItem(layer, mapServerInfo, folderStableId);
           } catch (e) {
             error = e;
             break;

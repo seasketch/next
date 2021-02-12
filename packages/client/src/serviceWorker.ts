@@ -78,19 +78,4 @@ self.addEventListener("message", (event) => {
   }
 });
 
-self.addEventListener("fetch", (event) => {
-  console.log("fetch");
-  if (!/arcgis/.test(event.request.url)) {
-    return false;
-  } else {
-    event.respondWith(
-      new Response("Hi There", {
-        headers: {
-          "content-type": "text/plain",
-        },
-      })
-    );
-  }
-});
-
 // Any other custom service worker logic can go here.

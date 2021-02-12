@@ -86,6 +86,10 @@ export default function TableOfContentsEditor() {
     }
   }, [layersAndSources.data, manager]);
 
+  useEffect(() => {
+    tocQuery.refetch();
+  }, [slug]);
+
   return (
     <div className="">
       {

@@ -154,8 +154,6 @@ export function FeatureLayerSettings(props: {
     updateSettings("outFields", outFields);
   };
 
-  // console.log(sizeData);
-
   return (
     <div
       ref={rootElRef}

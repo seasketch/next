@@ -1,4 +1,3 @@
-console.log("craco config");
 // craco.config.js
 module.exports = {
   style: {

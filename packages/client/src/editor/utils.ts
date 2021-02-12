@@ -10,7 +10,6 @@ export function markActive(state: EditorState, type: MarkType): boolean {
 export function marks(state: EditorState, type: MarkType) {
   let { from, $from, to, empty } = state.selection;
   if (empty) {
-    console.log("empty", state.selection);
     const mark = type.isInSet(state.storedMarks || $from.marks());
     if (mark) {
       return [mark];

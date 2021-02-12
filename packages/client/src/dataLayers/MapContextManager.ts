@@ -310,6 +310,8 @@ class MapContextManager {
         ...prev,
         ready: true,
       }));
+    } else {
+      this.debouncedUpdateStyle();
     }
   }
 
@@ -357,11 +359,21 @@ class MapContextManager {
     }, backoff);
   }
 
+  private updateStyleInfinitLoopDetector = 0;
+
   private async updateStyle() {
     if (this.map && this.selectedBasemapId) {
+      this.updateStyleInfinitLoopDetector = 0;
       const { style, sprites } = await this.getComputedStyle();
       this.addSprites(sprites);
       this.map.setStyle(style);
+    } else {
+      this.updateStyleInfinitLoopDetector++;
+      if (this.updateStyleInfinitLoopDetector > 10) {
+        this.updateStyleInfinitLoopDetector = 0;
+      } else {
+        this.debouncedUpdateStyle();
+      }
     }
   }
 
@@ -592,7 +604,7 @@ class MapContextManager {
     if (event.sourceId && event.sourceId !== "composite") {
       let anySet = false;
       for (const layerId of Object.keys(this.visibleLayers)) {
-        if (event.sourceId === this.layers[layerId].dataSourceId.toString()) {
+        if (event.sourceId === this.layers[layerId]?.dataSourceId.toString()) {
           this.visibleLayers[layerId].error = event.error;
           this.visibleLayers[layerId].loading = false;
           anySet = true;
@@ -696,20 +708,20 @@ class MapContextManager {
 
   highlightLayer(layerId: string) {}
 
-  private resetPromise: Promise<any> | undefined;
-  // prevent reset from being called multiple times before completion
-  async reset(sources: ClientDataSource[], layers: ClientDataLayer[]) {
-    if (this.resetPromise) {
-      return this.resetPromise;
-      // this._reset(sources, layers);
-    } else {
-      this.resetPromise = this._reset(sources, layers);
-      await this.resetPromise;
-      delete this.resetPromise;
-    }
-  }
+  // private resetPromise: Promise<any> | undefined;
+  // // prevent reset from being called multiple times before completion
+  // async reset(sources: ClientDataSource[], layers: ClientDataLayer[]) {
+  //   if (this.resetPromise) {
+  //     return this.resetPromise;
+  //     // this._reset(sources, layers);
+  //   } else {
+  //     this.resetPromise = this._reset(sources, layers);
+  //     await this.resetPromise;
+  //     delete this.resetPromise;
+  //   }
+  // }
 
-  private async _reset(sources: ClientDataSource[], layers: ClientDataLayer[]) {
+  reset(sources: ClientDataSource[], layers: ClientDataLayer[]) {
     this.clientDataSources = {};
     for (const source of sources) {
       this.clientDataSources[source.id] = source;

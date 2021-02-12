@@ -139,12 +139,37 @@ export default class LayerInteractivityManager {
     map.off("mouseout", this.onMouseOut);
     map.off("mousemove", this.debouncedMouseMoveListener);
     map.off("click", this.onMouseClick);
+    map.on("movestart", this.onMoveStart);
+    map.on("moveend", this.onMoveEnd);
   }
 
   private registerEventListeners(map: Map) {
     map.on("mouseout", this.onMouseOut);
     map.on("click", this.onMouseClick);
+    map.on("movestart", this.onMoveStart);
+    map.on("moveend", this.onMoveEnd);
   }
+
+  private moving = false;
+  private lastMouseEvent: MapMouseEvent | undefined = undefined;
+
+  private onMoveStart = () => {
+    this.setState((prev) => ({
+      ...prev,
+      bannerMessages: [],
+      fixedBlocks: [],
+      tooltip: undefined,
+    }));
+    delete this.previousInteractionTarget;
+    this.moving = true;
+  };
+
+  private onMoveEnd = () => {
+    this.moving = false;
+    if (this.lastMouseEvent) {
+      this.mouseMoveListener(this.lastMouseEvent);
+    }
+  };
 
   private onMouseOut = () => {
     setTimeout(() => {
@@ -287,16 +312,26 @@ export default class LayerInteractivityManager {
   }
 
   private debouncedMouseMoveListener = (e: MapMouseEvent, backoff = 4) => {
+    if (this.moving) {
+      this.lastMouseEvent = e;
+      return;
+    }
     if (this.debouncedMouseMoveListenerReference) {
       clearTimeout(this.debouncedMouseMoveListenerReference);
     }
     this.debouncedMouseMoveListenerReference = setTimeout(() => {
       delete this.debouncedMouseMoveListenerReference;
+      if (this.moving) {
+        return;
+      }
       this.mouseMoveListener(e);
     }, backoff);
   };
 
   private mouseMoveListener = (e: MapMouseEvent) => {
+    if (this.moving) {
+      return;
+    }
     const features = this.map!.queryRenderedFeatures(e.point, {
       layers: this.interactiveVectorLayerIds,
     });
