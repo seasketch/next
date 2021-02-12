@@ -260,7 +260,7 @@ class MapContextManager {
         "Wait to call createMap until after MapContext.ready = true"
       );
     }
-    const style = await this.getComputedStyle();
+    const { style, sprites } = await this.getComputedStyle();
     this.map = new Map({
       container,
       style,
@@ -268,6 +268,7 @@ class MapContextManager {
       center: [1.9, 18.7],
       zoom: 0.09527381899319892,
     });
+    this.addSprites(sprites);
 
     this.interactivityManager = new LayerInteractivityManager(
       this.map,
@@ -358,7 +359,8 @@ class MapContextManager {
 
   private async updateStyle() {
     if (this.map && this.selectedBasemapId) {
-      const style = await this.getComputedStyle();
+      const { style, sprites } = await this.getComputedStyle();
+      this.addSprites(sprites);
       this.map.setStyle(style);
     }
   }
@@ -405,8 +407,9 @@ class MapContextManager {
     }
   }
 
-  async getComputedStyle(): Promise<Style> {
+  async getComputedStyle(): Promise<{ style: Style; sprites: ClientSprite[] }> {
     this.resetLayersByZIndex();
+    let sprites: ClientSprite[] = [];
     if (!this.selectedBasemapId) {
       throw new Error("Cannot call getComputedStyle before basemaps are set");
     }
@@ -486,7 +489,7 @@ class MapContextManager {
               }
               // Add the sprites if needed
               if (layer.sprites?.length) {
-                this.addSprites(layer.sprites);
+                sprites = [...sprites, ...layer.sprites];
               }
               // Add the layer(s)
               if (sourceWasAdded) {
@@ -562,7 +565,7 @@ class MapContextManager {
       }
     }
     baseStyle.layers = [...underLabels, ...overLabels];
-    return baseStyle;
+    return { style: baseStyle, sprites };
   }
 
   private onMapDataEvent = (
@@ -780,7 +783,6 @@ class MapContextManager {
 
   private async addSprites(sprites: ClientSprite[]) {
     // get unique sprite ids
-
     for (const sprite of sprites) {
       const spriteId =
         typeof sprite.id === "string"
