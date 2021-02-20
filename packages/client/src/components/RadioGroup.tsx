@@ -16,6 +16,7 @@ interface RadioGroupProps<T> {
   legend?: string;
   error?: string;
   state?: "SAVED" | "SAVING" | "NONE";
+  className?: string;
 }
 
 export default function RadioGroup<T>(props: RadioGroupProps<T>) {
@@ -35,7 +36,7 @@ export default function RadioGroup<T>(props: RadioGroupProps<T>) {
   }, [state]);
 
   return (
-    <fieldset>
+    <fieldset className={props.className}>
       <legend className="block text-sm font-medium leading-5 text-gray-700 mb-2 relative">
         {props.legend}
         <div

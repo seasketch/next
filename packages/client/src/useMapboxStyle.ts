@@ -38,6 +38,7 @@ async function fetchGlStyle(url: string) {
   if (fetchedStyles[id]) {
     return fetchedStyles[id];
   } else {
+    const originalUrl = url;
     if (/mapbox:\/\//.test(url)) {
       url = `https://api.mapbox.com/styles/v1/${
         url.split("mapbox://styles/")[1]
@@ -50,7 +51,7 @@ async function fetchGlStyle(url: string) {
           return style as Style;
         } else {
           throw new Error(
-            "Returned JSON does not appear to be a Mapbox GL Style"
+            `Content at ${originalUrl} does not appear to be a Mapbox GL Style`
           );
         }
       });

@@ -50,6 +50,7 @@ function ApolloProviderWithToken(props: any) {
   const client = new ApolloClient({
     link: authLink.concat(httpLink),
     cache: new InMemoryCache(),
+    connectToDevTools: true,
   });
   return <ApolloProvider client={client}>{props.children}</ApolloProvider>;
 }

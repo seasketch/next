@@ -7,6 +7,8 @@ import mapboxgl, {
   AnyLayer,
   Style,
   Layer,
+  FreeCameraOptions,
+  CameraOptions,
 } from "mapbox-gl";
 import {
   createContext,
@@ -40,6 +42,8 @@ import {
   DataSource as GeneratedDataSource,
   DataSourceTypes,
   InteractivitySetting,
+  OptionalBasemapLayer,
+  OptionalBasemapLayersGroupType,
   RenderUnderType,
   Sprite,
   SpriteImage,
@@ -127,7 +131,7 @@ export type ClientDataLayer = Pick<
   >;
 };
 
-export type ClientBasemaps = Pick<
+export type ClientBasemap = Pick<
   Basemap,
   | "id"
   | "attribution"
@@ -145,48 +149,55 @@ export type ClientBasemaps = Pick<
   | "thumbnail"
   | "tileSize"
   | "url"
->;
+> & {
+  optionalBasemapLayers: Pick<
+    OptionalBasemapLayer,
+    | "basemapId"
+    | "id"
+    | "groupLabel"
+    | "name"
+    | "groupType"
+    | "defaultVisibility"
+    | "description"
+    | "layers"
+    | "metadata"
+  >[];
+};
 
 class MapContextManager {
   map?: Map;
   private interactivityManager?: LayerInteractivityManager;
   private preferencesKey?: string;
-  private ignoreLayerVisibilityState = false;
   private clientDataSources: { [dataSourceId: string]: ClientDataSource } = {};
   private layersByZIndex: string[] = [];
   private layers: { [layerId: string]: ClientDataLayer } = {};
-  private layersBySourceId: { [sourceId: string]: ClientDataLayer[] } = {};
   private visibleLayers: { [id: string]: LayerState } = {};
-  private selectedBasemapId?: string;
-  private basemaps: { [id: string]: ClientBasemaps } = {};
-  private setState: Dispatch<SetStateAction<MapContextInterface>>;
+  private basemaps: { [id: string]: ClientBasemap } = {};
+  private _setState: Dispatch<SetStateAction<MapContextInterface>>;
   private updateStateDebouncerReference?: NodeJS.Timeout;
   private sourceCache: {
     [id: string]: ArcGISDynamicMapServiceInstance | ArcGISVectorSourceInstance;
   } = {};
-  private dirtyMapServices: string[] = [];
-  private updateMapServicesDebouncerReference?: NodeJS.Timeout;
   private updateSourcesStateDebouncerReference?: NodeJS.Timeout;
-  private isReady = false;
-  private initialBounds?: [number, number, number, number];
+  private initialCameraOptions?: CameraOptions;
+  private internalState: MapContextInterface;
   arcgisVectorSourceCache: ArcGISVectorSourceCache;
 
   constructor(
     initialState: MapContextInterface,
     setState: Dispatch<SetStateAction<MapContextInterface>>,
+    initialCameraOptions?: CameraOptions,
     preferencesKey?: string,
-    ignoreLayerVisibilityState?: boolean,
     cacheSize?: number
   ) {
     cacheSize = cacheSize || bytes("50mb");
-    this.setState = setState;
+    this._setState = setState;
     // @ts-ignore
     window.mapContext = this;
     this.preferencesKey = preferencesKey;
-    this.ignoreLayerVisibilityState = !!ignoreLayerVisibilityState;
-    this.selectedBasemapId = initialState.selectedBasemap;
+    this.internalState = initialState;
+    this.initialCameraOptions = initialCameraOptions;
     this.visibleLayers = initialState.layerStates;
-    this.initialBounds = initialState.bounds;
     this.arcgisVectorSourceCache = new ArcGISVectorSourceCache(
       cacheSize,
       (key, item) => {
@@ -201,7 +212,7 @@ class MapContextManager {
           item.error = error;
           delete item.bytes;
           delete item.value;
-          this.debouncedUpdateState(1);
+          this.debouncedUpdateLayerState(1);
           this.debouncedUpdateStyle();
           return item;
         }
@@ -222,7 +233,20 @@ class MapContextManager {
         this.visibleLayers[layerId].loading = false;
       }
     }
-    this.debouncedUpdateState();
+    this.debouncedUpdateLayerState();
+  };
+
+  private setState = (action: SetStateAction<MapContextInterface>) => {
+    // console.warn("setState", action, this.internalState);
+    if (typeof action === "function") {
+      this.internalState = action(this.internalState);
+    } else {
+      this.internalState = action;
+    }
+    this._setState((prev) => ({
+      ...prev,
+      ...this.internalState,
+    }));
   };
 
   /**
@@ -253,20 +277,26 @@ class MapContextManager {
         this.map.off("error", this.onMapError);
         this.map.off("data", this.onMapDataEvent);
         this.map.off("dataloading", this.onMapDataEvent);
+        this.map.off("moveend", this.onMapMove);
       }
     }
-    if (!this.isReady) {
+    if (!this.internalState.ready) {
       throw new Error(
         "Wait to call createMap until after MapContext.ready = true"
       );
     }
     const { style, sprites } = await this.getComputedStyle();
+
     this.map = new Map({
       container,
       style,
-      bounds: this.initialBounds || bounds,
-      center: [1.9, 18.7],
-      zoom: 0.09527381899319892,
+      center: this.initialCameraOptions?.center || [1.9, 18.7],
+      zoom: this.initialCameraOptions?.zoom || 0.09527381899319892,
+      pitch: this.initialCameraOptions?.pitch,
+      bearing: this.initialCameraOptions?.bearing,
+      maxPitch: 70,
+      // @ts-ignore
+      optimizeForTerrain: true,
     });
     this.addSprites(sprites);
 
@@ -284,9 +314,47 @@ class MapContextManager {
     this.map.on("error", this.onMapError);
     this.map.on("data", this.onMapDataEvent);
     this.map.on("dataloading", this.onMapDataEvent);
+    this.map.on("moveend", this.onMapMove);
 
     return this.map;
   }
+
+  toggleTerrain() {
+    let on = true;
+    if (this.internalState.terrainEnabled) {
+      on = false;
+    }
+    this.setState((prev) => ({
+      ...prev,
+      terrainEnabled: on,
+      prefersTerrainEnabled: on,
+    }));
+    this.debouncedUpdateStyle();
+    if (!on) {
+      this.force2dView();
+    }
+  }
+
+  private force2dView() {
+    if (this.map && this.map.getPitch() > 0) {
+      this.map.easeTo({
+        pitch: 0,
+        bearing: 0,
+      });
+    }
+  }
+
+  onMapMoveDebouncerReference: NodeJS.Timeout | undefined;
+
+  onMapMove = (event: MouseEvent) => {
+    if (this.onMapMoveDebouncerReference) {
+      clearTimeout(this.onMapMoveDebouncerReference);
+    }
+    this.onMapMoveDebouncerReference = setTimeout(() => {
+      delete this.onMapMoveDebouncerReference;
+      this.updatePreferences();
+    }, 1000);
+  };
 
   setViewport(center: [number, number], zoom: number) {}
 
@@ -296,23 +364,50 @@ class MapContextManager {
    * updated.
    * @param basemaps List of Basemap objects
    */
-  setBasemaps(basemaps: ClientBasemaps[]) {
+  setBasemaps(basemaps: ClientBasemap[]) {
     this.basemaps = {};
     for (const basemap of basemaps) {
       this.basemaps[basemap.id.toString()] = basemap;
     }
-    if (!this.selectedBasemapId || !this.basemaps[this.selectedBasemapId]) {
-      this.setSelectedBasemap(basemaps[0].id.toString());
+    if (
+      !this.internalState.selectedBasemap ||
+      !this.basemaps[this.internalState.selectedBasemap]
+    ) {
+      if (basemaps.length) {
+        this.setSelectedBasemap(basemaps[0].id.toString());
+      }
     }
-    if (!this.isReady) {
-      this.isReady = true;
-      this.setState((prev) => ({
-        ...prev,
-        ready: true,
-      }));
-    } else {
-      this.debouncedUpdateStyle();
+    this.setState((prev) => ({
+      ...prev,
+      ready: true,
+      terrainEnabled: this.shouldEnableTerrain(),
+      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
+        this.internalState.selectedBasemap
+          ? this.basemaps[this.internalState.selectedBasemap] || basemaps[0]
+          : basemaps[0],
+        this.internalState.basemapOptionalLayerStatePreferences
+      ),
+    }));
+    this.debouncedUpdateStyle();
+  }
+
+  private computeBasemapOptionalLayerStates(
+    basemap: ClientBasemap | null,
+    preferences?: { [layerName: string]: any }
+  ) {
+    const states: { [layerName: string]: any } = {};
+    if (basemap) {
+      for (const layer of basemap.optionalBasemapLayers) {
+        if (preferences) {
+          const preference = preferences[layer.groupLabel || layer.name];
+          states[layer.id] =
+            preference !== undefined ? preference : layer.defaultVisibility;
+        } else {
+          states[layer.id] = layer.defaultVisibility;
+        }
+      }
     }
+    return states;
   }
 
   /**
@@ -320,30 +415,88 @@ class MapContextManager {
    * @param id String ID for the basemap to select
    */
   setSelectedBasemap(id: string) {
-    this.selectedBasemapId = id;
+    const previousBasemap =
+      this.internalState.selectedBasemap &&
+      this.basemaps[this.internalState.selectedBasemap];
+    this.internalState.selectedBasemap = id;
+    const terrainWasEnabled = this.internalState.terrainEnabled;
+    const terrainEnabled = this.shouldEnableTerrain();
+    const basemap = this.basemaps[id];
     this.setState((prev) => ({
       ...prev,
-      selectedBasemap: this.selectedBasemapId,
+      selectedBasemap: this.internalState.selectedBasemap,
+      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
+        basemap,
+        this.internalState.basemapOptionalLayerStatePreferences
+      ),
+      terrainEnabled,
     }));
     this.updatePreferences();
+    // this.updateState();
     this.debouncedUpdateStyle();
+    if (previousBasemap && basemap) {
+      if (!this.internalState.terrainEnabled) {
+        this.force2dView();
+      }
+    }
+  }
+
+  clearTerrainSettings() {
+    const selectedBasemap = this.getSelectedBasemap();
+    this.setState((prev) => ({
+      ...prev,
+      prefersTerrainEnabled: undefined,
+      terrainEnabled:
+        !!selectedBasemap?.terrainUrl &&
+        (!selectedBasemap?.terrainOptional ||
+          selectedBasemap?.terrainVisibilityDefault === true),
+    }));
+    this.updatePreferences();
+  }
+
+  private shouldEnableTerrain() {
+    const state = this.internalState;
+    if (this.basemaps && state.selectedBasemap) {
+      const basemap = this.basemaps[state.selectedBasemap];
+      if (basemap && basemap.terrainUrl) {
+        if (basemap.terrainOptional) {
+          if (this.internalState.prefersTerrainEnabled === true) {
+            return true;
+          } else if (this.internalState.prefersTerrainEnabled === false) {
+            return false;
+          } else {
+            return basemap.terrainVisibilityDefault || false;
+          }
+        } else {
+          return true;
+        }
+      } else {
+        return false;
+      }
+    }
+    return false;
   }
 
   private updatePreferences() {
     if (this.preferencesKey) {
-      const bounds = this.map!.getBounds();
-      window.localStorage.setItem(
-        this.preferencesKey,
-        JSON.stringify({
-          basemap: this.selectedBasemapId,
-          layers: this.visibleLayers,
-          ...(this.map
-            ? {
-                bounds: bounds.toArray(),
-              }
-            : {}),
-        })
-      );
+      const prefs = {
+        basemap: this.internalState.selectedBasemap,
+        layers: this.visibleLayers,
+        ...(this.map
+          ? {
+              cameraOptions: {
+                center: this.map.getCenter().toArray(),
+                zoom: this.map.getZoom(),
+                bearing: this.map.getBearing(),
+                pitch: this.map.getPitch(),
+              },
+            }
+          : {}),
+        prefersTerrainEnabled: this.internalState.prefersTerrainEnabled,
+        basemapOptionalLayerStatePreferences: this.internalState
+          .basemapOptionalLayerStatePreferences,
+      };
+      window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
     }
   }
 
@@ -362,7 +515,7 @@ class MapContextManager {
   private updateStyleInfinitLoopDetector = 0;
 
   private async updateStyle() {
-    if (this.map && this.selectedBasemapId) {
+    if (this.map && this.internalState.selectedBasemap) {
       this.updateStyleInfinitLoopDetector = 0;
       const { style, sprites } = await this.getComputedStyle();
       this.addSprites(sprites);
@@ -388,7 +541,7 @@ class MapContextManager {
         this.showLayerId(id);
       }
     }
-    this.debouncedUpdateState(1);
+    this.debouncedUpdateLayerState(1);
     this.debouncedUpdateStyle();
   }
 
@@ -422,17 +575,106 @@ class MapContextManager {
   async getComputedStyle(): Promise<{ style: Style; sprites: ClientSprite[] }> {
     this.resetLayersByZIndex();
     let sprites: ClientSprite[] = [];
-    if (!this.selectedBasemapId) {
+    if (!this.internalState.selectedBasemap) {
       throw new Error("Cannot call getComputedStyle before basemaps are set");
     }
-    const labelsID = this.basemaps[this.selectedBasemapId].labelsLayerId;
-    const url = this.basemaps[this.selectedBasemapId].url;
-    let baseStyle = await fetchGlStyle(url);
+    const basemap = this.basemaps[this.internalState.selectedBasemap];
+    const labelsID = basemap?.labelsLayerId;
+    const url =
+      basemap?.url ||
+      "mapbox://styles/underbluewaters/cklb3vusx2dvs17pay6jp5q7e";
+    let baseStyle: Style;
+    try {
+      baseStyle = await fetchGlStyle(url);
+      if (this.internalState.basemapError) {
+        this.setState((prev) => ({
+          ...prev,
+          basemapError: undefined,
+        }));
+      }
+    } catch (e) {
+      this.setState((prev) => ({
+        ...prev,
+        basemapError: e,
+      }));
+      console.warn(e);
+      baseStyle = await fetchGlStyle(
+        "mapbox://styles/underbluewaters/cklb5eho20sb817qhmzltsrpf"
+      );
+    }
     baseStyle = {
       ...baseStyle,
       layers: [...(baseStyle.layers || [])],
       sources: { ...(baseStyle.sources || {}) },
     };
+    if (this.internalState.terrainEnabled) {
+      const newSource = {
+        type: "raster-dem",
+        url: basemap.terrainUrl,
+      };
+      /**
+       * This extra check for an existing source is required because the terrain tilejson
+       * may be loaded already by mapbox gl. Calling setStyle with the un-initialized source
+       * will trigger a repaint of the entire style. This seems to be a bug with mapbox-gl
+       * because other source types do not have this problem
+       */
+      const existingSource = this.map?.getSource("terrain-source");
+      if (
+        existingSource &&
+        existingSource.type === "raster-dem" &&
+        existingSource.url === newSource.url &&
+        existingSource.encoding
+      ) {
+        baseStyle.sources!["terrain-source"] = {
+          type: existingSource.type,
+          url: existingSource.url,
+          bounds: existingSource.bounds,
+          tiles: existingSource.tiles,
+          encoding: existingSource.encoding,
+          tileSize: existingSource.tileSize,
+        };
+      } else {
+        // @ts-ignore
+        baseStyle.sources!["terrain-source"] = newSource;
+      }
+
+      // @ts-ignore
+      baseStyle.terrain = {
+        source: "terrain-source",
+        exaggeration: parseFloat(basemap.terrainExaggeration || 1.2),
+      };
+
+      baseStyle.layers?.push({
+        id: "sky",
+        type: "sky",
+        paint: {
+          // set up the sky layer to use a color gradient
+          "sky-type": "gradient",
+          // the sky will be lightest in the center and get darker moving radially outward
+          // this simulates the look of the sun just below the horizon
+          "sky-gradient": [
+            "interpolate",
+            ["linear"],
+            ["sky-radial-progress"],
+            0.8,
+            "rgba(135, 206, 235, 1.0)",
+            1,
+            "rgba(0,0,0,0.1)",
+          ],
+          "sky-gradient-center": [0, 0],
+          "sky-gradient-radius": 90,
+          "sky-opacity": [
+            "interpolate",
+            ["exponential", 0.1],
+            ["zoom"],
+            5,
+            0,
+            22,
+            1,
+          ],
+        },
+      });
+    }
 
     let labelsLayerIndex = baseStyle.layers?.findIndex(
       (layer) => layer.id === labelsID
@@ -577,7 +819,52 @@ class MapContextManager {
       }
     }
     baseStyle.layers = [...underLabels, ...overLabels];
+
+    // Evaluate any basemap optional layers
+    // value is whether to toggle
+    // const stylesSubjectToToggle: { [id: string]: boolean } = {};
+    const optionalBasemapLayerStates = this.computeBasemapOptionalLayerStates(
+      this.getSelectedBasemap(),
+      this.internalState.basemapOptionalLayerStatePreferences
+    );
+
+    const hiddenOptionalLayers: { [layerId: string]: true } = {};
+    for (const layer of basemap.optionalBasemapLayers) {
+      if (optionalBasemapLayerStates[layer.id] === false) {
+        for (const id of layer.layers) {
+          if (id) {
+            hiddenOptionalLayers[id] = true;
+          }
+        }
+      }
+    }
+    // for (const layer of basemap.optionalBasemapLayers || []) {
+    //   const enabled = optionalBasemapLayerStates[layer.id];
+    //   for (const layerId of layer.layers) {
+    //     if (layerId) {
+    //       stylesSubjectToToggle[layerId] =
+    //         enabled || !!stylesSubjectToToggle[layerId];
+    //     }
+    //   }
+    // }
+    // for (const layerId in stylesSubjectToToggle) {
+    //   if (!stylesSubjectToToggle[layerId]) {
+
+    //   }
+    // }
+    baseStyle.layers = baseStyle.layers.filter(
+      (layer) => !hiddenOptionalLayers[layer.id]
+    );
+
     return { style: baseStyle, sprites };
+  }
+
+  getSelectedBasemap() {
+    if (this.basemaps && this.internalState.selectedBasemap) {
+      return this.basemaps[this.internalState.selectedBasemap];
+    } else {
+      return null;
+    }
   }
 
   private onMapDataEvent = (
@@ -611,7 +898,7 @@ class MapContextManager {
         }
       }
       if (anySet) {
-        this.debouncedUpdateState();
+        this.debouncedUpdateLayerState();
       }
     }
   };
@@ -678,7 +965,7 @@ class MapContextManager {
       }
     }
     if (anyChanges) {
-      this.debouncedUpdateState();
+      this.debouncedUpdateLayerState();
     }
     // This is needed for geojson sources
     if (anyLoading) {
@@ -781,7 +1068,7 @@ class MapContextManager {
     for (const id of layerIds) {
       this.hideLayerId(id);
     }
-    this.debouncedUpdateState(1);
+    this.debouncedUpdateLayerState(1);
     this.debouncedUpdateStyle();
   }
 
@@ -789,7 +1076,7 @@ class MapContextManager {
     for (const id of layerIds) {
       this.showLayerId(id);
     }
-    this.debouncedUpdateState(1);
+    this.debouncedUpdateLayerState(1);
     this.debouncedUpdateStyle();
   }
 
@@ -842,14 +1129,17 @@ class MapContextManager {
     }
   }
 
-  private debouncedUpdateState(backoff = 5) {
+  private debouncedUpdateLayerState(backoff = 5) {
     if (this.updateStateDebouncerReference) {
       clearTimeout(this.updateStateDebouncerReference);
     }
-    this.updateStateDebouncerReference = setTimeout(this.updateState, backoff);
+    this.updateStateDebouncerReference = setTimeout(
+      this.updateLayerState,
+      backoff
+    );
   }
 
-  private updateState = () => {
+  private updateLayerState = () => {
     delete this.updateStateDebouncerReference;
     this.setState((oldState) => ({
       ...oldState,
@@ -858,6 +1148,48 @@ class MapContextManager {
     this.updatePreferences();
     this.updateInteractivitySettings();
   };
+
+  updateOptionalBasemapSetting(
+    layer: Pick<
+      OptionalBasemapLayer,
+      "id" | "groupLabel" | "groupType" | "name"
+    >,
+    value: any
+  ) {
+    const key =
+      layer.groupType === OptionalBasemapLayersGroupType.None
+        ? layer.name
+        : layer.groupLabel!;
+    this.setState((prev) => ({
+      ...prev,
+      basemapOptionalLayerStatePreferences: {
+        ...prev.basemapOptionalLayerStatePreferences,
+        [key]: value,
+      },
+      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
+        this.getSelectedBasemap(),
+        {
+          ...this.internalState.basemapOptionalLayerStatePreferences,
+          [key]: value,
+        }
+      ),
+    }));
+    this.updatePreferences();
+    this.debouncedUpdateStyle();
+  }
+
+  clearOptionalBasemapSettings() {
+    this.setState((prev) => ({
+      ...prev,
+      basemapOptionalLayerStatePreferences: undefined,
+      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
+        this.getSelectedBasemap(),
+        {}
+      ),
+    }));
+    this.updatePreferences();
+    this.debouncedUpdateStyle();
+  }
 }
 
 export default MapContextManager;
@@ -875,9 +1207,14 @@ export interface MapContextInterface {
   tooltip?: Tooltip;
   fixedBlocks: string[];
   selectedBasemap?: string;
-  bounds?: [number, number, number, number];
+  cameraOptions?: CameraOptions;
   /* Indicates the map state is ready to render a map */
   ready: boolean;
+  terrainEnabled: boolean;
+  prefersTerrainEnabled?: boolean;
+  basemapError?: Error;
+  basemapOptionalLayerStates: { [layerName: string]: any };
+  basemapOptionalLayerStatePreferences?: { [layerName: string]: any };
 }
 
 /**
@@ -898,7 +1235,10 @@ export function useMapContext(
     bannerMessages: [],
     fixedBlocks: [],
     ready: false,
+    terrainEnabled: false,
+    basemapOptionalLayerStates: {},
   };
+  let initialCameraOptions: CameraOptions | undefined = undefined;
   if (preferencesKey) {
     const preferencesString = window.localStorage.getItem(preferencesKey);
     if (preferencesString) {
@@ -909,8 +1249,19 @@ export function useMapContext(
       if (prefs.layers) {
         initialState.layerStates = prefs.layers;
       }
-      if (prefs.bounds) {
-        initialState.bounds = prefs.bounds;
+      if (prefs.cameraOptions) {
+        initialCameraOptions = prefs.cameraOptions;
+      }
+      if (prefs.basemapOptionalLayerStatePreferences) {
+        initialState.basemapOptionalLayerStatePreferences = {
+          ...prefs.basemapOptionalLayerStatePreferences,
+        };
+        initialState.basemapOptionalLayerStates = {
+          ...prefs.basemapOptionalLayerStates,
+        };
+      }
+      if ("prefersTerrainEnabled" in prefs) {
+        initialState.prefersTerrainEnabled = prefs.prefersTerrainEnabled;
       }
     }
   }
@@ -919,8 +1270,8 @@ export function useMapContext(
     const manager = new MapContextManager(
       initialState,
       setState,
+      initialCameraOptions,
       preferencesKey,
-      ignoreLayerVisibilityState,
       cacheSize
     );
     const newState = {
@@ -935,27 +1286,22 @@ export function useMapContext(
 export const MapContext = createContext<MapContextInterface>({
   layerStates: {},
   manager: new MapContextManager(
-    { layerStates: {}, bannerMessages: [], fixedBlocks: [], ready: false },
+    {
+      layerStates: {},
+      bannerMessages: [],
+      fixedBlocks: [],
+      ready: false,
+      terrainEnabled: false,
+      basemapOptionalLayerStates: {},
+    },
     (state) => {}
   ),
   bannerMessages: [],
   fixedBlocks: [],
   ready: false,
+  terrainEnabled: false,
+  basemapOptionalLayerStates: {},
 });
-
-function areEqualShallow(a: any, b: any) {
-  for (var key in a) {
-    if (!(key in b) || a[key] !== b[key]) {
-      return false;
-    }
-  }
-  for (var key in b) {
-    if (!(key in a) || a[key] !== b[key]) {
-      return false;
-    }
-  }
-  return true;
-}
 
 async function createImage(
   width: number,
@@ -994,12 +1340,6 @@ function idForSublayer(layer: ClientDataLayer) {
   } else {
     return idForImageSource(layer.dataSourceId);
   }
-}
-
-function isArcGISDynamicService(
-  source: any
-): source is ArcGISDynamicMapService {
-  return typeof source.updateUseDevicePixelRatio === "function";
 }
 
 /**
@@ -1046,10 +1386,4 @@ function idForImageSource(sourceId: number | string) {
 const layerIdRE = /seasketch/g;
 function isSeaSketchLayerId(id: string) {
   return layerIdRE.test(id);
-}
-
-function isPromise(
-  object: Promise<FeatureCollection> | FeatureCollection
-): object is Promise<FeatureCollection> {
-  return "then" in object && typeof object.then === "function";
 }

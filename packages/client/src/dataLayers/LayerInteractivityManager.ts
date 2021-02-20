@@ -24,7 +24,8 @@ import {
  */
 export default class LayerInteractivityManager {
   private map: Map;
-  private setState: Dispatch<SetStateAction<MapContextInterface>>;
+  private _setState: Dispatch<SetStateAction<MapContextInterface>>;
+  private previousState?: MapContextInterface;
 
   /** List of interactive layers that are currently shown on the map. Update with setVisibleLayers() */
   private layers: { [layerId: string]: ClientDataLayer } = {};
@@ -51,7 +52,7 @@ export default class LayerInteractivityManager {
   ) {
     this.map = map;
     this.registerEventListeners(map);
-    this.setState = setState;
+    this._setState = setState;
   }
 
   /**
@@ -152,6 +153,37 @@ export default class LayerInteractivityManager {
 
   private moving = false;
   private lastMouseEvent: MapMouseEvent | undefined = undefined;
+
+  private setState(action: SetStateAction<MapContextInterface>) {
+    let newState: MapContextInterface;
+    if (this.previousState && typeof action === "function") {
+      newState = action(this.previousState);
+      if (this.statesDiffer(this.previousState, newState)) {
+        this.previousState = newState;
+        this._setState(action);
+      }
+    } else if (this.previousState && typeof action !== "function") {
+      if (this.statesDiffer(this.previousState, action)) {
+        this.previousState = action;
+        this._setState(action);
+      }
+    } else {
+      if (typeof action === "function") {
+        this.previousState = action(({} as unknown) as MapContextInterface);
+      } else {
+        this.previousState = action;
+      }
+      this._setState(action);
+    }
+  }
+
+  private statesDiffer(prev: MapContextInterface, next: MapContextInterface) {
+    return (
+      prev.bannerMessages.join("") !== next.bannerMessages.join("") ||
+      prev.fixedBlocks.join("") !== next.fixedBlocks.join("") ||
+      prev.tooltip !== next.tooltip
+    );
+  }
 
   private onMoveStart = () => {
     this.setState((prev) => ({

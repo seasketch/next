@@ -1,3 +1,4 @@
+import { gql, StoreObject, useApolloClient } from "@apollo/client";
 import { Map } from "mapbox-gl";
 import React, { useEffect, useRef, useState } from "react";
 import Button from "../../components/Button";
@@ -33,7 +34,64 @@ export default function CreateBasemapModal({
     mapPreview: false,
   });
   const projectId = useProjectId();
-  const [mutate, mutationState] = useCreateBasemapMutation();
+  const [mutate, mutationState] = useCreateBasemapMutation({
+    update: (cache, { data }) => {
+      if (data?.createBasemap?.basemap) {
+        const newBasemapData = data.createBasemap.basemap;
+        console.log(
+          "modify cache",
+          projectId,
+          cache.identify({
+            __typename: "Project",
+            id: projectId,
+          })
+        );
+        cache.modify({
+          id: cache.identify({
+            __typename: "Project",
+            id: projectId,
+          }),
+          fields: {
+            basemaps(existingBasemapRefs = [], { readField }) {
+              console.log("modify basemaps field");
+              const newBasemapRef = cache.writeFragment({
+                data: newBasemapData,
+                fragment: gql`
+                  fragment NewBasemap on Basemap {
+                    id
+                    projectId
+                    attribution
+                    description
+                    labelsLayerId
+                    name
+                    nodeId
+                    terrainExaggeration
+                    terrainOptional
+                    url
+                    type
+                    tileSize
+                    thumbnail
+                    terrainUrl
+                    terrainTileSize
+                  }
+                `,
+              });
+
+              console.log("returning", [
+                ...existingBasemapRefs,
+                data!.createBasemap!.basemap,
+              ]);
+
+              return [...existingBasemapRefs, newBasemapRef];
+            },
+          },
+        });
+      }
+      console.log("after modify");
+    },
+  });
+  const client = useApolloClient();
+  const cache = client.cache;
 
   const mapboxStyleInfo = useMapboxStyle(
     state.type === BasemapType.Mapbox ? state.url : undefined
@@ -116,8 +174,10 @@ export default function CreateBasemapModal({
                             type: state.type,
                             url: state.url,
                           },
-                        }).then(() => {
-                          if (onRequestClose) onRequestClose();
+                        }).then((d) => {
+                          if (onRequestClose) {
+                            onRequestClose();
+                          }
                         });
                       })
                       .catch((e) => {

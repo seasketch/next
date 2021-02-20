@@ -12,7 +12,7 @@ export default {
 const Template: Story<InputBlockProps> = (args) => {
   return (
     <div className="max-w-lg">
-      <InputBlock title="Enable Feature" input={<Switch isToggled={true} />}>
+      <InputBlock {...args} input={<Switch isToggled={true} />}>
         Lorem ipsum dolor, sit amet consectetur adipisicing elit. Officia
         corporis delectus labore accusamus ipsam, consectetur illum iusto
         repellat voluptas maiores neque expedita. Quibusdam possimus libero in
@@ -23,7 +23,27 @@ const Template: Story<InputBlockProps> = (args) => {
 };
 
 export const Basic = Template.bind({});
+Basic.args = {
+  title: "Enable Feature",
+};
 
+export const Loading = Template.bind({});
+Loading.args = {
+  title: "Enable Feature",
+  mutationStatus: {
+    loading: true,
+    called: true,
+  },
+};
+
+export const Saved = Template.bind({});
+Saved.args = {
+  title: "Enable Feature",
+  mutationStatus: {
+    loading: false,
+    called: true,
+  },
+};
 // export const Defaults = Template.bind({});
 // Defaults.args = {
 //   label: "Click Me",

@@ -58,6 +58,13 @@ export default function MapboxMap(props: OverlayMapProps) {
           />
         ) : null}
       </div>
+      {mapContext.basemapError && (
+        <div className="flex w-full absolute top-1 place-content-center z-10 text-center">
+          <div className=" bg-red-900 text-white p-1 text-sm">
+            Basemap Error: {mapContext.basemapError.message}
+          </div>
+        </div>
+      )}
       {mapContext.tooltip ? (
         <Tooltip x={mapContext.tooltip.x} y={mapContext.tooltip.y}>
           <div

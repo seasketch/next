@@ -1,5 +1,6 @@
-query GetBasemaps($projectId: Int!) {
-  project(id: $projectId) {
+query GetBasemaps($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
     basemaps {
       id
       attribution
@@ -152,11 +153,168 @@ mutation UpdateBasemap($id: Int!, $name: String) {
   }
 }
 
+mutation UpdateBasemapUrl($id: Int!, $url: String!) {
+  updateBasemap(input: { id: $id, patch: { url: $url } }) {
+    basemap {
+      url
+      id
+    }
+  }
+}
+
 mutation UpdateBasemapLabelsLayer($id: Int!, $layer: String) {
   updateBasemap(input: { id: $id, patch: { labelsLayerId: $layer } }) {
     basemap {
       id
       labelsLayerId
+    }
+  }
+}
+
+mutation Toggle3dTerrain($id: Int!, $terrainUrl: String) {
+  updateBasemap(input: { id: $id, patch: { terrainUrl: $terrainUrl } }) {
+    basemap {
+      id
+      terrainUrl
+    }
+  }
+}
+
+mutation Set3dTerrain(
+  $id: Int!
+  $terrainUrl: String
+  $terrainOptional: Boolean
+  $terrainVisibilityDefault: Boolean
+) {
+  updateBasemap(
+    input: {
+      id: $id
+      patch: {
+        terrainUrl: $terrainUrl
+        terrainOptional: $terrainOptional
+        terrainVisibilityDefault: $terrainVisibilityDefault
+      }
+    }
+  ) {
+    basemap {
+      id
+      terrainUrl
+      terrainVisibilityDefault
+      terrainOptional
+    }
+  }
+}
+
+mutation UpdateTerrainExaggeration($id: Int!, $terrainExaggeration: BigFloat!) {
+  updateBasemap(
+    input: { id: $id, patch: { terrainExaggeration: $terrainExaggeration } }
+  ) {
+    basemap {
+      id
+      terrainExaggeration
+    }
+  }
+}
+
+mutation DeleteBasemap($id: Int!) {
+  deleteBasemap(input: { id: $id }) {
+    basemap {
+      id
+    }
+  }
+}
+
+query OptionalLayer($id: Int!) {
+  optionalBasemapLayer(id: $id) {
+    id
+    basemapId
+    defaultVisibility
+    description
+    groupLabel
+    groupType
+    layers
+    metadata
+    name
+  }
+}
+
+mutation UpdateOptionalLayerName($id: Int!, $name: String!) {
+  updateOptionalBasemapLayer(input: { id: $id, patch: { name: $name } }) {
+    optionalBasemapLayer {
+      id
+      name
+    }
+  }
+}
+
+mutation CreateOptionalLayer(
+  $name: String!
+  $basemapId: Int!
+  $groupType: OptionalBasemapLayersGroupType
+  $groupLabel: String
+) {
+  createOptionalBasemapLayer(
+    input: {
+      optionalBasemapLayer: {
+        name: $name
+        basemapId: $basemapId
+        groupType: $groupType
+        groupLabel: $groupLabel
+      }
+    }
+  ) {
+    optionalBasemapLayer {
+      id
+      basemapId
+      defaultVisibility
+      description
+      groupLabel
+      groupType
+      layers
+      metadata
+      name
+    }
+  }
+}
+
+mutation UpdateOptionalLayer(
+  $id: Int!
+  $name: String
+  $description: String
+  $defaultVisibility: Boolean
+) {
+  updateOptionalBasemapLayer(
+    input: {
+      id: $id
+      patch: {
+        name: $name
+        description: $description
+        defaultVisibility: $defaultVisibility
+      }
+    }
+  ) {
+    optionalBasemapLayer {
+      name
+      description
+      id
+      defaultVisibility
+    }
+  }
+}
+
+mutation DeleteOptionalLayer($id: Int!) {
+  deleteOptionalBasemapLayer(input: { id: $id }) {
+    optionalBasemapLayer {
+      id
+    }
+  }
+}
+
+mutation UpdateOptionalBasemapLayerLayerList($id: Int!, $layers: [String]) {
+  updateOptionalBasemapLayer(input: { id: $id, patch: { layers: $layers } }) {
+    optionalBasemapLayer {
+      id
+      layers
     }
   }
 }

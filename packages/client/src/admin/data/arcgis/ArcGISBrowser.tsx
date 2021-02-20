@@ -51,6 +51,7 @@ import {
 } from "../../../generated/graphql";
 import useProjectId from "../../../useProjectId";
 import bytes from "bytes";
+import { useParams } from "react-router-dom";
 
 export default function ArcGISBrowser() {
   const [server, setServer] = useState<{
@@ -68,10 +69,11 @@ export default function ArcGISBrowser() {
   const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
     selectedMapServer
   );
+  const { slug } = useParams<{ slug: string }>();
   const projectId = useProjectId();
   const basemapsData = useGetBasemapsQuery({
     variables: {
-      projectId: projectId!,
+      slug,
     },
   });
   const [modalOpen, setModalOpen] = useState(false);
@@ -94,7 +96,9 @@ export default function ArcGISBrowser() {
 
   useEffect(() => {
     if (basemapsData.data && mapContext.manager) {
-      mapContext.manager.setBasemaps(basemapsData.data.project!.basemaps!);
+      mapContext.manager.setBasemaps(
+        basemapsData.data.projectBySlug!.basemaps!
+      );
     }
   }, [basemapsData.data, mapContext.manager]);
 

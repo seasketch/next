@@ -20,3 +20,10 @@ mutation UpdateProjectRegion($slug: String!, $region: GeoJSON!) {
     }
   }
 }
+
+query GetProjectBySlug($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    name
+  }
+}

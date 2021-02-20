@@ -9,13 +9,13 @@ interface LayerAdminSidebarProps {}
 type Segment = "Basemaps" | "Overlay Layers";
 
 export default function LayerAdminSidebar() {
-  const [selectedTab, setSelectedTab] = useState<Segment>("Overlay Layers");
+  const [selectedTab, setSelectedTab] = useState<Segment>("Basemaps");
   return (
     <div className="flex flex-col max-h-full min-h-full bg-white">
       <header className="flex-shrink-0">
         <div className="max-w-sm m-auto mt-4">
           <SegmentControl
-            segments={["Overlay Layers", "Basemaps"]}
+            segments={["Basemaps", "Overlay Layers"]}
             value={selectedTab}
             onClick={(s) => setSelectedTab(s as Segment)}
           />

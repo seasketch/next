@@ -1,24 +1,73 @@
 {
+  "3d Terrain": "",
+  "<0>Unsupported</0>": {
+    " Users will not be able to control the visibility and ordering of individual layers": {
+      "": "<0>Unsupported</0>. Users will not be able to control the visibility and ordering of individual layers."
+    }
+  },
+  "Access Control": "",
   "Access Control Settings": "",
+  "Access limited to listed user groups, as well as project administrators": "",
+  "Accessible only to project administrators": "",
+  "Accessible to anyone with project access": "",
+  "Actions": "Actions",
+  "Add Option": "",
+  "Add description": "",
   "Admins Only": "",
+  "Always on": "",
   "Anyone can visit the project and participate": {
     " Can only be enabled for <1>listed</1> projects": {
       "": "Anyone can visit the project and participate. Can only be enabled for <1>listed</1> projects."
     }
   },
+  "ArcGIS Dynamic Map Service": "ArcGIS Dynamic Map Service",
+  "Are you sure you want to delete the basemap?": "",
+  "Attribution": "",
+  "Basemap Integration": "",
+  "Basemap Labels": "",
   "Basic Settings": "",
   "Brief description below the name": "",
+  "By Group": "",
+  "By identifying the lowest labels layer in this basemap you will be able to configure layers to render below them": {
+    "": "By identifying the lowest labels layer in this basemap you will be able to configure layers to render below them."
+  },
+  "Cancel": "",
+  "Change label": "",
+  "Choose a location where you want SeaSketch to store imported map data": {
+    " It's best to pick a data center close to your users for best performance": {
+      "": "Choose a location where you want SeaSketch to store imported map data. It's best to pick a data center close to your users for best performance."
+    }
+  },
   "Choose an Image": "",
   "Contact <2>support</2> to discuss changing": {
     "": "Contact <2>support</2> to discuss changing."
   },
   "Copied URL": "",
+  "Cover Basemap": "",
+  "Data Source Details": "Data Source Details",
+  "Data Storage Location": "",
+  "Delete": "",
   "Description": "",
+  "Display this layer under any text labels on the basemap": {
+    "": ""
+  },
+  "Download": "Download",
   "Draw a box around the region where your project will be used": {
     " SeaSketch will ensure that users see the entirety of this area when they first load the map, regardless of their display size": {
       "": "Draw a box around the region where your project will be used. SeaSketch will ensure that users see the entirety of this area when they first load the map, regardless of their display size."
     }
   },
+  "Dynamic Layers": "Dynamic Layers",
+  "Dynamic layers are supported": {
+    "": ""
+  },
+  "Dynamic layers are unsupported": {
+    "": ""
+  },
+  "Edit Basemap": "Edit Basemap",
+  "Edit Layer": "Edit Layer",
+  "Edit description": "",
+  "Enable data download": "Enable data download",
   "Error fetching settings": {
     "": ""
   },
@@ -29,10 +78,27 @@
   "Featured projects will be displayed more prominently on project listing pages": {
     "": ""
   },
+  "File Size": "File Size",
+  "First Option Name": "",
+  "GeoJSON data hosted on SeaSketch": "GeoJSON data hosted on SeaSketch",
+  "Groups of mutually exclusive layers can be chosen from a dropdown menu": "",
+  "Groups of mutually exclusive layers can be chosen from a list of radio options": "",
+  "If enabled, users will be able to download this dataset in GeoJSON vector format using the context menu": {
+    "": "If enabled, users will be able to download this dataset in GeoJSON vector format using the context menu."
+  },
+  "If set, a short attribution string will be shown at the bottom of the map": {
+    "": ""
+  },
+  "Image Service": "",
   "Invite Only": "",
+  "Labels Layer": "Labels Layer",
   "Logo": "",
   "Logo Link URL": "",
   "Map Extent Settings": "",
+  "Name": "",
+  "None": "",
+  "Off by default": "",
+  "On by default": "",
   "Only approved participants can visit the project": {
     " Admins can invite users by email and users can also request access": {
       "": "Only approved participants can visit the project. Admins can invite users by email and users can also request access."
@@ -41,19 +107,51 @@
   "Only project administrators will be able to visit the site": {
     "": ""
   },
+  "Option Type": "",
+  "Optional Layers": "Optional Layers",
+  "Original Source": "Original Source",
   "Permanent Project URL": "",
   "Project Name": "",
   "Public": "",
   "Public Listing": "",
   "Redraw Bounds": "",
+  "Render this layer above the basemap entirely": {
+    "": ""
+  },
+  "Save": "",
   "SeaSketch Developer Settings": "",
+  "Set layers": "",
+  "Show Under Labels": "",
+  "Simple switch to toggle a set of optional layers": "",
+  "Source Server": "Source Server",
+  "Source Type": "Source Type",
+  "Supported": {
+    " Users can control layer visibility, opacity, and ordering": {
+      "": "Supported. Users can control layer visibility, opacity, and ordering."
+    }
+  },
+  "Terrain Exaggeration": "",
+  "Terrain will be enabled whenever this basemap is visible": "",
+  "Terrain works best with imagery data and is often best disabled otherwise": "",
   "These options are only visible to the SeaSketch team": {
     "": ""
   },
   "These settings will control who can find and visit your project": {
     "": ""
   },
+  "Title": "",
+  "Update from ArcGIS": "Update from ArcGIS",
+  "Upload": "Upload",
   "Uploading": "",
+  "Users can turn off 3d terrain if desired": "",
+  "Users can turn on 3d terrain if desired": "",
+  "Vector Style": "Vector Style",
+  "Vector data hosted on ArcGIS Server": "Vector data hosted on ArcGIS Server",
+  "Vector layers can be styled using <2>MapBox GL Style Layers</2>": {
+    " Don't specify a <4>source</4> or <6>id</6> property on your layers, those will be managed for you by SeaSketch": {
+      "": "Vector layers can be styled using <2>MapBox GL Style Layers</2>. Don't specify a <4>source</4> or <6>id</6> property on your layers, those will be managed for you by SeaSketch."
+    }
+  },
   "We recommend a square PNG logo with transparent background of at least <1>128x128</1> pixels": {
     "": "We recommend a square PNG logo with transparent background of at least <1>128x128</1> pixels."
   },
@@ -62,6 +160,7 @@
       "": "When enabled, this project will be listed on the SeaSketch <2>projects page</2> and accessible to search engines. We recommend enabling this setting even for private projects so that your users can find the project easily and request access if necessary."
     }
   },
+  "With Optional Layers you can provide a means for users to toggle components of the basemap like labels, or even choose among mutually exclusive versions of a dataset like annual data": "With Optional Layers you can provide a means for users to toggle components of the basemap like labels, or even choose among mutually exclusive versions of a dataset like annual data",
   "You cannot unlist a public project": {
     "": ""
   }
