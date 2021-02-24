@@ -2620,10 +2620,23 @@ CREATE FUNCTION public.data_hosting_quota(p public.projects) RETURNS integer
 --
 
 CREATE FUNCTION public.data_hosting_quota_left(pid integer) RETURNS integer
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    select projects_data_hosting_quota(projects.*) - projects_data_hosting_quota_used(projects.*) from projects where id = pid;
+    declare
+      sum_bytes bigint;
+      quota int;
+    begin
+      select coalesce(sum(byte_length), 0) into sum_bytes from data_sources where project_id = pid;
+      return 524288000 - sum_bytes;
+    end;
   $$;
+
+
+--
+-- Name: FUNCTION data_hosting_quota_left(pid integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.data_hosting_quota_left(pid integer) IS '@omit';
 
 
 --
@@ -7094,90 +7107,6 @@ COMMENT ON FUNCTION public.unsubscribed("userId" integer) IS '@omit';
 
 
 --
--- Name: optional_basemap_layers; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.optional_basemap_layers (
-    id integer NOT NULL,
-    basemap_id integer NOT NULL,
-    layers text[] DEFAULT ARRAY[]::text[] NOT NULL,
-    default_visibility boolean DEFAULT true NOT NULL,
-    name text NOT NULL,
-    description text,
-    group_type public.optional_basemap_layers_group_type DEFAULT 'NONE'::public.optional_basemap_layers_group_type NOT NULL,
-    metadata jsonb,
-    options jsonb
-);
-
-
---
--- Name: TABLE optional_basemap_layers; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.optional_basemap_layers IS '
-@omit all
-@simpleCollections only
-Available only for MapBox GL Style-based basemaps. Specifies optional components of the basemap that can be shown or hidden.
-';
-
-
---
--- Name: COLUMN optional_basemap_layers.layers; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.optional_basemap_layers.layers IS 'IDs for layers in the gl style that will be toggled by this option.';
-
-
---
--- Name: COLUMN optional_basemap_layers.name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.optional_basemap_layers.name IS 'Label that will be given in the UI';
-
-
---
--- Name: COLUMN optional_basemap_layers.group_type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.optional_basemap_layers.group_type IS 'Specify RADIO or SELECT if this option should be presented as a group of options. Useful for mutually exclusive views like different years for the same dataset, or a heatmap display of density for multiple species where a single species must be chosen from a list. If left null, the option will be treated as standalone.';
-
-
---
--- Name: COLUMN optional_basemap_layers.metadata; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.optional_basemap_layers.metadata IS 'JSON representation of a ProseMirror document with layer metadata.';
-
-
---
--- Name: update_basemap_layer_radio_group_label(integer, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text) RETURNS public.optional_basemap_layers
-    LANGUAGE sql SECURITY DEFINER
-    AS $$
-    update 
-      optional_basemap_layers 
-    set group_label = new_label 
-    where 
-      group_label = old_label and 
-      basemap_id = "basemapId" and
-      session_is_admin((select project_id from basemaps where basemaps.id = "basemapId"))
-    returning 
-      optional_basemap_layers.*;
-  $$;
-
-
---
--- Name: FUNCTION update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text) IS '
-Update the group_label for multiple OptionalBasemapLayers
-';
-
-
---
 -- Name: update_post(integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8080,6 +8009,62 @@ COMMENT ON TABLE public.jwks IS '
 @omit
 JSON web key set table. Design guided by https://tools.ietf.org/html/rfc7517
 ';
+
+
+--
+-- Name: optional_basemap_layers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.optional_basemap_layers (
+    id integer NOT NULL,
+    basemap_id integer NOT NULL,
+    layers text[] DEFAULT ARRAY[]::text[] NOT NULL,
+    default_visibility boolean DEFAULT true NOT NULL,
+    name text NOT NULL,
+    description text,
+    group_type public.optional_basemap_layers_group_type DEFAULT 'NONE'::public.optional_basemap_layers_group_type NOT NULL,
+    metadata jsonb,
+    options jsonb
+);
+
+
+--
+-- Name: TABLE optional_basemap_layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.optional_basemap_layers IS '
+@omit all
+@simpleCollections only
+Available only for MapBox GL Style-based basemaps. Specifies optional components of the basemap that can be shown or hidden.
+';
+
+
+--
+-- Name: COLUMN optional_basemap_layers.layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.optional_basemap_layers.layers IS 'IDs for layers in the gl style that will be toggled by this option.';
+
+
+--
+-- Name: COLUMN optional_basemap_layers.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.optional_basemap_layers.name IS 'Label that will be given in the UI';
+
+
+--
+-- Name: COLUMN optional_basemap_layers.group_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.optional_basemap_layers.group_type IS 'Specify RADIO or SELECT if this option should be presented as a group of options. Useful for mutually exclusive views like different years for the same dataset, or a heatmap display of density for multiple species where a single species must be chosen from a list. If left null, the option will be treated as standalone.';
+
+
+--
+-- Name: COLUMN optional_basemap_layers.metadata; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.optional_basemap_layers.metadata IS 'JSON representation of a ProseMirror document with layer metadata.';
 
 
 --
@@ -19467,22 +19452,6 @@ GRANT ALL ON FUNCTION public.unsubscribed("userId" integer) TO graphile;
 
 
 --
--- Name: TABLE optional_basemap_layers; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.optional_basemap_layers TO seasketch_user;
-GRANT SELECT ON TABLE public.optional_basemap_layers TO anon;
-
-
---
--- Name: FUNCTION update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_basemap_layer_radio_group_label("basemapId" integer, old_label text, new_label text) TO seasketch_user;
-
-
---
 -- Name: FUNCTION update_post("postId" integer, message jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19908,6 +19877,14 @@ GRANT INSERT,UPDATE ON TABLE public.interactivity_settings TO seasketch_user;
 --
 
 GRANT ALL ON TABLE public.jwks TO graphile;
+
+
+--
+-- Name: TABLE optional_basemap_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.optional_basemap_layers TO seasketch_user;
+GRANT SELECT ON TABLE public.optional_basemap_layers TO anon;
 
 
 --

@@ -6696,17 +6696,6 @@ type Mutation {
     input: UpdateBasemapInteractivitySettingByNodeIdInput!
   ): UpdateBasemapInteractivitySettingPayload
 
-  """
-  Update the group_label for multiple OptionalBasemapLayers
-  
-  """
-  updateBasemapLayerRadioGroupLabel(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateBasemapLayerRadioGroupLabelInput!
-  ): UpdateBasemapLayerRadioGroupLabelPayload
-
   """Updates a single `CommunityGuideline` using a unique key and a patch."""
   updateCommunityGuideline(
     """
@@ -8433,7 +8422,6 @@ type Query implements Node {
   
   """
   currentProject: Project
-  dataHostingQuotaLeft(pid: Int): Int
   dataLayer(id: Int!): DataLayer
   dataLayerByInteractivitySettingsId(interactivitySettingsId: Int!): DataLayer
 
@@ -11082,39 +11070,6 @@ type UpdateBasemapInteractivitySettingPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
-"""All input for the `updateBasemapLayerRadioGroupLabel` mutation."""
-input UpdateBasemapLayerRadioGroupLabelInput {
-  basemapId: Int
-
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  newLabel: String
-  oldLabel: String
-}
-
-"""The output of our `updateBasemapLayerRadioGroupLabel` mutation."""
-type UpdateBasemapLayerRadioGroupLabelPayload {
-  """
-  Reads a single `Basemap` that is related to this `OptionalBasemapLayer`.
-  """
-  basemap: Basemap
-
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  optionalBasemapLayer: OptionalBasemapLayer
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

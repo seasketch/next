@@ -5076,8 +5076,6 @@ export type Mutation = {
   updateBasemapInteractivitySetting?: Maybe<UpdateBasemapInteractivitySettingPayload>;
   /** Updates a single `BasemapInteractivitySetting` using its globally unique id and a patch. */
   updateBasemapInteractivitySettingByNodeId?: Maybe<UpdateBasemapInteractivitySettingPayload>;
-  /** Update the group_label for multiple OptionalBasemapLayers */
-  updateBasemapLayerRadioGroupLabel?: Maybe<UpdateBasemapLayerRadioGroupLabelPayload>;
   /** Updates a single `CommunityGuideline` using a unique key and a patch. */
   updateCommunityGuideline?: Maybe<UpdateCommunityGuidelinePayload>;
   /** Updates a single `CommunityGuideline` using its globally unique id and a patch. */
@@ -5931,12 +5929,6 @@ export type MutationUpdateBasemapInteractivitySettingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateBasemapInteractivitySettingByNodeIdArgs = {
   input: UpdateBasemapInteractivitySettingByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateBasemapLayerRadioGroupLabelArgs = {
-  input: UpdateBasemapLayerRadioGroupLabelInput;
 };
 
 
@@ -7309,7 +7301,6 @@ export type Query = Node & {
    * `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
    */
   currentProject?: Maybe<Project>;
-  dataHostingQuotaLeft?: Maybe<Scalars['Int']>;
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
   /** Reads a single `DataLayer` using its globally unique `ID`. */
@@ -7664,22 +7655,6 @@ export type QueryCommunityGuidelineArgs = {
  */
 export type QueryCommunityGuidelineByNodeIdArgs = {
   nodeId: Scalars['ID'];
-};
-
-
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
-export type QueryDataHostingQuotaLeftArgs = {
-  pid?: Maybe<Scalars['Int']>;
 };
 
 
@@ -10581,33 +10556,6 @@ export type UpdateBasemapInteractivitySettingPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
-/** All input for the `updateBasemapLayerRadioGroupLabel` mutation. */
-export type UpdateBasemapLayerRadioGroupLabelInput = {
-  basemapId?: Maybe<Scalars['Int']>;
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  newLabel?: Maybe<Scalars['String']>;
-  oldLabel?: Maybe<Scalars['String']>;
-};
-
-/** The output of our `updateBasemapLayerRadioGroupLabel` mutation. */
-export type UpdateBasemapLayerRadioGroupLabelPayload = {
-  __typename?: 'UpdateBasemapLayerRadioGroupLabelPayload';
-  /** Reads a single `Basemap` that is related to this `OptionalBasemapLayer`. */
-  basemap?: Maybe<Basemap>;
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
