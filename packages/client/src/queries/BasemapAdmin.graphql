@@ -20,7 +20,7 @@ query GetBasemaps($slug: String!) {
         id
         defaultVisibility
         description
-        groupLabel
+        options
         groupType
         layers
         metadata
@@ -81,7 +81,7 @@ mutation CreateBasemap(
         id
         defaultVisibility
         description
-        groupLabel
+        options
         groupType
         layers
         metadata
@@ -123,7 +123,7 @@ query GetBasemap($id: Int!) {
       basemapId
       defaultVisibility
       description
-      groupLabel
+      options
       groupType
       id
       layers
@@ -230,7 +230,7 @@ query OptionalLayer($id: Int!) {
     basemapId
     defaultVisibility
     description
-    groupLabel
+    options
     groupType
     layers
     metadata
@@ -251,7 +251,7 @@ mutation CreateOptionalLayer(
   $name: String!
   $basemapId: Int!
   $groupType: OptionalBasemapLayersGroupType
-  $groupLabel: String
+  $options: JSON
 ) {
   createOptionalBasemapLayer(
     input: {
@@ -259,7 +259,7 @@ mutation CreateOptionalLayer(
         name: $name
         basemapId: $basemapId
         groupType: $groupType
-        groupLabel: $groupLabel
+        options: $options
       }
     }
   ) {
@@ -268,7 +268,7 @@ mutation CreateOptionalLayer(
       basemapId
       defaultVisibility
       description
-      groupLabel
+      options
       groupType
       layers
       metadata
@@ -282,6 +282,7 @@ mutation UpdateOptionalLayer(
   $name: String
   $description: String
   $defaultVisibility: Boolean
+  $metadata: JSON
 ) {
   updateOptionalBasemapLayer(
     input: {
@@ -290,6 +291,7 @@ mutation UpdateOptionalLayer(
         name: $name
         description: $description
         defaultVisibility: $defaultVisibility
+        metadata: $metadata
       }
     }
   ) {
@@ -298,6 +300,7 @@ mutation UpdateOptionalLayer(
       description
       id
       defaultVisibility
+      metadata
     }
   }
 }
@@ -315,6 +318,47 @@ mutation UpdateOptionalBasemapLayerLayerList($id: Int!, $layers: [String]) {
     optionalBasemapLayer {
       id
       layers
+    }
+  }
+}
+
+mutation UpdateOptionalBasemapLayerOptions($id: Int!, $options: JSON!) {
+  updateOptionalBasemapLayer(input: { id: $id, patch: { options: $options } }) {
+    optionalBasemapLayer {
+      id
+      options
+    }
+  }
+}
+
+query GetOptionalBasemapLayer($id: Int!) {
+  optionalBasemapLayer(id: $id) {
+    id
+    basemapId
+    name
+    description
+    defaultVisibility
+    groupType
+    layers
+    metadata
+    options
+  }
+}
+
+query GetOptionalBasemapLayerMetadata($id: Int!) {
+  optionalBasemapLayer(id: $id) {
+    id
+    metadata
+  }
+}
+
+mutation UpdateOptionalBasemapLayerMetadata($id: Int!, $metadata: JSON) {
+  updateOptionalBasemapLayer(
+    input: { id: $id, patch: { metadata: $metadata } }
+  ) {
+    optionalBasemapLayer {
+      id
+      metadata
     }
   }
 }

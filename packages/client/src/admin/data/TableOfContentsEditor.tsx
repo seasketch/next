@@ -6,7 +6,7 @@ import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
-import MetadataModal from "../../dataLayers/MetadataModal";
+import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
 import TableOfContents, {
   ClientTableOfContentsItem,
 } from "../../dataLayers/tableOfContents/TableOfContents";
@@ -24,7 +24,7 @@ import { generateStableId } from "./arcgis/arcgis";
 import DeleteTableOfContentsItemModal from "./DeleteTableOfContentsItemModal";
 import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
-import MetadataEditor from "./MetadataEditor";
+import TableOfContentsMetadataEditor from "./TableOfContentsMetadataEditor";
 import ZIndexEditor from "./ZIndexEditor";
 
 export default function TableOfContentsEditor() {
@@ -317,13 +317,13 @@ export default function TableOfContentsEditor() {
         />
       )}
       {openMetadataItemId && (
-        <MetadataEditor
+        <TableOfContentsMetadataEditor
           id={openMetadataItemId}
           onRequestClose={() => setOpenMetadataItemId(undefined)}
         />
       )}
       {openMetadataViewerId && (
-        <MetadataModal
+        <TableOfContentsMetadataModal
           id={openMetadataViewerId}
           onRequestClose={() => setOpenMetadataViewerId(undefined)}
         />

@@ -1,5 +1,5 @@
 import { MutationResult } from "@apollo/client";
-import React, { useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import Spinner from "./Spinner";
 
 interface RadioItem<T> {
@@ -13,7 +13,7 @@ interface RadioGroupProps<T> {
   items: RadioItem<T>[];
   onChange?: (value: T) => void;
   value: T;
-  legend?: string;
+  legend?: string | ReactNode;
   error?: string;
   state?: "SAVED" | "SAVING" | "NONE";
   className?: string;

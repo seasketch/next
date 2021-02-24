@@ -27,7 +27,6 @@ export interface CreateOptionaLayerProps {
 
 export default function CreateOptionalLayerModal({
   onRequestClose,
-  groupLabel,
   basemapId,
 }: CreateOptionaLayerProps) {
   const { t } = useTranslation(["admin"]);
@@ -36,7 +35,7 @@ export default function CreateOptionalLayerModal({
     firstOptionName?: string;
     groupType: OptionalBasemapLayersGroupType;
   }>({
-    name: groupLabel || "",
+    name: "",
     groupType: OptionalBasemapLayersGroupType.None,
   });
   const [createOption, createOptionState] = useCreateOptionalLayerMutation();
@@ -45,28 +44,19 @@ export default function CreateOptionalLayerModal({
   const error = createOptionState.error;
   function onSave() {
     let props: any = {};
-    if (groupLabel) {
+    if (state.groupType === OptionalBasemapLayersGroupType.None) {
       props = {
         basemapId,
-        groupLabel: state.name,
-        type: state.groupType,
-        name: state.firstOptionName,
+        name: state.name,
+        groupType: state.groupType,
       };
     } else {
-      if (state.groupType === OptionalBasemapLayersGroupType.None) {
-        props = {
-          basemapId,
-          name: state.name,
-          type: state.groupType,
-        };
-      } else {
-        props = {
-          basemapId,
-          groupLabel: state.name,
-          type: state.groupType,
-          name: state.firstOptionName,
-        };
-      }
+      props = {
+        basemapId,
+        name: state.name,
+        groupType: state.groupType,
+        options: [{ name: state.firstOptionName }],
+      };
     }
     createOption({
       variables: props,
@@ -89,11 +79,15 @@ export default function CreateOptionalLayerModal({
           });
         }
       },
-    }).then(() => {
-      if (onRequestClose) {
-        onRequestClose();
-      }
-    });
+    })
+      .then(() => {
+        if (onRequestClose) {
+          onRequestClose();
+        }
+      })
+      .catch((e) => {
+        console.error(e);
+      });
   }
 
   return (
@@ -170,24 +164,23 @@ export default function CreateOptionalLayerModal({
             ]}
           />
         </div>
-        {state.groupType !== OptionalBasemapLayersGroupType.None &&
-          !groupLabel && (
-            <div className="max-w-xs mt-5">
-              <TextInput
-                error={error ? error.message : undefined}
-                id="firstOptionName"
-                label={t("First Option Name")}
-                disabled={isLoading}
-                value={state.firstOptionName || ""}
-                onChange={(val) =>
-                  setState((prev) => ({
-                    ...prev,
-                    firstOptionName: val,
-                  }))
-                }
-              />
-            </div>
-          )}
+        {state.groupType !== OptionalBasemapLayersGroupType.None && (
+          <div className="max-w-xs mt-5">
+            <TextInput
+              error={error ? error.message : undefined}
+              id="firstOptionName"
+              label={t("Default option name")}
+              disabled={isLoading}
+              value={state.firstOptionName || ""}
+              onChange={(val) =>
+                setState((prev) => ({
+                  ...prev,
+                  firstOptionName: val,
+                }))
+              }
+            />
+          </div>
+        )}
       </div>
     </Modal>
   );

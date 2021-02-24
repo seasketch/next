@@ -7105,8 +7105,8 @@ CREATE TABLE public.optional_basemap_layers (
     name text NOT NULL,
     description text,
     group_type public.optional_basemap_layers_group_type DEFAULT 'NONE'::public.optional_basemap_layers_group_type NOT NULL,
-    group_label text,
-    metadata jsonb
+    metadata jsonb,
+    options jsonb
 );
 
 
@@ -7140,13 +7140,6 @@ COMMENT ON COLUMN public.optional_basemap_layers.name IS 'Label that will be giv
 --
 
 COMMENT ON COLUMN public.optional_basemap_layers.group_type IS 'Specify RADIO or SELECT if this option should be presented as a group of options. Useful for mutually exclusive views like different years for the same dataset, or a heatmap display of density for multiple species where a single species must be chosen from a list. If left null, the option will be treated as standalone.';
-
-
---
--- Name: COLUMN optional_basemap_layers.group_label; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.optional_basemap_layers.group_label IS 'If RADIO or SELECT group_type is specified, this label will be used for the form input. It also specifies _which_ group this option should be shown for. Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for multiple options at once.';
 
 
 --
@@ -9904,13 +9897,6 @@ CREATE TRIGGER before_survey_update_trigger BEFORE INSERT OR UPDATE ON public.su
 --
 
 CREATE TRIGGER before_valid_children_insert_or_update_trigger BEFORE INSERT OR UPDATE ON public.sketch_classes_valid_children FOR EACH ROW EXECUTE FUNCTION public.before_valid_children_insert_or_update();
-
-
---
--- Name: optional_basemap_layers check_optional_basemap_layers; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER check_optional_basemap_layers BEFORE INSERT OR UPDATE ON public.optional_basemap_layers FOR EACH ROW EXECUTE FUNCTION public.check_optional_basemap_layers_columns();
 
 
 --

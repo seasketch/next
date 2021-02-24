@@ -154,7 +154,7 @@ export type ClientBasemap = Pick<
     OptionalBasemapLayer,
     | "basemapId"
     | "id"
-    | "groupLabel"
+    | "options"
     | "name"
     | "groupType"
     | "defaultVisibility"
@@ -292,8 +292,8 @@ class MapContextManager {
       style,
       center: this.initialCameraOptions?.center || [1.9, 18.7],
       zoom: this.initialCameraOptions?.zoom || 0.09527381899319892,
-      pitch: this.initialCameraOptions?.pitch,
-      bearing: this.initialCameraOptions?.bearing,
+      pitch: this.initialCameraOptions?.pitch || 0,
+      bearing: this.initialCameraOptions?.bearing || 0,
       maxPitch: 70,
       // @ts-ignore
       optimizeForTerrain: true,
@@ -398,12 +398,20 @@ class MapContextManager {
     const states: { [layerName: string]: any } = {};
     if (basemap) {
       for (const layer of basemap.optionalBasemapLayers) {
-        if (preferences) {
-          const preference = preferences[layer.groupLabel || layer.name];
+        if (preferences && Object.keys(preferences).length > 0) {
+          const preference = preferences[layer.name];
           states[layer.id] =
             preference !== undefined ? preference : layer.defaultVisibility;
         } else {
-          states[layer.id] = layer.defaultVisibility;
+          if (layer.groupType === OptionalBasemapLayersGroupType.None) {
+            states[layer.id] = layer.defaultVisibility;
+          } else if (
+            layer.groupType === OptionalBasemapLayersGroupType.Select
+          ) {
+            states[layer.id] = (layer.options || [])[0]?.name || null;
+          } else {
+            states[layer.id] = (layer.options || [])[0]?.name || null;
+          }
         }
       }
     }
@@ -606,6 +614,8 @@ class MapContextManager {
       ...baseStyle,
       layers: [...(baseStyle.layers || [])],
       sources: { ...(baseStyle.sources || {}) },
+      // @ts-ignore
+      terrain: undefined,
     };
     if (this.internalState.terrainEnabled) {
       const newSource = {
@@ -828,33 +838,46 @@ class MapContextManager {
       this.internalState.basemapOptionalLayerStatePreferences
     );
 
-    const hiddenOptionalLayers: { [layerId: string]: true } = {};
+    // If set to true, display the optional layer, else filter out
+    const optionalLayersToggleState: { [layerId: string]: boolean } = {};
     for (const layer of basemap.optionalBasemapLayers) {
-      if (optionalBasemapLayerStates[layer.id] === false) {
+      if (layer.groupType === OptionalBasemapLayersGroupType.None) {
         for (const id of layer.layers) {
           if (id) {
-            hiddenOptionalLayers[id] = true;
+            optionalLayersToggleState[id] =
+              optionalLayersToggleState[id] ||
+              optionalBasemapLayerStates[layer.id];
           }
+        }
+      } else {
+        // Select or Radio-type basemap
+        for (const option of (layer.options || []) as {
+          name: string;
+          description?: string;
+          layers?: string[];
+        }[]) {
+          // if (optionalBasemapLayerStates[layer.id] !== option.name) {
+          // hide all layers associated with this option
+          for (const id of option.layers || []) {
+            if (id) {
+              optionalLayersToggleState[id] =
+                optionalLayersToggleState[id] ||
+                optionalBasemapLayerStates[layer.id] === option.name;
+            }
+          }
+          // }
         }
       }
     }
-    // for (const layer of basemap.optionalBasemapLayers || []) {
-    //   const enabled = optionalBasemapLayerStates[layer.id];
-    //   for (const layerId of layer.layers) {
-    //     if (layerId) {
-    //       stylesSubjectToToggle[layerId] =
-    //         enabled || !!stylesSubjectToToggle[layerId];
-    //     }
-    //   }
-    // }
-    // for (const layerId in stylesSubjectToToggle) {
-    //   if (!stylesSubjectToToggle[layerId]) {
 
-    //   }
-    // }
-    baseStyle.layers = baseStyle.layers.filter(
-      (layer) => !hiddenOptionalLayers[layer.id]
-    );
+    baseStyle.layers = baseStyle.layers.filter((layer) => {
+      const state = optionalLayersToggleState[layer.id];
+      if (state === false) {
+        return false;
+      } else {
+        return true;
+      }
+    });
 
     return { style: baseStyle, sprites };
   }
@@ -1150,16 +1173,10 @@ class MapContextManager {
   };
 
   updateOptionalBasemapSetting(
-    layer: Pick<
-      OptionalBasemapLayer,
-      "id" | "groupLabel" | "groupType" | "name"
-    >,
+    layer: Pick<OptionalBasemapLayer, "id" | "options" | "groupType" | "name">,
     value: any
   ) {
-    const key =
-      layer.groupType === OptionalBasemapLayersGroupType.None
-        ? layer.name
-        : layer.groupLabel!;
+    const key = layer.name;
     this.setState((prev) => ({
       ...prev,
       basemapOptionalLayerStatePreferences: {

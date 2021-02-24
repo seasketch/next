@@ -1,5 +1,5 @@
 import { Layer } from "mapbox-gl";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import {
@@ -24,6 +24,7 @@ import Button from "../../components/Button";
 import CreateOptionalLayerModal from "./CreateOptionalLayerModal";
 import OptionalBasemapLayerControl from "../../dataLayers/OptionalBasemapLayerControl";
 import OptionalBasemapLayerEditor from "../../dataLayers/OptionalBasemapLayerEditor";
+import useDebounce from "../../useDebounce";
 
 const TERRAIN_URL = "mapbox://mapbox.mapbox-terrain-dem-v1";
 
@@ -49,12 +50,50 @@ export default function BasemapEditorPanel({
   const [mutateItem, mutateItemState] = useUpdateBasemapMutation({});
   const [updateUrl, updateUrlMutationState] = useUpdateBasemapUrlMutation();
   const [set3dTerrain, set3dTerrainMutationState] = useSet3dTerrainMutation();
+  const [exaggeration, setExaggeration] = useState<number>(
+    data?.basemap?.terrainExaggeration
+  );
+  const debouncedExaggeration = useDebounce(exaggeration, 50);
+  const basemap = data?.basemap;
+
+  useEffect(() => {
+    if (basemap && !exaggeration) {
+      setExaggeration(parseFloat(basemap.terrainExaggeration));
+    }
+  }, [basemap]);
+
+  useEffect(() => {
+    if (
+      basemap &&
+      exaggeration &&
+      debouncedExaggeration &&
+      parseFloat(basemap.terrainExaggeration) !==
+        parseFloat(debouncedExaggeration)
+    ) {
+      client.writeFragment({
+        id: `Basemap:${basemap.id}`,
+        fragment: gql`
+          fragment UpdateTerrainExaggeration on Basemap {
+            terrainExaggeration
+          }
+        `,
+        data: {
+          terrainExaggeration: debouncedExaggeration,
+        },
+      });
+      updateExaggeration({
+        variables: {
+          id: basemap.id,
+          terrainExaggeration: debouncedExaggeration,
+        },
+      });
+    }
+  }, [debouncedExaggeration, basemap]);
   const [
     updateExaggeration,
     updateExaggerationMutationState,
   ] = useUpdateTerrainExaggerationMutation();
 
-  const basemap = data?.basemap;
   const mapboxStyle = useMapboxStyle(
     basemap && basemap.type === BasemapType.Mapbox ? basemap.url : undefined
   );
@@ -256,7 +295,7 @@ export default function BasemapEditorPanel({
             }}
           />
           <InputBlock
-            className={`mt-5 ${
+            className={`mt-5 relative ${
               terrainSetting === "NONE"
                 ? "text-gray-400 pointer-events-none opacity-20"
                 : ""
@@ -268,35 +307,15 @@ export default function BasemapEditorPanel({
               <>
                 <input
                   type="range"
-                  value={basemap.terrainExaggeration || 1.2}
+                  value={exaggeration}
                   min={0.5}
                   max={3}
                   step={0.1}
                   onChange={(e) => {
-                    const value = parseFloat(e.target.value);
-                    // console.log(value);
-                    client.writeFragment({
-                      id: `Basemap:${basemap.id}`,
-                      fragment: gql`
-                        fragment UpdateTerrainExaggeration on Basemap {
-                          terrainExaggeration
-                        }
-                      `,
-                      data: {
-                        terrainExaggeration: value,
-                      },
-                    });
-                    updateExaggeration({
-                      variables: {
-                        id: basemap.id,
-                        terrainExaggeration: value,
-                      },
-                    });
+                    setExaggeration(parseFloat(e.target.value));
                   }}
                 />
-                <div className="absolute right-48">
-                  {basemap.terrainExaggeration || 1}x
-                </div>
+                <div className="absolute right-44">{exaggeration || 1.2}x</div>
               </>
             }
           ></InputBlock>
@@ -313,8 +332,8 @@ export default function BasemapEditorPanel({
               <br />
             </p>
             {basemap.optionalBasemapLayers.map((layer) => (
-              <div className="my-2">
-                <OptionalBasemapLayerEditor layer={layer} />
+              <div className="my-2" key={layer.id}>
+                <OptionalBasemapLayerEditor layerId={layer.id} />
               </div>
             ))}
             <Button

@@ -4,6 +4,7 @@ import {
   OptionalBasemapLayer,
   useGetBasemapQuery,
   useUpdateOptionalBasemapLayerLayerListMutation,
+  useUpdateOptionalBasemapLayerOptionsMutation,
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 import { useMapboxStyle } from "../../useMapboxStyle";
@@ -13,12 +14,13 @@ import Button from "../../components/Button";
 export default function OptionalBasemapLayerSetLayersModal({
   layer,
   onRequestClose,
+  optionName,
 }: {
   layer: Pick<
     OptionalBasemapLayer,
     | "id"
     | "name"
-    | "groupLabel"
+    | "options"
     | "groupType"
     | "defaultVisibility"
     | "description"
@@ -26,11 +28,23 @@ export default function OptionalBasemapLayerSetLayersModal({
     | "basemapId"
   >;
   onRequestClose?: () => void;
+  optionName?: string | null;
 }) {
   const { t } = useTranslation(["admin"]);
-  const [layers, setLayers] = useState<string[]>(
-    layer.layers === null ? [] : (layer.layers as string[])
-  );
+  let initialLayers: string[] = Array.isArray(layer.layers)
+    ? (layer.layers as string[])
+    : [];
+
+  if (optionName) {
+    const option = (layer.options || []).find(
+      (o: { name: string }) => o.name === optionName
+    );
+    if (!option) {
+      throw Error(`Could not find option with name ${optionName}`);
+    }
+    initialLayers = option.layers || [];
+  }
+  const [layers, setLayers] = useState<string[]>(initialLayers);
   const { data, loading, error } = useGetBasemapQuery({
     variables: {
       id: layer.basemapId,
@@ -42,14 +56,41 @@ export default function OptionalBasemapLayerSetLayersModal({
     mutate,
     mutationState,
   ] = useUpdateOptionalBasemapLayerLayerListMutation();
+  const [
+    updateOptionsMutation,
+    updateOptionsMutationState,
+  ] = useUpdateOptionalBasemapLayerOptionsMutation();
 
   const onSave = async () => {
-    await mutate({
-      variables: {
-        id: layer.id,
-        layers: layers,
-      },
-    });
+    if (optionName) {
+      const options = [...layer.options];
+      let option = options.find((o: { name: string }) => o.name === optionName);
+      if (!option) {
+        throw new Error(`Could not find option named ${optionName}`);
+      }
+      const i = options.indexOf(option);
+      const newOptions = [
+        ...options.slice(0, i),
+        {
+          ...option,
+          layers,
+        },
+        ...options.slice(i + 1),
+      ];
+      await updateOptionsMutation({
+        variables: {
+          id: layer.id,
+          options: newOptions,
+        },
+      });
+    } else {
+      await mutate({
+        variables: {
+          id: layer.id,
+          layers: layers,
+        },
+      });
+    }
     if (onRequestClose) {
       onRequestClose();
     }
@@ -62,6 +103,18 @@ export default function OptionalBasemapLayerSetLayersModal({
       footer={
         <div className="text-left">
           <Button
+            small
+            className="float-right ml-2 mt-1"
+            label="Select All"
+            onClick={() => setLayers(style?.layers?.map((l) => l.id) || [])}
+          />
+          <Button
+            small
+            className="float-right mt-1"
+            label="Select None"
+            onClick={() => setLayers([])}
+          />
+          <Button
             label={t("Cancel")}
             className="mr-2"
             onClick={onRequestClose}
@@ -70,8 +123,12 @@ export default function OptionalBasemapLayerSetLayersModal({
             label={t("Save")}
             primary
             onClick={onSave}
-            disabled={mutationState.loading}
-            loading={mutationState.loading}
+            disabled={
+              mutationState.loading || updateOptionsMutationState.loading
+            }
+            loading={
+              mutationState.loading || updateOptionsMutationState.loading
+            }
           />
         </div>
       }
@@ -91,7 +148,7 @@ export default function OptionalBasemapLayerSetLayersModal({
               {style.layers?.map((lyr) => {
                 const checked = layers.indexOf(lyr.id) !== -1;
                 return (
-                  <li>
+                  <li key={lyr.id}>
                     <input
                       id={lyr.id}
                       className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded m-2"

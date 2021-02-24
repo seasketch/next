@@ -3,36 +3,35 @@ import React, { useEffect, useRef } from "react";
 import Modal from "../components/Modal";
 import Spinner from "../components/Spinner";
 import { schema } from "../editor/config";
-import { useGetMetadataQuery } from "../generated/graphql";
 
 export default function MetadataModal({
-  id,
+  document,
   onRequestClose,
+  loading,
+  error,
+  title,
 }: {
-  id: number;
+  document?: any;
   onRequestClose: () => void;
+  loading: boolean;
+  error?: Error;
+  title?: string;
 }) {
-  const { data, loading, error } = useGetMetadataQuery({
-    variables: {
-      itemId: id,
-    },
-  });
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
-  const metadata = data?.tableOfContentsItem?.metadata;
 
   useEffect(() => {
-    if (target.current && metadata) {
+    if (target.current && document) {
       target.current.innerHTML = "";
       target.current.appendChild(
         serializer.current.serializeFragment(
-          Node.fromJSON(schema, metadata).content
+          Node.fromJSON(schema, document).content
         )
       );
     }
-  }, [target.current, metadata]);
+  }, [target.current, document]);
   return (
-    <Modal onRequestClose={onRequestClose} open={true}>
+    <Modal title={title} onRequestClose={onRequestClose} open={true}>
       <>
         <div className="w-full h-full sm:h-auto md:w-160 lg:pb-4 relative">
           <button
@@ -54,6 +53,7 @@ export default function MetadataModal({
               />
             </svg>
           </button>
+          {error && `Error: ${error.message}`}
           {loading && <Spinner />}
           <div className="ProseMirror" ref={target}></div>
         </div>

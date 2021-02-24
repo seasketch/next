@@ -1,46 +1,49 @@
 import React, { useEffect, useRef, useState } from "react";
-import Modal from "../../components/Modal";
-import {
-  useGetMetadataQuery,
-  useUpdateMetadataMutation,
-} from "../../generated/graphql";
+import Modal from "../components/Modal";
 import { EditorState, Plugin, PluginKey } from "prosemirror-state";
-import { Schema, DOMParser, Node } from "prosemirror-model";
+import { Node } from "prosemirror-model";
 import "prosemirror-menu/style/menu.css";
-import applyDevTools from "prosemirror-dev-tools";
-import Spinner from "../../components/Spinner";
+import Spinner from "../components/Spinner";
 import "prosemirror-view/style/prosemirror.css";
-import Button from "../../components/Button";
+import Button from "../components/Button";
 import { useProseMirror, ProseMirror } from "use-prosemirror";
-import { schema, plugins } from "../../editor/config";
-import EditorMenuBar from "../../editor/EditorMenuBar";
+import { schema, plugins } from "../editor/config";
+import EditorMenuBar from "../editor/EditorMenuBar";
 import { EditorView } from "prosemirror-view";
+import { MutationResult } from "@apollo/client";
 
 interface MetadataEditorProps {
   onRequestClose?: () => void;
-  id: number;
+  /* state of the mutation */
+  mutationState: MutationResult;
+  /* function to call which mutates the metadata document */
+  mutation: (value: any) => Promise<any>;
+  /* loading state of metadata fetch */
+  loading: boolean;
+  /* any errors from loading the current metadata document */
+  error?: Error;
+  /* metadata document as json */
+  startingDocument?: any;
 }
 
 export default function MetadataEditor({
   onRequestClose,
-  id,
+  mutationState,
+  mutation,
+  loading,
+  error,
+  startingDocument,
 }: MetadataEditorProps) {
-  const { data, error, loading } = useGetMetadataQuery({
-    variables: {
-      itemId: id,
-    },
-  });
   const [state, setState] = useProseMirror({ schema });
   const [changes, setChanges] = useState(false);
   const [originalDoc, setOriginalDoc] = useState<Node>();
-  const [mutation, mutationState] = useUpdateMetadataMutation();
   // const viewHost = useRef<HTMLDivElement>(null);
   const viewRef = useRef<{ view: EditorView }>();
 
   useEffect(() => {
-    if (data && !originalDoc) {
-      const doc = data.tableOfContentsItem?.metadata
-        ? Node.fromJSON(schema, data.tableOfContentsItem?.metadata)
+    if (!loading) {
+      const doc = startingDocument
+        ? Node.fromJSON(schema, startingDocument)
         : null;
       if (doc) {
         setOriginalDoc(doc);
@@ -56,7 +59,7 @@ export default function MetadataEditor({
       // applyDevTools(view.current);
       // return () => view.current!.destroy();
     }
-  }, [data]);
+  }, [loading]);
 
   return (
     <Modal
@@ -91,12 +94,7 @@ export default function MetadataEditor({
             className=""
             onClick={async () => {
               if (changes) {
-                await mutation({
-                  variables: {
-                    itemId: id,
-                    metadata: state.doc.toJSON(),
-                  },
-                });
+                await mutation(state.doc.toJSON());
                 onRequestClose && onRequestClose();
               } else {
                 onRequestClose && onRequestClose();
@@ -115,9 +113,10 @@ export default function MetadataEditor({
           style={{ width: "calc(100% + 3rem)" }}
           state={state}
         />
+        {error && `Error: ${error.message}`}
         {loading && <Spinner />}
         {/* {data && <div ref={viewHost} />} */}
-        {data && (
+        {!loading && !error && (
           <ProseMirror
             // @ts-ignore
             ref={viewRef}

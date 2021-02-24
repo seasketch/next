@@ -6272,13 +6272,6 @@ export type OptionalBasemapLayer = Node & {
   defaultVisibility: Scalars['Boolean'];
   description?: Maybe<Scalars['String']>;
   /**
-   * If RADIO or SELECT group_type is specified, this label will be used for the
-   * form input. It also specifies _which_ group this option should be shown for.
-   * Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for
-   * multiple options at once.
-   */
-  groupLabel?: Maybe<Scalars['String']>;
-  /**
    * Specify RADIO or SELECT if this option should be presented as a group of
    * options. Useful for mutually exclusive views like different years for the same
    * dataset, or a heatmap display of density for multiple species where a single
@@ -6294,6 +6287,7 @@ export type OptionalBasemapLayer = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  options?: Maybe<Scalars['JSON']>;
 };
 
 /**
@@ -6313,13 +6307,6 @@ export type OptionalBasemapLayerInput = {
   defaultVisibility?: Maybe<Scalars['Boolean']>;
   description?: Maybe<Scalars['String']>;
   /**
-   * If RADIO or SELECT group_type is specified, this label will be used for the
-   * form input. It also specifies _which_ group this option should be shown for.
-   * Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for
-   * multiple options at once.
-   */
-  groupLabel?: Maybe<Scalars['String']>;
-  /**
    * Specify RADIO or SELECT if this option should be presented as a group of
    * options. Useful for mutually exclusive views like different years for the same
    * dataset, or a heatmap display of density for multiple species where a single
@@ -6333,6 +6320,7 @@ export type OptionalBasemapLayerInput = {
   metadata?: Maybe<Scalars['JSON']>;
   /** Label that will be given in the UI */
   name: Scalars['String'];
+  options?: Maybe<Scalars['JSON']>;
 };
 
 /** Represents an update to a `OptionalBasemapLayer`. Fields that are set will be updated. */
@@ -6340,13 +6328,6 @@ export type OptionalBasemapLayerPatch = {
   basemapId?: Maybe<Scalars['Int']>;
   defaultVisibility?: Maybe<Scalars['Boolean']>;
   description?: Maybe<Scalars['String']>;
-  /**
-   * If RADIO or SELECT group_type is specified, this label will be used for the
-   * form input. It also specifies _which_ group this option should be shown for.
-   * Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for
-   * multiple options at once.
-   */
-  groupLabel?: Maybe<Scalars['String']>;
   /**
    * Specify RADIO or SELECT if this option should be presented as a group of
    * options. Useful for mutually exclusive views like different years for the same
@@ -6361,6 +6342,7 @@ export type OptionalBasemapLayerPatch = {
   metadata?: Maybe<Scalars['JSON']>;
   /** Label that will be given in the UI */
   name?: Maybe<Scalars['String']>;
+  options?: Maybe<Scalars['JSON']>;
 };
 
 export enum OptionalBasemapLayersGroupType {
@@ -12302,7 +12284,7 @@ export type GetBasemapsQuery = (
         & Pick<BasemapInteractivitySetting, 'cursor' | 'id' | 'layers' | 'basemapId' | 'longTemplate' | 'shortTemplate' | 'type'>
       )>, optionalBasemapLayers: Array<(
         { __typename?: 'OptionalBasemapLayer' }
-        & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'groupLabel' | 'groupType' | 'layers' | 'metadata' | 'name'>
+        & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
       )> }
     )>> }
   )> }
@@ -12330,7 +12312,7 @@ export type CreateBasemapMutation = (
         & Pick<BasemapInteractivitySetting, 'cursor' | 'id' | 'layers' | 'basemapId' | 'longTemplate' | 'shortTemplate' | 'type'>
       )>, optionalBasemapLayers: Array<(
         { __typename?: 'OptionalBasemapLayer' }
-        & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'groupLabel' | 'groupType' | 'layers' | 'metadata' | 'name'>
+        & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
       )> }
     )> }
   )> }
@@ -12351,7 +12333,7 @@ export type GetBasemapQuery = (
       & Pick<BasemapInteractivitySetting, 'basemapId' | 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
     )>, optionalBasemapLayers: Array<(
       { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'groupLabel' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
+      & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
     )> }
   )> }
 );
@@ -12485,7 +12467,7 @@ export type OptionalLayerQuery = (
   { __typename?: 'Query' }
   & { optionalBasemapLayer?: Maybe<(
     { __typename?: 'OptionalBasemapLayer' }
-    & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'defaultVisibility' | 'description' | 'groupLabel' | 'groupType' | 'layers' | 'metadata' | 'name'>
+    & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
   )> }
 );
 
@@ -12510,7 +12492,7 @@ export type CreateOptionalLayerMutationVariables = Exact<{
   name: Scalars['String'];
   basemapId: Scalars['Int'];
   groupType?: Maybe<OptionalBasemapLayersGroupType>;
-  groupLabel?: Maybe<Scalars['String']>;
+  options?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -12520,7 +12502,7 @@ export type CreateOptionalLayerMutation = (
     { __typename?: 'CreateOptionalBasemapLayerPayload' }
     & { optionalBasemapLayer?: Maybe<(
       { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'defaultVisibility' | 'description' | 'groupLabel' | 'groupType' | 'layers' | 'metadata' | 'name'>
+      & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
     )> }
   )> }
 );
@@ -12530,6 +12512,7 @@ export type UpdateOptionalLayerMutationVariables = Exact<{
   name?: Maybe<Scalars['String']>;
   description?: Maybe<Scalars['String']>;
   defaultVisibility?: Maybe<Scalars['Boolean']>;
+  metadata?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -12539,7 +12522,7 @@ export type UpdateOptionalLayerMutation = (
     { __typename?: 'UpdateOptionalBasemapLayerPayload' }
     & { optionalBasemapLayer?: Maybe<(
       { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'name' | 'description' | 'id' | 'defaultVisibility'>
+      & Pick<OptionalBasemapLayer, 'name' | 'description' | 'id' | 'defaultVisibility' | 'metadata'>
     )> }
   )> }
 );
@@ -12573,6 +12556,66 @@ export type UpdateOptionalBasemapLayerLayerListMutation = (
     & { optionalBasemapLayer?: Maybe<(
       { __typename?: 'OptionalBasemapLayer' }
       & Pick<OptionalBasemapLayer, 'id' | 'layers'>
+    )> }
+  )> }
+);
+
+export type UpdateOptionalBasemapLayerOptionsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  options: Scalars['JSON'];
+}>;
+
+
+export type UpdateOptionalBasemapLayerOptionsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateOptionalBasemapLayer?: Maybe<(
+    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
+    & { optionalBasemapLayer?: Maybe<(
+      { __typename?: 'OptionalBasemapLayer' }
+      & Pick<OptionalBasemapLayer, 'id' | 'options'>
+    )> }
+  )> }
+);
+
+export type GetOptionalBasemapLayerQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetOptionalBasemapLayerQuery = (
+  { __typename?: 'Query' }
+  & { optionalBasemapLayer?: Maybe<(
+    { __typename?: 'OptionalBasemapLayer' }
+    & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'name' | 'description' | 'defaultVisibility' | 'groupType' | 'layers' | 'metadata' | 'options'>
+  )> }
+);
+
+export type GetOptionalBasemapLayerMetadataQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetOptionalBasemapLayerMetadataQuery = (
+  { __typename?: 'Query' }
+  & { optionalBasemapLayer?: Maybe<(
+    { __typename?: 'OptionalBasemapLayer' }
+    & Pick<OptionalBasemapLayer, 'id' | 'metadata'>
+  )> }
+);
+
+export type UpdateOptionalBasemapLayerMetadataMutationVariables = Exact<{
+  id: Scalars['Int'];
+  metadata?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateOptionalBasemapLayerMetadataMutation = (
+  { __typename?: 'Mutation' }
+  & { updateOptionalBasemapLayer?: Maybe<(
+    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
+    & { optionalBasemapLayer?: Maybe<(
+      { __typename?: 'OptionalBasemapLayer' }
+      & Pick<OptionalBasemapLayer, 'id' | 'metadata'>
     )> }
   )> }
 );
@@ -13826,7 +13869,7 @@ export const GetBasemapsDocument = gql`
         id
         defaultVisibility
         description
-        groupLabel
+        options
         groupType
         layers
         metadata
@@ -13898,7 +13941,7 @@ export const CreateBasemapDocument = gql`
         id
         defaultVisibility
         description
-        groupLabel
+        options
         groupType
         layers
         metadata
@@ -13971,7 +14014,7 @@ export const GetBasemapDocument = gql`
       basemapId
       defaultVisibility
       description
-      groupLabel
+      options
       groupType
       id
       layers
@@ -14283,7 +14326,7 @@ export const OptionalLayerDocument = gql`
     basemapId
     defaultVisibility
     description
-    groupLabel
+    options
     groupType
     layers
     metadata
@@ -14354,16 +14397,16 @@ export type UpdateOptionalLayerNameMutationHookResult = ReturnType<typeof useUpd
 export type UpdateOptionalLayerNameMutationResult = Apollo.MutationResult<UpdateOptionalLayerNameMutation>;
 export type UpdateOptionalLayerNameMutationOptions = Apollo.BaseMutationOptions<UpdateOptionalLayerNameMutation, UpdateOptionalLayerNameMutationVariables>;
 export const CreateOptionalLayerDocument = gql`
-    mutation CreateOptionalLayer($name: String!, $basemapId: Int!, $groupType: OptionalBasemapLayersGroupType, $groupLabel: String) {
+    mutation CreateOptionalLayer($name: String!, $basemapId: Int!, $groupType: OptionalBasemapLayersGroupType, $options: JSON) {
   createOptionalBasemapLayer(
-    input: {optionalBasemapLayer: {name: $name, basemapId: $basemapId, groupType: $groupType, groupLabel: $groupLabel}}
+    input: {optionalBasemapLayer: {name: $name, basemapId: $basemapId, groupType: $groupType, options: $options}}
   ) {
     optionalBasemapLayer {
       id
       basemapId
       defaultVisibility
       description
-      groupLabel
+      options
       groupType
       layers
       metadata
@@ -14390,7 +14433,7 @@ export type CreateOptionalLayerMutationFn = Apollo.MutationFunction<CreateOption
  *      name: // value for 'name'
  *      basemapId: // value for 'basemapId'
  *      groupType: // value for 'groupType'
- *      groupLabel: // value for 'groupLabel'
+ *      options: // value for 'options'
  *   },
  * });
  */
@@ -14401,15 +14444,16 @@ export type CreateOptionalLayerMutationHookResult = ReturnType<typeof useCreateO
 export type CreateOptionalLayerMutationResult = Apollo.MutationResult<CreateOptionalLayerMutation>;
 export type CreateOptionalLayerMutationOptions = Apollo.BaseMutationOptions<CreateOptionalLayerMutation, CreateOptionalLayerMutationVariables>;
 export const UpdateOptionalLayerDocument = gql`
-    mutation UpdateOptionalLayer($id: Int!, $name: String, $description: String, $defaultVisibility: Boolean) {
+    mutation UpdateOptionalLayer($id: Int!, $name: String, $description: String, $defaultVisibility: Boolean, $metadata: JSON) {
   updateOptionalBasemapLayer(
-    input: {id: $id, patch: {name: $name, description: $description, defaultVisibility: $defaultVisibility}}
+    input: {id: $id, patch: {name: $name, description: $description, defaultVisibility: $defaultVisibility, metadata: $metadata}}
   ) {
     optionalBasemapLayer {
       name
       description
       id
       defaultVisibility
+      metadata
     }
   }
 }
@@ -14433,6 +14477,7 @@ export type UpdateOptionalLayerMutationFn = Apollo.MutationFunction<UpdateOption
  *      name: // value for 'name'
  *      description: // value for 'description'
  *      defaultVisibility: // value for 'defaultVisibility'
+ *      metadata: // value for 'metadata'
  *   },
  * });
  */
@@ -14512,6 +14557,153 @@ export function useUpdateOptionalBasemapLayerLayerListMutation(baseOptions?: Apo
 export type UpdateOptionalBasemapLayerLayerListMutationHookResult = ReturnType<typeof useUpdateOptionalBasemapLayerLayerListMutation>;
 export type UpdateOptionalBasemapLayerLayerListMutationResult = Apollo.MutationResult<UpdateOptionalBasemapLayerLayerListMutation>;
 export type UpdateOptionalBasemapLayerLayerListMutationOptions = Apollo.BaseMutationOptions<UpdateOptionalBasemapLayerLayerListMutation, UpdateOptionalBasemapLayerLayerListMutationVariables>;
+export const UpdateOptionalBasemapLayerOptionsDocument = gql`
+    mutation UpdateOptionalBasemapLayerOptions($id: Int!, $options: JSON!) {
+  updateOptionalBasemapLayer(input: {id: $id, patch: {options: $options}}) {
+    optionalBasemapLayer {
+      id
+      options
+    }
+  }
+}
+    `;
+export type UpdateOptionalBasemapLayerOptionsMutationFn = Apollo.MutationFunction<UpdateOptionalBasemapLayerOptionsMutation, UpdateOptionalBasemapLayerOptionsMutationVariables>;
+
+/**
+ * __useUpdateOptionalBasemapLayerOptionsMutation__
+ *
+ * To run a mutation, you first call `useUpdateOptionalBasemapLayerOptionsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateOptionalBasemapLayerOptionsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateOptionalBasemapLayerOptionsMutation, { data, loading, error }] = useUpdateOptionalBasemapLayerOptionsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      options: // value for 'options'
+ *   },
+ * });
+ */
+export function useUpdateOptionalBasemapLayerOptionsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateOptionalBasemapLayerOptionsMutation, UpdateOptionalBasemapLayerOptionsMutationVariables>) {
+        return Apollo.useMutation<UpdateOptionalBasemapLayerOptionsMutation, UpdateOptionalBasemapLayerOptionsMutationVariables>(UpdateOptionalBasemapLayerOptionsDocument, baseOptions);
+      }
+export type UpdateOptionalBasemapLayerOptionsMutationHookResult = ReturnType<typeof useUpdateOptionalBasemapLayerOptionsMutation>;
+export type UpdateOptionalBasemapLayerOptionsMutationResult = Apollo.MutationResult<UpdateOptionalBasemapLayerOptionsMutation>;
+export type UpdateOptionalBasemapLayerOptionsMutationOptions = Apollo.BaseMutationOptions<UpdateOptionalBasemapLayerOptionsMutation, UpdateOptionalBasemapLayerOptionsMutationVariables>;
+export const GetOptionalBasemapLayerDocument = gql`
+    query GetOptionalBasemapLayer($id: Int!) {
+  optionalBasemapLayer(id: $id) {
+    id
+    basemapId
+    name
+    description
+    defaultVisibility
+    groupType
+    layers
+    metadata
+    options
+  }
+}
+    `;
+
+/**
+ * __useGetOptionalBasemapLayerQuery__
+ *
+ * To run a query within a React component, call `useGetOptionalBasemapLayerQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetOptionalBasemapLayerQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetOptionalBasemapLayerQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetOptionalBasemapLayerQuery(baseOptions: Apollo.QueryHookOptions<GetOptionalBasemapLayerQuery, GetOptionalBasemapLayerQueryVariables>) {
+        return Apollo.useQuery<GetOptionalBasemapLayerQuery, GetOptionalBasemapLayerQueryVariables>(GetOptionalBasemapLayerDocument, baseOptions);
+      }
+export function useGetOptionalBasemapLayerLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetOptionalBasemapLayerQuery, GetOptionalBasemapLayerQueryVariables>) {
+          return Apollo.useLazyQuery<GetOptionalBasemapLayerQuery, GetOptionalBasemapLayerQueryVariables>(GetOptionalBasemapLayerDocument, baseOptions);
+        }
+export type GetOptionalBasemapLayerQueryHookResult = ReturnType<typeof useGetOptionalBasemapLayerQuery>;
+export type GetOptionalBasemapLayerLazyQueryHookResult = ReturnType<typeof useGetOptionalBasemapLayerLazyQuery>;
+export type GetOptionalBasemapLayerQueryResult = Apollo.QueryResult<GetOptionalBasemapLayerQuery, GetOptionalBasemapLayerQueryVariables>;
+export const GetOptionalBasemapLayerMetadataDocument = gql`
+    query GetOptionalBasemapLayerMetadata($id: Int!) {
+  optionalBasemapLayer(id: $id) {
+    id
+    metadata
+  }
+}
+    `;
+
+/**
+ * __useGetOptionalBasemapLayerMetadataQuery__
+ *
+ * To run a query within a React component, call `useGetOptionalBasemapLayerMetadataQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetOptionalBasemapLayerMetadataQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetOptionalBasemapLayerMetadataQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetOptionalBasemapLayerMetadataQuery(baseOptions: Apollo.QueryHookOptions<GetOptionalBasemapLayerMetadataQuery, GetOptionalBasemapLayerMetadataQueryVariables>) {
+        return Apollo.useQuery<GetOptionalBasemapLayerMetadataQuery, GetOptionalBasemapLayerMetadataQueryVariables>(GetOptionalBasemapLayerMetadataDocument, baseOptions);
+      }
+export function useGetOptionalBasemapLayerMetadataLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetOptionalBasemapLayerMetadataQuery, GetOptionalBasemapLayerMetadataQueryVariables>) {
+          return Apollo.useLazyQuery<GetOptionalBasemapLayerMetadataQuery, GetOptionalBasemapLayerMetadataQueryVariables>(GetOptionalBasemapLayerMetadataDocument, baseOptions);
+        }
+export type GetOptionalBasemapLayerMetadataQueryHookResult = ReturnType<typeof useGetOptionalBasemapLayerMetadataQuery>;
+export type GetOptionalBasemapLayerMetadataLazyQueryHookResult = ReturnType<typeof useGetOptionalBasemapLayerMetadataLazyQuery>;
+export type GetOptionalBasemapLayerMetadataQueryResult = Apollo.QueryResult<GetOptionalBasemapLayerMetadataQuery, GetOptionalBasemapLayerMetadataQueryVariables>;
+export const UpdateOptionalBasemapLayerMetadataDocument = gql`
+    mutation UpdateOptionalBasemapLayerMetadata($id: Int!, $metadata: JSON) {
+  updateOptionalBasemapLayer(input: {id: $id, patch: {metadata: $metadata}}) {
+    optionalBasemapLayer {
+      id
+      metadata
+    }
+  }
+}
+    `;
+export type UpdateOptionalBasemapLayerMetadataMutationFn = Apollo.MutationFunction<UpdateOptionalBasemapLayerMetadataMutation, UpdateOptionalBasemapLayerMetadataMutationVariables>;
+
+/**
+ * __useUpdateOptionalBasemapLayerMetadataMutation__
+ *
+ * To run a mutation, you first call `useUpdateOptionalBasemapLayerMetadataMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateOptionalBasemapLayerMetadataMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateOptionalBasemapLayerMetadataMutation, { data, loading, error }] = useUpdateOptionalBasemapLayerMetadataMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      metadata: // value for 'metadata'
+ *   },
+ * });
+ */
+export function useUpdateOptionalBasemapLayerMetadataMutation(baseOptions?: Apollo.MutationHookOptions<UpdateOptionalBasemapLayerMetadataMutation, UpdateOptionalBasemapLayerMetadataMutationVariables>) {
+        return Apollo.useMutation<UpdateOptionalBasemapLayerMetadataMutation, UpdateOptionalBasemapLayerMetadataMutationVariables>(UpdateOptionalBasemapLayerMetadataDocument, baseOptions);
+      }
+export type UpdateOptionalBasemapLayerMetadataMutationHookResult = ReturnType<typeof useUpdateOptionalBasemapLayerMetadataMutation>;
+export type UpdateOptionalBasemapLayerMetadataMutationResult = Apollo.MutationResult<UpdateOptionalBasemapLayerMetadataMutation>;
+export type UpdateOptionalBasemapLayerMetadataMutationOptions = Apollo.BaseMutationOptions<UpdateOptionalBasemapLayerMetadataMutation, UpdateOptionalBasemapLayerMetadataMutationVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {

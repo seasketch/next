@@ -7194,14 +7194,6 @@ type OptionalBasemapLayer implements Node {
   description: String
 
   """
-  If RADIO or SELECT group_type is specified, this label will be used for the
-  form input. It also specifies _which_ group this option should be shown for.
-  Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for
-  multiple options at once.
-  """
-  groupLabel: String
-
-  """
   Specify RADIO or SELECT if this option should be presented as a group of
   options. Useful for mutually exclusive views like different years for the same
   dataset, or a heatmap display of density for multiple species where a single
@@ -7223,6 +7215,7 @@ type OptionalBasemapLayer implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  options: JSON
 }
 
 """
@@ -7244,14 +7237,6 @@ input OptionalBasemapLayerInput {
   description: String
 
   """
-  If RADIO or SELECT group_type is specified, this label will be used for the
-  form input. It also specifies _which_ group this option should be shown for.
-  Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for
-  multiple options at once.
-  """
-  groupLabel: String
-
-  """
   Specify RADIO or SELECT if this option should be presented as a group of
   options. Useful for mutually exclusive views like different years for the same
   dataset, or a heatmap display of density for multiple species where a single
@@ -7268,6 +7253,7 @@ input OptionalBasemapLayerInput {
 
   """Label that will be given in the UI"""
   name: String!
+  options: JSON
 }
 
 """
@@ -7277,14 +7263,6 @@ input OptionalBasemapLayerPatch {
   basemapId: Int
   defaultVisibility: Boolean
   description: String
-
-  """
-  If RADIO or SELECT group_type is specified, this label will be used for the
-  form input. It also specifies _which_ group this option should be shown for.
-  Use the UpdateBasemapLayerRadioGroupLabel mutation to update the label for
-  multiple options at once.
-  """
-  groupLabel: String
 
   """
   Specify RADIO or SELECT if this option should be presented as a group of
@@ -7303,6 +7281,7 @@ input OptionalBasemapLayerPatch {
 
   """Label that will be given in the UI"""
   name: String
+  options: JSON
 }
 
 enum OptionalBasemapLayersGroupType {

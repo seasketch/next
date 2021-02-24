@@ -22,8 +22,8 @@ const InputBlock: FunctionComponent<InputBlockProps> = ({
   labelType = labelType || "large";
   return (
     <div className={`mt-1 ${className}`}>
-      <div className="flex mb-2">
-        <div className="flex-1 font-medium flex-rows items-center pr-4 mt-0.5">
+      <div className="flex mb-2 ">
+        <div className="flex-1 font-medium flex-rows items-center pr-4 mt-0.5 self-center ">
           <div className="flex items-center">
             <span
               className={
