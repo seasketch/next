@@ -59,7 +59,6 @@ export default function OptionalBasemapLayerControl({
   ) : null;
   const metadataModal = metadataOpen ? (
     <BasemapMetadataModal
-      // title={layer.name}
       id={layer.id}
       onRequestClose={() => setMetadataOpen(false)}
     />
@@ -106,7 +105,11 @@ export default function OptionalBasemapLayerControl({
       <div className="py-2">
         {metadataModal}
         <RadioGroup
-          legend={<span>layer.name {metadataButton}</span>}
+          legend={
+            <span>
+              {layer.name} {metadataButton}
+            </span>
+          }
           value={mapContext.basemapOptionalLayerStates[layer.id]}
           onChange={(value) => {
             if (mapContext.manager) {
