@@ -214,6 +214,7 @@ query GetLayerItem($id: Int!) {
       id
       zIndex
       mapboxGlStyles
+      interactivitySettingsId
       renderUnder
       sourceLayer
       sublayer
@@ -498,5 +499,16 @@ query ProjectHostingQuota($slug: String!) {
     id
     dataHostingQuota
     dataHostingQuotaUsed
+  }
+}
+
+query InteractivitySettingsById($id: Int!) {
+  interactivitySetting(id: $id) {
+    cursor
+    id
+    layers
+    longTemplate
+    shortTemplate
+    type
   }
 }

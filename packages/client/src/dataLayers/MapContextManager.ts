@@ -586,7 +586,9 @@ class MapContextManager {
     if (!this.internalState.selectedBasemap) {
       throw new Error("Cannot call getComputedStyle before basemaps are set");
     }
-    const basemap = this.basemaps[this.internalState.selectedBasemap];
+    const basemap = this.basemaps[this.internalState.selectedBasemap] as
+      | ClientBasemap
+      | undefined;
     const labelsID = basemap?.labelsLayerId;
     const url =
       basemap?.url ||
@@ -617,7 +619,7 @@ class MapContextManager {
       // @ts-ignore
       terrain: undefined,
     };
-    if (this.internalState.terrainEnabled) {
+    if (this.internalState.terrainEnabled && basemap) {
       const newSource = {
         type: "raster-dem",
         url: basemap.terrainUrl,
@@ -840,7 +842,7 @@ class MapContextManager {
 
     // If set to true, display the optional layer, else filter out
     const optionalLayersToggleState: { [layerId: string]: boolean } = {};
-    for (const layer of basemap.optionalBasemapLayers) {
+    for (const layer of basemap?.optionalBasemapLayers || []) {
       if (layer.groupType === OptionalBasemapLayersGroupType.None) {
         for (const id of layer.layers) {
           if (id) {

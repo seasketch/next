@@ -178,26 +178,20 @@ describe("Basemaps", () => {
         "public",
         async (conn, projectId, adminId, [user1, user2]) => {
           await createSession(conn, adminId, true, false, projectId);
-          const basemapId = await conn.oneFirst(
-            sql`insert into basemaps (project_id, name, type, url, thumbnail) values (${projectId}, 'project basemap a', 'MAPBOX', 'mapbox://my-map/id', 'https://thumbnail.org/1.png') returning id`
+          const basemap = await conn.one(
+            sql`insert into basemaps (project_id, name, type, url, thumbnail) values (${projectId}, 'project basemap a', 'MAPBOX', 'mapbox://my-map/id', 'https://thumbnail.org/1.png') returning id, interactivity_settings_id`
           );
-          const interactivitySettingId = await conn.oneFirst(
-            sql`insert into basemap_interactivity_settings (basemap_id, layers, type) values (${basemapId}, ${sql.array(
-              ["layer1"],
-              "text"
-            )}, 'BANNER') returning id`
+          expect(basemap.interactivity_settings_id).toBeTruthy();
+          const newType = await conn.oneFirst(
+            sql`update interactivity_settings set type = 'BANNER' where id = ${basemap.interactivity_settings_id} returning type`
           );
-          expect(interactivitySettingId).toBeTruthy();
+          expect(newType).toBe("BANNER");
+
           await createSession(conn, user1, true, false, projectId);
           const interactivitySettings = await conn.any(
-            sql`select * from basemap_interactivity_settings where basemap_id = ${basemapId}`
+            sql`select * from interactivity_settings where id = ${basemap.interactivity_settings_id}`
           );
           expect(interactivitySettings.length).toBe(1);
-          expect(
-            conn.oneFirst(
-              sql`insert into basemaps (project_id, name, type, url, thumbnail) values (${projectId}, 'project basemap a', 'MAPBOX', 'mapbox://my-map/id', 'https://thumbnail.org/1.png') returning id`
-            )
-          ).rejects.toThrow(/policy/);
         }
       );
     });

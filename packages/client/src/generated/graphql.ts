@@ -203,10 +203,11 @@ export type Basemap = Node & {
    * the attribution specified in the gl-style in the case of MAPBOX types.
    */
   attribution?: Maybe<Scalars['String']>;
-  /** Reads and enables pagination through a set of `BasemapInteractivitySetting`. */
-  basemapInteractivitySettings: Array<BasemapInteractivitySetting>;
   description?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
+  /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
+  interactivitySettings?: Maybe<InteractivitySetting>;
+  interactivitySettingsId: Scalars['Int'];
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
@@ -250,14 +251,6 @@ export type Basemap = Node & {
 };
 
 
-export type BasemapBasemapInteractivitySettingsArgs = {
-  condition?: Maybe<BasemapInteractivitySettingCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<BasemapInteractivitySettingsOrderBy>>;
-};
-
-
 export type BasemapOptionalBasemapLayersArgs = {
   condition?: Maybe<OptionalBasemapLayerCondition>;
   first?: Maybe<Scalars['Int']>;
@@ -280,6 +273,8 @@ export type BasemapProjectsSharedBasemapsConnectionArgs = {
 export type BasemapCondition = {
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `interactivitySettingsId` field. */
+  interactivitySettingsId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
 };
@@ -327,72 +322,6 @@ export type BasemapInput = {
   url: Scalars['String'];
 };
 
-/** Used to specify hover effects and popups for vector layers within a basemap. Only works for MAPBOX-type basemaps. */
-export type BasemapInteractivitySetting = Node & {
-  __typename?: 'BasemapInteractivitySetting';
-  /** Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`. */
-  basemap?: Maybe<Basemap>;
-  basemapId: Scalars['Int'];
-  cursor: CursorType;
-  id: Scalars['Int'];
-  /** Interactivity could apply to more than one layer. */
-  layers: Array<Maybe<Scalars['String']>>;
-  longTemplate?: Maybe<Scalars['String']>;
-  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  /** Mustache template populated with feature attributes. Used for popup and fixed-block types. */
-  shortTemplate?: Maybe<Scalars['String']>;
-  type: InteractivityType;
-};
-
-/**
- * A condition to be used against `BasemapInteractivitySetting` object types. All
- * fields are tested for equality and combined with a logical ‘and.’
- */
-export type BasemapInteractivitySettingCondition = {
-  /** Checks for equality with the object’s `basemapId` field. */
-  basemapId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
-};
-
-/** An input for mutations affecting `BasemapInteractivitySetting` */
-export type BasemapInteractivitySettingInput = {
-  basemapId: Scalars['Int'];
-  cursor?: Maybe<CursorType>;
-  id?: Maybe<Scalars['Int']>;
-  /** Interactivity could apply to more than one layer. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
-  longTemplate?: Maybe<Scalars['String']>;
-  /** Mustache template populated with feature attributes. Used for popup and fixed-block types. */
-  shortTemplate?: Maybe<Scalars['String']>;
-  type?: Maybe<InteractivityType>;
-};
-
-/** Represents an update to a `BasemapInteractivitySetting`. Fields that are set will be updated. */
-export type BasemapInteractivitySettingPatch = {
-  basemapId?: Maybe<Scalars['Int']>;
-  cursor?: Maybe<CursorType>;
-  id?: Maybe<Scalars['Int']>;
-  /** Interactivity could apply to more than one layer. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
-  longTemplate?: Maybe<Scalars['String']>;
-  /** Mustache template populated with feature attributes. Used for popup and fixed-block types. */
-  shortTemplate?: Maybe<Scalars['String']>;
-  type?: Maybe<InteractivityType>;
-};
-
-/** Methods to use when ordering `BasemapInteractivitySetting`. */
-export enum BasemapInteractivitySettingsOrderBy {
-  BasemapIdAsc = 'BASEMAP_ID_ASC',
-  BasemapIdDesc = 'BASEMAP_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
-}
-
 /** Represents an update to a `Basemap`. Fields that are set will be updated. */
 export type BasemapPatch = {
   /**
@@ -402,6 +331,7 @@ export type BasemapPatch = {
   attribution?: Maybe<Scalars['String']>;
   description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
+  interactivitySettingsId?: Maybe<Scalars['Int']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
@@ -462,6 +392,8 @@ export type BasemapsEdge = {
 export enum BasemapsOrderBy {
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
+  InteractivitySettingsIdAsc = 'INTERACTIVITY_SETTINGS_ID_ASC',
+  InteractivitySettingsIdDesc = 'INTERACTIVITY_SETTINGS_ID_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
@@ -594,33 +526,6 @@ export type CreateBasemapInput = {
   clientMutationId?: Maybe<Scalars['String']>;
 };
 
-/** All input for the create `BasemapInteractivitySetting` mutation. */
-export type CreateBasemapInteractivitySettingInput = {
-  /** The `BasemapInteractivitySetting` to be created by this mutation. */
-  basemapInteractivitySetting: BasemapInteractivitySettingInput;
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-};
-
-/** The output of our create `BasemapInteractivitySetting` mutation. */
-export type CreateBasemapInteractivitySettingPayload = {
-  __typename?: 'CreateBasemapInteractivitySettingPayload';
-  /** Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`. */
-  basemap?: Maybe<Basemap>;
-  /** The `BasemapInteractivitySetting` that was created by this mutation. */
-  basemapInteractivitySetting?: Maybe<BasemapInteractivitySetting>;
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 /** The output of our create `Basemap` mutation. */
 export type CreateBasemapPayload = {
   __typename?: 'CreateBasemapPayload';
@@ -633,6 +538,8 @@ export type CreateBasemapPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
+  interactivitySettings?: Maybe<InteractivitySetting>;
   /** Reads a single `Project` that is related to this `Basemap`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -2172,44 +2079,6 @@ export type DeleteBasemapInput = {
   id: Scalars['Int'];
 };
 
-/** All input for the `deleteBasemapInteractivitySettingByNodeId` mutation. */
-export type DeleteBasemapInteractivitySettingByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `BasemapInteractivitySetting` to be deleted. */
-  nodeId: Scalars['ID'];
-};
-
-/** All input for the `deleteBasemapInteractivitySetting` mutation. */
-export type DeleteBasemapInteractivitySettingInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-};
-
-/** The output of our delete `BasemapInteractivitySetting` mutation. */
-export type DeleteBasemapInteractivitySettingPayload = {
-  __typename?: 'DeleteBasemapInteractivitySettingPayload';
-  /** Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`. */
-  basemap?: Maybe<Basemap>;
-  /** The `BasemapInteractivitySetting` that was deleted by this mutation. */
-  basemapInteractivitySetting?: Maybe<BasemapInteractivitySetting>;
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedBasemapInteractivitySettingNodeId?: Maybe<Scalars['ID']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 /** The output of our delete `Basemap` mutation. */
 export type DeleteBasemapPayload = {
   __typename?: 'DeleteBasemapPayload';
@@ -2223,6 +2092,8 @@ export type DeleteBasemapPayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   deletedBasemapNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
+  interactivitySettings?: Maybe<InteractivitySetting>;
   /** Reads a single `Project` that is related to this `Basemap`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -4428,6 +4299,8 @@ export type InitializeSurveyFormFromTemplatePayloadFormEdgeArgs = {
 
 export type InteractivitySetting = Node & {
   __typename?: 'InteractivitySetting';
+  /** Reads and enables pagination through a set of `Basemap`. */
+  basemapsByInteractivitySettingsIdConnection: BasemapsConnection;
   cursor: CursorType;
   /** Reads a single `DataLayer` that is related to this `InteractivitySetting`. */
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
@@ -4437,11 +4310,24 @@ export type InteractivitySetting = Node & {
    */
   dataLayersByInteractivitySettingsIdConnection: DataLayersConnection;
   id: Scalars['Int'];
+  /** Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to. */
+  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
   longTemplate?: Maybe<Scalars['String']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   shortTemplate?: Maybe<Scalars['String']>;
   type: InteractivityType;
+};
+
+
+export type InteractivitySettingBasemapsByInteractivitySettingsIdConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<BasemapCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<BasemapsOrderBy>>;
 };
 
 
@@ -4459,6 +4345,8 @@ export type InteractivitySettingDataLayersByInteractivitySettingsIdConnectionArg
 export type InteractivitySettingInput = {
   cursor?: Maybe<CursorType>;
   id?: Maybe<Scalars['Int']>;
+  /** Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to. */
+  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
   longTemplate?: Maybe<Scalars['String']>;
   shortTemplate?: Maybe<Scalars['String']>;
   type?: Maybe<InteractivityType>;
@@ -4468,6 +4356,8 @@ export type InteractivitySettingInput = {
 export type InteractivitySettingPatch = {
   cursor?: Maybe<CursorType>;
   id?: Maybe<Scalars['Int']>;
+  /** Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to. */
+  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
   longTemplate?: Maybe<Scalars['String']>;
   shortTemplate?: Maybe<Scalars['String']>;
   type?: Maybe<InteractivityType>;
@@ -4765,8 +4655,6 @@ export type Mutation = {
   confirmProjectInviteWithVerifiedEmail?: Maybe<ConfirmProjectInviteWithVerifiedEmailPayload>;
   /** Creates a single `Basemap`. */
   createBasemap?: Maybe<CreateBasemapPayload>;
-  /** Creates a single `BasemapInteractivitySetting`. */
-  createBasemapInteractivitySetting?: Maybe<CreateBasemapInteractivitySettingPayload>;
   /** Creates a single `CommunityGuideline`. */
   createCommunityGuideline?: Maybe<CreateCommunityGuidelinePayload>;
   /** Creates a single `DataLayer`. */
@@ -4839,10 +4727,6 @@ export type Mutation = {
   deleteBasemap?: Maybe<DeleteBasemapPayload>;
   /** Deletes a single `Basemap` using its globally unique id. */
   deleteBasemapByNodeId?: Maybe<DeleteBasemapPayload>;
-  /** Deletes a single `BasemapInteractivitySetting` using a unique key. */
-  deleteBasemapInteractivitySetting?: Maybe<DeleteBasemapInteractivitySettingPayload>;
-  /** Deletes a single `BasemapInteractivitySetting` using its globally unique id. */
-  deleteBasemapInteractivitySettingByNodeId?: Maybe<DeleteBasemapInteractivitySettingPayload>;
   /** Deletes a single `CommunityGuideline` using a unique key. */
   deleteCommunityGuideline?: Maybe<DeleteCommunityGuidelinePayload>;
   /** Deletes a single `CommunityGuideline` using its globally unique id. */
@@ -5072,10 +4956,6 @@ export type Mutation = {
   updateBasemap?: Maybe<UpdateBasemapPayload>;
   /** Updates a single `Basemap` using its globally unique id and a patch. */
   updateBasemapByNodeId?: Maybe<UpdateBasemapPayload>;
-  /** Updates a single `BasemapInteractivitySetting` using a unique key and a patch. */
-  updateBasemapInteractivitySetting?: Maybe<UpdateBasemapInteractivitySettingPayload>;
-  /** Updates a single `BasemapInteractivitySetting` using its globally unique id and a patch. */
-  updateBasemapInteractivitySettingByNodeId?: Maybe<UpdateBasemapInteractivitySettingPayload>;
   /** Updates a single `CommunityGuideline` using a unique key and a patch. */
   updateCommunityGuideline?: Maybe<UpdateCommunityGuidelinePayload>;
   /** Updates a single `CommunityGuideline` using its globally unique id and a patch. */
@@ -5256,12 +5136,6 @@ export type MutationCreateBasemapArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateBasemapInteractivitySettingArgs = {
-  input: CreateBasemapInteractivitySettingInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateCommunityGuidelineArgs = {
   input: CreateCommunityGuidelineInput;
 };
@@ -5420,18 +5294,6 @@ export type MutationDeleteBasemapArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteBasemapByNodeIdArgs = {
   input: DeleteBasemapByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteBasemapInteractivitySettingArgs = {
-  input: DeleteBasemapInteractivitySettingInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteBasemapInteractivitySettingByNodeIdArgs = {
-  input: DeleteBasemapInteractivitySettingByNodeIdInput;
 };
 
 
@@ -5917,18 +5779,6 @@ export type MutationUpdateBasemapArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateBasemapByNodeIdArgs = {
   input: UpdateBasemapByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateBasemapInteractivitySettingArgs = {
-  input: UpdateBasemapInteractivitySettingInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateBasemapInteractivitySettingByNodeIdArgs = {
-  input: UpdateBasemapInteractivitySettingByNodeIdInput;
 };
 
 
@@ -7288,9 +7138,6 @@ export type Query = Node & {
   basemap?: Maybe<Basemap>;
   /** Reads a single `Basemap` using its globally unique `ID`. */
   basemapByNodeId?: Maybe<Basemap>;
-  basemapInteractivitySetting?: Maybe<BasemapInteractivitySetting>;
-  /** Reads a single `BasemapInteractivitySetting` using its globally unique `ID`. */
-  basemapInteractivitySettingByNodeId?: Maybe<BasemapInteractivitySetting>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemapsConnection?: Maybe<BasemapsConnection>;
   communityGuideline?: Maybe<CommunityGuideline>;
@@ -7568,38 +7415,6 @@ export type QueryBasemapArgs = {
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
 export type QueryBasemapByNodeIdArgs = {
-  nodeId: Scalars['ID'];
-};
-
-
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
-export type QueryBasemapInteractivitySettingArgs = {
-  id: Scalars['Int'];
-};
-
-
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
-export type QueryBasemapInteractivitySettingByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
@@ -10519,47 +10334,6 @@ export type UpdateBasemapInput = {
   patch: BasemapPatch;
 };
 
-/** All input for the `updateBasemapInteractivitySettingByNodeId` mutation. */
-export type UpdateBasemapInteractivitySettingByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `BasemapInteractivitySetting` to be updated. */
-  nodeId: Scalars['ID'];
-  /** An object where the defined keys will be set on the `BasemapInteractivitySetting` being updated. */
-  patch: BasemapInteractivitySettingPatch;
-};
-
-/** All input for the `updateBasemapInteractivitySetting` mutation. */
-export type UpdateBasemapInteractivitySettingInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-  /** An object where the defined keys will be set on the `BasemapInteractivitySetting` being updated. */
-  patch: BasemapInteractivitySettingPatch;
-};
-
-/** The output of our update `BasemapInteractivitySetting` mutation. */
-export type UpdateBasemapInteractivitySettingPayload = {
-  __typename?: 'UpdateBasemapInteractivitySettingPayload';
-  /** Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`. */
-  basemap?: Maybe<Basemap>;
-  /** The `BasemapInteractivitySetting` that was updated by this mutation. */
-  basemapInteractivitySetting?: Maybe<BasemapInteractivitySetting>;
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 /** The output of our update `Basemap` mutation. */
 export type UpdateBasemapPayload = {
   __typename?: 'UpdateBasemapPayload';
@@ -10572,6 +10346,8 @@ export type UpdateBasemapPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
+  interactivitySettings?: Maybe<InteractivitySetting>;
   /** Reads a single `Project` that is related to this `Basemap`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -12227,9 +12003,9 @@ export type GetBasemapsQuery = (
     & { basemaps?: Maybe<Array<(
       { __typename?: 'Basemap' }
       & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
-      & { basemapInteractivitySettings: Array<(
-        { __typename?: 'BasemapInteractivitySetting' }
-        & Pick<BasemapInteractivitySetting, 'cursor' | 'id' | 'layers' | 'basemapId' | 'longTemplate' | 'shortTemplate' | 'type'>
+      & { interactivitySettings?: Maybe<(
+        { __typename?: 'InteractivitySetting' }
+        & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
       )>, optionalBasemapLayers: Array<(
         { __typename?: 'OptionalBasemapLayer' }
         & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
@@ -12255,9 +12031,9 @@ export type CreateBasemapMutation = (
     & { basemap?: Maybe<(
       { __typename?: 'Basemap' }
       & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
-      & { basemapInteractivitySettings: Array<(
-        { __typename?: 'BasemapInteractivitySetting' }
-        & Pick<BasemapInteractivitySetting, 'cursor' | 'id' | 'layers' | 'basemapId' | 'longTemplate' | 'shortTemplate' | 'type'>
+      & { interactivitySettings?: Maybe<(
+        { __typename?: 'InteractivitySetting' }
+        & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
       )>, optionalBasemapLayers: Array<(
         { __typename?: 'OptionalBasemapLayer' }
         & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
@@ -12276,9 +12052,9 @@ export type GetBasemapQuery = (
   & { basemap?: Maybe<(
     { __typename?: 'Basemap' }
     & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
-    & { basemapInteractivitySettings: Array<(
-      { __typename?: 'BasemapInteractivitySetting' }
-      & Pick<BasemapInteractivitySetting, 'basemapId' | 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
+    & { interactivitySettings?: Maybe<(
+      { __typename?: 'InteractivitySetting' }
+      & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
     )>, optionalBasemapLayers: Array<(
       { __typename?: 'OptionalBasemapLayer' }
       & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
@@ -12568,6 +12344,23 @@ export type UpdateOptionalBasemapLayerMetadataMutation = (
   )> }
 );
 
+export type UpdateInteractivitySettingsLayersMutationVariables = Exact<{
+  id: Scalars['Int'];
+  layers?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
+}>;
+
+
+export type UpdateInteractivitySettingsLayersMutation = (
+  { __typename?: 'Mutation' }
+  & { updateInteractivitySetting?: Maybe<(
+    { __typename?: 'UpdateInteractivitySettingPayload' }
+    & { interactivitySetting?: Maybe<(
+      { __typename?: 'InteractivitySetting' }
+      & Pick<InteractivitySetting, 'layers' | 'id'>
+    )> }
+  )> }
+);
+
 export type CreateProjectMutationVariables = Exact<{
   name: Scalars['String'];
   slug: Scalars['String'];
@@ -12756,7 +12549,7 @@ export type GetLayerItemQuery = (
       )>> }
     )>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'dataSourceId'>
+      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'dataSourceId'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -13009,6 +12802,19 @@ export type ProjectHostingQuotaQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'dataHostingQuota' | 'dataHostingQuotaUsed'>
+  )> }
+);
+
+export type InteractivitySettingsByIdQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type InteractivitySettingsByIdQuery = (
+  { __typename?: 'Query' }
+  & { interactivitySetting?: Maybe<(
+    { __typename?: 'InteractivitySetting' }
+    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
   )> }
 );
 
@@ -13801,11 +13607,10 @@ export const GetBasemapsDocument = gql`
     basemaps {
       id
       attribution
-      basemapInteractivitySettings {
+      interactivitySettings {
         cursor
         id
         layers
-        basemapId
         longTemplate
         shortTemplate
         type
@@ -13873,11 +13678,10 @@ export const CreateBasemapDocument = gql`
     basemap {
       id
       attribution
-      basemapInteractivitySettings {
+      interactivitySettings {
         cursor
         id
         layers
-        basemapId
         longTemplate
         shortTemplate
         type
@@ -13946,8 +13750,7 @@ export const GetBasemapDocument = gql`
   basemap(id: $id) {
     id
     attribution
-    basemapInteractivitySettings {
-      basemapId
+    interactivitySettings {
       cursor
       id
       layers
@@ -14652,6 +14455,42 @@ export function useUpdateOptionalBasemapLayerMetadataMutation(baseOptions?: Apol
 export type UpdateOptionalBasemapLayerMetadataMutationHookResult = ReturnType<typeof useUpdateOptionalBasemapLayerMetadataMutation>;
 export type UpdateOptionalBasemapLayerMetadataMutationResult = Apollo.MutationResult<UpdateOptionalBasemapLayerMetadataMutation>;
 export type UpdateOptionalBasemapLayerMetadataMutationOptions = Apollo.BaseMutationOptions<UpdateOptionalBasemapLayerMetadataMutation, UpdateOptionalBasemapLayerMetadataMutationVariables>;
+export const UpdateInteractivitySettingsLayersDocument = gql`
+    mutation UpdateInteractivitySettingsLayers($id: Int!, $layers: [String]) {
+  updateInteractivitySetting(input: {id: $id, patch: {layers: $layers}}) {
+    interactivitySetting {
+      layers
+      id
+    }
+  }
+}
+    `;
+export type UpdateInteractivitySettingsLayersMutationFn = Apollo.MutationFunction<UpdateInteractivitySettingsLayersMutation, UpdateInteractivitySettingsLayersMutationVariables>;
+
+/**
+ * __useUpdateInteractivitySettingsLayersMutation__
+ *
+ * To run a mutation, you first call `useUpdateInteractivitySettingsLayersMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateInteractivitySettingsLayersMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateInteractivitySettingsLayersMutation, { data, loading, error }] = useUpdateInteractivitySettingsLayersMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      layers: // value for 'layers'
+ *   },
+ * });
+ */
+export function useUpdateInteractivitySettingsLayersMutation(baseOptions?: Apollo.MutationHookOptions<UpdateInteractivitySettingsLayersMutation, UpdateInteractivitySettingsLayersMutationVariables>) {
+        return Apollo.useMutation<UpdateInteractivitySettingsLayersMutation, UpdateInteractivitySettingsLayersMutationVariables>(UpdateInteractivitySettingsLayersDocument, baseOptions);
+      }
+export type UpdateInteractivitySettingsLayersMutationHookResult = ReturnType<typeof useUpdateInteractivitySettingsLayersMutation>;
+export type UpdateInteractivitySettingsLayersMutationResult = Apollo.MutationResult<UpdateInteractivitySettingsLayersMutation>;
+export type UpdateInteractivitySettingsLayersMutationOptions = Apollo.BaseMutationOptions<UpdateInteractivitySettingsLayersMutation, UpdateInteractivitySettingsLayersMutationVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
@@ -15106,6 +14945,7 @@ export const GetLayerItemDocument = gql`
       id
       zIndex
       mapboxGlStyles
+      interactivitySettingsId
       renderUnder
       sourceLayer
       sublayer
@@ -15759,6 +15599,44 @@ export function useProjectHostingQuotaLazyQuery(baseOptions?: Apollo.LazyQueryHo
 export type ProjectHostingQuotaQueryHookResult = ReturnType<typeof useProjectHostingQuotaQuery>;
 export type ProjectHostingQuotaLazyQueryHookResult = ReturnType<typeof useProjectHostingQuotaLazyQuery>;
 export type ProjectHostingQuotaQueryResult = Apollo.QueryResult<ProjectHostingQuotaQuery, ProjectHostingQuotaQueryVariables>;
+export const InteractivitySettingsByIdDocument = gql`
+    query InteractivitySettingsById($id: Int!) {
+  interactivitySetting(id: $id) {
+    cursor
+    id
+    layers
+    longTemplate
+    shortTemplate
+    type
+  }
+}
+    `;
+
+/**
+ * __useInteractivitySettingsByIdQuery__
+ *
+ * To run a query within a React component, call `useInteractivitySettingsByIdQuery` and pass it any options that fit your needs.
+ * When your component renders, `useInteractivitySettingsByIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useInteractivitySettingsByIdQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useInteractivitySettingsByIdQuery(baseOptions: Apollo.QueryHookOptions<InteractivitySettingsByIdQuery, InteractivitySettingsByIdQueryVariables>) {
+        return Apollo.useQuery<InteractivitySettingsByIdQuery, InteractivitySettingsByIdQueryVariables>(InteractivitySettingsByIdDocument, baseOptions);
+      }
+export function useInteractivitySettingsByIdLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<InteractivitySettingsByIdQuery, InteractivitySettingsByIdQueryVariables>) {
+          return Apollo.useLazyQuery<InteractivitySettingsByIdQuery, InteractivitySettingsByIdQueryVariables>(InteractivitySettingsByIdDocument, baseOptions);
+        }
+export type InteractivitySettingsByIdQueryHookResult = ReturnType<typeof useInteractivitySettingsByIdQuery>;
+export type InteractivitySettingsByIdLazyQueryHookResult = ReturnType<typeof useInteractivitySettingsByIdLazyQuery>;
+export type InteractivitySettingsByIdQueryResult = Apollo.QueryResult<InteractivitySettingsByIdQuery, InteractivitySettingsByIdQueryVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {

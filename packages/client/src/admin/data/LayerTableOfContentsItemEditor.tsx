@@ -507,7 +507,7 @@ export default function LayerTableOfContentsItemEditor(
           <div className="mt-5">
             {source && layer && (
               <InteractivitySettings
-                layerId={layer.id}
+                id={layer.interactivitySettingsId}
                 dataSourceId={layer.dataSourceId}
                 sublayer={layer.sublayer}
               />

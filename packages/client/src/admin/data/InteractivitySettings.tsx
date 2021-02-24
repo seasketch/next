@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { updateStatement } from "typescript";
+import React, { ReactNode, useEffect, useState } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import RadioGroup from "../../components/RadioGroup";
 import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
 import {
-  InteractivitySetting,
   InteractivityType,
-  useInteractivitySettingsForLayerQuery,
   useUpdateInteractivitySettingsMutation,
+  useInteractivitySettingsByIdQuery,
 } from "../../generated/graphql";
 import MutableAutosaveInput from "../MutableAutosaveInput";
 import * as CodeMirror from "react-codemirror2";
@@ -19,7 +18,11 @@ import "codemirror/addon/lint/lint.css";
 import sanitizeHtml from "sanitize-html";
 import Button from "../../components/Button";
 import useSourcePropertyNames from "./useSourcePropertyNames";
-import { ClientDataLayer } from "../../dataLayers/MapContextManager";
+import {
+  ClientBasemap,
+  ClientDataLayer,
+} from "../../dataLayers/MapContextManager";
+import SetBasemapInteractivityLayers from "./SetBasemapInteractivityLayers";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -27,28 +30,32 @@ require("codemirror/mode/xml/xml");
 require("codemirror/mode/handlebars/handlebars");
 
 export default function InteractivitySettings({
-  layerId,
+  id,
   dataSourceId,
   sublayer,
+  basemap,
 }: {
-  layerId: number;
-  dataSourceId: number;
+  id: number;
+  dataSourceId?: number;
   sublayer?: string | null;
+  basemap?: ClientBasemap;
 }) {
-  const { data, loading, error } = useInteractivitySettingsForLayerQuery({
+  const { t } = useTranslation(["admin"]);
+  const { data, loading, error } = useInteractivitySettingsByIdQuery({
     variables: {
-      layerId,
+      id,
     },
   });
   const [type, setType] = useState<InteractivityType>();
 
   const [mutate, mutationState] = useUpdateInteractivitySettingsMutation();
 
-  const settings = data?.dataLayer?.interactivitySettings;
+  const settings = data?.interactivitySetting;
 
-  const attributeNames = useSourcePropertyNames(dataSourceId, sublayer);
+  const attributeNames = useSourcePropertyNames(dataSourceId || 0, sublayer);
   const [shortTemplate, setShortTemplate] = useState(settings?.shortTemplate);
   const [longTemplate, setLongTemplate] = useState(settings?.longTemplate);
+  const [pickLayersOpen, setPickLayersOpen] = useState(false);
 
   useEffect(() => {
     if (settings && settings.shortTemplate && shortTemplate === undefined) {
@@ -116,6 +123,14 @@ export default function InteractivitySettings({
   const selectedType = type || settings?.type || InteractivityType.None;
   return (
     <div>
+      {pickLayersOpen && (
+        <SetBasemapInteractivityLayers
+          initialLayers={(data?.interactivitySetting?.layers || []) as string[]}
+          id={data!.interactivitySetting!.id}
+          styleUrl={basemap!.url}
+          onRequestClose={() => setPickLayersOpen(false)}
+        />
+      )}
       {loading && <Spinner />}
       {data && (
         <RadioGroup
@@ -129,43 +144,58 @@ export default function InteractivitySettings({
           }
           items={[
             {
-              label: "None",
+              label: t("None"),
               value: InteractivityType.None,
             },
             ...(!sublayer
               ? [
                   {
-                    label: "Banner",
-                    description:
-                      "Short text can be displayed towards the top of the map when the user hovers over features.",
+                    label: t("Banner"),
+                    description: basemap
+                      ? t(
+                          "Short text can be displayed towards the top of the map when the user hovers over features in the selected basemap layers."
+                        )
+                      : t(
+                          "Short text can be displayed towards the top of the map when the user hovers over features."
+                        ),
                     value: InteractivityType.Banner,
                     children: (
-                      <TemplateEditor
-                        type={InteractivityType.Banner}
-                        selectedType={selectedType}
-                        propName={"shortTemplate"}
-                        templateValue={shortTemplate || undefined}
-                        onSave={sanitizeTemplate}
-                        onChange={(value) => setShortTemplate(value)}
-                        attributeNames={attributeNames}
-                      />
+                      <>
+                        <TemplateEditor
+                          type={InteractivityType.Banner}
+                          selectedType={selectedType}
+                          propName={"shortTemplate"}
+                          templateValue={shortTemplate || undefined}
+                          onSave={sanitizeTemplate}
+                          onChange={(value) => setShortTemplate(value)}
+                          attributeNames={attributeNames}
+                          basemap={basemap}
+                          layers={data.interactivitySetting?.layers as string[]}
+                          onSelectLayers={() => setPickLayersOpen(true)}
+                        />
+                      </>
                     ),
                   },
                   {
-                    label: "Tooltip",
+                    label: t("Tooltip"),
                     description:
                       "Short text is displayed next to the mouse cursor.",
                     value: InteractivityType.Tooltip,
                     children: (
-                      <TemplateEditor
-                        type={InteractivityType.Tooltip}
-                        selectedType={selectedType}
-                        propName={"shortTemplate"}
-                        templateValue={shortTemplate || undefined}
-                        onSave={sanitizeTemplate}
-                        onChange={(value) => setShortTemplate(value)}
-                        attributeNames={attributeNames}
-                      />
+                      <>
+                        <TemplateEditor
+                          type={InteractivityType.Tooltip}
+                          selectedType={selectedType}
+                          propName={"shortTemplate"}
+                          templateValue={shortTemplate || undefined}
+                          onSave={sanitizeTemplate}
+                          onChange={(value) => setShortTemplate(value)}
+                          attributeNames={attributeNames}
+                          basemap={basemap}
+                          layers={data.interactivitySetting?.layers as string[]}
+                          onSelectLayers={() => setPickLayersOpen(true)}
+                        />
+                      </>
                     ),
                   },
                 ]
@@ -176,15 +206,20 @@ export default function InteractivitySettings({
                 "Popup windows can be opened and closed to show detailed information.",
               value: InteractivityType.Popup,
               children: (
-                <TemplateEditor
-                  type={InteractivityType.Popup}
-                  selectedType={selectedType}
-                  propName={"longTemplate"}
-                  templateValue={longTemplate || undefined}
-                  onSave={sanitizeTemplate}
-                  onChange={(value) => setLongTemplate(value)}
-                  attributeNames={attributeNames}
-                />
+                <>
+                  <TemplateEditor
+                    type={InteractivityType.Popup}
+                    selectedType={selectedType}
+                    propName={"longTemplate"}
+                    templateValue={longTemplate || undefined}
+                    onSave={sanitizeTemplate}
+                    onChange={(value) => setLongTemplate(value)}
+                    attributeNames={attributeNames}
+                    basemap={basemap}
+                    layers={data.interactivitySetting?.layers as string[]}
+                    onSelectLayers={() => setPickLayersOpen(true)}
+                  />
+                </>
               ),
             },
             // {
@@ -223,7 +258,11 @@ function TemplateEditor(props: {
   onSave: (propName: "shortTemplate" | "longTemplate") => void;
   onChange: (value: string) => void;
   attributeNames: string[];
+  layers?: string[];
+  basemap?: any;
+  onSelectLayers?: () => void;
 }) {
+  const { t } = useTranslation(["admin"]);
   const onSave = () => props.onSave(props.propName);
   if (props.selectedType === props.type) {
     return (
@@ -243,12 +282,17 @@ function TemplateEditor(props: {
           }}
           onChange={(editor, data, value) => {}}
         />
-        <button
-          className="text-sm px-2 mt-1 border rounded bg-white shadow-sm"
-          onClick={onSave}
-        >
-          save
-        </button>
+        <Button small label={t("save")} onClick={onSave} />
+        {props.basemap && (
+          <Button
+            className="ml-1"
+            small
+            label={
+              t("Select applicable layers") + ` (${props.layers?.length || 0})`
+            }
+            onClick={props.onSelectLayers}
+          />
+        )}
         <div className="w-96 mt-2">
           {props.attributeNames.map((attr) => (
             <span

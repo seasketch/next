@@ -4,11 +4,10 @@ query GetBasemaps($slug: String!) {
     basemaps {
       id
       attribution
-      basemapInteractivitySettings {
+      interactivitySettings {
         cursor
         id
         layers
-        basemapId
         longTemplate
         shortTemplate
         type
@@ -65,11 +64,10 @@ mutation CreateBasemap(
     basemap {
       id
       attribution
-      basemapInteractivitySettings {
+      interactivitySettings {
         cursor
         id
         layers
-        basemapId
         longTemplate
         shortTemplate
         type
@@ -107,8 +105,7 @@ query GetBasemap($id: Int!) {
   basemap(id: $id) {
     id
     attribution
-    basemapInteractivitySettings {
-      basemapId
+    interactivitySettings {
       cursor
       id
       layers
@@ -359,6 +356,15 @@ mutation UpdateOptionalBasemapLayerMetadata($id: Int!, $metadata: JSON) {
     optionalBasemapLayer {
       id
       metadata
+    }
+  }
+}
+
+mutation UpdateInteractivitySettingsLayers($id: Int!, $layers: [String]) {
+  updateInteractivitySetting(input: { id: $id, patch: { layers: $layers } }) {
+    interactivitySetting {
+      layers
+      id
     }
   }
 }

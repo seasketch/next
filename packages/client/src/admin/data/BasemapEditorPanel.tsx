@@ -25,6 +25,7 @@ import CreateOptionalLayerModal from "./CreateOptionalLayerModal";
 import OptionalBasemapLayerControl from "../../dataLayers/OptionalBasemapLayerControl";
 import OptionalBasemapLayerEditor from "../../dataLayers/OptionalBasemapLayerEditor";
 import useDebounce from "../../useDebounce";
+import InteractivitySettings from "./InteractivitySettings";
 
 const TERRAIN_URL = "mapbox://mapbox.mapbox-terrain-dem-v1";
 
@@ -343,6 +344,14 @@ export default function BasemapEditorPanel({
               onClick={() => setCreateOptionOpen(true)}
             />
           </div>
+          {basemap.type === BasemapType.Mapbox && (
+            <div className="mt-5">
+              <InteractivitySettings
+                basemap={basemap}
+                id={basemap.interactivitySettings!.id}
+              />
+            </div>
+          )}
         </div>
       )}
       {createOptionOpen && (

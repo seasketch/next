@@ -175,27 +175,14 @@ type Basemap implements Node {
   the attribution specified in the gl-style in the case of MAPBOX types.
   """
   attribution: String
-
-  """
-  Reads and enables pagination through a set of `BasemapInteractivitySetting`.
-  """
-  basemapInteractivitySettings(
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: BasemapInteractivitySettingCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-
-    """The method to use when ordering `BasemapInteractivitySetting`."""
-    orderBy: [BasemapInteractivitySettingsOrderBy!]
-  ): [BasemapInteractivitySetting!]!
   description: String
   id: Int!
+
+  """
+  Reads a single `InteractivitySetting` that is related to this `Basemap`.
+  """
+  interactivitySettings: InteractivitySetting
+  interactivitySettingsId: Int!
 
   """
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
@@ -305,6 +292,9 @@ input BasemapCondition {
   """Checks for equality with the object’s `id` field."""
   id: Int
 
+  """Checks for equality with the object’s `interactivitySettingsId` field."""
+  interactivitySettingsId: Int
+
   """Checks for equality with the object’s `projectId` field."""
   projectId: Int
 }
@@ -367,94 +357,6 @@ input BasemapInput {
 }
 
 """
-Used to specify hover effects and popups for vector layers within a basemap. Only works for MAPBOX-type basemaps.
-
-"""
-type BasemapInteractivitySetting implements Node {
-  """
-  Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`.
-  """
-  basemap: Basemap
-  basemapId: Int!
-  cursor: CursorType!
-  id: Int!
-
-  """Interactivity could apply to more than one layer."""
-  layers: [String]!
-  longTemplate: String
-
-  """
-  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
-  """
-  nodeId: ID!
-
-  """
-  Mustache template populated with feature attributes. Used for popup and fixed-block types.
-  """
-  shortTemplate: String
-  type: InteractivityType!
-}
-
-"""
-A condition to be used against `BasemapInteractivitySetting` object types. All
-fields are tested for equality and combined with a logical ‘and.’
-"""
-input BasemapInteractivitySettingCondition {
-  """Checks for equality with the object’s `basemapId` field."""
-  basemapId: Int
-
-  """Checks for equality with the object’s `id` field."""
-  id: Int
-}
-
-"""An input for mutations affecting `BasemapInteractivitySetting`"""
-input BasemapInteractivitySettingInput {
-  basemapId: Int!
-  cursor: CursorType
-  id: Int
-
-  """Interactivity could apply to more than one layer."""
-  layers: [String]
-  longTemplate: String
-
-  """
-  Mustache template populated with feature attributes. Used for popup and fixed-block types.
-  """
-  shortTemplate: String
-  type: InteractivityType
-}
-
-"""
-Represents an update to a `BasemapInteractivitySetting`. Fields that are set will be updated.
-"""
-input BasemapInteractivitySettingPatch {
-  basemapId: Int
-  cursor: CursorType
-  id: Int
-
-  """Interactivity could apply to more than one layer."""
-  layers: [String]
-  longTemplate: String
-
-  """
-  Mustache template populated with feature attributes. Used for popup and fixed-block types.
-  """
-  shortTemplate: String
-  type: InteractivityType
-}
-
-"""Methods to use when ordering `BasemapInteractivitySetting`."""
-enum BasemapInteractivitySettingsOrderBy {
-  BASEMAP_ID_ASC
-  BASEMAP_ID_DESC
-  ID_ASC
-  ID_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
-}
-
-"""
 Represents an update to a `Basemap`. Fields that are set will be updated.
 """
 input BasemapPatch {
@@ -465,6 +367,7 @@ input BasemapPatch {
   attribution: String
   description: String
   id: Int
+  interactivitySettingsId: Int
 
   """
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
@@ -543,6 +446,8 @@ type BasemapsEdge {
 enum BasemapsOrderBy {
   ID_ASC
   ID_DESC
+  INTERACTIVITY_SETTINGS_ID_ASC
+  INTERACTIVITY_SETTINGS_ID_DESC
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
@@ -707,40 +612,6 @@ input CreateBasemapInput {
   clientMutationId: String
 }
 
-"""All input for the create `BasemapInteractivitySetting` mutation."""
-input CreateBasemapInteractivitySettingInput {
-  """The `BasemapInteractivitySetting` to be created by this mutation."""
-  basemapInteractivitySetting: BasemapInteractivitySettingInput!
-
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-}
-
-"""The output of our create `BasemapInteractivitySetting` mutation."""
-type CreateBasemapInteractivitySettingPayload {
-  """
-  Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`.
-  """
-  basemap: Basemap
-
-  """The `BasemapInteractivitySetting` that was created by this mutation."""
-  basemapInteractivitySetting: BasemapInteractivitySetting
-
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
 """The output of our create `Basemap` mutation."""
 type CreateBasemapPayload {
   """The `Basemap` that was created by this mutation."""
@@ -757,6 +628,11 @@ type CreateBasemapPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
+
+  """
+  Reads a single `InteractivitySetting` that is related to this `Basemap`.
+  """
+  interactivitySettings: InteractivitySetting
 
   """Reads a single `Project` that is related to this `Basemap`."""
   project: Project
@@ -2641,55 +2517,6 @@ input DeleteBasemapInput {
   id: Int!
 }
 
-"""
-All input for the `deleteBasemapInteractivitySettingByNodeId` mutation.
-"""
-input DeleteBasemapInteractivitySettingByNodeIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  The globally unique `ID` which will identify a single `BasemapInteractivitySetting` to be deleted.
-  """
-  nodeId: ID!
-}
-
-"""All input for the `deleteBasemapInteractivitySetting` mutation."""
-input DeleteBasemapInteractivitySettingInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  id: Int!
-}
-
-"""The output of our delete `BasemapInteractivitySetting` mutation."""
-type DeleteBasemapInteractivitySettingPayload {
-  """
-  Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`.
-  """
-  basemap: Basemap
-
-  """The `BasemapInteractivitySetting` that was deleted by this mutation."""
-  basemapInteractivitySetting: BasemapInteractivitySetting
-
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  deletedBasemapInteractivitySettingNodeId: ID
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
 """The output of our delete `Basemap` mutation."""
 type DeleteBasemapPayload {
   """The `Basemap` that was deleted by this mutation."""
@@ -2707,6 +2534,11 @@ type DeleteBasemapPayload {
   """
   clientMutationId: String
   deletedBasemapNodeId: ID
+
+  """
+  Reads a single `InteractivitySetting` that is related to this `Basemap`.
+  """
+  interactivitySettings: InteractivitySetting
 
   """Reads a single `Project` that is related to this `Basemap`."""
   project: Project
@@ -5194,6 +5026,34 @@ type InitializeSurveyFormFromTemplatePayload {
 }
 
 type InteractivitySetting implements Node {
+  """Reads and enables pagination through a set of `Basemap`."""
+  basemapsByInteractivitySettingsIdConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: BasemapCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `Basemap`."""
+    orderBy: [BasemapsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): BasemapsConnection!
   cursor: CursorType!
 
   """
@@ -5230,6 +5090,12 @@ type InteractivitySetting implements Node {
     orderBy: [DataLayersOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataLayersConnection! @deprecated(reason: "Please use dataLayerByInteractivitySettingsId instead")
   id: Int!
+
+  """
+  Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to.
+  
+  """
+  layers: [String]
   longTemplate: String
 
   """
@@ -5244,6 +5110,12 @@ type InteractivitySetting implements Node {
 input InteractivitySettingInput {
   cursor: CursorType
   id: Int
+
+  """
+  Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to.
+  
+  """
+  layers: [String]
   longTemplate: String
   shortTemplate: String
   type: InteractivityType
@@ -5255,6 +5127,12 @@ Represents an update to a `InteractivitySetting`. Fields that are set will be up
 input InteractivitySettingPatch {
   cursor: CursorType
   id: Int
+
+  """
+  Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to.
+  
+  """
+  layers: [String]
   longTemplate: String
   shortTemplate: String
   type: InteractivityType
@@ -5665,14 +5543,6 @@ type Mutation {
     input: CreateBasemapInput!
   ): CreateBasemapPayload
 
-  """Creates a single `BasemapInteractivitySetting`."""
-  createBasemapInteractivitySetting(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateBasemapInteractivitySettingInput!
-  ): CreateBasemapInteractivitySettingPayload
-
   """Creates a single `CommunityGuideline`."""
   createCommunityGuideline(
     """
@@ -5906,24 +5776,6 @@ type Mutation {
     """
     input: DeleteBasemapByNodeIdInput!
   ): DeleteBasemapPayload
-
-  """Deletes a single `BasemapInteractivitySetting` using a unique key."""
-  deleteBasemapInteractivitySetting(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteBasemapInteractivitySettingInput!
-  ): DeleteBasemapInteractivitySettingPayload
-
-  """
-  Deletes a single `BasemapInteractivitySetting` using its globally unique id.
-  """
-  deleteBasemapInteractivitySettingByNodeId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteBasemapInteractivitySettingByNodeIdInput!
-  ): DeleteBasemapInteractivitySettingPayload
 
   """Deletes a single `CommunityGuideline` using a unique key."""
   deleteCommunityGuideline(
@@ -6675,26 +6527,6 @@ type Mutation {
     """
     input: UpdateBasemapByNodeIdInput!
   ): UpdateBasemapPayload
-
-  """
-  Updates a single `BasemapInteractivitySetting` using a unique key and a patch.
-  """
-  updateBasemapInteractivitySetting(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateBasemapInteractivitySettingInput!
-  ): UpdateBasemapInteractivitySettingPayload
-
-  """
-  Updates a single `BasemapInteractivitySetting` using its globally unique id and a patch.
-  """
-  updateBasemapInteractivitySettingByNodeId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateBasemapInteractivitySettingByNodeIdInput!
-  ): UpdateBasemapInteractivitySettingPayload
 
   """Updates a single `CommunityGuideline` using a unique key and a patch."""
   updateCommunityGuideline(
@@ -8366,17 +8198,6 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Basemap`."""
     nodeId: ID!
   ): Basemap
-  basemapInteractivitySetting(id: Int!): BasemapInteractivitySetting
-
-  """
-  Reads a single `BasemapInteractivitySetting` using its globally unique `ID`.
-  """
-  basemapInteractivitySettingByNodeId(
-    """
-    The globally unique `ID` to be used in selecting a single `BasemapInteractivitySetting`.
-    """
-    nodeId: ID!
-  ): BasemapInteractivitySetting
 
   """Reads and enables pagination through a set of `Basemap`."""
   basemapsConnection(
@@ -11019,64 +10840,6 @@ input UpdateBasemapInput {
   patch: BasemapPatch!
 }
 
-"""
-All input for the `updateBasemapInteractivitySettingByNodeId` mutation.
-"""
-input UpdateBasemapInteractivitySettingByNodeIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  The globally unique `ID` which will identify a single `BasemapInteractivitySetting` to be updated.
-  """
-  nodeId: ID!
-
-  """
-  An object where the defined keys will be set on the `BasemapInteractivitySetting` being updated.
-  """
-  patch: BasemapInteractivitySettingPatch!
-}
-
-"""All input for the `updateBasemapInteractivitySetting` mutation."""
-input UpdateBasemapInteractivitySettingInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  id: Int!
-
-  """
-  An object where the defined keys will be set on the `BasemapInteractivitySetting` being updated.
-  """
-  patch: BasemapInteractivitySettingPatch!
-}
-
-"""The output of our update `BasemapInteractivitySetting` mutation."""
-type UpdateBasemapInteractivitySettingPayload {
-  """
-  Reads a single `Basemap` that is related to this `BasemapInteractivitySetting`.
-  """
-  basemap: Basemap
-
-  """The `BasemapInteractivitySetting` that was updated by this mutation."""
-  basemapInteractivitySetting: BasemapInteractivitySetting
-
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
 """The output of our update `Basemap` mutation."""
 type UpdateBasemapPayload {
   """The `Basemap` that was updated by this mutation."""
@@ -11093,6 +10856,11 @@ type UpdateBasemapPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
+
+  """
+  Reads a single `InteractivitySetting` that is related to this `Basemap`.
+  """
+  interactivitySettings: InteractivitySetting
 
   """Reads a single `Project` that is related to this `Basemap`."""
   project: Project
