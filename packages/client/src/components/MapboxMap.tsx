@@ -2,6 +2,7 @@ import mapboxgl, { ErrorEvent, Map, MapDataEvent } from "mapbox-gl";
 import ReactDOM from "react-dom";
 import React, { useEffect, useState, useRef, useContext } from "react";
 import { MapContext, useMapContext } from "../dataLayers/MapContextManager";
+import { motion, AnimatePresence } from "framer-motion";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -48,15 +49,21 @@ export default function MapboxMap(props: OverlayMapProps) {
       className={`flex-1 bg-gray-300 ${props.className} relative`}
       ref={mapContainer}
     >
-      <div className="flex align-middle justify-center absolute top-2 z-10 w-full">
-        {mapContext.bannerMessages?.length ? (
-          <div
-            className="mb-2 rounded-md text-sm bg-white bg-opacity-70 p-2"
-            dangerouslySetInnerHTML={{
-              __html: mapContext.bannerMessages.join(","),
-            }}
-          />
-        ) : null}
+      <div className="flex align-middle justify-center absolute top-2 z-10 w-full pointer-events-none">
+        <AnimatePresence>
+          {mapContext.bannerMessages?.length ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.75 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mb-2 rounded-md text-sm bg-white bg-opacity-70 p-2"
+              dangerouslySetInnerHTML={{
+                __html: mapContext.bannerMessages.join(","),
+              }}
+            />
+          ) : null}
+        </AnimatePresence>
       </div>
       {mapContext.basemapError && (
         <div className="flex w-full absolute top-1 place-content-center z-10 text-center">
@@ -66,26 +73,33 @@ export default function MapboxMap(props: OverlayMapProps) {
         </div>
       )}
       {mapContext.tooltip ? (
-        <Tooltip x={mapContext.tooltip.x} y={mapContext.tooltip.y}>
-          <div
-            dangerouslySetInnerHTML={{
-              __html: mapContext.tooltip.messages.join(","),
-            }}
-          ></div>
-        </Tooltip>
+        <AnimatePresence>
+          <Tooltip x={mapContext.tooltip.x} y={mapContext.tooltip.y}>
+            <div
+              dangerouslySetInnerHTML={{
+                __html: mapContext.tooltip.messages.join(","),
+              }}
+            ></div>
+          </Tooltip>
+        </AnimatePresence>
       ) : null}
     </div>
   );
 }
-
+// TODO: Keep tooltip around and hide/show it so that framer-motion can be used
+// to animate entry *and exit* and tween between x and y position.
 function Tooltip(props: { x: number; y: number; children: React.ReactNode }) {
   return ReactDOM.createPortal(
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.75 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
       className="absolute z-10 bg-white p-1 px-2 shadow rounded text-sm"
       style={{ left: props.x + 15, top: props.y + 15 }}
     >
       {props.children}
-    </div>,
+    </motion.div>,
     document.getElementById("tooltip-container")!
   );
 }

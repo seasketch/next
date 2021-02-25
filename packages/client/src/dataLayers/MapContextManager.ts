@@ -405,20 +405,17 @@ class MapContextManager {
     const states: { [layerName: string]: any } = {};
     if (basemap) {
       for (const layer of basemap.optionalBasemapLayers) {
-        if (preferences && Object.keys(preferences).length > 0) {
-          const preference = preferences[layer.name];
-          states[layer.id] =
-            preference !== undefined ? preference : layer.defaultVisibility;
+        const preference =
+          preferences && layer.name in preferences
+            ? preferences[layer.name]
+            : undefined;
+        if (layer.groupType === OptionalBasemapLayersGroupType.None) {
+          console.log("isNone", layer.name);
+          states[layer.id] = preference ?? layer.defaultVisibility;
+        } else if (layer.groupType === OptionalBasemapLayersGroupType.Select) {
+          states[layer.id] = preference ?? (layer.options || [])[0]?.name;
         } else {
-          if (layer.groupType === OptionalBasemapLayersGroupType.None) {
-            states[layer.id] = layer.defaultVisibility;
-          } else if (
-            layer.groupType === OptionalBasemapLayersGroupType.Select
-          ) {
-            states[layer.id] = (layer.options || [])[0]?.name || null;
-          } else {
-            states[layer.id] = (layer.options || [])[0]?.name || null;
-          }
+          states[layer.id] = preference ?? (layer.options || [])[0]?.name;
         }
       }
     }
@@ -879,12 +876,21 @@ class MapContextManager {
       }
     }
 
-    baseStyle.layers = baseStyle.layers.filter((layer) => {
+    baseStyle.layers = baseStyle.layers.map((layer) => {
       const state = optionalLayersToggleState[layer.id];
       if (state === false) {
-        return false;
+        return {
+          ...layer,
+          ...{
+            layout: {
+              // @ts-ignore
+              ...(layer.layout || {}),
+              visibility: "none",
+            },
+          },
+        };
       } else {
-        return true;
+        return layer;
       }
     });
 
@@ -1410,7 +1416,7 @@ function idForImageSource(sourceId: number | string) {
   return `seasketch/${sourceId}/image`;
 }
 
-const layerIdRE = /seasketch\//g;
+const layerIdRE = /^seasketch\//;
 export function isSeaSketchLayerId(id: string) {
   return layerIdRE.test(id);
 }

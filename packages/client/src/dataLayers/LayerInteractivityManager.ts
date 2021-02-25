@@ -143,10 +143,10 @@ export default class LayerInteractivityManager {
         ...newInteractiveVectorLayerIds,
         ...(basemap.interactivitySettings.layers as string[]),
       ];
-      this.basemap = basemap;
     } else {
-      delete this.basemap;
+      // delete this.basemap;
     }
+    this.basemap = basemap;
     this.interactiveImageLayerIds = newInteractiveImageLayerIds;
     this.interactiveVectorLayerIds = newInteractiveVectorLayerIds;
     this.layers = newActiveLayers;
@@ -383,10 +383,8 @@ export default class LayerInteractivityManager {
     if (this.moving) {
       return;
     }
-    const features = this.map!.queryRenderedFeatures(e.point, {
-      layers: this.interactiveVectorLayerIds,
-    });
-
+    const layerIds = this.interactiveVectorLayerIds;
+    const features = this.map!.queryRenderedFeatures(e.point);
     const clear = () => {
       this.map!.getCanvas().style.cursor = "";
       this.setState((prev) => ({
@@ -479,11 +477,6 @@ export default class LayerInteractivityManager {
     if (isSeaSketchLayerId(feature.layer.id)) {
       const dataLayer = this.layers[layerIdFromStyleLayerId(feature.layer.id)];
       if (!dataLayer) {
-        console.warn(
-          `Could not find interactive dataLayer with id=${layerIdFromStyleLayerId(
-            feature.layer.id
-          )}`
-        );
         return;
       }
       return dataLayer.interactivitySettings;
@@ -495,6 +488,7 @@ export default class LayerInteractivityManager {
           -1
       ) {
         return this.basemap.interactivitySettings;
+      } else {
       }
     }
   }
