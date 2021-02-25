@@ -26,6 +26,7 @@ import OptionalBasemapLayerControl from "../../dataLayers/OptionalBasemapLayerCo
 import OptionalBasemapLayerEditor from "../../dataLayers/OptionalBasemapLayerEditor";
 import useDebounce from "../../useDebounce";
 import InteractivitySettings from "./InteractivitySettings";
+import { ClientBasemap } from "../../dataLayers/MapContextManager";
 
 const TERRAIN_URL = "mapbox://mapbox.mapbox-terrain-dem-v1";
 
@@ -347,7 +348,7 @@ export default function BasemapEditorPanel({
           {basemap.type === BasemapType.Mapbox && (
             <div className="mt-5">
               <InteractivitySettings
-                basemap={basemap}
+                basemap={basemap as ClientBasemap}
                 id={basemap.interactivitySettings!.id}
               />
             </div>

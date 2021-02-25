@@ -9309,6 +9309,13 @@ CREATE INDEX basemaps_interactivity_settings_id_idx5 ON public.basemaps USING bt
 
 
 --
+-- Name: basemaps_interactivity_settings_id_idx6; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX basemaps_interactivity_settings_id_idx6 ON public.basemaps USING btree (interactivity_settings_id);
+
+
+--
 -- Name: basemaps_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 

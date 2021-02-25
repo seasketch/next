@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { ClientBasemap, MapContext } from "../../dataLayers/MapContextManager";
 import {
   useGetBasemapsQuery,
   useDeleteBasemapMutation,
@@ -33,7 +33,9 @@ export default function BaseMapEditor() {
   const client = useApolloClient();
   useEffect(() => {
     if (data?.projectBySlug?.basemaps && mapContext.manager) {
-      mapContext.manager.setBasemaps(data.projectBySlug.basemaps);
+      mapContext.manager.setBasemaps(
+        data.projectBySlug.basemaps as ClientBasemap[]
+      );
     }
   }, [data?.projectBySlug?.basemaps, mapContext.manager]);
 

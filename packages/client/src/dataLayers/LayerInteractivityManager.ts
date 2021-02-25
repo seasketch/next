@@ -1,15 +1,27 @@
-import { Layer, Map, MapMouseEvent, Popup } from "mapbox-gl";
 import {
+  Layer,
+  Map,
+  MapboxGeoJSONFeature,
+  MapMouseEvent,
+  Popup,
+} from "mapbox-gl";
+import {
+  ClientBasemap,
   ClientDataLayer,
   ClientDataSource,
   idForLayer,
+  isSeaSketchLayerId,
   layerIdFromStyleLayerId,
   MapContextInterface,
   Tooltip,
 } from "./MapContextManager";
 import Mustache from "mustache";
 import { Dispatch, SetStateAction } from "react";
-import { DataSourceTypes, InteractivityType } from "../generated/graphql";
+import {
+  DataSourceTypes,
+  InteractivitySetting,
+  InteractivityType,
+} from "../generated/graphql";
 import {
   getDynamicArcGISStyle,
   identifyLayers,
@@ -39,6 +51,7 @@ export default class LayerInteractivityManager {
   private popupAbortController: AbortController | undefined;
   private interactiveVectorLayerIds: string[] = [];
   private interactiveImageLayerIds: string[] = [];
+  private basemap: ClientBasemap | undefined;
 
   /**
    *
@@ -74,7 +87,8 @@ export default class LayerInteractivityManager {
    */
   async setVisibleLayers(
     dataLayers: ClientDataLayer[],
-    dataSources: { [dataSourceId: string]: ClientDataSource }
+    dataSources: { [dataSourceId: string]: ClientDataSource },
+    basemap: ClientBasemap
   ) {
     const newActiveLayers: { [layerId: string]: ClientDataLayer } = {};
     const newActiveImageSources: { [sourceId: string]: ClientDataSource } = {};
@@ -118,6 +132,20 @@ export default class LayerInteractivityManager {
           }
         }
       }
+    }
+    if (
+      basemap &&
+      basemap.interactivitySettings &&
+      basemap.interactivitySettings.type !== InteractivityType.None &&
+      basemap.interactivitySettings.layers?.length
+    ) {
+      newInteractiveVectorLayerIds = [
+        ...newInteractiveVectorLayerIds,
+        ...(basemap.interactivitySettings.layers as string[]),
+      ];
+      this.basemap = basemap;
+    } else {
+      delete this.basemap;
     }
     this.interactiveImageLayerIds = newInteractiveImageLayerIds;
     this.interactiveVectorLayerIds = newInteractiveVectorLayerIds;
@@ -224,18 +252,9 @@ export default class LayerInteractivityManager {
       layers: this.interactiveVectorLayerIds,
     });
     const top = features[0];
-    let vectorPopupOpened: ClientDataLayer | undefined;
+    let vectorPopupOpened = false;
     if (top) {
-      const dataLayer = this.layers[layerIdFromStyleLayerId(top.layer.id)];
-      if (!dataLayer) {
-        console.warn(
-          `Could not find interactive dataLayer with id=${layerIdFromStyleLayerId(
-            top.layer.id
-          )}`
-        );
-        return;
-      }
-      const interactivitySetting = dataLayer.interactivitySettings;
+      const interactivitySetting = this.getInteractivitySettingForFeature(top);
       if (
         interactivitySetting &&
         interactivitySetting.type === InteractivityType.Popup
@@ -249,7 +268,7 @@ export default class LayerInteractivityManager {
             })
           )
           .addTo(this.map!);
-        vectorPopupOpened = dataLayer;
+        vectorPopupOpened = true;
       }
     }
     if (!vectorPopupOpened) {
@@ -380,16 +399,7 @@ export default class LayerInteractivityManager {
     };
     if (features.length) {
       const top = features[0];
-      const dataLayer = this.layers[layerIdFromStyleLayerId(top.layer.id)];
-      if (!dataLayer) {
-        console.warn(
-          `Could not find interactive dataLayer with id=${layerIdFromStyleLayerId(
-            top.layer.id
-          )}`
-        );
-        return;
-      }
-      const interactivitySetting = dataLayer.interactivitySettings;
+      const interactivitySetting = this.getInteractivitySettingForFeature(top);
       if (interactivitySetting) {
         let cursor = "";
         this.map!.getCanvas().style.cursor = cursor;
@@ -464,6 +474,30 @@ export default class LayerInteractivityManager {
       clear();
     }
   };
+
+  getInteractivitySettingForFeature(feature: MapboxGeoJSONFeature) {
+    if (isSeaSketchLayerId(feature.layer.id)) {
+      const dataLayer = this.layers[layerIdFromStyleLayerId(feature.layer.id)];
+      if (!dataLayer) {
+        console.warn(
+          `Could not find interactive dataLayer with id=${layerIdFromStyleLayerId(
+            feature.layer.id
+          )}`
+        );
+        return;
+      }
+      return dataLayer.interactivitySettings;
+    } else {
+      if (
+        this.basemap &&
+        this.basemap.interactivitySettings?.layers &&
+        this.basemap.interactivitySettings?.layers.indexOf(feature.layer.id) !==
+          -1
+      ) {
+        return this.basemap.interactivitySettings;
+      }
+    }
+  }
 }
 
 const mustacheHelpers = {

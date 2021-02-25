@@ -162,6 +162,11 @@ export type ClientBasemap = Pick<
     | "layers"
     | "metadata"
   >[];
+} & {
+  interactivitySettings?: Pick<
+    InteractivitySetting,
+    "id" | "cursor" | "layers" | "longTemplate" | "shortTemplate" | "type"
+  >;
 };
 
 class MapContextManager {
@@ -308,7 +313,8 @@ class MapContextManager {
       Object.keys(this.visibleLayers)
         .filter((id) => this.visibleLayers[id]?.visible && this.layers[id])
         .map((id) => this.layers[id]),
-      this.clientDataSources
+      this.clientDataSources,
+      this.getSelectedBasemap()!
     );
 
     this.map.on("error", this.onMapError);
@@ -389,6 +395,7 @@ class MapContextManager {
       ),
     }));
     this.debouncedUpdateStyle();
+    this.updateInteractivitySettings();
   }
 
   private computeBasemapOptionalLayerStates(
@@ -939,7 +946,8 @@ class MapContextManager {
       }
       this.interactivityManager.setVisibleLayers(
         visibleLayers,
-        this.clientDataSources
+        this.clientDataSources,
+        this.getSelectedBasemap()!
       );
     }
   }
@@ -1402,7 +1410,7 @@ function idForImageSource(sourceId: number | string) {
   return `seasketch/${sourceId}/image`;
 }
 
-const layerIdRE = /seasketch/g;
-function isSeaSketchLayerId(id: string) {
+const layerIdRE = /seasketch\//g;
+export function isSeaSketchLayerId(id: string) {
   return layerIdRE.test(id);
 }

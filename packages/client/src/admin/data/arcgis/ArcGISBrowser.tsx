@@ -32,6 +32,7 @@ import {
   ClientDataLayer,
   ClientDataSource,
   ClientSprite,
+  ClientBasemap,
 } from "../../../dataLayers/MapContextManager";
 import TableOfContents, {
   ClientTableOfContentsItem,
@@ -97,7 +98,7 @@ export default function ArcGISBrowser() {
   useEffect(() => {
     if (basemapsData.data && mapContext.manager) {
       mapContext.manager.setBasemaps(
-        basemapsData.data.projectBySlug!.basemaps!
+        basemapsData.data.projectBySlug!.basemaps! as ClientBasemap[]
       );
     }
   }, [basemapsData.data, mapContext.manager]);
