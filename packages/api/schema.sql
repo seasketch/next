@@ -11014,11 +11014,7 @@ CREATE POLICY interactivity_settings_admin ON public.interactivity_settings USIN
 -- Name: interactivity_settings interactivity_settings_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY interactivity_settings_select ON public.interactivity_settings USING (public.session_has_project_access(COALESCE(( SELECT data_layers.project_id
-   FROM public.data_layers
-  WHERE (data_layers.interactivity_settings_id = data_layers.id)), ( SELECT basemaps.project_id
-   FROM public.basemaps
-  WHERE (basemaps.interactivity_settings_id = basemaps.id)))));
+CREATE POLICY interactivity_settings_select ON public.interactivity_settings USING (true);
 
 
 --
