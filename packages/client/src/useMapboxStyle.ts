@@ -10,23 +10,29 @@ function useMapboxStyle(styleUrl?: string) {
     error?: Error;
   }>({ loading: false });
   useEffect(() => {
+    let cancelled = false;
     setState({
       loading: true,
     });
     if (styleUrl) {
       const style = fetchGlStyle(styleUrl)
         .then((style) => {
-          setState({
-            loading: false,
-            data: style,
-          });
+          if (!cancelled) {
+            setState({
+              loading: false,
+              data: style,
+            });
+          }
         })
         .catch((error) => {
-          setState({ loading: false, error });
+          if (!cancelled) setState({ loading: false, error });
         });
     } else {
       setState({ loading: false });
     }
+    return () => {
+      cancelled = true;
+    };
   }, [styleUrl]);
   return state;
 }

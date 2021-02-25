@@ -49,15 +49,19 @@ export default function MapboxMap(props: OverlayMapProps) {
       className={`flex-1 bg-gray-300 ${props.className} relative`}
       ref={mapContainer}
     >
-      <div className="flex align-middle justify-center absolute top-2 z-10 w-full pointer-events-none">
+      <div className="flex justify-center absolute text-xs z-10 pointer-events-none">
         <AnimatePresence>
           {mapContext.bannerMessages?.length ? (
             <motion.div
-              initial={{ opacity: 0, scale: 0.75 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="mb-2 rounded-md text-sm bg-white bg-opacity-70 p-2"
+              transition={{ duration: 0.5 }}
+              className="text-sm p-1 w-full pr-16"
+              style={{
+                backgroundImage:
+                  "linear-gradient(to right, rgba(255,255,255,0.5), rgba(255,255,255,0.5), rgba(255,255,255,0))",
+              }}
               dangerouslySetInnerHTML={{
                 __html: mapContext.bannerMessages.join(","),
               }}
@@ -72,33 +76,87 @@ export default function MapboxMap(props: OverlayMapProps) {
           </div>
         </div>
       )}
-      {mapContext.tooltip ? (
-        <AnimatePresence>
-          <Tooltip x={mapContext.tooltip.x} y={mapContext.tooltip.y}>
-            <div
-              dangerouslySetInnerHTML={{
-                __html: mapContext.tooltip.messages.join(","),
-              }}
-            ></div>
-          </Tooltip>
-        </AnimatePresence>
-      ) : null}
+      <AnimatePresence>
+        <Tooltip
+          visible={!!mapContext.tooltip}
+          x={mapContext.tooltip?.x}
+          y={mapContext.tooltip?.y}
+          content={
+            mapContext.tooltip ? (
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: mapContext.tooltip?.messages.join(",") || "",
+                }}
+              ></div>
+            ) : undefined
+          }
+        ></Tooltip>
+      </AnimatePresence>
     </div>
   );
 }
 // TODO: Keep tooltip around and hide/show it so that framer-motion can be used
 // to animate entry *and exit* and tween between x and y position.
-function Tooltip(props: { x: number; y: number; children: React.ReactNode }) {
+function Tooltip({
+  x,
+  y,
+  visible,
+  content,
+}: {
+  x?: number;
+  y?: number;
+  content?: React.ReactNode;
+  visible: boolean;
+}) {
+  const [state, setState] = useState<{
+    x: number;
+    y: number;
+    children: React.ReactNode;
+  }>({ x: 0, y: 0, children: "" });
+
+  useEffect(() => {
+    if (x && y) {
+      setState({ x, y, children: content });
+    }
+  }, [x, y, content]);
+
   return ReactDOM.createPortal(
     <motion.div
-      initial={{ opacity: 0, scale: 0.75 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      className="absolute z-10 bg-white p-1 px-2 shadow rounded text-sm"
-      style={{ left: props.x + 15, top: props.y + 15 }}
+      transition={{
+        scale: { type: "spring", stiffness: 200 },
+        default: { duration: 0.1 },
+      }}
+      className="absolute z-10 bg-white p-1 px-2 shadow-lg rounded text-sm"
+      style={{ left: state.x + 15, top: state.y + 15 }}
+      animate={visible ? "visible" : "hidden"}
+      variants={{
+        hidden: {
+          scale: 0.5,
+          opacity: 0,
+          transition: {
+            type: "easeOut",
+            duration: 0.3,
+          },
+        },
+        visible: {
+          scale: 1,
+          opacity: 1,
+          transition: {
+            type: "spring",
+            stiffness: 300,
+            duration: 0.1,
+          },
+        },
+      }}
+      // animate={{
+      //   opacity: visible ? 1 : 0,
+      //   scale: visible ? 1 : 0.5,
+      //   // @ts-ignore
+      //   // left: state.x + 15,
+      //   // top: state.y + 15,
+      // }}
     >
-      {props.children}
+      {state.children}
     </motion.div>,
     document.getElementById("tooltip-container")!
   );

@@ -10,6 +10,8 @@ import mapboxgl, {
   FreeCameraOptions,
   CameraOptions,
 } from "mapbox-gl";
+// @ts-ignore
+import { validate } from "@mapbox/mapbox-gl-style-spec";
 import {
   createContext,
   Dispatch,
@@ -187,6 +189,7 @@ class MapContextManager {
   private initialCameraOptions?: CameraOptions;
   private internalState: MapContextInterface;
   arcgisVectorSourceCache: ArcGISVectorSourceCache;
+  private mapIsLoaded = false;
 
   constructor(
     initialState: MapContextInterface,
@@ -321,6 +324,9 @@ class MapContextManager {
     this.map.on("data", this.onMapDataEvent);
     this.map.on("dataloading", this.onMapDataEvent);
     this.map.on("moveend", this.onMapMove);
+    this.map.on("load", () => {
+      this.mapIsLoaded = true;
+    });
 
     return this.map;
   }
@@ -410,7 +416,6 @@ class MapContextManager {
             ? preferences[layer.name]
             : undefined;
         if (layer.groupType === OptionalBasemapLayersGroupType.None) {
-          console.log("isNone", layer.name);
           states[layer.id] = preference ?? layer.defaultVisibility;
         } else if (layer.groupType === OptionalBasemapLayersGroupType.Select) {
           states[layer.id] = preference ?? (layer.options || [])[0]?.name;
@@ -531,7 +536,13 @@ class MapContextManager {
       this.updateStyleInfinitLoopDetector = 0;
       const { style, sprites } = await this.getComputedStyle();
       this.addSprites(sprites);
+      // if (!this.mapIsLoaded) {
+      //   setTimeout(() => {
+      //     this.map!.setStyle(style);
+      //   }, 10);
+      // } else {
       this.map.setStyle(style);
+      // }
     } else {
       this.updateStyleInfinitLoopDetector++;
       if (this.updateStyleInfinitLoopDetector > 10) {
@@ -639,7 +650,8 @@ class MapContextManager {
         existingSource &&
         existingSource.type === "raster-dem" &&
         existingSource.url === newSource.url &&
-        existingSource.encoding
+        existingSource.encoding &&
+        existingSource.tiles
       ) {
         baseStyle.sources!["terrain-source"] = {
           type: existingSource.type,

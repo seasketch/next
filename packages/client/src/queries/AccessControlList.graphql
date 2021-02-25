@@ -45,6 +45,7 @@ mutation RemoveGroupFromAcl($id: Int!, $groupId: Int!) {
 
 query Groups($projectSlug: String!) {
   projectBySlug(slug: $projectSlug) {
+    id
     groups {
       id
       name

@@ -20,17 +20,6 @@ export default function OptionalBasemapLayerEditor({
   layerId,
 }: {
   layerId: number;
-  //  Pick<
-  //   OptionalBasemapLayer,
-  //   | "id"
-  //   | "name"
-  //   | "options"
-  //   | "groupType"
-  //   | "defaultVisibility"
-  //   | "description"
-  //   | "layers"
-  //   | "basemapId"
-  // >;
 }) {
   const { t } = useTranslation(["admin"]);
   const [mutate, mutationState] = useUpdateOptionalLayerMutation();

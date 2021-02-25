@@ -11830,6 +11830,7 @@ export type GroupsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
+    & Pick<Project, 'id'>
     & { groups: Array<(
       { __typename?: 'Group' }
       & Pick<Group, 'id' | 'name' | 'memberCount'>
@@ -13225,6 +13226,7 @@ export type RemoveGroupFromAclMutationOptions = Apollo.BaseMutationOptions<Remov
 export const GroupsDocument = gql`
     query Groups($projectSlug: String!) {
   projectBySlug(slug: $projectSlug) {
+    id
     groups {
       id
       name
