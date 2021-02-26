@@ -536,13 +536,13 @@ class MapContextManager {
       this.updateStyleInfinitLoopDetector = 0;
       const { style, sprites } = await this.getComputedStyle();
       this.addSprites(sprites);
-      // if (!this.mapIsLoaded) {
-      //   setTimeout(() => {
-      //     this.map!.setStyle(style);
-      //   }, 10);
-      // } else {
-      this.map.setStyle(style);
-      // }
+      if (!this.mapIsLoaded) {
+        setTimeout(() => {
+          this.map!.setStyle(style);
+        }, 20);
+      } else {
+        this.map.setStyle(style);
+      }
     } else {
       this.updateStyleInfinitLoopDetector++;
       if (this.updateStyleInfinitLoopDetector > 10) {
