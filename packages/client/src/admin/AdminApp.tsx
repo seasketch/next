@@ -2,19 +2,17 @@ import React, { useState, useEffect } from "react";
 import {
   useRouteMatch,
   useParams,
-  Link,
   NavLink,
   Switch,
   Route,
   Redirect,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import logo from "../header/seasketch-logo.png";
 import { useCurrentProjectMetadataQuery } from "../generated/graphql";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import ProfileContextMenu from "../header/ProfileContextMenu";
 import useBreadcrumbs from "use-react-router-breadcrumbs";
-import { useAuth0 } from "@auth0/auth0-react";
+import { Trans } from "react-i18next";
 
 const LazyBasicSettings = React.lazy(() => import("./Settings"));
 const LazyDataSettings = React.lazy(() => import("./data/DataSettings"));
@@ -28,157 +26,177 @@ interface Section {
 const iconClassName =
   "mr-3 h-6 w-6 text-indigo-400 group-hover:text-indigo-300 group-focus:text-indigo-300 transition ease-in-out duration-150";
 
-const sections: Section[] = [
-  {
-    breadcrumb: "Settings",
-    icon: (
-      <svg
-        className={iconClassName}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-        />
-      </svg>
-    ),
-    path: "/admin",
-  },
-  {
-    breadcrumb: "Activity",
-    icon: (
-      <svg
-        className={iconClassName}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-        />
-      </svg>
-    ),
-    path: "/admin/activity",
-  },
-  {
-    breadcrumb: "Users & Groups",
-    icon: (
-      <svg
-        className={iconClassName}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-        />
-      </svg>
-    ),
-    path: "/admin/users",
-  },
-  {
-    breadcrumb: "Data Layers",
-    icon: (
-      <svg
-        viewBox="2 1 21 21"
-        height="48"
-        width="48"
-        focusable="false"
-        role="img"
-        fill="currentColor"
-        xmlns="http://www.w3.org/2000/svg"
-        className={iconClassName}
-      >
-        <title>LayersOutline icon</title>
-        <g data-name="Layer 2">
-          <path
-            d="M21 11.35a1 1 0 00-.61-.86l-2.15-.92 2.26-1.3a1 1 0 00.5-.92 1 1 0 00-.61-.86l-8-3.41a1 1 0 00-.78 0l-8 3.41a1 1 0 00-.61.86 1 1 0 00.5.92l2.26 1.3-2.15.92a1 1 0 00-.61.86 1 1 0 00.5.92l2.26 1.3-2.15.92a1 1 0 00-.61.86 1 1 0 00.5.92l8 4.6a1 1 0 001 0l8-4.6a1 1 0 00.5-.92 1 1 0 00-.61-.86l-2.15-.92 2.26-1.3a1 1 0 00.5-.92zm-9-6.26l5.76 2.45L12 10.85 6.24 7.54zm-.5 7.78a1 1 0 001 0l3.57-2 1.69.72L12 14.85l-5.76-3.31 1.69-.72zm6.26 2.67L12 18.85l-5.76-3.31 1.69-.72 3.57 2.05a1 1 0 001 0l3.57-2.05z"
-            data-name="layers"
-          ></path>
-        </g>
-      </svg>
-    ),
-    path: "/admin/data",
-  },
-  {
-    breadcrumb: "Sketch Classes",
-    icon: (
-      <svg
-        viewBox="0 0 448 512"
-        height="48"
-        width="48"
-        focusable="false"
-        role="img"
-        fill="currentColor"
-        xmlns="http://www.w3.org/2000/svg"
-        className={iconClassName}
-      >
-        <title>DrawPolygon icon</title>
-        <path
-          fill="currentColor"
-          d="M384 352c-.35 0-.67.1-1.02.1l-39.2-65.32c5.07-9.17 8.22-19.56 8.22-30.78s-3.14-21.61-8.22-30.78l39.2-65.32c.35.01.67.1 1.02.1 35.35 0 64-28.65 64-64s-28.65-64-64-64c-23.63 0-44.04 12.95-55.12 32H119.12C108.04 44.95 87.63 32 64 32 28.65 32 0 60.65 0 96c0 23.63 12.95 44.04 32 55.12v209.75C12.95 371.96 0 392.37 0 416c0 35.35 28.65 64 64 64 23.63 0 44.04-12.95 55.12-32h209.75c11.09 19.05 31.49 32 55.12 32 35.35 0 64-28.65 64-64 .01-35.35-28.64-64-63.99-64zm-288 8.88V151.12A63.825 63.825 0 00119.12 128h208.36l-38.46 64.1c-.35-.01-.67-.1-1.02-.1-35.35 0-64 28.65-64 64s28.65 64 64 64c.35 0 .67-.1 1.02-.1l38.46 64.1H119.12A63.748 63.748 0 0096 360.88zM272 256c0-8.82 7.18-16 16-16s16 7.18 16 16-7.18 16-16 16-16-7.18-16-16zM400 96c0 8.82-7.18 16-16 16s-16-7.18-16-16 7.18-16 16-16 16 7.18 16 16zM64 80c8.82 0 16 7.18 16 16s-7.18 16-16 16-16-7.18-16-16 7.18-16 16-16zM48 416c0-8.82 7.18-16 16-16s16 7.18 16 16-7.18 16-16 16-16-7.18-16-16zm336 16c-8.82 0-16-7.18-16-16s7.18-16 16-16 16 7.18 16 16-7.18 16-16 16z"
-        ></path>
-      </svg>
-    ),
-    path: "/admin/sketching",
-  },
-  {
-    breadcrumb: "Forums",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        className={iconClassName}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-        />
-      </svg>
-    ),
-    path: "/admin/forums",
-  },
-  {
-    breadcrumb: "Surveys",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        className={iconClassName}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-        />
-      </svg>
-    ),
-    path: "/admin/surveys",
-  },
-];
-
 export default function AdminApp() {
   const { slug } = useParams<{ slug: string }>();
+  const { t } = useTranslation(["admin"]);
+  const sections: Section[] = [
+    {
+      breadcrumb: t("Back to Project"),
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          className={iconClassName}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+          />
+        </svg>
+      ),
+      path: "/app",
+    },
+
+    {
+      breadcrumb: t("Settings"),
+      icon: (
+        <svg
+          className={iconClassName}
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+          />
+        </svg>
+      ),
+      path: "/admin",
+    },
+    {
+      breadcrumb: t("Activity"),
+      icon: (
+        <svg
+          className={iconClassName}
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      ),
+      path: "/admin/activity",
+    },
+    {
+      breadcrumb: "Users & Groups",
+      icon: (
+        <svg
+          className={iconClassName}
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+          />
+        </svg>
+      ),
+      path: "/admin/users",
+    },
+    {
+      breadcrumb: "Data Layers",
+      icon: (
+        <svg
+          viewBox="2 1 21 21"
+          height="48"
+          width="48"
+          focusable="false"
+          role="img"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+          className={iconClassName}
+        >
+          <g data-name="Layer 2">
+            <path
+              d="M21 11.35a1 1 0 00-.61-.86l-2.15-.92 2.26-1.3a1 1 0 00.5-.92 1 1 0 00-.61-.86l-8-3.41a1 1 0 00-.78 0l-8 3.41a1 1 0 00-.61.86 1 1 0 00.5.92l2.26 1.3-2.15.92a1 1 0 00-.61.86 1 1 0 00.5.92l2.26 1.3-2.15.92a1 1 0 00-.61.86 1 1 0 00.5.92l8 4.6a1 1 0 001 0l8-4.6a1 1 0 00.5-.92 1 1 0 00-.61-.86l-2.15-.92 2.26-1.3a1 1 0 00.5-.92zm-9-6.26l5.76 2.45L12 10.85 6.24 7.54zm-.5 7.78a1 1 0 001 0l3.57-2 1.69.72L12 14.85l-5.76-3.31 1.69-.72zm6.26 2.67L12 18.85l-5.76-3.31 1.69-.72 3.57 2.05a1 1 0 001 0l3.57-2.05z"
+              data-name="layers"
+            ></path>
+          </g>
+        </svg>
+      ),
+      path: "/admin/data",
+    },
+    {
+      breadcrumb: "Sketch Classes",
+      icon: (
+        <svg
+          viewBox="0 0 448 512"
+          height="48"
+          width="48"
+          focusable="false"
+          role="img"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+          className={iconClassName}
+        >
+          <path
+            fill="currentColor"
+            d="M384 352c-.35 0-.67.1-1.02.1l-39.2-65.32c5.07-9.17 8.22-19.56 8.22-30.78s-3.14-21.61-8.22-30.78l39.2-65.32c.35.01.67.1 1.02.1 35.35 0 64-28.65 64-64s-28.65-64-64-64c-23.63 0-44.04 12.95-55.12 32H119.12C108.04 44.95 87.63 32 64 32 28.65 32 0 60.65 0 96c0 23.63 12.95 44.04 32 55.12v209.75C12.95 371.96 0 392.37 0 416c0 35.35 28.65 64 64 64 23.63 0 44.04-12.95 55.12-32h209.75c11.09 19.05 31.49 32 55.12 32 35.35 0 64-28.65 64-64 .01-35.35-28.64-64-63.99-64zm-288 8.88V151.12A63.825 63.825 0 00119.12 128h208.36l-38.46 64.1c-.35-.01-.67-.1-1.02-.1-35.35 0-64 28.65-64 64s28.65 64 64 64c.35 0 .67-.1 1.02-.1l38.46 64.1H119.12A63.748 63.748 0 0096 360.88zM272 256c0-8.82 7.18-16 16-16s16 7.18 16 16-7.18 16-16 16-16-7.18-16-16zM400 96c0 8.82-7.18 16-16 16s-16-7.18-16-16 7.18-16 16-16 16 7.18 16 16zM64 80c8.82 0 16 7.18 16 16s-7.18 16-16 16-16-7.18-16-16 7.18-16 16-16zM48 416c0-8.82 7.18-16 16-16s16 7.18 16 16-7.18 16-16 16-16-7.18-16-16zm336 16c-8.82 0-16-7.18-16-16s7.18-16 16-16 16 7.18 16 16-7.18 16-16 16z"
+          ></path>
+        </svg>
+      ),
+      path: "/admin/sketching",
+    },
+    {
+      breadcrumb: "Forums",
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          className={iconClassName}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
+        </svg>
+      ),
+      path: "/admin/forums",
+    },
+    {
+      breadcrumb: "Surveys",
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          className={iconClassName}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+          />
+        </svg>
+      ),
+      path: "/admin/surveys",
+    },
+  ];
+
   const routeConfig = [
     ...sections,
     ...[
@@ -197,10 +215,9 @@ export default function AdminApp() {
       path: `/:slug${section.path}`,
     }))
     .filter((route) => route.breadcrumb !== "Settings");
-  let { path, url } = useRouteMatch();
+  let { path } = useRouteMatch();
   const breadcrumbs = useBreadcrumbs(routeConfig, { disableDefaults: true });
 
-  const { t, i18n } = useTranslation(["admin"]);
   const { data, loading, error } = useCurrentProjectMetadataQuery({
     variables: {
       slug: slug || "",
@@ -281,6 +298,7 @@ export default function AdminApp() {
               </button>
             </div>
             <SidebarContents
+              sections={sections}
               slug={slug}
               projectName={data?.projectBySlug?.name || "▌"}
             />
@@ -297,6 +315,7 @@ export default function AdminApp() {
           {/* <!-- Sidebar component, swap this element with another sidebar if you like --> */}
           <div className="flex flex-col flex-grow bg-indigo-800 pt-5 pb-4 overflow-y-auto text-white">
             <SidebarContents
+              sections={sections}
               slug={slug}
               projectName={data?.projectBySlug?.name || "▌"}
             />
@@ -329,7 +348,7 @@ export default function AdminApp() {
               <nav className="flex items-center text-sm leading-5 font-medium">
                 {breadcrumbs.length === 0 && (
                   <span className="text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out">
-                    Settings
+                    <Trans ns={["admin"]}>Settings</Trans>
                   </span>
                 )}
                 {breadcrumbs.map((b, i) => {
@@ -426,16 +445,22 @@ export default function AdminApp() {
   );
 }
 
-function SidebarContents(props: { slug: string; projectName: string }) {
+function SidebarContents(props: {
+  slug: string;
+  projectName: string;
+  sections: Section[];
+}) {
   return (
     <>
       <div className="flex-row items-center flex-shrink-0 px-4 text-white">
         <span className="text-xl font-semibold">{props.projectName}</span>{" "}
-        <span className="block text-sm">Admin Dashboard</span>
+        <span className="block text-sm">
+          <Trans ns={["admin"]}>Admin Dashboard</Trans>
+        </span>
       </div>
       <div className="mt-5 flex-1 flex flex-col">
         <nav className="flex-1 px-2 bg-indigo-800 space-y-1">
-          {sections.map((section) => (
+          {props.sections.map((section) => (
             <NavLink
               exact
               key={section.path}

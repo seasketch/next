@@ -27,7 +27,6 @@ function ProfileStatusButton({
   onClick,
   loadingIndicatorDelay,
 }: ProfileStatusButtonProps) {
-  const auth0 = useAuth0();
   // Use this state to delay the appearance of the loading indicator.
   // The indicator is useful for exceptional states where auth0 is slow to
   // respond, but we don't need the UI spinning needlessly when it usually only
@@ -39,7 +38,7 @@ function ProfileStatusButton({
   }, loadingIndicatorDelay);
 
   const onClickHandler = onClick ? () => onClick() : undefined;
-  const { user, isLoading, error, isAuthenticated, logout } = useAuth0();
+  const { user, isLoading, error, isAuthenticated } = useAuth0();
   if (error) {
     return (
       <div
@@ -87,7 +86,9 @@ function ProfileStatusButton({
     <button
       className={`
         max-w-xs flex items-center text-sm rounded-full text-white 
-        focus:outline-none focus:shadow-solid hover:shadow-solid
+        focus:outline-none focus:shadow-solid hover:shadow-solid ${
+          !onClick ? "pointer-events-none" : ""
+        }
       `}
       style={{ borderColor: "#1e429f" }}
       id="user-menu"

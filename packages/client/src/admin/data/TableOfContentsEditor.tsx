@@ -4,11 +4,14 @@ import { Item, Menu, Separator } from "react-contexify";
 import { Link, useParams } from "react-router-dom";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
+import { useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
 import TableOfContents, {
   ClientTableOfContentsItem,
+  createBoundsRecursive,
+  nestItems,
 } from "../../dataLayers/tableOfContents/TableOfContents";
 import {
   TableOfContentsItem,
@@ -26,11 +29,14 @@ import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
 import TableOfContentsMetadataEditor from "./TableOfContentsMetadataEditor";
 import ZIndexEditor from "./ZIndexEditor";
+import PublishTableOfContentsModal from "./PublishTableOfContentsModal";
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
   const { slug } = useParams<{ slug: string }>();
   const { manager } = useContext(MapContext);
+  const { t, i18n } = useTranslation(["nav"]);
+
   const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },
   });
@@ -53,6 +59,7 @@ export default function TableOfContentsEditor() {
   const [folderId, setFolderId] = useState<number>();
   const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
   const [openMetadataViewerId, setOpenMetadataViewerId] = useState<number>();
+  const [publishOpen, setPublishOpen] = useState(false);
 
   useEffect(() => {
     if (tocQuery.data?.projectBySlug?.draftTableOfContentsItems) {
@@ -106,19 +113,24 @@ export default function TableOfContentsEditor() {
           createNew={createNewFolderModalOpen}
         />
       }
+      {publishOpen && (
+        <PublishTableOfContentsModal
+          onRequestClose={() => setPublishOpen(false)}
+        />
+      )}
       <header className="fixed bg-white h-16 w-128 z-20">
         <div className="max-w-md m-auto mt-4">
           <div className="bg-cool-gray-200 w-auto inline-block p-0.5 rounded text-sm">
-            <span className="px-2">view</span>
+            <span className="px-2">{t("view")}</span>
             <select
               value={selectedView}
               onChange={(e) => setSelectedView(e.target.value)}
               className="bg-white form-select text-sm overflow-visible p-1 px-2 pr-7 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 rounded-md focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5"
               style={{ lineHeight: 1, backgroundSize: "1em 1em" }}
             >
-              <option value="tree">Tree Editor</option>
-              <option value="state">Default Visibility</option>
-              <option value="order">Z-Order</option>
+              <option value="tree">{t("Tree Editor")}</option>
+              <option value="state">{t("Default Visibility")}</option>
+              <option value="order">{t("Z-Order")}</option>
             </select>
           </div>
           {/* <Link
@@ -129,26 +141,24 @@ export default function TableOfContentsEditor() {
           </Link> */}
           <Button
             small
-            label="Add data"
+            label={t("Add data")}
             href={`./data/add-data`}
-            className="ml-2"
+            className="ml-1"
           />
           <Button
-            className="ml-2"
-            label="Add folder"
+            className="ml-1"
+            label={t("Add folder")}
             small
             onClick={async () => {
               setCreateNewFolderModalOpen(true);
             }}
           />
-          {/* <button
-            className="bg-white rounded shadow-sm border-grey-500 border px-2 py-0.5 text-sm mx-2"
-            onClick={async () => {
-              setCreateNewFolderModalOpen(true);
-            }}
-          >
-            Add folder
-          </button> */}
+          <Button
+            small
+            className="ml-1"
+            label={t("Publish")}
+            onClick={() => setPublishOpen(true)}
+          />
         </div>
       </header>
       <div
@@ -330,106 +340,4 @@ export default function TableOfContentsEditor() {
       )}
     </div>
   );
-}
-
-function nestItems(
-  items: (Pick<
-    TableOfContentsItem,
-    | "title"
-    | "showRadioChildren"
-    | "isFolder"
-    | "isClickOffOnly"
-    | "id"
-    | "stableId"
-    | "parentStableId"
-    | "sortIndex"
-    | "hideChildren"
-  > & { dataLayerId?: number | string | null })[],
-  expansionState?: { [id: number]: boolean }
-) {
-  expansionState = expansionState || {};
-  const output: ClientTableOfContentsItem[] = [];
-  const lookup: { [stableId: string]: ClientTableOfContentsItem } = {};
-  for (const item of items) {
-    lookup[item.stableId] = {
-      ...item,
-      ...(item.isFolder
-        ? {
-            children: [],
-            expanded:
-              item.id in expansionState
-                ? expansionState[item.id] && !item.hideChildren
-                : false,
-          }
-        : {}),
-    };
-  }
-  for (const item of Object.values(lookup).sort(bySortIndexAndId)) {
-    if (item.parentStableId) {
-      const parent = lookup[item.parentStableId];
-      if (parent) {
-        parent.children!.push(item);
-      }
-    } else {
-      output.push(item);
-    }
-  }
-  return output;
-}
-
-function bySortIndexAndId(
-  a: ClientTableOfContentsItem,
-  b: ClientTableOfContentsItem
-): number {
-  // return (a.sortIndex)
-  const sortIndexA = a.sortIndex || 0;
-  const sortIndexB = b.sortIndex || 0;
-  return sortIndexA - sortIndexB;
-}
-
-function createBoundsRecursive(
-  item: ClientTableOfContentsItem,
-  bounds?: [number, number, number, number]
-): [number, number, number, number] {
-  if (item.bounds) {
-    if (!bounds) {
-      bounds = item.bounds.map((v) => parseFloat(v)) as [
-        number,
-        number,
-        number,
-        number
-      ];
-    } else {
-      bounds = combineBounds(
-        bounds,
-        item.bounds.map((v) => parseFloat(v)) as [
-          number,
-          number,
-          number,
-          number
-        ]
-      );
-    }
-  }
-  if (!bounds) {
-    bounds = [180.0, 90.0, -180.0, -90.0];
-  }
-  if (item.children) {
-    for (const child of item.children) {
-      bounds = createBoundsRecursive(child, bounds);
-    }
-  }
-  return bounds;
-}
-
-function combineBounds(
-  a: [number, number, number, number],
-  b: [number, number, number, number]
-): [number, number, number, number] {
-  return [
-    a[0] < b[0] ? a[0] : b[0],
-    a[1] < b[1] ? a[1] : b[1],
-    a[2] > b[2] ? a[2] : b[2],
-    a[3] > b[3] ? a[3] : b[3],
-  ];
 }

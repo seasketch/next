@@ -1,0 +1,23 @@
+query PublishedTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    tableOfContentsItems {
+      id
+      acl {
+        id
+        type
+      }
+      bounds
+      dataLayerId
+      enableDownload
+      hideChildren
+      isClickOffOnly
+      isFolder
+      parentStableId
+      showRadioChildren
+      sortIndex
+      stableId
+      title
+    }
+  }
+}

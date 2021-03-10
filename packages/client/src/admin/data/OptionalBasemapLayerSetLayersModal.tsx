@@ -40,6 +40,7 @@ export default function OptionalBasemapLayerSetLayersModal({
       (o: { name: string }) => o.name === optionName
     );
     if (!option) {
+      /* eslint-disable-next-line */
       throw Error(`Could not find option with name ${optionName}`);
     }
     initialLayers = option.layers || [];
@@ -66,6 +67,7 @@ export default function OptionalBasemapLayerSetLayersModal({
       const options = [...layer.options];
       let option = options.find((o: { name: string }) => o.name === optionName);
       if (!option) {
+        /* eslint-disable-next-line */
         throw new Error(`Could not find option named ${optionName}`);
       }
       const i = options.indexOf(option);
@@ -105,13 +107,13 @@ export default function OptionalBasemapLayerSetLayersModal({
           <Button
             small
             className="float-right ml-2 mt-1"
-            label="Select All"
+            label={t("Select All")}
             onClick={() => setLayers(style?.layers?.map((l) => l.id) || [])}
           />
           <Button
             small
             className="float-right mt-1"
-            label="Select None"
+            label={t("Select None")}
             onClick={() => setLayers([])}
           />
           <Button

@@ -1,11 +1,4 @@
-import React, {
-  Children,
-  ReactNode,
-  useCallback,
-  useContext,
-  useRef,
-  useState,
-} from "react";
+import React, { ReactNode, useContext, useRef, useState } from "react";
 import SortableTree, {
   changeNodeAtPath,
   FullTree,
@@ -25,22 +18,12 @@ import Spinner from "../../components/Spinner";
 import {
   AccessControlListType,
   TableOfContentsItem as GeneratedTableOfContentsItem,
+  TableOfContentsItem,
 } from "../../generated/graphql";
 import { Menu, useContextMenu } from "react-contexify";
 import "react-contexify/dist/ReactContexify.css";
 import Button from "../../components/Button";
-
-// export interface TableOfContentsNode {
-//   id: string;
-//   type: "folder" | "layer";
-//   title: string;
-//   children?: TableOfContentsNode[];
-//   expanded: boolean;
-//   disabled?: boolean;
-//   acl?: {
-//     type: AccessControlListType;
-//   };
-// }
+import { useTranslation } from "react-i18next";
 
 export type ClientTableOfContentsItem = Pick<
   GeneratedTableOfContentsItem,
@@ -86,6 +69,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
   const showFolderToggle = hasFolders(props.nodes[0]) && !props.hideExpandAll;
   const [selectedItemId, setSelectedItemId] = useState<string>();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
   const { show } = useContextMenu({
     id: props.contextMenuId || "none",
   });
@@ -128,7 +112,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
         <div className="z-10 p-0 absolute top-0 right-12 text-gray-500">
           <Button
             small
-            title="toggle all folder expansion"
+            title={t("toggle all folder expansion")}
             buttonClassName="px-0 py-0"
             className="px-0 py-0"
             onClick={() => setExpanded(expansionToggled)}
@@ -471,4 +455,106 @@ function hasFolders(node?: ClientTableOfContentsItem) {
     }
   }
   return false;
+}
+
+export function nestItems(
+  items: (Pick<
+    TableOfContentsItem,
+    | "title"
+    | "showRadioChildren"
+    | "isFolder"
+    | "isClickOffOnly"
+    | "id"
+    | "stableId"
+    | "parentStableId"
+    | "sortIndex"
+    | "hideChildren"
+  > & { dataLayerId?: number | string | null })[],
+  expansionState?: { [id: number]: boolean }
+) {
+  expansionState = expansionState || {};
+  const output: ClientTableOfContentsItem[] = [];
+  const lookup: { [stableId: string]: ClientTableOfContentsItem } = {};
+  for (const item of items) {
+    lookup[item.stableId] = {
+      ...item,
+      ...(item.isFolder
+        ? {
+            children: [],
+            expanded:
+              item.id in expansionState
+                ? expansionState[item.id] && !item.hideChildren
+                : false,
+          }
+        : {}),
+    };
+  }
+  for (const item of Object.values(lookup).sort(bySortIndexAndId)) {
+    if (item.parentStableId) {
+      const parent = lookup[item.parentStableId];
+      if (parent) {
+        parent.children!.push(item);
+      }
+    } else {
+      output.push(item);
+    }
+  }
+  return output;
+}
+
+export function bySortIndexAndId(
+  a: ClientTableOfContentsItem,
+  b: ClientTableOfContentsItem
+): number {
+  // return (a.sortIndex)
+  const sortIndexA = a.sortIndex || 0;
+  const sortIndexB = b.sortIndex || 0;
+  return sortIndexA - sortIndexB;
+}
+
+export function createBoundsRecursive(
+  item: ClientTableOfContentsItem,
+  bounds?: [number, number, number, number]
+): [number, number, number, number] {
+  if (item.bounds) {
+    if (!bounds) {
+      bounds = item.bounds.map((v) => parseFloat(v)) as [
+        number,
+        number,
+        number,
+        number
+      ];
+    } else {
+      bounds = combineBounds(
+        bounds,
+        item.bounds.map((v) => parseFloat(v)) as [
+          number,
+          number,
+          number,
+          number
+        ]
+      );
+    }
+  }
+  if (!bounds) {
+    bounds = [180.0, 90.0, -180.0, -90.0];
+  }
+  if (item.children) {
+    for (const child of item.children) {
+      bounds = createBoundsRecursive(child, bounds);
+    }
+  }
+  return bounds;
+}
+
+export function combineBounds(
+  a: [number, number, number, number],
+  b: [number, number, number, number]
+): [number, number, number, number] {
+  return [
+    a[0] < b[0] ? a[0] : b[0],
+    a[1] < b[1] ? a[1] : b[1],
+    a[2] > b[2] ? a[2] : b[2],
+    a[3] > b[3] ? a[3] : b[3],
+  ];
 }

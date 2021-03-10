@@ -53,7 +53,9 @@ export default function MetadataModal({
               />
             </svg>
           </button>
-          {error && `Error: ${error.message}`}
+          {error &&
+            // eslint-disable-next-line
+            `Error: ${error.message}`}
           {loading && <Spinner />}
           <div className="ProseMirror" ref={target}></div>
         </div>

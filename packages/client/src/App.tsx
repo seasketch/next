@@ -1,11 +1,12 @@
 import React, { Suspense } from "react";
-import { Switch, Route } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { Switch, Route, Redirect } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
 import ProjectsPage from "./homepage/ProjectsPage";
 import Header from "./header/Header";
 import NewProjectCTA from "./homepage/NewProjectCTA";
 import NewProjectPage from "./homepage/NewProjectPage";
+// import ProjectApp from "./projects/ProjectApp";
 
 const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
 
@@ -13,7 +14,13 @@ function App() {
   const { t } = useTranslation(["homepage"]);
   return (
     <div className="App">
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense
+        fallback={
+          <div>
+            <Trans>Loading...</Trans>
+          </div>
+        }
+      >
         <Route
           path={[
             "/signin",
@@ -42,7 +49,9 @@ function App() {
           </Route>
           <Route path="/authenticate">
             {/* check Auth0ProviderWithRouter#onRedirectCallback in index.tsx */}
-            <span>authenticating...</span>
+            <span>
+              <Trans>authenticating...</Trans>
+            </span>
           </Route>
           <Route exact path="/">
             <div className="p-4 pb-12 bg-white">
@@ -61,7 +70,14 @@ function App() {
             </div>
             <NewProjectCTA />
           </Route>
-          <Route path="/:slug">
+          <Route
+            exact
+            path="/:slug"
+            render={(params) => (
+              <Redirect to={`/${params.match.params.slug}/app`} />
+            )}
+          />
+          <Route path="/:slug/app/:sidebar?">
             <LazyProjectApp />
           </Route>
         </Switch>

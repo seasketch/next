@@ -17,11 +17,7 @@ import {
 } from "./MapContextManager";
 import Mustache from "mustache";
 import { Dispatch, SetStateAction } from "react";
-import {
-  DataSourceTypes,
-  InteractivitySetting,
-  InteractivityType,
-} from "../generated/graphql";
+import { DataSourceTypes, InteractivityType } from "../generated/graphql";
 import {
   getDynamicArcGISStyle,
   identifyLayers,
@@ -119,6 +115,7 @@ export default class LayerInteractivityManager {
                   GLStyles = layers;
                 } else {
                   throw new Error(
+                    /* eslint-disable-next-line */
                     `Could not find mapbox layer ids for client layer id=${layer.id}`
                   );
                 }
@@ -259,7 +256,7 @@ export default class LayerInteractivityManager {
         interactivitySetting &&
         interactivitySetting.type === InteractivityType.Popup
       ) {
-        var popup = new Popup({ closeOnClick: true, closeButton: false })
+        new Popup({ closeOnClick: true, closeButton: false })
           .setLngLat([e.lngLat.lng, e.lngLat.lat])
           .setHTML(
             Mustache.render(interactivitySetting.longTemplate || "", {
@@ -303,6 +300,7 @@ export default class LayerInteractivityManager {
       if (!existingRequest) {
         const source = this.imageSources[layer.dataSourceId];
         if (!source) {
+          /* eslint-disable-next-line */
           throw new Error(`Could not find source id=${layer.dataSourceId}`);
         }
         existingRequest = {

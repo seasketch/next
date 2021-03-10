@@ -49,7 +49,7 @@ export default function MapboxMap(props: OverlayMapProps) {
       className={`flex-1 bg-gray-300 ${props.className} relative`}
       ref={mapContainer}
     >
-      <div className="flex justify-center absolute text-xs z-10 pointer-events-none">
+      <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">
         <AnimatePresence>
           {mapContext.bannerMessages?.length ? (
             <motion.div
@@ -57,10 +57,11 @@ export default function MapboxMap(props: OverlayMapProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5 }}
-              className="text-sm p-1 w-full pr-16"
+              className="text-sm p-0.5 w-full px-4 "
               style={{
-                backgroundImage:
-                  "linear-gradient(to right, rgba(255,255,255,0.5), rgba(255,255,255,0.5), rgba(255,255,255,0))",
+                backgroundColor: "rgba(255,255,255,0.5)",
+                // backgroundImage:
+                //   "linear-gradient(to right, rgba(255,255,255,0.5), rgba(255,255,255,0.5), rgba(255,255,255,0))",
               }}
               dangerouslySetInnerHTML={{
                 __html: mapContext.bannerMessages.join(","),
@@ -72,6 +73,9 @@ export default function MapboxMap(props: OverlayMapProps) {
       {mapContext.basemapError && (
         <div className="flex w-full absolute top-1 place-content-center z-10 text-center">
           <div className=" bg-red-900 text-white p-1 text-sm">
+            {
+              //eslint-disable-next-line
+            }
             Basemap Error: {mapContext.basemapError.message}
           </div>
         </div>

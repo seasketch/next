@@ -48,13 +48,13 @@ export default function SetBasemapInteractivityLayers({
           <Button
             small
             className="float-right ml-2 mt-1"
-            label="Select All"
+            label={t("Select All")}
             onClick={() => setLayers(style?.layers?.map((l) => l.id) || [])}
           />
           <Button
             small
             className="float-right mt-1"
-            label="Select None"
+            label={t("Select None")}
             onClick={() => setLayers([])}
           />
           <Button

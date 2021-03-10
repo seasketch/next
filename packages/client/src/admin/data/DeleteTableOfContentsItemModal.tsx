@@ -3,6 +3,7 @@ import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import { ClientTableOfContentsItem } from "../../dataLayers/tableOfContents/TableOfContents";
 import { useDeleteBranchMutation } from "../../generated/graphql";
+import { Trans, useTranslation } from "react-i18next";
 
 export default function DeleteTableOfContentsItemModal(props: {
   item?: ClientTableOfContentsItem;
@@ -10,6 +11,7 @@ export default function DeleteTableOfContentsItemModal(props: {
   onDelete?: () => void;
 }) {
   const [mutation, mutationState] = useDeleteBranchMutation();
+  const { t } = useTranslation("admin");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<Error>();
   const onRequestClose = () => {
@@ -28,7 +30,7 @@ export default function DeleteTableOfContentsItemModal(props: {
             disabled={deleting}
             onClick={onRequestClose}
             className="mr-2"
-            label="Cancel"
+            label={t("Cancel")}
           />
           <Button
             disabled={deleting}
@@ -55,19 +57,28 @@ export default function DeleteTableOfContentsItemModal(props: {
                 setDeleting(false);
               }
             }}
-            label="Delete"
+            label={t("Delete")}
           />
         </>
       }
     >
-      <h2 className="text-lg font-semibold">Delete {props.item?.title}</h2>
+      <h2 className="text-lg font-semibold">
+        <Trans ns="admin">Delete</Trans> {props.item?.title}
+      </h2>
       <div className="mt-2 text-md text-gray-500">
         <p>
-          Are you sure you want to delete{" "}
-          {props.item?.isFolder
-            ? "this folder? Items contained will also be deleted."
-            : "this layer?"}
+          {props.item?.isFolder ? (
+            <Trans ns="admin">
+              Are you sure you want to delete this folder? Items contained will
+              also be deleted.
+            </Trans>
+          ) : (
+            <Trans ns="admin">
+              Are you sure you want to delete this layer?
+            </Trans>
+          )}
         </p>
+        {/* eslint-disable-next-line */}
         {error && <p className="text-red-900 mt-2">Error: {error.message}</p>}
       </div>
     </Modal>

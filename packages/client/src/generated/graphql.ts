@@ -12819,6 +12819,22 @@ export type InteractivitySettingsByIdQuery = (
   )> }
 );
 
+export type PublishTableOfContentsMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type PublishTableOfContentsMutation = (
+  { __typename?: 'Mutation' }
+  & { publishTableOfContents?: Maybe<(
+    { __typename?: 'PublishTableOfContentsPayload' }
+    & { tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id'>
+    )>> }
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -12913,6 +12929,27 @@ export type ProjectSlugExistsQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
+  )> }
+);
+
+export type PublishedTableOfContentsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type PublishedTableOfContentsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title'>
+      & { acl?: Maybe<(
+        { __typename?: 'Acl' }
+        & Pick<Acl, 'id' | 'type'>
+      )> }
+    )>> }
   )> }
 );
 
@@ -15639,6 +15676,40 @@ export function useInteractivitySettingsByIdLazyQuery(baseOptions?: Apollo.LazyQ
 export type InteractivitySettingsByIdQueryHookResult = ReturnType<typeof useInteractivitySettingsByIdQuery>;
 export type InteractivitySettingsByIdLazyQueryHookResult = ReturnType<typeof useInteractivitySettingsByIdLazyQuery>;
 export type InteractivitySettingsByIdQueryResult = Apollo.QueryResult<InteractivitySettingsByIdQuery, InteractivitySettingsByIdQueryVariables>;
+export const PublishTableOfContentsDocument = gql`
+    mutation PublishTableOfContents($projectId: Int!) {
+  publishTableOfContents(input: {projectId: $projectId}) {
+    tableOfContentsItems {
+      id
+    }
+  }
+}
+    `;
+export type PublishTableOfContentsMutationFn = Apollo.MutationFunction<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>;
+
+/**
+ * __usePublishTableOfContentsMutation__
+ *
+ * To run a mutation, you first call `usePublishTableOfContentsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePublishTableOfContentsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [publishTableOfContentsMutation, { data, loading, error }] = usePublishTableOfContentsMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function usePublishTableOfContentsMutation(baseOptions?: Apollo.MutationHookOptions<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>) {
+        return Apollo.useMutation<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>(PublishTableOfContentsDocument, baseOptions);
+      }
+export type PublishTableOfContentsMutationHookResult = ReturnType<typeof usePublishTableOfContentsMutation>;
+export type PublishTableOfContentsMutationResult = Apollo.MutationResult<PublishTableOfContentsMutation>;
+export type PublishTableOfContentsMutationOptions = Apollo.BaseMutationOptions<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -15861,6 +15932,57 @@ export function useProjectSlugExistsLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type ProjectSlugExistsQueryHookResult = ReturnType<typeof useProjectSlugExistsQuery>;
 export type ProjectSlugExistsLazyQueryHookResult = ReturnType<typeof useProjectSlugExistsLazyQuery>;
 export type ProjectSlugExistsQueryResult = Apollo.QueryResult<ProjectSlugExistsQuery, ProjectSlugExistsQueryVariables>;
+export const PublishedTableOfContentsDocument = gql`
+    query PublishedTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    tableOfContentsItems {
+      id
+      acl {
+        id
+        type
+      }
+      bounds
+      dataLayerId
+      enableDownload
+      hideChildren
+      isClickOffOnly
+      isFolder
+      parentStableId
+      showRadioChildren
+      sortIndex
+      stableId
+      title
+    }
+  }
+}
+    `;
+
+/**
+ * __usePublishedTableOfContentsQuery__
+ *
+ * To run a query within a React component, call `usePublishedTableOfContentsQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePublishedTableOfContentsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePublishedTableOfContentsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function usePublishedTableOfContentsQuery(baseOptions: Apollo.QueryHookOptions<PublishedTableOfContentsQuery, PublishedTableOfContentsQueryVariables>) {
+        return Apollo.useQuery<PublishedTableOfContentsQuery, PublishedTableOfContentsQueryVariables>(PublishedTableOfContentsDocument, baseOptions);
+      }
+export function usePublishedTableOfContentsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<PublishedTableOfContentsQuery, PublishedTableOfContentsQueryVariables>) {
+          return Apollo.useLazyQuery<PublishedTableOfContentsQuery, PublishedTableOfContentsQueryVariables>(PublishedTableOfContentsDocument, baseOptions);
+        }
+export type PublishedTableOfContentsQueryHookResult = ReturnType<typeof usePublishedTableOfContentsQuery>;
+export type PublishedTableOfContentsLazyQueryHookResult = ReturnType<typeof usePublishedTableOfContentsLazyQuery>;
+export type PublishedTableOfContentsQueryResult = Apollo.QueryResult<PublishedTableOfContentsQuery, PublishedTableOfContentsQueryVariables>;
 export const SimpleProjectListDocument = gql`
     query SimpleProjectList($first: Int, $offset: Int) {
   projectsConnection(first: $first, offset: $offset) {

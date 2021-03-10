@@ -6,6 +6,7 @@ import Modal from "../../../components/Modal";
 import ProgressBar from "../../../components/ProgressBar";
 import Switch from "../../../components/Switch";
 import { RenderUnderType } from "../../../generated/graphql";
+import { useTranslation, Trans } from "react-i18next";
 import useProjectId from "../../../useProjectId";
 import {
   ArcGISServiceSettings,
@@ -29,6 +30,7 @@ export default function DynamicMapServerSettingsForm(props: {
   const { slug } = useParams<{ slug: string }>();
   const projectId = useProjectId();
   const history = useHistory();
+  const { t } = useTranslation("admin");
   const acceptableImageFormats = [
     "PNG",
     "PNG8",
@@ -40,7 +42,7 @@ export default function DynamicMapServerSettingsForm(props: {
   return (
     <div>
       <InputBlock
-        title="Enable High-DPI Requests"
+        title={t("Enable High-DPI Requests")}
         className="mt-4 text-sm"
         input={
           <Switch
@@ -54,13 +56,15 @@ export default function DynamicMapServerSettingsForm(props: {
           />
         }
       >
-        Request higher resolution images when the user has a "Retina" or 4k
-        display. Maps will be much more detailed, but it demands more of the
-        data server.
+        <Trans ns="admin">
+          Request higher resolution images when the user has a "Retina" or 4k
+          display. Maps will be much more detailed, but it demands more of the
+          data server.
+        </Trans>
       </InputBlock>
       <InputBlock
         className="mt-4 text-sm"
-        title="Image Format"
+        title={t("Image Format")}
         input={
           <select
             id="imageFormat"
@@ -81,8 +85,10 @@ export default function DynamicMapServerSettingsForm(props: {
           </select>
         }
       >
-        Imagery data looks best using <code>jpg</code>, for others{" "}
-        <code>png</code> is a good choice.
+        <Trans ns="admin">
+          Imagery data looks best using <code>jpg</code>, for others{" "}
+          <code>png</code> is a good choice.
+        </Trans>
       </InputBlock>
       {/* <InputBlock
         className="mt-4 text-sm"
@@ -108,14 +114,16 @@ export default function DynamicMapServerSettingsForm(props: {
         can render this service underneath labels or land.
       </InputBlock> */}
       <div className="mt-6 mb-5 bg-gray-100 rounded py-2 px-4 pb-3">
-        <h3 className="font-medium">Import Service</h3>
+        <h3 className="font-medium">{t("Import Service")}</h3>
         <p className="text-sm text-gray-600 mt-1 mb-2">
-          Please review the layer list and exclude any that you do not wish to
-          display, and check that the above settings render well.
+          <Trans ns="admin">
+            Please review the layer list and exclude any that you do not wish to
+            display, and check that the above settings render well.
+          </Trans>
         </p>
         <Button
           primary={true}
-          label={`Import Service`}
+          label={t(`Import Service`)}
           onClick={async () => {
             await importService(
               props.layerInfo,
@@ -132,7 +140,7 @@ export default function DynamicMapServerSettingsForm(props: {
       </div>
       <Modal
         open={!!importServiceState.inProgress || !!importServiceState.error}
-        title="Import Image Service"
+        title={t("Import Image Service")}
       >
         <div className="w-128">
           {importServiceState.error && (
@@ -143,7 +151,7 @@ export default function DynamicMapServerSettingsForm(props: {
               </div>
               <Button
                 onClick={() => history.push(`/${slug}/admin/data`)}
-                label="Cancel"
+                label={t("Cancel")}
                 className="mr-2"
               />
             </>

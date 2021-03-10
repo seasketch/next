@@ -67,6 +67,9 @@ const Modal: React.FunctionComponent<ModalProps> = ({
             </motion.div>
             {/* <!-- This element is to trick the browser into centering the modal contents. --> */}
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen"></span>
+            {
+              // eslint-disable-next-line
+            }
             &#8203;
             <motion.div
               className={`inline-block align-bottom overflow-hidden bg-white sm:rounded-lg  text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm md:max-w-full md:w-auto sm:w-full z-50 relative ${

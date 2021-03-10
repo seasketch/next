@@ -1,10 +1,16 @@
 import React from "react";
 import { useSimpleProjectListQuery } from "../generated/graphql";
 import { Link } from "react-router-dom";
+import { Trans } from "react-i18next";
 
-export default () => {
+export default function SimpleProjectList() {
   const { data, loading, error } = useSimpleProjectListQuery();
-  if (loading) return <span>loading</span>;
+  if (loading)
+    return (
+      <span>
+        <Trans>loading...</Trans>
+      </span>
+    );
   if (error) return <span>{error.toString()}</span>;
   return (
     <div className="mx-auto bg-white shadow sm:rounded-md sm:my-4 max-w-lg">
@@ -23,4 +29,4 @@ export default () => {
       </ul>
     </div>
   );
-};
+}

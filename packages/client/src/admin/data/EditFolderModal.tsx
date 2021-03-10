@@ -1,11 +1,10 @@
-import React, { FormEvent, FormEventHandler, useEffect, useState } from "react";
-import { createStatement } from "typescript";
+import React, { FormEvent, useEffect, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
 import {
-  GetFolderDocument,
   TableOfContentsItem,
   useCreateFolderMutation,
   useGetFolderQuery,
@@ -34,7 +33,7 @@ export default function EditFolderModal({
   className,
   createNew,
 }: EditFolderModalProps) {
-  const { data, loading, ...queryState } = useGetFolderQuery({
+  const { data, loading } = useGetFolderQuery({
     variables: {
       id: folderId!,
     },
@@ -105,6 +104,7 @@ export default function EditFolderModal({
       folderType: value,
     }));
   };
+  const { t } = useTranslation("admin");
 
   const error = mutationState.error || createFolderState.error;
   const isLoading =
@@ -120,7 +120,7 @@ export default function EditFolderModal({
           {" "}
           <Button
             disabled={isLoading}
-            label="Cancel"
+            label={t("Cancel")}
             onClick={() => {
               if (onRequestClose) {
                 onRequestClose(false);
@@ -132,7 +132,7 @@ export default function EditFolderModal({
             loading={isLoading}
             className="ml-2"
             primary
-            label="Save"
+            label={t("Save")}
             onClick={onSave}
           />
         </>
@@ -150,7 +150,7 @@ export default function EditFolderModal({
                 autoFocus
                 error={error ? error.message : undefined}
                 id="folder-name"
-                label="Name"
+                label={t("Name")}
                 disabled={loading || isLoading}
                 value={state.title}
                 onChange={(val) =>
@@ -163,7 +163,7 @@ export default function EditFolderModal({
             </div>
             <fieldset className="mt-6 mb-8">
               <legend className="text-sm font-medium text-gray-700">
-                Folder type
+                <Trans ns="admin">Folder type</Trans>
               </legend>
               <div className="mt-2 space-y-4 pr-8 pl-2">
                 <div className="relative flex items-start">
@@ -182,11 +182,13 @@ export default function EditFolderModal({
                       htmlFor={FolderType.DEFAULT.toString()}
                       className="font-medium text-gray-700"
                     >
-                      Default
+                      <Trans ns="admin">Default</Trans>
                     </label>
                     <p className="text-gray-500">
-                      Folder can be expanded and layers within can be toggled
-                      individually.
+                      <Trans ns="admin">
+                        Folder can be expanded and layers within can be toggled
+                        individually.
+                      </Trans>
                     </p>
                   </div>
                 </div>
@@ -206,12 +208,14 @@ export default function EditFolderModal({
                       htmlFor={FolderType.CLICK_OFF_ONLY.toString()}
                       className="font-medium text-gray-700"
                     >
-                      Check-off only
+                      <Trans ns="admin">Check-off only</Trans>
                     </label>
                     <p className="text-gray-500">
-                      Folders of this type do not enable users to turn on all
-                      layers at once. They can use the folder to toggle all
-                      layers <i>off</i>.
+                      <Trans ns="admin">
+                        Folders of this type do not enable users to turn on all
+                        layers at once. They can use the folder to toggle all
+                        layers <i>off</i>.
+                      </Trans>
                     </p>
                   </div>
                 </div>
@@ -231,12 +235,14 @@ export default function EditFolderModal({
                       htmlFor={FolderType.HIDE_CHILDREN.toString()}
                       className="font-medium text-gray-700"
                     >
-                      Hidden children
+                      <Trans ns="admin">Hidden children</Trans>
                     </label>
                     <p className="text-gray-500">
-                      Folders of this type cannot be expanded to reveal the
-                      layers within. This can be used to make multiple layers
-                      appear as one in the table of contents.
+                      <Trans ns="admin">
+                        Folders of this type cannot be expanded to reveal the
+                        layers within. This can be used to make multiple layers
+                        appear as one in the table of contents.
+                      </Trans>
                     </p>
                   </div>
                 </div>
@@ -256,11 +262,13 @@ export default function EditFolderModal({
                       htmlFor={FolderType.RADIO_CHILDREN.toString()}
                       className="font-medium text-gray-700"
                     >
-                      Radio children
+                      <Trans ns="admin">Radio children</Trans>
                     </label>
                     <p className="text-gray-500">
-                      Only a single item within this folder can be turned on at
-                      one time.
+                      <Trans ns="admin">
+                        Only a single item within this folder can be turned on
+                        at one time.
+                      </Trans>
                     </p>
                   </div>
                 </div>

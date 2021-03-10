@@ -1,8 +1,14 @@
 {
+  " /  currently remaining": " /  currently remaining",
   "3d Terrain": "",
   "<0>Unsupported</0>": {
     " Users will not be able to control the visibility and ordering of individual layers": {
       "": "<0>Unsupported</0>. Users will not be able to control the visibility and ordering of individual layers."
+    }
+  },
+  "A copy of this dataset will be hosted on our global content delivery network": {
+    " This option offers better performance and enables custom styling, creation of vector tiles, and offline access (coming soon)": {
+      "": "A copy of this dataset will be hosted on our global content delivery network. This option offers better performance and enables custom styling, creation of vector tiles, and offline access (coming soon)."
     }
   },
   "Access Control": "",
@@ -11,43 +17,85 @@
   "Accessible only to project administrators": "",
   "Accessible to anyone with project access": "",
   "Actions": "Actions",
+  "Activity": "",
   "Add Option": "",
+  "Add Radio Option": "",
+  "Add Select Option": "",
+  "Add basemap": "",
   "Add description": "",
+  "Admin": "Admin",
+  "Admin Dashboard": "Admin Dashboard",
   "Admins Only": "",
   "Always on": "",
+  "An error occured when retrieving this dataset and it cannot be imported": {
+    " ": "An error occured when retrieving this dataset and it cannot be imported. "
+  },
+  "Analyzing layer  of  ": "Analyzing layer  of  ",
   "Anyone can visit the project and participate": {
     " Can only be enabled for <1>listed</1> projects": {
       "": "Anyone can visit the project and participate. Can only be enabled for <1>listed</1> projects."
     }
   },
   "ArcGIS Dynamic Map Service": "ArcGIS Dynamic Map Service",
+  "ArcGIS Server": "",
+  "ArcGIS Server Location": "ArcGIS Server Location",
+  "ArcGIS Version": "ArcGIS Version",
+  "Are you sure you want to cancel importing this service? Proceeding may leave partially imported service items in the layer list": {
+    "": ""
+  },
   "Are you sure you want to delete the basemap?": "",
+  "Are you sure you want to delete this folder? Items contained will also be deleted": {
+    "": "Are you sure you want to delete this folder? Items contained will also be deleted."
+  },
+  "Are you sure you want to delete this layer?": "Are you sure you want to delete this layer?",
   "Attribution": "",
+  "Back to Project": "",
+  "Banner": "",
   "Basemap Integration": "",
   "Basemap Labels": "",
+  "Basemap Name": "",
+  "Basemap Options": "",
+  "Basemap Type": "",
   "Basic Settings": "",
+  "Before importing vector sources, SeaSketch will these vector sources for compatability and file size issues": {
+    "": "Before importing vector sources, SeaSketch will these vector sources for compatability and file size issues."
+  },
   "Brief description below the name": "",
+  "Browse": "Browse",
   "By Group": "",
   "By identifying the lowest labels layer in this basemap you will be able to configure layers to render below them": {
     "": "By identifying the lowest labels layer in this basemap you will be able to configure layers to render below them."
   },
   "Cancel": "",
+  "Change description": "",
   "Change label": "",
+  "Change name": "",
+  "Check-off only": "Check-off only",
   "Choose a location where you want SeaSketch to store imported map data": {
     " It's best to pick a data center close to your users for best performance": {
       "": "Choose a location where you want SeaSketch to store imported map data. It's best to pick a data center close to your users for best performance."
     }
   },
   "Choose an Image": "",
+  "Clear metadata": "",
+  "Close": "",
   "Contact <2>support</2> to discuss changing": {
     "": "Contact <2>support</2> to discuss changing."
   },
   "Copied URL": "",
   "Cover Basemap": "",
+  "Create a thumbnail image that best represents this basemap": "Create a thumbnail image that best represents this basemap",
+  "Custom Basemap": "",
   "Data Source Details": "Data Source Details",
+  "Data Source Options": "",
   "Data Storage Location": "",
+  "Default": "Default",
+  "Default off": "",
+  "Default on": "",
+  "Default option name": "",
   "Delete": "",
   "Description": "",
+  "Discard Changes": "Discard Changes",
   "Display this layer under any text labels on the basemap": {
     "": ""
   },
@@ -64,41 +112,111 @@
   "Dynamic layers are unsupported": {
     "": ""
   },
+  "Edit": "",
   "Edit Basemap": "Edit Basemap",
   "Edit Layer": "Edit Layer",
+  "Edit Link": "",
+  "Edit Metadata": "Edit Metadata",
   "Edit description": "",
+  "Edit metadata": "",
+  "Enable High-DPI Requests": "",
   "Enable data download": "Enable data download",
+  "Enter a <2>url template</2> the tells SeaSketch how to load a raster tile data source": {
+    "": "Enter a <2>url template</2> the tells SeaSketch how to load a raster tile data source."
+  },
+  "Enter a new description": "",
+  "Enter a new label": "",
   "Error fetching settings": {
     "": ""
   },
   "Error saving settings": {
     "": ""
   },
+  "Exclude all from import": "",
   "Featured Project": "",
   "Featured projects will be displayed more prominently on project listing pages": {
     "": ""
   },
+  "Field": "Field",
   "File Size": "File Size",
   "First Option Name": "",
+  "Folder can be expanded and layers within can be toggled individually": {
+    "": "Folder can be expanded and layers within can be toggled individually."
+  },
+  "Folder type": "Folder type",
+  "Folders of this type cannot be expanded to reveal the layers within": {
+    " This can be used to make multiple layers appear as one in the table of contents": {
+      "": "Folders of this type cannot be expanded to reveal the layers within. This can be used to make multiple layers appear as one in the table of contents."
+    }
+  },
+  "Folders of this type do not enable users to turn on all layers at once": {
+    " They can use the folder to toggle all layers <i>off</i>": {
+      "": "Folders of this type do not enable users to turn on all layers at once. They can use the folder to toggle all layers <i>off</i>."
+    }
+  },
   "GeoJSON data hosted on SeaSketch": "GeoJSON data hosted on SeaSketch",
+  "Geometry Precision": "",
+  "Go Back": "",
   "Groups of mutually exclusive layers can be chosen from a dropdown menu": "",
   "Groups of mutually exclusive layers can be chosen from a list of radio options": "",
+  "Hidden children": "Hidden children",
   "If enabled, users will be able to download this dataset in GeoJSON vector format using the context menu": {
     "": "If enabled, users will be able to download this dataset in GeoJSON vector format using the context menu."
   },
   "If set, a short attribution string will be shown at the bottom of the map": {
     "": ""
   },
+  "Image Format": "",
   "Image Service": "",
+  "Image sources display data as full-screen images, typical of how most web mapping portals work": {
+    " Each time the user pans or zooms the map a new image will be requested and displayed with the requested layers": {
+      "": "Image sources display data as full-screen images, typical of how most web mapping portals work. Each time the user pans or zooms the map a new image will be requested and displayed with the requested layers."
+    }
+  },
+  "Imagery data looks best using <1>jpg</1>, for others <4>png</4> is a good choice": {
+    "": "Imagery data looks best using <1>jpg</1>, for others <4>png</4> is a good choice."
+  },
+  "Import  layers": "Import  layers",
+  "Import  layers_plural": "",
+  "Import Image Service": "",
+  "Import Layers": "",
+  "Import Service": "",
+  "Import Vector Layers": "",
+  "Import a copy into SeaSketch": "Import a copy into SeaSketch",
+  "Import all  layers": "Import all  layers",
+  "Import all  layers_plural": "",
+  "Importing Service": "",
+  "Importing this service will consume  of your  quota": {
+    "": "Importing this service will consume  of your  quota."
+  },
+  "Included": "Included",
+  "Included Fields": "Included Fields",
   "Invite Only": "",
   "Labels Layer": "Labels Layer",
+  "Limit the fields included in this dataset in order to reduce download size": {
+    " Does not apply to uploaded revisions": {
+      " Be careful not to remove fields used in styles": {
+        "": "Limit the fields included in this dataset in order to reduce download size. Does not apply to uploaded revisions. Be careful not to remove fields used in styles."
+      }
+    }
+  },
+  "Link dynamically to origin server": "Link dynamically to origin server",
+  "Loading style": "",
   "Logo": "",
   "Logo Link URL": "",
+  "Map": "Map",
   "Map Extent Settings": "",
+  "Mapbox GL Style": "",
   "Name": "",
+  "New Optional Layer": "New Optional Layer",
+  "New description": "",
+  "New name": "",
   "None": "",
   "Off by default": "",
   "On by default": "",
+  "Only a single item within this folder can be turned on at one time": {
+    "": "Only a single item within this folder can be turned on at one time."
+  },
   "Only approved participants can visit the project": {
     " Admins can invite users by email and users can also request access": {
       "": "Only approved participants can visit the project. Admins can invite users by email and users can also request access."
@@ -108,19 +226,75 @@
     "": ""
   },
   "Option Type": "",
+  "Option name": "",
   "Optional Layers": "Optional Layers",
+  "Options": "",
   "Original Source": "Original Source",
   "Permanent Project URL": "",
+  "Please review the layer list and exclude any that you do not wish to display, and check that the above settings render well": {
+    "": "Please review the layer list and exclude any that you do not wish to display, and check that the above settings render well."
+  },
   "Project Name": "",
   "Public": "",
   "Public Listing": "",
+  "Publish": "",
+  "Publish Overlays": "",
+  "Published layer lists include all authorization settings, data layer and source changes, and z-ordering specifications": {
+    " Once published, project users will have access to the new list upon reloading the page": {
+      " Edits to the overlay list from the administrator page will not be available to end-users until they are published": {
+        "": "Published layer lists include all authorization settings, data layer and source changes, and z-ordering specifications. Once published, project users will have access to the new list upon reloading the page. Edits to the overlay list from the administrator page will not be available to end-users until they are published."
+      }
+    }
+  },
+  "Radio children": "Radio children",
+  "Raster tile url template": "",
+  "Recently Used Servers": "Recently Used Servers",
   "Redraw Bounds": "",
   "Render this layer above the basemap entirely": {
     "": ""
   },
+  "Rendering Style": "",
+  "Request higher resolution images when the user has a \"Retina\" or 4k display": {
+    " Maps will be much more detailed, but it demands more of the data server": {
+      "": "Request higher resolution images when the user has a \"Retina\" or 4k display. Maps will be much more detailed, but it demands more of the data server."
+    }
+  },
+  "Reset to original ArcGIS style": "Reset to original ArcGIS style",
+  "Reset to server style": "Reset to server style",
+  "Resetting style from <2>original source</2>": "Resetting style from <2>original source</2>",
+  "Review any warnings or errors above before importing": {
+    " Once the import process begins, be sure not to close the browser window or let your computer go to sleep": {
+      " Otherwise the import will fail": {
+        "": "Review any warnings or errors above before importing. Once the import process begins, be sure not to close the browser window or let your computer go to sleep. Otherwise the import will fail."
+      }
+    }
+  },
   "Save": "",
+  "Save and Close": "",
   "SeaSketch Developer Settings": "",
+  "SeaSketch is preparing for import by reviewing your settings and the file sizes of the selected layers": {
+    "": "SeaSketch is preparing for import by reviewing your settings and the file sizes of the selected layers."
+  },
+  "Select All": "",
+  "Select None": "",
+  "Select all layers in the basemap that will be controlled by this option": {
+    " When added to an Optional Layer, these layers will be hidden unless an associated control has been toggled": {
+      "": "Select all layers in the basemap that will be controlled by this option. When added to an Optional Layer, these layers will be hidden unless an associated control has been toggled."
+    }
+  },
+  "Select all layers in the basemap that you would like to be interactive": {
+    "": "Select all layers in the basemap that you would like to be interactive."
+  },
+  "Select applicable layers": "",
+  "Set Layers": "",
   "Set layers": "",
+  "Settings": "Settings",
+  "Short text can be displayed towards the top of the map when the user hovers over features": {
+    "": ""
+  },
+  "Short text can be displayed towards the top of the map when the user hovers over features in the selected basemap layers": {
+    "": ""
+  },
   "Show Under Labels": "",
   "Simple switch to toggle a set of optional layers": "",
   "Source Server": "Source Server",
@@ -133,6 +307,11 @@
   "Terrain Exaggeration": "",
   "Terrain will be enabled whenever this basemap is visible": "",
   "Terrain works best with imagery data and is often best disabled otherwise": "",
+  "There were errors found when analyzing this service": {
+    " Either exclude layers with errors from the import or adjust their settings to fix the error before proceeding": {
+      "": "There were errors found when analyzing this service. Either exclude layers with errors from the import or adjust their settings to fix the error before proceeding."
+    }
+  },
   "These options are only visible to the SeaSketch team": {
     "": ""
   },
@@ -140,11 +319,21 @@
     "": ""
   },
   "Title": "",
+  "Tooltip": "",
+  "Try Again": "",
+  "Type": "Type",
   "Update from ArcGIS": "Update from ArcGIS",
   "Upload": "Upload",
   "Uploading": "",
   "Users can turn off 3d terrain if desired": "",
   "Users can turn on 3d terrain if desired": "",
+  "Using a lower level of precision reduces a dataset's size, increasing download speed and improving map performance": {
+    " Does not apply to uploads": {
+      "": "Using a lower level of precision reduces a dataset's size, increasing download speed and improving map performance. Does not apply to uploads."
+    }
+  },
+  "Using a lower level of precision reduces download size": "",
+  "Vector Dataset Statistics": "",
   "Vector Style": "Vector Style",
   "Vector data hosted on ArcGIS Server": "Vector data hosted on ArcGIS Server",
   "Vector layers can be styled using <2>MapBox GL Style Layers</2>": {
@@ -152,6 +341,14 @@
       "": "Vector layers can be styled using <2>MapBox GL Style Layers</2>. Don't specify a <4>source</4> or <6>id</6> property on your layers, those will be managed for you by SeaSketch."
     }
   },
+  "Vector layers in SeaSketch are rendered using <2>MapBox GL Styles</2>": {
+    " Cartographic information from ArcGIS Server has been converted into this stylesheet format for you": {
+      " Below you can adjust this style information": {
+        "": "Vector layers in SeaSketch are rendered using <2>MapBox GL Styles</2>. Cartographic information from ArcGIS Server has been converted into this stylesheet format for you. Below you can adjust this style information."
+      }
+    }
+  },
+  "WCS (WMS or WMTS)": "",
   "We recommend a square PNG logo with transparent background of at least <1>128x128</1> pixels": {
     "": "We recommend a square PNG logo with transparent background of at least <1>128x128</1> pixels."
   },
@@ -160,8 +357,30 @@
       "": "When enabled, this project will be listed on the SeaSketch <2>projects page</2> and accessible to search engines. We recommend enabling this setting even for private projects so that your users can find the project easily and request access if necessary."
     }
   },
+  "When using vector sources, SeaSketch loads actual geometry data and uses the user's browser to render it": {
+    " This can result in a much faster, sharper, and more interactive map but takes a little more work to configure": {
+      " Each layer can be styled and configured independently": "When using vector sources, SeaSketch loads actual geometry data and uses the user's browser to render it. This can result in a much faster, sharper, and more interactive map but takes a little more work to configure. Each layer can be styled and configured independently"
+    }
+  },
+  "With Optional Layers you can provide a means for users to toggle components of the basemap like labels, or choose among mutually exclusive versions of a dataset like annual data": "With Optional Layers you can provide a means for users to toggle components of the basemap like labels, or choose among mutually exclusive versions of a dataset like annual data",
   "With Optional Layers you can provide a means for users to toggle components of the basemap like labels, or even choose among mutually exclusive versions of a dataset like annual data": "With Optional Layers you can provide a means for users to toggle components of the basemap like labels, or even choose among mutually exclusive versions of a dataset like annual data",
+  "With this option selected data and cartographic styling will be downloaded from the origin server by each user": {
+    " Updates to data and cartography are immediately available in SeaSketch but performance is poorer and features are limited": {
+      "": "With this option selected data and cartographic styling will be downloaded from the origin server by each user. Updates to data and cartography are immediately available in SeaSketch but performance is poorer and features are limited."
+    }
+  },
+  "You can also <2>download</2> this dataset and <6>upload</6> a revised copy": {
+    " We suggest removing complex coastlines (use the render under land option) and simplifying geometry to only the precision needed for visualization": {
+      "": "You can also <2>download</2> this dataset and <6>upload</6> a revised copy. We suggest removing complex coastlines (use the render under land option) and simplifying geometry to only the precision needed for visualization."
+    }
+  },
   "You cannot unlist a public project": {
     "": ""
-  }
+  },
+  "attributes": "",
+  "download time": "",
+  "features": "",
+  "reset to defaults": "",
+  "save": "",
+  "sq kilometers": ""
 }

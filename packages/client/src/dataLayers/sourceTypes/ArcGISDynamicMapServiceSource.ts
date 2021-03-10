@@ -21,11 +21,13 @@ export function updateDynamicMapService(
 ) {
   if (prev.type !== state.type) {
     throw new Error(
+      // eslint-disable-next-line
       `Changing type of ArcGISDynamicMapServiceSource is not supported`
     );
   }
   if (prev.url !== state.url) {
     throw new Error(
+      // eslint-disable-next-line
       `Changing url of ArcGISDynamicMapServiceSource is not supported`
     );
   }
@@ -86,10 +88,12 @@ export function urlTemplateForArcGISDynamicSource(
   // Default is epsg:3857
   url.searchParams.set("imageSR", "102100");
   url.searchParams.set("bboxSR", "102100");
+  /* eslint-disable */
   url.searchParams.set(
     "layers",
     `show:${sublayers.map((l) => l.sublayer).join(",")}`
   );
+  /* eslint-enable */
   // url.searchParams.set("bbox", "{bbox-epsg-3857}");
   url.searchParams.set("size", [size, size].join(","));
   url.searchParams.set("transparent", "true");

@@ -24,7 +24,6 @@ import ArcGISServiceMetadata from "./ArcGISServiceMetadata";
 import SegmentControl from "../../../components/SegmentControl";
 import SettingsIcon from "../../../components/SettingsIcon";
 import DynamicMapServerSettingsForm from "./DynamicMapServerSettingsForm";
-import VectorFeatureLayerSettingsForm from "./VectorFeatureLayerSettingsForm";
 import { FeatureLayerSettings } from "./FeatureLayerSettings";
 import {
   MapContext,
@@ -38,9 +37,7 @@ import TableOfContents, {
   ClientTableOfContentsItem,
 } from "../../../dataLayers/tableOfContents/TableOfContents";
 import Button from "../../../components/Button";
-import Modal from "../../../components/Modal";
 import ImportVectorLayersModal from "./ImportVectorLayersModal";
-import { settings } from "cluster";
 import ExcludeLayerToggle, {
   ExcludeAddIcon,
   ExcludeIcon,
@@ -50,9 +47,9 @@ import {
   RenderUnderType,
   useGetBasemapsQuery,
 } from "../../../generated/graphql";
-import useProjectId from "../../../useProjectId";
 import bytes from "bytes";
 import { useParams } from "react-router-dom";
+import { useTranslation, Trans } from "react-i18next";
 
 export default function ArcGISBrowser() {
   const [server, setServer] = useState<{
@@ -65,13 +62,13 @@ export default function ArcGISBrowser() {
   const mapServerInfo = useMapServerInfo(selectedMapServer);
   const [selectedFeatureLayer, setSelectedFeatureLayer] = useState<LayerInfo>();
   const serviceColumnRef = useRef<HTMLDivElement>(null);
-  const mapContext = useMapContext(undefined, undefined, bytes("200mb"));
+  const mapContext = useMapContext(undefined, bytes("200mb"));
   const [treeData, setTreeData] = useState<ClientTableOfContentsItem[]>([]);
   const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
     selectedMapServer
   );
   const { slug } = useParams<{ slug: string }>();
-  const projectId = useProjectId();
+  const { t } = useTranslation("admin");
   const basemapsData = useGetBasemapsQuery({
     variables: {
       slug,
@@ -146,7 +143,7 @@ export default function ArcGISBrowser() {
       }
       mapContext.manager.reset(sources, layers);
     }
-  }, [serviceData, serviceSettings]);
+  }, [serviceData, serviceSettings, mapContext.manager]);
 
   // useEffect(() => {
   //   if (
@@ -316,7 +313,7 @@ export default function ArcGISBrowser() {
             <div className="bg-white text-lg p-2 text-primary-500 border-b">
               {server.location.baseUrl}
               <span className="ml-4 italic text-gray-500">
-                ArcGIS Version {server.version}
+                <Trans ns="admin">ArcGIS Version</Trans> {server.version}
               </span>
             </div>
             <div
@@ -348,7 +345,11 @@ export default function ArcGISBrowser() {
                     <h3 className="text-lg leading-6 font-medium text-gray-900">
                       {serviceData.mapServerInfo.documentInfo.Title ||
                         serviceData.mapServerInfo.mapName}
-                      <a target="_blank" href={serviceData.mapServerInfo.url}>
+                      <a
+                        target="_blank"
+                        rel="noreferrer"
+                        href={serviceData.mapServerInfo.url}
+                      >
                         <OutgoingLinkIcon />
                       </a>
                     </h3>
@@ -380,21 +381,29 @@ export default function ArcGISBrowser() {
                     {serviceSettings.sourceType ===
                       "arcgis-dynamic-mapservice" && (
                       <p className="text-sm text-gray-600">
-                        Image sources display data as full-screen images,
-                        typical of how most web mapping portals work. Each time
-                        the user pans or zooms the map a new image will be
-                        requested and displayed with the requested layers.
+                        <Trans ns="admin">
+                          Image sources display data as full-screen images,
+                          typical of how most web mapping portals work. Each
+                          time the user pans or zooms the map a new image will
+                          be requested and displayed with the requested layers.
+                        </Trans>
                       </p>
                     )}
 
                     {serviceSettings.sourceType === "arcgis-vector-source" && (
                       <p className="text-sm text-gray-600">
-                        When using vector sources, SeaSketch loads actual
-                        geometry data and uses the user's browser to render it.
-                        This can result in a much faster, sharper, and more
-                        interactive map but takes a little more work to
-                        configure. Each layer can be styled and configured
-                        independently (click{" "}
+                        <Trans ns="admin">
+                          When using vector sources, SeaSketch loads actual
+                          geometry data and uses the user's browser to render
+                          it. This can result in a much faster, sharper, and
+                          more interactive map but takes a little more work to
+                          configure. Each layer can be styled and configured
+                          independently
+                        </Trans>
+                        {
+                          // eslint-disable-next-line
+                          `(click `
+                        }
                         <SettingsIcon className="w-4 h-4 inline-block" />
                         ).
                       </p>
@@ -410,7 +419,7 @@ export default function ArcGISBrowser() {
                             <ExcludeIcon className="w-4 h-4 text-gray-800" />
                           )
                         }
-                        title="Exclude all from import"
+                        title={t("Exclude all from import")}
                         small
                         onClick={() => {
                           const layerIds =
@@ -520,11 +529,13 @@ export default function ArcGISBrowser() {
                     {serviceSettings.sourceType === "arcgis-vector-source" && (
                       <div>
                         <div className="mt-6 mb-5 bg-gray-100 rounded py-2 px-4 pb-3">
-                          <h3 className="font-medium">Import Layers</h3>
+                          <h3 className="font-medium">{t("Import Layers")}</h3>
                           <p className="text-sm text-gray-600 mt-1 mb-2">
-                            Before importing vector sources, SeaSketch will
-                            these vector sources for compatability and file size
-                            issues.
+                            <Trans ns={["admin"]}>
+                              Before importing vector sources, SeaSketch will
+                              these vector sources for compatability and file
+                              size issues.
+                            </Trans>
                           </p>
                           <Button
                             primary={true}
@@ -534,20 +545,37 @@ export default function ArcGISBrowser() {
                               0
                             }
                             onClick={() => setModalOpen(true)}
-                            label={`Import ${
-                              serviceSettings.excludedSublayers.length === 0
-                                ? "all"
-                                : ""
-                            } ${
-                              allFeatureLayerIds.length -
-                              serviceSettings.excludedSublayers.length
-                            } layer${
-                              allFeatureLayerIds.length -
-                                serviceSettings.excludedSublayers.length ===
-                              1
-                                ? ""
-                                : "s"
-                            }`}
+                            label={
+                              serviceSettings.excludedSublayers.length === 0 ? (
+                                <Trans
+                                  ns="admin"
+                                  count={
+                                    allFeatureLayerIds.length -
+                                    serviceSettings.excludedSublayers.length
+                                  }
+                                >
+                                  Import all{" "}
+                                  {allFeatureLayerIds.length -
+                                    serviceSettings.excludedSublayers
+                                      .length}{" "}
+                                  layers
+                                </Trans>
+                              ) : (
+                                <Trans
+                                  ns="admin"
+                                  count={
+                                    allFeatureLayerIds.length -
+                                    serviceSettings.excludedSublayers.length
+                                  }
+                                >
+                                  Import{" "}
+                                  {allFeatureLayerIds.length -
+                                    serviceSettings.excludedSublayers
+                                      .length}{" "}
+                                  layers
+                                </Trans>
+                              )
+                            }
                           />
                         </div>
                       </div>

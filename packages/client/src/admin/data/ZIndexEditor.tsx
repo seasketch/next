@@ -7,9 +7,7 @@ import {
 import { ClientTableOfContentsItem } from "../../dataLayers/tableOfContents/TableOfContents";
 import "react-sortable-tree/style.css";
 import SortableTree, { TreeItem } from "react-sortable-tree";
-import Spinner from "../../components/Spinner";
 import {
-  DataLayer,
   RenderUnderType,
   useUpdateZIndexesMutation,
   useUpdateRenderUnderTypeMutation,
@@ -29,11 +27,8 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
   const [treeState, setTreeState] = useState<TreeItem[]>();
   const [expandedItems, setExpandedItems] = useState<(number | string)[]>([]);
   const client = useApolloClient();
-  const [updateZIndexes, updateZIndexesState] = useUpdateZIndexesMutation();
-  const [
-    updateRenderUnder,
-    updateRenderUnderState,
-  ] = useUpdateRenderUnderTypeMutation();
+  const [updateZIndexes] = useUpdateZIndexesMutation();
+  const [updateRenderUnder] = useUpdateRenderUnderTypeMutation();
   const { manager, layerStates } = useContext(MapContext);
   let layerLookup = useRef<{ [id: string]: ClientDataLayer }>({});
 
@@ -63,6 +58,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
           const layer = props.dataLayers.find((l) => l.id === item.dataLayerId);
           if (!layer) {
             throw new Error(
+              /* eslint-disable-next-line */
               `Could not find layer associated with ${item.title}`
             );
           }

@@ -1,6 +1,13 @@
 {
   "Create your own<1></1><2> SeaSketch Project</2>": "Create your own<1></1><2> SeaSketch Project</2>",
   "Create your project": "",
+  "Loading": {
+    "": {
+      "": {
+        "": "Loading..."
+      }
+    }
+  },
   "Project name": "",
   "Projects": "",
   "Sign In": "",
@@ -12,5 +19,21 @@
       }
     }
   },
-  "Welcome to SeaSketch": ""
+  "Welcome to SeaSketch": "",
+  "authenticating": {
+    "": {
+      "": {
+        "": "authenticating..."
+      }
+    }
+  },
+  "loading": {
+    "": {
+      "": {
+        "": "loading..."
+      }
+    }
+  },
+  "reset to defaults": "reset to defaults",
+  "toggle all folder expansion": ""
 }

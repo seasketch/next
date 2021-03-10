@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Modal from "../components/Modal";
-import { EditorState, Plugin, PluginKey } from "prosemirror-state";
+import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import "prosemirror-menu/style/menu.css";
 import Spinner from "../components/Spinner";
@@ -11,6 +11,7 @@ import { schema, plugins } from "../editor/config";
 import EditorMenuBar from "../editor/EditorMenuBar";
 import { EditorView } from "prosemirror-view";
 import { MutationResult } from "@apollo/client";
+import { Trans, useTranslation } from "react-i18next";
 
 interface MetadataEditorProps {
   onRequestClose?: () => void;
@@ -37,8 +38,8 @@ export default function MetadataEditor({
   const [state, setState] = useProseMirror({ schema });
   const [changes, setChanges] = useState(false);
   const [originalDoc, setOriginalDoc] = useState<Node>();
-  // const viewHost = useRef<HTMLDivElement>(null);
   const viewRef = useRef<{ view: EditorView }>();
+  const { t } = useTranslation("admin");
 
   useEffect(() => {
     if (!loading) {
@@ -71,7 +72,9 @@ export default function MetadataEditor({
       }}
       title={
         <div className="flex p-4 px-5 items-center">
-          <div className="text-lg flex-1">Edit Metadata</div>
+          <div className="text-lg flex-1">
+            <Trans ns="admin">Edit Metadata</Trans>
+          </div>
           {changes && (
             <button
               disabled={mutationState.loading}
@@ -85,7 +88,7 @@ export default function MetadataEditor({
               }}
               className="text-sm p-2 px-4"
             >
-              Discard Changes
+              <Trans ns="admin">Discard Changes</Trans>
             </button>
           )}
           <Button
@@ -100,7 +103,7 @@ export default function MetadataEditor({
                 onRequestClose && onRequestClose();
               }
             }}
-            label={changes ? `Save and Close` : `Close`}
+            label={changes ? t(`Save and Close`) : t(`Close`)}
             primary={changes}
           />
         </div>
@@ -113,7 +116,9 @@ export default function MetadataEditor({
           style={{ width: "calc(100% + 3rem)" }}
           state={state}
         />
-        {error && `Error: ${error.message}`}
+        {error &&
+          // eslint-disable-next-line
+          `Error: ${error.message}`}
         {loading && <Spinner />}
         {/* {data && <div ref={viewHost} />} */}
         {!loading && !error && (

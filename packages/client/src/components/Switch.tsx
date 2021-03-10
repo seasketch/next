@@ -28,9 +28,12 @@ export default function Switch(props: SwitchProps) {
         role="switch"
         aria-readonly={!!props.disabled}
         tabIndex={0}
-        className={`${
-          !!props.isToggled ? "bg-primary-500" : "bg-gray-200"
-        } inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full ${
+        style={{
+          backgroundColor: !!props.isToggled
+            ? "rgb(46, 115, 182)"
+            : "rgba(0,0,0,0.18)",
+        }}
+        className={`inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full ${
           !props.disabled && "cursor-pointer"
         } transition-colors ease-in-out duration-200 focus:outline-none ${
           !props.disabled && "focus:ring"

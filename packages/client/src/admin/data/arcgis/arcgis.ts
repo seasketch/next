@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Layer, LngLatBoundsLike } from "mapbox-gl";
 import {
   Dispatch,
@@ -663,6 +664,7 @@ function calculateWarnings(
     warnings.push({
       type: "arcgis",
       level: "warning",
+      /* eslint-disable-next-line */
       message: `This dataset will require ${numRequests} requests to load due to the number of features.`,
     });
   }
@@ -670,6 +672,7 @@ function calculateWarnings(
     warnings.push({
       type: "arcgis",
       level: "warning",
+      /* eslint-disable-next-line */
       message: `Dynamic vector sources are not recommended for large layers. Consider importing a copy into SeaSketch or using an Image Source.`,
     });
   }
@@ -677,6 +680,7 @@ function calculateWarnings(
     warnings.push({
       type: "geojson",
       level: "warning",
+      /* eslint-disable-next-line */
       message:
         "Consider importing very large datasets individually to avoid a long import process.",
     });
@@ -684,6 +688,7 @@ function calculateWarnings(
     warnings.push({
       type: "geojson",
       level: geoJsonBytes > 10_000_000 ? "warning" : "info",
+      /* eslint-disable-next-line */
       message:
         "This dataset could take a long time to download depending on connection speed. You should consider adding it to a tileset after import.",
     });

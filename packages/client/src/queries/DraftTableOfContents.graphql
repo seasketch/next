@@ -512,3 +512,11 @@ query InteractivitySettingsById($id: Int!) {
     type
   }
 }
+
+mutation PublishTableOfContents($projectId: Int!) {
+  publishTableOfContents(input: { projectId: $projectId }) {
+    tableOfContentsItems {
+      id
+    }
+  }
+}

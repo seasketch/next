@@ -4,6 +4,7 @@ import {
   NormalizedArcGISServerLocation,
 } from "./arcgis";
 import useRecentDataServers from "./useRecentServers";
+import { Trans } from "react-i18next";
 
 export default function ArcGISSearchPage({
   onResult,
@@ -44,7 +45,7 @@ export default function ArcGISSearchPage({
           setInputError("Unrecognized server response");
         }
       } catch (e) {
-        console.log(e);
+        console.error(e);
         setInputError(e.toString());
       }
     }
@@ -56,7 +57,7 @@ export default function ArcGISSearchPage({
         htmlFor="arcgis"
         className="block text-sm font-medium leading-5 text-gray-700"
       >
-        ArcGIS Server Location
+        <Trans ns="admin">ArcGIS Server Location</Trans>
       </label>
       <div className="mt-1 flex rounded-md shadow-sm">
         <div className="relative flex-grow focus-within:z-10">
@@ -91,14 +92,16 @@ export default function ArcGISSearchPage({
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
           </svg>
-          <span className="ml-2">Browse</span>
+          <span className="ml-2">
+            <Trans ns="admin">Browse</Trans>
+          </span>
         </button>
       </div>
       {inputError && <p className="text-sm text-red-900">{inputError}</p>}
       {recentServers && recentServers.length > 0 && (
         <div className="pt-6">
           <h4 className="block text-sm font-medium leading-5 text-gray-700">
-            Recently Used Servers
+            <Trans ns="admin">Recently Used Servers</Trans>
           </h4>
           <ul className="pt-2">
             {recentServers

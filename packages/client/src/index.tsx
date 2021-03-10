@@ -43,6 +43,7 @@ function ApolloProviderWithToken(props: any) {
     return {
       headers: {
         ...headers,
+        // eslint-disable-next-line
         authorization: token ? `Bearer ${token}` : "",
       },
     };

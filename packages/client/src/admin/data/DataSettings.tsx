@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import ReactDOM from "react-dom";
+import React, { useState } from "react";
 import {
   Link,
   Route,
@@ -8,19 +7,20 @@ import {
   useRouteMatch,
 } from "react-router-dom";
 import Button from "../../components/Button";
-import DataBucketSettings from "./DataBucketSettings";
 import MapboxMap from "../../components/MapboxMap";
 import LayerAdminSidebar from "./LayerAdminSidebar";
 import { useProjectRegionQuery } from "../../generated/graphql";
 import bbox from "@turf/bbox";
 import { Map } from "mapbox-gl";
 import { MapContext, useMapContext } from "../../dataLayers/MapContextManager";
+import { useTranslation } from "react-i18next";
 const LazyArcGISBrowser = React.lazy(() => import("./arcgis/ArcGISBrowser"));
 
 export default function DataSettings() {
   const { path } = useRouteMatch();
   const { slug } = useParams<{ slug: string }>();
   const [map, setMap] = useState<Map>();
+  const { t } = useTranslation("admin");
   const mapContext = useMapContext("data-settings");
   const { data, loading, error } = useProjectRegionQuery({
     variables: {
@@ -83,14 +83,14 @@ export default function DataSettings() {
                         className="mx-2"
                         component={Button}
                       >
-                        ArcGIS Server
+                        {t("ArcGIS Server")}
                       </Link>
                       <Link
                         to={`./add-data/esri`}
                         className="mx-2"
                         component={Button}
                       >
-                        WCS (WMS or WMTS)
+                        {t("WCS (WMS or WMTS)")}
                       </Link>
                     </div>
                   </div>

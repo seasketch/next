@@ -14,11 +14,11 @@ import {
   MapServerCatalogInfo,
   useImportArcGISService,
   useVectorSublayerStatus,
-  VectorSublayerSettings,
 } from "./arcgis";
 import QuotaBar from "./QuotaBar";
 import { useHistory, useParams } from "react-router-dom";
 import { useProjectHostingQuotaQuery } from "../../../generated/graphql";
+import { useTranslation, Trans } from "react-i18next";
 
 interface ImportVectorLayersProps {
   layers?: LayerInfo[];
@@ -32,8 +32,9 @@ interface ImportVectorLayersProps {
 export default function ImportVectorLayersModal(
   props: ImportVectorLayersProps
 ) {
+  const { t } = useTranslation("admin");
   const { layers, settings, open, onRequestClose } = props;
-  const { layerStatus, abortController } = useVectorSublayerStatus(
+  const { layerStatus } = useVectorSublayerStatus(
     open,
     layers,
     settings?.vectorSublayerSettings
@@ -92,7 +93,7 @@ export default function ImportVectorLayersModal(
   }).length;
 
   const onImport = async () => {
-    const result = await importService(
+    await importService(
       layers!.filter((l) => l.type !== "Raster Layer"),
       props.mapServerInfo,
       projectId!,
@@ -113,9 +114,108 @@ export default function ImportVectorLayersModal(
       }, 0)
     );
     if (!importServiceState.error) {
+      // eslint-disable-next-line
       history.push(`/${slug}/admin/data`);
     }
   };
+
+  const footer = (
+    <div className="">
+      {remaining > 0 ? (
+        <>
+          <Trans ns="admin">
+            Analyzing layer {pendingIndex + 1} of {layers.length}{" "}
+          </Trans>
+          <span className="text-gray-500">
+            ({bytes(totalBytes, { decimalPlaces: 2 })})
+          </span>
+          <div className="flex">
+            <p className="text-sm py-2">
+              <Trans ns="admin">
+                SeaSketch is preparing for import by reviewing your settings and
+                the file sizes of the selected layers.
+              </Trans>
+            </p>
+            <Button
+              className="mx-2"
+              onClick={onRequestClose}
+              label={t("Cancel")}
+            />
+          </div>
+        </>
+      ) : numErrors > 0 ? (
+        <div>
+          <p className="my-2 mb-3">
+            <Trans ns="admin">
+              There were errors found when analyzing this service. Either
+              exclude layers with errors from the import or adjust their
+              settings to fix the error before proceeding.
+            </Trans>
+          </p>
+          <Button onClick={onRequestClose} label={t("Go Back")} />
+        </div>
+      ) : importServiceState.inProgress ? (
+        <div>
+          <div>
+            <h3>{t("Importing Service")}</h3>
+            <ProgressBar progress={importServiceState.progress!} />
+            <div className="mb-2 text-sm">
+              {importServiceState.statusMessage}
+            </div>
+          </div>
+          {/* <Button
+        onClick={onRequestClose}
+        label="Cancel"
+        className="mr-2"
+      /> */}
+        </div>
+      ) : importServiceState.error ? (
+        <div>
+          <h3>{t("Importing Service")}</h3>
+          <div className="mb-2 mt-4 text-red-900">
+            <h4>{importServiceState.error.name}</h4>
+            {importServiceState.error.message}
+          </div>
+          <Button
+            onClick={onRequestClose}
+            label={t("Cancel")}
+            className="mr-2"
+          />
+          <Button label={t("Try Again")} primary onClick={onImport} />
+        </div>
+      ) : (
+        <div>
+          {totalBytes > 0 && (
+            <>
+              <Trans ns="admin">
+                Importing this service will consume{" "}
+                {bytes(totalBytes, { decimalPlaces: 0 })} of your{" "}
+                {bytes(quota, { decimalPlaces: 0 })} quota.
+              </Trans>
+              <QuotaBar
+                total={quota}
+                remaining={remainingQuota}
+                additional={totalBytes}
+              />
+            </>
+          )}
+          <p className="my-2 mb-3">
+            <Trans ns="admin">
+              Review any warnings or errors above before importing. Once the
+              import process begins, be sure not to close the browser window or
+              let your computer go to sleep. Otherwise the import will fail.
+            </Trans>
+          </p>
+          <Button
+            onClick={onRequestClose}
+            label={t("Cancel")}
+            className="mr-2"
+          />
+          <Button label={t("Import Layers")} primary onClick={onImport} />
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <Modal
@@ -124,7 +224,9 @@ export default function ImportVectorLayersModal(
         if (importServiceState.inProgress) {
           if (
             window.confirm(
-              "Are you sure you want to cancel importing this service? Proceeding may leave partially imported service items in the layer list."
+              t(
+                "Are you sure you want to cancel importing this service? Proceeding may leave partially imported service items in the layer list."
+              )
             )
           ) {
             importServiceState.abortController?.abort();
@@ -134,96 +236,8 @@ export default function ImportVectorLayersModal(
           onRequestClose();
         }
       }}
-      title="Import Vector Layers"
-      footer={
-        <div className="">
-          {remaining > 0 ? (
-            <>
-              Analyzing layer {pendingIndex + 1} of {layers.length}{" "}
-              <span className="text-gray-500">
-                ({bytes(totalBytes, { decimalPlaces: 2 })})
-              </span>
-              <div className="flex">
-                <p className="text-sm py-2">
-                  SeaSketch is preparing for import by reviewing your settings
-                  and the file sizes of the selected layers.
-                </p>
-                <Button
-                  className="mx-2"
-                  onClick={onRequestClose}
-                  label="Cancel"
-                />
-              </div>
-            </>
-          ) : numErrors > 0 ? (
-            <div>
-              <p className="my-2 mb-3">
-                There were errors found when analyzing this service. Either
-                exclude layers with errors from the import or adjust their
-                settings to fix the error before proceeding.
-              </p>
-              <Button onClick={onRequestClose} label="Go Back" />
-            </div>
-          ) : importServiceState.inProgress ? (
-            <div>
-              <div>
-                <h3>Importing Service</h3>
-                <ProgressBar progress={importServiceState.progress!} />
-                <div className="mb-2 text-sm">
-                  {importServiceState.statusMessage}
-                </div>
-              </div>
-              {/* <Button
-                onClick={onRequestClose}
-                label="Cancel"
-                className="mr-2"
-              /> */}
-            </div>
-          ) : importServiceState.error ? (
-            <div>
-              <h3>Importing Service</h3>
-              <div className="mb-2 mt-4 text-red-900">
-                <h4>{importServiceState.error.name}</h4>
-                {importServiceState.error.message}
-              </div>
-              <Button
-                onClick={onRequestClose}
-                label="Cancel"
-                className="mr-2"
-              />
-              <Button label="Try Again" primary onClick={onImport} />
-            </div>
-          ) : (
-            <div>
-              {totalBytes > 0 && (
-                <>
-                  {" "}
-                  Importing this service will consume{" "}
-                  {bytes(totalBytes, { decimalPlaces: 0 })} of your{" "}
-                  {bytes(quota, { decimalPlaces: 0 })} quota.
-                  <QuotaBar
-                    total={quota}
-                    remaining={remainingQuota}
-                    additional={totalBytes}
-                  />
-                </>
-              )}
-              <p className="my-2 mb-3">
-                Review any warnings or errors above before importing. Once the
-                import process begins, be sure not to close the browser window
-                or let your computer go to sleep. Otherwise the import will
-                fail.
-              </p>
-              <Button
-                onClick={onRequestClose}
-                label="Cancel"
-                className="mr-2"
-              />
-              <Button label="Import Layers" primary onClick={onImport} />
-            </div>
-          )}
-        </div>
-      }
+      title={t("Import Vector Layers")}
+      footer={footer}
       className="lg:w-160"
     >
       <div
@@ -329,8 +343,10 @@ export default function ImportVectorLayersModal(
                     ))}
                   {status.error ? (
                     <Warning className="sm:mt-0 mt-0" level="error">
-                      An error occured when retrieving this dataset and it
-                      cannot be imported. {status.error.message}
+                      <Trans ns="admin">
+                        An error occured when retrieving this dataset and it
+                        cannot be imported. {status.error.message}
+                      </Trans>
                     </Warning>
                   ) : null}
                 </div>

@@ -37,6 +37,7 @@ export default function Button(props: ButtonProps) {
   if (props.children) {
     label = props.children;
   }
+  // eslint-disable-next-line
   const buttonClassName = `select-none ${
     props.disabled
       ? "opacity-75 pointer-events-none"
@@ -49,8 +50,10 @@ export default function Button(props: ButtonProps) {
     props.small ? "rounded" : "rounded-md"
   } ${
     props.primary
-      ? `text-white bg-primary-500 focus:outline-none focus:border-primary-600 focus:shadow-outline-blue active:bg-primary-600`
-      : `text-gray-700 ${
+      ? // eslint-disable-next-line
+        `text-white bg-primary-500 focus:outline-none focus:border-primary-600 focus:shadow-outline-blue active:bg-primary-600`
+      : // eslint-disable-next-line
+        `text-gray-700 ${
           props.disabled ? "bg-gray-100" : "bg-white"
         } hover:text-gray-500 focus:border-blue-300 focus:shadow-outline-blue active:text-gray-800 active:bg-gray-50`
   } focus:outline-none  transition ease-in-out duration-150`;

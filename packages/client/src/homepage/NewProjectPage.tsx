@@ -33,7 +33,7 @@ const logos = [
 ];
 
 export default function NewProjectPage() {
-  const { t, i18n } = useTranslation(["homepage"]);
+  const { t } = useTranslation(["homepage"]);
   const { isAuthenticated } = useAuth0();
   return (
     <main className="bg-gray-800 min-h-screen pt-12">
@@ -124,7 +124,7 @@ export default function NewProjectPage() {
 }
 
 function PleaseSignIn() {
-  const { t, i18n } = useTranslation(["homepage"]);
+  const { t } = useTranslation(["homepage"]);
   const { loginWithRedirect } = useAuth0();
   return (
     <>
@@ -149,7 +149,7 @@ function PleaseSignIn() {
           <div className="w-full border-t border-gray-300"></div>
         </div>
         <div className="relative flex justify-center text-sm leading-5">
-          <span className="px-2 bg-white text-gray-500">Or</span>
+          <span className="px-2 bg-white text-gray-500">{t("Or")}</span>
         </div>
       </div>
 

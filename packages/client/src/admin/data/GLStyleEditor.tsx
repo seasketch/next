@@ -25,6 +25,7 @@ import {
 } from "../../generated/graphql";
 import { useParams } from "react-router-dom";
 import useProjectId from "../../useProjectId";
+import { Trans, useTranslation } from "react-i18next";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -52,6 +53,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const [createSprite, createSpriteState] = useGetOrCreateSpriteMutation();
   const [addImageToSprite] = useAddImageToSpriteMutation();
   const projectId = useProjectId();
+  const { t } = useTranslation("admin");
 
   useEffect(() => {
     if (debouncedStyle) {
@@ -195,7 +197,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
             }
           }}
         >
-          Reset to original ArcGIS style
+          <Trans ns="admin">Reset to original ArcGIS style</Trans>
         </button>
       )}
       <Modal
@@ -204,7 +206,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           errorResettingStyle ? (
             <>
               <Button
-                label="Cancel"
+                label={t("Cancel")}
                 onClick={() => {
                   setErrorResettingStyle(undefined);
                   setResettingStyle(false);
@@ -220,14 +222,17 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
               <Spinner className="" />
             </div>
             <div className="flex-1">
-              Resetting style from{" "}
-              <a
-                className="underline text-primary-500"
-                href={props.arcgisServerSource}
-                target="_blank"
-              >
-                original source
-              </a>
+              <Trans ns="admin">
+                Resetting style from{" "}
+                <a
+                  className="underline text-primary-500"
+                  href={props.arcgisServerSource}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  original source
+                </a>
+              </Trans>
             </div>
           </div>
         )}

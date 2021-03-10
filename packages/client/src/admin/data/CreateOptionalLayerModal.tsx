@@ -1,21 +1,11 @@
-import React, { FormEvent, FormEventHandler, useEffect, useState } from "react";
-import { createStatement } from "typescript";
+import React, { useState } from "react";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
-import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
 import {
-  GetFolderDocument,
-  TableOfContentsItem,
-  useCreateFolderMutation,
-  useGetFolderQuery,
-  useUpdateFolderMutation,
-  OptionalBasemapLayer,
   OptionalBasemapLayersGroupType,
   useCreateOptionalLayerMutation,
 } from "../../generated/graphql";
-import useProjectId from "../../useProjectId";
-import { generateStableId } from "./arcgis/arcgis";
 import { useTranslation, Trans } from "react-i18next";
 import RadioGroup from "../../components/RadioGroup";
 
@@ -117,7 +107,9 @@ export default function CreateOptionalLayerModal({
       }
     >
       <div className={`w-96 md:w-144`}>
-        <h2 className="text-lg font-semibold mb-4">New Optional Layer</h2>
+        <h2 className="text-lg font-semibold mb-4">
+          <Trans ns="admin">New Optional Layer</Trans>
+        </h2>
         <div className="max-w-xs">
           <TextInput
             autoFocus

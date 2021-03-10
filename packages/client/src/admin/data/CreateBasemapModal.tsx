@@ -1,8 +1,8 @@
-import { gql, StoreObject, useApolloClient } from "@apollo/client";
+import { gql, useApolloClient } from "@apollo/client";
 import { Map } from "mapbox-gl";
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import Button from "../../components/Button";
-import InputBlock from "../../components/InputBlock";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
@@ -33,19 +33,12 @@ export default function CreateBasemapModal({
     url: "",
     mapPreview: false,
   });
+  const { t } = useTranslation("admin");
   const projectId = useProjectId();
   const [mutate, mutationState] = useCreateBasemapMutation({
     update: (cache, { data }) => {
       if (data?.createBasemap?.basemap) {
         const newBasemapData = data.createBasemap.basemap;
-        console.log(
-          "modify cache",
-          projectId,
-          cache.identify({
-            __typename: "Project",
-            id: projectId,
-          })
-        );
         cache.modify({
           id: cache.identify({
             __typename: "Project",
@@ -53,7 +46,6 @@ export default function CreateBasemapModal({
           }),
           fields: {
             basemaps(existingBasemapRefs = [], { readField }) {
-              console.log("modify basemaps field");
               const newBasemapRef = cache.writeFragment({
                 data: newBasemapData,
                 fragment: gql`
@@ -77,21 +69,14 @@ export default function CreateBasemapModal({
                 `,
               });
 
-              console.log("returning", [
-                ...existingBasemapRefs,
-                data!.createBasemap!.basemap,
-              ]);
-
               return [...existingBasemapRefs, newBasemapRef];
             },
           },
         });
       }
-      console.log("after modify");
     },
   });
   const client = useApolloClient();
-  const cache = client.cache;
 
   const mapboxStyleInfo = useMapboxStyle(
     state.type === BasemapType.Mapbox ? state.url : undefined
@@ -136,11 +121,15 @@ export default function CreateBasemapModal({
       ></canvas>
       <Modal
         open={true}
-        title="Custom Basemap"
+        title={t("Custom Basemap")}
         zeroPadding
         footer={
           <div className="text-right">
-            <Button onClick={onRequestClose} label="Cancel" className="mr-2" />
+            <Button
+              onClick={onRequestClose}
+              label={t("Cancel")}
+              className="mr-2"
+            />
             <Button
               primary
               onClick={() => {
@@ -203,7 +192,7 @@ export default function CreateBasemapModal({
                   htmlFor="type"
                   className="block text-sm mb-1 font-medium leading-5 text-gray-700"
                 >
-                  Basemap Type
+                  {t("Basemap Type")}
                 </label>
                 <select
                   id="type"
@@ -215,9 +204,11 @@ export default function CreateBasemapModal({
                   className="bg-white text-sm overflow-visible p-2 px-4 pr-7 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 rounded-md focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-md sm:leading-5"
                   style={{ lineHeight: 1, backgroundSize: "1em 1em" }}
                 >
-                  <option value={BasemapType.Mapbox}>Mapbox GL Style</option>
+                  <option value={BasemapType.Mapbox}>
+                    {t("Mapbox GL Style")}
+                  </option>
                   <option value={BasemapType.RasterUrlTemplate}>
-                    Raster tile url template
+                    {t("Raster tile url template")}
                   </option>
                 </select>
               </div>
@@ -238,18 +229,21 @@ export default function CreateBasemapModal({
                   description={
                     state.type === BasemapType.Mapbox ? (
                       <>
-                        Enter a{" "}
-                        <code className="bg-gray-100 p-0.5 rounded">
-                          mapbox://
-                        </code>{" "}
-                        type url or the direct url to a mapbox-gl style hosted
-                        on another platform.
+                        <Trans ns="admin">
+                          Enter a{" "}
+                          <code className="bg-gray-100 p-0.5 rounded">
+                            mapbox://
+                          </code>{" "}
+                          type url or the direct url to a mapbox-gl style hosted
+                          on another platform.
+                        </Trans>
                       </>
                     ) : (
-                      <>
+                      <Trans ns="admin">
                         Enter a{" "}
                         <a
                           target="_blank"
+                          rel="noreferrer"
                           className="text-primary-500 underline"
                           href="https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources"
                         >
@@ -257,7 +251,7 @@ export default function CreateBasemapModal({
                         </a>{" "}
                         the tells SeaSketch how to load a raster tile data
                         source.
-                      </>
+                      </Trans>
                     )
                   }
                   id="url"
@@ -273,7 +267,7 @@ export default function CreateBasemapModal({
               </div>
               <div className="mt-4">
                 <TextInput
-                  label="Basemap Name"
+                  label={t("Basemap Name")}
                   id="name"
                   value={state.name}
                   onChange={(name) => setState((old) => ({ ...old, name }))}
@@ -300,7 +294,9 @@ export default function CreateBasemapModal({
             <div ref={mapDivRef} className="w-128 h-72 bg-gray-300 relative">
               <div className="absolute w-128 h-72 left-0 top-0 z-10 pointer-events-none flex items-center justify-center">
                 <div className="absolute top-0 text-sm bg-yellow-200 px-1">
-                  Create a thumbnail image that best represents this basemap
+                  <Trans ns="admin">
+                    Create a thumbnail image that best represents this basemap
+                  </Trans>
                 </div>
                 <div
                   className="absolute border border-black border-opacity-50 pointer-events-none rounded-md shadow-2xl select-none"

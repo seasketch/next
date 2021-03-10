@@ -28,6 +28,7 @@ export function updateGeoJSONSource(
     map.addSource(prev.id.toString(), {
       attribution: next.attribution || undefined,
       type: "geojson",
+      /* eslint-disable-next-line */
       data: `https://${next.bucketId}/${next.objectKey}`,
     });
   }

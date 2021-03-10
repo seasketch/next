@@ -149,7 +149,7 @@ export default function BasemapEditorPanel({
       </div>
       {!basemap || mapboxStyle.loading ? (
         <div className="w-full mt-20 flex items-center justify-center text-gray-600">
-          <span className="mx-1">Loading style</span>
+          <span className="mx-1">{t("Loading style")}</span>
           <Spinner className="ml-0.5" />
         </div>
       ) : (

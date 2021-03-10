@@ -26,6 +26,7 @@ import slugify from "slugify";
 import ArcGISServiceMetadata from "./ArcGISServiceMetadata";
 import Warning from "../../../components/Warning";
 import { RenderUnderType } from "../../../generated/graphql";
+import { useTranslation, Trans } from "react-i18next";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -40,6 +41,7 @@ export function FeatureLayerSettings(props: {
   settings: ArcGISServiceSettings;
   updateSettings: (settings: ArcGISServiceSettings) => void;
 }) {
+  const { t } = useTranslation("admin");
   const { layer, settings } = props;
   const updateSettings = (key: string, value: any) => {
     props.updateSettings({
@@ -91,8 +93,10 @@ export function FeatureLayerSettings(props: {
       var blob = new Blob([json], { type: "application/json" });
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
+      // eslint-disable-next-line
       a.download = `${slugify(layer.name)}.json`;
       a.href = url;
+      // eslint-disable-next-line
       a.textContent = `${slugify(layer.name)}.json`;
       setIsDownloading(false);
       a.click();
@@ -114,6 +118,7 @@ export function FeatureLayerSettings(props: {
           name: "Mapbox Streets",
           layers: styleJSON.map((layer: any, index: number) => ({
             ...layer,
+            // eslint-disable-next-line
             source: "1",
             id: index.toString(),
           })),
@@ -174,32 +179,37 @@ export function FeatureLayerSettings(props: {
       <div className="p-2 px-4">
         <div className="py-2">
           <h3 className="font-medium text-sm py-2">
-            Vector Dataset Statistics
+            {t("Vector Dataset Statistics")}
           </h3>
           <div>
             <span className="text-2xl">
               {sizeData.data ? (
                 bytes(sizeData.data.geoJsonBytes)
               ) : sizeData.error ? (
+                // eslint-disable-next-line
                 `Error: ${sizeData.error.message}`
               ) : (
                 <Spinner className="w-5 h-5" />
               )}
             </span>{" "}
             <span className="font-light text-gray-700">
-              {sizeData.data ? `${bytes(sizeData.data.gzipBytes)} gzip` : ""}
+              {sizeData.data
+                ? // eslint-disable-next-line
+                  `${bytes(sizeData.data.gzipBytes)} gzip`
+                : ""}
             </span>
           </div>
           <div>
-            download time <Lightning className="text-gray-400 inline" />{" "}
+            {t("download time")} <Lightning className="text-gray-400 inline" />{" "}
             {downloadTime(20, sizeData.data?.gzipBytes)} -{" "}
-            {downloadTime(20 / 4, sizeData.data?.gzipBytes)} seconds when hosted
-            on SeaSketch
+            {downloadTime(20 / 4, sizeData.data?.gzipBytes)}{" "}
+            {`seconds when hosted
+            on SeaSketch`}
           </div>
           <div>
-            {sizeData?.data?.objects || 0} features,{" "}
-            {sizeData.data?.attributes || 0} attributes,{" "}
-            {Math.round(sizeData.data?.areaKm || 0)} sq kilometers
+            {sizeData?.data?.objects || 0} {t("features")},{" "}
+            {sizeData.data?.attributes || 0} {t("attributes")},{" "}
+            {Math.round(sizeData.data?.areaKm || 0)} {t("sq kilometers")}
           </div>
           {/* {(sizeData.data?.geoJsonBytes || 0) > VECTOR_BYTES_LIMIT ? (
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-2">
@@ -241,7 +251,9 @@ export function FeatureLayerSettings(props: {
           ) : null} */}
         </div>
         <div className="py-2">
-          <h3 className="font-medium text-sm py-2">Data Source Options</h3>
+          <h3 className="font-medium text-sm py-2">
+            {t("Data Source Options")}
+          </h3>
 
           <div className="relative flex items-start p-2">
             <div className="flex items-center h-5">
@@ -256,30 +268,36 @@ export function FeatureLayerSettings(props: {
             </div>
             <div className="ml-3 text-sm leading-5">
               <label htmlFor="offers" className="font-medium text-gray-700">
-                Import a copy into SeaSketch
+                <Trans ns="admin">Import a copy into SeaSketch</Trans>
               </label>
               <p className="text-gray-500">
-                A copy of this dataset will be hosted on our global content
-                delivery network. This option offers better performance and
-                enables custom styling, creation of vector tiles, and offline
-                access (coming soon).
+                <Trans ns="admin">
+                  A copy of this dataset will be hosted on our global content
+                  delivery network. This option offers better performance and
+                  enables custom styling, creation of vector tiles, and offline
+                  access (coming soon).
+                </Trans>
               </p>
               <p className="text-gray-500 mt-1">
-                You can also{" "}
-                <button
-                  className={`underline text-primary-600 ${
-                    isDownloading ? "pointer-events-none" : ""
-                  }`}
-                  disabled={isDownloading}
-                  onClick={download}
-                >
-                  download
-                </button>{" "}
-                this dataset and{" "}
-                <button className={`underline text-primary-600`}>upload</button>{" "}
-                a revised copy. We suggest removing complex coastlines (use the
-                render under land option) and simplifying geometry to only the
-                precision needed for visualization.
+                <Trans ns="admin">
+                  You can also{" "}
+                  <button
+                    className={`underline text-primary-600 ${
+                      isDownloading ? "pointer-events-none" : ""
+                    }`}
+                    disabled={isDownloading}
+                    onClick={download}
+                  >
+                    download
+                  </button>{" "}
+                  this dataset and{" "}
+                  <button className={`underline text-primary-600`}>
+                    upload
+                  </button>{" "}
+                  a revised copy. We suggest removing complex coastlines (use
+                  the render under land option) and simplifying geometry to only
+                  the precision needed for visualization.
+                </Trans>
               </p>
               {(sizeData.data?.warnings || [])
                 .filter((w) => w.type === "geojson")
@@ -308,13 +326,15 @@ export function FeatureLayerSettings(props: {
             </div>
             <div className="ml-3 text-sm leading-5">
               <label htmlFor="offers" className="font-medium text-gray-700">
-                Link dynamically to origin server
+                <Trans ns="admin">Link dynamically to origin server</Trans>
               </label>
               <p className="text-gray-500">
-                With this option selected data and cartographic styling will be
-                downloaded from the origin server by each user. Updates to data
-                and cartography are immediately available in SeaSketch but
-                performance is poorer and features are limited.
+                <Trans ns="admin">
+                  With this option selected data and cartographic styling will
+                  be downloaded from the origin server by each user. Updates to
+                  data and cartography are immediately available in SeaSketch
+                  but performance is poorer and features are limited.
+                </Trans>
               </p>
               {(sizeData.data?.warnings || [])
                 .filter((w) => w.type === "arcgis")
@@ -358,7 +378,7 @@ export function FeatureLayerSettings(props: {
 
         <InputBlock
           className="mt-4 text-sm"
-          title="Geometry Precision"
+          title={t("Geometry Precision")}
           input={
             <select
               id="geometryPrecision"
@@ -373,9 +393,11 @@ export function FeatureLayerSettings(props: {
             </select>
           }
         >
-          Using a lower level of precision reduces a dataset's size, increasing
-          download speed and improving map performance. Does not apply to
-          uploads.
+          <Trans ns="admin">
+            Using a lower level of precision reduces a dataset's size,
+            increasing download speed and improving map performance. Does not
+            apply to uploads.
+          </Trans>
         </InputBlock>
 
         {/* <InputBlock
@@ -403,11 +425,15 @@ export function FeatureLayerSettings(props: {
         </InputBlock> */}
 
         <div className="py-2">
-          <h3 className="font-medium text-sm py-2">Included Fields</h3>
+          <h3 className="font-medium text-sm py-2">
+            <Trans ns="admin">Included Fields</Trans>
+          </h3>
           <p className="text-sm text-gray-700">
-            Limit the fields included in this dataset in order to reduce
-            download size. Does not apply to uploaded revisions. Be careful not
-            to remove fields used in styles.
+            <Trans ns="admin">
+              Limit the fields included in this dataset in order to reduce
+              download size. Does not apply to uploaded revisions. Be careful
+              not to remove fields used in styles.
+            </Trans>
           </p>
 
           <div className="flex flex-col mt-3">
@@ -418,13 +444,13 @@ export function FeatureLayerSettings(props: {
                     <thead>
                       <tr>
                         <th className="px-6 py-3 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">
-                          Field
+                          <Trans ns="admin">Field</Trans>
                         </th>
                         <th className="px-6 py-3 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">
-                          Type
+                          <Trans ns="admin">Type</Trans>
                         </th>
                         <th className="px-6 py-3 bg-gray-50 text-center text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">
-                          Included
+                          <Trans ns="admin">Included</Trans>
                         </th>
                       </tr>
                     </thead>
@@ -477,20 +503,22 @@ export function FeatureLayerSettings(props: {
           <>
             <InputBlock
               className="mt-4 text-sm mb-4"
-              title="Rendering Style"
+              title={t("Rendering Style")}
               input={<div />}
             >
-              Vector layers in SeaSketch are rendered using{" "}
-              <a
-                className="text-primary-500 hover:underline"
-                target="_blank"
-                href="https://docs.mapbox.com/mapbox-gl-js/style-spec/"
-              >
-                MapBox GL Styles
-              </a>
-              . Cartographic information from ArcGIS Server has been converted
-              into this stylesheet format for you. Below you can adjust this
-              style information.
+              <Trans ns="admin">
+                Vector layers in SeaSketch are rendered using{" "}
+                <a
+                  className="text-primary-500 hover:underline"
+                  target="_blank"
+                  href="https://docs.mapbox.com/mapbox-gl-js/style-spec/"
+                >
+                  MapBox GL Styles
+                </a>
+                . Cartographic information from ArcGIS Server has been converted
+                into this stylesheet format for you. Below you can adjust this
+                style information.
+              </Trans>
             </InputBlock>
             <CodeMirror
               className={`h-auto border ${
@@ -555,7 +583,7 @@ export function FeatureLayerSettings(props: {
                 }
               }}
             >
-              Reset to server style
+              <Trans ns="admin">Reset to server style</Trans>
             </button>
           </>
         )}

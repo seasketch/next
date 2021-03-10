@@ -46,6 +46,7 @@ async function fetchGlStyle(url: string) {
   } else {
     const originalUrl = url;
     if (/mapbox:\/\//.test(url)) {
+      // eslint-disable-next-line
       url = `https://api.mapbox.com/styles/v1/${
         url.split("mapbox://styles/")[1]
       }?access_token=${TOKEN}`;
@@ -57,6 +58,7 @@ async function fetchGlStyle(url: string) {
           return style as Style;
         } else {
           throw new Error(
+            // eslint-disable-next-line
             `Content at ${originalUrl} does not appear to be a Mapbox GL Style`
           );
         }

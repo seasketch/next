@@ -3,7 +3,7 @@ import { ImageSet } from "@seasketch/mapbox-gl-esri-sources/dist/src/ImageList";
 import { ArcGISVectorSource as ArcGISVectorSourceInstance } from "@seasketch/mapbox-gl-esri-sources";
 import { SeaSketchSourceBaseOptions } from "./Base";
 import { ClientDataSource, ClientDataLayer } from "../MapContextManager";
-import { Layer, Map } from "mapbox-gl";
+import { Map } from "mapbox-gl";
 
 export type ArcGISVectorSource = {
   type: "ArcGISVectorSource";
@@ -20,9 +20,11 @@ export function updateArcGISVectorSource(
   map: Map
 ) {
   if (prev.type !== state.type) {
+    /* eslint-disable-next-line */
     throw new Error(`Changing type of ArcGISVectorSource is not supported`);
   }
   if (prev.url !== state.url) {
+    /* eslint-disable-next-line */
     throw new Error(`Changing url of ArcGISVectorSource is not supported`);
   }
 

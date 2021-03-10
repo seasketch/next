@@ -10,6 +10,7 @@ import Modal from "../components/Modal";
 import Button from "../components/Button";
 import TextInput from "../components/TextInput";
 import { link } from "fs";
+import { useTranslation } from "react-i18next";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -20,6 +21,7 @@ interface EditorMenuBarProps {
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
   const [menuState, setMenuState] = useState<any>({});
+  const { t } = useTranslation("admin");
   const [linkModalState, setLinkModalState] = useState<{
     href: string;
     title?: string;
@@ -73,6 +75,9 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           menuState?.active?.strong ? "bg-gray-100" : ""
         }`}
       >
+        {
+          // eslint-disable-next-line
+        }
         B
       </button>
       <button
@@ -87,6 +92,9 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           return false;
         }}
       >
+        {
+          // eslint-disable-next-line
+        }
         I
       </button>
       <button
@@ -101,6 +109,9 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           );
         }}
       >
+        {
+          // eslint-disable-next-line
+        }
         ¶
       </button>
 
@@ -116,6 +127,9 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           );
         }}
       >
+        {
+          // eslint-disable-next-line
+        }
         H1
       </button>
       <button
@@ -130,6 +144,9 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           );
         }}
       >
+        {
+          // eslint-disable-next-line
+        }
         H2
       </button>
       <button
@@ -144,6 +161,9 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           );
         }}
       >
+        {
+          // eslint-disable-next-line
+        }
         H3
       </button>
       <button
@@ -191,15 +211,18 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         </svg>
       </button>
       <Modal
-        title={`Edit Link`}
+        title={t(`Edit Link`)}
         open={!!linkModalState}
         footer={
           <>
-            <Button label="Cancel" onClick={() => setLinkModalState(null)} />
+            <Button
+              label={t("Cancel")}
+              onClick={() => setLinkModalState(null)}
+            />
             <Button
               className="ml-2"
               primary={true}
-              label="Save"
+              label={t("Save")}
               onClick={() => {
                 toggleMark(schema.marks.link, {
                   href: linkModalState!.href,
@@ -216,6 +239,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
             autoFocus
             id="href"
             value={linkModalState?.href || ""}
+            // eslint-disable-next-line
             label="href"
             required={true}
             onChange={(href) =>
@@ -230,6 +254,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           <TextInput
             id="title"
             value={linkModalState?.title || ""}
+            // eslint-disable-next-line
             label="title"
             required={false}
             onChange={(title) =>

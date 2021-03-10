@@ -18,9 +18,12 @@
   },
   "[sql]": {
     "editor.formatOnSave": false,
-    "editor.defaultFormatter": "mtxr.sqltools",
+    "editor.defaultFormatter": "mtxr.sqltools"
   },
   "files.exclude": {
     "**/dist/**": true
-  }
+  },
+  "eslint.workingDirectories": [
+    "packages/client"
+  ]
 }

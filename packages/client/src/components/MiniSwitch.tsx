@@ -21,7 +21,6 @@ export default function MiniSwitch(props: MiniSwitchProps) {
         }
       }}
     >
-      <span className="sr-only">Use setting</span>
       <span
         aria-hidden="true"
         className={`${

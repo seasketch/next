@@ -1,20 +1,17 @@
 import React, { useContext, useEffect, useState } from "react";
 import Button from "../../components/Button";
-import InputBlock from "../../components/InputBlock";
-import Switch from "../../components/Switch";
 import { ClientBasemap, MapContext } from "../../dataLayers/MapContextManager";
 import {
   useGetBasemapsQuery,
   useDeleteBasemapMutation,
   useGetProjectBySlugQuery,
-  OptionalBasemapLayersGroupType,
 } from "../../generated/graphql";
 import BasemapEditorPanel from "./BasemapEditorPanel";
 import CreateBasemapModal from "./CreateBasemapModal";
-import { useTranslation, Trans } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { useApolloClient } from "@apollo/client";
 import { useParams } from "react-router-dom";
-import OptionalBasemapLayerControl from "../../dataLayers/OptionalBasemapLayerControl";
+import BasemapControl from "../../dataLayers/BasemapControl";
 
 export default function BaseMapEditor() {
   const mapContext = useContext(MapContext);
@@ -54,14 +51,14 @@ export default function BaseMapEditor() {
           <div className="mb-4">
             <Button
               small
-              label="Add basemap"
+              label={t("Add basemap")}
               onClick={() => setAddModalOpen(true)}
             />
             <Button
               className="ml-2"
               small
               disabled={!mapContext.selectedBasemap}
-              label="Edit"
+              label={t("Edit")}
               onClick={() => setEditModalOpen(true)}
             />
             <Button
@@ -70,7 +67,7 @@ export default function BaseMapEditor() {
               disabled={
                 !mapContext.selectedBasemap || deleteMutationState.loading
               }
-              label="Delete"
+              label={t("Delete")}
               onClick={() => {
                 if (
                   window.confirm(
@@ -120,25 +117,9 @@ export default function BaseMapEditor() {
           {addModalOpen && (
             <CreateBasemapModal onRequestClose={() => setAddModalOpen(false)} />
           )}
-          <div className="w-full flex flex-wrap justify-center">
-            {[...(data?.projectBySlug?.basemaps || [])]
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map((b) => (
-                <BasemapSquareItem
-                  selected={mapContext.selectedBasemap === b.id.toString()}
-                  error={mapContext.basemapError}
-                  key={b.id}
-                  basemap={b}
-                  onClick={() => {
-                    // if (selectedBasemap !== b.id) {
-                    mapContext.manager?.setSelectedBasemap(b.id.toString());
-                    // setSelectedBasemap(b.id);
-                    // managerContext.manager?.changeBasemap(b.url);
-                    // }
-                  }}
-                />
-              ))}
-          </div>
+          <BasemapControl
+            basemaps={(data?.projectBySlug?.basemaps || []) as ClientBasemap[]}
+          />
         </div>
         {editModalOpen && mapContext.selectedBasemap && (
           <BasemapEditorPanel
@@ -146,96 +127,7 @@ export default function BaseMapEditor() {
             basemapId={parseInt(mapContext.selectedBasemap)}
           />
         )}
-        {showBasemapOptions && (
-          <div
-            className="p-5 bottom-0 border-t w-128"
-            style={{ minHeight: "20%" }}
-          >
-            <h4 className="pb-2 font-semibold">Basemap Options</h4>
-            {terrainOptional && (
-              <div className="">
-                <InputBlock
-                  title={<span className="font-light">3d Terrain</span>}
-                  input={
-                    <Switch
-                      isToggled={mapContext.terrainEnabled}
-                      onClick={() => {
-                        if (
-                          mapContext.manager?.map &&
-                          !mapContext.prefersTerrainEnabled &&
-                          mapContext.manager.map.getPitch() === 0
-                        ) {
-                          // turning on, add some pitch
-                          mapContext.manager.map.easeTo({ pitch: 75 });
-                        }
-                        mapContext.manager?.toggleTerrain();
-                      }}
-                    />
-                  }
-                ></InputBlock>
-              </div>
-            )}
-            {(
-              mapContext.manager!.getSelectedBasemap()!.optionalBasemapLayers ||
-              []
-            ).map((layer) => {
-              return (
-                <OptionalBasemapLayerControl key={layer.id} layer={layer} />
-              );
-            })}
-            <button
-              className="underline text-gray-500 text-sm"
-              onClick={() => {
-                if (mapContext.manager) {
-                  mapContext.manager.clearOptionalBasemapSettings();
-                  mapContext.manager.clearTerrainSettings();
-                }
-              }}
-            >
-              reset to defaults
-            </button>
-          </div>
-        )}
       </div>
     </>
-  );
-}
-
-function BasemapSquareItem({
-  basemap,
-  selected,
-  onClick,
-  error,
-}: {
-  basemap: { name: string; thumbnail: string; id: number };
-  selected: boolean;
-  error?: Error;
-  onClick?: () => void;
-}) {
-  return (
-    <div className="flex flex-col m-2 cursor-pointer" onClick={onClick}>
-      <div
-        className={`w-32 h-32 rounded-md mb-1 ${
-          selected
-            ? error
-              ? "ring-4 ring-red-700 shadow-xl"
-              : "ring-4 ring-blue-500 shadow-xl"
-            : "shadow-md"
-        }`}
-        style={{
-          background: `grey url(${basemap.thumbnail})`,
-          backgroundSize: "cover",
-        }}
-      >
-        &nbsp;
-      </div>
-      <h4
-        className={`w-32 truncate text-center font-medium  text-sm px-2 ${
-          selected ? "text-gray-800 " : "text-gray-600"
-        }`}
-      >
-        {basemap.name}
-      </h4>
-    </div>
   );
 }

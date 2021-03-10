@@ -347,7 +347,7 @@ export default function LayerTableOfContentsItemEditor(
               {source?.type === DataSourceTypes.ArcgisVector && (
                 <InputBlock
                   className="mt-4 text-sm"
-                  title="Geometry Precision"
+                  title={t("Geometry Precision")}
                   input={
                     <select
                       id="geometryPrecision"
@@ -384,7 +384,7 @@ export default function LayerTableOfContentsItemEditor(
                     </select>
                   }
                 >
-                  Using a lower level of precision reduces download size
+                  {t("Using a lower level of precision reduces download size")}
                 </InputBlock>
               )}
               {source?.type === DataSourceTypes.Geojson ||
@@ -422,7 +422,7 @@ export default function LayerTableOfContentsItemEditor(
               {source?.type === DataSourceTypes.ArcgisDynamicMapserver && (
                 <>
                   <InputBlock
-                    title="Enable High-DPI Requests"
+                    title={t("Enable High-DPI Requests")}
                     className="mt-4 text-sm"
                     input={
                       <Switch
@@ -449,13 +449,15 @@ export default function LayerTableOfContentsItemEditor(
                       />
                     }
                   >
-                    Request higher resolution images when the user has a
-                    "Retina" or 4k display. Maps will be much more detailed, but
-                    it demands more of the data server.
+                    <Trans ns="admin">
+                      Request higher resolution images when the user has a
+                      "Retina" or 4k display. Maps will be much more detailed,
+                      but it demands more of the data server.
+                    </Trans>
                   </InputBlock>
                   <InputBlock
                     className="mt-4 text-sm"
-                    title="Image Format"
+                    title={t("Image Format")}
                     input={
                       <select
                         id="imageFormat"
@@ -497,8 +499,10 @@ export default function LayerTableOfContentsItemEditor(
                       </select>
                     }
                   >
-                    Imagery data looks best using <code>jpg</code>, for others{" "}
-                    <code>png</code> is a good choice.
+                    <Trans ns="admin">
+                      Imagery data looks best using <code>jpg</code>, for others{" "}
+                      <code>png</code> is a good choice.
+                    </Trans>
                   </InputBlock>
                 </>
               )}

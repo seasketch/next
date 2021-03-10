@@ -227,7 +227,7 @@ export default function OptionalBasemapLayerEditor({
         )}
         {layer.groupType !== OptionalBasemapLayersGroupType.None && (
           <div className="p-2">
-            <h4 className="text-gray-500">Options</h4>
+            <h4 className="text-gray-500">{t("Options")}</h4>
             <div className="py-2">
               {options.map((option, i) => (
                 <div className="" key={option.name + i}>

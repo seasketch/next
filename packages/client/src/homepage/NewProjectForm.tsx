@@ -26,7 +26,7 @@ export default function NewProjectForm() {
   });
 
   if (error) {
-    return <span>error.message</span>;
+    return <span>{error.message}</span>;
   }
   return (
     <>
@@ -70,6 +70,9 @@ export default function NewProjectForm() {
           <div className="mt-1 sm:mt-0 sm:col-span-2">
             <div className="max-w-lg flex rounded-md shadow-sm">
               <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm font-mono">
+                {
+                  // eslint-disable-next-line
+                }
                 seasketch.org/
               </span>
               <input

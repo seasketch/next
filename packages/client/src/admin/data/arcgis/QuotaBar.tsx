@@ -1,5 +1,6 @@
 import bytes from "bytes";
 import React from "react";
+import { Trans } from "react-i18next";
 
 interface QuotaBarProps {
   total: number;
@@ -42,8 +43,10 @@ export default function QuotaBar(props: QuotaBarProps) {
         )}
       </div>
       <span className="text-sm text-gray-500">
-        {bytes(props.remaining, { decimalPlaces: 0 })} /{" "}
-        {bytes(props.total, { decimalPlaces: 0 })} currently remaining
+        <Trans ns="admin">
+          {bytes(props.remaining, { decimalPlaces: 0 })} /{" "}
+          {bytes(props.total, { decimalPlaces: 0 })} currently remaining
+        </Trans>
       </span>
     </div>
   );

@@ -1059,8 +1059,12 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
       raise 'enhanced_security may only be set on seasketch-vector sources';
     end if;
     if old is null and new.type = 'seasketch-vector' then
-      new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
-      new.object_key = (select gen_random_uuid());
+      if new.bucket_id is null then
+        new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
+      end if;
+      if new.object_key is null then
+        new.object_key = (select gen_random_uuid());
+      end if;
       new.tiles = null;
       new.url = null;
     end if;
@@ -10076,7 +10080,7 @@ ALTER TABLE ONLY public.data_layers
 --
 
 ALTER TABLE ONLY public.data_layers
-    ADD CONSTRAINT data_layers_interactivity_settings_id_fkey FOREIGN KEY (interactivity_settings_id) REFERENCES public.interactivity_settings(id);
+    ADD CONSTRAINT data_layers_interactivity_settings_id_fkey FOREIGN KEY (interactivity_settings_id) REFERENCES public.interactivity_settings(id) ON DELETE CASCADE;
 
 
 --
@@ -10667,7 +10671,7 @@ ALTER TABLE ONLY public.surveys
 --
 
 ALTER TABLE ONLY public.table_of_contents_items
-    ADD CONSTRAINT table_of_contents_items_data_layer_id_fkey FOREIGN KEY (data_layer_id) REFERENCES public.data_layers(id);
+    ADD CONSTRAINT table_of_contents_items_data_layer_id_fkey FOREIGN KEY (data_layer_id) REFERENCES public.data_layers(id) ON DELETE CASCADE;
 
 
 --
@@ -15674,6 +15678,13 @@ GRANT ALL ON FUNCTION public.projects_data_sources_for_items(p public.projects, 
 
 
 --
+-- Name: TABLE table_of_contents_items; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.table_of_contents_items TO anon;
+
+
+--
 -- Name: COLUMN table_of_contents_items.id; Type: ACL; Schema: public; Owner: -
 --
 
@@ -15882,6 +15893,7 @@ GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.pro
 
 REVOKE ALL ON FUNCTION public.projects_session_is_admin(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO anon;
 
 
 --

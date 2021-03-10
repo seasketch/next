@@ -211,11 +211,12 @@ class MapContextManager {
       (key, item) => {
         const state = this.visibleLayers[key];
         if (state && state.visible) {
+          /* eslint-disable */
           const error = new Error(
             `Active source was evicted from cache due to memory limit. Limit is ${bytes(
               cacheSize || 0
             )}, layer is ${bytes(item.bytes || 0)}`
-          );
+          ); /* eslint-enable */
           state.error = error;
           item.error = error;
           delete item.bytes;
@@ -305,6 +306,7 @@ class MapContextManager {
       maxPitch: 70,
       // @ts-ignore
       optimizeForTerrain: true,
+      logoPosition: "bottom-right",
     });
     this.addSprites(sprites);
 
@@ -598,10 +600,10 @@ class MapContextManager {
   async getComputedStyle(): Promise<{ style: Style; sprites: ClientSprite[] }> {
     this.resetLayersByZIndex();
     let sprites: ClientSprite[] = [];
-    if (!this.internalState.selectedBasemap) {
-      throw new Error("Cannot call getComputedStyle before basemaps are set");
-    }
-    const basemap = this.basemaps[this.internalState.selectedBasemap] as
+    // if (!this.internalState.selectedBasemap) {
+    //   throw new Error("Cannot call getComputedStyle before basemaps are set");
+    // }
+    const basemap = this.basemaps[this.internalState.selectedBasemap || ""] as
       | ClientBasemap
       | undefined;
     const labelsID = basemap?.labelsLayerId;
@@ -737,7 +739,8 @@ class MapContextManager {
                       type: "geojson",
                       data:
                         source.type === DataSourceTypes.SeasketchVector
-                          ? `https://${source.bucketId}/${source.objectKey}`
+                          ? // eslint-disable-next-line
+                            `https://${source.bucketId}/${source.objectKey}`
                           : source.url!,
                       attribution: source.attribution || "",
                     };
@@ -1137,7 +1140,8 @@ class MapContextManager {
       const spriteId =
         typeof sprite.id === "string"
           ? sprite.id
-          : `seasketch://sprites/${sprite.id}`;
+          : // eslint-disable-next-line
+            `seasketch://sprites/${sprite.id}`;
       if (!this.map!.hasImage(spriteId)) {
         this.addSprite(sprite);
       }
@@ -1154,7 +1158,8 @@ class MapContextManager {
     const spriteId =
       typeof sprite.id === "string"
         ? sprite.id
-        : `seasketch://sprites/${sprite.id}`;
+        : // eslint-disable-next-line
+          `seasketch://sprites/${sprite.id}`;
 
     if (spriteImage.dataUri) {
       const image = await createImage(
@@ -1176,6 +1181,7 @@ class MapContextManager {
         pixelRatio: spriteImage.pixelRatio,
       });
     } else {
+      /* eslint-disable-next-line */
       throw new Error(`Sprite id=${sprite.id} missing both dataUri and url`);
     }
   }
@@ -1270,11 +1276,7 @@ export interface MapContextInterface {
  * @param preferencesKey If provided, map state will be restored upon return to the map by storing state in localStorage
  * @param ignoreLayerVisibilityState Don't store layer visibility state in localStorage
  */
-export function useMapContext(
-  preferencesKey?: string,
-  ignoreLayerVisibilityState?: boolean,
-  cacheSize?: number
-) {
+export function useMapContext(preferencesKey?: string, cacheSize?: number) {
   let initialState: MapContextInterface = {
     layerStates: {},
     bannerMessages: [],
@@ -1381,6 +1383,7 @@ async function loadImage(
 
 function idForSublayer(layer: ClientDataLayer) {
   if (layer.sublayer === null || layer.sublayer === undefined) {
+    /* eslint-disable-next-line */
     throw new Error(`Layer is not a sublayer. id=${layer.id}`);
   } else {
     return idForImageSource(layer.dataSourceId);
@@ -1402,6 +1405,7 @@ export function idForLayer(
         "styleLayerIndex must be provided to determine ID for a vector DataLayer"
       );
     } else {
+      /* eslint-disable-next-line */
       return `seasketch/${layer.id}/${styleLayerIndex}`;
     }
   } else {
@@ -1425,6 +1429,7 @@ export function layerIdFromStyleLayerId(id: string) {
 }
 
 function idForImageSource(sourceId: number | string) {
+  /* eslint-disable-next-line */
   return `seasketch/${sourceId}/image`;
 }
 
