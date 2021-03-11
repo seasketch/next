@@ -9,6 +9,7 @@ import NewProjectPage from "./homepage/NewProjectPage";
 // import ProjectApp from "./projects/ProjectApp";
 
 const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
+const LazyProjectAdmin = React.lazy(() => import("./admin/AdminApp"));
 
 function App() {
   const { t } = useTranslation(["homepage"]);
@@ -77,6 +78,9 @@ function App() {
               <Redirect to={`/${params.match.params.slug}/app`} />
             )}
           />
+          <Route path="/:slug/admin">
+            <LazyProjectAdmin />
+          </Route>
           <Route path="/:slug/app/:sidebar?">
             <LazyProjectApp />
           </Route>
