@@ -393,7 +393,7 @@ export default class LayerInteractivityManager {
       }));
       delete this.previousInteractionTarget;
     };
-    if (features.length) {
+    if (features.length && layerIds.indexOf(features[0].layer.id) > -1) {
       const top = features[0];
       const interactivitySetting = this.getInteractivitySettingForFeature(top);
       if (interactivitySetting) {
