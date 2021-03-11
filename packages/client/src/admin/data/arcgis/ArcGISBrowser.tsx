@@ -50,6 +50,7 @@ import {
 import bytes from "bytes";
 import { useParams } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
+import MiniBasemapSelector from "../MiniBasemapSelector";
 
 export default function ArcGISBrowser() {
   const [server, setServer] = useState<{
@@ -62,7 +63,7 @@ export default function ArcGISBrowser() {
   const mapServerInfo = useMapServerInfo(selectedMapServer);
   const [selectedFeatureLayer, setSelectedFeatureLayer] = useState<LayerInfo>();
   const serviceColumnRef = useRef<HTMLDivElement>(null);
-  const mapContext = useMapContext(undefined, bytes("200mb"));
+  const mapContext = useMapContext("arcgis-browser", bytes("200mb"));
   const [treeData, setTreeData] = useState<ClientTableOfContentsItem[]>([]);
   const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
     selectedMapServer
@@ -309,6 +310,12 @@ export default function ArcGISBrowser() {
               onLoad={(map) => {
                 setMap(map);
               }}
+            />
+            <MiniBasemapSelector
+              basemaps={
+                (basemapsData.data?.projectBySlug?.basemaps ||
+                  []) as ClientBasemap[]
+              }
             />
             <div className="bg-white text-lg p-2 text-primary-500 border-b">
               {server.location.baseUrl}
