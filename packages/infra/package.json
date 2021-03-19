@@ -28,9 +28,11 @@
     "@aws-cdk/aws-ecs": "^1.94.1",
     "@aws-cdk/aws-ecs-patterns": "^1.94.1",
     "@aws-cdk/aws-iam": "^1.93.0",
+    "@aws-cdk/aws-lambda": "^1.94.1",
     "@aws-cdk/aws-rds": "^1.93.0",
     "@aws-cdk/aws-s3": "^1.93.0",
     "@aws-cdk/core": "^1.94.1",
+    "aws-sdk": "^2.868.0",
     "pg-connection-string": "^2.4.0",
     "source-map-support": "^0.5.16"
   }

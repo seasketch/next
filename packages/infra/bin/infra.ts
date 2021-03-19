@@ -6,15 +6,12 @@ import { DatabaseStack } from "../lib/DatabaseStack";
 import { DataHostingStack } from "../lib/DataHostingStack";
 import { VpnStack } from "../VpnStack";
 import { MaintenanceStack } from "../MaintenanceStack";
+import { CustomResource, CustomResourceProvider } from "@aws-cdk/core";
 
 const env = { account: "196230260133", region: "us-west-2" };
 
 const app = new cdk.App();
 const db = new DatabaseStack(app, "SeaSketchProductionDBStack", { env });
-// Don't use the VPN. Instead use `ECS exec`
-// const vpn = new VpnStack(app, "SeaSketchVPN", { vpc: db.vpc, env });
-// Can't use ECS exec from CDK yet 😭
-// https://github.com/aws/aws-cdk/issues/13618
 new MaintenanceStack(app, "SeaSketchMaintenanceStack", {
   env,
   vpc: db.vpc,

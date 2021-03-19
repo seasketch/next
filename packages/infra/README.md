@@ -16,7 +16,11 @@ To list out all the stacks, enter `cdk ls`.
 
 # Doing a clean install
 
-You will need highly privileged AWS credentials to install the whole application from scratch. You will also need to have a certificate in Amazon Certificate Manager to enable remote connectivity to the database.
+You will need highly privileged AWS credentials to install the whole application from scratch. You will also need to have a certificate in Amazon Certificate Manager to enable remote connectivity to the database. Basic steps are as follows:
+
+```
+cdk deploy SeaSketchProductionDBStack SeaSketchMaintenanceStack
+```
 
 ## Database Stack
 
@@ -24,7 +28,7 @@ You will need highly privileged AWS credentials to install the whole application
 cdk deploy SeaSketchProductionDBStack
 ```
 
-This will create a new stack for the database, but that database will be empty. Afterwards you will need to bootstrap the database schema using the bastion container within the Maintenance Stack.
+This will create a new stack for the database, but that database will be empty. Afterwards you will need to bootstrap the database schema using the bastion container within the Maintenance Stack to run migrations.
 
 ## The Maintenance Stack
 
@@ -38,14 +42,6 @@ AWS_PROFILE=$YOUR_PROFILE aws ecs execute-command --region $AWS_REGION --cluster
 
 Be sure to run `sh` with the `-l` option that will launch startup scripts to bootstrap you shell environment.
 
-### Initializing the database from the Maintenance Stack for the first time
-
-Unfortunately there is no easy way to support IAM authentication "out of the box" through CDK so a manual step must be performed the first time that a database is created to enable IAM authentication on the primary user. Steps are as follows:
-
-1. Get the master password from Secrets Manager by logging into the AWS console and finding the record pertaining to the db
-2. Run `psql -c "GRANT rds_iam TO postgres; create graphile user..."`. You should be prompted for the password copied from secrets manager.
-3. Now you should be able to verify connecting via the IAM role as documented below and run the first set of migrations.
-
 ### Connecting to the database from the Maintenance Stack
 
 The startup script in /etc/profile.d/pg.sh should make it possible to run `psql` without any arguments.
@@ -53,6 +49,11 @@ The startup script in /etc/profile.d/pg.sh should make it possible to run `psql`
 ### Checking out the SeaSketch codebase
 
 Deploy keys should be used to checkout the codebase into `/usr/src/app/next`. The startup scripts should detect if these keys are installed properly and if not provide instructions.
+
+```
+cd /usr/src/app
+git clone git@github.com:seasketch/next.git
+```
 
 ## Running database migrations
 

@@ -4,6 +4,11 @@ import * as ec2 from "@aws-cdk/aws-ec2";
 import * as iam from "@aws-cdk/aws-iam";
 import { Connections } from "@aws-cdk/aws-ec2";
 import { Secret } from "@aws-cdk/aws-ecs";
+import { CustomResource } from "@aws-cdk/core";
+import * as logs from "@aws-cdk/aws-logs";
+import * as cr from "@aws-cdk/custom-resources";
+import * as lambda from "@aws-cdk/aws-lambda";
+import * as path from "path";
 
 export class DatabaseStack extends cdk.Stack {
   vpc: ec2.Vpc;
@@ -52,5 +57,34 @@ export class DatabaseStack extends cdk.Stack {
     // TODO: Add monitoring using cloudwatch events. Docs have some good ideas:
     // https://docs.aws.amazon.com/cdk/api/latest/docs/aws-rds-readme.html#starting-an-instance-database
     this.instance = instance;
+
+    const onEvent = new lambda.Function(this, "DBStackEventHandler", {
+      code: lambda.Code.fromAsset(
+        path.join(__dirname, "../lambdas/initDbUsers")
+      ),
+      handler: "index.handler",
+      runtime: lambda.Runtime.NODEJS_14_X,
+      vpc: this.vpc,
+      securityGroups: instance.connections.securityGroups,
+      timeout: cdk.Duration.seconds(30),
+      logRetention: logs.RetentionDays.ONE_DAY,
+    });
+
+    instance.grantConnect(onEvent);
+    instance.secret!.grantRead(onEvent);
+
+    const myProvider = new cr.Provider(this, "InitDBUsersProvider", {
+      onEventHandler: onEvent,
+      logRetention: logs.RetentionDays.ONE_DAY, // default is INFINITE
+    });
+
+    const custom = new CustomResource(this, "InitDBUsers", {
+      serviceToken: myProvider.serviceToken,
+      properties: {
+        secret: instance.secret!.secretName,
+        region: instance.env.region,
+      },
+    });
+    custom.node.addDependency(instance);
   }
 }

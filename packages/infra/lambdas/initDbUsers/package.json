@@ -1,0 +1,22 @@
+{
+  "name": "initidbusers",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "author": "Chad Burt",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "homepage": "https://github.com/seasketch/next#readme",
+  "dependencies": {
+    "node-postgres": "^0.6.2"
+  }
+}
