@@ -29,7 +29,7 @@ const { PGUSER, PGREGION, PGHOST, PGPORT, PGNAME } = process.env;
                 const dbUrl = `postgres://${PGUSER}:${encodeURIComponent(
                   token
                 )}@${PGHOST}:${PGPORT}/${PGNAME}?ssl=1&sslmode=no-verify&sslrootcert=${certPath}`;
-                console.log(dbUrl);
+                console.log(`DATABASE_URL=${dbUrl}\nPGPASSWORD=${token}`);
               }
             }
           );

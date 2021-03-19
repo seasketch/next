@@ -37,11 +37,12 @@ RUN   apk update && \
       openssh-keygen
 
 WORKDIR /usr/src/app
-
 RUN ssh-keygen -t rsa -b 4096 -C "support@seasketch.org" -f /root/.ssh/id_rsa -P ""
 RUN ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts
 RUN echo "Be sure to add /root/.ssh/id_rsa.pub to the @seasketch/next repo deploy keys!"
-RUN wget https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem
-# TODO: populate environment with keys from secrets manager
-# TODO: test that api can be installed
+COPY ./github.sh /etc/profile.d/
+COPY ./pg.sh /etc/profile.d/
+RUN chmod u+x /etc/profile.d/pg.sh
+RUN chmod u+x /etc/profile.d/github.sh
+RUN wget "https://s3.amazonaws.com/rds-downloads/rds-ca-2019-root.pem" -O /root/rds-ca-2019-root.pem
 CMD [ "tail", "-f" ]
