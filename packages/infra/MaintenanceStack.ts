@@ -8,6 +8,7 @@ import * as ecs from "@aws-cdk/aws-ecs";
 import * as ecs_patterns from "@aws-cdk/aws-ecs-patterns";
 import { IVpc } from "@aws-cdk/aws-ec2/lib/vpc";
 import {
+  Policy,
   PolicyDocument,
   PolicyStatement,
   Role,
@@ -34,33 +35,26 @@ export class MaintenanceStack extends cdk.Stack {
     const role = new iam.Role(this, "MaintenanceRole", {
       assumedBy: new ServicePrincipal("ecs-tasks.amazonaws.com"),
       inlinePolicies: {
-        // ecsExec: new PolicyDocument({
-        //   statements: [
-        //     new PolicyStatement({
-        //       effect: iam.Effect.ALLOW,
-        //       actions: [
-        //         "ssmmessages:CreateControlChannel",
-        //         "ssmmessages:CreateDataChannel",
-        //         "ssmmessages:OpenControlChannel",
-        //         "ssmmessages:OpenDataChannel",
-        //       ],
-        //       resources: ["*"],
-        //     }),
-        //   ],
-        // }),
+        dbAccess: new PolicyDocument({
+          statements: [
+            new PolicyStatement({
+              actions: ["rds-db:connect"],
+              effect: iam.Effect.ALLOW,
+              // TODO: This policy might not be necessary.
+              // The duplicate one below definitely is
+              // TODO: It would be nice to scope this down
+              // https://github.com/aws/aws-cdk/issues/11851
+              // In practice this shouldn't be a big deal because
+              // we won't have RDS instances that shouldn't be
+              // accessed in the same VPC
+              resources: [`arn:aws:rds-db:*:*:dbuser:*/*`],
+            }),
+          ],
+        }),
       },
     });
     asset.repository.grantPull(role);
-    // props.db.grantConnect(role);
-
-    // role.addToPolicy(
-    //   new PolicyStatement({
-    //     actions: ["sts:AssumeRole"],
-    //     effect: iam.Effect.ALLOW,
-    //     principals: [new ServicePrincipal("ecs-tasks.amazonaws.com")],
-    //   })
-    // );
-    // props.dbAccessRole.grantPrincipal(new ServicePrincipal('ecs-tasks.amazonaws.com'));
+    props.db.grantConnect(role);
 
     const taskDefinition = new ecs.FargateTaskDefinition(
       this,
@@ -99,6 +93,24 @@ export class MaintenanceStack extends cdk.Stack {
     );
     asset.repository.grantPull(taskDefinition.taskRole);
     props.db.grantConnect(taskDefinition.taskRole);
+    taskDefinition.taskRole.attachInlinePolicy(
+      new Policy(this, "DBAccess", {
+        document: new PolicyDocument({
+          statements: [
+            new PolicyStatement({
+              actions: ["rds-db:connect"],
+              effect: iam.Effect.ALLOW,
+              // TODO: It would be nice to scope this down
+              // https://github.com/aws/aws-cdk/issues/11851
+              // In practice this shouldn't be a big deal because
+              // we won't have RDS instances that shouldn't be
+              // accessed in the same VPC
+              resources: [`arn:aws:rds-db:*:*:dbuser:*/*`],
+            }),
+          ],
+        }),
+      })
+    );
 
     const ecsService = new ecs.FargateService(
       this,

@@ -70,7 +70,7 @@ export async function initializeUsers(
   await dbClient.connect();
   console.log("creating user...");
   await dbClient.query("CREATE USER graphile WITH LOGIN");
-  console.log("granint rds_iam...");
+  console.log("granting rds_iam...");
   await dbClient.query("GRANT rds_iam TO postgres");
   const res = await dbClient.query("GRANT rds_iam TO graphile");
   console.log("done", res);
