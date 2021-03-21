@@ -37,12 +37,16 @@ RUN   apk update && \
       openssh-keygen
 
 WORKDIR /usr/src/app
+# Create deploy keys
 RUN ssh-keygen -t rsa -b 4096 -C "support@seasketch.org" -f /root/.ssh/id_rsa -P ""
 RUN ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts
-RUN echo "Be sure to add /root/.ssh/id_rsa.pub to the @seasketch/next repo deploy keys!"
+# Startup scripts check status of deploy keys, setup pg environment vars, and echo
+# startup messages
 COPY ./github.sh /etc/profile.d/
 COPY ./pg.sh /etc/profile.d/
 RUN chmod u+x /etc/profile.d/pg.sh
 RUN chmod u+x /etc/profile.d/github.sh
+# Fetch root cert so that pg can use ssl connection
 RUN wget "https://s3.amazonaws.com/rds-downloads/rds-ca-2019-root.pem" -O /root/rds-ca-2019-root.pem
+# TODO: can we just run this without a command? Is there a standard Docker CMD "noop"?
 CMD [ "tail", "-f" ]

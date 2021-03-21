@@ -4,11 +4,8 @@ import * as cdk from "@aws-cdk/core";
 import { ClientStack } from "../lib/ClientStack";
 import { DatabaseStack } from "../lib/DatabaseStack";
 import { DataHostingStack } from "../lib/DataHostingStack";
-import { VpnStack } from "../VpnStack";
 import { MaintenanceStack } from "../MaintenanceStack";
-import { CustomResource, CustomResourceProvider } from "@aws-cdk/core";
-
-const env = { account: "196230260133", region: "us-west-2" };
+const env = require("./env.production");
 
 const app = new cdk.App();
 const db = new DatabaseStack(app, "SeaSketchProductionDBStack", { env });

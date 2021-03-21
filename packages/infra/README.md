@@ -20,6 +20,8 @@ You will need highly privileged AWS credentials to install the whole application
 
 ```
 cdk deploy SeaSketchProductionDBStack SeaSketchMaintenanceStack
+# log into the Maintenance Stack bastion and run initial db migration
+
 ```
 
 ## Database Stack
@@ -34,15 +36,15 @@ This will create a new stack for the database, but that database will be empty. 
 
 This stack includes a _bastion_ container that can be connected to using AWS' new [ECS exec](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html) function. The bastion is inside the VPC and can be used to perform database migrations and could be used to debug other services otherwise inaccessible.
 
-To access the bastion you will need a cluster name and task id. Then run
+Connect to the bastion by running
 
-```sh
-AWS_PROFILE=$YOUR_PROFILE aws ecs execute-command --region $AWS_REGION --cluster $CLUSTER_ID --task $TASK_ID --container Default --command "/bin/sh -l" --interactive
+```
+npm run shell
 ```
 
-Be sure to run `sh` with the `-l` option that will launch startup scripts to bootstrap you shell environment.
+This script will automatically pull the cluster and task ids from cloudformation and run the ecs exec function.
 
-### Connecting to the database from the Maintenance Stack
+### Connecting to the database from the bastion
 
 The startup script in /etc/profile.d/pg.sh should make it possible to run `psql` without any arguments.
 
