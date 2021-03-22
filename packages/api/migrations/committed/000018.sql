@@ -1,5 +1,5 @@
---! Previous: sha1:6d911bef85f0be73bbab249dcc473bd828e259a9
---! Hash: sha1:4e8180ffb27c3cc0eaa2b1087c0db65e29ccdaa1
+--! Previous: sha1:a4428edc5143127a1d49a17157a772ed15c917a7
+--! Hash: sha1:e609611ee62bec274e5da81b6a89185120cafc5c
 
 -- Enter migration here
 -- Registered users invited to a survey, or unregistered users with an invite token, should have access to:

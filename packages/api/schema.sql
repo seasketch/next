@@ -818,21 +818,6 @@ Add a SketchClass to the list of valid children for a Collection-type SketchClas
 
 
 --
--- Name: after_data_source_insert(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.after_data_source_insert() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    begin
-      if new.type != 'vector' then
-        insert into interactivity_settings (data_source_id) values (new.id);
-      end if;
-    end;
-  $$;
-
-
---
 -- Name: after_post_insert(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1059,12 +1044,8 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
       raise 'enhanced_security may only be set on seasketch-vector sources';
     end if;
     if old is null and new.type = 'seasketch-vector' then
-      if new.bucket_id is null then
-        new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
-      end if;
-      if new.object_key is null then
-        new.object_key = (select gen_random_uuid());
-      end if;
+      new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
+      new.object_key = (select gen_random_uuid());
       new.tiles = null;
       new.url = null;
     end if;
@@ -2625,17 +2606,6 @@ $$;
 COMMENT ON FUNCTION public.current_project() IS '
 The current SeaSketch Project, which is determined by the `referer` or `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
 ';
-
-
---
--- Name: data_hosting_quota(public.projects); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.data_hosting_quota(p public.projects) RETURNS integer
-    LANGUAGE sql STABLE
-    AS $$
-    select 500000000;
-  $$;
 
 
 --
@@ -9033,209 +9003,6 @@ CREATE UNIQUE INDEX access_control_lists_basemap_id_idx ON public.access_control
 
 
 --
--- Name: access_control_lists_basemap_id_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx1 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx10; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx10 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx11; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx11 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx12; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx12 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx13; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx13 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx14; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx14 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx15; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx15 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx16; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx16 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx17; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx17 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx18; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx18 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx19; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx19 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx2 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx20; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx20 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx21; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx21 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx22; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx22 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx23; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx23 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx24; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx24 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx25; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx25 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx26; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx26 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx27; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx27 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx28; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx28 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx29; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx29 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx3; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx3 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx4; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx4 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx5; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx5 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx6; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx6 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx7; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx7 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx8; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx8 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
--- Name: access_control_lists_basemap_id_idx9; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX access_control_lists_basemap_id_idx9 ON public.access_control_lists USING btree (basemap_id) WHERE (basemap_id IS NOT NULL);
-
-
---
 -- Name: access_control_lists_forum_id_read_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9278,48 +9045,6 @@ CREATE INDEX basemaps_interactivity_settings_id_idx ON public.basemaps USING btr
 
 
 --
--- Name: basemaps_interactivity_settings_id_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX basemaps_interactivity_settings_id_idx1 ON public.basemaps USING btree (interactivity_settings_id);
-
-
---
--- Name: basemaps_interactivity_settings_id_idx2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX basemaps_interactivity_settings_id_idx2 ON public.basemaps USING btree (interactivity_settings_id);
-
-
---
--- Name: basemaps_interactivity_settings_id_idx3; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX basemaps_interactivity_settings_id_idx3 ON public.basemaps USING btree (interactivity_settings_id);
-
-
---
--- Name: basemaps_interactivity_settings_id_idx4; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX basemaps_interactivity_settings_id_idx4 ON public.basemaps USING btree (interactivity_settings_id);
-
-
---
--- Name: basemaps_interactivity_settings_id_idx5; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX basemaps_interactivity_settings_id_idx5 ON public.basemaps USING btree (interactivity_settings_id);
-
-
---
--- Name: basemaps_interactivity_settings_id_idx6; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX basemaps_interactivity_settings_id_idx6 ON public.basemaps USING btree (interactivity_settings_id);
-
-
---
 -- Name: basemaps_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9338,34 +9063,6 @@ CREATE INDEX data_layers_data_source_id_idx ON public.data_layers USING btree (d
 --
 
 CREATE INDEX data_layers_interactivity_settings_id_idx ON public.data_layers USING btree (interactivity_settings_id);
-
-
---
--- Name: data_layers_interactivity_settings_id_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX data_layers_interactivity_settings_id_idx1 ON public.data_layers USING btree (interactivity_settings_id);
-
-
---
--- Name: data_layers_interactivity_settings_id_idx2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX data_layers_interactivity_settings_id_idx2 ON public.data_layers USING btree (interactivity_settings_id);
-
-
---
--- Name: data_layers_interactivity_settings_id_idx3; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX data_layers_interactivity_settings_id_idx3 ON public.data_layers USING btree (interactivity_settings_id);
-
-
---
--- Name: data_layers_interactivity_settings_id_idx4; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX data_layers_interactivity_settings_id_idx4 ON public.data_layers USING btree (interactivity_settings_id);
 
 
 --
@@ -9994,6 +9691,14 @@ ALTER TABLE ONLY public.access_control_list_groups
 
 
 --
+-- Name: access_control_lists access_control_lists_basemap_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_control_lists
+    ADD CONSTRAINT access_control_lists_basemap_id_fkey FOREIGN KEY (basemap_id) REFERENCES public.basemaps(id) ON DELETE CASCADE;
+
+
+--
 -- Name: access_control_lists access_control_lists_forum_id_read_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10080,7 +9785,7 @@ ALTER TABLE ONLY public.data_layers
 --
 
 ALTER TABLE ONLY public.data_layers
-    ADD CONSTRAINT data_layers_interactivity_settings_id_fkey FOREIGN KEY (interactivity_settings_id) REFERENCES public.interactivity_settings(id) ON DELETE CASCADE;
+    ADD CONSTRAINT data_layers_interactivity_settings_id_fkey FOREIGN KEY (interactivity_settings_id) REFERENCES public.interactivity_settings(id);
 
 
 --
@@ -10671,7 +10376,7 @@ ALTER TABLE ONLY public.surveys
 --
 
 ALTER TABLE ONLY public.table_of_contents_items
-    ADD CONSTRAINT table_of_contents_items_data_layer_id_fkey FOREIGN KEY (data_layer_id) REFERENCES public.data_layers(id) ON DELETE CASCADE;
+    ADD CONSTRAINT table_of_contents_items_data_layer_id_fkey FOREIGN KEY (data_layer_id) REFERENCES public.data_layers(id);
 
 
 --
@@ -12378,13 +12083,6 @@ REVOKE ALL ON FUNCTION public.addgeometrycolumn(catalog_name character varying, 
 
 
 --
--- Name: FUNCTION after_data_source_insert(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.after_data_source_insert() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION after_post_insert(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -13126,13 +12824,6 @@ REVOKE ALL ON FUNCTION public.crypt(text, text) FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.current_project() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.current_project() TO anon;
-
-
---
--- Name: FUNCTION data_hosting_quota(p public.projects); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.data_hosting_quota(p public.projects) FROM PUBLIC;
 
 
 --
@@ -15485,7 +15176,6 @@ GRANT ALL ON FUNCTION public.projects_basemaps(project public.projects) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.projects_data_hosting_quota(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_data_hosting_quota(p public.projects) TO anon;
 GRANT ALL ON FUNCTION public.projects_data_hosting_quota(p public.projects) TO seasketch_user;
 
 
@@ -15494,7 +15184,6 @@ GRANT ALL ON FUNCTION public.projects_data_hosting_quota(p public.projects) TO s
 --
 
 REVOKE ALL ON FUNCTION public.projects_data_hosting_quota_used(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_data_hosting_quota_used(p public.projects) TO anon;
 GRANT ALL ON FUNCTION public.projects_data_hosting_quota_used(p public.projects) TO seasketch_user;
 
 
@@ -15675,13 +15364,6 @@ GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE p
 
 REVOKE ALL ON FUNCTION public.projects_data_sources_for_items(p public.projects, table_of_contents_item_ids integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_data_sources_for_items(p public.projects, table_of_contents_item_ids integer[]) TO anon;
-
-
---
--- Name: TABLE table_of_contents_items; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.table_of_contents_items TO anon;
 
 
 --
@@ -15893,7 +15575,6 @@ GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.pro
 
 REVOKE ALL ON FUNCTION public.projects_session_is_admin(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO seasketch_user;
-GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO anon;
 
 
 --
@@ -19952,23 +19633,6 @@ GRANT INSERT,DELETE ON TABLE public.survey_invited_groups TO seasketch_user;
 --
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE ALL ON FUNCTIONS  FROM PUBLIC;
-
-
---
--- Name: postgraphile_watch_ddl; Type: EVENT TRIGGER; Schema: -; Owner: -
---
-
-CREATE EVENT TRIGGER postgraphile_watch_ddl ON ddl_command_end
-         WHEN TAG IN ('ALTER AGGREGATE', 'ALTER DOMAIN', 'ALTER EXTENSION', 'ALTER FOREIGN TABLE', 'ALTER FUNCTION', 'ALTER POLICY', 'ALTER SCHEMA', 'ALTER TABLE', 'ALTER TYPE', 'ALTER VIEW', 'COMMENT', 'CREATE AGGREGATE', 'CREATE DOMAIN', 'CREATE EXTENSION', 'CREATE FOREIGN TABLE', 'CREATE FUNCTION', 'CREATE INDEX', 'CREATE POLICY', 'CREATE RULE', 'CREATE SCHEMA', 'CREATE TABLE', 'CREATE TABLE AS', 'CREATE VIEW', 'DROP AGGREGATE', 'DROP DOMAIN', 'DROP EXTENSION', 'DROP FOREIGN TABLE', 'DROP FUNCTION', 'DROP INDEX', 'DROP OWNED', 'DROP POLICY', 'DROP RULE', 'DROP SCHEMA', 'DROP TABLE', 'DROP TYPE', 'DROP VIEW', 'GRANT', 'REVOKE', 'SELECT INTO')
-   EXECUTE FUNCTION postgraphile_watch.notify_watchers_ddl();
-
-
---
--- Name: postgraphile_watch_drop; Type: EVENT TRIGGER; Schema: -; Owner: -
---
-
-CREATE EVENT TRIGGER postgraphile_watch_drop ON sql_drop
-   EXECUTE FUNCTION postgraphile_watch.notify_watchers_drop();
 
 
 --

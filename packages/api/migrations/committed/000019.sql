@@ -1,5 +1,5 @@
---! Previous: sha1:4e8180ffb27c3cc0eaa2b1087c0db65e29ccdaa1
---! Hash: sha1:449f05317d2b63f6ee6157c937707d95c71eeac6
+--! Previous: sha1:e609611ee62bec274e5da81b6a89185120cafc5c
+--! Hash: sha1:a943cd0256bce79a4ebda91b2090a622755945a4
 
 -- Enter migration here
 ALTER TYPE invite_status ADD VALUE if not exists 'SURVEY_INVITE_QUEUED';

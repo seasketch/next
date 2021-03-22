@@ -1,5 +1,5 @@
---! Previous: sha1:c32d48dc0cd43a5e6468f44bceb09789bcd48d34
---! Hash: sha1:af0cd62839087a2cb536b0fc4968d9d87760dd2e
+--! Previous: sha1:6aa6643f8f7a20c9682fc30216e43c52480208cb
+--! Hash: sha1:99ae529b7263600476f8b9882ca9514ecbf332d1
 
 -- Enter migration here
 alter table optional_basemap_layers add column if not exists options jsonb;

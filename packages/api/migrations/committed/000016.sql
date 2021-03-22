@@ -1,5 +1,5 @@
---! Previous: sha1:921cf80f47843160ec34e7ba94667018e75a3e0a
---! Hash: sha1:d16fb19fdfd563b271c53d30b13c2c1b39a5f6a1
+--! Previous: sha1:e61f7322d81359c2b8898c30417a164e063fe671
+--! Hash: sha1:8ceecc5a99e90f875719ba4cab503278fe914e1b
 
 comment on column surveys.is_disabled is '
 Disabled surveys will not be accessible to non-admins. Invite email sending will
@@ -102,10 +102,8 @@ $$;
 grant execute on function unsubscribed to graphile;
 comment on function unsubscribed is '@omit';
 
-DELETE FROM pg_enum en WHERE en.enumtypid=( SELECT oid FROM pg_type WHERE typname = 'email_status') AND en.enumlabel='UNSUBSCRIBED';
 alter type email_status add value 'UNSUBSCRIBED';
 
-DELETE FROM pg_enum en WHERE en.enumtypid=( SELECT oid FROM pg_type WHERE typname = 'invite_status') AND en.enumlabel='UNSUBSCRIBED';
 alter type invite_status add value 'UNSUBSCRIBED';
 
 CREATE OR REPLACE FUNCTION public.before_invite_emails_insert() RETURNS trigger

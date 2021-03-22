@@ -1,5 +1,5 @@
---! Previous: sha1:d16fb19fdfd563b271c53d30b13c2c1b39a5f6a1
---! Hash: sha1:6d911bef85f0be73bbab249dcc473bd828e259a9
+--! Previous: sha1:8ceecc5a99e90f875719ba4cab503278fe914e1b
+--! Hash: sha1:a4428edc5143127a1d49a17157a772ed15c917a7
 
 -- Enter migration here
 alter table survey_invites alter column email drop not null;

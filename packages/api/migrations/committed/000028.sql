@@ -1,5 +1,5 @@
---! Previous: sha1:35823d24a95fd9ce6c2fd8297259163d26a1cf73
---! Hash: sha1:0ce44bd94a3d7dbd72c893062a61b095f0b5c595
+--! Previous: sha1:a7c4b8dffe23ed1b025b62dfdf35b63c7191bf56
+--! Hash: sha1:12c8706b5c07264e77a5dbf2cda1735de89d2687
 
 -- Enter migration here
 alter table data_layers add column if not exists z_index int not null default 0;

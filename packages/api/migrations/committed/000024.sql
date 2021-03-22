@@ -1,5 +1,5 @@
---! Previous: sha1:eea07c9932a8e940df6b104e5304b7f5295f3697
---! Hash: sha1:ee3faa87e262b601b114b7407eeac3669bfc3a09
+--! Previous: sha1:00a45cfca76013eea06ea6d96943eff01061025a
+--! Hash: sha1:555da213d419d160a4032e196f0cdf9e0e813660
 
 -- Enter migration here
 

@@ -1,5 +1,5 @@
---! Previous: sha1:6857c8d88fe890b06ae6e87f8be5c799f84eef06
---! Hash: sha1:31f7edc657ff6f958fe8f428a9f3de3141b9da78
+--! Previous: sha1:5173931e593ac45dce778294dc74b9fbfb35fa10
+--! Hash: sha1:12fe1d500a9f3721cc49a531f8bb61af37dc5d5f
 
 -- Enter migration here
 drop policy if exists interactivity_settings_select on interactivity_settings;

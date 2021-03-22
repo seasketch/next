@@ -1,5 +1,5 @@
---! Previous: sha1:0ce44bd94a3d7dbd72c893062a61b095f0b5c595
---! Hash: sha1:4b3af9866b3b42281ed8294d304f5f49685b6fde
+--! Previous: sha1:12c8706b5c07264e77a5dbf2cda1735de89d2687
+--! Hash: sha1:e3e075792f9c7f7a2a7bc846ae9e083d68c0b0de
 
 alter table interactivity_settings drop column if exists data_source_id cascade;
 alter table interactivity_settings drop column if exists source_layer cascade;

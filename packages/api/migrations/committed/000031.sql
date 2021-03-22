@@ -1,5 +1,5 @@
---! Previous: sha1:1ab3b6a42bfdbb04f9a96a71143ef592a028ac5e
---! Hash: sha1:b8db3d8acc2073b70854f6f5738f1786e4d59f4d
+--! Previous: sha1:0ac4708539ed31664b8ad7ba769ce30ca817785d
+--! Hash: sha1:e1829fdefdd4e457b5a0d99071a1fa1437e78d1b
 
 -- Enter migration here
 alter table basemaps add column if not exists description text;

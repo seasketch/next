@@ -1,5 +1,5 @@
---! Previous: sha1:caa10561eb38d0000106a791b3aec4b6f8917e03
---! Hash: sha1:921cf80f47843160ec34e7ba94667018e75a3e0a
+--! Previous: sha1:684aadf4ac39d9264a6b940413a1ee881bcc9dd7
+--! Hash: sha1:e61f7322d81359c2b8898c30417a164e063fe671
 
 -- Enter migration here
 comment on column project_invites.was_used is 'Project invite has already been accepted.';
@@ -160,13 +160,6 @@ alter table sketch_classes add column mapbox_gl_style jsonb;
 comment on column sketch_classes.name is 'Label chosen by project admins that is shown to users.';
 comment on column sketch_classes.project_id is 'SketchClasses belong to a single project.';
 comment on function sketch_classes_can_digitize is 'Whether the current user session is allowed to digitize sketches of this type. Digitizing is controlled by admins via access control lists, and archived sketch classes can only be digitized by admins.';
-
-DELETE FROM pg_enum
-WHERE enumlabel = 'CHOOSE_FEATURE'
-AND enumtypid = (
-  SELECT oid FROM pg_type WHERE typname = 'sketch_geometry_type'
-);
-alter type sketch_geometry_type add value 'CHOOSE_FEATURE';
 
 comment on column sketch_classes.allow_multi is '
 If set to true, a geometry_type of POLYGON would allow for both POLYGONs and 

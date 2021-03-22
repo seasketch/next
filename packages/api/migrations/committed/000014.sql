@@ -1,5 +1,5 @@
---! Previous: sha1:c5a00be2a63ac9d7c0ce54bbbc5d17fe83469ed3
---! Hash: sha1:caa10561eb38d0000106a791b3aec4b6f8917e03
+--! Previous: sha1:6ece23f47e605b3e05c6a230857276f5cc42607f
+--! Hash: sha1:684aadf4ac39d9264a6b940413a1ee881bcc9dd7
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 drop table if exists jwks cascade;

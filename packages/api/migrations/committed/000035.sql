@@ -1,5 +1,5 @@
---! Previous: sha1:be3455e2b857910557d0a119d6f9caf88f646838
---! Hash: sha1:ffffdd6d30627708d297ca735dbc4a40936252c4
+--! Previous: sha1:8652a041adeb02197a07140441748010d0c23e77
+--! Hash: sha1:29d90e32fdb447d6d4ec6b9ec5218a695ec792e9
 
 -- Enter migration here
 drop table if exists basemap_interactivity_settings;

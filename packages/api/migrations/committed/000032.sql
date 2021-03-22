@@ -1,5 +1,5 @@
---! Previous: sha1:b8db3d8acc2073b70854f6f5738f1786e4d59f4d
---! Hash: sha1:c32d48dc0cd43a5e6468f44bceb09789bcd48d34
+--! Previous: sha1:e1829fdefdd4e457b5a0d99071a1fa1437e78d1b
+--! Hash: sha1:6aa6643f8f7a20c9682fc30216e43c52480208cb
 
 -- Enter migration here
 create or replace function projects_data_hosting_quota(p projects)

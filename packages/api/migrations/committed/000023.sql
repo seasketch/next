@@ -1,5 +1,5 @@
---! Previous: sha1:d2692d59e6e1def03a6986a27afdd152cd348d2e
---! Hash: sha1:eea07c9932a8e940df6b104e5304b7f5295f3697
+--! Previous: sha1:abb03e2cb26cae081514482d9ecb6df6961f91c9
+--! Hash: sha1:00a45cfca76013eea06ea6d96943eff01061025a
 
 -- Enter migration here
 alter table projects

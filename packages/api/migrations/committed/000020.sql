@@ -1,5 +1,5 @@
---! Previous: sha1:449f05317d2b63f6ee6157c937707d95c71eeac6
---! Hash: sha1:228b7f09439f9caa1902cc61bbd20b89ba19c74f
+--! Previous: sha1:a943cd0256bce79a4ebda91b2090a622755945a4
+--! Hash: sha1:f0455b06949a61a4230b4fecbfb185107137160a
 
 -- Enter migration here
 alter table project_participants drop column if exists is_banned_from_forums;

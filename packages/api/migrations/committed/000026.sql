@@ -1,5 +1,5 @@
---! Previous: sha1:a2c3d56e79044e22cab47c18a8d1667aae68ac61
---! Hash: sha1:cd8ee90dd87bceb81b00043cf06dca75bd6a593e
+--! Previous: sha1:d117a2ce1ead675f8a00c05379ec4f7697e88764
+--! Hash: sha1:7c519df93f23989e13360b4ef27edf049b10b127
 
 -- Enter migration here
 CREATE or replace FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS trigger

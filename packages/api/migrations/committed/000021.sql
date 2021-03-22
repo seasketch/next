@@ -1,5 +1,5 @@
---! Previous: sha1:228b7f09439f9caa1902cc61bbd20b89ba19c74f
---! Hash: sha1:2909fcb3ba5cfe63a2df0399a500636d8cc3ce5f
+--! Previous: sha1:f0455b06949a61a4230b4fecbfb185107137160a
+--! Hash: sha1:a3a9228335c887a67534b4e4d11ee87bbb5f8fbc
 
 -- Enter migration here
 comment on function projects_users_banned_from_forums is '

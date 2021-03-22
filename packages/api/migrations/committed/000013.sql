@@ -1,5 +1,5 @@
 --! Previous: sha1:d2f9c3b9a6a308384237f8bd2899fd19bfc6b4f6
---! Hash: sha1:c5a00be2a63ac9d7c0ce54bbbc5d17fe83469ed3
+--! Hash: sha1:6ece23f47e605b3e05c6a230857276f5cc42607f
 
 -- Enter migration here
 drop type if exists sketch_geometry_type cascade;
@@ -7,7 +7,8 @@ create type sketch_geometry_type as enum (
   'POLYGON',
   'LINESTRING',
   'POINT',
-  'COLLECTION'
+  'COLLECTION',
+  'CHOOSE_FEATURE'
 );
 
 drop table if exists sketch_classes cascade;
