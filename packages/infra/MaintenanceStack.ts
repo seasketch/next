@@ -74,7 +74,7 @@ export class MaintenanceStack extends cdk.Stack {
       environment: {
         PGHOST: props.db.instanceEndpoint.hostname,
         PGPORT: "5432",
-        PGNAME: "seasketch",
+        PGDATABASE: "seasketch",
         PGUSER: "postgres",
         PGREGION: props.db.env.region,
       },

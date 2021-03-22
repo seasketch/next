@@ -2,7 +2,7 @@
 const AWS = require("aws-sdk");
 const https = require("https");
 const fs = require("fs");
-const { PGUSER, PGREGION, PGHOST, PGPORT, PGNAME } = process.env;
+const { PGUSER, PGREGION, PGHOST, PGPORT, PGDATABASE } = process.env;
 
 (async () => {
   const signer = new AWS.RDS.Signer();
@@ -28,7 +28,7 @@ const { PGUSER, PGREGION, PGHOST, PGPORT, PGNAME } = process.env;
               } else {
                 const dbUrl = `postgres://${PGUSER}:${encodeURIComponent(
                   token
-                )}@${PGHOST}:${PGPORT}/${PGNAME}?ssl=1&sslmode=no-verify&sslrootcert=${certPath}`;
+                )}@${PGHOST}:${PGPORT}/${PGDATABASE}?ssl=1&sslmode=no-verify&sslrootcert=${certPath}`;
                 console.log(`DATABASE_URL=${dbUrl}\nPGPASSWORD=${token}`);
               }
             }
