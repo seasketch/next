@@ -55,6 +55,8 @@ export enum AccessControlListType {
  */
 export type Acl = Node & {
   __typename?: 'Acl';
+  /** Reads a single `Basemap` that is related to this `Acl`. */
+  basemap?: Maybe<Basemap>;
   basemapId?: Maybe<Scalars['Int']>;
   forumIdRead?: Maybe<Scalars['Int']>;
   forumIdWrite?: Maybe<Scalars['Int']>;
@@ -114,6 +116,8 @@ export type AddGroupToAclInput = {
 export type AddGroupToAclPayload = {
   __typename?: 'AddGroupToAclPayload';
   acl?: Maybe<Acl>;
+  /** Reads a single `Basemap` that is related to this `Acl`. */
+  basemap?: Maybe<Basemap>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
@@ -198,6 +202,8 @@ export type ApproveParticipantPayload = {
 
 export type Basemap = Node & {
   __typename?: 'Basemap';
+  /** Reads a single `Acl` that is related to this `Basemap`. */
+  acl?: Maybe<Acl>;
   /**
    * Optional attribution to show at the bottom of the map. Will be overriden by
    * the attribution specified in the gl-style in the case of MAPBOX types.
@@ -8742,6 +8748,8 @@ export type RemoveGroupFromAclInput = {
 export type RemoveGroupFromAclPayload = {
   __typename?: 'RemoveGroupFromAclPayload';
   acl?: Maybe<Acl>;
+  /** Reads a single `Basemap` that is related to this `Acl`. */
+  basemap?: Maybe<Basemap>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
@@ -10296,6 +10304,8 @@ export type UpdateAclPayload = {
   __typename?: 'UpdateAclPayload';
   /** The `Acl` that was updated by this mutation. */
   acl?: Maybe<Acl>;
+  /** Reads a single `Basemap` that is related to this `Acl`. */
+  basemap?: Maybe<Basemap>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
