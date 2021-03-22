@@ -74,7 +74,7 @@ export class MaintenanceStack extends cdk.Stack {
       environment: {
         PGHOST: props.db.instanceEndpoint.hostname,
         PGPORT: "5432",
-        PGNAME: "SeaSketch",
+        PGNAME: "seasketch",
         PGUSER: "postgres",
         PGREGION: props.db.env.region,
       },
@@ -127,22 +127,5 @@ export class MaintenanceStack extends cdk.Stack {
     // https://github.com/aws/aws-cdk/issues/10666
     const cfnService = ecsService.node.children[0] as CfnService;
     cfnService.addOverride("Properties.EnableExecuteCommand", "True");
-
-    // new ecs_patterns.ApplicationLoadBalancedFargateService(
-    //   this,
-    //   "SeaSketchMaintenanceService",
-    //   {
-    //     cluster: cluster,
-    //     cpu: 256, // Default is 256
-    //     desiredCount: 1, // Default is 1
-
-    //     taskImageOptions: {
-    //       image: ecs.ContainerImage.fromRegistry(asset.imageUri),
-    //     },
-
-    //     memoryLimitMiB: 512, // Default is 512
-    //     taskDefinition,
-    //   }
-    // );
   }
 }
