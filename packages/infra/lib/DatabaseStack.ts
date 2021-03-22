@@ -22,7 +22,7 @@ export class DatabaseStack extends cdk.Stack {
 
     const instance = new rds.DatabaseInstance(this, "Instance", {
       engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.VER_12_5,
+        version: rds.PostgresEngineVersion.of("13", "1"),
       }),
       // optional, defaults to m5.large
       instanceType: ec2.InstanceType.of(
@@ -40,7 +40,7 @@ export class DatabaseStack extends cdk.Stack {
       iamAuthentication: true,
       // TODO: change to RETAIN when using in production
       removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
-      databaseName: "SeaSketch",
+      databaseName: "seasketch",
     });
 
     // @ts-ignore
