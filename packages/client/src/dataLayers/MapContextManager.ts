@@ -1,17 +1,12 @@
 import mapboxgl, {
-  Layer as MapBoxLayer,
   Map,
   MapDataEvent,
   ErrorEvent,
   Source,
-  AnyLayer,
   Style,
   Layer,
-  FreeCameraOptions,
   CameraOptions,
 } from "mapbox-gl";
-// @ts-ignore
-import { validate } from "@mapbox/mapbox-gl-style-spec";
 import {
   createContext,
   Dispatch,
@@ -19,25 +14,14 @@ import {
   useState,
   SetStateAction,
 } from "react";
-import {
-  ArcGISDynamicMapServiceSource,
-  isArcGISDynamicServiceLoading,
-  updateDynamicMapService,
-  urlTemplateForArcGISDynamicSource,
-} from "./sourceTypes/ArcGISDynamicMapServiceSource";
-import {
-  ArcGISVectorSource,
-  updateArcGISVectorSource,
-  isArcGISVectorSourceLoading,
-} from "./sourceTypes/ArcGISVectorSource";
-import { MapBoxSource, updateGeoJSONSource } from "./sourceTypes/MapBoxSource";
+// import {
+//   ArcGISVectorSource,
+// } from "./sourceTypes/ArcGISVectorSource";
+import { MapBoxSource } from "./sourceTypes/MapBoxSource";
 import { WMSSource } from "./sourceTypes/WMSSource";
-import {
-  ArcGISDynamicMapService,
-  ArcGISDynamicMapService as ArcGISDynamicMapServiceInstance,
-  ArcGISVectorSource as ArcGISVectorSourceInstance,
-  fetchFeatureLayerData,
-} from "@seasketch/mapbox-gl-esri-sources";
+// import {
+//   fetchFeatureLayerData,
+// } from "mapbox-gl-esri-feature-layers";
 import {
   Basemap,
   DataLayer,
@@ -51,13 +35,12 @@ import {
   SpriteImage,
 } from "../generated/graphql";
 import { fetchGlStyle } from "../useMapboxStyle";
-import { getDynamicArcGISStyle } from "../admin/data/arcgis/arcgis";
 import LayerInteractivityManager from "./LayerInteractivityManager";
 import ArcGISVectorSourceCache, {
   ArcGISVectorSourceCacheEvent,
 } from "./ArcGISVectorSourceCache";
 import bytes from "bytes";
-import { FeatureCollection } from "geojson";
+import { urlTemplateForArcGISDynamicSource } from "./sourceTypes/ArcGISDynamicMapServiceSource";
 
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 
@@ -67,11 +50,10 @@ interface LayerState {
   error?: Error;
 }
 
-export type SourceInstance =
-  | MapBoxSource
-  | ArcGISDynamicMapServiceSource
-  | ArcGISVectorSource
-  | WMSSource;
+// export type SourceInstance =
+//   | MapBoxSource
+//   | ArcGISVectorSource
+//   | WMSSource;
 
 export type ClientDataSource = Pick<
   GeneratedDataSource,
@@ -182,9 +164,6 @@ class MapContextManager {
   private basemaps: { [id: string]: ClientBasemap } = {};
   private _setState: Dispatch<SetStateAction<MapContextInterface>>;
   private updateStateDebouncerReference?: NodeJS.Timeout;
-  private sourceCache: {
-    [id: string]: ArcGISDynamicMapServiceInstance | ArcGISVectorSourceInstance;
-  } = {};
   private updateSourcesStateDebouncerReference?: NodeJS.Timeout;
   private initialCameraOptions?: CameraOptions;
   private internalState: MapContextInterface;
@@ -1000,13 +979,10 @@ class MapContextManager {
       }
     }
     for (const sourceId in sources) {
-      let loading = this.isSourceLoading(sourceId);
+      let loading = !this.map!.isSourceLoaded(sourceId)
       if (loading) {
         anyLoading = true;
       }
-      const isDynamicService =
-        this.sourceCache[sourceId] &&
-        this.sourceCache[sourceId] instanceof ArcGISDynamicMapServiceInstance;
       for (const layer of sources[sourceId]) {
         if (this.visibleLayers[layer.id].loading !== loading) {
           this.visibleLayers[layer.id].loading = loading;
@@ -1029,23 +1005,17 @@ class MapContextManager {
     }
   }
 
-  private isSourceLoading(id: string) {
-    // let loaded = this.map.isSourceLoaded(id);
-    let loading = false;
-    const instance = this.sourceCache[id];
-    if (instance) {
-      if (instance instanceof ArcGISDynamicMapServiceInstance) {
-        return isArcGISDynamicServiceLoading(instance, this.map!);
-      }
-    } else if (
-      this.clientDataSources[id].type === DataSourceTypes.ArcgisVector
-    ) {
-      return this.arcgisVectorSourceCache.isSourceLoading(id);
-    } else {
-      loading = !this.map!.isSourceLoaded(id);
-    }
-    return loading;
-  }
+  // private isSourceLoading(id: string) {
+  //   // let loaded = this.map.isSourceLoaded(id);
+  //   let loading = false;
+  //   const instance = this.sourceCache[id];
+  //   // if (instance) {
+  //   //   return this.arcgisVectorSourceCache.isSourceLoading(id);
+  //   // } else {
+  //     loading = !this.map!.isSourceLoaded(id);
+  //   }
+  //   return loading;
+  // }
 
   highlightLayer(layerId: string) {}
 

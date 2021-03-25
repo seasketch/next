@@ -1,53 +1,79 @@
 #!/usr/bin/env node
 import "source-map-support/register";
 import * as cdk from "@aws-cdk/core";
-import { ClientStack } from "../lib/ClientStack";
 import { DatabaseStack } from "../lib/DatabaseStack";
-import { DataHostingStack } from "../lib/DataHostingStack";
+// import { DataHostingStack } from "../lib/DataHostingStack";
 import { MaintenanceStack } from "../MaintenanceStack";
-const env = require("./env.production");
+import { ReactClientStack } from "../lib/ReactClientStack";
+import { PublicUploadsStack } from "../lib/PublicUploadsStack";
+let env = require("./env.production");
 
 const app = new cdk.App();
 const db = new DatabaseStack(app, "SeaSketchProductionDBStack", { env });
-new MaintenanceStack(app, "SeaSketchMaintenanceStack", {
+const maintenance = new MaintenanceStack(app, "SeaSketchMaintenanceStack", {
   env,
   vpc: db.vpc,
   db: db.instance,
 });
-// For now, use the crappy Copilot configration via `copilot svc exec`
+const client = new ReactClientStack(app, "SeaSketchProductionReactClient", {
+  env,
+  maintenanceRole: maintenance.taskRole,
+});
+const allowedCorsDomains = [client.url];
+const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploadsStack", {
+  env,
+  maintenanceRole: maintenance.taskRole,
+  allowedCorsDomains,
+});
 
-// Setup regional hosts for user-uploaded GeoJSON. These have some extra outputs
-// which will need to go into the data_sources_buckets postgres table
-const dataHosts = [
-  new DataHostingStack(app, "SeaSketchDataOregon", {
-    env: { ...env, region: "us-west-2" },
-    coords: [-119.6313015, 45.8511146],
-    name: "Oregon, USA",
-  }),
+// // Setup regional hosts for user-uploaded GeoJSON. These should be registered
+// // with the database after creation
+// const hostConfigs: {
+//   region: string;
+//   slug: string;
+//   coords: [number, number];
+//   name: string;
+// }[] = [
+//   {
+//     name: "Oregon, USA",
+//     slug: "oregon",
+//     region: "us-west-2",
+//     coords: [-119.6313015, 45.8511146],
+//   },
+//   {
+//     region: "us-east-1",
+//     coords: [-77.15, 38.91],
+//     name: "Virginia, USA",
+//     slug: "virginia",
+//   },
+//   {
+//     region: "eu-west-1",
+//     coords: [-7.9, 52],
+//     name: "Ireland",
+//     slug: "ireland",
+//   },
+//   {
+//     region: "sa-east-1",
+//     coords: [-47.9, -22.6],
+//     name: "São Paulo",
+//     slug: "sao-paulo",
+//   },
+//   {
+//     region: "ap-southeast-2",
+//     coords: [150.8, -33.7],
+//     name: "Sydney",
+//     slug: "sydney",
+//   },
+// ];
 
-  new DataHostingStack(app, "SeaSketchDataVirginia", {
-    env: { ...env, region: "us-east-1" },
-    coords: [-77.15, 38.91],
-    name: "Virginia, USA",
-  }),
-
-  new DataHostingStack(app, "SeaSketchDataIreland", {
-    env: { ...env, region: "eu-west-1" },
-    coords: [-7.9, 52],
-    name: "Ireland",
-  }),
-
-  new DataHostingStack(app, "SeaSketchDataSaoPaulo", {
-    env: { ...env, region: "sa-east-1" },
-    coords: [-47.9, -22.6],
-    name: "São Paulo",
-  }),
-
-  new DataHostingStack(app, "SeaSketchDataSydney", {
-    env: { ...env, region: "ap-southeast-2" },
-    coords: [150.8, -33.7],
-    name: "Sydney",
-  }),
-];
-
-new ClientStack(app, "SeaSketchProductionClientStack", { env });
+// const dataHosts = hostConfigs.map(
+//   (config) =>
+//     new DataHostingStack(app, "SeaSketchData-" + config.slug, {
+//       env: { ...env, region: config.region },
+//       ...config,
+//       allowedCorsDomains,
+//       maintenanceRole: maintenance.taskRole,
+//       vpc: db.vpc,
+//       db: db.instance,
+//     })
+// );

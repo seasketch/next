@@ -1,7 +1,6 @@
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import InputBlock from "../../../components/InputBlock";
 import OutgoingLinkIcon from "../../../components/OutgoingLinkIcon";
-import Switch from "../../../components/Switch";
 import {
   ArcGISServiceSettings,
   esriFieldTypesToTileJSONTypes,
@@ -20,8 +19,7 @@ import { validate } from "@mapbox/mapbox-gl-style-spec";
 import useDebounce from "../../../useDebounce";
 import Spinner from "../../../components/Spinner";
 import bytes from "bytes";
-import Button from "../../../components/Button";
-import { fetchFeatureLayerData } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISVectorSource";
+import { fetchFeatureLayerData } from "mapbox-gl-esri-feature-layers";
 import slugify from "slugify";
 import ArcGISServiceMetadata from "./ArcGISServiceMetadata";
 import Warning from "../../../components/Warning";

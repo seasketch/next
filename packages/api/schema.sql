@@ -1044,8 +1044,12 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
       raise 'enhanced_security may only be set on seasketch-vector sources';
     end if;
     if old is null and new.type = 'seasketch-vector' then
-      new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
-      new.object_key = (select gen_random_uuid());
+      if new.bucket_id is null then
+        new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
+      end if;
+      if new.object_key is null then
+        new.object_key = (select gen_random_uuid());
+      end if;
       new.tiles = null;
       new.url = null;
     end if;
@@ -2049,6 +2053,25 @@ Must have write permission for the specified forum. Create reply to a discussion
 
 
 --
+-- Name: get_default_data_sources_bucket(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_default_data_sources_bucket() RETURNS text
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    bucket_id text;
+  begin
+    select url into bucket_id from data_sources_buckets where region = 'us-west-2';
+    if bucket_id is null then
+      select url into bucket_id from data_sources_buckets limit 1;
+    end if;
+    return bucket_id;
+  end
+$$;
+
+
+--
 -- Name: projects; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2066,7 +2089,7 @@ CREATE TABLE public.projects (
     is_deleted boolean DEFAULT false NOT NULL,
     deleted_at timestamp with time zone,
     region public.geometry(Polygon) DEFAULT public.st_geomfromgeojson('{"coordinates":[[[-157.05324470015358,69.74201326987497],[135.18377661193057,69.74201326987497],[135.18377661193057,-43.27449014737426],[-157.05324470015358,-43.27449014737426],[-157.05324470015358,69.74201326987497]]],"type":"Polygon"}'::text) NOT NULL,
-    data_sources_bucket_id text DEFAULT 'geojson-1.seasketch-data.org'::text NOT NULL,
+    data_sources_bucket_id text DEFAULT public.get_default_data_sources_bucket() NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT name_min_length CHECK ((length(name) >= 4))
 );
@@ -7694,11 +7717,18 @@ COMMENT ON TABLE public.data_source_types IS '@enum';
 --
 
 CREATE TABLE public.data_sources_buckets (
-    bucket text NOT NULL,
+    url text NOT NULL,
     name text NOT NULL,
     region text NOT NULL,
     location public.geometry(Point,4326) NOT NULL
 );
+
+
+--
+-- Name: COLUMN data_sources_buckets.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources_buckets.url IS 'Base url for this point-of-presence.';
 
 
 --
@@ -8579,7 +8609,7 @@ ALTER TABLE ONLY public.data_source_types
 --
 
 ALTER TABLE ONLY public.data_sources_buckets
-    ADD CONSTRAINT data_sources_buckets_pkey PRIMARY KEY (bucket);
+    ADD CONSTRAINT data_sources_buckets_pkey PRIMARY KEY (url);
 
 
 --
@@ -9785,7 +9815,7 @@ ALTER TABLE ONLY public.data_layers
 --
 
 ALTER TABLE ONLY public.data_layers
-    ADD CONSTRAINT data_layers_interactivity_settings_id_fkey FOREIGN KEY (interactivity_settings_id) REFERENCES public.interactivity_settings(id);
+    ADD CONSTRAINT data_layers_interactivity_settings_id_fkey FOREIGN KEY (interactivity_settings_id) REFERENCES public.interactivity_settings(id) ON DELETE CASCADE;
 
 
 --
@@ -9808,7 +9838,7 @@ COMMENT ON CONSTRAINT data_layers_project_id_fkey ON public.data_layers IS '@omi
 --
 
 ALTER TABLE ONLY public.data_sources
-    ADD CONSTRAINT data_sources_bucket_id_fkey FOREIGN KEY (bucket_id) REFERENCES public.data_sources_buckets(bucket) ON DELETE CASCADE;
+    ADD CONSTRAINT data_sources_bucket_id_fkey FOREIGN KEY (bucket_id) REFERENCES public.data_sources_buckets(url) ON DELETE CASCADE;
 
 
 --
@@ -10108,7 +10138,7 @@ ALTER TABLE ONLY public.project_participants
 --
 
 ALTER TABLE ONLY public.projects
-    ADD CONSTRAINT projects_data_sources_bucket_id_fkey FOREIGN KEY (data_sources_bucket_id) REFERENCES public.data_sources_buckets(bucket);
+    ADD CONSTRAINT projects_data_sources_bucket_id_fkey FOREIGN KEY (data_sources_bucket_id) REFERENCES public.data_sources_buckets(url);
 
 
 --
@@ -10376,7 +10406,7 @@ ALTER TABLE ONLY public.surveys
 --
 
 ALTER TABLE ONLY public.table_of_contents_items
-    ADD CONSTRAINT table_of_contents_items_data_layer_id_fkey FOREIGN KEY (data_layer_id) REFERENCES public.data_layers(id);
+    ADD CONSTRAINT table_of_contents_items_data_layer_id_fkey FOREIGN KEY (data_layer_id) REFERENCES public.data_layers(id) ON DELETE CASCADE;
 
 
 --
@@ -12598,6 +12628,14 @@ GRANT ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer) TO se
 
 REVOKE ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) TO anon;
+
+
+--
+-- Name: FUNCTION get_default_data_sources_bucket(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_default_data_sources_bucket() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_default_data_sources_bucket() TO anon;
 
 
 --
@@ -15367,6 +15405,13 @@ GRANT ALL ON FUNCTION public.projects_data_sources_for_items(p public.projects, 
 
 
 --
+-- Name: TABLE table_of_contents_items; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.table_of_contents_items TO anon;
+
+
+--
 -- Name: COLUMN table_of_contents_items.id; Type: ACL; Schema: public; Owner: -
 --
 
@@ -15575,6 +15620,7 @@ GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.pro
 
 REVOKE ALL ON FUNCTION public.projects_session_is_admin(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO anon;
 
 
 --

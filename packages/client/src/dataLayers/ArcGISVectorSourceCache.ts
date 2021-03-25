@@ -2,8 +2,8 @@ import bytes from "bytes";
 import LRUCache from "lru-cache";
 import cache from "lru-cache";
 import { FeatureCollection } from "geojson";
-import { DataSourceTypes, Query } from "../generated/graphql";
-import { fetchFeatureLayerData } from "@seasketch/mapbox-gl-esri-sources";
+import { DataSourceTypes } from "../generated/graphql";
+import { fetchFeatureLayerData } from "mapbox-gl-esri-feature-layers";
 import { byteLength } from "../admin/data/arcgis/arcgis";
 import { ClientDataSource } from "./MapContextManager";
 import { nextTick } from "process";
@@ -139,6 +139,7 @@ class ArcGISVectorSourceCache {
       loadedFeatures: 0,
       queryParameters: { ...source.queryParameters },
     };
+    
     const promise = new Promise<FeatureCollection>((resolve, reject) => {
       fetchFeatureLayerData(
         source.url!,

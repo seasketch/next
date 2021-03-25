@@ -19,7 +19,7 @@ function DataBucketSettings(props: { className?: string }) {
     variables: { slug },
   });
   const projectBucketSetting =
-    buckets.data?.projectBySlug?.dataSourcesBucket?.bucket || "";
+    buckets.data?.projectBySlug?.dataSourcesBucket?.url || "";
   const [
     mutate,
     { data, error, loading },
@@ -86,12 +86,12 @@ function DataBucketSettings(props: { className?: string }) {
         []) {
         const geometry = bucket.location.geojson as Point;
         const feature = {
-          id: bucket.bucket,
+          id: bucket.url,
           type: "Feature",
           properties: {
             name: bucket.name,
             region: bucket.region,
-            bucket: bucket.bucket,
+            bucket: bucket.url,
           },
           geometry,
         };
@@ -203,8 +203,8 @@ function DataBucketSettings(props: { className?: string }) {
                     buckets.data?.dataSourcesBucketsConnection?.nodes || []
                   ).map((bucket) => (
                     <option
-                      key={bucket.bucket}
-                      value={bucket.bucket}
+                      key={bucket.url}
+                      value={bucket.url}
                       // selected={bucket.id === projectBucketSetting}
                     >
                       {bucket.name}

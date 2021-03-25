@@ -10,10 +10,15 @@ import * as cr from "@aws-cdk/custom-resources";
 import * as lambda from "@aws-cdk/aws-lambda";
 import * as path from "path";
 
+/**
+ * The DatabaseStack is responsible for creating an RDS Postgres instance and
+ * creating a "Custom Resource" lambda which will create initial db users and
+ * enable IAM authentication. This is also the stack that creates the initial
+ * VPC, so it is exposed as an instance property.
+ */
 export class DatabaseStack extends cdk.Stack {
   vpc: ec2.Vpc;
   instance: rds.DatabaseInstance;
-  secret: Secret;
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
@@ -24,67 +29,85 @@ export class DatabaseStack extends cdk.Stack {
       engine: rds.DatabaseInstanceEngine.postgres({
         version: rds.PostgresEngineVersion.of("13", "1"),
       }),
-      // optional, defaults to m5.large
+      // Note that instance size can be changed at any time, at the cost of some
+      // downtime
       instanceType: ec2.InstanceType.of(
         ec2.InstanceClass.T3,
         ec2.InstanceSize.SMALL
       ),
       storageEncrypted: true,
-      backupRetention: cdk.Duration.days(7),
+      backupRetention: cdk.Duration.days(30),
+      // New credentials will be automatically generated and stored in SSM
       credentials: rds.Credentials.fromGeneratedSecret("postgres"),
       vpc,
       vpcSubnets: {
-        // This is important!!, because the security group will not block connections
+        // This is important!! Security group will not block connections
         subnetType: ec2.SubnetType.PRIVATE,
       },
       iamAuthentication: true,
       // TODO: change to RETAIN when using in production
-      removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
       databaseName: "seasketch",
     });
 
-    // @ts-ignore
-    this.secret = instance.secret!;
-
-    // Master password will be updated every 7 days.
+    // Master password will be updated every 30 days.
     instance.addRotationSingleUser({
-      automaticallyAfter: cdk.Duration.days(7),
+      automaticallyAfter: cdk.Duration.days(30),
     });
 
-    // Connections are limited to the VPC
+    // Connections are limited to the VPC so we can go ahead and allow
+    // connections from any IP address and be protected by the VPC firewall
     instance.connections.allowDefaultPortFromAnyIpv4();
 
     // TODO: Add monitoring using cloudwatch events. Docs have some good ideas:
     // https://docs.aws.amazon.com/cdk/api/latest/docs/aws-rds-readme.html#starting-an-instance-database
     this.instance = instance;
 
-    const onEvent = new lambda.Function(this, "DBStackEventHandler", {
-      code: lambda.Code.fromAsset(
-        path.join(__dirname, "../lambdas/initDbUsers")
-      ),
-      handler: "index.handler",
-      runtime: lambda.Runtime.NODEJS_14_X,
-      vpc: this.vpc,
-      securityGroups: instance.connections.securityGroups,
-      timeout: cdk.Duration.seconds(30),
-      logRetention: logs.RetentionDays.ONE_DAY,
-    });
+    /**
+     * This lambda will recieve CREATE/UPDATE/DELETE events from CloudFormation.
+     * When a database instance is first created it will create a graphile user
+     * for use by the graphql server and enable IAM authentication for both
+     * graphile and the postgres user. This lambda is the *only* case of using
+     * the master password secret held in SSM. Afterwards everything should be
+     * performed through IAM.
+     */
+    const dockerfile = path.join(__dirname, "../../api/migrations/");
+    const onEvent = new lambda.DockerImageFunction(
+      this,
+      "DBStackEventHandler",
+      {
+        // Don't forget to compile the typescript code for this lambda manually
+        // if it is ever changed
+        code: lambda.DockerImageCode.fromImageAsset(dockerfile, {
+          cmd: ["migrate.handler"],
+          // entrypoint: ["/lambda-entrypoint.sh"],
+        }),
+        vpc: this.vpc,
+        // allowAllOutbound: true,
+        // allowPublicSubnet: true,
+        securityGroups: instance.connections.securityGroups,
+        // should be more than ample
+        timeout: cdk.Duration.seconds(30),
+        logRetention: logs.RetentionDays.ONE_DAY,
+      }
+    );
 
     instance.grantConnect(onEvent);
+    // Only resource which has access to this secret
     instance.secret!.grantRead(onEvent);
 
-    const myProvider = new cr.Provider(this, "InitDBUsersProvider", {
+    const myProvider = new cr.Provider(this, "InitDBProvider", {
       onEventHandler: onEvent,
-      logRetention: logs.RetentionDays.ONE_DAY, // default is INFINITE
+      logRetention: logs.RetentionDays.ONE_MONTH,
     });
 
-    const custom = new CustomResource(this, "InitDBUsers", {
+    const custom = new CustomResource(this, "InitDB", {
       serviceToken: myProvider.serviceToken,
       properties: {
+        // lambda need to know how to access the master password
         secret: instance.secret!.secretName,
         region: instance.env.region,
       },
     });
-    custom.node.addDependency(instance);
   }
 }

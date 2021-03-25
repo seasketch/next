@@ -1,34 +1,48 @@
 import * as cdk from "@aws-cdk/core";
 import * as iam from "@aws-cdk/aws-iam";
-import { CfnInstance, Vpc } from "@aws-cdk/aws-ec2";
 import { DockerImageAsset } from "@aws-cdk/aws-ecr-assets";
 import * as path from "path";
-import * as ec2 from "@aws-cdk/aws-ec2";
 import * as ecs from "@aws-cdk/aws-ecs";
-import * as ecs_patterns from "@aws-cdk/aws-ecs-patterns";
 import { IVpc } from "@aws-cdk/aws-ec2/lib/vpc";
 import {
   Policy,
   PolicyDocument,
   PolicyStatement,
-  Role,
   ServicePrincipal,
 } from "@aws-cdk/aws-iam";
-import { CfnDBInstance, DatabaseInstance } from "@aws-cdk/aws-rds";
+import { DatabaseInstance } from "@aws-cdk/aws-rds";
 import { CfnService } from "@aws-cdk/aws-ecs";
 
+/**
+ * The MaintenanceStack sets up a "bastion" instance in ECS running within the
+ * SeaSketch VPC. `ECS exec` can then be used to run an interactive shell for
+ * maintenance tasks like running database migrations or debugging services. The
+ * bastion container comes pre-loaded with scripts to fetch temporary database
+ * access credentials and has a github deploy key for checking out code. In the
+ * future it can be given necessary access to s3 buckets and other resources as
+ * needed.
+ *
+ * To use the maintenance bastion, run `npm run shell` from the infra package.
+ */
 export class MaintenanceStack extends cdk.Stack {
+  taskRole: iam.IRole;
   constructor(
     scope: cdk.Construct,
     id: string,
-    props: cdk.StackProps & { vpc: IVpc; db: DatabaseInstance }
+    props: cdk.StackProps & {
+      /* VPC used when creating the DB Stack */
+      vpc: IVpc;
+      /* Database instance is needed to grant connect privileges */
+      db: DatabaseInstance;
+    }
   ) {
     super(scope, id, props);
+    // CDK will build the Dockerfile on deployment, but sometimes changes need
+    // to be committed to git to trigger a republishing on ECR.
     const asset = new DockerImageAsset(this, "MaintenanceImage", {
       directory: path.join(__dirname, "containers/maintenance"),
     });
     const cluster = new ecs.Cluster(this, "MaintenanceCluster", {
-      // @ts-ignore ECS refers to something other than the canonical ec2.Vpc...
       vpc: props.vpc,
     });
 
@@ -71,14 +85,19 @@ export class MaintenanceStack extends cdk.Stack {
       linuxParameters: new ecs.LinuxParameters(this, "LinuxParams", {
         initProcessEnabled: true,
       }),
+      /**
+       * Connection details are passed as environment variables that match what
+       * `psql` expects
+       */
       environment: {
         PGHOST: props.db.instanceEndpoint.hostname,
         PGPORT: "5432",
         PGDATABASE: "seasketch",
-        PGUSER: "postgres",
+        PGUSER: "bastion",
         PGREGION: props.db.env.region,
       },
     });
+    // Needed to enable ECS exec
     taskDefinition.addToTaskRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -93,6 +112,7 @@ export class MaintenanceStack extends cdk.Stack {
     );
     asset.repository.grantPull(taskDefinition.taskRole);
     props.db.grantConnect(taskDefinition.taskRole);
+    this.taskRole = taskDefinition.taskRole;
     taskDefinition.taskRole.attachInlinePolicy(
       new Policy(this, "DBAccess", {
         document: new PolicyDocument({
@@ -122,6 +142,8 @@ export class MaintenanceStack extends cdk.Stack {
       }
     );
 
+    // At some point CDK will support `ECS exec` directly and this will be a
+    // lot easier. For now it requires manually managing CFN properties.
     // const cfnService = ecsService.node.defaultChild as CfnService;
     // doesn't work, see
     // https://github.com/aws/aws-cdk/issues/10666

@@ -1,4 +1,3 @@
-import { Style } from "mapbox-gl";
 import React, { useEffect, useState } from "react";
 import { GeoJsonGeometryTypes } from "geojson";
 import { Controlled as CodeMirror } from "react-codemirror2";
@@ -13,9 +12,8 @@ import useDebounce from "../../useDebounce";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import Button from "../../components/Button";
-import { styleForFeatureLayer } from "@seasketch/mapbox-gl-esri-sources";
+import { styleForFeatureLayer } from "mapbox-gl-esri-feature-layers";
 import {
-  createImageBlobFromDataURI,
   getOrCreateSpritesFromImageSet,
   replaceSpriteIds,
 } from "./arcgis/arcgis";
@@ -23,7 +21,6 @@ import {
   useGetOrCreateSpriteMutation,
   useAddImageToSpriteMutation,
 } from "../../generated/graphql";
-import { useParams } from "react-router-dom";
 import useProjectId from "../../useProjectId";
 import { Trans, useTranslation } from "react-i18next";
 require("codemirror/addon/lint/lint");

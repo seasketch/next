@@ -3,11 +3,13 @@
   "editor.minimap.enabled": false,
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "editor.rulers": [80]
   },
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "editor.rulers": [80]
   },
   "[markdown]": {
     "editor.wordWrap": "bounded",
@@ -23,7 +25,10 @@
   "files.exclude": {
     "**/dist/**": true
   },
-  "eslint.workingDirectories": [
-    "packages/client"
-  ]
+  "eslint.workingDirectories": ["packages/client"],
+  "[git-commit]": {
+    "editor.rulers": [
+      50
+    ]
+  }
 }

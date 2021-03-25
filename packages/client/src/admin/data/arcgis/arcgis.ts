@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { Layer, LngLatBoundsLike } from "mapbox-gl";
+import { Layer } from "mapbox-gl";
 import {
   Dispatch,
   SetStateAction,
@@ -9,10 +9,8 @@ import {
   useState,
 } from "react";
 import { Symbol } from "arcgis-rest-api";
-import { ImageList } from "@seasketch/mapbox-gl-esri-sources";
-import { styleForFeatureLayer } from "@seasketch/mapbox-gl-esri-sources";
+import { ImageList, styleForFeatureLayer, fetchFeatureLayerData } from "mapbox-gl-esri-feature-layers";
 import { v4 as uuid } from "uuid";
-import { fetchFeatureLayerData } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISVectorSource";
 import bboxPolygon from "@turf/bbox-polygon";
 import area from "@turf/area";
 import bbox from "@turf/bbox";
@@ -59,7 +57,14 @@ export function generateStableId() {
   return nanoId();
 }
 
-const worker = new Worker();
+let worker: any;
+if (process.env.NODE_ENV === "test") {
+  worker = {gzippedSize: () => 0};
+} else {
+  import("../../../workers/index").then((mod) => {
+    worker = new mod.default();
+  })
+}
 
 export interface NormalizedArcGISServerLocation {
   baseUrl: string;

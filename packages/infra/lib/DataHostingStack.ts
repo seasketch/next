@@ -9,10 +9,17 @@ import * as cloudfront from "@aws-cdk/aws-cloudfront";
 import * as iam from "@aws-cdk/aws-iam";
 import * as origins from "@aws-cdk/aws-cloudfront-origins";
 import { ViewerProtocolPolicy } from "@aws-cdk/aws-cloudfront";
-import { Duration } from "@aws-cdk/core";
+import { Duration, PhysicalName } from "@aws-cdk/core";
+import commonAllowedOrigins from "./commonAllowedOrigins";
+import { CustomResource } from "@aws-cdk/core";
+import * as logs from "@aws-cdk/aws-logs";
+import * as cr from "@aws-cdk/custom-resources";
+import * as lambda from "@aws-cdk/aws-lambda";
+import * as path from "path";
+import { Vpc } from "@aws-cdk/aws-ec2";
+import { DatabaseInstance } from "@aws-cdk/aws-rds";
 
 export class DataHostingStack extends cdk.Stack {
-  privilegedRole: iam.Role;
   bucket: s3.Bucket;
   constructor(
     scope: cdk.Construct,
@@ -22,6 +29,10 @@ export class DataHostingStack extends cdk.Stack {
       coords: [number, number];
       /* Name of the data center to use in the admin interface */
       name: string;
+      allowedCorsDomains: string[];
+      maintenanceRole: iam.IRole;
+      vpc: Vpc;
+      db: DatabaseInstance;
     }
   ) {
     super(scope, id, props);
@@ -34,11 +45,14 @@ export class DataHostingStack extends cdk.Stack {
       versioned: true,
       cors: [
         {
-          allowedOrigins: ["*"],
+          allowedOrigins: [
+            ...commonAllowedOrigins,
+            ...props.allowedCorsDomains,
+          ],
           allowedMethods: ["HEAD", "GET"],
           allowedHeaders: ["*"],
-          id: "my-cors-rule-1",
-          maxAge: 3600,
+          id: "localhost",
+          maxAge: 31536000,
         } as s3.CorsRule,
       ],
     });
@@ -47,8 +61,6 @@ export class DataHostingStack extends cdk.Stack {
     });
 
     storageBucket.grantReadWrite(role);
-    this.privilegedRole = role;
-    new cdk.CfnOutput(this, "bucket", { value: storageBucket.bucketName });
 
     const distribution = new cloudfront.Distribution(this, "GeoJSONCDN", {
       defaultBehavior: {
@@ -57,19 +69,59 @@ export class DataHostingStack extends cdk.Stack {
         viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
       },
     });
-    new cdk.CfnOutput(this, "url", {
-      value: distribution.distributionDomainName,
-    });
-    new cdk.CfnOutput(this, "location", {
-      value: JSON.stringify(props.coords),
-    });
-    new cdk.CfnOutput(this, "region", {
-      value: this.region,
-    });
-    new cdk.CfnOutput(this, "name", {
-      value: props.name,
-    });
     // TODO: WAF settings to rate limit requests, protecting unlisted datasets
     this.bucket = storageBucket;
+    this.bucket.grantReadWrite(props.maintenanceRole);
+
+    /**
+     * After creating the stack it will need to be added to a table in the
+     * database as one of the options users can choose for hosting their data.
+     * This lambda will run after creation to do that.
+     */
+    const onEvent = new lambda.Function(this, "DataHostingStackEventHandler", {
+      // Don't forget to compile the typescript code for this lambda manually
+      // if it is ever changed
+      code: lambda.Code.fromAsset(
+        path.join(__dirname, "../lambdas/dataHostingStackHook")
+      ),
+      handler: "index.handler",
+      runtime: lambda.Runtime.NODEJS_14_X,
+      vpc: props.vpc,
+      // should be more than ample
+      timeout: cdk.Duration.seconds(30),
+      logRetention: logs.RetentionDays.ONE_DAY,
+    });
+
+    props.db.grantConnect(onEvent);
+
+    const myProvider = new cr.Provider(
+      this,
+      "DataHostingStackEventHandlerProvider",
+      {
+        onEventHandler: onEvent,
+        logRetention: logs.RetentionDays.ONE_MONTH,
+      }
+    );
+
+    const custom = new CustomResource(this, "InitDataHostingStack", {
+      serviceToken: myProvider.serviceToken,
+      properties: {
+        // lambda need to know how to access the db
+        db: {
+          user: "postgres",
+          host: props.db.instanceEndpoint,
+          database: "postgres",
+          port: 5432,
+        },
+        host: {
+          region: props.env!.region,
+          coords: props.coords,
+          name: props.name,
+          url: distribution.distributionDomainName,
+        },
+      },
+    });
+    custom.node.addDependency(props.db);
+    custom.node.addDependency(storageBucket);
   }
 }
