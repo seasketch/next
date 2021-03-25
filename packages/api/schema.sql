@@ -7720,7 +7720,8 @@ CREATE TABLE public.data_sources_buckets (
     url text NOT NULL,
     name text NOT NULL,
     region text NOT NULL,
-    location public.geometry(Point,4326) NOT NULL
+    location public.geometry(Point,4326) NOT NULL,
+    offline boolean DEFAULT false NOT NULL
 );
 
 
@@ -7729,6 +7730,13 @@ CREATE TABLE public.data_sources_buckets (
 --
 
 COMMENT ON COLUMN public.data_sources_buckets.url IS 'Base url for this point-of-presence.';
+
+
+--
+-- Name: COLUMN data_sources_buckets.offline; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources_buckets.offline IS 'Indicates the DataHostingStack for this region has been deleted';
 
 
 --
