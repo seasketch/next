@@ -19571,6 +19571,7 @@ GRANT SELECT ON TABLE public.data_source_types TO anon;
 --
 
 GRANT SELECT ON TABLE public.data_sources_buckets TO anon;
+GRANT INSERT ON TABLE public.data_sources_buckets TO seasketch_superuser;
 
 
 --

@@ -2,18 +2,27 @@
 import "source-map-support/register";
 import * as cdk from "@aws-cdk/core";
 import { DatabaseStack } from "../lib/DatabaseStack";
-// import { DataHostingStack } from "../lib/DataHostingStack";
+import { DataHostingStack } from "../lib/DataHostingStack";
 import { MaintenanceStack } from "../MaintenanceStack";
 import { ReactClientStack } from "../lib/ReactClientStack";
 import { PublicUploadsStack } from "../lib/PublicUploadsStack";
+import { DataHostDbUpdaterStack } from "../lib/DataHostDbUpdaterStack";
+import { RedisStack } from "../lib/RedisStack";
 let env = require("./env.production");
 
 const app = new cdk.App();
 const db = new DatabaseStack(app, "SeaSketchProductionDBStack", { env });
+const redis = new RedisStack(app, "SeaSketchProductionRedis", {
+  env,
+  db: db.instance,
+  vpc: db.vpc,
+  securityGroup: db.defaultSecurityGroup,
+});
 const maintenance = new MaintenanceStack(app, "SeaSketchMaintenanceStack", {
   env,
   vpc: db.vpc,
   db: db.instance,
+  redis: redis.cluster,
 });
 const client = new ReactClientStack(app, "SeaSketchProductionReactClient", {
   env,
@@ -25,55 +34,65 @@ const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploadsStack", {
   maintenanceRole: maintenance.taskRole,
   allowedCorsDomains,
 });
+const dataHostDbUpdater = new DataHostDbUpdaterStack(
+  app,
+  "SeaSketchDataHostDbUpdater",
+  {
+    env,
+    db: db.instance,
+    vpc: db.vpc,
+  }
+);
 
-// // Setup regional hosts for user-uploaded GeoJSON. These should be registered
-// // with the database after creation
-// const hostConfigs: {
-//   region: string;
-//   slug: string;
-//   coords: [number, number];
-//   name: string;
-// }[] = [
-//   {
-//     name: "Oregon, USA",
-//     slug: "oregon",
-//     region: "us-west-2",
-//     coords: [-119.6313015, 45.8511146],
-//   },
-//   {
-//     region: "us-east-1",
-//     coords: [-77.15, 38.91],
-//     name: "Virginia, USA",
-//     slug: "virginia",
-//   },
-//   {
-//     region: "eu-west-1",
-//     coords: [-7.9, 52],
-//     name: "Ireland",
-//     slug: "ireland",
-//   },
-//   {
-//     region: "sa-east-1",
-//     coords: [-47.9, -22.6],
-//     name: "São Paulo",
-//     slug: "sao-paulo",
-//   },
-//   {
-//     region: "ap-southeast-2",
-//     coords: [150.8, -33.7],
-//     name: "Sydney",
-//     slug: "sydney",
-//   },
-// ];
+// Setup regional hosts for user-uploaded GeoJSON. These should be registered
+// with the database after creation
+const hostConfigs: {
+  region: string;
+  slug: string;
+  coords: [number, number];
+  name: string;
+}[] = [
+  {
+    name: "Oregon, USA",
+    slug: "oregon",
+    region: "us-west-2",
+    coords: [-119.6313015, 45.8511146],
+  },
+  {
+    region: "us-east-1",
+    coords: [-77.15, 38.91],
+    name: "Virginia, USA",
+    slug: "virginia",
+  },
+  {
+    region: "eu-west-1",
+    coords: [-7.9, 52],
+    name: "Ireland",
+    slug: "ireland",
+  },
+  {
+    region: "sa-east-1",
+    coords: [-47.9, -22.6],
+    name: "São Paulo",
+    slug: "sao-paulo",
+  },
+  {
+    region: "ap-southeast-2",
+    coords: [150.8, -33.7],
+    name: "Sydney",
+    slug: "sydney",
+  },
+];
 
-// const dataHosts = hostConfigs.map(
-//   (config) =>
-//     new DataHostingStack(app, "SeaSketchData-" + config.slug, {
-//       env: { ...env, region: config.region },
-//       ...config,
-//       allowedCorsDomains,
-//       maintenanceRole: maintenance.taskRole,
-//       vpc: db.vpc,
-//       db: db.instance,
-//     })
-// );
+const dataHosts = hostConfigs.map((config) => {
+  const host = new DataHostingStack(app, "SeaSketchData-" + config.slug, {
+    env: { account: env.account, region: config.region },
+    ...config,
+    // allowedCorsDomains,
+    // maintenanceRole: maintenance.taskRole,
+    lambdaFunctionNameExport: "DataHostDbUpdaterLambda",
+    dbRegion: env.region,
+  });
+  host.addDependency(dataHostDbUpdater);
+  return host;
+});

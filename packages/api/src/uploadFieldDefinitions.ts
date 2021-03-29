@@ -6,6 +6,7 @@ import slugify from "slugify";
 
 const s3 = new S3.default({
   region: process.env.S3_REGION,
+  // TODO: Use ec2/fargate perms in production
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 });

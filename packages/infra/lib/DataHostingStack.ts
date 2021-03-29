@@ -9,7 +9,7 @@ import * as cloudfront from "@aws-cdk/aws-cloudfront";
 import * as iam from "@aws-cdk/aws-iam";
 import * as origins from "@aws-cdk/aws-cloudfront-origins";
 import { ViewerProtocolPolicy } from "@aws-cdk/aws-cloudfront";
-import { Duration, PhysicalName } from "@aws-cdk/core";
+import { CfnOutput, Duration, PhysicalName } from "@aws-cdk/core";
 import commonAllowedOrigins from "./commonAllowedOrigins";
 import { CustomResource } from "@aws-cdk/core";
 import * as logs from "@aws-cdk/aws-logs";
@@ -18,6 +18,8 @@ import * as lambda from "@aws-cdk/aws-lambda";
 import * as path from "path";
 import { Vpc } from "@aws-cdk/aws-ec2";
 import { DatabaseInstance } from "@aws-cdk/aws-rds";
+import { HostingStackResourceProperties } from "../lambdas/dataHostDbUpdater/index";
+import { PolicyStatement } from "@aws-cdk/aws-iam";
 
 export class DataHostingStack extends cdk.Stack {
   bucket: s3.Bucket;
@@ -29,10 +31,10 @@ export class DataHostingStack extends cdk.Stack {
       coords: [number, number];
       /* Name of the data center to use in the admin interface */
       name: string;
-      allowedCorsDomains: string[];
-      maintenanceRole: iam.IRole;
-      vpc: Vpc;
-      db: DatabaseInstance;
+      // allowedCorsDomains: string[];
+      // maintenanceRole: iam.IRole;
+      lambdaFunctionNameExport: string;
+      dbRegion: string;
     }
   ) {
     super(scope, id, props);
@@ -46,8 +48,9 @@ export class DataHostingStack extends cdk.Stack {
       cors: [
         {
           allowedOrigins: [
-            ...commonAllowedOrigins,
-            ...props.allowedCorsDomains,
+            // ...commonAllowedOrigins,
+            "*",
+            // ...props.allowedCorsDomains,
           ],
           allowedMethods: ["HEAD", "GET"],
           allowedHeaders: ["*"],
@@ -71,7 +74,7 @@ export class DataHostingStack extends cdk.Stack {
     });
     // TODO: WAF settings to rate limit requests, protecting unlisted datasets
     this.bucket = storageBucket;
-    this.bucket.grantReadWrite(props.maintenanceRole);
+    // this.bucket.grantReadWrite(props.maintenanceRole);
 
     /**
      * After creating the stack it will need to be added to a table in the
@@ -86,13 +89,30 @@ export class DataHostingStack extends cdk.Stack {
       ),
       handler: "index.handler",
       runtime: lambda.Runtime.NODEJS_14_X,
-      vpc: props.vpc,
       // should be more than ample
       timeout: cdk.Duration.seconds(30),
       logRetention: logs.RetentionDays.ONE_DAY,
+      environment: {
+        LAMBDA_FUNCTION_EXPORT_NAME: props.lambdaFunctionNameExport,
+        LAMBDA_REGION: props.dbRegion,
+      },
+      initialPolicy: [
+        new PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["lambda:InvokeFunction"],
+          resources: [
+            `arn:aws:lambda:${props.dbRegion}:${
+              props.env?.account || "*"
+            }:function:*`,
+          ],
+        }),
+        new PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["cloudformation:ListExports"],
+          resources: [`*`],
+        }),
+      ],
     });
-
-    props.db.grantConnect(onEvent);
 
     const myProvider = new cr.Provider(
       this,
@@ -107,21 +127,11 @@ export class DataHostingStack extends cdk.Stack {
       serviceToken: myProvider.serviceToken,
       properties: {
         // lambda need to know how to access the db
-        db: {
-          user: "postgres",
-          host: props.db.instanceEndpoint,
-          database: "postgres",
-          port: 5432,
-        },
-        host: {
-          region: props.env!.region,
-          coords: props.coords,
-          name: props.name,
-          url: distribution.distributionDomainName,
-        },
-      },
+        region: props.env!.region,
+        coords: props.coords,
+        name: props.name,
+        domain: distribution.distributionDomainName,
+      } as HostingStackResourceProperties,
     });
-    custom.node.addDependency(props.db);
-    custom.node.addDependency(storageBucket);
   }
 }

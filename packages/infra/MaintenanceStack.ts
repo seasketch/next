@@ -12,6 +12,7 @@ import {
 } from "@aws-cdk/aws-iam";
 import { DatabaseInstance } from "@aws-cdk/aws-rds";
 import { CfnService } from "@aws-cdk/aws-ecs";
+import { CfnCacheCluster } from "@aws-cdk/aws-elasticache";
 
 /**
  * The MaintenanceStack sets up a "bastion" instance in ECS running within the
@@ -34,6 +35,7 @@ export class MaintenanceStack extends cdk.Stack {
       vpc: IVpc;
       /* Database instance is needed to grant connect privileges */
       db: DatabaseInstance;
+      redis: CfnCacheCluster;
     }
   ) {
     super(scope, id, props);
@@ -95,6 +97,7 @@ export class MaintenanceStack extends cdk.Stack {
         PGDATABASE: "seasketch",
         PGUSER: "bastion",
         PGREGION: props.db.env.region,
+        REDIS_HOST: props.redis.attrRedisEndpointAddress,
       },
     });
     // Needed to enable ECS exec

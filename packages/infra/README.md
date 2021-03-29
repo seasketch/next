@@ -16,39 +16,39 @@ To list out all the stacks, enter `cdk ls`.
 
 # Doing a clean install
 
-You will need highly privileged AWS credentials to install the whole application from scratch. You will also need to have a certificate in Amazon Certificate Manager to enable remote connectivity to the database. Basic steps are as follows:
+You will need highly privileged AWS credentials to install the whole application from scratch. You will also need to generate github deploy keys. The deploy keys will be stored on the maintenance bastion for later use, and will be temporarily used when building the graphql server.
+
+### generating deploy keys
 
 ```
-cdk deploy SeaSketchProductionDBStack SeaSketchMaintenanceStack
-# log into the Maintenance Stack bastion and run initial db migration
-
+cd packages/infra
+# be sure to use an empty passphrase
+ssh-keygen -t rsa -f github_key
 ```
 
-## Database Stack
+Afterwards you should have `github_key` and `github_key.pub` files. Copy the contents of `github_key.pub` to [the project's deploy keys](https://github.com/seasketch/next/settings/keys). Afterwards it just takes one command to deploy (or update) SeaSketch's deployment.
 
 ```
-cdk deploy SeaSketchProductionDBStack
+cdk deploy --all --require-approval never
 ```
 
-This will create a new stack for the database, but that database will be empty. Afterwards you will need to bootstrap the database schema using the bastion container within the Maintenance Stack to run migrations.
+This one command will stand up the database & redis, run db migrations, create the graphile server on ecs and create stacks that host client code and user uploads.
 
-## The Maintenance Stack
+# The Maintenance Stack
 
 This stack includes a _bastion_ container that can be connected to using AWS' new [ECS exec](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html) function. The bastion is inside the VPC and can be used to perform database migrations and could be used to debug other services otherwise inaccessible.
 
-Connect to the bastion by running
+An npm script is provided to connect to the bastion without having to fetch info from cloudformation and run `ecs exec` directly.
 
 ```
 npm run shell
 ```
 
-This script will automatically pull the cluster and task ids from cloudformation and run the ecs exec function.
-
-### Connecting to the database from the bastion
+## Connecting to the database from the bastion
 
 The startup script in /etc/profile.d/pg.sh should make it possible to run `psql` without any arguments.
 
-### Checking out the SeaSketch codebase
+## Checking out the SeaSketch codebase
 
 Deploy keys should be used to checkout the codebase into `/usr/src/app/next`. The startup scripts should detect if these keys are installed properly and if not provide instructions.
 
@@ -67,13 +67,15 @@ git pull origin master
 npm run db:migrate
 ```
 
-## Vector Data Hosting Stack
+For now these migrations are run manually rather than as part of a continuous deployment system. The Dockerfile in `api/migrations` could be used as a starting point to build such a system.
 
-```
+## Other services
 
-cdk deploy SeaSketchDataOregon SeaSketchDataVirginia SeaSketchDataIreland SeaSketchDataSaoPaulo SeaSketchDataSydney
+As services are added to the deployment the bastion should be updated with environment variables to facilitate connecting and debugging. For example, `REDIS_HOST` is available so that connecting to the cache is an easy `redis-cli -h $REDIS_HOST`. Run `env` to find out what else is available on the bastion.
 
-```
+# Vector Data Hosting Stack
+
+Harvested and uploaded GeoJSON data can be hosted on SeaSketch through any number of AWS regions. `infra/bin/infra.ts` defines multiple instances of DataHostingStack to stand up infrastructure in the relevant regions. If you want to establish a new region just create a new stack. Records will be automatically added to the associated database to list the new option in the graphql api.
 
 # Deploying a new version of the browser client
 

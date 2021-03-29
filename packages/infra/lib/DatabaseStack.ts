@@ -2,7 +2,7 @@ import * as cdk from "@aws-cdk/core";
 import * as rds from "@aws-cdk/aws-rds";
 import * as ec2 from "@aws-cdk/aws-ec2";
 import * as iam from "@aws-cdk/aws-iam";
-import { Connections } from "@aws-cdk/aws-ec2";
+import { Connections, ISecurityGroup, SecurityGroup } from "@aws-cdk/aws-ec2";
 import { Secret } from "@aws-cdk/aws-ecs";
 import { CustomResource } from "@aws-cdk/core";
 import * as logs from "@aws-cdk/aws-logs";
@@ -19,11 +19,19 @@ import * as path from "path";
 export class DatabaseStack extends cdk.Stack {
   vpc: ec2.Vpc;
   instance: rds.DatabaseInstance;
+  defaultSecurityGroup: ISecurityGroup;
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     const vpc = new ec2.Vpc(this, "seasketchVPC", {});
     this.vpc = vpc;
+
+    this.defaultSecurityGroup = SecurityGroup.fromSecurityGroupId(
+      this,
+      "defaultSecurityGroup",
+      this.vpc.vpcDefaultSecurityGroup
+    );
+    // this.vpc.vpcDefaultSecurityGroup.
 
     const instance = new rds.DatabaseInstance(this, "Instance", {
       engine: rds.DatabaseInstanceEngine.postgres({
@@ -44,6 +52,7 @@ export class DatabaseStack extends cdk.Stack {
         // This is important!! Security group will not block connections
         subnetType: ec2.SubnetType.PRIVATE,
       },
+      securityGroups: [this.defaultSecurityGroup],
       iamAuthentication: true,
       // TODO: change to RETAIN when using in production
       removalPolicy: cdk.RemovalPolicy.DESTROY,
