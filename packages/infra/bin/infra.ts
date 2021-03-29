@@ -8,6 +8,8 @@ import { ReactClientStack } from "../lib/ReactClientStack";
 import { PublicUploadsStack } from "../lib/PublicUploadsStack";
 import { DataHostDbUpdaterStack } from "../lib/DataHostDbUpdaterStack";
 import { RedisStack } from "../lib/RedisStack";
+import { GraphQLStack } from "../lib/GraphQLStack";
+import { Vpc } from "@aws-cdk/aws-ec2";
 let env = require("./env.production");
 
 const app = new cdk.App();
@@ -95,4 +97,14 @@ const dataHosts = hostConfigs.map((config) => {
   });
   host.addDependency(dataHostDbUpdater);
   return host;
+});
+
+const graphqlServer = new GraphQLStack(app, "SeaSketchGraphQLServerStack", {
+  env,
+  db: db.instance,
+  securityGroup: db.defaultSecurityGroup,
+  uploadsBucket: uploads.bucket,
+  uploadsUrl: uploads.url,
+  vpc: db.vpc,
+  redisHost: redis.cluster.attrRedisEndpointAddress,
 });

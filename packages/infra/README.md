@@ -23,7 +23,10 @@ You will need highly privileged AWS credentials to install the whole application
 ```
 cd packages/infra
 # be sure to use an empty passphrase
-ssh-keygen -t rsa -f github_key
+ssh-keygen -t rsa -f containers/maintenance/github_key
+# make duplicates since docker won't bundle outside the Dockerfile directory
+cp containers/maintenance/github_key* containers/graphql
+cat containers/maintenance/github_key.pub
 ```
 
 Afterwards you should have `github_key` and `github_key.pub` files. Copy the contents of `github_key.pub` to [the project's deploy keys](https://github.com/seasketch/next/settings/keys). Afterwards it just takes one command to deploy (or update) SeaSketch's deployment.

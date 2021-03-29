@@ -1,0 +1,34 @@
+/**
+ * CustomResource Hook receives events when a DataHostingStack is modified.
+ * Makes sure records exist in the SeaSketch database so that a hosting region
+ * can be specified by users.
+ */
+import * as AWS from "aws-sdk";
+
+export interface HostingStackResourceProperties {
+  region: string;
+  coords: [number, number];
+  name: string;
+  domain: string;
+}
+
+export async function handler(event: AWSCDKAsyncCustomResource.OnEventRequest) {
+  const props = event.ResourceProperties as HostingStackResourceProperties;
+  const exportName = process.env.LAMBDA_FUNCTION_EXPORT_NAME!;
+  const lambdaRegion = process.env.LAMBDA_REGION!;
+  const cf = new AWS.CloudFormation({ region: lambdaRegion });
+  const exports = await cf.listExports().promise();
+  const functionName = exports.Exports?.find((e) => e.Name === exportName)
+    ?.Value;
+  if (!functionName) {
+    console.error(exports);
+    throw new Error("Could not find export with name=" + exportName);
+  }
+  const lambda = new AWS.Lambda({
+    region: lambdaRegion,
+  });
+  const response = await lambda
+    .invoke({ FunctionName: functionName, Payload: JSON.stringify(event) })
+    .promise();
+  return JSON.parse(response.Payload!.toString());
+}

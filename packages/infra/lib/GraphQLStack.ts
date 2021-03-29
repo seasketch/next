@@ -1,0 +1,72 @@
+import * as cdk from "@aws-cdk/core";
+import * as s3 from "@aws-cdk/aws-s3";
+import * as ecsPatterns from "@aws-cdk/aws-ecs-patterns";
+import * as ecs from "@aws-cdk/aws-ecs";
+import { DatabaseInstance } from "@aws-cdk/aws-rds";
+import { ISecurityGroup, IVpc } from "@aws-cdk/aws-ec2";
+import { Bucket } from "@aws-cdk/aws-s3";
+
+const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
+const JWT_AUD = "https://api.seasketch.org";
+const JWT_ISS = "https://seasketch.auth0.com";
+const AUTH0_DOMAIN = "seasketch.auth0.com";
+const HOST = "https://api.seasketch.org";
+
+export class GraphQLStack extends cdk.Stack {
+  constructor(
+    scope: cdk.Construct,
+    id: string,
+    props: cdk.StackProps & {
+      db: DatabaseInstance;
+      vpc: IVpc;
+      securityGroup: ISecurityGroup;
+      uploadsBucket: Bucket;
+      uploadsUrl: string;
+      redisHost: string;
+    }
+  ) {
+    super(scope, id, props);
+    const { AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID } = process.env;
+    if (!AUTH0_CLIENT_ID || !AUTH0_CLIENT_SECRET) {
+      throw new Error(
+        `AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID environment variables must be set`
+      );
+    }
+    // The code that defines your stack goes here
+    const service = new ecsPatterns.ApplicationLoadBalancedFargateService(
+      this,
+      "GraphQLServer",
+      {
+        // cluster,
+        cpu: 512,
+        memoryLimitMiB: 1024,
+        taskImageOptions: {
+          image: ecs.ContainerImage.fromAsset("./containers/graphql"),
+          environment: {
+            NODE_ENV: "production",
+            DATABASE_URL: `postgres://graphile@${props.db.instanceEndpoint.hostname}/seasketch`,
+            JWKS_URI,
+            JWT_AUD,
+            JWT_ISS,
+            AUTH0_CLIENT_ID,
+            AUTH0_CLIENT_SECRET,
+            AUTH0_DOMAIN,
+            PUBLIC_S3_BUCKET: props.uploadsBucket.bucketName,
+            PUBLIC_UPLOADS_DOMAIN: props.uploadsUrl,
+            S3_REGION: props.uploadsBucket.env.region,
+            HOST,
+            REDIS_HOST: props.redisHost,
+          },
+        },
+        desiredCount: 2,
+        listenerPort: 3857,
+        // protocol: ,
+        vpc: props.vpc,
+        // redirectHTTP: true,
+      }
+    );
+    service.targetGroup.configureHealthCheck({
+      path: "/favicon.ico",
+    });
+  }
+}
