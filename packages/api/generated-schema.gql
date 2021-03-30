@@ -761,6 +761,41 @@ type CreateDataSourcePayload {
   query: Query
 }
 
+"""All input for the create `DataSourcesBucket` mutation."""
+input CreateDataSourcesBucketInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `DataSourcesBucket` to be created by this mutation."""
+  dataSourcesBucket: DataSourcesBucketInput!
+}
+
+"""The output of our create `DataSourcesBucket` mutation."""
+type CreateDataSourcesBucketPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `DataSourcesBucket` that was created by this mutation."""
+  dataSourcesBucket: DataSourcesBucket
+
+  """An edge for our `DataSourcesBucket`. May be used by Relay 1."""
+  dataSourcesBucketEdge(
+    """The method to use when ordering `DataSourcesBucket`."""
+    orderBy: [DataSourcesBucketsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): DataSourcesBucketsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the create `FormConditionalRenderingRule` mutation."""
 input CreateFormConditionalRenderingRuleInput {
   """
@@ -2366,6 +2401,9 @@ type DataSourcesBucket implements Node {
   """
   nodeId: ID!
 
+  """Indicates the DataHostingStack for this region has been deleted"""
+  offline: Boolean!
+
   """Reads and enables pagination through a set of `Project`."""
   projectsConnection(
     """Read all values in the set after (below) this cursor."""
@@ -2407,6 +2445,19 @@ tested for equality and combined with a logical ‘and.’
 input DataSourcesBucketCondition {
   """Checks for equality with the object’s `url` field."""
   url: String
+}
+
+"""An input for mutations affecting `DataSourcesBucket`"""
+input DataSourcesBucketInput {
+  location: GeoJSON!
+  name: String!
+
+  """Indicates the DataHostingStack for this region has been deleted"""
+  offline: Boolean
+  region: String!
+
+  """Base url for this point-of-presence."""
+  url: String!
 }
 
 """A connection to a list of `DataSourcesBucket` values."""
@@ -5577,6 +5628,14 @@ type Mutation {
     input: CreateDataSourceInput!
   ): CreateDataSourcePayload
 
+  """Creates a single `DataSourcesBucket`."""
+  createDataSourcesBucket(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateDataSourcesBucketInput!
+  ): CreateDataSourcesBucketPayload
+
   """Creates a single `FormConditionalRenderingRule`."""
   createFormConditionalRenderingRule(
     """
@@ -8375,6 +8434,7 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Forum`."""
     nodeId: ID!
   ): Forum
+  getDefaultDataSourcesBucket: String
   group(id: Int!): Group
 
   """Reads a single `Group` using its globally unique `ID`."""

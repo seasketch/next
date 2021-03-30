@@ -27,6 +27,15 @@ module.exports = async () => {
   // supress logs from graphile-migrate
   console.log = (msg) => {};
   await reset(settings);
+  const client2 = new Client(settings.connectionString);
+  await client2.connect();
+  await client2.query(
+    `
+    INSERT into data_sources_buckets (url, name, region, location) values ($1, $2, $3, ST_GeomFromText('POINT(-71.060316 48.432044)', 4326))
+  `,
+    ["geojson-1.seasketch-data.org", "Oregon, USA", "us-west-2"]
+  );
+  await client2.end();
   await watch(settings, true);
   console.log = log;
 };

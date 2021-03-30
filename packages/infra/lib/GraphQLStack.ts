@@ -48,7 +48,11 @@ export class GraphQLStack extends cdk.Stack {
           }),
           environment: {
             NODE_ENV: "production",
-            DATABASE_URL: `postgres://graphile@${props.db.instanceEndpoint.hostname}/seasketch`,
+            PGHOST: props.db.instanceEndpoint.hostname,
+            PGUSER: "graphile",
+            PGREGION: props.db.env.region,
+            PGPORT: "5432",
+            PGDATABASE: "seasketch",
             JWKS_URI,
             JWT_AUD,
             JWT_ISS,

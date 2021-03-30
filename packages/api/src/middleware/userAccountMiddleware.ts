@@ -1,7 +1,11 @@
 import { Response } from "express";
-import pool from "../pool";
 import { IncomingRequest } from "./IncomingRequest";
 import * as cache from "../cache";
+import getPool from "../pool";
+import { Pool } from "pg";
+
+let pool: Pool;
+getPool().then((p) => (pool = p));
 
 async function getOrCreateUserId(sub: string): Promise<number> {
   const results = await pool.query(`select get_or_create_user_by_sub($1)`, [

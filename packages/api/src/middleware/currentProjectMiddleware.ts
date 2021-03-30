@@ -1,8 +1,12 @@
 import { Response } from "express";
 import { IncomingRequest } from "./IncomingRequest";
 import { IncomingHttpHeaders } from "http";
-import pool from "../pool";
 import * as cache from "../cache";
+import getPool from "../pool";
+import { Pool } from "pg";
+
+let pool: Pool;
+getPool().then((p) => (pool = p));
 
 /**
  * Populates req.projectId from request headers.

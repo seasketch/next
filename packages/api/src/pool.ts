@@ -1,29 +1,83 @@
+import { Signer } from "aws-sdk/clients/rds";
 import { Pool } from "pg";
+
 require("dotenv").config();
 
-let pool: Pool;
-if (process.env.NODE_ENV === "test") {
-  const Pool = require("pgmock2").default;
-  pool = new Pool();
-} else {
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
-  pool.on("error", (err, client) => {
-    console.error("Unexpected error on idle client", err);
-    process.exit(-1);
-  });
-  pool.connect((err, client) => {
-    if (err) {
-      console.error(
-        `Exception when trying to connect to db at ${process.env.DATABASE_URL}`
+const signer = new Signer();
+
+let pool: Promise<Pool>;
+
+export default async function getPool(): Promise<Pool> {
+  if (!pool) {
+    pool = createPool();
+  }
+  return pool;
+}
+
+async function createPool(): Promise<Pool> {
+  return new Promise<Pool>((resolve, reject) => {
+    if (process.env.NODE_ENV === "test") {
+      const Pool = require("pgmock2").default;
+      resolve(new Pool());
+    } else if (process.env.NODE_ENV === "production") {
+      const { PGHOST, PGUSER, PGREGION, PGPORT, PGDATABASE } = process.env;
+      if (!PGHOST || !PGUSER || !PGREGION || !PGPORT || !PGDATABASE) {
+        return reject(
+          new Error(
+            "PGHOST, PGUSER, PGREGION, PGPORT, PGDATABASE must be set if NODE_ENV=production"
+          )
+        );
+      }
+      console.log(
+        `Requesting IAM token for user ${PGUSER} at ${PGHOST}/${PGDATABASE}`
       );
-      console.error(err);
-      process.exit(-1);
+      signer.getAuthToken(
+        {
+          region: PGREGION,
+          hostname: PGHOST,
+          port: parseInt(PGPORT),
+          username: PGUSER,
+        },
+        function (err, token) {
+          if (err) {
+            return reject(new Error("Could not sign token for RDS access"));
+          } else {
+            const pool = new Pool({
+              database: PGDATABASE,
+              host: PGHOST,
+              port: parseInt(PGPORT),
+              password: token,
+              user: PGUSER,
+              ssl: true,
+            });
+            pool.connect((err, client) => {
+              if (err) {
+                reject(err);
+              } else {
+                client.query("SET statement_timeout TO 3000");
+                resolve(pool);
+              }
+            });
+          }
+        }
+      );
     } else {
-      client.query("SET statement_timeout TO 3000");
+      console.log(`Connecting to ${process.env.DATABASE_URL}`);
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+      });
+      pool.on("error", (err, client) => {
+        console.error("Unexpected error on idle client", err);
+        process.exit(-1);
+      });
+      pool.connect((err, client) => {
+        if (err) {
+          reject(err);
+        } else {
+          client.query("SET statement_timeout TO 3000");
+          resolve(pool);
+        }
+      });
     }
   });
 }
-
-export default pool;

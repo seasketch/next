@@ -656,6 +656,39 @@ export type CreateDataSourcePayloadDataSourceEdgeArgs = {
   orderBy?: Maybe<Array<DataSourcesOrderBy>>;
 };
 
+/** All input for the create `DataSourcesBucket` mutation. */
+export type CreateDataSourcesBucketInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `DataSourcesBucket` to be created by this mutation. */
+  dataSourcesBucket: DataSourcesBucketInput;
+};
+
+/** The output of our create `DataSourcesBucket` mutation. */
+export type CreateDataSourcesBucketPayload = {
+  __typename?: 'CreateDataSourcesBucketPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `DataSourcesBucket` that was created by this mutation. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  /** An edge for our `DataSourcesBucket`. May be used by Relay 1. */
+  dataSourcesBucketEdge?: Maybe<DataSourcesBucketsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `DataSourcesBucket` mutation. */
+export type CreateDataSourcesBucketPayloadDataSourcesBucketEdgeArgs = {
+  orderBy?: Maybe<Array<DataSourcesBucketsOrderBy>>;
+};
+
 /** All input for the create `FormConditionalRenderingRule` mutation. */
 export type CreateFormConditionalRenderingRuleInput = {
   /**
@@ -1966,6 +1999,8 @@ export type DataSourcesBucket = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Indicates the DataHostingStack for this region has been deleted */
+  offline: Scalars['Boolean'];
   /** Reads and enables pagination through a set of `Project`. */
   projectsConnection: ProjectsConnection;
   region: Scalars['String'];
@@ -1991,6 +2026,17 @@ export type DataSourcesBucketProjectsConnectionArgs = {
 export type DataSourcesBucketCondition = {
   /** Checks for equality with the object’s `url` field. */
   url?: Maybe<Scalars['String']>;
+};
+
+/** An input for mutations affecting `DataSourcesBucket` */
+export type DataSourcesBucketInput = {
+  location: Scalars['GeoJSON'];
+  name: Scalars['String'];
+  /** Indicates the DataHostingStack for this region has been deleted */
+  offline?: Maybe<Scalars['Boolean']>;
+  region: Scalars['String'];
+  /** Base url for this point-of-presence. */
+  url: Scalars['String'];
 };
 
 /** A connection to a list of `DataSourcesBucket` values. */
@@ -4669,6 +4715,8 @@ export type Mutation = {
   createDataLayer?: Maybe<CreateDataLayerPayload>;
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
+  /** Creates a single `DataSourcesBucket`. */
+  createDataSourcesBucket?: Maybe<CreateDataSourcesBucketPayload>;
   /** Creates a single `FormConditionalRenderingRule`. */
   createFormConditionalRenderingRule?: Maybe<CreateFormConditionalRenderingRulePayload>;
   /** Creates a single `FormField`. */
@@ -5158,6 +5206,12 @@ export type MutationCreateDataLayerArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataSourceArgs = {
   input: CreateDataSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateDataSourcesBucketArgs = {
+  input: CreateDataSourcesBucketInput;
 };
 
 
@@ -7186,6 +7240,7 @@ export type Query = Node & {
   forum?: Maybe<Forum>;
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
+  getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   group?: Maybe<Group>;
   /** Reads a single `Group` using its globally unique `ID`. */
   groupByNodeId?: Maybe<Group>;
