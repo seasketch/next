@@ -2,9 +2,11 @@ import * as cdk from "@aws-cdk/core";
 import * as s3 from "@aws-cdk/aws-s3";
 import * as ecsPatterns from "@aws-cdk/aws-ecs-patterns";
 import * as ecs from "@aws-cdk/aws-ecs";
+import * as iam from "@aws-cdk/aws-iam";
 import { DatabaseInstance } from "@aws-cdk/aws-rds";
 import { ISecurityGroup, IVpc } from "@aws-cdk/aws-ec2";
 import { Bucket } from "@aws-cdk/aws-s3";
+import { PolicyStatement } from "@aws-cdk/aws-iam";
 
 const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
 const JWT_AUD = "https://api.seasketch.org";
@@ -65,9 +67,10 @@ export class GraphQLStack extends cdk.Stack {
             HOST,
             REDIS_HOST: props.redisHost,
           },
+          containerPort: 3857,
         },
         desiredCount: 2,
-        listenerPort: 3857,
+        listenerPort: 80,
         // protocol: ,
         vpc: props.vpc,
         // redirectHTTP: true,
@@ -75,6 +78,21 @@ export class GraphQLStack extends cdk.Stack {
     );
     service.targetGroup.configureHealthCheck({
       path: "/favicon.ico",
+      port: "3857",
     });
+    service.taskDefinition.taskRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: ["rds-db:connect"],
+        effect: iam.Effect.ALLOW,
+        // TODO: This policy might not be necessary.
+        // The duplicate one below definitely is
+        // TODO: It would be nice to scope this down
+        // https://github.com/aws/aws-cdk/issues/11851
+        // In practice this shouldn't be a big deal because
+        // we won't have RDS instances that shouldn't be
+        // accessed in the same VPC
+        resources: [`arn:aws:rds-db:*:*:dbuser:*/*`],
+      })
+    );
   }
 }

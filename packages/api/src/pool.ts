@@ -47,7 +47,7 @@ async function createPool(): Promise<Pool> {
               database: PGDATABASE,
               host: PGHOST,
               port: parseInt(PGPORT),
-              password: token,
+              password: "******",
               user: PGUSER,
               ssl: { rejectUnauthorized: false },
             });
