@@ -42,6 +42,15 @@ async function createPool(): Promise<Pool> {
           if (err) {
             return reject(new Error("Could not sign token for RDS access"));
           } else {
+            console.log("connecting with options...");
+            console.log({
+              database: PGDATABASE,
+              host: PGHOST,
+              port: parseInt(PGPORT),
+              password: token,
+              user: PGUSER,
+              ssl: { rejectUnauthorized: false },
+            });
             const pool = new Pool({
               database: PGDATABASE,
               host: PGHOST,
