@@ -48,7 +48,7 @@ async function createPool(): Promise<Pool> {
               port: parseInt(PGPORT),
               password: token,
               user: PGUSER,
-              ssl: true,
+              ssl: { rejectUnauthorized: false },
             });
             pool.connect((err, client) => {
               if (err) {
