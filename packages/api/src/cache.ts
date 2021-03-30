@@ -46,7 +46,7 @@ async function get(key: string): Promise<string | null> {
 async function set(key: string, value: any) {
   return new Promise(function (resolve, reject) {
     client.set(key, value, () => {
-      resolve();
+      resolve(value);
     });
   });
 }

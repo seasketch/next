@@ -3,7 +3,8 @@ RUN apk --no-cache add git openssh
 COPY github_key /root/.ssh/id_rsa
 COPY github_key.pub /root/.ssh/id_rsa.pub
 RUN ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts
-RUN git clone --single-branch --branch infra-stack git@github.com:seasketch/next.git /var/seasketch
+ARG commit
+RUN git clone git@github.com:seasketch/next.git /var/seasketch && cd /var/seasketch && git checkout $commit
 WORKDIR /var/seasketch/packages/api
 RUN npx lerna bootstrap && npm run build
 

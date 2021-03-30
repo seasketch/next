@@ -41,7 +41,11 @@ export class GraphQLStack extends cdk.Stack {
         cpu: 512,
         memoryLimitMiB: 1024,
         taskImageOptions: {
-          image: ecs.ContainerImage.fromAsset("./containers/graphql"),
+          image: ecs.ContainerImage.fromAsset("./containers/graphql", {
+            buildArgs: {
+              commit: process.env.COMMIT || "master",
+            },
+          }),
           environment: {
             NODE_ENV: "production",
             DATABASE_URL: `postgres://graphile@${props.db.instanceEndpoint.hostname}/seasketch`,
