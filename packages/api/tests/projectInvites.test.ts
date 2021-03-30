@@ -894,7 +894,7 @@ describe("Accepting Invites", () => {
             });
           await clearSession(conn);
           await sendQueuedInvites(asPg(conn), 20);
-          let { token } = await conn.one(
+          let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
           await createSession(conn, undefined, false, false, projectId);
@@ -939,7 +939,7 @@ describe("Accepting Invites", () => {
             });
           await clearSession(conn);
           await sendQueuedInvites(asPg(conn), 20);
-          let { token } = await conn.one(
+          let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
           await createSession(conn, undefined, false, false, projectId);
@@ -981,7 +981,7 @@ describe("Accepting Invites", () => {
           await clearSession(conn);
           await sendQueuedInvites(asPg(conn), 20);
           await conn.any(sql`update project_invites set was_used = true`);
-          let { token } = await conn.one(
+          let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
           await createSession(conn, undefined, false, false, projectId);
@@ -1025,7 +1025,7 @@ describe("Accepting Invites", () => {
             });
           await clearSession(conn);
           await sendQueuedInvites(asPg(conn), 20);
-          let { token } = await conn.one(
+          let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
           await createSession(conn, undefined, false, false, projectId);
@@ -1067,7 +1067,7 @@ describe("Accepting Invites", () => {
             });
           await clearSession(conn);
           await sendQueuedInvites(asPg(conn), 20);
-          let { token } = await conn.one(
+          let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
           await createSession(conn, userA, false, false, projectId);
@@ -1134,7 +1134,7 @@ describe("Accepting Invites", () => {
             sql`insert into project_participants (project_id, user_id, is_admin, share_profile) values (${projectId}, ${userA}, false, true)`
           );
           await sendQueuedInvites(asPg(conn), 20);
-          let { token } = await conn.one(
+          let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
           await createSession(conn, userA, false, false, projectId);
@@ -1196,7 +1196,7 @@ describe("Accepting Invites", () => {
             });
           await clearSession(conn);
           await sendQueuedInvites(asPg(conn), 20);
-          let { token } = await conn.one(
+          let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
           await createSession(conn, userA, false, false, projectId);
@@ -1247,7 +1247,7 @@ describe("Accepting Invites", () => {
             });
           await clearSession(conn);
           await sendQueuedInvites(asPg(conn), 20);
-          let { token } = await conn.one(
+          let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
           await createSession(conn, userA, false, false, projectId);
@@ -1306,7 +1306,7 @@ describe("Accepting Invites", () => {
             });
           await clearSession(conn);
           await sendQueuedInvites(asPg(conn), 20);
-          let { token } = await conn.one(
+          let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
           await createSession(conn, userA, false, false, projectId);
@@ -1506,7 +1506,7 @@ describe("Accepting Invites", () => {
             });
           await clearSession(conn);
           await sendQueuedInvites(asPg(conn), 20);
-          let { token } = await conn.one(
+          let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
           await createSession(conn, userA, false, false, projectId);
@@ -1692,7 +1692,12 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           });
         await clearSession(conn);
         const successes = await sendQueuedInvites(asPg(conn), 20);
-        let { status, token, token_expires_at, message_id } = await conn.one(
+        let { status, token, token_expires_at, message_id } = await conn.one<{
+          token: string;
+          status: string;
+          token_expires_at: number;
+          message_id: number;
+        }>(
           sql`select status, token, token_expires_at, message_id from invite_emails where project_invite_id = ${invite.id}`
         );
         expect(
@@ -1791,7 +1796,7 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           );
           const claims = await verify(
             asPg(conn),
-            token,
+            token as string,
             "https://seasketch.org"
           );
           expect(claims.fullname).toBe("Bob");
@@ -1835,7 +1840,7 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           );
           const claims = await verify(
             asPg(conn),
-            token,
+            token as string,
             "https://seasketch.org"
           );
           expect(claims.exp * 1000).toBeGreaterThan(
@@ -1881,7 +1886,7 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           );
           const claims = await verify(
             asPg(conn),
-            token,
+            token as string,
             "https://seasketch.org"
           );
           expect(claims.admin).toBe(true);
