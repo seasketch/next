@@ -131,6 +131,20 @@ app.use(
     setofFunctionsContainNulls: false,
     pgSettings: async (req: IncomingRequest) => {
       // These session vars will be added to each postgres transaction
+      console.log("pgsettings", {
+        role: req.user
+          ? req.user.superuser
+            ? "seasketch_superuser"
+            : "seasketch_user"
+          : "anon",
+        "session.project_id": req.projectId,
+        "session.email_verified": !!req.user?.emailVerified,
+        "session.canonical_email": req.user?.canonicalEmail,
+        "session.user_id": req.user?.id,
+        "session.request_ip": req.ip,
+        "session.survey_invite_email": req.surveyInvite?.email,
+        "session.survey_invite_id": req.surveyInvite?.inviteId,
+      });
       return {
         role: req.user
           ? req.user.superuser

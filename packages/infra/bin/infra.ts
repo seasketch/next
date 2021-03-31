@@ -29,6 +29,8 @@ const maintenance = new MaintenanceStack(app, "SeaSketchMaintenanceStack", {
 const client = new ReactClientStack(app, "SeaSketchProductionReactClient", {
   env,
   maintenanceRole: maintenance.taskRole,
+  domainName: "seasket.ch",
+  siteSubDomain: "next",
 });
 const allowedCorsDomains = [client.url];
 const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploadsStack", {

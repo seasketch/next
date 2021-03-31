@@ -55,7 +55,7 @@ export class DatabaseStack extends cdk.Stack {
       securityGroups: [this.defaultSecurityGroup],
       iamAuthentication: true,
       // TODO: change to RETAIN when using in production
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
       databaseName: "seasketch",
     });
 

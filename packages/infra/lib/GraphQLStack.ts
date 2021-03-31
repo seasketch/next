@@ -9,6 +9,7 @@ import { Bucket } from "@aws-cdk/aws-s3";
 import { PolicyStatement } from "@aws-cdk/aws-iam";
 import { HostedZone } from "@aws-cdk/aws-route53";
 import { ApplicationProtocol } from "@aws-cdk/aws-elasticloadbalancingv2";
+import { AwsLogDriver } from "@aws-cdk/aws-ecs";
 
 const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
 const JWT_AUD = "https://api.seasketch.org";
@@ -36,6 +37,11 @@ export class GraphQLStack extends cdk.Stack {
         `AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID environment variables must be set`
       );
     }
+    if (!process.env.COMMIT) {
+      throw new Error(
+        "You must specify a COMMIT env var so that the graphql container can be built with the appropriate version of the source code."
+      );
+    }
     // The code that defines your stack goes here
     const service = new ecsPatterns.ApplicationLoadBalancedFargateService(
       this,
@@ -45,9 +51,13 @@ export class GraphQLStack extends cdk.Stack {
         cpu: 512,
         memoryLimitMiB: 1024,
         taskImageOptions: {
+          logDriver: new AwsLogDriver({
+            streamPrefix: "SeaSketchGraphQLServer",
+            logRetention: 30,
+          }),
           image: ecs.ContainerImage.fromAsset("./containers/graphql", {
             buildArgs: {
-              commit: process.env.COMMIT || "master",
+              commit: process.env.COMMIT,
               tags: "graphql",
             },
           }),
@@ -83,11 +93,11 @@ export class GraphQLStack extends cdk.Stack {
         redirectHTTP: true,
       }
     );
-    // TODO: adjust log retention
     service.targetGroup.configureHealthCheck({
       path: "/favicon.ico",
       port: "3857",
     });
+
     service.taskDefinition.taskRole.addToPrincipalPolicy(
       new PolicyStatement({
         actions: ["rds-db:connect"],
