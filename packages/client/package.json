@@ -114,7 +114,8 @@
     "start": "craco start",
     "storybook": "start-storybook -p 6006 -s public",
     "build-storybook": "build-storybook -s public",
-    "lint": "NODE_ENV=production npx eslint . --quiet"
+    "lint": "NODE_ENV=production npx eslint . --quiet",
+    "deploy": "bin/deploy.sh"
   },
   "eslintConfig": {
     "extends": "react-app"

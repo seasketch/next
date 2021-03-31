@@ -12,7 +12,7 @@ import { ApplicationProtocol } from "@aws-cdk/aws-elasticloadbalancingv2";
 import { AwsLogDriver } from "@aws-cdk/aws-ecs";
 
 const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
-const JWT_AUD = "https://api.seasketch.org";
+const JWT_AUD = "r2wvq2SjLJmSnRUhMcnlGGEKFE8tO9qR";
 const JWT_ISS = "https://seasketch.auth0.com/";
 const AUTH0_DOMAIN = "seasketch.auth0.com";
 const HOST = "https://api.seasket.ch";

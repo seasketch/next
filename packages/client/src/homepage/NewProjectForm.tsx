@@ -73,7 +73,7 @@ export default function NewProjectForm() {
                 {
                   // eslint-disable-next-line
                 }
-                seasketch.org/
+                {window.location.host}/
               </span>
               <input
                 type="text"
