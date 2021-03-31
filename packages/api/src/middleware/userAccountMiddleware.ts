@@ -29,7 +29,12 @@ export default function userAccountMiddlware(
   next: Function
 ) {
   console.log("req.user", req.user);
-  console.log("req", req);
+  console.log("req.headers", req.headers);
+  console.log({
+    JWKS_URI: process.env.JWKS_URI,
+    JWT_AUD: process.env.JWT_AUD,
+    JWT_ISS: process.env.JWT_ISS,
+  });
   // req.user could be assigned by authorizationMiddlware
   if (req.user) {
     // normalize claims

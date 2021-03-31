@@ -89,6 +89,9 @@ export class DatabaseStack extends cdk.Stack {
         // if it is ever changed
         code: lambda.DockerImageCode.fromImageAsset(dockerfile, {
           cmd: ["migrate.handler"],
+          buildArgs: {
+            tags: "init-db",
+          },
           // entrypoint: ["/lambda-entrypoint.sh"],
         }),
         vpc: this.vpc,

@@ -43,6 +43,9 @@ export class MaintenanceStack extends cdk.Stack {
     // to be committed to git to trigger a republishing on ECR.
     const asset = new DockerImageAsset(this, "MaintenanceImage", {
       directory: path.join(__dirname, "containers/maintenance"),
+      buildArgs: {
+        tags: "maintenance",
+      },
     });
     const cluster = new ecs.Cluster(this, "MaintenanceCluster", {
       vpc: props.vpc,

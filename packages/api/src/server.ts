@@ -87,6 +87,7 @@ app.use(
     res: express.Response,
     next: (err: Error | null) => void
   ) {
+    console.log("token err?", err);
     // Needed to allow requests to proceed with invalid (e.g. expired) tokens.
     // Clients will be anonymous in that case.
     // @ts-ignore

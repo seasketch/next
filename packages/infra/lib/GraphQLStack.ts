@@ -48,6 +48,7 @@ export class GraphQLStack extends cdk.Stack {
           image: ecs.ContainerImage.fromAsset("./containers/graphql", {
             buildArgs: {
               commit: process.env.COMMIT || "master",
+              tags: "graphql",
             },
           }),
           environment: {
@@ -73,7 +74,6 @@ export class GraphQLStack extends cdk.Stack {
         },
         desiredCount: 2,
         listenerPort: 443,
-        // TODO: setup domain records, ssl
         domainName: "api.seasket.ch",
         domainZone: HostedZone.fromLookup(this, "seasket.ch", {
           domainName: "seasket.ch.",
@@ -83,6 +83,7 @@ export class GraphQLStack extends cdk.Stack {
         redirectHTTP: true,
       }
     );
+    // TODO: adjust log retention
     service.targetGroup.configureHealthCheck({
       path: "/favicon.ico",
       port: "3857",
