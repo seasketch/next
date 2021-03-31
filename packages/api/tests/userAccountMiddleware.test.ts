@@ -1,10 +1,7 @@
 import { IncomingRequest } from "../src/middleware/IncomingRequest";
 import middleware from "../src/middleware/userAccountMiddleware";
-import getPool from "../src/pool";
+import pool from "../src/pool";
 import { Pool } from "pg";
-
-let pool: Pool;
-getPool().then((p) => (pool = p));
 
 test("anonymous user, no req.user assigned", (done) => {
   const req = {} as IncomingRequest;

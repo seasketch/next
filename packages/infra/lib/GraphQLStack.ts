@@ -4,15 +4,17 @@ import * as ecsPatterns from "@aws-cdk/aws-ecs-patterns";
 import * as ecs from "@aws-cdk/aws-ecs";
 import * as iam from "@aws-cdk/aws-iam";
 import { DatabaseInstance } from "@aws-cdk/aws-rds";
-import { ISecurityGroup, IVpc } from "@aws-cdk/aws-ec2";
+import { ISecurityGroup, IVpc, Protocol } from "@aws-cdk/aws-ec2";
 import { Bucket } from "@aws-cdk/aws-s3";
 import { PolicyStatement } from "@aws-cdk/aws-iam";
+import { HostedZone } from "@aws-cdk/aws-route53";
+import { ApplicationProtocol } from "@aws-cdk/aws-elasticloadbalancingv2";
 
 const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
 const JWT_AUD = "https://api.seasketch.org";
 const JWT_ISS = "https://seasketch.auth0.com";
 const AUTH0_DOMAIN = "seasketch.auth0.com";
-const HOST = "https://api.seasketch.org";
+const HOST = "https://api.seasket.ch";
 
 export class GraphQLStack extends cdk.Stack {
   constructor(
@@ -70,10 +72,15 @@ export class GraphQLStack extends cdk.Stack {
           containerPort: 3857,
         },
         desiredCount: 2,
-        listenerPort: 80,
-        // protocol: ,
+        listenerPort: 443,
+        // TODO: setup domain records, ssl
+        domainName: "api.seasket.ch",
+        domainZone: HostedZone.fromLookup(this, "seasket.ch", {
+          domainName: "seasket.ch.",
+        }),
+        protocol: ApplicationProtocol.HTTPS,
         vpc: props.vpc,
-        // redirectHTTP: true,
+        redirectHTTP: true,
       }
     );
     service.targetGroup.configureHealthCheck({
@@ -84,8 +91,6 @@ export class GraphQLStack extends cdk.Stack {
       new PolicyStatement({
         actions: ["rds-db:connect"],
         effect: iam.Effect.ALLOW,
-        // TODO: This policy might not be necessary.
-        // The duplicate one below definitely is
         // TODO: It would be nice to scope this down
         // https://github.com/aws/aws-cdk/issues/11851
         // In practice this shouldn't be a big deal because
@@ -94,5 +99,6 @@ export class GraphQLStack extends cdk.Stack {
         resources: [`arn:aws:rds-db:*:*:dbuser:*/*`],
       })
     );
+    props.uploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
   }
 }

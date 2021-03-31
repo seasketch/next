@@ -1,13 +1,7 @@
 import { IncomingRequest } from "../src/middleware/IncomingRequest";
-import getPool from "../src/pool";
+import pool from "../src/pool";
 import currentProjectMiddlware from "../src/middleware/currentProjectMiddleware";
 import { Pool } from "pg";
-
-let pool: Pool;
-
-beforeAll(async () => {
-  pool = await getPool();
-});
 
 test("projectId set from x-ss-slug header", (done) => {
   // @ts-ignore

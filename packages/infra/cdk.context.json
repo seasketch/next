@@ -4,5 +4,9 @@
     "us-west-2b",
     "us-west-2c",
     "us-west-2d"
-  ]
+  ],
+  "hosted-zone:account=196230260133:domainName=seasket.ch.:region=us-west-2": {
+    "Id": "/hostedzone/Z02849091W1ZOT9UE433E",
+    "Name": "seasket.ch."
+  }
 }

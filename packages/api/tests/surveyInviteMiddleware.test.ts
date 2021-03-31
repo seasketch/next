@@ -4,14 +4,12 @@ import middleware from "../src/middleware/surveyInviteMiddleware";
 import { createPool } from "./pool";
 import { rotateKeys } from "../src/auth/jwks";
 import { sql } from "slonik";
-import getPool from "../src/pool";
+import pool2 from "../src/pool";
 import { Pool } from "pg";
 
 const pool = createPool("test");
-let pool2: Pool;
 
 beforeAll(async () => {
-  pool2 = await getPool();
   await rotateKeys(asPg(pool));
 });
 

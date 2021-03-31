@@ -1,11 +1,8 @@
 import { Response } from "express";
 import { IncomingRequest } from "./IncomingRequest";
 import { verifySurveyInvite } from "../invites/surveyInvites";
-import getPool from "../pool";
+import pool from "../pool";
 import { Pool } from "pg";
-
-let pool: Pool;
-getPool().then((p) => (pool = p));
 
 /**
  * Populates req.surveyInvite with survey invite token claims if present in the
