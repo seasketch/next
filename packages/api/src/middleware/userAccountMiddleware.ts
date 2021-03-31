@@ -28,6 +28,8 @@ export default function userAccountMiddlware(
   res: Response,
   next: Function
 ) {
+  console.log("req.user", req.user);
+  console.log("req", req);
   // req.user could be assigned by authorizationMiddlware
   if (req.user) {
     // normalize claims
@@ -40,12 +42,14 @@ export default function userAccountMiddlware(
     req.user.emailVerified = !!req.user["https://seasketch.org/email_verified"];
     const key = `userid-by-sub:${req.user.sub}`;
     cache.get(key).then((userId) => {
+      console.log("cache: ", userId);
       if (userId) {
         req.user!.id = parseInt(userId);
         next();
       } else {
         getOrCreateUserId(req.user!.sub)
           .then((id) => {
+            console.log("created user", id);
             req.user!.id = id;
             cache.set(key, id).then(() => next());
           })
