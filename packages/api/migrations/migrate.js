@@ -82,8 +82,10 @@ async function initializeDb(event) {
   );
   const response = await dbClient.query("GRANT rds_iam TO graphile");
 
-  const token = await getToken(secret);
-  const connectionString = `postgres://admin:${token}@${secret.host}:${secret.port}/${secret.dbname}?ssl=1&sslmode=no-verify`;
+  const token = await getToken(secret, region);
+  const connectionString = `postgres://admin:${encodeURIComponent(token)}@${
+    secret.host
+  }:${secret.port}/${secret.dbname}?ssl=1&sslmode=no-verify`;
   // /**
   //  * After initial setup of user roles, run the latest database migrations
   //  */
