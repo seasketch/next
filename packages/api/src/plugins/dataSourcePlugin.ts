@@ -18,7 +18,7 @@ const DataSourcePlugin = makeExtendSchemaPlugin((build) => {
           const {
             rows,
           } = await context.pgClient.query(
-            `select region from data_sources_buckets where bucket = $1`,
+            `select region from data_sources_buckets where url = $1`,
             [source.bucketId]
           );
           const region = rows[0].region;
