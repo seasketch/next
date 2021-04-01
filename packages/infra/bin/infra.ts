@@ -3,7 +3,7 @@ import "source-map-support/register";
 import * as cdk from "@aws-cdk/core";
 import { DatabaseStack } from "../lib/DatabaseStack";
 import { DataHostingStack } from "../lib/DataHostingStack";
-import { MaintenanceStack } from "../MaintenanceStack";
+import { MaintenanceStack } from "../lib/MaintenanceStack";
 import { ReactClientStack } from "../lib/ReactClientStack";
 import { PublicUploadsStack } from "../lib/PublicUploadsStack";
 import { DataHostDbUpdaterStack } from "../lib/DataHostDbUpdaterStack";
@@ -13,27 +13,27 @@ import { Vpc } from "@aws-cdk/aws-ec2";
 let env = require("./env.production");
 
 const app = new cdk.App();
-const db = new DatabaseStack(app, "SeaSketchProductionDBStack", { env });
-const redis = new RedisStack(app, "SeaSketchProductionRedis", {
+const db = new DatabaseStack(app, "SeaSketchDB", { env });
+const redis = new RedisStack(app, "SeaSketchRedis", {
   env,
   db: db.instance,
   vpc: db.vpc,
   securityGroup: db.defaultSecurityGroup,
 });
-const maintenance = new MaintenanceStack(app, "SeaSketchMaintenanceStack", {
+const maintenance = new MaintenanceStack(app, "SeaSketchMaintenanceBastion", {
   env,
   vpc: db.vpc,
   db: db.instance,
   redis: redis.cluster,
 });
-const client = new ReactClientStack(app, "SeaSketchProductionReactClient", {
+const client = new ReactClientStack(app, "SeaSketchReactClient", {
   env,
   maintenanceRole: maintenance.taskRole,
   domainName: "seasket.ch",
   siteSubDomain: "next",
 });
 const allowedCorsDomains = [client.url];
-const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploadsStack", {
+const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploads", {
   env,
   maintenanceRole: maintenance.taskRole,
   allowedCorsDomains,
@@ -101,7 +101,7 @@ const dataHosts = hostConfigs.map((config) => {
   return host;
 });
 
-const graphqlServer = new GraphQLStack(app, "SeaSketchGraphQLServerStack", {
+const graphqlServer = new GraphQLStack(app, "SeaSketchGraphQLServer", {
   env,
   db: db.instance,
   securityGroup: db.defaultSecurityGroup,

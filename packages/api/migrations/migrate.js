@@ -3,6 +3,7 @@ const { Client } = require("pg");
 const graphile = require("graphile-migrate");
 const fs = require("fs");
 const path = require("path");
+const signer = new AWS.RDS.Signer();
 
 exports.handler = (event) => {
   switch (event.RequestType) {
@@ -68,26 +69,39 @@ async function initializeDb(event) {
    * Also, ffs, you can't create superusers in rds. You have to grant a role
    * rds_superuser because superuser is too powerful for RDS to handle
    */
-  await dbClient.query("CREATE ROLE bastion WITH login");
-  await dbClient.query("GRANT rds_iam TO bastion");
-  await dbClient.query("GRANT rds_superuser TO bastion");
-  await dbClient.query("alter user bastion createrole");
-  await dbClient.query(`GRANT CONNECT ON DATABASE ${secret.dbname} TO bastion`);
-  await dbClient.query(`GRANT CREATE ON DATABASE ${secret.dbname} TO bastion`);
-
-  await dbClient.query("CREATE ROLE cdk WITH login");
-  await dbClient.query("GRANT rds_iam TO cdk");
-  await dbClient.query("GRANT rds_superuser TO cdk");
-  await dbClient.query("alter user cdk createrole");
-  await dbClient.query(`GRANT CONNECT ON DATABASE ${secret.dbname} TO cdk`);
-  await dbClient.query(`GRANT CREATE ON DATABASE ${secret.dbname} TO cdk`);
+  await dbClient.query("CREATE ROLE admin WITH login");
+  await dbClient.query("GRANT rds_iam TO admin");
+  await dbClient.query("GRANT rds_superuser TO admin");
+  await dbClient.query("alter user admin createrole");
+  await dbClient.query(`GRANT CONNECT ON DATABASE ${secret.dbname} TO admin`);
+  await dbClient.query(`GRANT CREATE ON DATABASE ${secret.dbname} TO admin`);
 
   await dbClient.query("CREATE USER graphile WITH LOGIN");
   await dbClient.query(
     `GRANT CONNECT ON DATABASE ${secret.dbname} TO graphile`
   );
   const response = await dbClient.query("GRANT rds_iam TO graphile");
-  const connectionString = `postgres://${secret.username}:${secret.password}@${secret.host}:${secret.port}/${secret.dbname}`;
+
+  const token = await (new Promise() <
+    string >
+    ((resolve, reject) => {
+      signer.getAuthToken(
+        {
+          region: PGREGION,
+          hostname: PGHOST,
+          port: parseInt(PGPORT),
+          username: PGUSER,
+        },
+        function (err, token) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(token);
+          }
+        }
+      );
+    }));
+  const connectionString = `postgres://admin:${token}@${secret.host}:${secret.port}/${secret.dbname}`;
   /**
    * After initial setup of user roles, run the latest database migrations
    */

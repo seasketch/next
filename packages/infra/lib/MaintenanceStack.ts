@@ -98,7 +98,7 @@ export class MaintenanceStack extends cdk.Stack {
         PGHOST: props.db.instanceEndpoint.hostname,
         PGPORT: "5432",
         PGDATABASE: "seasketch",
-        PGUSER: "bastion",
+        PGUSER: "admin",
         PGREGION: props.db.env.region,
         REDIS_HOST: props.redis.attrRedisEndpointAddress,
       },

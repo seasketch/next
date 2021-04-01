@@ -101,6 +101,18 @@ export class DatabaseStack extends cdk.Stack {
         // should be more than ample
         timeout: cdk.Duration.seconds(30),
         logRetention: logs.RetentionDays.ONE_DAY,
+        initialPolicy: [
+          new iam.PolicyStatement({
+            actions: ["rds-db:connect"],
+            effect: iam.Effect.ALLOW,
+            // TODO: It would be nice to scope this down
+            // https://github.com/aws/aws-cdk/issues/11851
+            // In practice this shouldn't be a big deal because
+            // we won't have RDS instances that shouldn't be
+            // accessed in the same VPC
+            resources: [`arn:aws:rds-db:*:*:dbuser:*/*`],
+          }),
+        ],
       }
     );
 
