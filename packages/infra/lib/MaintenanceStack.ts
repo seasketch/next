@@ -42,7 +42,7 @@ export class MaintenanceStack extends cdk.Stack {
     // CDK will build the Dockerfile on deployment, but sometimes changes need
     // to be committed to git to trigger a republishing on ECR.
     const asset = new DockerImageAsset(this, "MaintenanceImage", {
-      directory: path.join(__dirname, "containers/maintenance"),
+      directory: path.join(__dirname, "../containers/maintenance"),
       buildArgs: {
         tags: "maintenance",
       },

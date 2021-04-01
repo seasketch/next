@@ -82,29 +82,11 @@ async function initializeDb(event) {
   );
   const response = await dbClient.query("GRANT rds_iam TO graphile");
 
-  const token = await (new Promise() <
-    string >
-    ((resolve, reject) => {
-      signer.getAuthToken(
-        {
-          region: PGREGION,
-          hostname: PGHOST,
-          port: parseInt(PGPORT),
-          username: PGUSER,
-        },
-        function (err, token) {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(token);
-          }
-        }
-      );
-    }));
-  const connectionString = `postgres://admin:${token}@${secret.host}:${secret.port}/${secret.dbname}`;
-  /**
-   * After initial setup of user roles, run the latest database migrations
-   */
+  const token = await getToken(secret);
+  const connectionString = `postgres://admin:${token}@${secret.host}:${secret.port}/${secret.dbname}?ssl=1&sslmode=no-verify`;
+  // /**
+  //  * After initial setup of user roles, run the latest database migrations
+  //  */
   const migrationsFolder = path.resolve("./migrations");
   await graphile.migrate({
     connectionString,
@@ -116,4 +98,24 @@ async function initializeDb(event) {
       username: "graphile",
     },
   };
+}
+
+async function getToken(secret, region) {
+  return new Promise((resolve, reject) => {
+    signer.getAuthToken(
+      {
+        region,
+        hostname: secret.host,
+        port: parseInt(secret.port),
+        username: "admin",
+      },
+      function (err, token) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(token);
+        }
+      }
+    );
+  });
 }
