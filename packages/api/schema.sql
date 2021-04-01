@@ -4234,6 +4234,9 @@ CREATE FUNCTION public.projects_data_hosting_quota_used(p public.projects) RETUR
     if sum_bytes < quota then
       return sum_bytes;
     end if;
+    if sum_bytes is null then
+      return 0;
+    end if;
     return quota;
     end;
   $$;
