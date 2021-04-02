@@ -41,7 +41,7 @@ export default function ImportVectorLayersModal(
   );
   const history = useHistory();
 
-  const { importService, ...importServiceState } = useImportArcGISService(
+  const [importService, importServiceState] = useImportArcGISService(
     props.serviceRoot
   );
   const { slug } = useParams<{ slug: string }>();
@@ -92,6 +92,7 @@ export default function ImportVectorLayersModal(
     }
   }).length;
 
+  const s = importServiceState;
   const onImport = async () => {
     await importService(
       layers!.filter((l) => l.type !== "Raster Layer"),

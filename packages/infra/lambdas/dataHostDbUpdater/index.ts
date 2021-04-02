@@ -15,6 +15,7 @@ export interface HostingStackResourceProperties {
   coords: [number, number];
   name: string;
   domain: string;
+  bucket: string;
 }
 
 const db = {
@@ -81,21 +82,24 @@ export async function upsertDataSourcesBucket(
 ): Promise<AWSCDKAsyncCustomResource.OnEventResponse> {
   const dbClient = await getClient(event);
   const query = `
-  insert into data_sources_buckets (url, name, region, location)
-  values ($1, $2, $3, ST_GeomFromText($4, 4326))
+  insert into data_sources_buckets (url, name, region, location, bucket)
+  values ($1, $2, $3, ST_GeomFromText($4, 4326), $5)
   on conflict (url)
   do
-    update set name = $5, region = $6, location = ST_GeomFromText($7, 4326)
+    update set name = $6, region = $7, location = ST_GeomFromText($8, 4326), bucket = $9
   `;
   const values = [
     `https://${event.domain}`,
     event.name,
     event.region,
     `POINT(${event.coords.join(" ")})`,
+    event.bucket,
     event.name,
     event.region,
     `POINT(${event.coords.join(" ")})`,
+    event.bucket,
   ];
+  console.log("query, values", query, values);
   await dbClient.query(query, values);
   return {
     PhysicalResourceId: idForEvent(event),

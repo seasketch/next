@@ -1011,19 +1011,23 @@ interface ImportArcGISServiceState {
   error?: Error;
   abortController?: AbortController;
   parentStableIds?: { [sublayer: number]: string };
-  importService: (
+  /* 0.0 - 1.0. Used to render a progress bar */
+  progress?: number;
+}
+
+export function useImportArcGISService(
+  serviceRoot?: string
+): [
+  (
     layerInfo: LayerInfo[],
     mapServerInfo: MapServerCatalogInfo,
     projectId: number,
     settings: ArcGISServiceSettings,
     importType: "vector" | "image",
     totalBytesForUpload?: number
-  ) => Promise<void>;
-  /* 0.0 - 1.0. Used to render a progress bar */
-  progress?: number;
-}
-
-export function useImportArcGISService(serviceRoot?: string) {
+  ) => Promise<ImportArcGISServiceState | undefined>,
+  ImportArcGISServiceState
+] {
   // const [mutate, mutationState] = useCreateFolderMutation();
   const [
     createTableOfContentsItem,
@@ -1051,49 +1055,69 @@ export function useImportArcGISService(serviceRoot?: string) {
   const [createSprite, createSpriteState] = useGetOrCreateSpriteMutation();
   const [addImageToSprite] = useAddImageToSpriteMutation();
   const mapContext = useContext(MapContext);
+  // importService: (
+  //   layerInfo: LayerInfo[],
+  //   mapServerInfo: MapServerCatalogInfo,
+  //   projectId: number,
+  //   settings: ArcGISServiceSettings,
+  //   importType: "vector" | "image",
+  //   totalBytesForUpload?: number
+  // ) => Promise<void>;
   const [state, setState] = useState<ImportArcGISServiceState>({
     inProgress: false,
-    importService: async (
-      layerInfo: LayerInfo[],
-      mapServerInfo: MapServerCatalogInfo,
-      projectId: number,
-      settings: ArcGISServiceSettings,
-      importType: "vector" | "image",
-      totalBytesForUpload?: number
-    ) => {
-      try {
-        let totalBytesUploaded = 0;
-        let imageSourceId: number | undefined;
-        let progress = 0.0;
-        let totalProgressCredits =
-          (totalBytesForUpload || 0) +
+  });
+  useEffect(() => {
+    setState((prev) => {
+      return {
+        ...prev,
+        inProgress: false,
+        error: undefined,
+        parentStableIds: undefined,
+      };
+    });
+  }, [serviceRoot]);
+  const importService = async (
+    layerInfo: LayerInfo[],
+    mapServerInfo: MapServerCatalogInfo,
+    projectId: number,
+    settings: ArcGISServiceSettings,
+    importType: "vector" | "image",
+    totalBytesForUpload?: number
+  ) => {
+    try {
+      let totalBytesUploaded = 0;
+      let imageSourceId: number | undefined;
+      let progress = 0.0;
+      let totalProgressCredits =
+        (totalBytesForUpload || 0) +
+        layerInfo.filter((l) => {
+          return (
+            l.type != "Group Layer" &&
+            !!settings.vectorSublayerSettings.find(
+              (s) => s.sublayer === l.id
+            ) &&
+            settings.excludedSublayers.indexOf(l.generatedId) === -1
+          );
+        }).length *
+          1000;
+      if (importType === "image") {
+        totalProgressCredits =
           layerInfo.filter((l) => {
             return (
               l.type != "Group Layer" &&
-              !!settings.vectorSublayerSettings.find(
-                (s) => s.sublayer === l.id
-              ) &&
               settings.excludedSublayers.indexOf(l.generatedId) === -1
             );
-          }).length *
-            1000;
-        if (importType === "image") {
-          totalProgressCredits =
-            layerInfo.filter((l) => {
-              return (
-                l.type != "Group Layer" &&
-                settings.excludedSublayers.indexOf(l.generatedId) === -1
-              );
-            }).length * 1000;
-        }
+          }).length * 1000;
+      }
 
-        const stableIds: { [sublayer: number]: string } = {};
-        const saved: { [sublayer: number]: boolean } = {};
-        const saveItem = async (
-          layer: LayerInfo,
-          mapServerInfo: MapServerCatalogInfo,
-          containerFolderId?: string
-        ) => {
+      const stableIds: { [sublayer: number]: string } = {};
+      const saved: { [sublayer: number]: boolean } = {};
+      const saveItem = async (
+        layer: LayerInfo,
+        mapServerInfo: MapServerCatalogInfo,
+        containerFolderId?: string
+      ) => {
+        try {
           if (state.abortController && state.abortController.signal.aborted) {
             return;
           }
@@ -1170,7 +1194,7 @@ export function useImportArcGISService(serviceRoot?: string) {
                     };
                   });
                   const stringifiedJSON = JSON.stringify(featureCollection);
-                  const { data } = await createSeaSketchVectorSource({
+                  const { data, errors } = await createSeaSketchVectorSource({
                     variables: {
                       projectId,
                       attribution:
@@ -1185,6 +1209,9 @@ export function useImportArcGISService(serviceRoot?: string) {
                       originalSourceUrl: layer.url,
                     },
                   });
+                  if (errors && errors.length) {
+                    throw new Error(errors[0].message);
+                  }
                   const source = data!.createDataSource!.dataSource!;
                   sourceId = data!.createDataSource!.dataSource!.id;
                   setState((prev) => {
@@ -1322,16 +1349,16 @@ export function useImportArcGISService(serviceRoot?: string) {
                       longTemplate: `
 <b>${layer.name}</b>
 <table>
-  ${layer.fields
-    .map(
-      (field) => `<tr>
-    <td>${field.name}</td>
-    <td>{{${field.name}}}</td>
-  </tr>`
-    )
-    .join("\n")}
+${layer.fields
+  .map(
+    (field) => `<tr>
+  <td>${field.name}</td>
+  <td>{{${field.name}}}</td>
+</tr>`
+  )
+  .join("\n")}
 </table>
-                      `,
+                    `,
                     },
                   });
                 }
@@ -1360,16 +1387,16 @@ export function useImportArcGISService(serviceRoot?: string) {
                       longTemplate: `
 <b>${layer.name}</b>
 <table>
-  ${layer.fields
-    .map(
-      (field) => `<tr>
-    <td>${field.name}</td>
-    <td>{{${field.name}}}</td>
-  </tr>`
-    )
-    .join("\n")}
+${layer.fields
+  .map(
+    (field) => `<tr>
+  <td>${field.name}</td>
+  <td>{{${field.name}}}</td>
+</tr>`
+  )
+  .join("\n")}
 </table>
-                        `,
+                      `,
                     },
                   });
                 }
@@ -1400,153 +1427,145 @@ export function useImportArcGISService(serviceRoot?: string) {
             saved[layer.id] = true;
             return id;
           }
-        };
+        } catch (e) {
+          console.error(e);
+          throw e;
+        }
+      };
 
+      setState((prev) => {
+        return {
+          ...prev,
+          inProgress: true,
+          abortController: new AbortController(),
+          progress: progress / totalProgressCredits,
+        };
+      });
+
+      // Loop through each layer, adding each and any parent folders
+
+      const dataLayers = layerInfo.filter((l) => l.type !== "Group Layer");
+      let error: Error;
+
+      if (importType === "image") {
         setState((prev) => {
           return {
             ...prev,
-            inProgress: true,
-            abortController: new AbortController(),
-            progress: progress / totalProgressCredits,
+            statusMessage: `Creating source record ${
+              mapServerInfo.mapName ? `"${mapServerInfo.mapName}"` : ""
+            }`,
           };
         });
-
-        // Loop through each layer, adding each and any parent folders
-
-        const dataLayers = layerInfo.filter((l) => l.type !== "Group Layer");
-        let error: Error;
-
-        if (importType === "image") {
-          setState((prev) => {
-            return {
-              ...prev,
-              statusMessage: `Creating source record ${
-                mapServerInfo.mapName ? `"${mapServerInfo.mapName}"` : ""
-              }`,
-            };
-          });
-          const latLngBounds = extentToLatLngBounds(mapServerInfo.fullExtent);
-          try {
-            const sourceResponse = await createArcGISImageSource({
-              variables: {
-                projectId,
-                url: mapServerInfo.url,
-                attribution:
-                  contentOrFalse(mapServerInfo.copyrightText) ||
-                  contentOrFalse(mapServerInfo.documentInfo.Author) ||
-                  null,
-                bounds: latLngBounds
-                  ? [
-                      latLngBounds[0][0],
-                      latLngBounds[0][1],
-                      latLngBounds[1][0],
-                      latLngBounds[1][1],
-                    ]
-                  : null,
-                enableHighDPI: settings.enableHighDpi,
-                supportsDynamicLayers: mapServerInfo.supportsDynamicLayers,
-              },
-            });
-            imageSourceId = sourceResponse.data!.createDataSource!.dataSource!
-              .id;
-          } catch (e) {
-            throw new Error(`Problem saving source. ${e.message}`);
-          }
-        }
-
-        const layers = dataLayers.filter(
-          (l) => settings.excludedSublayers.indexOf(l.generatedId) === -1
-        );
-        let folderStableId: string | undefined;
-        // If vector import, create containing folder first
-        if (layers.length > 1) {
-          const folderName =
-            mapServerInfo.documentInfo.Title ||
-            mapServerInfo.documentInfo.Subject ||
-            mapServerInfo.serviceDescription ||
-            "New Import";
-          setState((prev) => {
-            return {
-              ...prev,
-              progress: 0,
-              statusMessage: `Creating folder "${folderName}"`,
-            };
-          });
-          folderStableId = nanoId();
-          await createTableOfContentsItem({
+        const latLngBounds = extentToLatLngBounds(mapServerInfo.fullExtent);
+        try {
+          const sourceResponse = await createArcGISImageSource({
             variables: {
-              title: folderName,
-              stableId: folderStableId,
               projectId,
-              isFolder: true,
+              url: mapServerInfo.url,
+              attribution:
+                contentOrFalse(mapServerInfo.copyrightText) ||
+                contentOrFalse(mapServerInfo.documentInfo.Author) ||
+                null,
+              bounds: latLngBounds
+                ? [
+                    latLngBounds[0][0],
+                    latLngBounds[0][1],
+                    latLngBounds[1][0],
+                    latLngBounds[1][1],
+                  ]
+                : null,
+              enableHighDPI: settings.enableHighDpi,
+              supportsDynamicLayers: mapServerInfo.supportsDynamicLayers,
             },
           });
+          imageSourceId = sourceResponse.data!.createDataSource!.dataSource!.id;
+        } catch (e) {
+          throw new Error(`Problem saving source. ${e.message}`);
         }
+      }
 
-        for (const layer of layers) {
-          // check first if item has any children
-          if (state.abortController && state.abortController.signal.aborted) {
-            return;
-          }
-          progress += 1000;
-          setState((prev) => {
-            return {
-              ...prev,
-              progress: progress / totalProgressCredits,
-              statusMessage: `Saving layer ${layer.name}`,
-            };
-          });
-          try {
-            await saveItem(layer, mapServerInfo, folderStableId);
-          } catch (e) {
-            error = e;
-            break;
-          }
-        }
-        if (error!) {
-          console.error(error!);
-          setState((prev) => {
-            return {
-              ...prev,
-              error,
-              inProgress: false,
-              // parentStableIds: stableIds,
-            };
-          });
-        } else {
-          setState((prev) => {
-            return {
-              ...prev,
-              inProgress: false,
-              parentStableIds: stableIds,
-            };
-          });
-        }
-      } catch (e) {
+      const layers = dataLayers.filter(
+        (l) => settings.excludedSublayers.indexOf(l.generatedId) === -1
+      );
+      let folderStableId: string | undefined;
+      // If vector import, create containing folder first
+      if (layers.length > 1) {
+        const folderName =
+          mapServerInfo.documentInfo.Title ||
+          mapServerInfo.documentInfo.Subject ||
+          mapServerInfo.serviceDescription ||
+          "New Import";
         setState((prev) => {
           return {
             ...prev,
-            error: e,
-            inProgress: false,
-            parentStableIds: undefined,
+            progress: 0,
+            statusMessage: `Creating folder "${folderName}"`,
           };
         });
-        throw e;
+        folderStableId = nanoId();
+        await createTableOfContentsItem({
+          variables: {
+            title: folderName,
+            stableId: folderStableId,
+            projectId,
+            isFolder: true,
+          },
+        });
       }
-    },
-  });
-  useEffect(() => {
-    setState((prev) => {
-      return {
-        ...prev,
-        inProgress: false,
-        error: undefined,
-        parentStableIds: undefined,
-      };
-    });
-  }, [serviceRoot]);
 
-  return state;
+      for (const layer of layers) {
+        // check first if item has any children
+        if (state.abortController && state.abortController.signal.aborted) {
+          return;
+        }
+        progress += 1000;
+        setState((prev) => {
+          return {
+            ...prev,
+            progress: progress / totalProgressCredits,
+            statusMessage: `Saving layer ${layer.name}`,
+          };
+        });
+        try {
+          await saveItem(layer, mapServerInfo, folderStableId);
+        } catch (e) {
+          error = e;
+          break;
+        }
+      }
+      if (error!) {
+        setState((prev) => {
+          return {
+            ...prev,
+            error,
+            inProgress: false,
+            // parentStableIds: stableIds,
+          };
+        });
+        throw error;
+      } else {
+        setState((prev) => {
+          return {
+            ...prev,
+            inProgress: false,
+            parentStableIds: stableIds,
+          };
+        });
+        return state;
+      }
+    } catch (e) {
+      setState((prev) => {
+        return {
+          ...prev,
+          error: e,
+          inProgress: false,
+          parentStableIds: undefined,
+        };
+      });
+      throw e;
+    }
+  };
+  return [importService, state];
 }
 
 export async function createImageBlobFromDataURI(

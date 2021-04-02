@@ -30,5 +30,9 @@ export async function handler(event: AWSCDKAsyncCustomResource.OnEventRequest) {
   const response = await lambda
     .invoke({ FunctionName: functionName, Payload: JSON.stringify(event) })
     .promise();
-  return JSON.parse(response.Payload!.toString());
+  if (response.FunctionError) {
+    throw new Error(response.FunctionError);
+  } else {
+    return JSON.parse(response.Payload!.toString());
+  }
 }

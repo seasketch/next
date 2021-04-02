@@ -7724,7 +7724,8 @@ CREATE TABLE public.data_sources_buckets (
     name text NOT NULL,
     region text NOT NULL,
     location public.geometry(Point,4326) NOT NULL,
-    offline boolean DEFAULT false NOT NULL
+    offline boolean DEFAULT false NOT NULL,
+    bucket text
 );
 
 
@@ -19575,6 +19576,13 @@ GRANT SELECT ON TABLE public.data_source_types TO anon;
 
 GRANT SELECT ON TABLE public.data_sources_buckets TO anon;
 GRANT INSERT ON TABLE public.data_sources_buckets TO seasketch_superuser;
+
+
+--
+-- Name: COLUMN data_sources_buckets.bucket; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(bucket) ON TABLE public.data_sources_buckets TO seasketch_user;
 
 
 --

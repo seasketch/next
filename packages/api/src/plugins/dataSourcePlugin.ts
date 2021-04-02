@@ -18,13 +18,15 @@ const DataSourcePlugin = makeExtendSchemaPlugin((build) => {
           const {
             rows,
           } = await context.pgClient.query(
-            `select region from data_sources_buckets where url = $1`,
+            `select region, bucket from data_sources_buckets where url = $1`,
             [source.bucketId]
           );
+          console.log("create presigned url", source);
           const region = rows[0].region;
+          const bucket = rows[0].bucket;
           const s3 = new S3({ region });
           return s3.getSignedUrlPromise("putObject", {
-            Bucket: source.bucketId,
+            Bucket: bucket,
             Key: source.objectKey,
             Expires: 60 * 30, // 30 minutes
             ContentType: "application/json",

@@ -31,7 +31,7 @@ export class DataHostingStack extends cdk.Stack {
       coords: [number, number];
       /* Name of the data center to use in the admin interface */
       name: string;
-      // allowedCorsDomains: string[];
+      allowedCorsDomains: string[];
       // maintenanceRole: iam.IRole;
       lambdaFunctionNameExport: string;
       dbRegion: string;
@@ -49,10 +49,10 @@ export class DataHostingStack extends cdk.Stack {
         {
           allowedOrigins: [
             // ...commonAllowedOrigins,
-            "*",
-            // ...props.allowedCorsDomains,
+            // "*",
+            ...props.allowedCorsDomains,
           ],
-          allowedMethods: ["HEAD", "GET"],
+          allowedMethods: ["HEAD", "GET", "PUT"],
           allowedHeaders: ["*"],
           id: "localhost",
           maxAge: 31536000,
@@ -131,6 +131,7 @@ export class DataHostingStack extends cdk.Stack {
         coords: props.coords,
         name: props.name,
         domain: distribution.distributionDomainName,
+        bucket: this.bucket.bucketName,
       } as HostingStackResourceProperties,
     });
   }

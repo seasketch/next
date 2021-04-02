@@ -1995,6 +1995,7 @@ export type DataSourcePatch = {
 
 export type DataSourcesBucket = Node & {
   __typename?: 'DataSourcesBucket';
+  bucket?: Maybe<Scalars['String']>;
   location: GeometryPoint;
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -2030,6 +2031,7 @@ export type DataSourcesBucketCondition = {
 
 /** An input for mutations affecting `DataSourcesBucket` */
 export type DataSourcesBucketInput = {
+  bucket?: Maybe<Scalars['String']>;
   location: Scalars['GeoJSON'];
   name: Scalars['String'];
   /** Indicates the DataHostingStack for this region has been deleted */

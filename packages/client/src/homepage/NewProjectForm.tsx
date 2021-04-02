@@ -43,7 +43,11 @@ export default function NewProjectForm() {
                   },
                 });
                 if (result.data?.createProject?.project) {
-                  history.push(`/${result.data.createProject.project.slug}`);
+                  const slug = result.data.createProject.project.slug;
+                  setTimeout(() => {
+                    console.log("push state");
+                    history.push(`/${slug}/admin`);
+                  }, 1000);
                 }
               } catch (e) {
                 setMutationError(e.toString());

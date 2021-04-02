@@ -37,7 +37,7 @@ export class DataHostDbUpdaterStack extends cdk.Stack {
         PGHOST: props.db.instanceEndpoint.hostname,
         PGPORT: "5432",
         PGDATABASE: "seasketch",
-        PGUSER: "cdk",
+        PGUSER: "admin",
         PGREGION: props.db.env.region,
       },
       initialPolicy: [

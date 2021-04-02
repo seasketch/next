@@ -299,10 +299,10 @@ function AccessControlSettings() {
     let variables = {
       slug,
       isListed:
-        isListedOn === null ? data!.projectBySlug?.isListed : isListedOn,
+        isListedOn === null ? data?.projectBySlug?.isListed : isListedOn,
       accessControl:
         accessControl === null
-          ? data!.projectBySlug!.accessControl
+          ? data?.projectBySlug?.accessControl
           : (accessControl as ProjectAccessControlSetting),
       ...patch,
     };
@@ -313,10 +313,10 @@ function AccessControlSettings() {
 
   const toggleIsListed = () => {
     const isListed =
-      isListedOn === null ? !data!.projectBySlug?.isListed : !isListedOn;
+      isListedOn === null ? !data?.projectBySlug?.isListed : !isListedOn;
     const isPublic =
       accessControl === null
-        ? data!.projectBySlug?.accessControl === "PUBLIC"
+        ? data?.projectBySlug?.accessControl === "PUBLIC"
         : accessControl === "PUBLIC";
     if (isPublic) {
       if (isListed === false) {
@@ -327,11 +327,11 @@ function AccessControlSettings() {
       update({ isListed });
     }
   };
-  if (!data) {
+  if (!data?.projectBySlug) {
     return null;
   }
   const showPublicOption =
-    isListedOn === null ? data!.projectBySlug?.isListed : isListedOn;
+    isListedOn === null ? data?.projectBySlug?.isListed : isListedOn;
   return (
     <>
       <div className="mt-5">
@@ -660,7 +660,7 @@ function SuperUserSettings() {
   }
 
   const isFeaturedToggled =
-    isFeatured === null ? data!.projectBySlug!.isFeatured : isFeatured;
+    isFeatured === null ? data?.projectBySlug?.isFeatured : isFeatured;
 
   const toggleIsFeatured = () => {
     const featured = !isFeaturedToggled;

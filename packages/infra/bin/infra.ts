@@ -12,6 +12,9 @@ import { GraphQLStack } from "../lib/GraphQLStack";
 import { Vpc } from "@aws-cdk/aws-ec2";
 let env = require("./env.production");
 
+const DOMAIN_NAME = "seasket.ch";
+const SUBDOMAIN = "next";
+
 const app = new cdk.App();
 const db = new DatabaseStack(app, "SeaSketchDB", { env });
 const redis = new RedisStack(app, "SeaSketchRedis", {
@@ -29,8 +32,8 @@ const maintenance = new MaintenanceStack(app, "SeaSketchMaintenanceBastion", {
 const client = new ReactClientStack(app, "SeaSketchReactClient", {
   env,
   maintenanceRole: maintenance.taskRole,
-  domainName: "seasket.ch",
-  siteSubDomain: "next",
+  domainName: DOMAIN_NAME,
+  siteSubDomain: SUBDOMAIN,
 });
 const allowedCorsDomains = [client.url];
 const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploads", {
@@ -96,6 +99,12 @@ const dataHosts = hostConfigs.map((config) => {
     // maintenanceRole: maintenance.taskRole,
     lambdaFunctionNameExport: "DataHostDbUpdaterLambda",
     dbRegion: env.region,
+    allowedCorsDomains: [
+      [SUBDOMAIN, DOMAIN_NAME].join("."),
+      "localhost:3000",
+      "seasketch.org",
+      "www.seasketch.org",
+    ],
   });
   host.addDependency(dataHostDbUpdater);
   return host;

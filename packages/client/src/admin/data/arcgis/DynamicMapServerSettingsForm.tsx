@@ -24,7 +24,7 @@ export default function DynamicMapServerSettingsForm(props: {
   mapServerInfo: MapServerCatalogInfo;
 }) {
   const { settings, updateSettings } = props;
-  const { importService, ...importServiceState } = useImportArcGISService(
+  const [importService, importServiceState] = useImportArcGISService(
     props.serviceRoot
   );
   const { slug } = useParams<{ slug: string }>();

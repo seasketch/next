@@ -2393,6 +2393,7 @@ input DataSourcePatch {
 }
 
 type DataSourcesBucket implements Node {
+  bucket: String
   location: GeometryPoint!
   name: String!
 
@@ -2449,6 +2450,7 @@ input DataSourcesBucketCondition {
 
 """An input for mutations affecting `DataSourcesBucket`"""
 input DataSourcesBucketInput {
+  bucket: String
   location: GeoJSON!
   name: String!
 

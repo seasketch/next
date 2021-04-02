@@ -1,7 +1,7 @@
-import mapboxgl, { ErrorEvent, Map, MapDataEvent } from "mapbox-gl";
+import mapboxgl, { Map } from "mapbox-gl";
 import ReactDOM from "react-dom";
 import React, { useEffect, useState, useRef, useContext } from "react";
-import { MapContext, useMapContext } from "../dataLayers/MapContextManager";
+import { MapContext } from "../dataLayers/MapContextManager";
 import { motion, AnimatePresence } from "framer-motion";
 
 export interface OverlayMapProps {

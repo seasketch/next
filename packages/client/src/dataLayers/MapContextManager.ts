@@ -6,6 +6,8 @@ import mapboxgl, {
   Style,
   Layer,
   CameraOptions,
+  LngLatBoundsLike,
+  MapboxOptions,
 } from "mapbox-gl";
 import {
   createContext,
@@ -14,14 +16,7 @@ import {
   useState,
   SetStateAction,
 } from "react";
-// import {
-//   ArcGISVectorSource,
-// } from "./sourceTypes/ArcGISVectorSource";
-import { MapBoxSource } from "./sourceTypes/MapBoxSource";
-import { WMSSource } from "./sourceTypes/WMSSource";
-// import {
-//   fetchFeatureLayerData,
-// } from "mapbox-gl-esri-feature-layers";
+import { Feature, Polygon } from "geojson";
 import {
   Basemap,
   DataLayer,
@@ -33,6 +28,7 @@ import {
   RenderUnderType,
   Sprite,
   SpriteImage,
+  useProjectRegionQuery,
 } from "../generated/graphql";
 import { fetchGlStyle } from "../useMapboxStyle";
 import LayerInteractivityManager from "./LayerInteractivityManager";
@@ -41,6 +37,8 @@ import ArcGISVectorSourceCache, {
 } from "./ArcGISVectorSourceCache";
 import bytes from "bytes";
 import { urlTemplateForArcGISDynamicSource } from "./sourceTypes/ArcGISDynamicMapServiceSource";
+import bbox from "@turf/bbox";
+import { useParams } from "react-router";
 
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 
@@ -166,6 +164,7 @@ class MapContextManager {
   private updateStateDebouncerReference?: NodeJS.Timeout;
   private updateSourcesStateDebouncerReference?: NodeJS.Timeout;
   private initialCameraOptions?: CameraOptions;
+  private initialBounds?: LngLatBoundsLike;
   private internalState: MapContextInterface;
   arcgisVectorSourceCache: ArcGISVectorSourceCache;
   private mapIsLoaded = false;
@@ -275,7 +274,7 @@ class MapContextManager {
     }
     const { style, sprites } = await this.getComputedStyle();
 
-    this.map = new Map({
+    let mapOptions: MapboxOptions = {
       container,
       style,
       center: this.initialCameraOptions?.center || [1.9, 18.7],
@@ -286,7 +285,24 @@ class MapContextManager {
       // @ts-ignore
       optimizeForTerrain: true,
       logoPosition: "bottom-right",
-    });
+    };
+    if (this.initialCameraOptions) {
+      mapOptions = {
+        ...mapOptions,
+        center: this.initialCameraOptions.center,
+        zoom: this.initialCameraOptions.zoom,
+        pitch: this.initialCameraOptions.pitch,
+        bearing: this.initialCameraOptions.bearing,
+      };
+    } else if (this.initialBounds) {
+      mapOptions = {
+        ...mapOptions,
+        bounds: this.initialBounds,
+      };
+    } else {
+      throw new Error("Both initialBounds and initialCameraOptions are empty");
+    }
+    this.map = new Map(mapOptions);
     this.addSprites(sprites);
 
     this.interactivityManager = new LayerInteractivityManager(
@@ -372,7 +388,7 @@ class MapContextManager {
     }
     this.setState((prev) => ({
       ...prev,
-      ready: true,
+      ready: !!(this.initialCameraOptions || this.initialBounds),
       terrainEnabled: this.shouldEnableTerrain(),
       basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
         this.internalState.selectedBasemap
@@ -383,6 +399,15 @@ class MapContextManager {
     }));
     this.debouncedUpdateStyle();
     this.updateInteractivitySettings();
+  }
+
+  setProjectBounds(feature: Feature<Polygon>) {
+    const box = bbox(feature);
+    this.initialBounds = box.slice(0, 4) as [number, number, number, number];
+    this.setState((prev) => ({
+      ...prev,
+      ready: !!(this.initialCameraOptions || this.initialBounds),
+    }));
   }
 
   private computeBasemapOptionalLayerStates(
@@ -513,7 +538,7 @@ class MapContextManager {
   private updateStyleInfinitLoopDetector = 0;
 
   private async updateStyle() {
-    if (this.map && this.internalState.selectedBasemap) {
+    if (this.map && this.internalState.ready) {
       this.updateStyleInfinitLoopDetector = 0;
       const { style, sprites } = await this.getComputedStyle();
       this.addSprites(sprites);
@@ -979,7 +1004,7 @@ class MapContextManager {
       }
     }
     for (const sourceId in sources) {
-      let loading = !this.map!.isSourceLoaded(sourceId)
+      let loading = !this.map!.isSourceLoaded(sourceId);
       if (loading) {
         anyLoading = true;
       }
@@ -1256,8 +1281,11 @@ export function useMapContext(preferencesKey?: string, cacheSize?: number) {
     basemapOptionalLayerStates: {},
   };
   let initialCameraOptions: CameraOptions | undefined = undefined;
+  const { slug } = useParams<{ slug: string }>();
   if (preferencesKey) {
-    const preferencesString = window.localStorage.getItem(preferencesKey);
+    const preferencesString = window.localStorage.getItem(
+      `${slug}-${preferencesKey}`
+    );
     if (preferencesString) {
       const prefs = JSON.parse(preferencesString);
       if (prefs.basemap) {
@@ -1283,12 +1311,17 @@ export function useMapContext(preferencesKey?: string, cacheSize?: number) {
     }
   }
   const [state, setState] = useState<MapContextInterface>(initialState);
+  const { data, loading, error } = useProjectRegionQuery({
+    variables: {
+      slug,
+    },
+  });
   useEffect(() => {
     const manager = new MapContextManager(
       initialState,
       setState,
       initialCameraOptions,
-      preferencesKey,
+      preferencesKey ? `${slug}-${preferencesKey}` : undefined,
       cacheSize
     );
     const newState = {
@@ -1297,6 +1330,12 @@ export function useMapContext(preferencesKey?: string, cacheSize?: number) {
     };
     setState(newState);
   }, []);
+
+  useEffect(() => {
+    if (data?.projectBySlug?.region.geojson && state.manager) {
+      state.manager.setProjectBounds(data.projectBySlug.region.geojson);
+    }
+  }, [data?.projectBySlug, state.manager]);
   return state;
 }
 
