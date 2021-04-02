@@ -45,7 +45,6 @@ export default function NewProjectForm() {
                 if (result.data?.createProject?.project) {
                   const slug = result.data.createProject.project.slug;
                   setTimeout(() => {
-                    console.log("push state");
                     history.push(`/${slug}/admin`);
                   }, 1000);
                 }
