@@ -110,6 +110,22 @@ export class GraphQLStack extends cdk.Stack {
         resources: [`arn:aws:rds-db:*:*:dbuser:*/*`],
       })
     );
+    service.taskDefinition.taskRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: [
+          "s3:DeleteObject",
+          "s3:DeleteObjectTagging",
+          "s3:DeleteObjectVersion",
+          "s3:GetObject",
+          "s3:GetObjectTagging",
+          "s3:PutObject",
+          "s3:PutObjectAcl",
+          "s3:PutObjectTagging",
+        ],
+        effect: iam.Effect.ALLOW,
+        resources: [`arn:aws:s3:::seasketchdata-*/*`],
+      })
+    );
     props.uploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
   }
 }
