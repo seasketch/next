@@ -100,10 +100,10 @@ const dataHosts = hostConfigs.map((config) => {
     lambdaFunctionNameExport: "DataHostDbUpdaterLambda",
     dbRegion: env.region,
     allowedCorsDomains: [
-      [SUBDOMAIN, DOMAIN_NAME].join("."),
-      "localhost:3000",
-      "seasketch.org",
-      "www.seasketch.org",
+      `https://${[SUBDOMAIN, DOMAIN_NAME].join(".")}`,
+      "http://localhost:3000",
+      "https://seasketch.org",
+      "https://www.seasketch.org",
     ],
   });
   host.addDependency(dataHostDbUpdater);

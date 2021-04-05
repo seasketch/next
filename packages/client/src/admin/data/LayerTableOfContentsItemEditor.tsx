@@ -223,9 +223,7 @@ export default function LayerTableOfContentsItemEditor(
                             className="font-semibold text-primary-600 px-2"
                             onClick={async () => {
                               const data = await fetch(
-                                `https://${source.bucketId!}/${
-                                  source.objectKey
-                                }`
+                                `${source.bucketId!}/${source.objectKey}`
                               ).then((r) => r.json());
                               var json = JSON.stringify(data);
                               var blob = new Blob([json], {

@@ -78,6 +78,9 @@ export interface NormalizedArcGISServerLocation {
 export function normalizeArcGISServerUrl(
   url: string
 ): NormalizedArcGISServerLocation {
+  if (!/http[s]?:\/\//.test(url)) {
+    url = "https://" + url;
+  }
   if (/arcgis\/rest\/services/.test(url)) {
     const parts = url.split("/arcgis/rest/services");
     const baseUrl = parts[0];

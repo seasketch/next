@@ -21,7 +21,6 @@ const DataSourcePlugin = makeExtendSchemaPlugin((build) => {
             `select region, bucket from data_sources_buckets where url = $1`,
             [source.bucketId]
           );
-          console.log("create presigned url", source);
           const region = rows[0].region;
           const bucket = rows[0].bucket;
           const s3 = new S3({ region });

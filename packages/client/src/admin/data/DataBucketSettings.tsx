@@ -14,16 +14,20 @@ function DataBucketSettings(props: { className?: string }) {
   const [map, setMap] = useState<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const { slug } = useParams<{ slug: string }>();
-  const [region, setRegion] = useState("");
+  const [region, setRegion] = useState<string>();
   const buckets = useProjectBucketSettingQuery({
     variables: { slug },
   });
-  const projectBucketSetting =
-    buckets.data?.projectBySlug?.dataSourcesBucket?.url || "";
   const [
     mutate,
     { data, error, loading },
   ] = useUpdateProjectStorageBucketMutation();
+
+  useEffect(() => {
+    if (!region && buckets.data?.projectBySlug?.dataSourcesBucket) {
+      setRegion(buckets.data.projectBySlug.dataSourcesBucket.url);
+    }
+  }, [buckets.data?.projectBySlug?.dataSourcesBucket?.url]);
 
   useEffect(() => {
     mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;

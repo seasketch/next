@@ -744,7 +744,7 @@ class MapContextManager {
                       data:
                         source.type === DataSourceTypes.SeasketchVector
                           ? // eslint-disable-next-line
-                            `https://${source.bucketId}/${source.objectKey}`
+                            `${source.bucketId}/${source.objectKey}`
                           : source.url!,
                       attribution: source.attribution || "",
                     };
