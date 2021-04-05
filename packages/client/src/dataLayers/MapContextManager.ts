@@ -897,7 +897,9 @@ class MapContextManager {
 
     baseStyle.layers = baseStyle.layers.map((layer) => {
       const state = optionalLayersToggleState[layer.id];
-      if (state === false) {
+      // @ts-ignore
+      const hasSource = !!layer.source;
+      if (hasSource && state === false) {
         return {
           ...layer,
           ...{
