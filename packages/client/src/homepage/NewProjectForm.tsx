@@ -46,7 +46,7 @@ export default function NewProjectForm() {
                   const slug = result.data.createProject.project.slug;
                   setTimeout(() => {
                     history.push(`/${slug}/admin`);
-                  }, 1000);
+                  }, 100);
                 }
               } catch (e) {
                 setMutationError(e.toString());
