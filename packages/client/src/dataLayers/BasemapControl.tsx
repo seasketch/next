@@ -109,7 +109,7 @@ function BasemapSquareItem({
 }) {
   return (
     <div
-      className="flex flex-col m-2 cursor-pointer select-none"
+      className="flex flex-col m-2 cursor-pointer select-none w-32"
       onClick={onClick}
     >
       <div
@@ -128,7 +128,7 @@ function BasemapSquareItem({
         &nbsp;
       </div>
       <h4
-        className={`select-none w-full truncate text-center font-medium  text-sm px-2 ${
+        className={`select-none w-full text-center font-medium  text-sm px-2 ${
           selected ? "text-gray-800 " : "text-gray-600"
         }`}
       >
