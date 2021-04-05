@@ -1332,6 +1332,9 @@ export function useMapContext(preferencesKey?: string, cacheSize?: number) {
   }, []);
 
   useEffect(() => {
+    if (error) {
+      throw error;
+    }
     if (data?.projectBySlug?.region.geojson && state.manager) {
       state.manager.setProjectBounds(data.projectBySlug.region.geojson);
     }
