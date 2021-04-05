@@ -33,7 +33,7 @@ function DataBucketSettings(props: { className?: string }) {
         style: "mapbox://styles/underbluewaters/ckhgrw8pq0n2j19ldoa5z1d72", // stylesheet location
         center: [17, 19.8],
         zoom: 0.026,
-        maxZoom: 0.725,
+        maxZoom: 0.95, //0.725,
       });
 
       mapInstance.on("load", () => {
@@ -46,30 +46,6 @@ function DataBucketSettings(props: { className?: string }) {
       });
     }
   }, [map, mapContainer.current]);
-
-  useEffect(() => {
-    if (projectBucketSetting) {
-      setRegion(projectBucketSetting);
-    }
-    if (
-      map &&
-      buckets.data?.projectBySlug?.dataSourcesBucket &&
-      map.getSource("selected-region")
-    ) {
-      const source = map.getSource("selected-region") as GeoJSONSource;
-      source.setData({
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            properties: {},
-            geometry:
-              buckets.data.projectBySlug.dataSourcesBucket.location.geojson,
-          },
-        ],
-      });
-    }
-  }, [projectBucketSetting]);
 
   useEffect(() => {
     if (
@@ -99,13 +75,8 @@ function DataBucketSettings(props: { className?: string }) {
         collection.features.push(feature as Feature<Point>);
       }
       if (map.getLayer("data-centers-circle")) {
-        map.removeLayer("data-centers-circle");
-        map.removeLayer("data-center-label");
-        map.removeSource("data-centers");
-      }
-      map.addSource("selected-region", {
-        type: "geojson",
-        data: {
+        (map.getSource("data-centers") as GeoJSONSource).setData(collection);
+        (map.getSource("selected-region") as GeoJSONSource).setData({
           type: "FeatureCollection",
           features: [
             {
@@ -115,56 +86,69 @@ function DataBucketSettings(props: { className?: string }) {
                 buckets.data.projectBySlug.dataSourcesBucket.location.geojson,
             },
           ],
-        },
-      });
-      map.addSource("data-centers", {
-        type: "geojson",
-        data: collection,
-        attribution:
-          '© <a href="https://github.com/telegeography/www.submarinecablemap.com">submarinecablemap.com</a> (CC BY-NC-SA 3.0)',
-      });
-      map.addLayer({
-        id: "selected-region-circle",
-        type: "circle",
-        paint: {
-          "circle-color": "yellow",
-          "circle-radius": 18,
-          // "circle-stroke-width": 1,
-          // "circle-stroke-color": "yellow",
-          "circle-blur": 1,
-        },
-        source: "selected-region",
-      });
-      map.addLayer({
-        id: "data-centers-circle",
-        type: "circle",
-        paint: {
-          "circle-color": "orange",
-          "circle-radius": 5,
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "black",
-        },
-        source: "data-centers",
-      });
-      map.addLayer({
-        id: "data-center-label",
-        type: "symbol",
-        source: "data-centers",
-        layout: {
-          "text-field": "{name}",
-          "text-size": 13,
-          "text-ignore-placement": true,
-          "text-anchor": "bottom-left",
-          "text-offset": [0.25, -0.25],
-        },
-        paint: {
-          "text-color": "white",
-          "text-halo-width": 2,
-          "text-halo-color": "rgba(0,0,0,0.5)",
-        },
-      });
-      // @ts-ignore
-      window.map = map;
+        });
+      } else {
+        map.addSource("selected-region", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                properties: {},
+                geometry:
+                  buckets.data.projectBySlug.dataSourcesBucket.location.geojson,
+              },
+            ],
+          },
+        });
+        map.addSource("data-centers", {
+          type: "geojson",
+          data: collection,
+          attribution:
+            '© <a href="https://github.com/telegeography/www.submarinecablemap.com">submarinecablemap.com</a> (CC BY-NC-SA 3.0)',
+        });
+        map.addLayer({
+          id: "selected-region-circle",
+          type: "circle",
+          paint: {
+            "circle-color": "yellow",
+            "circle-radius": 18,
+            // "circle-stroke-width": 1,
+            // "circle-stroke-color": "yellow",
+            "circle-blur": 1,
+          },
+          source: "selected-region",
+        });
+        map.addLayer({
+          id: "data-centers-circle",
+          type: "circle",
+          paint: {
+            "circle-color": "orange",
+            "circle-radius": 5,
+            "circle-stroke-width": 1,
+            "circle-stroke-color": "black",
+          },
+          source: "data-centers",
+        });
+        map.addLayer({
+          id: "data-center-label",
+          type: "symbol",
+          source: "data-centers",
+          layout: {
+            "text-field": "{name}",
+            "text-size": 13,
+            "text-ignore-placement": true,
+            "text-anchor": "bottom-left",
+            "text-offset": [0.25, -0.25],
+          },
+          paint: {
+            "text-color": "white",
+            "text-halo-width": 2,
+            "text-halo-color": "rgba(0,0,0,0.5)",
+          },
+        });
+      }
     }
   }, [
     map,
