@@ -123,7 +123,7 @@ export default function RadioGroup<T>(props: RadioGroupProps<T>) {
             <div className="flex items-center h-5">
               <input
                 id={`${props.legend || ""}-item-${item.value}`}
-                name={`item-${item.value}`}
+                name={`${props.legend || ""}-item-${item.value}`}
                 type="radio"
                 className="focus:ring-blue-300 h-4 w-4 text-primary-500 cursor-pointer border-gray-300"
                 checked={props.value === item.value}
