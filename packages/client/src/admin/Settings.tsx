@@ -292,7 +292,7 @@ function AccessControlSettings() {
     setAccessControl(type);
     update({ accessControl: type as ProjectAccessControlSetting });
   };
-  const update = (patch: {
+  const update = async (patch: {
     isListed?: boolean;
     accessControl?: ProjectAccessControlSetting;
   }) => {
@@ -306,12 +306,12 @@ function AccessControlSettings() {
           : (accessControl as ProjectAccessControlSetting),
       ...patch,
     };
-    mutate({
+    await mutate({
       variables,
     }).catch((e) => {});
   };
 
-  const toggleIsListed = () => {
+  const toggleIsListed = async () => {
     const isListed =
       isListedOn === null ? !data?.projectBySlug?.isListed : !isListedOn;
     const isPublic =
@@ -324,7 +324,7 @@ function AccessControlSettings() {
       }
     } else {
       setIsListedOn(isListed);
-      update({ isListed });
+      await update({ isListed });
     }
   };
   if (!data?.projectBySlug) {
@@ -357,13 +357,33 @@ function AccessControlSettings() {
                 </p>
               )}
               <div className="ml-4 max-w-2xl mt-5">
-                <div className="relative flex items-start mt-4">
+                <div
+                  className="relative flex items-start mt-4"
+                  onClick={async (e) => {
+                    if (!showPublicOption) {
+                      if (
+                        window.confirm(
+                          t(
+                            "Enabling public access will also enable public listing. Are you sure?"
+                          )
+                        )
+                      ) {
+                        setIsListedOn(true);
+                        update({
+                          isListed: true,
+                          accessControl: ProjectAccessControlSetting.Public,
+                        });
+                      }
+                    }
+                  }}
+                >
                   <div className="flex items-center h-5">
                     <input
                       name="access_control"
                       disabled={!showPublicOption}
                       id="PUBLIC"
                       type="radio"
+                      style={showPublicOption ? {} : { pointerEvents: "none" }}
                       onChange={(e) => updateAccessControl("PUBLIC")}
                       checked={
                         accessControl
@@ -379,7 +399,7 @@ function AccessControlSettings() {
                     }`}
                   >
                     <label
-                      htmlFor="comments"
+                      htmlFor="PUBLIC"
                       className="font-medium text-gray-700"
                     >
                       {t("Public")}
@@ -411,7 +431,7 @@ function AccessControlSettings() {
                     </div>
                     <div className="ml-3 text-sm leading-5">
                       <label
-                        htmlFor="candidates"
+                        htmlFor="ADMINS_ONLY"
                         className="font-medium text-gray-700"
                       >
                         {t("Admins Only")}
@@ -443,7 +463,7 @@ function AccessControlSettings() {
                     </div>
                     <div className="ml-3 text-sm leading-5">
                       <label
-                        htmlFor="candidates"
+                        htmlFor="INVITE_ONLY"
                         className="font-medium text-gray-700"
                       >
                         {t("Invite Only")}
@@ -464,7 +484,7 @@ function AccessControlSettings() {
                   <div className="ml-3 text-sm leading-5">
                     <div className="flex items-center -mt-2 py-4">
                       <label
-                        htmlFor="candidates"
+                        htmlFor="PUBLIC"
                         className="font-medium text-gray-700"
                       >
                         {t("Public Listing")}
