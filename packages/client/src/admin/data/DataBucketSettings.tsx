@@ -76,7 +76,8 @@ function DataBucketSettings(props: { className?: string }) {
       map &&
       buckets.data &&
       buckets.data.dataSourcesBucketsConnection?.nodes.length &&
-      !map.getSource("data-centers")
+      buckets.data.projectBySlug?.dataSourcesBucket
+      // !map.getSource("data-centers")
     ) {
       const collection: FeatureCollection<Point> = {
         type: "FeatureCollection",
@@ -110,8 +111,8 @@ function DataBucketSettings(props: { className?: string }) {
             {
               type: "Feature",
               properties: {},
-              geometry: buckets.data.projectBySlug!.dataSourcesBucket!.location
-                .geojson,
+              geometry:
+                buckets.data.projectBySlug.dataSourcesBucket.location.geojson,
             },
           ],
         },
@@ -165,7 +166,12 @@ function DataBucketSettings(props: { className?: string }) {
       // @ts-ignore
       window.map = map;
     }
-  }, [map, buckets.data]);
+  }, [
+    map,
+    buckets.data,
+    buckets.data?.projectBySlug?.dataSourcesBucket,
+    buckets.data?.dataSourcesBucketsConnection,
+  ]);
 
   return (
     <>
