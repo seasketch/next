@@ -63,6 +63,14 @@ export class ReactClientStack extends cdk.Stack {
       },
       certificate: certificate,
       domainNames: [siteDomain],
+      errorResponses: [
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: "/index.html",
+          ttl: cdk.Duration.hours(1),
+        },
+      ],
     });
     this.url = distribution.distributionDomainName;
     this.bucket.grantReadWrite(props.maintenanceRole);
