@@ -122,13 +122,16 @@ async function fetchData(
       message: string;
     };
     exceededTransferLimit?: boolean;
+    /* used in (arcgis-online only?) feature servers */
+    properties?: {
+      exceededTransferLimit?: boolean;
+    };
   };
   if (fc.error) {
     return onError(new Error(fc.error.message));
   } else {
     featureCollection.features.push(...fc.features);
-
-    if (fc.exceededTransferLimit) {
+    if (fc.exceededTransferLimit || fc.properties?.exceededTransferLimit) {
       if (!objectIdFieldName) {
         // Fetch objectIds to do manual paging
         params.set("returnIdsOnly", "true");
@@ -138,7 +141,11 @@ async function fetchData(
             ...(abortController ? { signal: abortController.signal } : {}),
           });
           const featureIds = featureCollection.features.map((f) => f.id);
-          const objectIdParameters = await r.json();
+          let objectIdParameters = await r.json();
+          // FeatureServers (at least on ArcGIS Online) behave differently
+          if (objectIdParameters.properties) {
+            objectIdParameters = objectIdParameters.properties;
+          }
           expectedFeatureCount = objectIdParameters.objectIds.length;
           objectIdFieldName = objectIdParameters.objectIdFieldName;
         } catch (e) {

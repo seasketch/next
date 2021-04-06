@@ -281,6 +281,9 @@ export default function ArcGISBrowser() {
     } else if (item.type === "MapServer") {
       setSelectedMapServer(item.url);
       setSelectedFeatureLayer(undefined);
+    } else if (item.type === "FeatureServer") {
+      setSelectedMapServer(item.url);
+      setSelectedFeatureLayer(undefined);
     } else {
       throw new Error("Unsupported type " + item.type);
     }
@@ -350,7 +353,7 @@ export default function ArcGISBrowser() {
                 >
                   <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
                     <h3 className="text-lg leading-6 font-medium text-gray-900">
-                      {serviceData.mapServerInfo.documentInfo.Title ||
+                      {serviceData.mapServerInfo.documentInfo?.Title ||
                         serviceData.mapServerInfo.mapName}
                       <a
                         target="_blank"
@@ -367,7 +370,11 @@ export default function ArcGISBrowser() {
                   <div className="mt-10 px-6">
                     <div className="mx-auto mb-4 max-w-md">
                       <SegmentControl
-                        segments={["Image Source", "Vector Sources"]}
+                        segments={
+                          /FeatureServer/.test(selectedMapServer)
+                            ? ["Vector Sources"]
+                            : ["Image Source", "Vector Sources"]
+                        }
                         value={
                           serviceSettings.sourceType ===
                           "arcgis-dynamic-mapservice"

@@ -110,7 +110,10 @@ export default async function styleForFeatureLayer(
   const renderer = response.drawingInfo.renderer as Renderer;
 
   let layers: Layer[] = [];
-  const imageList = new ImageList(response.currentVersion);
+  const imageList = new ImageList(
+    response.currentVersion,
+    /FeatureServer/.test(rootUrl)
+  );
   let legendItemIndex = 0;
   switch (renderer.type) {
     case "uniqueValue": {

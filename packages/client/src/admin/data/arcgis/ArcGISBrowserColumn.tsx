@@ -70,7 +70,10 @@ function ServiceItem(props: {
   leading?: boolean;
   onClick?: (e: { id: string; url: string }) => void;
 }) {
-  const disabled = props.type !== "MapServer" && props.type !== "Folder";
+  const disabled =
+    props.type !== "MapServer" &&
+    props.type !== "Folder" &&
+    props.type !== "FeatureServer";
   /* eslint-disable */
   const svgClassName = `mr-1.5 w-4 -mt-0.5 h-4 inline ${
     props.selected

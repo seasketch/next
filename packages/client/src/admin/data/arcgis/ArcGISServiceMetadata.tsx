@@ -15,7 +15,7 @@ export default function ArcGISServiceMetadata(
   if (props.layer) {
     definitionListItems.push(
       ["Description", props.layer?.description],
-      ["Author", mapServerInfo.documentInfo.Author],
+      ["Author", mapServerInfo.documentInfo?.Author],
       ["Copyright", props.layer?.copyrightText || mapServerInfo.copyrightText],
       [
         "Projection",
@@ -39,11 +39,11 @@ export default function ArcGISServiceMetadata(
         "Description",
         mapServerInfo.serviceDescription || mapServerInfo.description,
       ],
-      ["Author", mapServerInfo.documentInfo.Author],
-      ["Subject", mapServerInfo.documentInfo.Subject],
-      ["Comments", mapServerInfo.documentInfo.Comments],
+      ["Author", mapServerInfo.documentInfo?.Author],
+      ["Subject", mapServerInfo.documentInfo?.Subject],
+      ["Comments", mapServerInfo.documentInfo?.Comments],
       ["Copyright", mapServerInfo.copyrightText],
-      ["Keywords", mapServerInfo.documentInfo.Keywords],
+      ["Keywords", mapServerInfo.documentInfo?.Keywords],
       [
         "Projection",
 

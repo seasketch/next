@@ -153,7 +153,7 @@ export interface MapServerCatalogInfo {
   maxScale: number;
   /** comma-delimited */
   supportedImageFormatTypes: string;
-  documentInfo: {
+  documentInfo?: {
     Title: string;
     Author: string;
     Comments: string;
@@ -298,10 +298,11 @@ export function useMapServerInfo(location: string | undefined) {
                 layerData.layers.map(async (lyr: LayerInfo) => {
                   const generatedId = uuid();
                   if (lyr.type === "Feature Layer") {
-                    const { layers, imageList } = await styleForFeatureLayer(
+                    let { layers, imageList } = await styleForFeatureLayer(
                       location + "/" + lyr.id,
                       generatedId
                     );
+                    imageList = await imageList;
                     return {
                       ...lyr,
                       generatedId,
@@ -482,11 +483,16 @@ export function useArcGISServiceSettings(
   // eventually, init from localstorage too
   const [settings, setSettings] = useState<ArcGISServiceSettings>();
   useEffect(() => {
+    let s: ArcGISServiceSettings | undefined;
     if (location) {
-      setSettings(settingsCache[location] || defaultServiceSettings);
+      s = settingsCache[location] || defaultServiceSettings;
     } else {
-      setSettings(undefined);
+      s = undefined;
     }
+    if (s && location && /FeatureServer/.test(location)) {
+      s.sourceType = "arcgis-vector-source";
+    }
+    setSettings(s);
   }, [location]);
   function updateSettings(settings: ArcGISServiceSettings) {
     setSettings(settings);
@@ -1203,7 +1209,7 @@ export function useImportArcGISService(
                       attribution:
                         contentOrFalse(layer.copyrightText) ||
                         contentOrFalse(mapServerInfo.copyrightText) ||
-                        contentOrFalse(mapServerInfo.documentInfo.Author) ||
+                        contentOrFalse(mapServerInfo.documentInfo?.Author) ||
                         null,
                       bounds: bounds,
                       byteLength: byteLength(stringifiedJSON),
@@ -1286,7 +1292,7 @@ export function useImportArcGISService(
                       attribution:
                         contentOrFalse(layer.copyrightText) ||
                         contentOrFalse(mapServerInfo.copyrightText) ||
-                        contentOrFalse(mapServerInfo.documentInfo.Author) ||
+                        contentOrFalse(mapServerInfo.documentInfo?.Author) ||
                         null,
                       bounds: bounds,
                       queryParameters: queryParameters,
@@ -1467,7 +1473,7 @@ ${layer.fields
               url: mapServerInfo.url,
               attribution:
                 contentOrFalse(mapServerInfo.copyrightText) ||
-                contentOrFalse(mapServerInfo.documentInfo.Author) ||
+                contentOrFalse(mapServerInfo.documentInfo?.Author) ||
                 null,
               bounds: latLngBounds
                 ? [
@@ -1494,8 +1500,8 @@ ${layer.fields
       // If vector import, create containing folder first
       if (layers.length > 1) {
         const folderName =
-          mapServerInfo.documentInfo.Title ||
-          mapServerInfo.documentInfo.Subject ||
+          mapServerInfo.documentInfo?.Title ||
+          mapServerInfo.documentInfo?.Subject ||
           mapServerInfo.serviceDescription ||
           "New Import";
         setState((prev) => {
@@ -1748,12 +1754,12 @@ export function generateMetadataForLayer(
   const attribution =
     contentOrFalse(layer.copyrightText) ||
     contentOrFalse(mapServerInfo.copyrightText) ||
-    contentOrFalse(mapServerInfo.documentInfo.Author);
+    contentOrFalse(mapServerInfo.documentInfo?.Author);
   const description = pickDescription(mapServerInfo, layer);
   let keywords =
-    mapServerInfo.documentInfo.Keywords &&
-    mapServerInfo.documentInfo.Keywords.length
-      ? mapServerInfo.documentInfo.Keywords.split(",")
+    mapServerInfo.documentInfo?.Keywords &&
+    mapServerInfo.documentInfo?.Keywords.length
+      ? mapServerInfo.documentInfo?.Keywords.split(",")
       : [];
   return {
     type: "doc",
@@ -1861,8 +1867,8 @@ function pickDescription(info: MapServerCatalogInfo, layer?: LayerInfo) {
   return (
     contentOrFalse(layer?.description) ||
     contentOrFalse(info.description) ||
-    contentOrFalse(info.documentInfo.Subject) ||
-    contentOrFalse(info.documentInfo.Comments)
+    contentOrFalse(info.documentInfo?.Subject) ||
+    contentOrFalse(info.documentInfo?.Comments)
   );
 }
 
