@@ -462,6 +462,7 @@ class MapContextManager {
         this.force2dView();
       }
     }
+    this.updateInteractivitySettings();
   }
 
   clearTerrainSettings() {
@@ -669,7 +670,9 @@ class MapContextManager {
         };
       } else {
         // @ts-ignore
-        baseStyle.sources!["terrain-source"] = newSource;
+        baseStyle.sources![
+          baseStyle.terrain?.source || "terrain-source"
+        ] = newSource;
       }
 
       // @ts-ignore
@@ -678,37 +681,43 @@ class MapContextManager {
         exaggeration: parseFloat(basemap.terrainExaggeration || 1.2),
       };
 
-      baseStyle.layers?.push({
-        id: "sky",
-        type: "sky",
-        paint: {
-          // set up the sky layer to use a color gradient
-          "sky-type": "gradient",
-          // the sky will be lightest in the center and get darker moving radially outward
-          // this simulates the look of the sun just below the horizon
-          "sky-gradient": [
-            "interpolate",
-            ["linear"],
-            ["sky-radial-progress"],
-            0.8,
-            "rgba(135, 206, 235, 1.0)",
-            1,
-            "rgba(0,0,0,0.1)",
-          ],
-          "sky-gradient-center": [0, 0],
-          "sky-gradient-radius": 90,
-          "sky-opacity": [
-            "interpolate",
-            ["exponential", 0.1],
-            ["zoom"],
-            5,
-            0,
-            22,
-            1,
-          ],
-        },
-      });
+      if (!(baseStyle.layers || []).find((l) => l.type === "sky")) {
+        baseStyle.layers?.push({
+          id: "sky",
+          type: "sky",
+          paint: {
+            // set up the sky layer to use a color gradient
+            "sky-type": "gradient",
+            // the sky will be lightest in the center and get darker moving radially outward
+            // this simulates the look of the sun just below the horizon
+            "sky-gradient": [
+              "interpolate",
+              ["linear"],
+              ["sky-radial-progress"],
+              0.8,
+              "rgba(135, 206, 235, 1.0)",
+              1,
+              "rgba(0,0,0,0.1)",
+            ],
+            "sky-gradient-center": [0, 0],
+            "sky-gradient-radius": 90,
+            "sky-opacity": [
+              "interpolate",
+              ["exponential", 0.1],
+              ["zoom"],
+              5,
+              0,
+              22,
+              1,
+            ],
+          },
+        });
+      }
     }
+    // } else if (!this.internalState.terrainEnabled) {
+    //   console.log("delete terrain");
+    //   delete baseStyle.terrain;
+    // }
 
     let labelsLayerIndex = baseStyle.layers?.findIndex(
       (layer) => layer.id === labelsID
