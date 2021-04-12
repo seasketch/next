@@ -475,6 +475,51 @@ describe("Data validation", () => {
     );
   });
 
+  test("updateTableOfContentsItemChildren works even after a tree is published (regression test)", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId, [userA]) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const folderA = id();
+        const folderAId = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'folderA', true, ${folderA}) returning id`
+        );
+        const folderB = id();
+        const folderBId = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'folderB', true, ${folderB}) returning id`
+        );
+        //    A[0]   B[1]
+        expect(
+          conn.oneFirst(
+            sql`select sort_index from table_of_contents_items where id = ${folderAId}`
+          )
+        ).resolves.toBe(0);
+        expect(
+          conn.oneFirst(
+            sql`select sort_index from table_of_contents_items where id = ${folderBId}`
+          )
+        ).resolves.toBe(1);
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
+        await conn.any(
+          sql`select update_table_of_contents_item_children(null, ${sql.array(
+            [folderBId, folderAId],
+            "int4"
+          )})`
+        );
+        // should be
+        //    B[0]   A[1]
+        const folderASortIndex = await conn.oneFirst(
+          sql`select sort_index from table_of_contents_items where id = ${folderAId}`
+        );
+        const folderBSortIndex = await conn.oneFirst(
+          sql`select sort_index from table_of_contents_items where id = ${folderBId}`
+        );
+        expect(folderBSortIndex).toBeLessThan(folderASortIndex as number);
+      }
+    );
+  });
+
   test("items cannot be nested under non-existent paths", async () => {
     await projectTransaction(
       pool,

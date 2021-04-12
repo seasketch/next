@@ -7412,13 +7412,17 @@ CREATE FUNCTION public.update_table_of_contents_item_position("itemId" integer, 
           update 
             table_of_contents_items 
           set path = parent_path || subpath(path, nlevel(current_path)-1) 
-          where path <@ current_path;
+          where 
+            is_draft = true and
+            path <@ current_path;
         end if;
       else
         update 
           table_of_contents_items 
         set path = subpath(path, nlevel(current_path)-1) 
-        where path <@ current_path;
+        where 
+          is_draft = true and
+          path <@ current_path;
       end if;
       select * into item from table_of_contents_items where id = "itemId";
       return item;
