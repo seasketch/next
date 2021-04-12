@@ -35,7 +35,12 @@ const client = new ReactClientStack(app, "SeaSketchReactClient", {
   domainName: DOMAIN_NAME,
   siteSubDomain: SUBDOMAIN,
 });
-const allowedCorsDomains = [client.url];
+const allowedCorsDomains = [
+  `https://${[SUBDOMAIN, DOMAIN_NAME].join(".")}`,
+  "http://localhost:3000",
+  "https://seasketch.org",
+  "https://www.seasketch.org",
+];
 const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploads", {
   env,
   maintenanceRole: maintenance.taskRole,
@@ -99,12 +104,7 @@ const dataHosts = hostConfigs.map((config) => {
     // maintenanceRole: maintenance.taskRole,
     lambdaFunctionNameExport: "DataHostDbUpdaterLambda",
     dbRegion: env.region,
-    allowedCorsDomains: [
-      `https://${[SUBDOMAIN, DOMAIN_NAME].join(".")}`,
-      "http://localhost:3000",
-      "https://seasketch.org",
-      "https://www.seasketch.org",
-    ],
+    allowedCorsDomains,
   });
   host.addDependency(dataHostDbUpdater);
   return host;
