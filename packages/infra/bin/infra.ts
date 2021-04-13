@@ -11,6 +11,7 @@ import { RedisStack } from "../lib/RedisStack";
 import { GraphQLStack } from "../lib/GraphQLStack";
 import { Vpc } from "@aws-cdk/aws-ec2";
 let env = require("./env.production");
+require("dotenv").config();
 
 const DOMAIN_NAME = "seasket.ch";
 const SUBDOMAIN = "next";
