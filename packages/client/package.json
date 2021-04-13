@@ -1,6 +1,6 @@
 {
   "name": "client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "dependencies": {
     "@apollo/client": "^3.3.8",
@@ -62,7 +62,7 @@
     "mapbox-gl": "^2.2.0",
     "mapbox-gl-draw-rectangle-mode": "^1.0.4",
     "mapbox-gl-draw-rectangle-restrict-area": "^3.1.0",
-    "mapbox-gl-esri-feature-layers": "^0.1.0",
+    "mapbox-gl-esri-feature-layers": "^0.1.1",
     "mustache": "^4.1.0",
     "nanoid": "^3.1.20",
     "pbf": "^3.2.1",
