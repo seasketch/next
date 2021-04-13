@@ -12,6 +12,10 @@ This is the core server package. It include a GraphQL API server based on Postgr
 
 Single-page-app style javascript client built using Create React App.
 
+### [packages/infra](./packages/infra)
+
+CDK App that defines the production hosting infrastructure
+
 #### Development Environment Setup
 
 There are a lot of build scripts and dev servers needed to run the entire stack. If you have Docker installed and use VSCode a lot of this setup can be started for you by simply opening the root of the project in your editor. Run the VSCode command "Manage Automatic Tasks in Folder" and choose allow to run the necessary build tasks and development servers.
