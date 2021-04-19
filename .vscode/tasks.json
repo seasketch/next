@@ -19,16 +19,10 @@
       "path": "packages/client/",
       "problemMatcher": [],
       "label": "Storybook",
-      "detail": "start-storybook -p 6006 -s public",
-      "runOptions": {
-        "runOn": "folderOpen"
-      }
+      "detail": "start-storybook -p 6006 -s public"
     },
     {
       "type": "npm",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
       "script": "start",
       "path": "packages/client/",
       "problemMatcher": [],
@@ -48,9 +42,6 @@
     },
     {
       "type": "npm",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
       "script": "db:watch",
       "path": "packages/api/",
       "group": "build",
@@ -61,9 +52,6 @@
     {
       "type": "npm",
       "script": "watch",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
       "path": "packages/api/",
       "problemMatcher": [],
       "label": "GraphQL server: watch mode",
