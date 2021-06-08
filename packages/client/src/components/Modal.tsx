@@ -1,5 +1,6 @@
 import React, { ReactElement, ReactNode, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Spinner from "./Spinner";
 
 interface ModalProps {
   open: boolean;
@@ -10,6 +11,7 @@ interface ModalProps {
   title?: string | ReactNode;
   className?: string;
   zeroPadding?: boolean;
+  loading?: boolean;
 }
 
 const Modal: React.FunctionComponent<ModalProps> = ({
@@ -22,6 +24,7 @@ const Modal: React.FunctionComponent<ModalProps> = ({
   title,
   className,
   zeroPadding,
+  loading,
 }) => {
   return (
     // <AnimatePresence>
@@ -71,61 +74,64 @@ const Modal: React.FunctionComponent<ModalProps> = ({
               // eslint-disable-next-line
             }
             &#8203;
-            <motion.div
-              className={`inline-block align-bottom overflow-hidden bg-white sm:rounded-lg  text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm md:max-w-full md:w-auto sm:w-full z-50 relative ${
-                className ? className : ""
-              }`}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="modal-headline"
-              variants={{
-                enter: {
-                  scale: 1,
-                  opacity: 1,
-                  transition: {
-                    duration: 0.1,
-                    ease: "easeIn",
-                    delay: 0.0,
+            {loading && <Spinner className="z-50" color="white" large />}
+            {!loading && (
+              <motion.div
+                className={`inline-block w-full sm:align-middle sm:h-auto absolute top-0 max-w-full align-bottom overflow-hidden bg-white sm:rounded-lg text-left shadow-xl transform transition-all sm:my-8 md:w-auto sm:w-full z-50 md:relative ${
+                  className ? className : ""
+                }`}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modal-headline"
+                variants={{
+                  enter: {
+                    scale: 1,
+                    opacity: 1,
+                    transition: {
+                      duration: 0.1,
+                      ease: "easeIn",
+                      delay: 0.0,
+                    },
                   },
-                },
-                exit: {
-                  scale: 0.5,
-                  opacity: 0,
-                  transition: {
-                    ease: "easeOut",
-                    delay: 0,
-                    duration: 0.1,
+                  exit: {
+                    scale: 0.5,
+                    opacity: 0,
+                    transition: {
+                      ease: "easeOut",
+                      delay: 0,
+                      duration: 0.1,
+                    },
                   },
-                },
-              }}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate="enter"
-              exit="exit"
-            >
-              <div className="flex flex-col max-h-full">
-                {title && (
+                }}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate="enter"
+                exit="exit"
+              >
+                <div className="flex flex-col max-h-full h-full">
+                  {title && (
+                    <div
+                      className={`w-full text-lg ${
+                        typeof title === "string" ? "p-6" : ""
+                      } flex-0 border-b`}
+                    >
+                      {title}
+                    </div>
+                  )}
                   <div
-                    className={`w-full text-lg ${
-                      typeof title === "string" ? "p-6" : ""
-                    } flex-0 border-b`}
+                    className={`${
+                      zeroPadding ? "p-0" : "p-4 sm:p-6"
+                    } flex-0 overflow-y-scroll`}
                   >
-                    {title}
+                    {children}
                   </div>
-                )}
-                <div
-                  className={`${
-                    zeroPadding ? "p-0" : "p-4 sm:p-6"
-                  } flex-1 overflow-y-scroll`}
-                >
-                  {children}
+                  {footer && (
+                    <div className="w-full flex-1 self-end bg-cool-gray-50 p-4 text-left border-t space-x-2 ">
+                      {footer}
+                    </div>
+                  )}
                 </div>
-                {footer && (
-                  <div className="w-full flex-0 self-end bg-cool-gray-50 p-4 text-left border-t ">
-                    {footer}
-                  </div>
-                )}
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
           </div>
         </div>
       )}

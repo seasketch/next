@@ -35,13 +35,13 @@ export class DatabaseStack extends cdk.Stack {
 
     const instance = new rds.DatabaseInstance(this, "Instance", {
       engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.of("13", "1"),
+        version: rds.PostgresEngineVersion.of("13.2", "13"),
       }),
       // Note that instance size can be changed at any time, at the cost of some
       // downtime
       instanceType: ec2.InstanceType.of(
-        ec2.InstanceClass.T3,
-        ec2.InstanceSize.SMALL
+        ec2.InstanceClass.M6G,
+        ec2.InstanceSize.XLARGE
       ),
       storageEncrypted: true,
       backupRetention: cdk.Duration.days(30),
@@ -58,6 +58,27 @@ export class DatabaseStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
       databaseName: "seasketch",
     });
+
+    const cfnInstance = instance.node.defaultChild as rds.CfnDBInstance;
+
+    const role = new iam.Role(this, "InvokeWorkerLambdas", {
+      assumedBy: new iam.ServicePrincipal("rds.amazonaws.com"),
+    });
+
+    role.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["lambda:InvokeFunction"],
+        effect: iam.Effect.ALLOW,
+        resources: [
+          `arn:aws:lambda:${props!.env!.region!}:${props!.env!
+            .account!}:function:SendProjectInvites`,
+        ],
+      })
+    );
+
+    cfnInstance.associatedRoles = [
+      { featureName: "Lambda", roleArn: role.roleArn },
+    ];
 
     // Master password will be updated every 30 days.
     instance.addRotationSingleUser({

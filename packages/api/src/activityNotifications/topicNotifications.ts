@@ -1,6 +1,6 @@
 import { sign, verify } from "../auth/jwks";
 import { DBClient } from "../dbClient";
-const HOST = process.env.HOST || "https://seasketch.org";
+const HOST = process.env.HOST || "seasketch.org";
 
 interface UnsubscribeFromTopicClaims {
   userId: number;

@@ -24,6 +24,13 @@ CREATE SCHEMA app_private;
 
 
 --
+-- Name: graphile_worker; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA graphile_worker;
+
+
+--
 -- Name: citext; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -463,6 +470,471 @@ CREATE TYPE public.tile_scheme AS ENUM (
 );
 
 
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: jobs; Type: TABLE; Schema: graphile_worker; Owner: -
+--
+
+CREATE TABLE graphile_worker.jobs (
+    id bigint NOT NULL,
+    queue_name text DEFAULT (public.gen_random_uuid())::text,
+    task_identifier text NOT NULL,
+    payload json DEFAULT '{}'::json NOT NULL,
+    priority integer DEFAULT 0 NOT NULL,
+    run_at timestamp with time zone DEFAULT now() NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    max_attempts integer DEFAULT 25 NOT NULL,
+    last_error text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    key text,
+    locked_at timestamp with time zone,
+    locked_by text,
+    revision integer DEFAULT 0 NOT NULL,
+    flags jsonb,
+    CONSTRAINT jobs_key_check CHECK ((length(key) > 0))
+);
+
+
+--
+-- Name: add_job(text, json, text, timestamp with time zone, integer, text, integer, text[], text); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker.jobs
+    LANGUAGE plpgsql
+    AS $$
+declare
+  v_job "graphile_worker".jobs;
+begin
+  -- Apply rationality checks
+  if length(identifier) > 128 then
+    raise exception 'Task identifier is too long (max length: 128).' using errcode = 'GWBID';
+  end if;
+  if queue_name is not null and length(queue_name) > 128 then
+    raise exception 'Job queue name is too long (max length: 128).' using errcode = 'GWBQN';
+  end if;
+  if job_key is not null and length(job_key) > 512 then
+    raise exception 'Job key is too long (max length: 512).' using errcode = 'GWBJK';
+  end if;
+  if max_attempts < 1 then
+    raise exception 'Job maximum attempts must be at least 1.' using errcode = 'GWBMA';
+  end if;
+  if job_key is not null and (job_key_mode is null or job_key_mode in ('replace', 'preserve_run_at')) then
+    -- Upsert job if existing job isn't locked, but in the case of locked
+    -- existing job create a new job instead as it must have already started
+    -- executing (i.e. it's world state is out of date, and the fact add_job
+    -- has been called again implies there's new information that needs to be
+    -- acted upon).
+    insert into "graphile_worker".jobs (
+      task_identifier,
+      payload,
+      queue_name,
+      run_at,
+      max_attempts,
+      key,
+      priority,
+      flags
+    )
+      values(
+        identifier,
+        coalesce(payload, '{}'::json),
+        queue_name,
+        coalesce(run_at, now()),
+        coalesce(max_attempts, 25),
+        job_key,
+        coalesce(priority, 0),
+        (
+          select jsonb_object_agg(flag, true)
+          from unnest(flags) as item(flag)
+        )
+      )
+      on conflict (key) do update set
+        task_identifier=excluded.task_identifier,
+        payload=excluded.payload,
+        queue_name=excluded.queue_name,
+        max_attempts=excluded.max_attempts,
+        run_at=(case
+          when job_key_mode = 'preserve_run_at' and jobs.attempts = 0 then jobs.run_at
+          else excluded.run_at
+        end),
+        priority=excluded.priority,
+        revision=jobs.revision + 1,
+        flags=excluded.flags,
+        -- always reset error/retry state
+        attempts=0,
+        last_error=null
+      where jobs.locked_at is null
+      returning *
+      into v_job;
+    -- If upsert succeeded (insert or update), return early
+    if not (v_job is null) then
+      return v_job;
+    end if;
+    -- Upsert failed -> there must be an existing job that is locked. Remove
+    -- existing key to allow a new one to be inserted, and prevent any
+    -- subsequent retries of existing job by bumping attempts to the max
+    -- allowed.
+    update "graphile_worker".jobs
+      set
+        key = null,
+        attempts = jobs.max_attempts
+      where key = job_key;
+  elsif job_key is not null and job_key_mode = 'unsafe_dedupe' then
+    -- Insert job, but if one already exists then do nothing, even if the
+    -- existing job has already started (and thus represents an out-of-date
+    -- world state). This is dangerous because it means that whatever state
+    -- change triggered this add_job may not be acted upon (since it happened
+    -- after the existing job started executing, but no further job is being
+    -- scheduled), but it is useful in very rare circumstances for
+    -- de-duplication. If in doubt, DO NOT USE THIS.
+    insert into "graphile_worker".jobs (
+      task_identifier,
+      payload,
+      queue_name,
+      run_at,
+      max_attempts,
+      key,
+      priority,
+      flags
+    )
+      values(
+        identifier,
+        coalesce(payload, '{}'::json),
+        queue_name,
+        coalesce(run_at, now()),
+        coalesce(max_attempts, 25),
+        job_key,
+        coalesce(priority, 0),
+        (
+          select jsonb_object_agg(flag, true)
+          from unnest(flags) as item(flag)
+        )
+      )
+      on conflict (key)
+      -- Bump the revision so that there's something to return
+      do update set revision = jobs.revision + 1
+      returning *
+      into v_job;
+    return v_job;
+  elsif job_key is not null then
+    raise exception 'Invalid job_key_mode value, expected ''replace'', ''preserve_run_at'' or ''unsafe_dedupe''.' using errcode = 'GWBKM';
+  end if;
+  -- insert the new job. Assume no conflicts due to the update above
+  insert into "graphile_worker".jobs(
+    task_identifier,
+    payload,
+    queue_name,
+    run_at,
+    max_attempts,
+    key,
+    priority,
+    flags
+  )
+    values(
+      identifier,
+      coalesce(payload, '{}'::json),
+      queue_name,
+      coalesce(run_at, now()),
+      coalesce(max_attempts, 25),
+      job_key,
+      coalesce(priority, 0),
+      (
+        select jsonb_object_agg(flag, true)
+        from unnest(flags) as item(flag)
+      )
+    )
+    returning *
+    into v_job;
+  return v_job;
+end;
+$$;
+
+
+--
+-- Name: complete_job(text, bigint); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.complete_job(worker_id text, job_id bigint) RETURNS graphile_worker.jobs
+    LANGUAGE plpgsql
+    AS $$
+declare
+  v_row "graphile_worker".jobs;
+begin
+  delete from "graphile_worker".jobs
+    where id = job_id
+    returning * into v_row;
+
+  if v_row.queue_name is not null then
+    update "graphile_worker".job_queues
+      set locked_by = null, locked_at = null
+      where queue_name = v_row.queue_name and locked_by = worker_id;
+  end if;
+
+  return v_row;
+end;
+$$;
+
+
+--
+-- Name: complete_jobs(bigint[]); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.complete_jobs(job_ids bigint[]) RETURNS SETOF graphile_worker.jobs
+    LANGUAGE sql
+    AS $$
+  delete from "graphile_worker".jobs
+    where id = any(job_ids)
+    and (
+      locked_by is null
+    or
+      locked_at < NOW() - interval '4 hours'
+    )
+    returning *;
+$$;
+
+
+--
+-- Name: fail_job(text, bigint, text); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.fail_job(worker_id text, job_id bigint, error_message text) RETURNS graphile_worker.jobs
+    LANGUAGE plpgsql STRICT
+    AS $$
+declare
+  v_row "graphile_worker".jobs;
+begin
+  update "graphile_worker".jobs
+    set
+      last_error = error_message,
+      run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
+      locked_by = null,
+      locked_at = null
+    where id = job_id and locked_by = worker_id
+    returning * into v_row;
+
+  if v_row.queue_name is not null then
+    update "graphile_worker".job_queues
+      set locked_by = null, locked_at = null
+      where queue_name = v_row.queue_name and locked_by = worker_id;
+  end if;
+
+  return v_row;
+end;
+$$;
+
+
+--
+-- Name: get_job(text, text[], interval, text[]); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[]) RETURNS graphile_worker.jobs
+    LANGUAGE plpgsql
+    AS $$
+declare
+  v_job_id bigint;
+  v_queue_name text;
+  v_row "graphile_worker".jobs;
+  v_now timestamptz = now();
+begin
+  if worker_id is null or length(worker_id) < 10 then
+    raise exception 'invalid worker id';
+  end if;
+
+  select jobs.queue_name, jobs.id into v_queue_name, v_job_id
+    from "graphile_worker".jobs
+    where (jobs.locked_at is null or jobs.locked_at < (v_now - job_expiry))
+    and (
+      jobs.queue_name is null
+    or
+      exists (
+        select 1
+        from "graphile_worker".job_queues
+        where job_queues.queue_name = jobs.queue_name
+        and (job_queues.locked_at is null or job_queues.locked_at < (v_now - job_expiry))
+        for update
+        skip locked
+      )
+    )
+    and run_at <= v_now
+    and attempts < max_attempts
+    and (task_identifiers is null or task_identifier = any(task_identifiers))
+    and (forbidden_flags is null or (flags ?| forbidden_flags) is not true)
+    order by priority asc, run_at asc, id asc
+    limit 1
+    for update
+    skip locked;
+
+  if v_job_id is null then
+    return null;
+  end if;
+
+  if v_queue_name is not null then
+    update "graphile_worker".job_queues
+      set
+        locked_by = worker_id,
+        locked_at = v_now
+      where job_queues.queue_name = v_queue_name;
+  end if;
+
+  update "graphile_worker".jobs
+    set
+      attempts = attempts + 1,
+      locked_by = worker_id,
+      locked_at = v_now
+    where id = v_job_id
+    returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+
+--
+-- Name: jobs__decrease_job_queue_count(); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.jobs__decrease_job_queue_count() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+declare
+  v_new_job_count int;
+begin
+  update "graphile_worker".job_queues
+    set job_count = job_queues.job_count - 1
+    where queue_name = old.queue_name
+    returning job_count into v_new_job_count;
+
+  if v_new_job_count <= 0 then
+    delete from "graphile_worker".job_queues where queue_name = old.queue_name and job_count <= 0;
+  end if;
+
+  return old;
+end;
+$$;
+
+
+--
+-- Name: jobs__increase_job_queue_count(); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.jobs__increase_job_queue_count() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  insert into "graphile_worker".job_queues(queue_name, job_count)
+    values(new.queue_name, 1)
+    on conflict (queue_name)
+    do update
+    set job_count = job_queues.job_count + 1;
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: permanently_fail_jobs(bigint[], text); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.permanently_fail_jobs(job_ids bigint[], error_message text DEFAULT NULL::text) RETURNS SETOF graphile_worker.jobs
+    LANGUAGE sql
+    AS $$
+  update "graphile_worker".jobs
+    set
+      last_error = coalesce(error_message, 'Manually marked as failed'),
+      attempts = max_attempts
+    where id = any(job_ids)
+    and (
+      locked_by is null
+    or
+      locked_at < NOW() - interval '4 hours'
+    )
+    returning *;
+$$;
+
+
+--
+-- Name: remove_job(text); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.remove_job(job_key text) RETURNS graphile_worker.jobs
+    LANGUAGE plpgsql STRICT
+    AS $$
+declare
+  v_job "graphile_worker".jobs;
+begin
+  -- Delete job if not locked
+  delete from "graphile_worker".jobs
+    where key = job_key
+    and locked_at is null
+  returning * into v_job;
+  if not (v_job is null) then
+    return v_job;
+  end if;
+  -- Otherwise prevent job from retrying, and clear the key
+  update "graphile_worker".jobs
+    set attempts = max_attempts, key = null
+    where key = job_key
+  returning * into v_job;
+  return v_job;
+end;
+$$;
+
+
+--
+-- Name: reschedule_jobs(bigint[], timestamp with time zone, integer, integer, integer); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, priority integer DEFAULT NULL::integer, attempts integer DEFAULT NULL::integer, max_attempts integer DEFAULT NULL::integer) RETURNS SETOF graphile_worker.jobs
+    LANGUAGE sql
+    AS $$
+  update "graphile_worker".jobs
+    set
+      run_at = coalesce(reschedule_jobs.run_at, jobs.run_at),
+      priority = coalesce(reschedule_jobs.priority, jobs.priority),
+      attempts = coalesce(reschedule_jobs.attempts, jobs.attempts),
+      max_attempts = coalesce(reschedule_jobs.max_attempts, jobs.max_attempts)
+    where id = any(job_ids)
+    and (
+      locked_by is null
+    or
+      locked_at < NOW() - interval '4 hours'
+    )
+    returning *;
+$$;
+
+
+--
+-- Name: tg__update_timestamp(); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.tg__update_timestamp() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  new.updated_at = greatest(now(), old.updated_at + interval '1 millisecond');
+  return new;
+end;
+$$;
+
+
+--
+-- Name: tg_jobs__notify_new_jobs(); Type: FUNCTION; Schema: graphile_worker; Owner: -
+--
+
+CREATE FUNCTION graphile_worker.tg_jobs__notify_new_jobs() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  perform pg_notify('jobs:insert', '');
+  return new;
+end;
+$$;
+
+
 --
 -- Name: _delete_table_of_contents_item(integer); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -515,10 +987,6 @@ CREATE FUNCTION public._session_on_toc_item_acl(lpath public.ltree) RETURNS bool
 
 COMMENT ON FUNCTION public._session_on_toc_item_acl(lpath public.ltree) IS '@omit';
 
-
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
 
 --
 -- Name: access_control_lists; Type: TABLE; Schema: public; Owner: -
@@ -576,8 +1044,8 @@ COMMENT ON COLUMN public.access_control_lists.type IS 'Control whether access co
 CREATE TABLE public.project_groups (
     id integer NOT NULL,
     project_id integer NOT NULL,
-    name text,
-    CONSTRAINT namechk CHECK ((char_length(name) <= 32))
+    name text NOT NULL,
+    CONSTRAINT namechk CHECK (((char_length(name) <= 32) AND (char_length(name) > 0)))
 );
 
 
@@ -815,6 +1283,75 @@ CREATE FUNCTION public.add_valid_child_sketch_class(parent integer, child intege
 COMMENT ON FUNCTION public.add_valid_child_sketch_class(parent integer, child integer) IS '
 Add a SketchClass to the list of valid children for a Collection-type SketchClass.
 ';
+
+
+--
+-- Name: after_insert_or_update_or_delete_project_invite_email(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_insert_or_update_or_delete_project_invite_email() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    pid int;
+    iid int;
+  begin
+    if NEW is null then
+      -- deleting
+      select id, project_id into iid, pid from project_invites where id = OLD.project_invite_id;
+      if pid is not null and iid is not null then
+        perform pg_notify(concat('graphql:project:', pid, ':project_invite_status_change'), json_build_object('inviteId', iid)::text);
+        return NEW;
+      else
+        -- Don't raise error to prevent issues with DELETE CASCADE on project_invites
+        -- raise exception 'Could not find project_invite';
+        return NEW;
+      end if;
+    elsif NEW.project_invite_id is null then
+      -- surveys
+      return NEW;
+    elsif OLD.status != NEW.status then
+      select id, project_id into iid, pid from project_invites where id = NEW.project_invite_id;
+      if pid is not null and iid is not null then
+        perform pg_notify(concat('graphql:project:', pid, ':project_invite_status_change'), json_build_object('inviteId', iid)::text);
+        return NEW;
+      else
+        raise exception 'Could not find project_invite';
+      end if;
+    else
+      return NEW;
+    end if;
+  end;
+  $$;
+
+
+--
+-- Name: after_insert_or_update_project_invite_email(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_insert_or_update_project_invite_email() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    pid int;
+    iid int;
+  begin
+    if NEW.project_invite_id is null then
+      return NEW;
+    else if OLD is null or OLD.status != NEW.status then
+      select id, project_id into iid, pid from project_invites where id = NEW.project_invite_id;
+      if pid is not null and iid is not null then
+        perform pg_notify(concat('graphql:project:', pid, ':project_invite_status_change'), json_build_object('inviteId', iid)::text);
+        return NEW;
+      else
+        raise exception 'Could not find project_invite';
+      end if;
+    else
+      return NEW;
+    end if;
+  end if;
+  end;
+  $$;
 
 
 --
@@ -1126,9 +1663,6 @@ CREATE FUNCTION public.before_invite_emails_insert() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
   begin
-    if (NEW.status != 'QUEUED' and NEW.status != 'UNSUBSCRIBED') and (NEW.token is null or NEW.token_expires_at is null) then
-      raise exception 'token and token_expires_at must be set on invite_emails unless status = "QUEUED" or "UNSUBSCRIBED". Was %', NEW.status;
-    end if;
     -- assigning to_address
     if NEW.project_invite_id is not null then
       NEW.to_address = (select email from project_invites where id = NEW.project_invite_id);
@@ -1151,8 +1685,7 @@ CREATE FUNCTION public.before_invite_emails_insert() RETURNS trigger
       if exists (
         select 1 from invite_emails 
         where project_invite_id = new.project_invite_id and
-        (status = 'QUEUED' or status = 'SENT') and
-        (token_expires_at is null or now() < token_expires_at)
+        status = 'QUEUED'
       ) then
         return NULL;
       end if;
@@ -1161,8 +1694,7 @@ CREATE FUNCTION public.before_invite_emails_insert() RETURNS trigger
       if exists (
         select 1 from invite_emails where 
         survey_invite_id = new.survey_invite_id and
-        (status = 'QUEUED' or status = 'SENT') and
-        (token_expires_at is null or now() < token_expires_at)
+        status = 'QUEUED'
       ) then
         return NULL;
       end if;
@@ -1180,9 +1712,7 @@ CREATE FUNCTION public.before_invite_emails_update() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
   begin
-    if (NEW.status != 'QUEUED' and NEW.status != 'UNSUBSCRIBED') and (NEW.token is null or NEW.token_expires_at is null) then
-      raise exception 'token and token_expires_at must be set on invite_emails unless status = "QUEUED" or "UNSUBSCRIBED"';
-    end if;
+    NEW.updated_at = now();
     return new;
   end;
 $$;
@@ -1524,7 +2054,8 @@ CREATE TABLE public.users (
     legacy_id text,
     sub text,
     registered_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-    onboarded timestamp with time zone
+    onboarded timestamp with time zone,
+    canonical_email text NOT NULL
 );
 
 
@@ -1577,6 +2108,13 @@ Since this field is a date, it could
 hypothetically be reset as terms of service are updated, though it may be better
 to add a new property to track that.
 ';
+
+
+--
+-- Name: COLUMN users.canonical_email; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.canonical_email IS '@omit';
 
 
 --
@@ -2090,6 +2628,11 @@ CREATE TABLE public.projects (
     deleted_at timestamp with time zone,
     region public.geometry(Polygon) DEFAULT public.st_geomfromgeojson('{"coordinates":[[[-157.05324470015358,69.74201326987497],[135.18377661193057,69.74201326987497],[135.18377661193057,-43.27449014737426],[-157.05324470015358,-43.27449014737426],[-157.05324470015358,69.74201326987497]]],"type":"Polygon"}'::text) NOT NULL,
     data_sources_bucket_id text DEFAULT public.get_default_data_sources_bucket() NOT NULL,
+    invite_email_subject text DEFAULT 'You have been invited to a SeaSketch project'::text NOT NULL,
+    invite_email_template_text text DEFAULT 'Hello {{name}},
+You have been invited to join the {{projectName}} SeaSketch project. To sign up, just follow this link and you will be able to create an account and start exploring the application.
+
+{{inviteLink}}'::text NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT name_min_length CHECK ((length(name) >= 4))
 );
@@ -2235,7 +2778,7 @@ CREATE TABLE public.project_invites (
 --
 
 COMMENT ON TABLE public.project_invites IS '
-@omit all
+@omit all,update
 @simpleCollections only
 Admins can invite users to their project, adding them to user groups and 
 distributing admin privileges as needed. Invitations can be immediately sent via
@@ -2911,30 +3454,51 @@ Incoming users from Auth0 need to be represented in our database. This function 
 
 
 --
--- Name: get_project_id(text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: get_or_create_user_by_sub(text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_project_id(slug text) RETURNS integer
-    LANGUAGE sql STABLE SECURITY DEFINER
+CREATE FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, OUT user_id integer) RETURNS integer
+    LANGUAGE sql SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
     AS $$
-  SELECT
-    id
-  FROM
-    projects
-  WHERE
-    projects.slug = slug
-  LIMIT 1;
-
+  WITH ins AS (
+INSERT INTO users (sub, canonical_email)
+      VALUES (_sub, _email)
+    ON CONFLICT (sub)
+      DO NOTHING
+    RETURNING
+      users.id)
+    SELECT
+      id
+    FROM
+      ins
+    UNION ALL
+    SELECT
+      users.id
+    FROM
+      users
+    WHERE
+      sub = _sub
+    LIMIT 1
 $$;
 
 
 --
--- Name: FUNCTION get_project_id(slug text); Type: COMMENT; Schema: public; Owner: -
+-- Name: get_project_id(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.get_project_id(slug text) IS '@omit
-Enables app to determine current project from url slug or x-ss-slug header';
+CREATE FUNCTION public.get_project_id(_slug text) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select id from projects where projects.slug = _slug;
+$$;
+
+
+--
+-- Name: FUNCTION get_project_id(_slug text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_project_id(_slug text) IS '@omit';
 
 
 --
@@ -3192,6 +3756,28 @@ $$;
 --
 
 COMMENT ON FUNCTION public.is_admin(_project_id integer, _user_id integer) IS '@omit';
+
+
+--
+-- Name: is_admin(integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_admin("userId" integer, "projectSlug" text) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select coalesce(is_admin, false) from project_participants where user_id = "userId" and project_id = (select id from projects where slug = "projectSlug" and session_is_admin(id))
+  $$;
+
+
+--
+-- Name: is_admin(public.users, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_admin(u public.users, "projectSlug" text) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select coalesce(is_admin, false) from project_participants where project_id = (select id from projects where slug = "projectSlug" and session_is_admin(id))
+  $$;
 
 
 --
@@ -4008,6 +4594,53 @@ CREATE FUNCTION public.project_invites_status(invite public.project_invites) RET
         end if;
       end if;
     end;      
+  $$;
+
+
+--
+-- Name: project_participants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_participants (
+    user_id integer NOT NULL,
+    project_id integer NOT NULL,
+    is_admin boolean DEFAULT false,
+    approved boolean DEFAULT false NOT NULL,
+    requested_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+    share_profile boolean DEFAULT false NOT NULL,
+    is_banned_from_forums boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: TABLE project_participants; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_participants IS '@omit';
+
+
+--
+-- Name: COLUMN project_participants.approved; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project_participants.approved IS 'Approval status for projects with access set to invite_only';
+
+
+--
+-- Name: COLUMN project_participants.share_profile; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project_participants.share_profile IS 'Whether user profile can be shared with project administrators, and other users if participating in the forum.';
+
+
+--
+-- Name: project_participants_canonical_email(public.project_participants); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_participants_canonical_email(participant public.project_participants) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select canonical_email from users where id = participant.user_id;
   $$;
 
 
@@ -4856,7 +5489,7 @@ CREATE FUNCTION public.projects_invites(p public.projects, statuses public.invit
     where 
       session_is_admin(p.id) and 
       project_id = p.id and 
-      project_invites_status(project_invites.*) = any (statuses)
+      (array_length(statuses, 1) is null or project_invites_status(project_invites.*) = any (statuses))
     order by
       (CASE WHEN "orderBy" = 'EMAIL' and "direction" = 'ASC' THEN email
             WHEN "orderBy" = 'NAME' and "direction" = 'ASC' THEN fullname
@@ -4874,6 +5507,26 @@ CREATE FUNCTION public.projects_invites(p public.projects, statuses public.invit
 --
 
 COMMENT ON FUNCTION public.projects_invites(p public.projects, statuses public.invite_status[], "orderBy" public.invite_order_by, direction public.sort_by_direction) IS 'List project invites by status';
+
+
+--
+-- Name: projects_is_admin(public.projects, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_is_admin(p public.projects, "userId" integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select coalesce(is_admin, false) from project_participants where user_id = "userId" and project_id = p.id and session_is_admin(p.id);
+  $$;
+
+
+--
+-- Name: FUNCTION projects_is_admin(p public.projects, "userId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_is_admin(p public.projects, "userId" integer) IS '
+Returns true if the given user is an administrator of the project. Informaiton is only available administrators of the project and will otherwise always return false.
+';
 
 
 --
@@ -4974,7 +5627,7 @@ CREATE FUNCTION public.projects_participants(p public.projects, order_by public.
         user_profiles.email
       END
     END DESC
-$$;
+  $$;
 
 
 --
@@ -5821,6 +6474,8 @@ Send all UNSENT invites in the current project.
 CREATE FUNCTION public.send_project_invites("inviteIds" integer[]) RETURNS SETOF public.invite_emails
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
+    declare
+      emails int[];
     begin
       if exists(
         select 1 from projects where id = any(
@@ -5829,7 +6484,11 @@ CREATE FUNCTION public.send_project_invites("inviteIds" integer[]) RETURNS SETOF
       ) then
         raise exception 'Must be project administrator';
       end if;
-      return query insert into invite_emails (project_invite_id) select unnest("inviteIds") returning *;
+      with new_emails (id) as (
+        insert into invite_emails (project_invite_id) select unnest("inviteIds") returning *
+      ) select array_agg(id) into emails from new_emails;
+      perform graphile_worker.add_job('sendProjectInviteEmail', json_build_object('emailId', id), max_attempts := 13, job_key := concat('project_invite_', invite_emails.project_invite_id)) from invite_emails where id = any(emails);
+      return query select * from invite_emails where id = any(emails);
     end;
   $$;
 
@@ -6503,6 +7162,36 @@ Admins can use this mutation to place topics at the top of the forum listing.
 
 
 --
+-- Name: set_user_groups(integer, integer, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_user_groups("userId" integer, "projectId" integer, groups integer[]) RETURNS integer[]
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin 
+      if session_is_admin("projectId") or session_is_superuser() THEN
+        delete from project_group_members where user_id = "userId" and group_id in (select id from project_groups where project_id = "projectId");
+        for i IN 1 ..coalesce(array_upper(groups, 1), 0) loop
+          insert into project_group_members (user_id, group_id) values ("userId", groups[i]);
+        end loop;
+        return groups;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end
+  $$;
+
+
+--
+-- Name: FUNCTION set_user_groups("userId" integer, "projectId" integer, groups integer[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.set_user_groups("userId" integer, "projectId" integer, groups integer[]) IS '
+Sets the list of groups that the given user belongs to. Will clear all other group memberships in the project. Available only to admins.
+';
+
+
+--
 -- Name: shared_basemaps(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6775,6 +7464,26 @@ CREATE FUNCTION public.slugify(value text, allow_unicode boolean) RETURNS text
   ) FROM "normalized";
 
 $$;
+
+
+--
+-- Name: subscription_authorization_func(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.subscription_authorization_func(topic text) RETURNS text
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+    begin
+      RAISE EXCEPTION 'Subscription denied';
+      IF session_is_admin(200) THEN
+        RETURN 'go-nuts';
+      ELSE
+        RAISE EXCEPTION 'Subscription denied';
+      END IF;
+    end;
+  $$;
 
 
 --
@@ -7084,6 +7793,66 @@ COMMENT ON FUNCTION public.template_forms() IS '@simpleCollections only';
 
 
 --
+-- Name: toggle_admin_access(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.toggle_admin_access("projectId" integer, "userId" integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    DECLARE
+      already_admin boolean;
+    BEGIN
+      IF session_is_admin("projectId") or session_is_superuser() THEN
+        IF exists(select 1 from project_participants where user_id = "userId" and project_id = "projectId" and share_profile = true) THEN
+          select is_admin into already_admin from project_participants where user_id = "userId" and project_id = "projectId";
+          update project_participants set is_admin = not(already_admin) where user_id = "userId" and project_id = "projectId";
+          return not(already_admin);
+        ELSE
+          raise exception 'User must join the project and share their user profile first.';
+        END IF;
+      ELSE
+        raise exception 'You must be a project administrator';
+      END IF;
+    END
+  $$;
+
+
+--
+-- Name: FUNCTION toggle_admin_access("projectId" integer, "userId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.toggle_admin_access("projectId" integer, "userId" integer) IS 'Toggle admin access for the given project and user. User must have already joined the project and shared their user profile.';
+
+
+--
+-- Name: toggle_forum_posting_ban(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.toggle_forum_posting_ban("userId" integer, "projectId" integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      is_banned boolean;
+    begin
+      if session_is_admin("projectId") then
+        select is_banned_from_forums into is_banned from project_participants where project_id = "projectId" and user_id = "userId";
+        update project_participants set is_banned_from_forums = not(is_banned) where project_id = "projectId" and user_id = "userId";
+        return not(is_banned);
+      else
+        raise exception 'Must be project admin';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION toggle_forum_posting_ban("userId" integer, "projectId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.toggle_forum_posting_ban("userId" integer, "projectId" integer) IS 'Ban a user from posting in the discussion forum';
+
+
+--
 -- Name: topics_author_profile(public.topics); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7208,6 +7977,46 @@ CREATE FUNCTION public.update_post("postId" integer, message jsonb) RETURNS publ
 COMMENT ON FUNCTION public.update_post("postId" integer, message jsonb) IS '
 Updates the contents of the post. Can only be used by the author for 5 minutes after posting.
 ';
+
+
+--
+-- Name: update_project_invite(integer, boolean, text, text, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) RETURNS public.project_invites
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+      status invite_status;
+      current_email text;
+      used boolean;
+      _email text;
+      _make_admin boolean;
+      _fullname text;
+      invite project_invites;
+    begin
+      select "email", "make_admin", "fullname" into _email, _make_admin, _fullname;
+      select project_id, project_invites_status(project_invites.*), project_invites.email, was_used into pid, status, current_email, used from project_invites where project_invites.id = "inviteId";
+      if session_is_admin(pid) then
+        if status != 'UNSENT'::invite_status and current_email != _email then
+          raise exception 'Cannot change email if invite has already been sent.';
+        end if;
+        if used is true then
+          raise exception 'Cannot update invite if it has already been used.';
+        end if;
+        update project_invites set email = _email, fullname = _fullname, make_admin = _make_admin where id = "inviteId";
+        delete from project_invite_groups where invite_id = "inviteId";
+        for i IN 1 ..coalesce(array_upper(groups, 1), 0) loop
+          insert into project_invite_groups (invite_id, group_id) values ("inviteId", "groups"[i]);
+        end loop;
+        select * into invite from project_invites where project_invites.id = "inviteId";
+        return invite;
+      else
+        raise exception 'Must be a project admin';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -7465,17 +8274,17 @@ $$;
 
 
 --
--- Name: users_banned_from_forums(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: users_banned_from_forums(public.users); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.users_banned_from_forums(u public.users, "projectId" integer) RETURNS boolean
+CREATE FUNCTION public.users_banned_from_forums(u public.users) RETURNS boolean
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
     declare
       is_banned boolean;
     begin
-      if session_is_admin("projectId") then
-        select is_banned_from_forums into is_banned from project_participants where project_id = "projectId" and user_id = u.id;
+      if session_is_admin(current_setting('session.project_id', true)::int) then
+        select is_banned_from_forums into is_banned from project_participants where project_id = current_setting('session.project_id', true)::int and user_id = u.id;
         return is_banned;
       else
         raise exception 'Must be a project admin';
@@ -7485,38 +8294,87 @@ CREATE FUNCTION public.users_banned_from_forums(u public.users, "projectId" inte
 
 
 --
--- Name: FUNCTION users_banned_from_forums(u public.users, "projectId" integer); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION users_banned_from_forums(u public.users); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.users_banned_from_forums(u public.users, "projectId" integer) IS 'Whether the user has been banned from the forums. Use `disableForumPosting()` and `enableForumPosting()` mutations to modify this state. Accessible only to admins.';
+COMMENT ON FUNCTION public.users_banned_from_forums(u public.users) IS 'Whether the user has been banned from the forums. Use `disableForumPosting()` and `enableForumPosting()` mutations to modify this state. Accessible only to admins.';
 
 
 --
--- Name: users_is_admin(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: users_canonical_email(public.users); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.users_is_admin(u public.users, project integer) RETURNS boolean
-    LANGUAGE plpgsql STABLE
+CREATE FUNCTION public.users_canonical_email(_user public.users) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT
-      user_id
-    FROM
-      project_participants
-    WHERE
-      project_participants.user_id = u.id
-      AND project_participants.is_admin = TRUE
-      AND project_participants.project_id = project);
-END
-$$;
+    select canonical_email from users where id in (select user_id from project_participants where project_participants.user_id = _user.id and session_is_admin(project_participants.project_id))
+  $$;
 
 
 --
--- Name: FUNCTION users_is_admin(u public.users, project integer); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION users_canonical_email(_user public.users); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.users_is_admin(u public.users, project integer) IS '@omit';
+COMMENT ON FUNCTION public.users_canonical_email(_user public.users) IS '
+Only visible to admins of projects a user has joined. Can be used for identification purposes since users will not gain any access control privileges until this email has been confirmed.
+';
+
+
+--
+-- Name: users_groups(public.users); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_groups(u public.users) RETURNS SETOF public.project_groups
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select 
+      * 
+    from 
+      project_groups 
+    where 
+      project_id = (
+        current_setting('session.project_id', true)::int
+      ) and 
+      session_is_admin(current_setting('session.project_id', true)::int) and
+      id = any((
+        select group_id from project_group_members where user_id = u.id
+      ))
+  $$;
+
+
+--
+-- Name: FUNCTION users_groups(u public.users); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.users_groups(u public.users) IS '
+@simpleCollections only
+List of groups for the given project and user. Only available to project admins.
+';
+
+
+--
+-- Name: users_is_admin(public.users); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_is_admin(u public.users) RETURNS boolean
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      "isAdmin" boolean;
+    begin
+      select coalesce(is_admin, false) into "isAdmin" from project_participants where user_id = u.id and project_id = current_setting('session.project_id', true)::int and session_is_admin(current_setting('session.project_id', true)::int);
+      return coalesce("isAdmin", false);
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION users_is_admin(u public.users); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.users_is_admin(u public.users) IS '
+Indicates if user is admin on the current project, indicated by the `x-ss-slug` header.
+';
 
 
 --
@@ -7592,6 +8450,58 @@ CREATE FUNCTION public.users_participation_status(u public.users, "projectId" in
     'none'::participation_status
   end
 $$;
+
+
+--
+-- Name: job_queues; Type: TABLE; Schema: graphile_worker; Owner: -
+--
+
+CREATE TABLE graphile_worker.job_queues (
+    queue_name text NOT NULL,
+    job_count integer NOT NULL,
+    locked_at timestamp with time zone,
+    locked_by text
+);
+
+
+--
+-- Name: jobs_id_seq; Type: SEQUENCE; Schema: graphile_worker; Owner: -
+--
+
+CREATE SEQUENCE graphile_worker.jobs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: jobs_id_seq; Type: SEQUENCE OWNED BY; Schema: graphile_worker; Owner: -
+--
+
+ALTER SEQUENCE graphile_worker.jobs_id_seq OWNED BY graphile_worker.jobs.id;
+
+
+--
+-- Name: known_crontabs; Type: TABLE; Schema: graphile_worker; Owner: -
+--
+
+CREATE TABLE graphile_worker.known_crontabs (
+    identifier text NOT NULL,
+    known_since timestamp with time zone NOT NULL,
+    last_execution timestamp with time zone
+);
+
+
+--
+-- Name: migrations; Type: TABLE; Schema: graphile_worker; Owner: -
+--
+
+CREATE TABLE graphile_worker.migrations (
+    id integer NOT NULL,
+    ts timestamp with time zone DEFAULT now() NOT NULL
+);
 
 
 --
@@ -7928,6 +8838,15 @@ ALTER TABLE public.forums ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 
 --
+-- Name: has_complaint; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.has_complaint (
+    "exists" boolean
+);
+
+
+--
 -- Name: interactivity_settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -8190,42 +9109,6 @@ ALTER TABLE public.project_invites ALTER COLUMN id ADD GENERATED BY DEFAULT AS I
     NO MAXVALUE
     CACHE 1
 );
-
-
---
--- Name: project_participants; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.project_participants (
-    user_id integer NOT NULL,
-    project_id integer NOT NULL,
-    is_admin boolean DEFAULT false,
-    approved boolean DEFAULT false NOT NULL,
-    requested_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-    share_profile boolean DEFAULT false NOT NULL,
-    is_banned_from_forums boolean DEFAULT false NOT NULL
-);
-
-
---
--- Name: TABLE project_participants; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.project_participants IS '@omit';
-
-
---
--- Name: COLUMN project_participants.approved; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.project_participants.approved IS 'Approval status for projects with access set to invite_only';
-
-
---
--- Name: COLUMN project_participants.share_profile; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.project_participants.share_profile IS 'Whether user profile can be shared with project administrators, and other users if participating in the forum.';
 
 
 --
@@ -8530,6 +9413,53 @@ ALTER TABLE public.users ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- Name: jobs id; Type: DEFAULT; Schema: graphile_worker; Owner: -
+--
+
+ALTER TABLE ONLY graphile_worker.jobs ALTER COLUMN id SET DEFAULT nextval('graphile_worker.jobs_id_seq'::regclass);
+
+
+--
+-- Name: job_queues job_queues_pkey; Type: CONSTRAINT; Schema: graphile_worker; Owner: -
+--
+
+ALTER TABLE ONLY graphile_worker.job_queues
+    ADD CONSTRAINT job_queues_pkey PRIMARY KEY (queue_name);
+
+
+--
+-- Name: jobs jobs_key_key; Type: CONSTRAINT; Schema: graphile_worker; Owner: -
+--
+
+ALTER TABLE ONLY graphile_worker.jobs
+    ADD CONSTRAINT jobs_key_key UNIQUE (key);
+
+
+--
+-- Name: jobs jobs_pkey; Type: CONSTRAINT; Schema: graphile_worker; Owner: -
+--
+
+ALTER TABLE ONLY graphile_worker.jobs
+    ADD CONSTRAINT jobs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: known_crontabs known_crontabs_pkey; Type: CONSTRAINT; Schema: graphile_worker; Owner: -
+--
+
+ALTER TABLE ONLY graphile_worker.known_crontabs
+    ADD CONSTRAINT known_crontabs_pkey PRIMARY KEY (identifier);
+
+
+--
+-- Name: migrations migrations_pkey; Type: CONSTRAINT; Schema: graphile_worker; Owner: -
+--
+
+ALTER TABLE ONLY graphile_worker.migrations
+    ADD CONSTRAINT migrations_pkey PRIMARY KEY (id);
 
 
 --
@@ -9028,6 +9958,13 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: jobs_priority_run_at_id_locked_at_without_failures_idx; Type: INDEX; Schema: graphile_worker; Owner: -
+--
+
+CREATE INDEX jobs_priority_run_at_id_locked_at_without_failures_idx ON graphile_worker.jobs USING btree (priority, run_at, id, locked_at) WHERE (attempts < max_attempts);
+
+
+--
 -- Name: access_control_list_groups_access_control_list_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9522,6 +10459,62 @@ CREATE INDEX user_profiles_user_id_idx ON public.user_profiles USING btree (user
 --
 
 CREATE INDEX users_sub ON public.users USING btree (sub);
+
+
+--
+-- Name: jobs _100_timestamps; Type: TRIGGER; Schema: graphile_worker; Owner: -
+--
+
+CREATE TRIGGER _100_timestamps BEFORE UPDATE ON graphile_worker.jobs FOR EACH ROW EXECUTE FUNCTION graphile_worker.tg__update_timestamp();
+
+
+--
+-- Name: jobs _500_decrease_job_queue_count; Type: TRIGGER; Schema: graphile_worker; Owner: -
+--
+
+CREATE TRIGGER _500_decrease_job_queue_count AFTER DELETE ON graphile_worker.jobs FOR EACH ROW WHEN ((old.queue_name IS NOT NULL)) EXECUTE FUNCTION graphile_worker.jobs__decrease_job_queue_count();
+
+
+--
+-- Name: jobs _500_decrease_job_queue_count_update; Type: TRIGGER; Schema: graphile_worker; Owner: -
+--
+
+CREATE TRIGGER _500_decrease_job_queue_count_update AFTER UPDATE OF queue_name ON graphile_worker.jobs FOR EACH ROW WHEN (((new.queue_name IS DISTINCT FROM old.queue_name) AND (old.queue_name IS NOT NULL))) EXECUTE FUNCTION graphile_worker.jobs__decrease_job_queue_count();
+
+
+--
+-- Name: jobs _500_increase_job_queue_count; Type: TRIGGER; Schema: graphile_worker; Owner: -
+--
+
+CREATE TRIGGER _500_increase_job_queue_count AFTER INSERT ON graphile_worker.jobs FOR EACH ROW WHEN ((new.queue_name IS NOT NULL)) EXECUTE FUNCTION graphile_worker.jobs__increase_job_queue_count();
+
+
+--
+-- Name: jobs _500_increase_job_queue_count_update; Type: TRIGGER; Schema: graphile_worker; Owner: -
+--
+
+CREATE TRIGGER _500_increase_job_queue_count_update AFTER UPDATE OF queue_name ON graphile_worker.jobs FOR EACH ROW WHEN (((new.queue_name IS DISTINCT FROM old.queue_name) AND (new.queue_name IS NOT NULL))) EXECUTE FUNCTION graphile_worker.jobs__increase_job_queue_count();
+
+
+--
+-- Name: jobs _900_notify_worker; Type: TRIGGER; Schema: graphile_worker; Owner: -
+--
+
+CREATE TRIGGER _900_notify_worker AFTER INSERT ON graphile_worker.jobs FOR EACH STATEMENT EXECUTE FUNCTION graphile_worker.tg_jobs__notify_new_jobs();
+
+
+--
+-- Name: invite_emails _500_gql_insert_or_update_or_delete_project_invite_email; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER _500_gql_insert_or_update_or_delete_project_invite_email AFTER INSERT OR DELETE OR UPDATE ON public.invite_emails FOR EACH ROW EXECUTE FUNCTION public.after_insert_or_update_or_delete_project_invite_email();
+
+
+--
+-- Name: invite_emails _500_gql_insert_or_update_project_invite_email; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER _500_gql_insert_or_update_project_invite_email AFTER UPDATE ON public.invite_emails FOR EACH ROW EXECUTE FUNCTION public.after_insert_or_update_project_invite_email();
 
 
 --
@@ -10078,14 +11071,7 @@ ALTER TABLE ONLY public.project_groups
 --
 
 ALTER TABLE ONLY public.project_invite_groups
-    ADD CONSTRAINT project_invite_groups_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.project_groups(id);
-
-
---
--- Name: CONSTRAINT project_invite_groups_group_id_fkey ON project_invite_groups; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON CONSTRAINT project_invite_groups_group_id_fkey ON public.project_invite_groups IS '@omit';
+    ADD CONSTRAINT project_invite_groups_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.project_groups(id) ON DELETE CASCADE;
 
 
 --
@@ -10093,14 +11079,7 @@ COMMENT ON CONSTRAINT project_invite_groups_group_id_fkey ON public.project_invi
 --
 
 ALTER TABLE ONLY public.project_invite_groups
-    ADD CONSTRAINT project_invite_groups_invite_id_fkey FOREIGN KEY (invite_id) REFERENCES public.project_invites(id);
-
-
---
--- Name: CONSTRAINT project_invite_groups_invite_id_fkey ON project_invite_groups; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON CONSTRAINT project_invite_groups_invite_id_fkey ON public.project_invite_groups IS '@omit';
+    ADD CONSTRAINT project_invite_groups_invite_id_fkey FOREIGN KEY (invite_id) REFERENCES public.project_invites(id) ON DELETE CASCADE;
 
 
 --
@@ -10486,6 +11465,24 @@ ALTER TABLE ONLY public.user_profiles
 
 COMMENT ON CONSTRAINT user_profiles_user_id_fkey ON public.user_profiles IS '@omit many';
 
+
+--
+-- Name: job_queues; Type: ROW SECURITY; Schema: graphile_worker; Owner: -
+--
+
+ALTER TABLE graphile_worker.job_queues ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: jobs; Type: ROW SECURITY; Schema: graphile_worker; Owner: -
+--
+
+ALTER TABLE graphile_worker.jobs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: known_crontabs; Type: ROW SECURITY; Schema: graphile_worker; Owner: -
+--
+
+ALTER TABLE graphile_worker.known_crontabs ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: access_control_lists; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11521,6 +12518,13 @@ REVOKE ALL ON FUNCTION public.spheroid_out(public.spheroid) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION gen_random_uuid(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.gen_random_uuid() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION gen_random_uuid(); Type: ACL; Schema: pg_catalog; Owner: -
 --
 
@@ -12126,6 +13130,20 @@ REVOKE ALL ON FUNCTION public.addgeometrycolumn(schema_name character varying, t
 --
 
 REVOKE ALL ON FUNCTION public.addgeometrycolumn(catalog_name character varying, schema_name character varying, table_name character varying, column_name character varying, new_srid_in integer, new_type character varying, new_dim integer, use_typmod boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_insert_or_update_or_delete_project_invite_email(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_insert_or_update_or_delete_project_invite_email() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_insert_or_update_project_invite_email(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_insert_or_update_project_invite_email() FROM PUBLIC;
 
 
 --
@@ -12741,6 +13759,20 @@ GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
 
 
 --
+-- Name: COLUMN projects.invite_email_subject; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.invite_email_template_text; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(invite_email_template_text),UPDATE(invite_email_template_text) ON TABLE public.projects TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -13083,13 +14115,6 @@ REVOKE ALL ON FUNCTION public.find_srid(character varying, character varying, ch
 --
 
 REVOKE ALL ON FUNCTION public.gen_random_bytes(integer) FROM PUBLIC;
-
-
---
--- Name: FUNCTION gen_random_uuid(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.gen_random_uuid() FROM PUBLIC;
 
 
 --
@@ -13869,6 +14894,14 @@ GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, OUT user_id in
 
 
 --
+-- Name: FUNCTION get_or_create_user_by_sub(_sub text, _email text, OUT user_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, OUT user_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, OUT user_id integer) TO anon;
+
+
+--
 -- Name: FUNCTION get_proj4_from_srid(integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -13876,11 +14909,11 @@ REVOKE ALL ON FUNCTION public.get_proj4_from_srid(integer) FROM PUBLIC;
 
 
 --
--- Name: FUNCTION get_project_id(slug text); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION get_project_id(_slug text); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.get_project_id(slug text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_project_id(slug text) TO anon;
+REVOKE ALL ON FUNCTION public.get_project_id(_slug text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_project_id(_slug text) TO anon;
 
 
 --
@@ -14007,6 +15040,22 @@ GRANT ALL ON FUNCTION public.initialize_survey_form_from_template(survey_id inte
 --
 
 REVOKE ALL ON FUNCTION public.is_admin(_project_id integer, _user_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION is_admin("userId" integer, "projectSlug" text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.is_admin("userId" integer, "projectSlug" text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.is_admin("userId" integer, "projectSlug" text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION is_admin(u public.users, "projectSlug" text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.is_admin(u public.users, "projectSlug" text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.is_admin(u public.users, "projectSlug" text) TO seasketch_user;
 
 
 --
@@ -15194,6 +16243,20 @@ GRANT ALL ON FUNCTION public.project_invites_status(invite public.project_invite
 
 
 --
+-- Name: TABLE project_participants; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
+
+
+--
+-- Name: FUNCTION project_participants_canonical_email(participant public.project_participants); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_participants_canonical_email(participant public.project_participants) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION projects_admin_count(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15583,6 +16646,14 @@ GRANT ALL ON FUNCTION public.projects_invites(p public.projects, statuses public
 
 
 --
+-- Name: FUNCTION projects_is_admin(p public.projects, "userId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_is_admin(p public.projects, "userId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_is_admin(p public.projects, "userId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_my_folders(project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15820,6 +16891,20 @@ GRANT ALL ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" i
 
 
 --
+-- Name: COLUMN invite_emails.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.invite_emails TO seasketch_user;
+
+
+--
+-- Name: COLUMN invite_emails.to_address; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(to_address) ON TABLE public.invite_emails TO seasketch_user;
+
+
+--
 -- Name: COLUMN invite_emails.project_invite_id; Type: ACL; Schema: public; Owner: -
 --
 
@@ -15859,6 +16944,13 @@ GRANT SELECT(updated_at) ON TABLE public.invite_emails TO seasketch_user;
 --
 
 GRANT SELECT(token_expires_at) ON TABLE public.invite_emails TO seasketch_user;
+
+
+--
+-- Name: COLUMN invite_emails.error; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(error) ON TABLE public.invite_emails TO seasketch_user;
 
 
 --
@@ -16081,6 +17173,14 @@ GRANT ALL ON FUNCTION public.set_topic_locked("topicId" integer, value boolean) 
 
 REVOKE ALL ON FUNCTION public.set_topic_sticky("topicId" integer, value boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.set_topic_sticky("topicId" integer, value boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION set_user_groups("userId" integer, "projectId" integer, groups integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_user_groups("userId" integer, "projectId" integer, groups integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_user_groups("userId" integer, "projectId" integer, groups integer[]) TO seasketch_user;
 
 
 --
@@ -19020,6 +20120,14 @@ REVOKE ALL ON FUNCTION public.subpath(public.ltree, integer, integer) FROM PUBLI
 
 
 --
+-- Name: FUNCTION subscription_authorization_func(topic text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.subscription_authorization_func(topic text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.subscription_authorization_func(topic text) TO anon;
+
+
+--
 -- Name: FUNCTION survey_group_ids(id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19162,6 +20270,22 @@ REVOKE ALL ON FUNCTION public.texticregexne(public.citext, public.citext) FROM P
 
 
 --
+-- Name: FUNCTION toggle_admin_access("projectId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.toggle_admin_access("projectId" integer, "userId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.toggle_admin_access("projectId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION toggle_forum_posting_ban("userId" integer, "projectId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.toggle_forum_posting_ban("userId" integer, "projectId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.toggle_forum_posting_ban("userId" integer, "projectId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION topics_author_profile(topic public.topics); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19225,6 +20349,14 @@ GRANT ALL ON FUNCTION public.unsubscribed("userId" integer) TO graphile;
 
 REVOKE ALL ON FUNCTION public.update_post("postId" integer, message jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_post("postId" integer, message jsonb) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) TO seasketch_user;
 
 
 --
@@ -19296,19 +20428,36 @@ REVOKE ALL ON FUNCTION public.updategeometrysrid(catalogn_name character varying
 
 
 --
--- Name: FUNCTION users_banned_from_forums(u public.users, "projectId" integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION users_banned_from_forums(u public.users); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.users_banned_from_forums(u public.users, "projectId" integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.users_banned_from_forums(u public.users, "projectId" integer) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.users_banned_from_forums(u public.users) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_banned_from_forums(u public.users) TO anon;
 
 
 --
--- Name: FUNCTION users_is_admin(u public.users, project integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION users_canonical_email(_user public.users); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.users_is_admin(u public.users, project integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.users_is_admin(u public.users, project integer) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.users_canonical_email(_user public.users) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_canonical_email(_user public.users) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION users_groups(u public.users); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_groups(u public.users) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_groups(u public.users) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION users_is_admin(u public.users); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_is_admin(u public.users) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_is_admin(u public.users) TO seasketch_user;
+GRANT ALL ON FUNCTION public.users_is_admin(u public.users) TO anon;
 
 
 --
@@ -19670,13 +20819,6 @@ GRANT ALL ON TABLE public.project_invite_groups TO seasketch_user;
 
 
 --
--- Name: TABLE project_participants; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
-
-
---
 -- Name: TABLE projects_shared_basemaps; Type: ACL; Schema: public; Owner: -
 --
 
@@ -19695,7 +20837,7 @@ GRANT SELECT ON TABLE public.sprite_images TO anon;
 -- Name: TABLE survey_invited_groups; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT INSERT,DELETE ON TABLE public.survey_invited_groups TO seasketch_user;
+GRANT SELECT,INSERT,DELETE ON TABLE public.survey_invited_groups TO seasketch_user;
 
 
 --
@@ -19703,6 +20845,23 @@ GRANT INSERT,DELETE ON TABLE public.survey_invited_groups TO seasketch_user;
 --
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE ALL ON FUNCTIONS  FROM PUBLIC;
+
+
+--
+-- Name: postgraphile_watch_ddl; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER postgraphile_watch_ddl ON ddl_command_end
+         WHEN TAG IN ('ALTER AGGREGATE', 'ALTER DOMAIN', 'ALTER EXTENSION', 'ALTER FOREIGN TABLE', 'ALTER FUNCTION', 'ALTER POLICY', 'ALTER SCHEMA', 'ALTER TABLE', 'ALTER TYPE', 'ALTER VIEW', 'COMMENT', 'CREATE AGGREGATE', 'CREATE DOMAIN', 'CREATE EXTENSION', 'CREATE FOREIGN TABLE', 'CREATE FUNCTION', 'CREATE INDEX', 'CREATE POLICY', 'CREATE RULE', 'CREATE SCHEMA', 'CREATE TABLE', 'CREATE TABLE AS', 'CREATE VIEW', 'DROP AGGREGATE', 'DROP DOMAIN', 'DROP EXTENSION', 'DROP FOREIGN TABLE', 'DROP FUNCTION', 'DROP INDEX', 'DROP OWNED', 'DROP POLICY', 'DROP RULE', 'DROP SCHEMA', 'DROP TABLE', 'DROP TYPE', 'DROP VIEW', 'GRANT', 'REVOKE', 'SELECT INTO')
+   EXECUTE FUNCTION postgraphile_watch.notify_watchers_ddl();
+
+
+--
+-- Name: postgraphile_watch_drop; Type: EVENT TRIGGER; Schema: -; Owner: -
+--
+
+CREATE EVENT TRIGGER postgraphile_watch_drop ON sql_drop
+   EXECUTE FUNCTION postgraphile_watch.notify_watchers_drop();
 
 
 --

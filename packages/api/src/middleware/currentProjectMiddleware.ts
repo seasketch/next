@@ -9,8 +9,7 @@ import { Pool } from "pg";
  * Populates req.projectId from request headers.
  *
  * The GraphQL api returns responses to queries such as currentProject using the
- * referrer url the request is made from, or the `x-ss-slug` header for
- * debugging purposes. It's also perfectly valid to make requests with no
+ * `x-ss-slug` header. It's also perfectly valid to make requests with no
  * project at all.
  *
  * @param {IncomingRequest} req
@@ -22,7 +21,8 @@ export default function currentProjectMiddlware(
   res: Response,
   next: Function
 ) {
-  const slug = getSlug(req.headers);
+  // @ts-ignore
+  const slug = getSlug(req.headers, req.connectionParams);
   if (slug) {
     getProjectIdFromSlug(slug)
       .then((projectId) => {
@@ -37,16 +37,17 @@ export default function currentProjectMiddlware(
   }
 }
 
-function getSlug(headers: IncomingHttpHeaders) {
-  if (headers["x-ss-slug"]) {
-    return Array.isArray(headers["x-ss-slug"])
-      ? headers["x-ss-slug"][0]
-      : headers["x-ss-slug"];
-  } else if (headers["referer"]) {
-    const url = new URL(headers["referer"]);
-    if (/\/p\//.test(url.pathname)) {
-      return url.pathname.split("/")[2];
-    }
+function getSlug(
+  headers: IncomingHttpHeaders,
+  connectionParams?: IncomingHttpHeaders
+) {
+  const headerValue =
+    // http requests
+    headers["x-ss-slug"] ||
+    // websockets
+    (connectionParams && connectionParams["x-ss-slug"]);
+  if (headerValue) {
+    return Array.isArray(headerValue) ? headerValue[0] : headerValue;
   }
 }
 
@@ -56,10 +57,7 @@ async function getProjectIdFromSlug(slug: string): Promise<number | undefined> {
   if (id) {
     return parseInt(id);
   } else {
-    const results = await pool.query(
-      `select id from projects where slug = $1`,
-      [slug]
-    );
+    const results = await pool.query(`select get_project_id($1) as id`, [slug]);
     if (results.rowCount === 0) {
       throw new Error(`Session error. Unknown project ${slug}`);
     } else {

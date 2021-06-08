@@ -424,16 +424,19 @@ describe("isAdmin property", () => {
     await pool.transaction(async (conn) => {
       const adminId = await createUser(conn);
       const projectId = await createProject(conn, adminId, "public");
+      const slug = await conn.oneFirst<string>(
+        sql`select slug from projects where id = ${projectId}`
+      );
       const regularUserId = await createUser(conn);
       await addParticipant(conn, regularUserId, projectId, false, true);
       await createSession(conn, regularUserId, true, false, projectId);
       let isAdmin = await conn.oneFirst(
-        sql`select users_is_admin(users.*, ${projectId}) from users where id = ${regularUserId}`
+        sql`select users_is_admin(users.*) from users where id = ${regularUserId}`
       );
       expect(isAdmin).toBe(false);
       await createSession(conn, adminId, true, false, projectId);
       isAdmin = await conn.oneFirst(
-        sql`select users_is_admin(users.*, ${projectId}) from users where id = ${adminId}`
+        sql`select users_is_admin(users.*) from users where id = ${adminId}`
       );
       expect(isAdmin).toBe(true);
       await conn.any(sql`ROLLBACK`);
@@ -444,11 +447,14 @@ describe("isAdmin property", () => {
     await pool.transaction(async (conn) => {
       const adminId = await createUser(conn);
       const projectId = await createProject(conn, adminId, "public");
+      const slug = await conn.oneFirst<string>(
+        sql`select slug from projects where id = ${projectId}`
+      );
       const regularUserId = await createUser(conn);
       await addParticipant(conn, regularUserId, projectId, false, true);
       await createSession(conn, adminId, true, false, projectId);
       let isAdmin = await conn.oneFirst(
-        sql`select users_is_admin(users.*, ${projectId}) from users where id = ${regularUserId}`
+        sql`select users_is_admin(users.*) from users where id = ${regularUserId}`
       );
       expect(isAdmin).toBe(false);
       await conn.any(sql`ROLLBACK`);
@@ -458,11 +464,14 @@ describe("isAdmin property", () => {
     await pool.transaction(async (conn) => {
       const adminId = await createUser(conn);
       const projectId = await createProject(conn, adminId, "public");
+      const slug = await conn.oneFirst<string>(
+        sql`select slug from projects where id = ${projectId}`
+      );
       const regularUserId = await createUser(conn);
       await addParticipant(conn, regularUserId, projectId, false, true);
       await createSession(conn, regularUserId, true, false, projectId);
       let isAdmin = await conn.oneFirst(
-        sql`select users_is_admin(users.*, ${projectId}) from users where id = ${adminId}`
+        sql`select users_is_admin(users.*) from users where id = ${adminId}`
       );
       expect(isAdmin).toBe(false);
       await conn.any(sql`ROLLBACK`);

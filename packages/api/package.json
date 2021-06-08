@@ -12,7 +12,7 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "test": "jest",
+    "test": "jest --runInBand",
     "start": "node dist/src/server.js",
     "debug": "nodemon --inspect dist/src/server.js",
     "watch": "nodemon dist/src/server.js",
@@ -27,10 +27,7 @@
     "db:start": "docker-compose up -d",
     "db:stop": "docker-compose stop",
     "db:down": "docker-compose down",
-    "db:schema": "docker exec seasketch_db pg_dump --no-sync --schema-only --no-owner --exclude-schema=graphile_migrate --exclude-schema=postgraphile_watch -U postgres seasketch > ./schema.sql",
-    "services:rotatekeys": "node dist/src/scripts/rotatekeys.js",
-    "services:send-project-invites": "node dist/src/scripts/sendProjectInvites.js",
-    "services:send-survey-invites": "node dist/src/scripts/sendSurveyInvites.js"
+    "db:schema": "docker exec seasketch_db pg_dump --no-sync --schema-only --no-owner --exclude-schema=graphile_migrate --exclude-schema=postgraphile_watch -U postgres seasketch > ./schema.sql"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
@@ -40,19 +37,30 @@
     "classNameTemplate": "{classname}",
     "titleTemplate": "{title}"
   },
+  "files": [
+    "dist/"
+  ],
   "dependencies": {
+    "@graphile/pg-pubsub": "^4.11.0",
     "@types/bytes": "^3.1.0",
+    "@types/cors": "^2.8.10",
     "@types/graphql-upload": "^8.0.4",
+    "@types/mustache": "^4.1.1",
     "@types/redis": "^2.8.25",
     "@types/sanitize-html": "^1.27.0",
     "@types/uuid": "^8.3.0",
     "auth0": "^2.27.0",
     "bytes": "^3.1.0",
+    "cors": "^2.8.5",
+    "graphile-worker": "^0.11.2",
     "graphql-upload": "^11.0.0",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.8.0",
     "ms": "^2.1.2",
+    "mustache": "^4.2.0",
     "nanoid": "^3.1.17",
+    "pg-mem": "^1.9.9",
+    "pgmock2": "^2.0.6",
     "postgraphile-plugin-upload-field": "^1.0.0-alpha.10",
     "sanitize-html": "^2.3.0",
     "slugify": "^1.4.5",

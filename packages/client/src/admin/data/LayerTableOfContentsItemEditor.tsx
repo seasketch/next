@@ -107,7 +107,7 @@ export default function LayerTableOfContentsItemEditor(
   return (
     <div
       className="bg-white z-20 absolute bottom-0 w-128 flex flex-col"
-      style={{ height: "calc(100vh - 3rem)" }}
+      style={{ height: "calc(100vh)" }}
     >
       <div className="flex-0 p-4 border-b shadow-sm bg-primary-600">
         <button

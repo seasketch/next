@@ -3,7 +3,7 @@
 FROM amazon/aws-lambda-nodejs:14
 WORKDIR /var/task
 RUN npm init -y
-RUN npm install graphile-migrate pg aws-sdk
+RUN npm install graphile-migrate pg aws-sdk graphile-worker
 RUN mkdir migrations
 COPY committed migrations/committed
 RUN chmod a+r migrations/committed/*

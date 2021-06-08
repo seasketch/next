@@ -1,0 +1,37 @@
+{
+  "name": "@seasketch/email-status-handler",
+  "version": "1.0.0",
+  "description": "Lambdas for handling incoming SES email status notifications",
+  "keywords": [
+    "seasketch"
+  ],
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next#readme",
+  "license": "BSD-3-Clause",
+  "main": "src/index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1",
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "dependencies": {
+    "@seasketch/api": "^0.1.1",
+    "@seasketch/lambda-db-client": "^1.0.0",
+    "aws-sdk": "^2.910.0",
+    "mustache": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/mustache": "^4.1.1",
+    "typescript": "^4.2.4"
+  }
+}

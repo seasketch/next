@@ -12,16 +12,14 @@ import {
 } from "./helpers";
 import {
   updateStatus,
-  sendQueuedInvites,
+  sendProjectInviteEmail,
   verifyProjectInvite,
   confirmProjectInvite,
 } from "../src/invites/projectInvites";
 import { rotateKeys, verify } from "../src/auth/jwks";
-import MockSES from "aws-sdk/clients/ses";
 import ms from "ms";
 import auth0 from "auth0";
 
-jest.mock("auth0");
 // @ts-ignore
 auth0.ManagementClient.prototype.updateUser = jest.fn(() => {});
 // @ts-ignore
@@ -33,16 +31,10 @@ const pool = createPool("test");
 
 jest.setTimeout(10000);
 
+jest.mock("../src/invites/sendEmail");
+
 const exampleToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-
-jest.mock("aws-sdk/clients/ses", () => {
-  const mSES = {
-    sendBulkTemplatedEmail: jest.fn().mockReturnThis(),
-    promise: jest.fn(),
-  };
-  return jest.fn(() => mSES);
-});
 
 beforeAll(async () => {
   await rotateKeys(asPg(pool));
@@ -878,22 +870,12 @@ describe("Accepting Invites", () => {
                       ('bob@example.com', 'Bob')::project_invite_options
                     ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
+
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmail = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmail, asPg(conn));
           let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -920,25 +902,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -961,25 +932,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           await conn.any(sql`update project_invites set was_used = true`);
           let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
@@ -1006,25 +966,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -1048,25 +997,15 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
+
           let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -1103,37 +1042,26 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, true, null, array[
-                        ('bob@example.com', 'Bob')::project_invite_options
-                      ])`
+                            ('bob@example.com', 'Bob')::project_invite_options
+                          ])`
           );
           const invite2 = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                        ('bob2@example.com', 'Bob Two')::project_invite_options
-                      ])`
+                            ('bob2@example.com', 'Bob Two')::project_invite_options
+                          ])`
           );
           await clearSession(conn);
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementation(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                  {
-                    Status: "Success",
-                    MessageId: "456abc",
-                  },
-                ],
-              };
-            });
           await conn.any(
             sql`insert into project_participants (project_id, user_id, is_admin, share_profile) values (${projectId}, ${userA}, false, true)`
           );
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
+          const inviteEmail2Id = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite2.id}`
+          );
+          await sendProjectInviteEmail(inviteEmail2Id, asPg(conn));
           let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -1177,25 +1105,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, true, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -1228,25 +1145,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, array['Group A', 'Group B'], array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -1287,25 +1193,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -1341,25 +1236,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                        ('bob@example.com', 'Bob')::project_invite_options
-                      ])`
+                            ('bob@example.com', 'Bob')::project_invite_options
+                          ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           await createSession(conn, userA, true, false, projectId);
           const uid = await conn.oneFirst(
             sql`select * from confirm_project_invite_with_verified_email(${projectId})`
@@ -1391,25 +1275,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                          ('bob@example.com', 'Bob')::project_invite_options
-                        ])`
+                              ('bob@example.com', 'Bob')::project_invite_options
+                            ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           await createSession(conn, userA, false, false, projectId);
           expect(
             conn.oneFirst(
@@ -1433,8 +1306,8 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, false, false, null, array[
-                          ('bob@example.com', 'Bob')::project_invite_options
-                        ])`
+                              ('bob@example.com', 'Bob')::project_invite_options
+                            ])`
           );
           await createSession(conn, userA, true, false, projectId);
           expect(
@@ -1457,8 +1330,8 @@ describe("Accepting Invites", () => {
           const groupId = await createGroup(conn, projectId, "Group A");
           const invite = await conn.one(
             sql`select * from create_survey_invites(${surveyId}, true, true, array['Group A'], array[
-                            ('bob@example.com', 'Bob')::survey_invite_options
-                          ])`
+                                ('bob@example.com', 'Bob')::survey_invite_options
+                              ])`
           );
           await createSession(conn, userA, true, false, projectId);
           await conn.any(
@@ -1487,25 +1360,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           let token = await conn.oneFirst<string>(
             sql`select token from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -1540,25 +1402,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                        ('bob@example.com', 'Bob')::project_invite_options
-                      ])`
+                            ('bob@example.com', 'Bob')::project_invite_options
+                          ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           await createSession(conn, userA, true, false, projectId);
           const details = await conn.oneFirst(
             sql`select projects_invite(projects.*) from projects where id = ${projectId}`
@@ -1582,8 +1433,8 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, false, false, null, array[
-                        ('bob@example.com', 'Bob')::project_invite_options
-                      ])`
+                            ('bob@example.com', 'Bob')::project_invite_options
+                          ])`
           );
           const details = await conn.oneFirst(
             sql`select projects_invite(projects.*) from projects where id = ${projectId}`
@@ -1592,7 +1443,6 @@ describe("Accepting Invites", () => {
         }
       );
     });
-
     test("or is set if the user is bearing a survey invite", async () => {
       await projectTransaction(
         pool,
@@ -1605,8 +1455,8 @@ describe("Accepting Invites", () => {
           const groupId = await createGroup(conn, projectId, "Group A");
           const invite = await conn.one(
             sql`select * from create_survey_invites(${surveyId}, true, true, array['Group A'], array[
-                            ('bob@example.com', 'Bob')::survey_invite_options
-                          ])`
+                                ('bob@example.com', 'Bob')::survey_invite_options
+                              ])`
           );
           await createSession(conn, userA, true, false, projectId);
           await conn.any(
@@ -1620,7 +1470,6 @@ describe("Accepting Invites", () => {
         }
       );
     });
-
     test("returns null if anonymous", async () => {
       await projectTransaction(
         pool,
@@ -1632,25 +1481,14 @@ describe("Accepting Invites", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                        ('bob@example.com', 'Bob')::project_invite_options
-                      ])`
+                            ('bob@example.com', 'Bob')::project_invite_options
+                          ])`
           );
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           await createSession(conn);
           const details = await conn.oneFirst(
             sql`select projects_invite(projects.*) from projects where id = ${projectId}`
@@ -1661,7 +1499,6 @@ describe("Accepting Invites", () => {
     });
   });
 });
-
 describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
   test("Updates token, token_expires_at, message_id, and status. Sends to appropriate recipient", async () => {
     await projectTransaction(
@@ -1672,26 +1509,14 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
         await createSession(conn, adminId, true, false);
         const invite = await conn.one(
           sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                    ('bob@example.com', 'Bob')::project_invite_options
-                  ])`
+                        ('bob@example.com', 'Bob')::project_invite_options
+                      ])`
         );
-        const messageId = "123abc";
-        const mock = new MockSES();
-        mock
-          .sendBulkTemplatedEmail()
-          // @ts-ignore
-          .promise.mockImplementationOnce(() => {
-            return {
-              Status: [
-                {
-                  Status: "Success",
-                  MessageId: "123abc",
-                },
-              ],
-            };
-          });
         await clearSession(conn);
-        const successes = await sendQueuedInvites(asPg(conn), 20);
+        const inviteEmailId = await conn.oneFirst<number>(
+          sql`select id from invite_emails where project_invite_id = ${invite.id}`
+        );
+        await sendProjectInviteEmail(inviteEmailId, asPg(conn));
         let { status, token, token_expires_at, message_id } = await conn.one<{
           token: string;
           status: string;
@@ -1700,33 +1525,10 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
         }>(
           sql`select status, token, token_expires_at, message_id from invite_emails where project_invite_id = ${invite.id}`
         );
-        expect(
-          // @ts-ignore
-          mock.sendBulkTemplatedEmail().sendBulkTemplatedEmail
-        ).toBeCalledWith(
-          expect.objectContaining({
-            Source: "noreply@seasketch.org",
-            Template: "SeaSketchProjectInvite",
-            Destinations: [
-              expect.objectContaining({
-                Destination: {
-                  ToAddresses: ["bob@example.com"],
-                },
-                ReplacementTags: [
-                  {
-                    Name: "inviteLink",
-                    Value: expect.any(String),
-                  },
-                ],
-              }),
-            ],
-          })
-        );
         expect(status).toBe("SENT");
         expect(token.length).toBeGreaterThan(1);
         expect(token_expires_at * 1000).toBeGreaterThan(new Date().getTime());
-        expect(message_id).toBe(messageId);
-        expect(successes).toBe(1);
+        expect(message_id).toMatch(/test-email-id-\d+/);
       }
     );
   });
@@ -1738,29 +1540,19 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
         await createSession(conn, adminId, true, false);
         const invite = await conn.one(
           sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
         );
         const messageId = "123abc";
-        const mock = new MockSES();
-        mock
-          .sendBulkTemplatedEmail()
-          // @ts-ignore
-          .promise.mockImplementationOnce(() => {
-            return {
-              Status: [
-                {
-                  Status: "Success",
-                  MessageId: "123abc",
-                },
-              ],
-            };
-          });
-        expect(sendQueuedInvites(asPg(conn), 20)).rejects.toThrow(/permission/);
+        const inviteEmailId = await conn.oneFirst<number>(
+          sql`select id from invite_emails where project_invite_id = ${invite.id}`
+        );
+        expect(
+          sendProjectInviteEmail(inviteEmailId, asPg(conn))
+        ).rejects.toThrow(/permission/);
       }
     );
   });
-
   describe("Invite tokens", () => {
     test("invite tokens identify fullname, email, and project id", async () => {
       await projectTransaction(
@@ -1771,26 +1563,14 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const messageId = "123abc";
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           let { status, token, token_expires_at, message_id } = await conn.one(
             sql`select status, token, token_expires_at, message_id from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -1806,7 +1586,7 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
         }
       );
     });
-    test("project invite email tokens are only good for 60 days", async () => {
+    test("project invite email tokens are only good for 90 days", async () => {
       await projectTransaction(
         pool,
         "public",
@@ -1815,26 +1595,14 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const messageId = "123abc";
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           let { status, token, token_expires_at, message_id } = await conn.one(
             sql`select status, token, token_expires_at, message_id from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -1844,15 +1612,15 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
             "https://seasketch.org"
           );
           expect(claims.exp * 1000).toBeGreaterThan(
-            new Date().getTime() + ms("59 days")
+            new Date().getTime() + ms("89 days")
           );
           expect(claims.exp * 1000).toBeLessThan(
-            new Date().getTime() + ms("61 days")
+            new Date().getTime() + ms("91 days")
           );
         }
       );
     });
-    test("admin project invite email tokens are only good for 14 days", async () => {
+    test("admin project invite email tokens are only good for 30 days", async () => {
       await projectTransaction(
         pool,
         "public",
@@ -1861,26 +1629,14 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           await createSession(conn, adminId, true, false);
           const invite = await conn.one(
             sql`select * from create_project_invites(${projectId}, true, true, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
           );
-          const messageId = "123abc";
-          const mock = new MockSES();
-          mock
-            .sendBulkTemplatedEmail()
-            // @ts-ignore
-            .promise.mockImplementationOnce(() => {
-              return {
-                Status: [
-                  {
-                    Status: "Success",
-                    MessageId: "123abc",
-                  },
-                ],
-              };
-            });
           await clearSession(conn);
-          await sendQueuedInvites(asPg(conn), 20);
+          const inviteEmailId = await conn.oneFirst<number>(
+            sql`select id from invite_emails where project_invite_id = ${invite.id}`
+          );
+          await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           let { status, token, token_expires_at, message_id } = await conn.one(
             sql`select status, token, token_expires_at, message_id from invite_emails where project_invite_id = ${invite.id}`
           );
@@ -1891,17 +1647,16 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           );
           expect(claims.admin).toBe(true);
           expect(claims.exp * 1000).toBeGreaterThan(
-            new Date().getTime() + ms("13 days")
+            new Date().getTime() + ms("29 days")
           );
           expect(claims.exp * 1000).toBeLessThan(
-            new Date().getTime() + ms("15 days")
+            new Date().getTime() + ms("31 days")
           );
         }
       );
     });
   });
 });
-
 test("db.inviteEmails.updateStatus", async () => {
   await projectTransaction(
     pool,
@@ -1910,8 +1665,8 @@ test("db.inviteEmails.updateStatus", async () => {
       await createSession(conn, adminId, true, false);
       const invite = await conn.one(
         sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                  ('bob@example.com', 'Bob')::project_invite_options
-                ])`
+                      ('bob@example.com', 'Bob')::project_invite_options
+                    ])`
       );
       await clearSession(conn);
       await conn.any(
@@ -1923,12 +1678,7 @@ test("db.inviteEmails.updateStatus", async () => {
         sql`select project_invites_status(project_invites.*) from project_invites where id = ${invite.id}`
       );
       expect(status).toBe("SENT");
-      const count = await updateStatus(
-        asPg(conn),
-        "bob@example.com",
-        "123",
-        "Bounce"
-      );
+      const count = await updateStatus(asPg(conn), "123", "Bounce");
       expect(count).toBe(1);
       status = await conn.oneFirst(
         sql`select project_invites_status(project_invites.*) from project_invites where id = ${invite.id}`
@@ -1937,7 +1687,6 @@ test("db.inviteEmails.updateStatus", async () => {
     }
   );
 });
-
 test("Admins can access a invite_counts() property on projects", async () => {
   await projectTransaction(
     pool,
@@ -1946,8 +1695,8 @@ test("Admins can access a invite_counts() property on projects", async () => {
       await createSession(conn, adminId, true, false);
       const invite = await conn.one(
         sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                  ('bob@example.com', 'Bob')::project_invite_options
-                ])`
+                      ('bob@example.com', 'Bob')::project_invite_options
+                    ])`
       );
       await clearSession(conn);
       await conn.any(
@@ -1963,7 +1712,6 @@ test("Admins can access a invite_counts() property on projects", async () => {
     }
   );
 });
-
 test("invite_counts() returns nothing to non-admins", async () => {
   await projectTransaction(
     pool,
@@ -1972,8 +1720,8 @@ test("invite_counts() returns nothing to non-admins", async () => {
       await createSession(conn, adminId, true, false);
       const invite = await conn.one(
         sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                  ('bob@example.com', 'Bob')::project_invite_options
-                ])`
+                      ('bob@example.com', 'Bob')::project_invite_options
+                    ])`
       );
       await clearSession(conn);
       await conn.any(
@@ -1989,7 +1737,6 @@ test("invite_counts() returns nothing to non-admins", async () => {
     }
   );
 });
-
 test("project_invite_groups crud operations limited to admins", async () => {
   let groupId: number;
   let invite: { id: number };
@@ -1999,8 +1746,8 @@ test("project_invite_groups crud operations limited to admins", async () => {
       groupId = await createGroup(conn, projectId);
       invite = await conn.one(
         sql`select * from create_project_invites(${projectId}, true, false, null, array[
-                      ('bob@example.com', 'Bob')::project_invite_options
-                    ])`
+                          ('bob@example.com', 'Bob')::project_invite_options
+                        ])`
       );
       return sql`insert into project_invite_groups (group_id, invite_id) values (${groupId}, ${invite.id}) returning *`;
     },
@@ -2010,7 +1757,6 @@ test("project_invite_groups crud operations limited to admins", async () => {
     },
   });
 });
-
 test("Mailer updates email status if user is UNSUBSCRIBED", async () => {
   await projectTransaction(
     pool,
@@ -2018,6 +1764,9 @@ test("Mailer updates email status if user is UNSUBSCRIBED", async () => {
     async (conn, projectId, adminId, [userA, userB]) => {
       await rotateKeys(asPg(conn));
       const userId = await createUser(conn);
+      const canonicalEmail = await conn.oneFirst(
+        sql`select canonical_email from users where id = ${userId}`
+      );
       const sub = await conn.oneFirst(
         sql`select sub from users where id = ${userId}`
       );
@@ -2027,24 +1776,14 @@ test("Mailer updates email status if user is UNSUBSCRIBED", async () => {
       await createSession(conn, adminId, true, false);
       const invite = await conn.one(
         sql`select * from create_project_invites(${projectId}, true, true, null, array[
-                  ('bob@example.com', 'Bob')::project_invite_options
-                ])`
+                      (${canonicalEmail}, 'Bob')::project_invite_options
+                    ])`
       );
-      // @ts-ignore
-      auth0.ManagementClient.prototype.getUsers = jest.fn(() => [
-        { user_id: sub, email: "bob@example.com" },
-      ]);
-      const mock = new MockSES();
-      mock
-        .sendBulkTemplatedEmail()
-        // @ts-ignore
-        .promise.mockImplementationOnce(() => {
-          return {
-            Status: [],
-          };
-        });
       await clearSession(conn);
-      await sendQueuedInvites(asPg(conn), 20);
+      const inviteEmailId = await conn.oneFirst<number>(
+        sql`select id from invite_emails where project_invite_id = ${invite.id}`
+      );
+      await sendProjectInviteEmail(inviteEmailId, asPg(conn));
       let { status } = await conn.one(
         sql`select status from invite_emails where project_invite_id = ${invite.id}`
       );

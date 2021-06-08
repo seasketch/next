@@ -23,11 +23,7 @@ export default function MiniSidebar({
 }) {
   const { slug, sidebar } = useParams<{ slug: string; sidebar: string }>();
   const history = useHistory();
-  const { data } = useCurrentProjectMetadataQuery({
-    variables: {
-      slug: slug || "",
-    },
-  });
+  const { data } = useCurrentProjectMetadataQuery();
 
   const { t } = useTranslation("sidebar");
 
@@ -80,7 +76,7 @@ export default function MiniSidebar({
         anySidebarOpen={!!sidebar}
       />
 
-      {data?.projectBySlug?.sessionIsAdmin && (
+      {data?.currentProject?.sessionIsAdmin && (
         <AdminButton
           href={`/${slug}/admin`}
           tooltip={t("Administration")}

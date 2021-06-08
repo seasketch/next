@@ -6,21 +6,16 @@ import ProfileControl from "../header/ProfileControl";
 
 export default function ProjectAppHeader() {
   const { t, i18n } = useTranslation(["nav"]);
-  const { slug } = useParams<{ slug: string }>();
-  const { data, loading, error } = useCurrentProjectMetadataQuery({
-    variables: {
-      slug,
-    },
-  });
+  const { data, loading, error } = useCurrentProjectMetadataQuery();
 
   let logo: ReactNode | null = null;
-  if (data?.projectBySlug?.logoUrl) {
+  if (data?.currentProject?.logoUrl) {
     logo = (
-      <img src={data.projectBySlug.logoUrl} className="w-8 h-8 mr-2 inline" />
+      <img src={data.currentProject.logoUrl} className="w-8 h-8 mr-2 inline" />
     );
-    if (data.projectBySlug.logoLink) {
+    if (data.currentProject.logoLink) {
       logo = (
-        <a href={data.projectBySlug.logoLink} target="_blank">
+        <a href={data.currentProject.logoLink} target="_blank">
           {logo}
         </a>
       );
@@ -32,7 +27,7 @@ export default function ProjectAppHeader() {
       <div className="p-2 pl-5 flex place-items-center mr-auto ml-auto">
         <div className="flex-grow">
           {logo}
-          {data?.projectBySlug?.name}
+          {data?.currentProject?.name}
         </div>
         <div className="flex-0">
           <ProfileControl />

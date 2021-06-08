@@ -5,7 +5,7 @@ import {
   confirmProjectInvite,
 } from "../invites/projectInvites";
 
-const HOST = process.env.HOST || "https://seasketch.org";
+const HOST = process.env.HOST || "seasketch.org";
 
 const ProjectInvitesPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;

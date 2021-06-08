@@ -605,7 +605,7 @@ describe("Moderation", () => {
           await createSession(conn, adminId, true, false, projectId);
           expect(
             conn.oneFirst(
-              sql`select users_banned_from_forums(users.*, ${projectId}) from users where id = ${userA}`
+              sql`select users_banned_from_forums(users.*) from users where id = ${userA}`
             )
           ).resolves.toBe(false);
           await conn.any(
@@ -613,7 +613,7 @@ describe("Moderation", () => {
           );
           expect(
             conn.oneFirst(
-              sql`select users_banned_from_forums(users.*, ${projectId}) from users where id = ${userA}`
+              sql`select users_banned_from_forums(users.*) from users where id = ${userA}`
             )
           ).resolves.toBe(true);
         }

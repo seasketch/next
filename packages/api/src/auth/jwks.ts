@@ -28,9 +28,7 @@ export async function getPrivateKey(
 ): Promise<{ pem: string; kid: string }> {
   let key: { pem: string; kid: string } | null = null;
   if (kid) {
-    const {
-      rows,
-    } = await client.query(
+    const { rows } = await client.query(
       `select kid, private_pem from jwks where kid = $1 and now() < expires_at`,
       [kid]
     );
@@ -60,7 +58,7 @@ export async function getPrivateKey(
 
 export async function rotateKeys(client: DBClient): Promise<string> {
   // Create a fresh key if the newest key is stale
-  // Invite tokens may last up to 60 days. The database is set to expire private
+  // Invite tokens may last up to 90 days. The database is set to expire private
   // keys after 120 days, considering that a new jwt may be issued towards the
   // end of a private key's life. Ideally, fresh keys are generated before that.
   //
@@ -130,13 +128,16 @@ export async function sign(
   issuer: string
 ) {
   const privateKey = await getPrivateKey(client);
+  if (!/^http/.test(issuer)) {
+    issuer = `https://${issuer}`;
+  }
   return jwt.sign(payload, privateKey.pem, {
     expiresIn,
     issuer,
     keyid: privateKey.kid,
     algorithm: "RS256",
     header: {
-      jku: `https://${issuer}/.well-known/jwks.json`,
+      jku: `${issuer}/.well-known/jwks.json`,
     },
   });
 }
@@ -175,13 +176,16 @@ export async function verify<Claims>(
       callback(new Error(`Token must indicate key id (kid)`), "");
     }
   };
+  if (!/^http/.test(issuer)) {
+    issuer = `https://${issuer}`;
+  }
   return new Promise((resolve, reject) => {
     jwt.verify(
       token,
       getKey,
       {
         algorithms: ["RS256"],
-        maxAge: "60 days",
+        maxAge: "90 days",
         issuer,
       },
       (err, token) => {

@@ -19,7 +19,6 @@ const LazyArcGISBrowser = React.lazy(() => import("./arcgis/ArcGISBrowser"));
 export default function DataSettings() {
   const { path } = useRouteMatch();
   const { slug } = useParams<{ slug: string }>();
-  const [map, setMap] = useState<Map>();
   const { t } = useTranslation("admin");
   const mapContext = useMapContext("data-settings");
   const { data, loading, error } = useProjectRegionQuery({
@@ -27,26 +26,12 @@ export default function DataSettings() {
       slug,
     },
   });
-  // useEffect(() => {
-  //   if (map && data?.projectBySlug?.region) {
-  //     const bounds = bbox(data.projectBySlug.region.geojson) as [
-  //       number,
-  //       number,
-  //       number,
-  //       number
-  //     ];
-  //     map.fitBounds(bounds, { duration: 0 });
-  //     if (map) {
-  //       mapContext.manager?.setMap(map);
-  //     }
-  //   }
-  // }, [map, data?.projectBySlug?.region]);
   return (
     <>
       <MapContext.Provider value={mapContext}>
         <Switch>
           <Route exact path={`${path}`}>
-            <div className="flex flex-row h-full">
+            <div className="flex flex-row h-screen">
               <div className="h-full w-128">
                 <LayerAdminSidebar />
               </div>
@@ -63,9 +48,6 @@ export default function DataSettings() {
                           ])
                         : undefined
                     }
-                    onLoad={(map) => {
-                      setMap(map);
-                    }}
                     className="h-full"
                   />
                 )}

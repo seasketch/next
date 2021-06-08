@@ -119,10 +119,7 @@ export default function BasemapEditorPanel({
   }
 
   return (
-    <div
-      className="bg-white z-20 absolute bottom-0 w-128 flex flex-col"
-      style={{ height: "calc(100vh - 3rem)" }}
-    >
+    <div className="bg-white z-20 absolute bottom-0 w-128 flex flex-col h-full">
       <div className="flex-0 p-4 border-b shadow-sm bg-primary-600">
         <button
           className="bg-gray-300 bg-opacity-25 float-right rounded-full p-1 cursor-pointer focus:ring-blue-300"

@@ -178,7 +178,7 @@ function DataBucketSettings(props: { className?: string }) {
               </Trans>
             </p>
             <div>
-              <form className="relative w-96">
+              <form className="relative w-72">
                 <select
                   id="location"
                   onChange={(e) => {
@@ -191,7 +191,7 @@ function DataBucketSettings(props: { className?: string }) {
                     });
                   }}
                   value={region}
-                  className="mt-1 form-select w-80 pl-3 pr-10 py-2 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 rounded-md focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5"
+                  className="mt-1 form-select w-64 pl-3 pr-10 py-2 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 rounded-md focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5"
                 >
                   {(
                     buckets.data?.dataSourcesBucketsConnection?.nodes || []

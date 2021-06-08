@@ -126,3 +126,10 @@ test("Cannot use invalid emails", async () => {
     await conn.any(sql`ROLLBACK`);
   });
 });
+
+describe("User profile completeness", () => {
+  test.todo("Profile is considered complete if it includes a fullname");
+  test.todo(
+    "Profiles cannot be updated with incomplete information, instead the user must leave the project"
+  );
+});

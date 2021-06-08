@@ -13,11 +13,7 @@ export default function Header(props: { projectMode?: boolean }) {
   const { t, i18n } = useTranslation(["nav"]);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const { slug } = useParams<{ slug: string }>();
-  const currentProjectQuery = useCurrentProjectMetadataQuery({
-    variables: {
-      slug: slug || "",
-    },
-  });
+  const currentProjectQuery = useCurrentProjectMetadataQuery();
 
   const handleDocumentClick = useCallback(() => setProfileModalOpen(false), [
     setProfileModalOpen,
@@ -63,7 +59,7 @@ export default function Header(props: { projectMode?: boolean }) {
                   src={logo}
                   alt={t("SeaSketch logo")}
                 /> */}
-                {currentProjectQuery.data?.projectBySlug?.name || ""}
+                {currentProjectQuery.data?.currentProject?.name || ""}
               </div>
             )}
             <Link to="/">

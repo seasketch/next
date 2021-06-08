@@ -4,6 +4,9 @@ export default function Spinner(props: {
   svgClassName?: string;
   className?: string;
   style?: React.CSSProperties;
+  color?: "white" | "grey";
+  large?: boolean;
+  mini?: boolean;
 }) {
   return (
     <div
@@ -11,7 +14,9 @@ export default function Spinner(props: {
       className={`ml-3 inline-block inset-y-0 items-center pointer-events-none transition-opacity duration-500 opacity-50 ${props.className}`}
     >
       <svg
-        className={`animate-spin h-5 w-5 text-gray-500 ${props.svgClassName}`}
+        className={`animate-spin ${
+          props.large ? "h-8 w-8" : props.mini ? "h-3 w-3" : "h-5 w-5"
+        } ${props.color === "white" ? "text-white" : "text-gray-500"}`}
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"

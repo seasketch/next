@@ -6,7 +6,7 @@ import ProjectsPage from "./homepage/ProjectsPage";
 import Header from "./header/Header";
 import NewProjectCTA from "./homepage/NewProjectCTA";
 import NewProjectPage from "./homepage/NewProjectPage";
-// import ProjectApp from "./projects/ProjectApp";
+import Spinner from "./components/Spinner";
 
 const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
 const LazyProjectAdmin = React.lazy(() => import("./admin/AdminApp"));
@@ -17,8 +17,11 @@ function App() {
     <div className="App">
       <Suspense
         fallback={
-          <div>
-            <Trans>Loading...</Trans>
+          <div
+            style={{ height: "100vh" }}
+            className="w-full flex min-h-full h-96 justify-center text-center align-middle items-center content-center justify-items-center place-items-center place-content-center"
+          >
+            <Spinner />
           </div>
         }
       >
@@ -49,7 +52,6 @@ function App() {
             <NewProjectPage />
           </Route>
           <Route path="/authenticate">
-            {/* check Auth0ProviderWithRouter#onRedirectCallback in index.tsx */}
             <span>
               <Trans>authenticating...</Trans>
             </span>

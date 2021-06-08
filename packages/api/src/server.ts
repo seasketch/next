@@ -1,10 +1,10 @@
 import express from "express";
-import { postgraphile } from "postgraphile";
+import { postgraphile, makePluginHook } from "postgraphile";
 import PgSimplifyInflectorPlugin from "@graphile-contrib/pg-simplify-inflector";
 import compression from "compression";
 import path from "path";
 import authConfig from "./authConfig.json";
-import pool from "./pool";
+import pool, { workerPool } from "./pool";
 import graphqlSchemaModifiers from "./graphqlSchemaModifiers";
 import reorderSchemaFields from "./plugins/reorderSchemaFieldsPlugin";
 import extraDocumentationPlugin from "./plugins/extraDocumentationPlugin";
@@ -12,6 +12,7 @@ import ProjectInvitesPlugin from "./plugins/projectInvitesPlugin";
 import SurveyInvitesPlugin from "./plugins/surveyInvitesPlugin";
 import postgisPlugin from "@graphile/postgis";
 import CanonicalEmailPlugin from "./plugins/canonicalEmailPlugin";
+import ProjectInviteStateSubscriptionPlugin from "./plugins/ProjectInviteStateSubscriptionPlugin";
 import SanitizeInteractivityTemplatesPlugin from "./plugins/sanitizeInteractivityTemplatesPlugin";
 import DataSourcePlugin from "./plugins/dataSourcePlugin";
 import SpritesPlugin from "./plugins/spritesPlugin";
@@ -29,11 +30,32 @@ import { unsubscribeFromTopic } from "./activityNotifications/topicNotifications
 import PostGraphileUploadFieldPlugin from "postgraphile-plugin-upload-field";
 import { graphqlUploadExpress } from "graphql-upload";
 import uploadFieldDefinitions from "./uploadFieldDefinitions";
+import { default as PgPubsub } from "@graphile/pg-pubsub";
 import bytes from "bytes";
+import { run } from "graphile-worker";
+import cors from "cors";
 
 const app = express();
 
 app.use(compression());
+
+app.use(
+  cors({
+    origin: true,
+    allowedHeaders: [
+      "authorization",
+      "content-type",
+      "x-ss-slug",
+      "origin",
+      "x-requested-with",
+      "accept",
+      "x-apollo-tracing",
+      "content-length",
+      "x-postgraphile-explain",
+    ],
+    maxAge: 600,
+  })
+);
 
 // for accurate setting of req.ip
 app.set("trust proxy", true);
@@ -75,9 +97,6 @@ app.get("/.well-known/jwks.json", async (req, res) => {
   res.json(keys);
 });
 
-// assign req.currentProjectId from headers if applicable
-app.use(currentProjectMiddlware);
-
 // Parse Bearer tokens and populate req.user with valid claims
 app.use(
   authorizationMiddleware,
@@ -95,6 +114,9 @@ app.use(
     return next(err);
   }
 );
+
+// assign req.currentProjectId from headers if applicable
+app.use(currentProjectMiddlware);
 
 // Create new user account if req.user is unrecognized, and assign req.user.id
 app.use(userAccountMiddlware);
@@ -117,16 +139,27 @@ app.use(function (req, res, next) {
   next();
 });
 
+const pluginHook = makePluginHook([PgPubsub]);
+
+run({
+  pgPool: workerPool,
+  concurrency: parseInt(process.env.GRAPHILE_WORKER_CONCURRENCY || "0"),
+  // Install signal handlers for graceful shutdown on SIGINT, SIGTERM, etc
+  noHandleSignals: false,
+  pollInterval: 1000,
+  taskDirectory: path.join(__dirname, "..", "tasks"),
+});
+
 app.use(
   postgraphile(pool, "public", {
-    ownerConnectionString: process.env.OWNER_DATABASE_URL,
+    ownerConnectionString: process.env.ADMIN_DATABASE_URL,
     watchPg: true,
     graphiql: true,
     enhanceGraphiql: true,
     allowExplain: (req) => process.env.NODE_ENV !== "production",
     ignoreRBAC: false,
     ignoreIndexes: false,
-    enableCors: true,
+    // enableCors: true,
     dynamicJson: true,
     setofFunctionsContainNulls: false,
     pgSettings: async (req: IncomingRequest) => {
@@ -146,6 +179,7 @@ app.use(
         "session.survey_invite_id": req.surveyInvite?.inviteId,
       };
     },
+    pluginHook,
     appendPlugins: [
       PgSimplifyInflectorPlugin,
       PostGraphileUploadFieldPlugin,
@@ -156,6 +190,7 @@ app.use(
       DataSourcePlugin,
       SanitizeInteractivityTemplatesPlugin,
       orderTopicsByDateAndStickyPlugin,
+      ProjectInviteStateSubscriptionPlugin,
       reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
       SpritesPlugin,
@@ -164,12 +199,20 @@ app.use(
       pgOmitListSuffix: true,
       uploadFieldDefinitions,
     },
+    subscriptions: true,
+    websocketMiddlewares: [
+      authorizationMiddleware,
+      currentProjectMiddlware,
+      userAccountMiddlware,
+      verifyEmailMiddleware,
+    ],
     exportGqlSchemaPath: "./generated-schema.gql",
     sortExport: true,
     async additionalGraphQLContextFromRequest(req, res) {
       // Return here things that your resolvers need
       return {
         user: req.user,
+        projectId: req.projectId,
       };
     },
   })

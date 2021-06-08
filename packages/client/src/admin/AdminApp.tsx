@@ -13,9 +13,17 @@ import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import ProfileContextMenu from "../header/ProfileContextMenu";
 import useBreadcrumbs from "use-react-router-breadcrumbs";
 import { Trans } from "react-i18next";
+import UserSettingsSidebarSkeleton from "./users/UserSettingsSidebarSkeleton";
+import AdminMobileHeader, {
+  AdminMobileHeaderState,
+  AdminMobileHeaderContext,
+} from "./AdminMobileHeaderContext";
+import PhoneAccessGate from "./PhoneAccessGate";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const LazyBasicSettings = React.lazy(() => import("./Settings"));
 const LazyDataSettings = React.lazy(() => import("./data/DataSettings"));
+const LazyUserSettings = React.lazy(() => import("./users/UserSettings"));
 
 interface Section {
   breadcrumb: string;
@@ -196,6 +204,10 @@ export default function AdminApp() {
       path: "/admin/surveys",
     },
   ];
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileHeaderState, setMobileHeaderState] = useState<
+    AdminMobileHeaderState
+  >({});
 
   const routeConfig = [
     ...sections,
@@ -218,230 +230,88 @@ export default function AdminApp() {
   let { path } = useRouteMatch();
   const breadcrumbs = useBreadcrumbs(routeConfig, { disableDefaults: true });
 
-  const { data, loading, error } = useCurrentProjectMetadataQuery({
-    variables: {
-      slug: slug || "",
-    },
-  });
+  const { data, loading, error } = useCurrentProjectMetadataQuery();
 
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const handleDocumentClick = () => {
-    setProfileModalOpen(false);
-    setMobileSidebarOpen(false);
-  };
-  useEffect(() => {
-    if (profileModalOpen) {
-      document.addEventListener("click", handleDocumentClick);
-    }
-    if (mobileSidebarOpen) {
-      document.addEventListener("click", handleDocumentClick);
-    }
-    return () => {
-      document.removeEventListener("click", handleDocumentClick);
-    };
-  });
-
-  if (data && data.projectBySlug?.sessionIsAdmin === false) {
+  if (data && data.currentProject?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;
   }
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-100">
-      {/* <!-- Off-canvas menu for mobile --> */}
-      <div className={`md:hidden ${mobileSidebarOpen ? "flex" : "hidden"}`}>
-        <div className="fixed inset-0 flex z-40">
-          {/* <!--
-        Off-canvas menu overlay, show/hide based on off-canvas menu state.
+    <AdminMobileHeaderContext.Provider
+      value={{ ...mobileHeaderState, setState: setMobileHeaderState }}
+    >
+      <AdminMobileHeader onOpenSidebar={() => setMobileSidebarOpen(true)} />
+      <div className="pt-12 md:pt-0 flex bg-gray-100">
+        {/* <!-- Off-canvas menu for mobile --> */}
+        <MobileSidebar
+          sections={sections}
+          slug={slug}
+          projectName={data?.currentProject?.name || "▌"}
+          open={mobileSidebarOpen}
+          onRequestClose={() => setMobileSidebarOpen(false)}
+        />
 
-        Entering: "transition-opacity ease-linear duration-300"
-          From: "opacity-0"
-          To: "opacity-100"
-        Leaving: "transition-opacity ease-linear duration-300"
-          From: "opacity-100"
-          To: "opacity-0"
-      --> */}
-          <div className="fixed inset-0">
-            <div className="absolute inset-0 bg-gray-600 opacity-75"></div>
-          </div>
-          {/* <!--
-        Off-canvas menu, show/hide based on off-canvas menu state.
-
-        Entering: "transition ease-in-out duration-300 transform"
-          From: "-translate-x-full"
-          To: "translate-x-0"
-        Leaving: "transition ease-in-out duration-300 transform"
-          From: "translate-x-0"
-          To: "-translate-x-full"
-      --> */}
-          <div
-            className={`relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-indigo-800`}
+        {/* <!-- Static sidebar for desktop --> */}
+        <StaticSidebar
+          sections={sections}
+          slug={slug}
+          projectName={data?.currentProject?.name || "▌"}
+        />
+        <div className="flex w-0 flex-1 max-h-screen">
+          {/* Header (mobile-only) */}
+          <main
+            className="flex-1 relative overflow-x-hidden focus:outline-none max-h-full overflow-y-scroll"
+            tabIndex={0}
           >
-            <div className="absolute top-0 right-0 -mr-14 p-1">
-              <button
-                className="flex items-center justify-center h-12 w-12 rounded-full focus:outline-none focus:bg-gray-600"
-                aria-label="Close sidebar"
+            <Switch>
+              <Route exact path={`${path}`}>
+                <React.Suspense fallback={<div></div>}>
+                  <LazyBasicSettings />
+                </React.Suspense>
+              </Route>
+              <Route exact path={`${path}/activity`}></Route>
+              <Route
+                path={[
+                  `${path}/users`,
+                  `${path}/users`,
+                  `${path}/users/participants`,
+                  `${path}/users/invited`,
+                  `${path}/users/admins`,
+                  `${path}/users/invites/unsent`,
+                  `${path}/users/invites/sent`,
+                  `${path}/users/invites/bounced`,
+                  `${path}/users/invites/requests`,
+                  `${path}/users/groups/:group`,
+                ]}
               >
-                <svg
-                  className="h-6 w-6 text-white"
-                  stroke="currentColor"
-                  fill="none"
-                  viewBox="0 0 24 24"
+                <React.Suspense fallback={<UserSettingsSidebarSkeleton />}>
+                  <LazyUserSettings />
+                </React.Suspense>
+              </Route>
+              <Route path={`${path}/data`}>
+                {/* <div className="h-screen"> */}
+                <PhoneAccessGate
+                  heading={t("Data Layers")}
+                  message={t(
+                    "Data layer administration requires at least a tablet-sized screen."
+                  )}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <SidebarContents
-              sections={sections}
-              slug={slug}
-              projectName={data?.projectBySlug?.name || "▌"}
-            />
-          </div>
-          <div className="flex-shrink-0 w-14">
-            {/* <!-- Dummy element to force sidebar to shrink to fit close icon --> */}
-          </div>
+                  <React.Suspense fallback={<div></div>}>
+                    <LazyDataSettings />
+                  </React.Suspense>
+                </PhoneAccessGate>
+                {/* </div> */}
+              </Route>
+              <Route exact path={`${path}/sketching`}></Route>
+              <Route exact path={`${path}/forums`}></Route>
+              <Route exact path={`${path}/surveys`}></Route>
+            </Switch>
+            {/* <!-- Replace with your content --> */}
+            {/* <!-- /End replace --> */}
+          </main>
         </div>
       </div>
-
-      {/* <!-- Static sidebar for desktop --> */}
-      <div className="hidden md:flex md:flex-shrink-0">
-        <div className="flex flex-col w-56">
-          {/* <!-- Sidebar component, swap this element with another sidebar if you like --> */}
-          <div className="flex flex-col flex-grow bg-indigo-800 pt-5 pb-4 overflow-y-auto text-white">
-            <SidebarContents
-              sections={sections}
-              slug={slug}
-              projectName={data?.projectBySlug?.name || "▌"}
-            />
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col w-0 flex-1 overflow-hidden">
-        <div className="relative z-10 flex-shrink-0 flex h-12 bg-white shadow">
-          <button
-            onClick={() => setMobileSidebarOpen(true)}
-            className="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:bg-gray-100 focus:text-gray-600 md:hidden"
-            aria-label="Open sidebar"
-          >
-            <svg
-              className="h-6 w-6"
-              stroke="currentColor"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 6h16M4 12h16M4 18h7"
-              />
-            </svg>
-          </button>
-          <div className="flex-1 px-4 flex justify-between">
-            <div className="flex-1 flex">
-              <nav className="flex items-center text-sm leading-5 font-medium">
-                {breadcrumbs.length === 0 && (
-                  <span className="text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out">
-                    <Trans ns={["admin"]}>Settings</Trans>
-                  </span>
-                )}
-                {breadcrumbs.map((b, i) => {
-                  return (
-                    <div key={b.key}>
-                      <NavLink
-                        activeStyle={{ pointerEvents: "none" }}
-                        // isActive={b.match.url === }
-                        exact
-                        to={b.match.url}
-                        className="text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out text-sm mr-2 sm:mr-0"
-                      >
-                        {b.breadcrumb}
-                      </NavLink>
-                      {i < breadcrumbs.length - 1 && (
-                        <svg
-                          className="hidden flex-shrink-0 sm:inline -mt-0.5 mx-2 h-5 w-5 text-gray-400"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                  );
-                })}
-              </nav>
-            </div>
-            <div className="ml-4 flex items-center md:ml-6">
-              {/* <!-- Profile dropdown --> */}
-              <div className="ml-3 relative">
-                <ProfileStatusButton
-                  onClick={() => setProfileModalOpen(true)}
-                />
-                {/* <!--
-              Profile dropdown panel, show/hide based on dropdown state.
-
-              Entering: "transition ease-out duration-100"
-                From: "transform opacity-0 scale-95"
-                To: "transform opacity-100 scale-100"
-              Leaving: "transition ease-in duration-75"
-                From: "transform opacity-100 scale-100"
-                To: "transform opacity-0 scale-95"
-            --> */}
-                <div
-                  className={`origin-top-right absolute right-4 mt-2 w-48 rounded-md shadow-lg ${
-                    !profileModalOpen && "hidden"
-                  }`}
-                >
-                  <div
-                    className="py-1 rounded-md bg-white ring-1 ring-black ring-opacity-5"
-                    role="menu"
-                    aria-orientation="vertical"
-                    aria-labelledby="user-menu"
-                  >
-                    <ProfileContextMenu />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <main
-          className="flex-1 relative overflow-y-auto focus:outline-none"
-          tabIndex={0}
-        >
-          <Switch>
-            <Route exact path={`${path}`}>
-              <React.Suspense fallback={<div></div>}>
-                <LazyBasicSettings />
-              </React.Suspense>
-            </Route>
-            <Route exact path={`${path}/activity`}></Route>
-            <Route exact path={`${path}/users`}></Route>
-            <Route path={`${path}/data`}>
-              <React.Suspense fallback={<div></div>}>
-                <LazyDataSettings />
-              </React.Suspense>
-            </Route>
-            <Route exact path={`${path}/sketching`}></Route>
-            <Route exact path={`${path}/forums`}></Route>
-            <Route exact path={`${path}/surveys`}></Route>
-          </Switch>
-          {/* <!-- Replace with your content --> */}
-          {/* <!-- /End replace --> */}
-        </main>
-      </div>
-    </div>
+    </AdminMobileHeaderContext.Provider>
   );
 }
 
@@ -450,8 +320,34 @@ function SidebarContents(props: {
   projectName: string;
   sections: Section[];
 }) {
+  const { t } = useTranslation(["admin"]);
+  const { user, logout } = useAuth0();
+  let social: string | false = false;
+  if (user) {
+    if (/twitter/.test(user.sub)) {
+      social = "twitter";
+    } else if (/google/.test(user.sub)) {
+      social = "google";
+    } else if (/github/.test(user.sub)) {
+      social = "github";
+    }
+  }
+  const userId = user
+    ? `${user.name || user.email} ${social ? `(${social})` : ""}`
+    : undefined;
+
   return (
-    <>
+    <div
+      onClick={(e) => {
+        // @ts-ignore
+        if (e.target.tagName === "A") {
+        } else {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }}
+    >
       <div className="flex-row items-center flex-shrink-0 px-4 text-white">
         <span className="text-xl font-semibold">{props.projectName}</span>{" "}
         <span className="block text-sm">
@@ -472,8 +368,161 @@ function SidebarContents(props: {
               {section.breadcrumb}
             </NavLink>
           ))}
+          {userId && (
+            <>
+              <div className="flex w-full pl-1 pt-2 pb-1">
+                <ProfileStatusButton className="flex-none" />
+                <div className="ml-2 flex-1 text-indigo-300">
+                  <p className="text-base md:text-sm leading-5">
+                    {t("Signed in as")}
+                  </p>
+                  <p
+                    title={userId}
+                    className="text-base md:text-sm leading-8 md:leading-5 font-medium truncate"
+                  >
+                    {userId}
+                  </p>
+                </div>
+              </div>
+              {/* <NavLink
+                exact
+                to={`/${props.slug}/account-settings`}
+                activeClassName="bg-indigo-900 text-white"
+                className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-300 rounded-md hover:text-white hover:bg-indigo-700 focus:outline-none focus:text-white focus:bg-indigo-700 transition ease-in-out duration-75"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  className={iconClassName}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+                <Trans ns="admin">Account Settings</Trans>
+              </NavLink> */}
+              <button
+                onClick={() => logout()}
+                className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-300 rounded-md hover:text-white hover:bg-indigo-700 focus:outline-none focus:text-white focus:bg-indigo-700 transition ease-in-out duration-75 w-full"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  className={`${iconClassName} left-0.5 relative`}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                {/* {section.icon} */}
+                <Trans ns="admin">Sign Out</Trans>
+              </button>
+            </>
+          )}
         </nav>
       </div>
-    </>
+    </div>
+  );
+}
+
+function StaticSidebar({
+  sections,
+  projectName,
+  slug,
+  userId,
+}: {
+  sections: Section[];
+  projectName: string;
+  slug: string;
+  userId?: string;
+}) {
+  return (
+    <div className="hidden md:flex md:flex-shrink-0 min-h-screen">
+      <div className="flex flex-col w-56">
+        <div className="flex flex-col flex-grow bg-indigo-800 pt-5 pb-4 overflow-y-auto text-white">
+          <SidebarContents
+            sections={sections}
+            slug={slug}
+            projectName={projectName}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileSidebar({
+  sections,
+  projectName,
+  slug,
+  onRequestClose,
+  open,
+  userId,
+}: {
+  sections: Section[];
+  projectName: string;
+  slug: string;
+  onRequestClose: () => void;
+  open: boolean;
+  userId?: string;
+}) {
+  useEffect(() => {
+    if (open) {
+      document.addEventListener("click", onRequestClose);
+    }
+    return () => {
+      document.removeEventListener("click", onRequestClose);
+    };
+  });
+  return (
+    <div className={`md:hidden ${open ? "flex" : "hidden"}`}>
+      <div className="fixed inset-0 flex z-40">
+        <div className="fixed inset-0">
+          <div className="absolute inset-0 bg-gray-600 opacity-75"></div>
+        </div>
+        <div
+          className={`relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-indigo-800`}
+        >
+          <div className="absolute top-0 right-0 -mr-14 p-1">
+            <button
+              className="flex items-center justify-center h-12 w-12 rounded-full focus:outline-none focus:bg-gray-600"
+              aria-label="Close sidebar"
+            >
+              <svg
+                className="h-6 w-6 text-white"
+                stroke="currentColor"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+          <SidebarContents
+            sections={sections}
+            slug={slug}
+            projectName={projectName}
+          />
+        </div>
+        <div className="flex-shrink-0 w-14">
+          {/* <!-- Dummy element to force sidebar to shrink to fit close icon --> */}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ const { Client } = require("pg");
 const { DATABASE_URL } = require("./pool");
 const template1 = DATABASE_URL + "template1";
 const { migrate, reset, watch } = require("graphile-migrate");
+const { runMigrations } = require("graphile-worker");
 
 module.exports = async () => {
   const client = new Client(template1);
@@ -27,6 +28,10 @@ module.exports = async () => {
   // supress logs from graphile-migrate
   console.log = (msg) => {};
   await reset(settings);
+  await runMigrations({
+    connectionString: settings.connectionString,
+    taskList: {},
+  });
   const client2 = new Client(settings.connectionString);
   await client2.connect();
   await client2.query(

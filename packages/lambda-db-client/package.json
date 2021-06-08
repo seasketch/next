@@ -1,0 +1,41 @@
+{
+  "name": "@seasketch/lambda-db-client",
+  "version": "1.0.0",
+  "description": "Used by various lambda services to connect to the db",
+  "keywords": [
+    "seasketch"
+  ],
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next#readme",
+  "license": "BSD-3-Clause",
+  "main": "lib/lambda-db-client.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1",
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.6.0",
+    "typescript": "^4.2.4"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.910.0",
+    "pg": "^8.6.0"
+  }
+}

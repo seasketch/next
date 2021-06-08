@@ -1011,6 +1011,10 @@ export type CreateProjectInviteGroupPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Group` that is related to this `ProjectInviteGroup`. */
+  group?: Maybe<Group>;
+  /** Reads a single `ProjectInvite` that is related to this `ProjectInviteGroup`. */
+  invite?: Maybe<ProjectInvite>;
   /** The `ProjectInviteGroup` that was created by this mutation. */
   projectInviteGroup?: Maybe<ProjectInviteGroup>;
   /** An edge for our `ProjectInviteGroup`. May be used by Relay 1. */
@@ -2698,6 +2702,10 @@ export type DeleteProjectInviteGroupPayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   deletedProjectInviteGroupNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `Group` that is related to this `ProjectInviteGroup`. */
+  group?: Maybe<Group>;
+  /** Reads a single `ProjectInvite` that is related to this `ProjectInviteGroup`. */
+  invite?: Maybe<ProjectInvite>;
   /** The `ProjectInviteGroup` that was deleted by this mutation. */
   projectInviteGroup?: Maybe<ProjectInviteGroup>;
   /** An edge for our `ProjectInviteGroup`. May be used by Relay 1. */
@@ -4160,12 +4168,14 @@ export type Group = Node & {
   /** Listing of all users who have been assigned to this group. */
   members?: Maybe<Array<User>>;
   /** Label for the group. */
-  name?: Maybe<Scalars['String']>;
+  name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /** Reads a single `Project` that is related to this `Group`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `ProjectInviteGroup`. */
+  projectInviteGroupsByGroupIdConnection: ProjectInviteGroupsConnection;
 };
 
 
@@ -4184,11 +4194,30 @@ export type GroupMembersArgs = {
   orderBy?: Maybe<ParticipantSortBy>;
 };
 
+
+/**
+ * User groups designated by the project administrators. User groups can be used to
+ * assign access control privileges to users.
+ *
+ * Note that only admins have access to groups, or direct knowlege of what groups a
+ * user belongs to. If an admin wanted to create an *Assholes* group they are
+ * free to do so.
+ */
+export type GroupProjectInviteGroupsByGroupIdConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ProjectInviteGroupCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+};
+
 /** An input for mutations affecting `Group` */
 export type GroupInput = {
   id?: Maybe<Scalars['Int']>;
   /** Label for the group. */
-  name?: Maybe<Scalars['String']>;
+  name: Scalars['String'];
   projectId: Scalars['Int'];
 };
 
@@ -4439,6 +4468,8 @@ export enum InteractivityType {
 export type InviteEmail = Node & {
   __typename?: 'InviteEmail';
   createdAt: Scalars['Datetime'];
+  error?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /** Reads a single `ProjectInvite` that is related to this `InviteEmail`. */
@@ -4449,6 +4480,7 @@ export type InviteEmail = Node & {
   /** Reads a single `SurveyInvite` that is related to this `InviteEmail`. */
   surveyInvite?: Maybe<SurveyInvite>;
   surveyInviteId?: Maybe<Scalars['Int']>;
+  toAddress: Scalars['Email'];
   /**
    * Emails contain a link with an embedded JSON Web Token that is used to authorize
    * access. These tokens have an expiration that is both embedded in the token and
@@ -4463,6 +4495,8 @@ export type InviteEmail = Node & {
  * for equality and combined with a logical ‘and.’
  */
 export type InviteEmailCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectInviteId` field. */
   projectInviteId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `status` field. */
@@ -4473,6 +4507,8 @@ export type InviteEmailCondition = {
 
 /** Methods to use when ordering `InviteEmail`. */
 export enum InviteEmailsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
@@ -5000,6 +5036,19 @@ export type Mutation = {
   setTopicLocked?: Maybe<SetTopicLockedPayload>;
   /** Admins can use this mutation to place topics at the top of the forum listing. */
   setTopicSticky?: Maybe<SetTopicStickyPayload>;
+  /**
+   * Sets the list of groups that the given user belongs to. Will clear all other
+   * group memberships in the project. Available only to admins.
+   */
+  setUserGroups?: Maybe<SetUserGroupsPayload>;
+  subscriptionAuthorizationFunc?: Maybe<SubscriptionAuthorizationFuncPayload>;
+  /**
+   * Toggle admin access for the given project and user. User must have already
+   * joined the project and shared their user profile.
+   */
+  toggleAdminAccess?: Maybe<ToggleAdminAccessPayload>;
+  /** Ban a user from posting in the discussion forum */
+  toggleForumPostingBan?: Maybe<ToggleForumPostingBanPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAcl?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
@@ -5066,12 +5115,7 @@ export type Mutation = {
   updateProjectByNodeId?: Maybe<UpdateProjectPayload>;
   /** Updates a single `Project` using a unique key and a patch. */
   updateProjectBySlug?: Maybe<UpdateProjectPayload>;
-  /** Updates a single `ProjectInvite` using a unique key and a patch. */
   updateProjectInvite?: Maybe<UpdateProjectInvitePayload>;
-  /** Updates a single `ProjectInvite` using a unique key and a patch. */
-  updateProjectInviteByEmailAndProjectId?: Maybe<UpdateProjectInvitePayload>;
-  /** Updates a single `ProjectInvite` using its globally unique id and a patch. */
-  updateProjectInviteByNodeId?: Maybe<UpdateProjectInvitePayload>;
   /** Updates a single `ProjectInviteGroup` using a unique key and a patch. */
   updateProjectInviteGroupByInviteIdAndGroupId?: Maybe<UpdateProjectInviteGroupPayload>;
   /** Updates a single `ProjectsSharedBasemap` using a unique key and a patch. */
@@ -5805,6 +5849,30 @@ export type MutationSetTopicStickyArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetUserGroupsArgs = {
+  input: SetUserGroupsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSubscriptionAuthorizationFuncArgs = {
+  input: SubscriptionAuthorizationFuncInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationToggleAdminAccessArgs = {
+  input: ToggleAdminAccessInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationToggleForumPostingBanArgs = {
+  input: ToggleForumPostingBanInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclArgs = {
   input: UpdateAclInput;
 };
@@ -6005,18 +6073,6 @@ export type MutationUpdateProjectBySlugArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectInviteArgs = {
   input: UpdateProjectInviteInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateProjectInviteByEmailAndProjectIdArgs = {
-  input: UpdateProjectInviteByEmailAndProjectIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateProjectInviteByNodeIdArgs = {
-  input: UpdateProjectInviteByNodeIdInput;
 };
 
 
@@ -6491,8 +6547,15 @@ export type Project = Node & {
    * listing of users, groups, and invites in the user administration dashboard.
    */
   inviteCounts?: Maybe<Array<InviteStat>>;
+  inviteEmailSubject: Scalars['String'];
+  inviteEmailTemplateText: Scalars['String'];
   /** List project invites by status */
   invitesConnection: ProjectInvitesConnection;
+  /**
+   * Returns true if the given user is an administrator of the project. Informaiton
+   * is only available administrators of the project and will otherwise always return false.
+   */
+  isAdmin?: Maybe<Scalars['Boolean']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
   isFeatured: Scalars['Boolean'];
   /**
@@ -6703,6 +6766,15 @@ export type ProjectInvitesConnectionArgs = {
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
+export type ProjectIsAdminArgs = {
+  userId?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
 export type ProjectMyFoldersArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -6873,6 +6945,8 @@ export type ProjectInvite = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `ProjectInviteGroup`. */
+  projectInviteGroupsByInviteIdConnection: ProjectInviteGroupsConnection;
   /** Status derived from the state of invite emails as well as token expiration */
   status?: Maybe<InviteStatus>;
   /** Is set upon invite acceptance. */
@@ -6921,9 +6995,37 @@ export type ProjectInviteInviteEmailsArgs = {
   orderBy?: Maybe<Array<InviteEmailsOrderBy>>;
 };
 
+
+/**
+ * Admins can invite users to their project, adding them to user groups and
+ * distributing admin privileges as needed. Invitations can be immediately sent via
+ * email or they can be sent out later in batches.
+ *
+ * Use the `createProjectInvites()`
+ * mutation to create one or more invitations and then use graphile generated
+ * mutations to update and delete them.
+ *
+ * Details on [handling user ingress with invitation
+ * tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management)
+ * can be found on the wiki.
+ */
+export type ProjectInviteProjectInviteGroupsByInviteIdConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ProjectInviteGroupCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+};
+
 export type ProjectInviteGroup = {
   __typename?: 'ProjectInviteGroup';
+  /** Reads a single `Group` that is related to this `ProjectInviteGroup`. */
+  group?: Maybe<Group>;
   groupId: Scalars['Int'];
+  /** Reads a single `ProjectInvite` that is related to this `ProjectInviteGroup`. */
+  invite?: Maybe<ProjectInvite>;
   inviteId: Scalars['Int'];
 };
 
@@ -6987,16 +7089,6 @@ export type ProjectInviteOptionInput = {
   fullname?: Maybe<Scalars['String']>;
 };
 
-/** Represents an update to a `ProjectInvite`. Fields that are set will be updated. */
-export type ProjectInvitePatch = {
-  /** Specified by admin when invite was created. */
-  email?: Maybe<Scalars['Email']>;
-  /** Specified by admin when invite was created. */
-  fullname?: Maybe<Scalars['String']>;
-  /** User will be made an admin of the project if true. They will not be given special access until their email is verified. */
-  makeAdmin?: Maybe<Scalars['Boolean']>;
-};
-
 /** A connection to a list of `ProjectInvite` values. */
 export type ProjectInvitesConnection = {
   __typename?: 'ProjectInvitesConnection';
@@ -7017,6 +7109,11 @@ export type ProjectInvitesEdge = {
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `ProjectInvite` at the end of the edge. */
   node: ProjectInvite;
+};
+
+export type ProjectInviteStateSubscriptionPayload = {
+  __typename?: 'ProjectInviteStateSubscriptionPayload';
+  invite?: Maybe<ProjectInvite>;
 };
 
 export type ProjectInviteTokenClaims = {
@@ -7042,6 +7139,8 @@ export type ProjectPatch = {
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  inviteEmailSubject?: Maybe<Scalars['String']>;
+  inviteEmailTemplateText?: Maybe<Scalars['String']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
   isFeatured?: Maybe<Scalars['Boolean']>;
   /**
@@ -7250,6 +7349,7 @@ export type Query = Node & {
   interactivitySetting?: Maybe<InteractivitySetting>;
   /** Reads a single `InteractivitySetting` using its globally unique `ID`. */
   interactivitySettingByNodeId?: Maybe<InteractivitySetting>;
+  inviteEmail?: Maybe<InviteEmail>;
   /** Reads a single `InviteEmail` using its globally unique `ID`. */
   inviteEmailByNodeId?: Maybe<InviteEmail>;
   /** Access the current session's User. The user is determined by the access token embedded in the `Authorization` header. */
@@ -7328,6 +7428,7 @@ export type Query = Node & {
   surveyInviteByEmailAndSurveyId?: Maybe<SurveyInvite>;
   /** Reads a single `SurveyInvite` using its globally unique `ID`. */
   surveyInviteByNodeId?: Maybe<SurveyInvite>;
+  surveyInvitedGroupBySurveyIdAndGroupId?: Maybe<SurveyInvitedGroup>;
   surveyResponse?: Maybe<SurveyResponse>;
   /** Reads a single `SurveyResponse` using its globally unique `ID`. */
   surveyResponseByNodeId?: Maybe<SurveyResponse>;
@@ -7978,6 +8079,22 @@ export type QueryInteractivitySettingByNodeIdArgs = {
  * for each database table. These are unlikely to be needed often but may possibly
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
+export type QueryInviteEmailArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
 export type QueryInviteEmailByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
@@ -8584,6 +8701,23 @@ export type QuerySurveyInviteByNodeIdArgs = {
  * for each database table. These are unlikely to be needed often but may possibly
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
+export type QuerySurveyInvitedGroupBySurveyIdAndGroupIdArgs = {
+  groupId: Scalars['Int'];
+  surveyId: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
 export type QuerySurveyResponseArgs = {
   id: Scalars['Int'];
 };
@@ -9091,6 +9225,31 @@ export type SetTopicStickyPayloadTopicEdgeArgs = {
   orderBy?: Maybe<Array<TopicsOrderBy>>;
 };
 
+/** All input for the `setUserGroups` mutation. */
+export type SetUserGroupsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  groups?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  projectId?: Maybe<Scalars['Int']>;
+  userId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `setUserGroups` mutation. */
+export type SetUserGroupsPayload = {
+  __typename?: 'SetUserGroupsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integers?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /**
  * A *Sketch* is a spatial feature that matches the schema defined by the related
  * *SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
@@ -9587,6 +9746,40 @@ export enum SpriteType {
   Line = 'LINE'
 }
 
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type Subscription = {
+  __typename?: 'Subscription';
+  /**
+   * Triggered when the status of a project invite changes, generally because
+   * of a change in the delivery status of a related InviteEmail. Uses
+   * x-ss-slug to determine appropriate project.
+   */
+  projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
+};
+
+/** All input for the `subscriptionAuthorizationFunc` mutation. */
+export type SubscriptionAuthorizationFuncInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  topic?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `subscriptionAuthorizationFunc` mutation. */
+export type SubscriptionAuthorizationFuncPayload = {
+  __typename?: 'SubscriptionAuthorizationFuncPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  string?: Maybe<Scalars['String']>;
+};
+
 export type Survey = Node & {
   __typename?: 'Survey';
   /** PUBLIC or INVITE_ONLY */
@@ -9638,6 +9831,8 @@ export type Survey = Node & {
    */
   startButtonText?: Maybe<Scalars['String']>;
   submittedResponseCount?: Maybe<Scalars['Int']>;
+  /** Reads and enables pagination through a set of `SurveyInvitedGroup`. */
+  surveyInvitedGroups: Array<SurveyInvitedGroup>;
   /**
    * All related survey invites. Survey invites will be automatically created for
    * users in the groups specified by `surveyInvitedGroups`.
@@ -9666,6 +9861,14 @@ export type SurveyFormsConnectionArgs = {
 export type SurveyInvitedGroupsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+export type SurveySurveyInvitedGroupsArgs = {
+  condition?: Maybe<SurveyInvitedGroupCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SurveyInvitedGroupsOrderBy>>;
 };
 
 
@@ -9789,11 +9992,31 @@ export type SurveyInvitedGroup = {
   surveyId: Scalars['Int'];
 };
 
+/**
+ * A condition to be used against `SurveyInvitedGroup` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type SurveyInvitedGroupCondition = {
+  /** Checks for equality with the object’s `groupId` field. */
+  groupId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `surveyId` field. */
+  surveyId?: Maybe<Scalars['Int']>;
+};
+
 /** An input for mutations affecting `SurveyInvitedGroup` */
 export type SurveyInvitedGroupInput = {
   groupId: Scalars['Int'];
   surveyId: Scalars['Int'];
 };
+
+/** Methods to use when ordering `SurveyInvitedGroup`. */
+export enum SurveyInvitedGroupsOrderBy {
+  GroupIdAsc = 'GROUP_ID_ASC',
+  GroupIdDesc = 'GROUP_ID_DESC',
+  Natural = 'NATURAL',
+  SurveyIdAsc = 'SURVEY_ID_ASC',
+  SurveyIdDesc = 'SURVEY_ID_DESC'
+}
 
 export type SurveyInviteOptionsInput = {
   email?: Maybe<Scalars['Email']>;
@@ -10195,6 +10418,54 @@ export enum TileScheme {
   Tms = 'TMS',
   Xyz = 'XYZ'
 }
+
+/** All input for the `toggleAdminAccess` mutation. */
+export type ToggleAdminAccessInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  userId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `toggleAdminAccess` mutation. */
+export type ToggleAdminAccessPayload = {
+  __typename?: 'ToggleAdminAccessPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `toggleForumPostingBan` mutation. */
+export type ToggleForumPostingBanInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  userId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `toggleForumPostingBan` mutation. */
+export type ToggleForumPostingBanPayload = {
+  __typename?: 'ToggleForumPostingBanPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
 
 export type Topic = Node & {
   __typename?: 'Topic';
@@ -11007,33 +11278,6 @@ export type UpdateProjectInput = {
   patch: ProjectPatch;
 };
 
-/** All input for the `updateProjectInviteByEmailAndProjectId` mutation. */
-export type UpdateProjectInviteByEmailAndProjectIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Specified by admin when invite was created. */
-  email: Scalars['Email'];
-  /** An object where the defined keys will be set on the `ProjectInvite` being updated. */
-  patch: ProjectInvitePatch;
-  projectId: Scalars['Int'];
-};
-
-/** All input for the `updateProjectInviteByNodeId` mutation. */
-export type UpdateProjectInviteByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `ProjectInvite` to be updated. */
-  nodeId: Scalars['ID'];
-  /** An object where the defined keys will be set on the `ProjectInvite` being updated. */
-  patch: ProjectInvitePatch;
-};
-
 /** All input for the `updateProjectInviteGroupByInviteIdAndGroupId` mutation. */
 export type UpdateProjectInviteGroupByInviteIdAndGroupIdInput = {
   /**
@@ -11055,6 +11299,10 @@ export type UpdateProjectInviteGroupPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Group` that is related to this `ProjectInviteGroup`. */
+  group?: Maybe<Group>;
+  /** Reads a single `ProjectInvite` that is related to this `ProjectInviteGroup`. */
+  invite?: Maybe<ProjectInvite>;
   /** The `ProjectInviteGroup` that was updated by this mutation. */
   projectInviteGroup?: Maybe<ProjectInviteGroup>;
   /** An edge for our `ProjectInviteGroup`. May be used by Relay 1. */
@@ -11076,12 +11324,14 @@ export type UpdateProjectInviteInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-  /** An object where the defined keys will be set on the `ProjectInvite` being updated. */
-  patch: ProjectInvitePatch;
+  email?: Maybe<Scalars['String']>;
+  fullname?: Maybe<Scalars['String']>;
+  groups?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  inviteId?: Maybe<Scalars['Int']>;
+  makeAdmin?: Maybe<Scalars['Boolean']>;
 };
 
-/** The output of our update `ProjectInvite` mutation. */
+/** The output of our `updateProjectInvite` mutation. */
 export type UpdateProjectInvitePayload = {
   __typename?: 'UpdateProjectInvitePayload';
   /**
@@ -11089,7 +11339,6 @@ export type UpdateProjectInvitePayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** The `ProjectInvite` that was updated by this mutation. */
   projectInvite?: Maybe<ProjectInvite>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
@@ -11663,6 +11912,12 @@ export type User = Node & {
    */
   bannedFromForums?: Maybe<Scalars['Boolean']>;
   /**
+   * Only visible to admins of projects a user has joined. Can be used for
+   * identification purposes since users will not gain any access control
+   * privileges until this email has been confirmed.
+   */
+  canonicalEmail?: Maybe<Scalars['String']>;
+  /**
    * Email notification preferences can be read and set by the current user session.
    *     These settings cannot be accessed by other users or SeaSketch project admins.
    */
@@ -11672,7 +11927,11 @@ export type User = Node & {
    * @deprecated Please use emailNotificationPreference instead
    */
   emailNotificationPreferencesConnection: EmailNotificationPreferencesConnection;
+  /** List of groups for the given project and user. Only available to project admins. */
+  groups?: Maybe<Array<Group>>;
   id: Scalars['Int'];
+  /** Indicates if user is admin on the current project, indicated by the `x-ss-slug` header. */
+  isAdmin?: Maybe<Scalars['Boolean']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -11706,8 +11965,14 @@ export type User = Node & {
  * These tokens contain ephemeral information like `canonical_email` which can be
  * used to accept project invite tokens.
  */
-export type UserBannedFromForumsArgs = {
-  projectId?: Maybe<Scalars['Int']>;
+export type UserEmailNotificationPreferencesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<EmailNotificationPreferenceCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
 };
 
 
@@ -11720,14 +11985,9 @@ export type UserBannedFromForumsArgs = {
  * These tokens contain ephemeral information like `canonical_email` which can be
  * used to accept project invite tokens.
  */
-export type UserEmailNotificationPreferencesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<EmailNotificationPreferenceCondition>;
+export type UserGroupsArgs = {
   first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
 };
 
 
@@ -11762,6 +12022,26 @@ export enum UsersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+
+export type UpdateTerrainExaggerationFragment = (
+  { __typename?: 'Basemap' }
+  & Pick<Basemap, 'terrainExaggeration'>
+);
+
+export type NewLabelsLayerFragment = (
+  { __typename?: 'Basemap' }
+  & Pick<Basemap, 'labelsLayerId'>
+);
+
+export type NewTerrainFragment = (
+  { __typename?: 'Basemap' }
+  & Pick<Basemap, 'terrainUrl' | 'terrainOptional' | 'terrainVisibilityDefault'>
+);
+
+export type NewBasemapFragment = (
+  { __typename?: 'Basemap' }
+  & Pick<Basemap, 'id' | 'projectId' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'nodeId' | 'terrainExaggeration' | 'terrainOptional' | 'url' | 'type' | 'tileSize' | 'thumbnail' | 'terrainUrl' | 'terrainTileSize'>
+);
 
 export type ProjectBucketSettingQueryVariables = Exact<{
   slug: Scalars['String'];
@@ -11814,6 +12094,51 @@ export type UpdateProjectStorageBucketMutation = (
       )> }
     )> }
   )> }
+);
+
+export type NewQueryParametersFragment = (
+  { __typename?: 'DataSource' }
+  & Pick<DataSource, 'queryParameters'>
+);
+
+export type UpdateHighDpiFragment = (
+  { __typename?: 'DataSource' }
+  & Pick<DataSource, 'useDevicePixelRatio'>
+);
+
+export type UpdateFormatFragment = (
+  { __typename?: 'DataSource' }
+  & Pick<DataSource, 'queryParameters'>
+);
+
+export type NewGlStyleFragment = (
+  { __typename?: 'DataLayer' }
+  & Pick<DataLayer, 'mapboxGlStyles'>
+);
+
+export type NewRenderUnderFragment = (
+  { __typename?: 'DataLayer' }
+  & Pick<DataLayer, 'renderUnder'>
+);
+
+export type NewZIndexFragment = (
+  { __typename?: 'DataLayer' }
+  & Pick<DataLayer, 'zIndex'>
+);
+
+export type NewGroupFragment = (
+  { __typename?: 'Group' }
+  & Pick<Group, 'id' | 'projectId' | 'name'>
+);
+
+export type NewInviteEmailFragment = (
+  { __typename?: 'InviteEmail' }
+  & Pick<InviteEmail, 'id' | 'toAddress' | 'createdAt' | 'status' | 'tokenExpiresAt' | 'error' | 'updatedAt'>
+);
+
+export type NewLayerOptionsFragment = (
+  { __typename?: 'OptionalBasemapLayer' }
+  & Pick<OptionalBasemapLayer, 'options'>
 );
 
 export type GetAclQueryVariables = Exact<{
@@ -12448,14 +12773,12 @@ export type CreateProjectMutation = (
   )> }
 );
 
-export type CurrentProjectMetadataQueryVariables = Exact<{
-  slug: Scalars['String'];
-}>;
+export type CurrentProjectMetadataQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type CurrentProjectMetadataQuery = (
   { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
+  & { currentProject?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
   )> }
@@ -13081,7 +13404,597 @@ export type UpdateProjectSettingsMutation = (
   )> }
 );
 
+export type UserAdminCountsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
+
+export type UserAdminCountsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'accessControl' | 'participantCount' | 'adminCount' | 'unapprovedParticipantCount'>
+    & { inviteCounts?: Maybe<Array<(
+      { __typename?: 'InviteStat' }
+      & Pick<InviteStat, 'count' | 'status'>
+    )>>, groups: Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name' | 'memberCount'>
+    )> }
+  )> }
+);
+
+export type CreateGroupMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  name: Scalars['String'];
+}>;
+
+
+export type CreateGroupMutation = (
+  { __typename?: 'Mutation' }
+  & { createGroup?: Maybe<(
+    { __typename?: 'CreateGroupPayload' }
+    & { group?: Maybe<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name' | 'projectId'>
+    )> }
+  )> }
+);
+
+export type ParticipantListDetailsFragment = (
+  { __typename?: 'User' }
+  & Pick<User, 'id' | 'bannedFromForums' | 'isAdmin' | 'canonicalEmail'>
+  & { profile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'email' | 'fullname' | 'nickname' | 'picture'>
+  )>, groups?: Maybe<Array<(
+    { __typename?: 'Group' }
+    & Pick<Group, 'id' | 'name'>
+  )>> }
+);
+
+export type ParticipantsQueryVariables = Exact<{
+  slug: Scalars['String'];
+  offset?: Maybe<Scalars['Int']>;
+  first?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type ParticipantsQuery = (
+  { __typename?: 'Query' }
+  & { root?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { participants?: Maybe<Array<(
+      { __typename?: 'User' }
+      & ParticipantListDetailsFragment
+    )>> }
+  )> }
+);
+
+export type AdminsQueryVariables = Exact<{
+  slug: Scalars['String'];
+  offset?: Maybe<Scalars['Int']>;
+  first?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type AdminsQuery = (
+  { __typename?: 'Query' }
+  & { root?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { participants?: Maybe<Array<(
+      { __typename?: 'User' }
+      & ParticipantListDetailsFragment
+    )>> }
+  )> }
+);
+
+export type GroupMembersQueryVariables = Exact<{
+  groupId: Scalars['Int'];
+  offset?: Maybe<Scalars['Int']>;
+  first?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type GroupMembersQuery = (
+  { __typename?: 'Query' }
+  & { root?: Maybe<(
+    { __typename?: 'Group' }
+    & { participants?: Maybe<Array<(
+      { __typename?: 'User' }
+      & ParticipantListDetailsFragment
+    )>> }
+  )> }
+);
+
+export type UserListDetailsFragment = (
+  { __typename?: 'User' }
+  & Pick<User, 'id' | 'isAdmin' | 'canonicalEmail' | 'bannedFromForums' | 'onboarded' | 'participationStatus'>
+  & { groups?: Maybe<Array<(
+    { __typename?: 'Group' }
+    & Pick<Group, 'name' | 'id'>
+  )>>, profile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'email' | 'fullname' | 'nickname' | 'picture'>
+  )> }
+);
+
+export type UserSettingsListsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type UserSettingsListsQuery = (
+  { __typename?: 'Query' }
+  & { currentProject?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'accessControl'>
+    & { groups: Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'name' | 'id'>
+    )>, invitesConnection: (
+      { __typename?: 'ProjectInvitesConnection' }
+      & { nodes: Array<(
+        { __typename?: 'ProjectInvite' }
+        & InviteDetailsFragment
+      )> }
+    ), participants?: Maybe<Array<(
+      { __typename?: 'User' }
+      & UserListDetailsFragment
+    )>> }
+  )> }
+);
+
+export type UserInfoQueryVariables = Exact<{
+  userId: Scalars['Int'];
+}>;
+
+
+export type UserInfoQuery = (
+  { __typename?: 'Query' }
+  & { user?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id' | 'isAdmin' | 'canonicalEmail' | 'bannedFromForums' | 'onboarded' | 'participationStatus'>
+    & { emailNotificationPreference?: Maybe<(
+      { __typename?: 'EmailNotificationPreference' }
+      & Pick<EmailNotificationPreference, 'unsubscribeAll'>
+    )>, groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'name' | 'id'>
+    )>>, profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & Pick<Profile, 'affiliations' | 'bio' | 'email' | 'fullname' | 'nickname' | 'picture'>
+    )> }
+  )>, currentProject?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { groups: Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'name' | 'id'>
+    )> }
+  )> }
+);
+
+export type ToggleAdminAccessMutationVariables = Exact<{
+  userId: Scalars['Int'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type ToggleAdminAccessMutation = (
+  { __typename?: 'Mutation' }
+  & { toggleAdminAccess?: Maybe<(
+    { __typename?: 'ToggleAdminAccessPayload' }
+    & Pick<ToggleAdminAccessPayload, 'clientMutationId'>
+    & { isAdmin: ToggleAdminAccessPayload['boolean'] }
+  )> }
+);
+
+export type SetUserGroupsMutationVariables = Exact<{
+  userId: Scalars['Int'];
+  projectId: Scalars['Int'];
+  groupIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+}>;
+
+
+export type SetUserGroupsMutation = (
+  { __typename?: 'Mutation' }
+  & { setUserGroups?: Maybe<(
+    { __typename?: 'SetUserGroupsPayload' }
+    & { groupIds: SetUserGroupsPayload['integers'] }
+  )> }
+);
+
+export type ToggleForumPostingBanMutationVariables = Exact<{
+  userId: Scalars['Int'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type ToggleForumPostingBanMutation = (
+  { __typename?: 'Mutation' }
+  & { toggleForumPostingBan?: Maybe<(
+    { __typename?: 'ToggleForumPostingBanPayload' }
+    & { isBanned: ToggleForumPostingBanPayload['boolean'] }
+  )> }
+);
+
+export type DeleteGroupMutationVariables = Exact<{
+  groupId: Scalars['Int'];
+}>;
+
+
+export type DeleteGroupMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteGroup?: Maybe<(
+    { __typename?: 'DeleteGroupPayload' }
+    & { group?: Maybe<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id'>
+    )> }
+  )> }
+);
+
+export type CreateProjectInvitesMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  makeAdmin: Scalars['Boolean'];
+  groupNames: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
+  userDetails: Array<Maybe<ProjectInviteOptionInput>> | Maybe<ProjectInviteOptionInput>;
+  sendEmailNow: Scalars['Boolean'];
+}>;
+
+
+export type CreateProjectInvitesMutation = (
+  { __typename?: 'Mutation' }
+  & { createProjectInvites?: Maybe<(
+    { __typename?: 'CreateProjectInvitesPayload' }
+    & { projectInvites?: Maybe<Array<(
+      { __typename?: 'ProjectInvite' }
+      & InviteDetailsFragment
+    )>> }
+  )> }
+);
+
+export type InviteDetailsFragment = (
+  { __typename?: 'ProjectInvite' }
+  & Pick<ProjectInvite, 'createdAt' | 'email' | 'fullname' | 'id' | 'status' | 'makeAdmin' | 'wasUsed'>
+  & { groups?: Maybe<Array<(
+    { __typename?: 'Group' }
+    & Pick<Group, 'id' | 'name'>
+  )>> }
+);
+
+export type ProjectInvitesQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+  status?: Maybe<Array<Maybe<InviteStatus>> | Maybe<InviteStatus>>;
+  orderBy?: Maybe<InviteOrderBy>;
+  cursor?: Maybe<Scalars['Cursor']>;
+  limit?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type ProjectInvitesQuery = (
+  { __typename?: 'Query' }
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { invitesConnection: (
+      { __typename?: 'ProjectInvitesConnection' }
+      & { edges: Array<(
+        { __typename?: 'ProjectInvitesEdge' }
+        & { node: (
+          { __typename?: 'ProjectInvite' }
+          & InviteDetailsFragment
+        ) }
+      )>, pageInfo: (
+        { __typename?: 'PageInfo' }
+        & Pick<PageInfo, 'hasNextPage' | 'endCursor'>
+      ) }
+    ) }
+  )> }
+);
+
+export type InviteEmailDetailsFragment = (
+  { __typename?: 'InviteEmail' }
+  & Pick<InviteEmail, 'id' | 'toAddress' | 'createdAt' | 'status' | 'tokenExpiresAt' | 'error' | 'updatedAt'>
+);
+
+export type InviteEditorModalQueryQueryVariables = Exact<{
+  inviteId: Scalars['Int'];
+}>;
+
+
+export type InviteEditorModalQueryQuery = (
+  { __typename?: 'Query' }
+  & { currentProject?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { groups: Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )> }
+  )>, projectInvite?: Maybe<(
+    { __typename?: 'ProjectInvite' }
+    & Pick<ProjectInvite, 'id' | 'makeAdmin' | 'email' | 'fullname' | 'status' | 'wasUsed'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )>>, inviteEmails: Array<(
+      { __typename?: 'InviteEmail' }
+      & InviteEmailDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateProjectInviteMutationVariables = Exact<{
+  id: Scalars['Int'];
+  makeAdmin: Scalars['Boolean'];
+  email: Scalars['String'];
+  fullname?: Maybe<Scalars['String']>;
+  groups: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+}>;
+
+
+export type UpdateProjectInviteMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectInvite?: Maybe<(
+    { __typename?: 'UpdateProjectInvitePayload' }
+    & { projectInvite?: Maybe<(
+      { __typename?: 'ProjectInvite' }
+      & Pick<ProjectInvite, 'id' | 'makeAdmin' | 'email' | 'fullname'>
+      & { groups?: Maybe<Array<(
+        { __typename?: 'Group' }
+        & Pick<Group, 'id' | 'name'>
+      )>>, inviteEmails: Array<(
+        { __typename?: 'InviteEmail' }
+        & InviteEmailDetailsFragment
+      )> }
+    )> }
+  )> }
+);
+
+export type DeleteProjectInviteMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteProjectInviteMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteProjectInvite?: Maybe<(
+    { __typename?: 'DeleteProjectInvitePayload' }
+    & { projectInvite?: Maybe<(
+      { __typename?: 'ProjectInvite' }
+      & Pick<ProjectInvite, 'id'>
+    )> }
+  )> }
+);
+
+export type SendInviteMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type SendInviteMutation = (
+  { __typename?: 'Mutation' }
+  & { sendProjectInvites?: Maybe<(
+    { __typename?: 'SendProjectInvitesPayload' }
+    & { inviteEmails?: Maybe<Array<(
+      { __typename?: 'InviteEmail' }
+      & { projectInvite?: Maybe<(
+        { __typename?: 'ProjectInvite' }
+        & Pick<ProjectInvite, 'id' | 'status'>
+      )> }
+      & InviteEmailDetailsFragment
+    )>> }
+  )> }
+);
+
+export type RenameGroupMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name: Scalars['String'];
+}>;
+
+
+export type RenameGroupMutation = (
+  { __typename?: 'Mutation' }
+  & { updateGroup?: Maybe<(
+    { __typename?: 'UpdateGroupPayload' }
+    & { group?: Maybe<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )> }
+  )> }
+);
+
+export type SendInvitesMutationVariables = Exact<{
+  ids: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+}>;
+
+
+export type SendInvitesMutation = (
+  { __typename?: 'Mutation' }
+  & { sendProjectInvites?: Maybe<(
+    { __typename?: 'SendProjectInvitesPayload' }
+    & { inviteEmails?: Maybe<Array<(
+      { __typename?: 'InviteEmail' }
+      & Pick<InviteEmail, 'projectInviteId'>
+      & { projectInvite?: Maybe<(
+        { __typename?: 'ProjectInvite' }
+        & Pick<ProjectInvite, 'id' | 'status'>
+      )> }
+      & InviteEmailDetailsFragment
+    )>> }
+  )> }
+);
+
+export type ProjectInviteEmailStatusSubscriptionSubscriptionVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ProjectInviteEmailStatusSubscriptionSubscription = (
+  { __typename?: 'Subscription' }
+  & { projectInviteStateUpdated?: Maybe<(
+    { __typename?: 'ProjectInviteStateSubscriptionPayload' }
+    & { invite?: Maybe<(
+      { __typename?: 'ProjectInvite' }
+      & Pick<ProjectInvite, 'status'>
+      & { opaqueId: ProjectInvite['id'] }
+    )> }
+  )> }
+);
+
+export const UpdateTerrainExaggerationFragmentDoc = gql`
+    fragment UpdateTerrainExaggeration on Basemap {
+  terrainExaggeration
+}
+    `;
+export const NewLabelsLayerFragmentDoc = gql`
+    fragment NewLabelsLayer on Basemap {
+  labelsLayerId
+}
+    `;
+export const NewTerrainFragmentDoc = gql`
+    fragment NewTerrain on Basemap {
+  terrainUrl
+  terrainOptional
+  terrainVisibilityDefault
+}
+    `;
+export const NewBasemapFragmentDoc = gql`
+    fragment NewBasemap on Basemap {
+  id
+  projectId
+  attribution
+  description
+  labelsLayerId
+  name
+  nodeId
+  terrainExaggeration
+  terrainOptional
+  url
+  type
+  tileSize
+  thumbnail
+  terrainUrl
+  terrainTileSize
+}
+    `;
+export const NewQueryParametersFragmentDoc = gql`
+    fragment NewQueryParameters on DataSource {
+  queryParameters
+}
+    `;
+export const UpdateHighDpiFragmentDoc = gql`
+    fragment UpdateHighDPI on DataSource {
+  useDevicePixelRatio
+}
+    `;
+export const UpdateFormatFragmentDoc = gql`
+    fragment UpdateFormat on DataSource {
+  queryParameters
+}
+    `;
+export const NewGlStyleFragmentDoc = gql`
+    fragment NewGLStyle on DataLayer {
+  mapboxGlStyles
+}
+    `;
+export const NewRenderUnderFragmentDoc = gql`
+    fragment NewRenderUnder on DataLayer {
+  renderUnder
+}
+    `;
+export const NewZIndexFragmentDoc = gql`
+    fragment NewZIndex on DataLayer {
+  zIndex
+}
+    `;
+export const NewGroupFragmentDoc = gql`
+    fragment NewGroup on Group {
+  id
+  projectId
+  name
+}
+    `;
+export const NewInviteEmailFragmentDoc = gql`
+    fragment NewInviteEmail on InviteEmail {
+  id
+  toAddress
+  createdAt
+  status
+  tokenExpiresAt
+  error
+  updatedAt
+}
+    `;
+export const NewLayerOptionsFragmentDoc = gql`
+    fragment NewLayerOptions on OptionalBasemapLayer {
+  options
+}
+    `;
+export const ParticipantListDetailsFragmentDoc = gql`
+    fragment ParticipantListDetails on User {
+  id
+  bannedFromForums
+  isAdmin
+  profile {
+    email
+    fullname
+    nickname
+    picture
+  }
+  groups {
+    id
+    name
+  }
+  canonicalEmail
+}
+    `;
+export const UserListDetailsFragmentDoc = gql`
+    fragment UserListDetails on User {
+  id
+  isAdmin
+  canonicalEmail
+  bannedFromForums
+  groups {
+    name
+    id
+  }
+  onboarded
+  participationStatus
+  profile {
+    email
+    fullname
+    nickname
+    picture
+  }
+}
+    `;
+export const InviteDetailsFragmentDoc = gql`
+    fragment InviteDetails on ProjectInvite {
+  createdAt
+  email
+  fullname
+  groups {
+    id
+    name
+  }
+  id
+  status
+  makeAdmin
+  wasUsed
+}
+    `;
+export const InviteEmailDetailsFragmentDoc = gql`
+    fragment InviteEmailDetails on InviteEmail {
+  id
+  toAddress
+  createdAt
+  status
+  tokenExpiresAt
+  error
+  updatedAt
+}
+    `;
 export const ProjectBucketSettingDocument = gql`
     query ProjectBucketSetting($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -14681,8 +15594,8 @@ export type CreateProjectMutationHookResult = ReturnType<typeof useCreateProject
 export type CreateProjectMutationResult = Apollo.MutationResult<CreateProjectMutation>;
 export type CreateProjectMutationOptions = Apollo.BaseMutationOptions<CreateProjectMutation, CreateProjectMutationVariables>;
 export const CurrentProjectMetadataDocument = gql`
-    query CurrentProjectMetadata($slug: String!) {
-  projectBySlug(slug: $slug) {
+    query CurrentProjectMetadata {
+  currentProject {
     id
     slug
     url
@@ -14709,11 +15622,10 @@ export const CurrentProjectMetadataDocument = gql`
  * @example
  * const { data, loading, error } = useCurrentProjectMetadataQuery({
  *   variables: {
- *      slug: // value for 'slug'
  *   },
  * });
  */
-export function useCurrentProjectMetadataQuery(baseOptions: Apollo.QueryHookOptions<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>) {
+export function useCurrentProjectMetadataQuery(baseOptions?: Apollo.QueryHookOptions<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>(CurrentProjectMetadataDocument, options);
       }
@@ -16274,3 +17186,843 @@ export function useUpdateProjectSettingsMutation(baseOptions?: Apollo.MutationHo
 export type UpdateProjectSettingsMutationHookResult = ReturnType<typeof useUpdateProjectSettingsMutation>;
 export type UpdateProjectSettingsMutationResult = Apollo.MutationResult<UpdateProjectSettingsMutation>;
 export type UpdateProjectSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateProjectSettingsMutation, UpdateProjectSettingsMutationVariables>;
+export const UserAdminCountsDocument = gql`
+    query UserAdminCounts($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    accessControl
+    participantCount
+    adminCount
+    inviteCounts {
+      count
+      status
+    }
+    groups {
+      id
+      name
+      memberCount
+    }
+    unapprovedParticipantCount
+  }
+}
+    `;
+
+/**
+ * __useUserAdminCountsQuery__
+ *
+ * To run a query within a React component, call `useUserAdminCountsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useUserAdminCountsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserAdminCountsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useUserAdminCountsQuery(baseOptions: Apollo.QueryHookOptions<UserAdminCountsQuery, UserAdminCountsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<UserAdminCountsQuery, UserAdminCountsQueryVariables>(UserAdminCountsDocument, options);
+      }
+export function useUserAdminCountsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<UserAdminCountsQuery, UserAdminCountsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<UserAdminCountsQuery, UserAdminCountsQueryVariables>(UserAdminCountsDocument, options);
+        }
+export type UserAdminCountsQueryHookResult = ReturnType<typeof useUserAdminCountsQuery>;
+export type UserAdminCountsLazyQueryHookResult = ReturnType<typeof useUserAdminCountsLazyQuery>;
+export type UserAdminCountsQueryResult = Apollo.QueryResult<UserAdminCountsQuery, UserAdminCountsQueryVariables>;
+export const CreateGroupDocument = gql`
+    mutation CreateGroup($projectId: Int!, $name: String!) {
+  createGroup(input: {group: {name: $name, projectId: $projectId}}) {
+    group {
+      id
+      name
+      projectId
+    }
+  }
+}
+    `;
+export type CreateGroupMutationFn = Apollo.MutationFunction<CreateGroupMutation, CreateGroupMutationVariables>;
+
+/**
+ * __useCreateGroupMutation__
+ *
+ * To run a mutation, you first call `useCreateGroupMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateGroupMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createGroupMutation, { data, loading, error }] = useCreateGroupMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useCreateGroupMutation(baseOptions?: Apollo.MutationHookOptions<CreateGroupMutation, CreateGroupMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateGroupMutation, CreateGroupMutationVariables>(CreateGroupDocument, options);
+      }
+export type CreateGroupMutationHookResult = ReturnType<typeof useCreateGroupMutation>;
+export type CreateGroupMutationResult = Apollo.MutationResult<CreateGroupMutation>;
+export type CreateGroupMutationOptions = Apollo.BaseMutationOptions<CreateGroupMutation, CreateGroupMutationVariables>;
+export const ParticipantsDocument = gql`
+    query Participants($slug: String!, $offset: Int, $first: Int) {
+  root: projectBySlug(slug: $slug) {
+    id
+    participants(offset: $offset, first: $first) {
+      ...ParticipantListDetails
+    }
+  }
+}
+    ${ParticipantListDetailsFragmentDoc}`;
+
+/**
+ * __useParticipantsQuery__
+ *
+ * To run a query within a React component, call `useParticipantsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useParticipantsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useParticipantsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      offset: // value for 'offset'
+ *      first: // value for 'first'
+ *   },
+ * });
+ */
+export function useParticipantsQuery(baseOptions: Apollo.QueryHookOptions<ParticipantsQuery, ParticipantsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ParticipantsQuery, ParticipantsQueryVariables>(ParticipantsDocument, options);
+      }
+export function useParticipantsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ParticipantsQuery, ParticipantsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ParticipantsQuery, ParticipantsQueryVariables>(ParticipantsDocument, options);
+        }
+export type ParticipantsQueryHookResult = ReturnType<typeof useParticipantsQuery>;
+export type ParticipantsLazyQueryHookResult = ReturnType<typeof useParticipantsLazyQuery>;
+export type ParticipantsQueryResult = Apollo.QueryResult<ParticipantsQuery, ParticipantsQueryVariables>;
+export const AdminsDocument = gql`
+    query Admins($slug: String!, $offset: Int, $first: Int) {
+  root: projectBySlug(slug: $slug) {
+    id
+    participants: admins(offset: $offset, first: $first) {
+      ...ParticipantListDetails
+    }
+  }
+}
+    ${ParticipantListDetailsFragmentDoc}`;
+
+/**
+ * __useAdminsQuery__
+ *
+ * To run a query within a React component, call `useAdminsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAdminsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAdminsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      offset: // value for 'offset'
+ *      first: // value for 'first'
+ *   },
+ * });
+ */
+export function useAdminsQuery(baseOptions: Apollo.QueryHookOptions<AdminsQuery, AdminsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<AdminsQuery, AdminsQueryVariables>(AdminsDocument, options);
+      }
+export function useAdminsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<AdminsQuery, AdminsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<AdminsQuery, AdminsQueryVariables>(AdminsDocument, options);
+        }
+export type AdminsQueryHookResult = ReturnType<typeof useAdminsQuery>;
+export type AdminsLazyQueryHookResult = ReturnType<typeof useAdminsLazyQuery>;
+export type AdminsQueryResult = Apollo.QueryResult<AdminsQuery, AdminsQueryVariables>;
+export const GroupMembersDocument = gql`
+    query GroupMembers($groupId: Int!, $offset: Int, $first: Int) {
+  root: group(id: $groupId) {
+    participants: members(offset: $offset, first: $first) {
+      ...ParticipantListDetails
+    }
+  }
+}
+    ${ParticipantListDetailsFragmentDoc}`;
+
+/**
+ * __useGroupMembersQuery__
+ *
+ * To run a query within a React component, call `useGroupMembersQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGroupMembersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGroupMembersQuery({
+ *   variables: {
+ *      groupId: // value for 'groupId'
+ *      offset: // value for 'offset'
+ *      first: // value for 'first'
+ *   },
+ * });
+ */
+export function useGroupMembersQuery(baseOptions: Apollo.QueryHookOptions<GroupMembersQuery, GroupMembersQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GroupMembersQuery, GroupMembersQueryVariables>(GroupMembersDocument, options);
+      }
+export function useGroupMembersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GroupMembersQuery, GroupMembersQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GroupMembersQuery, GroupMembersQueryVariables>(GroupMembersDocument, options);
+        }
+export type GroupMembersQueryHookResult = ReturnType<typeof useGroupMembersQuery>;
+export type GroupMembersLazyQueryHookResult = ReturnType<typeof useGroupMembersLazyQuery>;
+export type GroupMembersQueryResult = Apollo.QueryResult<GroupMembersQuery, GroupMembersQueryVariables>;
+export const UserSettingsListsDocument = gql`
+    query UserSettingsLists {
+  currentProject {
+    id
+    groups {
+      name
+      id
+    }
+    invitesConnection {
+      nodes {
+        ...InviteDetails
+      }
+    }
+    participants {
+      ...UserListDetails
+    }
+    accessControl
+  }
+}
+    ${InviteDetailsFragmentDoc}
+${UserListDetailsFragmentDoc}`;
+
+/**
+ * __useUserSettingsListsQuery__
+ *
+ * To run a query within a React component, call `useUserSettingsListsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useUserSettingsListsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserSettingsListsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useUserSettingsListsQuery(baseOptions?: Apollo.QueryHookOptions<UserSettingsListsQuery, UserSettingsListsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<UserSettingsListsQuery, UserSettingsListsQueryVariables>(UserSettingsListsDocument, options);
+      }
+export function useUserSettingsListsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<UserSettingsListsQuery, UserSettingsListsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<UserSettingsListsQuery, UserSettingsListsQueryVariables>(UserSettingsListsDocument, options);
+        }
+export type UserSettingsListsQueryHookResult = ReturnType<typeof useUserSettingsListsQuery>;
+export type UserSettingsListsLazyQueryHookResult = ReturnType<typeof useUserSettingsListsLazyQuery>;
+export type UserSettingsListsQueryResult = Apollo.QueryResult<UserSettingsListsQuery, UserSettingsListsQueryVariables>;
+export const UserInfoDocument = gql`
+    query UserInfo($userId: Int!) {
+  user(id: $userId) {
+    id
+    isAdmin
+    canonicalEmail
+    bannedFromForums
+    emailNotificationPreference {
+      unsubscribeAll
+    }
+    groups {
+      name
+      id
+    }
+    onboarded
+    participationStatus
+    profile {
+      affiliations
+      bio
+      email
+      fullname
+      nickname
+      picture
+    }
+  }
+  currentProject {
+    id
+    groups {
+      name
+      id
+    }
+  }
+}
+    `;
+
+/**
+ * __useUserInfoQuery__
+ *
+ * To run a query within a React component, call `useUserInfoQuery` and pass it any options that fit your needs.
+ * When your component renders, `useUserInfoQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserInfoQuery({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useUserInfoQuery(baseOptions: Apollo.QueryHookOptions<UserInfoQuery, UserInfoQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<UserInfoQuery, UserInfoQueryVariables>(UserInfoDocument, options);
+      }
+export function useUserInfoLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<UserInfoQuery, UserInfoQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<UserInfoQuery, UserInfoQueryVariables>(UserInfoDocument, options);
+        }
+export type UserInfoQueryHookResult = ReturnType<typeof useUserInfoQuery>;
+export type UserInfoLazyQueryHookResult = ReturnType<typeof useUserInfoLazyQuery>;
+export type UserInfoQueryResult = Apollo.QueryResult<UserInfoQuery, UserInfoQueryVariables>;
+export const ToggleAdminAccessDocument = gql`
+    mutation toggleAdminAccess($userId: Int!, $projectId: Int!) {
+  toggleAdminAccess(input: {projectId: $projectId, userId: $userId}) {
+    clientMutationId
+    isAdmin: boolean
+  }
+}
+    `;
+export type ToggleAdminAccessMutationFn = Apollo.MutationFunction<ToggleAdminAccessMutation, ToggleAdminAccessMutationVariables>;
+
+/**
+ * __useToggleAdminAccessMutation__
+ *
+ * To run a mutation, you first call `useToggleAdminAccessMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useToggleAdminAccessMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [toggleAdminAccessMutation, { data, loading, error }] = useToggleAdminAccessMutation({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useToggleAdminAccessMutation(baseOptions?: Apollo.MutationHookOptions<ToggleAdminAccessMutation, ToggleAdminAccessMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ToggleAdminAccessMutation, ToggleAdminAccessMutationVariables>(ToggleAdminAccessDocument, options);
+      }
+export type ToggleAdminAccessMutationHookResult = ReturnType<typeof useToggleAdminAccessMutation>;
+export type ToggleAdminAccessMutationResult = Apollo.MutationResult<ToggleAdminAccessMutation>;
+export type ToggleAdminAccessMutationOptions = Apollo.BaseMutationOptions<ToggleAdminAccessMutation, ToggleAdminAccessMutationVariables>;
+export const SetUserGroupsDocument = gql`
+    mutation setUserGroups($userId: Int!, $projectId: Int!, $groupIds: [Int]!) {
+  setUserGroups(
+    input: {userId: $userId, projectId: $projectId, groups: $groupIds}
+  ) {
+    groupIds: integers
+  }
+}
+    `;
+export type SetUserGroupsMutationFn = Apollo.MutationFunction<SetUserGroupsMutation, SetUserGroupsMutationVariables>;
+
+/**
+ * __useSetUserGroupsMutation__
+ *
+ * To run a mutation, you first call `useSetUserGroupsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetUserGroupsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setUserGroupsMutation, { data, loading, error }] = useSetUserGroupsMutation({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *      projectId: // value for 'projectId'
+ *      groupIds: // value for 'groupIds'
+ *   },
+ * });
+ */
+export function useSetUserGroupsMutation(baseOptions?: Apollo.MutationHookOptions<SetUserGroupsMutation, SetUserGroupsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetUserGroupsMutation, SetUserGroupsMutationVariables>(SetUserGroupsDocument, options);
+      }
+export type SetUserGroupsMutationHookResult = ReturnType<typeof useSetUserGroupsMutation>;
+export type SetUserGroupsMutationResult = Apollo.MutationResult<SetUserGroupsMutation>;
+export type SetUserGroupsMutationOptions = Apollo.BaseMutationOptions<SetUserGroupsMutation, SetUserGroupsMutationVariables>;
+export const ToggleForumPostingBanDocument = gql`
+    mutation toggleForumPostingBan($userId: Int!, $projectId: Int!) {
+  toggleForumPostingBan(input: {userId: $userId, projectId: $projectId}) {
+    isBanned: boolean
+  }
+}
+    `;
+export type ToggleForumPostingBanMutationFn = Apollo.MutationFunction<ToggleForumPostingBanMutation, ToggleForumPostingBanMutationVariables>;
+
+/**
+ * __useToggleForumPostingBanMutation__
+ *
+ * To run a mutation, you first call `useToggleForumPostingBanMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useToggleForumPostingBanMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [toggleForumPostingBanMutation, { data, loading, error }] = useToggleForumPostingBanMutation({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useToggleForumPostingBanMutation(baseOptions?: Apollo.MutationHookOptions<ToggleForumPostingBanMutation, ToggleForumPostingBanMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ToggleForumPostingBanMutation, ToggleForumPostingBanMutationVariables>(ToggleForumPostingBanDocument, options);
+      }
+export type ToggleForumPostingBanMutationHookResult = ReturnType<typeof useToggleForumPostingBanMutation>;
+export type ToggleForumPostingBanMutationResult = Apollo.MutationResult<ToggleForumPostingBanMutation>;
+export type ToggleForumPostingBanMutationOptions = Apollo.BaseMutationOptions<ToggleForumPostingBanMutation, ToggleForumPostingBanMutationVariables>;
+export const DeleteGroupDocument = gql`
+    mutation deleteGroup($groupId: Int!) {
+  deleteGroup(input: {id: $groupId}) {
+    group {
+      id
+    }
+  }
+}
+    `;
+export type DeleteGroupMutationFn = Apollo.MutationFunction<DeleteGroupMutation, DeleteGroupMutationVariables>;
+
+/**
+ * __useDeleteGroupMutation__
+ *
+ * To run a mutation, you first call `useDeleteGroupMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteGroupMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteGroupMutation, { data, loading, error }] = useDeleteGroupMutation({
+ *   variables: {
+ *      groupId: // value for 'groupId'
+ *   },
+ * });
+ */
+export function useDeleteGroupMutation(baseOptions?: Apollo.MutationHookOptions<DeleteGroupMutation, DeleteGroupMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteGroupMutation, DeleteGroupMutationVariables>(DeleteGroupDocument, options);
+      }
+export type DeleteGroupMutationHookResult = ReturnType<typeof useDeleteGroupMutation>;
+export type DeleteGroupMutationResult = Apollo.MutationResult<DeleteGroupMutation>;
+export type DeleteGroupMutationOptions = Apollo.BaseMutationOptions<DeleteGroupMutation, DeleteGroupMutationVariables>;
+export const CreateProjectInvitesDocument = gql`
+    mutation createProjectInvites($projectId: Int!, $makeAdmin: Boolean!, $groupNames: [String]!, $userDetails: [ProjectInviteOptionInput]!, $sendEmailNow: Boolean!) {
+  createProjectInvites(
+    input: {projectId: $projectId, makeAdmin: $makeAdmin, groupNames: $groupNames, projectInviteOptions: $userDetails, sendEmailNow: $sendEmailNow}
+  ) {
+    projectInvites {
+      ...InviteDetails
+    }
+  }
+}
+    ${InviteDetailsFragmentDoc}`;
+export type CreateProjectInvitesMutationFn = Apollo.MutationFunction<CreateProjectInvitesMutation, CreateProjectInvitesMutationVariables>;
+
+/**
+ * __useCreateProjectInvitesMutation__
+ *
+ * To run a mutation, you first call `useCreateProjectInvitesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateProjectInvitesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createProjectInvitesMutation, { data, loading, error }] = useCreateProjectInvitesMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      makeAdmin: // value for 'makeAdmin'
+ *      groupNames: // value for 'groupNames'
+ *      userDetails: // value for 'userDetails'
+ *      sendEmailNow: // value for 'sendEmailNow'
+ *   },
+ * });
+ */
+export function useCreateProjectInvitesMutation(baseOptions?: Apollo.MutationHookOptions<CreateProjectInvitesMutation, CreateProjectInvitesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateProjectInvitesMutation, CreateProjectInvitesMutationVariables>(CreateProjectInvitesDocument, options);
+      }
+export type CreateProjectInvitesMutationHookResult = ReturnType<typeof useCreateProjectInvitesMutation>;
+export type CreateProjectInvitesMutationResult = Apollo.MutationResult<CreateProjectInvitesMutation>;
+export type CreateProjectInvitesMutationOptions = Apollo.BaseMutationOptions<CreateProjectInvitesMutation, CreateProjectInvitesMutationVariables>;
+export const ProjectInvitesDocument = gql`
+    query ProjectInvites($projectId: Int!, $status: [InviteStatus], $orderBy: InviteOrderBy, $cursor: Cursor, $limit: Int) {
+  project(id: $projectId) {
+    id
+    invitesConnection(
+      statuses: $status
+      orderBy: $orderBy
+      after: $cursor
+      first: $limit
+    ) {
+      edges {
+        node {
+          ...InviteDetails
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+    ${InviteDetailsFragmentDoc}`;
+
+/**
+ * __useProjectInvitesQuery__
+ *
+ * To run a query within a React component, call `useProjectInvitesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectInvitesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectInvitesQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      status: // value for 'status'
+ *      orderBy: // value for 'orderBy'
+ *      cursor: // value for 'cursor'
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useProjectInvitesQuery(baseOptions: Apollo.QueryHookOptions<ProjectInvitesQuery, ProjectInvitesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectInvitesQuery, ProjectInvitesQueryVariables>(ProjectInvitesDocument, options);
+      }
+export function useProjectInvitesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectInvitesQuery, ProjectInvitesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectInvitesQuery, ProjectInvitesQueryVariables>(ProjectInvitesDocument, options);
+        }
+export type ProjectInvitesQueryHookResult = ReturnType<typeof useProjectInvitesQuery>;
+export type ProjectInvitesLazyQueryHookResult = ReturnType<typeof useProjectInvitesLazyQuery>;
+export type ProjectInvitesQueryResult = Apollo.QueryResult<ProjectInvitesQuery, ProjectInvitesQueryVariables>;
+export const InviteEditorModalQueryDocument = gql`
+    query InviteEditorModalQuery($inviteId: Int!) {
+  currentProject {
+    id
+    groups {
+      id
+      name
+    }
+  }
+  projectInvite(id: $inviteId) {
+    id
+    makeAdmin
+    email
+    fullname
+    status
+    groups {
+      id
+      name
+    }
+    wasUsed
+    inviteEmails {
+      ...InviteEmailDetails
+    }
+  }
+}
+    ${InviteEmailDetailsFragmentDoc}`;
+
+/**
+ * __useInviteEditorModalQueryQuery__
+ *
+ * To run a query within a React component, call `useInviteEditorModalQueryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useInviteEditorModalQueryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useInviteEditorModalQueryQuery({
+ *   variables: {
+ *      inviteId: // value for 'inviteId'
+ *   },
+ * });
+ */
+export function useInviteEditorModalQueryQuery(baseOptions: Apollo.QueryHookOptions<InviteEditorModalQueryQuery, InviteEditorModalQueryQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<InviteEditorModalQueryQuery, InviteEditorModalQueryQueryVariables>(InviteEditorModalQueryDocument, options);
+      }
+export function useInviteEditorModalQueryLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<InviteEditorModalQueryQuery, InviteEditorModalQueryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<InviteEditorModalQueryQuery, InviteEditorModalQueryQueryVariables>(InviteEditorModalQueryDocument, options);
+        }
+export type InviteEditorModalQueryQueryHookResult = ReturnType<typeof useInviteEditorModalQueryQuery>;
+export type InviteEditorModalQueryLazyQueryHookResult = ReturnType<typeof useInviteEditorModalQueryLazyQuery>;
+export type InviteEditorModalQueryQueryResult = Apollo.QueryResult<InviteEditorModalQueryQuery, InviteEditorModalQueryQueryVariables>;
+export const UpdateProjectInviteDocument = gql`
+    mutation UpdateProjectInvite($id: Int!, $makeAdmin: Boolean!, $email: String!, $fullname: String, $groups: [Int]!) {
+  updateProjectInvite(
+    input: {inviteId: $id, makeAdmin: $makeAdmin, email: $email, groups: $groups, fullname: $fullname}
+  ) {
+    projectInvite {
+      id
+      makeAdmin
+      groups {
+        id
+        name
+      }
+      email
+      fullname
+      inviteEmails {
+        ...InviteEmailDetails
+      }
+    }
+  }
+}
+    ${InviteEmailDetailsFragmentDoc}`;
+export type UpdateProjectInviteMutationFn = Apollo.MutationFunction<UpdateProjectInviteMutation, UpdateProjectInviteMutationVariables>;
+
+/**
+ * __useUpdateProjectInviteMutation__
+ *
+ * To run a mutation, you first call `useUpdateProjectInviteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateProjectInviteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateProjectInviteMutation, { data, loading, error }] = useUpdateProjectInviteMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      makeAdmin: // value for 'makeAdmin'
+ *      email: // value for 'email'
+ *      fullname: // value for 'fullname'
+ *      groups: // value for 'groups'
+ *   },
+ * });
+ */
+export function useUpdateProjectInviteMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectInviteMutation, UpdateProjectInviteMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateProjectInviteMutation, UpdateProjectInviteMutationVariables>(UpdateProjectInviteDocument, options);
+      }
+export type UpdateProjectInviteMutationHookResult = ReturnType<typeof useUpdateProjectInviteMutation>;
+export type UpdateProjectInviteMutationResult = Apollo.MutationResult<UpdateProjectInviteMutation>;
+export type UpdateProjectInviteMutationOptions = Apollo.BaseMutationOptions<UpdateProjectInviteMutation, UpdateProjectInviteMutationVariables>;
+export const DeleteProjectInviteDocument = gql`
+    mutation DeleteProjectInvite($id: Int!) {
+  deleteProjectInvite(input: {id: $id}) {
+    projectInvite {
+      id
+    }
+  }
+}
+    `;
+export type DeleteProjectInviteMutationFn = Apollo.MutationFunction<DeleteProjectInviteMutation, DeleteProjectInviteMutationVariables>;
+
+/**
+ * __useDeleteProjectInviteMutation__
+ *
+ * To run a mutation, you first call `useDeleteProjectInviteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteProjectInviteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteProjectInviteMutation, { data, loading, error }] = useDeleteProjectInviteMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteProjectInviteMutation(baseOptions?: Apollo.MutationHookOptions<DeleteProjectInviteMutation, DeleteProjectInviteMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteProjectInviteMutation, DeleteProjectInviteMutationVariables>(DeleteProjectInviteDocument, options);
+      }
+export type DeleteProjectInviteMutationHookResult = ReturnType<typeof useDeleteProjectInviteMutation>;
+export type DeleteProjectInviteMutationResult = Apollo.MutationResult<DeleteProjectInviteMutation>;
+export type DeleteProjectInviteMutationOptions = Apollo.BaseMutationOptions<DeleteProjectInviteMutation, DeleteProjectInviteMutationVariables>;
+export const SendInviteDocument = gql`
+    mutation SendInvite($id: Int!) {
+  sendProjectInvites(input: {inviteIds: [$id]}) {
+    inviteEmails {
+      ...InviteEmailDetails
+      projectInvite {
+        id
+        status
+      }
+    }
+  }
+}
+    ${InviteEmailDetailsFragmentDoc}`;
+export type SendInviteMutationFn = Apollo.MutationFunction<SendInviteMutation, SendInviteMutationVariables>;
+
+/**
+ * __useSendInviteMutation__
+ *
+ * To run a mutation, you first call `useSendInviteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSendInviteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [sendInviteMutation, { data, loading, error }] = useSendInviteMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useSendInviteMutation(baseOptions?: Apollo.MutationHookOptions<SendInviteMutation, SendInviteMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SendInviteMutation, SendInviteMutationVariables>(SendInviteDocument, options);
+      }
+export type SendInviteMutationHookResult = ReturnType<typeof useSendInviteMutation>;
+export type SendInviteMutationResult = Apollo.MutationResult<SendInviteMutation>;
+export type SendInviteMutationOptions = Apollo.BaseMutationOptions<SendInviteMutation, SendInviteMutationVariables>;
+export const RenameGroupDocument = gql`
+    mutation RenameGroup($id: Int!, $name: String!) {
+  updateGroup(input: {id: $id, patch: {name: $name}}) {
+    group {
+      id
+      name
+    }
+  }
+}
+    `;
+export type RenameGroupMutationFn = Apollo.MutationFunction<RenameGroupMutation, RenameGroupMutationVariables>;
+
+/**
+ * __useRenameGroupMutation__
+ *
+ * To run a mutation, you first call `useRenameGroupMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRenameGroupMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [renameGroupMutation, { data, loading, error }] = useRenameGroupMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useRenameGroupMutation(baseOptions?: Apollo.MutationHookOptions<RenameGroupMutation, RenameGroupMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RenameGroupMutation, RenameGroupMutationVariables>(RenameGroupDocument, options);
+      }
+export type RenameGroupMutationHookResult = ReturnType<typeof useRenameGroupMutation>;
+export type RenameGroupMutationResult = Apollo.MutationResult<RenameGroupMutation>;
+export type RenameGroupMutationOptions = Apollo.BaseMutationOptions<RenameGroupMutation, RenameGroupMutationVariables>;
+export const SendInvitesDocument = gql`
+    mutation SendInvites($ids: [Int]!) {
+  sendProjectInvites(input: {inviteIds: $ids}) {
+    inviteEmails {
+      ...InviteEmailDetails
+      projectInviteId
+      projectInvite {
+        id
+        status
+      }
+    }
+  }
+}
+    ${InviteEmailDetailsFragmentDoc}`;
+export type SendInvitesMutationFn = Apollo.MutationFunction<SendInvitesMutation, SendInvitesMutationVariables>;
+
+/**
+ * __useSendInvitesMutation__
+ *
+ * To run a mutation, you first call `useSendInvitesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSendInvitesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [sendInvitesMutation, { data, loading, error }] = useSendInvitesMutation({
+ *   variables: {
+ *      ids: // value for 'ids'
+ *   },
+ * });
+ */
+export function useSendInvitesMutation(baseOptions?: Apollo.MutationHookOptions<SendInvitesMutation, SendInvitesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SendInvitesMutation, SendInvitesMutationVariables>(SendInvitesDocument, options);
+      }
+export type SendInvitesMutationHookResult = ReturnType<typeof useSendInvitesMutation>;
+export type SendInvitesMutationResult = Apollo.MutationResult<SendInvitesMutation>;
+export type SendInvitesMutationOptions = Apollo.BaseMutationOptions<SendInvitesMutation, SendInvitesMutationVariables>;
+export const ProjectInviteEmailStatusSubscriptionDocument = gql`
+    subscription ProjectInviteEmailStatusSubscription {
+  projectInviteStateUpdated {
+    invite {
+      opaqueId: id
+      status
+    }
+  }
+}
+    `;
+
+/**
+ * __useProjectInviteEmailStatusSubscriptionSubscription__
+ *
+ * To run a query within a React component, call `useProjectInviteEmailStatusSubscriptionSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useProjectInviteEmailStatusSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectInviteEmailStatusSubscriptionSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useProjectInviteEmailStatusSubscriptionSubscription(baseOptions?: Apollo.SubscriptionHookOptions<ProjectInviteEmailStatusSubscriptionSubscription, ProjectInviteEmailStatusSubscriptionSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<ProjectInviteEmailStatusSubscriptionSubscription, ProjectInviteEmailStatusSubscriptionSubscriptionVariables>(ProjectInviteEmailStatusSubscriptionDocument, options);
+      }
+export type ProjectInviteEmailStatusSubscriptionSubscriptionHookResult = ReturnType<typeof useProjectInviteEmailStatusSubscriptionSubscription>;
+export type ProjectInviteEmailStatusSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ProjectInviteEmailStatusSubscriptionSubscription>;

@@ -1,9 +1,0 @@
-import * as surveyInvites from "../invites/surveyInvites";
-import { Pool, Client } from "pg";
-require("dotenv").config();
-
-const client = new Client(process.env.DATABASE_URL!);
-
-(async function () {
-  await surveyInvites.sendQueuedSurveyInvites(client);
-})();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, KeyboardEvent } from "react";
 
 export interface TextInputOptions {
   /** Required id of input. Also referenced by labels. */
@@ -18,6 +18,8 @@ export interface TextInputOptions {
   onChange?: (value: string) => any;
   inputChildNode?: React.ReactNode;
   autoFocus?: boolean;
+  onKeyDown?: (e: KeyboardEvent) => void;
+  type?: "text" | "email";
 }
 
 export default function TextInput(props: TextInputOptions) {
@@ -32,6 +34,8 @@ export default function TextInput(props: TextInputOptions) {
     description,
     onChange,
     state,
+    onKeyDown,
+    type,
   } = props;
   const [showSaved, setShowSaved] = useState(true);
   useEffect(() => {
@@ -60,8 +64,9 @@ export default function TextInput(props: TextInputOptions) {
       <div className="mt-1 relative rounded-md shadow-sm">
         <input
           autoFocus={!!props.autoFocus}
-          type="text"
+          type={props.type || "text"}
           id={id}
+          onKeyDown={onKeyDown}
           onChange={(e) => onChange && onChange(e.target.value)}
           disabled={disabled}
           required={required}

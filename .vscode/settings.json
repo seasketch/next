@@ -23,7 +23,9 @@
     "editor.defaultFormatter": "mtxr.sqltools"
   },
   "files.exclude": {
-    "**/dist/**": true
+    "**/dist/**": true,
+    "**/infra/lib/*.d.ts": true,
+    "**/infra/lib/*Stack.js": true
   },
   "eslint.workingDirectories": ["packages/client"],
   "[git-commit]": {

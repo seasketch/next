@@ -28,6 +28,7 @@ export class GraphQLStack extends cdk.Stack {
       uploadsBucket: Bucket;
       uploadsUrl: string;
       redisHost: string;
+      emailSource: string;
     }
   ) {
     super(scope, id, props);
@@ -79,6 +80,8 @@ export class GraphQLStack extends cdk.Stack {
             S3_REGION: props.uploadsBucket.env.region,
             HOST,
             REDIS_HOST: props.redisHost,
+            SES_EMAIL_SOURCE: props.emailSource,
+            GRAPHILE_WORKER_CONCURRENCY: "5",
           },
           containerPort: 3857,
         },
@@ -124,6 +127,15 @@ export class GraphQLStack extends cdk.Stack {
         ],
         effect: iam.Effect.ALLOW,
         resources: [`arn:aws:s3:::seasketchdata-*/*`],
+      })
+    );
+    service.taskDefinition.taskRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: ["ses:SendEmail"],
+        effect: iam.Effect.ALLOW,
+        resources: [
+          `arn:aws:ses:us-west-2:196230260133:identity/do-not-reply@seasketch.org`,
+        ],
       })
     );
     props.uploadsBucket.grantReadWrite(service.taskDefinition.taskRole);

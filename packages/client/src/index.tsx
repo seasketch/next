@@ -1,3 +1,4 @@
+import "./wdyr";
 import React from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
@@ -5,10 +6,23 @@ import App from "./App";
 import "./i18n";
 import * as serviceWorkerRegistration from "./serviceWorkerRegistration";
 import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
-import { ApolloProvider, ApolloClient, InMemoryCache } from "@apollo/client";
+import {
+  ApolloProvider,
+  ApolloClient,
+  InMemoryCache,
+  split,
+  ApolloLink,
+  concat,
+} from "@apollo/client";
 import { createUploadLink } from "apollo-upload-client";
 import { setContext } from "@apollo/client/link/context";
 import { BrowserRouter as Router, useHistory } from "react-router-dom";
+import {
+  relayStylePagination,
+  getMainDefinition,
+} from "@apollo/client/utilities";
+import { WebSocketLink } from "@apollo/client/link/ws";
+import { SubscriptionClient } from "subscriptions-transport-ws";
 
 function Auth0ProviderWithRouter(props: any) {
   const history = useHistory();
@@ -32,7 +46,7 @@ function ApolloProviderWithToken(props: any) {
   const httpLink = createUploadLink({
     uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!,
   });
-  const authLink = setContext(async (_, { headers }) => {
+  const authMiddleware = setContext(async (_, { headers }) => {
     // @ts-ignore
     const idClaims = await auth.getIdTokenClaims();
 
@@ -44,11 +58,78 @@ function ApolloProviderWithToken(props: any) {
         ...headers,
         // eslint-disable-next-line
         authorization: token ? `Bearer ${token}` : "",
+        "x-ss-slug": window.location.pathname.split("/")[1],
       },
     };
   });
+
+  // const authMiddleware = setContext((operation, { headers }) => {
+  //   console.log("middleware");
+  //   return auth
+  //     .getIdTokenClaims()
+  //     .then((data) => {
+  //       const token = data?.__raw;
+  //       console.log("token", token);
+  //       return {
+  //         ...headers,
+  //         authorization: token ? `Bearer ${token}` : null,
+  //       };
+  //     })
+  //     .catch((e) => {
+  //       console.error(e);
+  //     });
+  // });
+
+  // const authMiddleware = new ApolloLink((operation, forward) => {
+  //   // add the authorization to the headers
+  //   auth.getIdTokenClaims().then((idClaims) => {
+  //     const token = idClaims?.__raw || null;
+  //     operation.setContext({
+  //       headers: {
+  //         // eslint-disable-next-line i18next/no-literal-string
+  //         authorization: token ? `Bearer ${token}` : "",
+  //       }
+  //     });
+  //     forward(operation);
+  //   });
+  //   // return forward(operation);
+  // })
+
+  // console.log(
+  //   process.env
+  //     .REACT_APP_GRAPHQL_ENDPOINT!.replace(/http/, "ws")
+  //     .replace("graphql", "subscriptions")
+  // );
+
+  const wsLink = new WebSocketLink({
+    uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(/http/, "ws"),
+    options: {
+      reconnect: true,
+      // lazy: true,
+      connectionParams: async () => {
+        const idClaims = await auth.getIdTokenClaims();
+        const token = idClaims?.__raw || null;
+        return {
+          // eslint-disable-next-line i18next/no-literal-string
+          Authorization: token ? `Bearer ${token}` : "",
+          "x-ss-slug": window.location.pathname.split("/")[1],
+        };
+      },
+    },
+  });
+  const splitLink = split(
+    ({ query }) => {
+      const definition = getMainDefinition(query);
+      return (
+        definition.kind === "OperationDefinition" &&
+        definition.operation === "subscription"
+      );
+    },
+    wsLink,
+    concat(authMiddleware, httpLink)
+  );
   const client = new ApolloClient({
-    link: authLink.concat(httpLink),
+    link: splitLink,
     cache: new InMemoryCache(),
     connectToDevTools: true,
   });

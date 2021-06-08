@@ -41,7 +41,10 @@ jest.mock("aws-sdk/clients/ses", () => {
 
 export async function createUser(conn: DatabaseTransactionConnectionType) {
   const sub = `test:${shortid()}`;
-  const id = await conn.oneFirst(sql`select get_or_create_user_by_sub(${sub})`);
+  const canonicalEmail = `${shortid()}@example.com`;
+  const id = await conn.oneFirst(
+    sql`select get_or_create_user_by_sub(${sub}, ${canonicalEmail})`
+  );
   return id as number;
 }
 

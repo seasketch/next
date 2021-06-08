@@ -149,7 +149,7 @@ describe("jwt generation", () => {
       );
       expect(token).toBeTruthy();
       const claims = await jwks.verify(asPg(conn), token, "seasketch.org");
-      expect(claims.iss).toBe("seasketch.org");
+      expect(claims.iss).toBe("https://seasketch.org");
       const dayMs = 1000 * 60 * 60 * 24;
       expect(claims.exp).toBeGreaterThan(
         (new Date().getTime() + dayMs - 2000) / 1000

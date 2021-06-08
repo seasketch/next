@@ -5,34 +5,15 @@ import { Pool } from "pg";
 
 test("projectId set from x-ss-slug header", (done) => {
   // @ts-ignore
-  pool.add("select id from projects where slug = $1", ["string"], {
+  pool.add("select get_project_id($1) as id", ["string"], {
     rowCount: 1,
     rows: [{ id: 1 }],
   });
-  const req = ({
+  const req = {
     headers: {
       "x-ss-slug": "cburt",
-      // referer: "https://seasketch.org/p/cburt/",
     },
-  } as unknown) as IncomingRequest;
-  // @ts-ignore
-  currentProjectMiddlware(req, null, () => {
-    expect(req.projectId).toBe(1);
-    done();
-  });
-});
-
-test("projectId set from referrer header", (done) => {
-  // @ts-ignore
-  pool.add("select id from projects where slug = $1", ["string"], {
-    rowCount: 1,
-    rows: [{ id: 1 }],
-  });
-  const req = ({
-    headers: {
-      referer: "https://seasketch.org/p/cburt/",
-    },
-  } as unknown) as IncomingRequest;
+  } as unknown as IncomingRequest;
   // @ts-ignore
   currentProjectMiddlware(req, null, () => {
     expect(req.projectId).toBe(1);
@@ -42,15 +23,15 @@ test("projectId set from referrer header", (done) => {
 
 test("unknown project slug returns error", (done) => {
   // @ts-ignore
-  pool.add("select id from projects where slug = $1", ["string"], {
+  pool.add("select get_project_id($1) as id", ["string"], {
     rowCount: 0,
     rows: [],
   });
-  const req = ({
+  const req = {
     headers: {
-      referer: "https://seasketch.org/p/cburt/",
+      "x-ss-slug": "cburt",
     },
-  } as unknown) as IncomingRequest;
+  } as unknown as IncomingRequest;
   // @ts-ignore
   currentProjectMiddlware(req, null, (e) => {
     expect(e.toString()).toMatch(/unknown project/i);

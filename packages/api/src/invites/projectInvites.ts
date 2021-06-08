@@ -1,16 +1,14 @@
 import { sign, verify } from "../auth/jwks";
 import ms from "ms";
-const HOST = process.env.HOST || "https://seasketch.org";
-const PROJECT_INVITE_SES_TEMPLATE =
-  process.env.PROJECT_INVITE_SES_TEMPLATE || "SeaSketchProjectInvite";
+const HOST = process.env.HOST || "seasketch.org";
 const SES_EMAIL_SOURCE =
-  process.env.SES_EMAIL_SOURCE || "noreply@seasketch.org";
-import SES from "aws-sdk/clients/ses";
+  process.env.SES_EMAIL_SOURCE || '"SeaSketch" <do-not-reply@seasketch.org>';
+// TODO: replace auth0 dependency with plain http requests to the management api
+// The library is incredibly bulky, adding 2.5MB to lambda sizes
 import { ManagementClient } from "auth0";
 import { DBClient } from "../dbClient";
-import { getSubsForEmails } from "../auth/auth0";
-
-const ses = new SES();
+import { default as mustache } from "mustache";
+import sendEmail from "./sendEmail";
 
 type ProjectInviteTokenClaims = {
   projectId: number;
@@ -21,32 +19,22 @@ type ProjectInviteTokenClaims = {
   emailId: number;
 };
 
-/**
- * Fetches QUEUED project invite emails from the database and sends them out
- * using SES, updating their status to SENT.
- *
- * sendQueuedInvites can be run by an npm or cron script, or within a lambda
- * handler to periodically check for project invite emails that need sending.
- * It's important to note that the function itself does not use transactions,
- * and running multiple times in parallel could result in multiple sends. For
- * this reason, consumers of api should provide the database client with a
- * transaction to be rolled back upon failure. If using lambda, cloudwatch
- * events could be used to run this function every minute or so.
- * @export
- * @param {DBClient} client
- * @param {number} [limit=50]
- */
-export async function sendQueuedInvites(client: DBClient, limit = 50) {
-  if (limit > 50) {
-    throw new Error(`sendBulkTemplatedEmail limits batches to 50 emails`);
-  }
-  let projectInviteEmails: {
+export async function sendProjectInviteEmail(
+  emailId: number,
+  client: DBClient
+) {
+  const results: {
     id: number;
-    project_id: number;
+    projectId: number;
     fullname: string;
     email: string;
-    make_admin: boolean;
+    makeAdmin: boolean;
     inviteId: number;
+    userId: number | null;
+    unsubscribed: boolean | null;
+    subject: string;
+    template: string;
+    projectName: string;
   }[] = (
     await client.query(
       `
@@ -54,125 +42,109 @@ export async function sendQueuedInvites(client: DBClient, limit = 50) {
         invite_emails.*,
         project_invites.email,
         project_invites.fullname,
-        project_invites.project_id,
-        project_invites.make_admin,
-        project_invites.id as "inviteId"
+        project_invites.project_id as "projectId",
+        project_invites.make_admin as "makeAdmin",
+        project_invites.id as "inviteId",
+        users.id as "userId",
+        email_notification_preferences.unsubscribe_all as "unsubscribed",
+        projects.invite_email_subject as "subject",
+        projects.invite_email_template_text as "template",
+        projects.name as "projectName"
       from
         invite_emails
       inner join
         project_invites
       on
         project_invites.id = invite_emails.project_invite_id
-      where
-        invite_emails.status = 'QUEUED' and invite_emails.survey_invite_id is null
-      limit $1`,
-      [limit]
-    )
-  ).rows;
-  if (projectInviteEmails.length === 0) {
-    return 0;
-  }
-  const existingUserSubs = await getSubsForEmails(
-    projectInviteEmails.map((i) => i.email)
-  );
-  const emailsBySub: { [sub: string]: string } = swap(existingUserSubs);
-  const { rows } = await client.query(
-    `
-      select 
-        users.sub
-      from 
-        users
       inner join
-        email_notification_preferences 
+        projects
+      on
+        project_invites.project_id = projects.id
+      left join
+        users
+      on
+        project_invites.email = users.canonical_email
+      left join
+        email_notification_preferences
       on
         email_notification_preferences.user_id = users.id
-      where 
-        email_notification_preferences.unsubscribe_all = true and 
-        users.sub = any($1::text[])
-    `,
-    [Object.values(existingUserSubs)]
-  );
-  const unsubscribedEmails = rows.map((r) => emailsBySub[r.sub]);
-  const tokens: {
-    [id: number]: { token_expires_at: number; token: string };
-  } = {};
-  projectInviteEmails = projectInviteEmails.filter(
-    (i) => unsubscribedEmails.indexOf(i.email) === -1
-  );
-  // update status of invites for any unsubscribed users
-  // note this will impact notifications that weren't picked up in the batch
-  // limit (50), but that's fine.
-  await client.query(
-    `
-    update 
-      invite_emails
-    set 
-      status = 'UNSUBSCRIBED'
-    where
-      to_address = any($1::text[])
-  `,
-    [unsubscribedEmails]
-  );
-  if (projectInviteEmails.length > 0) {
-    for (const invite of projectInviteEmails) {
-      const { token, expiration } = await createToken(client, {
-        projectId: invite.project_id,
-        fullname: invite.fullname,
-        email: invite.email,
-        admin: invite.make_admin,
-        inviteId: invite.inviteId,
-        emailId: invite.id,
-      });
-      tokens[invite.id] = {
-        token,
-        token_expires_at: expiration / 1000,
-      };
-    }
-    const response = await ses
-      .sendBulkTemplatedEmail({
-        Source: SES_EMAIL_SOURCE,
-        Template: PROJECT_INVITE_SES_TEMPLATE,
-        Destinations: projectInviteEmails.map((invite) => ({
-          Destination: {
-            ToAddresses: [invite.email],
-          },
-          ReplacementTags: [
-            {
-              Name: "inviteLink",
-              Value: `${HOST}/auth/projectInvite?token=${
-                tokens[invite.id].token
-              }`,
-            },
-          ],
-        })),
-      })
-      .promise();
-    for (let i = 0; i < response.Status.length; i++) {
-      const status = response.Status[i];
-      if (status.Status === "Success" && status.MessageId) {
+      where
+        invite_emails.id = $1
+        `,
+      [emailId]
+    )
+  ).rows;
+  if (results.length === 1) {
+    try {
+      const inviteData = results[0];
+      if (inviteData.unsubscribed) {
         await client.query(
-          `update invite_emails set status = 'SENT', token = $1, token_expires_at = to_timestamp($2), message_id = $3 where id = $4
-          `,
-          [
-            tokens[projectInviteEmails[i].id].token,
-            tokens[projectInviteEmails[i].id].token_expires_at,
-            status.MessageId,
-            projectInviteEmails[i].id,
-          ]
+          `update invite_emails set status = 'UNSUBSCRIBED', updated_at = now() where id = $1`,
+          [emailId]
+        );
+        return;
+      }
+
+      if (!process.env.SES_EMAIL_SOURCE) {
+        throw new Error(`SES_EMAIL_SOURCE environment variable not set`);
+      }
+
+      const { token, expiration } = await createToken(client, {
+        projectId: inviteData.projectId,
+        fullname: inviteData.fullname,
+        email: inviteData.email,
+        admin: inviteData.makeAdmin,
+        inviteId: inviteData.inviteId,
+        emailId: inviteData.id,
+      });
+
+      const templateVars = {
+        name: inviteData.fullname,
+        email: inviteData.email,
+        inviteLink: `https://${process.env.HOST}/auth/projectInvite?token=${token}`,
+        projectName: inviteData.projectName,
+      };
+      const textEmail = mustache.render(inviteData.template, templateVars);
+      const htmlEmail = mustache.render(
+        inviteData.template.replace(/\n/g, "<br>"),
+        templateVars
+      );
+
+      const response = await sendEmail(
+        inviteData.email,
+        inviteData.subject,
+        htmlEmail,
+        textEmail
+      );
+      // @ts-ignore
+      const errors = response.$response?.error;
+      if (errors) {
+        await client.query(
+          `update invite_emails set status = 'ERROR', updated_at = now(), error = $1 where id = $2`,
+          [errors || "Unknown SES Error", emailId]
         );
       } else {
         await client.query(
-          `update invite_emails set status = 'ERROR' error = $1 where id = $2`,
-          [status.Error || "Unknown SES Error", projectInviteEmails[i].id]
+          `update invite_emails set status = 'SENT', token = $1, token_expires_at = to_timestamp($2), message_id = $3, error = null, updated_at = now() where id = $4
+          `,
+          [token, expiration / 1000, response.MessageId, emailId]
         );
       }
+    } catch (e) {
+      await client.query(
+        `update invite_emails set status = 'ERROR', updated_at = now(), error = $1 where id = $2`,
+        [e.toString() || "Unknown Error", emailId]
+      );
+      throw e;
     }
+  } else {
+    throw new Error(`Could not find invite_email with id = ${emailId}`);
   }
-  return projectInviteEmails.length;
 }
 
 async function createToken(client: DBClient, claims: ProjectInviteTokenClaims) {
-  const expiration = claims.admin ? "14 days" : "60 days";
+  // admins have less time to use invites since they'are more sensitive
+  const expiration = claims.admin ? "30 days" : "90 days";
   const token = await sign(client, claims, expiration, HOST);
   return {
     token,
@@ -196,7 +168,6 @@ async function createToken(client: DBClient, claims: ProjectInviteTokenClaims) {
  */
 export async function updateStatus(
   client: DBClient,
-  email: string,
   messageId: string,
   notificationType: "Bounce" | "Complaint" | "Delivery"
 ) {
@@ -208,8 +179,8 @@ export async function updateStatus(
   }
   const { rows } = await client.query(
     `
-    update invite_emails set status = $1 where to_address = $2 and message_id = $3 returning status`,
-    [status, email, messageId]
+    update invite_emails set status = $1 where message_id = $2 returning status`,
+    [status, messageId]
   );
   return rows.length;
 }

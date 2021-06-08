@@ -4,6 +4,7 @@ const graphile = require("graphile-migrate");
 const fs = require("fs");
 const path = require("path");
 const signer = new AWS.RDS.Signer();
+const { workerUtils } = require("graphile-worker");
 
 exports.handler = (event) => {
   switch (event.RequestType) {
@@ -86,6 +87,9 @@ async function initializeDb(event) {
   const connectionString = `postgres://admin:${encodeURIComponent(token)}@${
     secret.host
   }:${secret.port}/${secret.dbname}?ssl=1&sslmode=no-verify`;
+
+  await workerUtils.migrate();
+
   // /**
   //  * After initial setup of user roles, run the latest database migrations
   //  */

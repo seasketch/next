@@ -1,5 +1,5 @@
 import { MutationResult } from "@apollo/client";
-import React, { FunctionComponent, ReactNode } from "react";
+import React, { CSSProperties, FunctionComponent, ReactNode } from "react";
 import MutationStatusIndicator from "./MutationStatusIndicator";
 
 export interface InputBlockProps {
@@ -9,6 +9,7 @@ export interface InputBlockProps {
   mutationStatus?: Pick<MutationResult<any>, "called" | "loading" | "error">;
   /* defaults to "large" */
   labelType?: "large" | "small";
+  flexDirection?: "column" | "row";
 }
 
 const InputBlock: FunctionComponent<InputBlockProps> = ({
@@ -18,13 +19,17 @@ const InputBlock: FunctionComponent<InputBlockProps> = ({
   children,
   mutationStatus,
   labelType,
+  flexDirection,
 }) => {
   labelType = labelType || "large";
   return (
     <div className={`mt-1 ${className}`}>
-      <div className="flex mb-2 ">
-        <div className="flex-1 font-medium flex-rows items-center pr-4 mt-0.5 self-center ">
-          <div className="flex items-center">
+      <div
+        className={`flex mb-2 `}
+        style={{ flexDirection: flexDirection || "row" }}
+      >
+        <div className="flex-1 font-medium flex-rows items-center pr-4 mt-0.5 ">
+          <div className="flex flex-row items-center">
             <span
               className={
                 labelType === "small"

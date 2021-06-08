@@ -27,11 +27,7 @@ export default function FullSidebar({
   const { t } = useTranslation("sidebar");
   const { slug } = useParams<{ slug: string }>();
   const { loginWithRedirect } = useAuth0();
-  const { data } = useCurrentProjectMetadataQuery({
-    variables: {
-      slug: slug || "",
-    },
-  });
+  const { data } = useCurrentProjectMetadataQuery();
   const { user, logout } = useAuth0();
   let social: string | false = false;
   if (user) {
@@ -47,7 +43,7 @@ export default function FullSidebar({
     ? `${user.email || user.name} ${social ? `(${social})` : ""}`
     : false;
 
-  if (!data?.projectBySlug) {
+  if (!data?.currentProject) {
     return <div></div>;
   }
 
@@ -56,6 +52,7 @@ export default function FullSidebar({
     onClose();
   };
 
+  const project = data?.currentProject;
   return (
     <motion.div
       variants={{
@@ -84,16 +81,16 @@ export default function FullSidebar({
     >
       <div className="flex w-full">
         <div className="flex-grow-0 flex items-center">
-          {data?.projectBySlug?.logoUrl && (
+          {project?.logoUrl && (
             <img
               alt="SeaSketch Logo"
-              src={data?.projectBySlug?.logoUrl}
+              src={project?.logoUrl}
               className="w-12 flex-0 mr-4"
             />
           )}
         </div>
         <div className="flex-1 max-w-md flex items-center text-xl">
-          <h1 className=" ">{data?.projectBySlug?.name}</h1>
+          <h1 className=" ">{project?.name}</h1>
         </div>
         <button
           onClick={onClose}
@@ -160,7 +157,7 @@ export default function FullSidebar({
           icon={ForumsIcon}
           onClick={chooseSidebar("forums")}
         />
-        {data.projectBySlug.sessionIsAdmin && (
+        {project.sessionIsAdmin && (
           <NavItem
             onClick={() => history.push("./admin")}
             label={t("Project Administration")}

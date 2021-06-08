@@ -2,6 +2,7 @@ overwrite: true
 schema: "../api/generated-schema.gql"
 documents:
   - "./src/**/*.graphql"
+  - "./src/**/*.tsx"
   # disabling for now to encourage use of seperate .graphql files
   # - "./src/**/*.tsx"
 generates:

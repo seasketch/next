@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import "source-map-support/register";
+require("dotenv").config();
 import * as cdk from "@aws-cdk/core";
 import { DatabaseStack } from "../lib/DatabaseStack";
 import { DataHostingStack } from "../lib/DataHostingStack";
@@ -10,11 +11,14 @@ import { DataHostDbUpdaterStack } from "../lib/DataHostDbUpdaterStack";
 import { RedisStack } from "../lib/RedisStack";
 import { GraphQLStack } from "../lib/GraphQLStack";
 import { Vpc } from "@aws-cdk/aws-ec2";
+import { MailerLambdaStack } from "../lib/MailerLambdaStack";
 let env = require("./env.production");
-require("dotenv").config();
 
 const DOMAIN_NAME = "seasket.ch";
 const SUBDOMAIN = "next";
+const EMAIL_STATUS_NOTIFICATION_TOPIC =
+  "arn:aws:sns:us-west-2:196230260133:email-notification-bounces-production";
+const SES_EMAIL_SOURCE = '"SeaSketch" <do-not-reply@seasketch.org>';
 
 const app = new cdk.App();
 const db = new DatabaseStack(app, "SeaSketchDB", { env });
@@ -111,7 +115,7 @@ const dataHosts = hostConfigs.map((config) => {
   return host;
 });
 
-const graphqlServer = new GraphQLStack(app, "SeaSketchGraphQLServer", {
+new GraphQLStack(app, "SeaSketchGraphQLServer", {
   env,
   db: db.instance,
   securityGroup: db.defaultSecurityGroup,
@@ -119,4 +123,14 @@ const graphqlServer = new GraphQLStack(app, "SeaSketchGraphQLServer", {
   uploadsUrl: uploads.url,
   vpc: db.vpc,
   redisHost: redis.cluster.attrRedisEndpointAddress,
+  emailSource: SES_EMAIL_SOURCE,
+});
+
+new MailerLambdaStack(app, "SeaSketchMailers", {
+  env,
+  vpc: db.vpc,
+  db: db.instance,
+  host: `${SUBDOMAIN}.${DOMAIN_NAME}`,
+  topic: EMAIL_STATUS_NOTIFICATION_TOPIC,
+  emailSource: SES_EMAIL_SOURCE,
 });

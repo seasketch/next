@@ -31,6 +31,7 @@ module.exports = {
           "cache.writeFragment",
         ],
         onlyAttribute: ["label", "title", "description", "footer"],
+        ignoreProperty: ["href", "className"],
         validateTemplate: true,
       },
     ],

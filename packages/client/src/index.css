@@ -8,6 +8,7 @@
 html {
   font-family: "Inter", sans-serif;
 }
+
 @supports (font-variation-settings: normal) {
   html {
     font-family: "Inter", sans-serif;
@@ -145,4 +146,29 @@ input::placeholder {
 
 .mapboxgl-canvas-container {
   cursor: default !important;
+}
+
+.seasketch-skeleton {
+  background: linear-gradient(-100deg, #f0f0f0 0%, #fafafa 50%, #f0f0f0 100%);
+  background-size: 400% 400%;
+  animation: pulse 1.2s ease-in-out infinite;
+
+  @keyframes pulse {
+    0% {
+      background-position: 0% 0%;
+    }
+    100% {
+      background-position: -135% 0%;
+    }
+  }
+}
+
+.seasketch-skeleton::before {
+  content: "d";
+  opacity: 0;
+}
+
+.react-select input {
+  outline: none !important;
+  box-shadow: none !important;
 }

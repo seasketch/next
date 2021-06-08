@@ -17,18 +17,14 @@ export default function ProjectSimpleNav() {
   const { t } = useTranslation(["admin"]);
   const { slug } = useParams<{ slug: string }>();
   let { path } = useRouteMatch();
-  const { data } = useCurrentProjectMetadataQuery({
-    variables: {
-      slug: slug || "",
-    },
-  });
+  const { data } = useCurrentProjectMetadataQuery();
   return (
     <div>
       <Switch>
         <Route exact path={path}>
           <Header projectMode />
           <nav className="max-w-lg mt-4 mx-auto text-center bg-white rounded shadow">
-            {data && data.projectBySlug?.sessionIsAdmin && (
+            {data && data.currentProject?.sessionIsAdmin && (
               <Link
                 className="inline-block m-4 p-2 px-4 bg-primary-600 text-white shadow rounded"
                 to={`/${slug}/admin`}

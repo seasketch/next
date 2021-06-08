@@ -301,21 +301,6 @@ describe("Management operations", () => {
 });
 
 describe("Invited Groups", () => {
-  test("survey_invited_groups is not directly accessible", async () => {
-    await projectTransaction(
-      pool,
-      "public",
-      async (conn, projectId, adminId, [userA, userB]) => {
-        await createSession(conn, adminId, true, false);
-        const surveyId = await conn.oneFirst(
-          sql`insert into surveys (project_id, name) values (${projectId}, 'Survey') returning id`
-        );
-        expect(
-          conn.any(sql`select * from survey_invited_groups`)
-        ).rejects.toThrow(/permission/i);
-      }
-    );
-  });
   test("update_survey_invited_groups(groupIds) can be used to add associated groups, and surveys_invited_groups(surveys.*) can be used to retrieve them", async () => {
     await projectTransaction(
       pool,

@@ -16,6 +16,14 @@ Single-page-app style javascript client built using Create React App.
 
 CDK App that defines the production hosting infrastructure
 
+### [packages/lambda-db-client](./packages/lambda-db-client)
+
+Provides a reusable method of connecting to the production SeaSketch database from Lambda services.
+
+### [packages/emailStatusHandler](./packages/emailStatusHandler)
+
+Lambda microservice for updating project and survey invite status based on SNS notifications from AWS SES.
+
 #### Development Environment Setup
 
 There are a lot of build scripts and dev servers needed to run the entire stack. If you have Docker installed and use VSCode a lot of this setup can be started for you by simply opening the root of the project in your editor. Run the VSCode command "Manage Automatic Tasks in Folder" and choose allow to run the necessary build tasks and development servers.

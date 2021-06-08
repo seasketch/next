@@ -6,6 +6,7 @@ export interface ProfileStatusButtonProps {
   children?: React.ReactNode;
   onClick?: Function;
   loadingIndicatorDelay?: number;
+  className?: string;
 }
 
 /**
@@ -26,6 +27,7 @@ function ProfileStatusButton({
   children,
   onClick,
   loadingIndicatorDelay,
+  className,
 }: ProfileStatusButtonProps) {
   // Use this state to delay the appearance of the loading indicator.
   // The indicator is useful for exceptional states where auth0 is slow to
@@ -88,7 +90,7 @@ function ProfileStatusButton({
         max-w-xs flex items-center text-sm rounded-full text-white 
         focus:outline-none focus:shadow-solid hover:shadow-solid ${
           !onClick ? "pointer-events-none" : ""
-        }
+        } ${className}
       `}
       style={{ borderColor: "#1e429f" }}
       id="user-menu"

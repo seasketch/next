@@ -1,0 +1,353 @@
+query UserAdminCounts($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    accessControl
+    participantCount
+    adminCount
+    inviteCounts {
+      count
+      status
+    }
+    groups {
+      id
+      name
+      memberCount
+    }
+    unapprovedParticipantCount
+  }
+}
+
+mutation CreateGroup($projectId: Int!, $name: String!) {
+  createGroup(input: { group: { name: $name, projectId: $projectId } }) {
+    group {
+      id
+      name
+      projectId
+    }
+  }
+}
+
+fragment ParticipantListDetails on User {
+  id
+  bannedFromForums
+  isAdmin
+  profile {
+    email
+    fullname
+    nickname
+    picture
+  }
+  groups {
+    id
+    name
+  }
+  canonicalEmail
+}
+
+query Participants($slug: String!, $offset: Int, $first: Int) {
+  root: projectBySlug(slug: $slug) {
+    id
+    participants(offset: $offset, first: $first) {
+      ...ParticipantListDetails
+    }
+  }
+}
+
+query Admins($slug: String!, $offset: Int, $first: Int) {
+  root: projectBySlug(slug: $slug) {
+    id
+    participants: admins(offset: $offset, first: $first) {
+      ...ParticipantListDetails
+    }
+  }
+}
+
+query GroupMembers($groupId: Int!, $offset: Int, $first: Int) {
+  root: group(id: $groupId) {
+    participants: members(offset: $offset, first: $first) {
+      ...ParticipantListDetails
+    }
+  }
+}
+
+fragment UserListDetails on User {
+  id
+  isAdmin
+  canonicalEmail
+  bannedFromForums
+  groups {
+    name
+    id
+  }
+  onboarded
+  participationStatus
+  profile {
+    email
+    fullname
+    nickname
+    picture
+  }
+}
+
+query UserSettingsLists {
+  currentProject {
+    id
+    groups {
+      name
+      id
+    }
+    invitesConnection {
+      nodes {
+        ...InviteDetails
+      }
+    }
+    participants {
+      ...UserListDetails
+    }
+    accessControl
+  }
+}
+
+query UserInfo($userId: Int!) {
+  user(id: $userId) {
+    id
+    isAdmin
+    canonicalEmail
+    bannedFromForums
+    emailNotificationPreference {
+      unsubscribeAll
+    }
+    groups {
+      name
+      id
+    }
+    onboarded
+    participationStatus
+    profile {
+      affiliations
+      bio
+      email
+      fullname
+      nickname
+      picture
+    }
+  }
+  currentProject {
+    id
+    groups {
+      name
+      id
+    }
+  }
+}
+
+mutation toggleAdminAccess($userId: Int!, $projectId: Int!) {
+  toggleAdminAccess(input: { projectId: $projectId, userId: $userId }) {
+    clientMutationId
+    isAdmin: boolean
+  }
+}
+
+mutation setUserGroups($userId: Int!, $projectId: Int!, $groupIds: [Int]!) {
+  setUserGroups(
+    input: { userId: $userId, projectId: $projectId, groups: $groupIds }
+  ) {
+    groupIds: integers
+  }
+}
+
+mutation toggleForumPostingBan($userId: Int!, $projectId: Int!) {
+  toggleForumPostingBan(input: { userId: $userId, projectId: $projectId }) {
+    isBanned: boolean
+  }
+}
+
+mutation deleteGroup($groupId: Int!) {
+  deleteGroup(input: { id: $groupId }) {
+    group {
+      id
+    }
+  }
+}
+
+mutation createProjectInvites(
+  $projectId: Int!
+  $makeAdmin: Boolean!
+  $groupNames: [String]!
+  $userDetails: [ProjectInviteOptionInput]!
+  $sendEmailNow: Boolean!
+) {
+  createProjectInvites(
+    input: {
+      projectId: $projectId
+      makeAdmin: $makeAdmin
+      groupNames: $groupNames
+      projectInviteOptions: $userDetails
+      sendEmailNow: $sendEmailNow
+    }
+  ) {
+    projectInvites {
+      ...InviteDetails
+    }
+  }
+}
+
+fragment InviteDetails on ProjectInvite {
+  createdAt
+  email
+  fullname
+  groups {
+    id
+    name
+  }
+  id
+  status
+  makeAdmin
+  wasUsed
+}
+
+query ProjectInvites(
+  $projectId: Int!
+  $status: [InviteStatus]
+  $orderBy: InviteOrderBy
+  $cursor: Cursor
+  $limit: Int
+) {
+  project(id: $projectId) {
+    id
+    invitesConnection(
+      statuses: $status
+      orderBy: $orderBy
+      after: $cursor
+      first: $limit
+    ) {
+      edges {
+        node {
+          ...InviteDetails
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+fragment InviteEmailDetails on InviteEmail {
+  id
+  toAddress
+  createdAt
+  status
+  tokenExpiresAt
+  error
+  updatedAt
+}
+
+query InviteEditorModalQuery($inviteId: Int!) {
+  currentProject {
+    id
+    groups {
+      id
+      name
+    }
+  }
+  projectInvite(id: $inviteId) {
+    id
+    makeAdmin
+    email
+    fullname
+    status
+    groups {
+      id
+      name
+    }
+    wasUsed
+    inviteEmails {
+      ...InviteEmailDetails
+    }
+  }
+}
+
+mutation UpdateProjectInvite(
+  $id: Int!
+  $makeAdmin: Boolean!
+  $email: String!
+  $fullname: String
+  $groups: [Int]!
+) {
+  updateProjectInvite(
+    input: {
+      inviteId: $id
+      makeAdmin: $makeAdmin
+      email: $email
+      groups: $groups
+      fullname: $fullname
+    }
+  ) {
+    projectInvite {
+      id
+      makeAdmin
+      groups {
+        id
+        name
+      }
+      email
+      fullname
+      inviteEmails {
+        ...InviteEmailDetails
+      }
+    }
+  }
+}
+
+mutation DeleteProjectInvite($id: Int!) {
+  deleteProjectInvite(input: { id: $id }) {
+    projectInvite {
+      id
+    }
+  }
+}
+
+mutation SendInvite($id: Int!) {
+  sendProjectInvites(input: { inviteIds: [$id] }) {
+    inviteEmails {
+      ...InviteEmailDetails
+      projectInvite {
+        id
+        status
+      }
+    }
+  }
+}
+
+mutation RenameGroup($id: Int!, $name: String!) {
+  updateGroup(input: { id: $id, patch: { name: $name } }) {
+    group {
+      id
+      name
+    }
+  }
+}
+
+mutation SendInvites($ids: [Int]!) {
+  sendProjectInvites(input: { inviteIds: $ids }) {
+    inviteEmails {
+      ...InviteEmailDetails
+      projectInviteId
+      projectInvite {
+        id
+        status
+      }
+    }
+  }
+}
+
+subscription ProjectInviteEmailStatusSubscription {
+  projectInviteStateUpdated {
+    invite {
+      opaqueId: id
+      status
+    }
+  }
+}

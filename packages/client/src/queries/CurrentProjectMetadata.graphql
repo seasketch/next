@@ -1,5 +1,5 @@
-query CurrentProjectMetadata($slug: String!) {
-  projectBySlug(slug: $slug) {
+query CurrentProjectMetadata {
+  currentProject {
     id
     slug
     url

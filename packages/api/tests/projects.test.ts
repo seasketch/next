@@ -8,7 +8,7 @@ describe("Access control", () => {
     test("Project admins can access unlisted projects", async () => {
       await pool.transaction(async (conn) => {
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         const pid = await conn.oneFirst(
           sql`INSERT INTO projects (name, slug, is_listed) values ('unlisted', 'unlisted', false) returning id`
@@ -87,7 +87,7 @@ describe("Access control", () => {
       await pool.transaction(async (conn) => {
         await conn.query(sql`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`);
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -108,11 +108,14 @@ describe("Access control", () => {
         await conn.any(sql`ROLLBACK;`);
       });
     });
+
+    test.todo("createProject creates owner record and populates support email");
+
     test("createProject can only be called if email is verified", async () => {
       await pool.transaction(async (conn) => {
         await conn.query(sql`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`);
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -155,7 +158,7 @@ describe("Access control", () => {
       await pool.transaction(async (conn) => {
         await conn.query(sql`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE`);
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -178,10 +181,10 @@ describe("Access control", () => {
     test("Admins cannot update projects they don't own", async () => {
       await pool.transaction(async (conn) => {
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         const userBId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Mr White') returning id`
+          sql`insert into users (sub, canonical_email) values ('Mr White', 'twwk@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -219,7 +222,7 @@ describe("Access control", () => {
     test("Anonymous users cannot update projects", async () => {
       await pool.transaction(async (conn) => {
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -244,10 +247,10 @@ describe("Access control", () => {
     test("Unpriviledged users cannot update projects", async () => {
       await pool.transaction(async (conn) => {
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         const userBId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Mr White') returning id`
+          sql`insert into users (sub, canonical_email) values ('Mr White', 'iatwwk@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -289,7 +292,7 @@ describe("Access control", () => {
     test("slug cannot be modified by admins", async () => {
       await pool.transaction(async (conn) => {
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -313,7 +316,7 @@ describe("Access control", () => {
     test("is_featured cannot be modified by admins", async () => {
       await pool.transaction(async (conn) => {
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -336,7 +339,7 @@ describe("Access control", () => {
     test("is_featured can be modified by superusers", async () => {
       await pool.transaction(async (conn) => {
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -427,7 +430,7 @@ describe("Access control", () => {
     test("Project admins can delete their own projects", async () => {
       await pool.transaction(async (conn) => {
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -450,10 +453,10 @@ describe("Access control", () => {
     test("Admins cannot delete other admin's projects", async () => {
       await pool.transaction(async (conn) => {
         const userId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Ahab') returning id`
+          sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
         );
         const userBId = await conn.oneFirst(
-          sql`insert into users (sub) values ('Mr White') returning id`
+          sql`insert into users (sub, canonical_email) values ('Mr White', 'white@example.com') returning id`
         );
         await conn.any(
           sql`select set_config('session.user_id', ${userId}, true)`
@@ -499,10 +502,10 @@ describe("Access control", () => {
       test("Approved participants can see unlisted projects", async () => {
         await pool.transaction(async (conn) => {
           const userId = await conn.oneFirst(
-            sql`insert into users (sub) values ('Ahab') returning id`
+            sql`insert into users (sub, canonical_email) values ('Ahab', 'ahab@example.com') returning id`
           );
           const unapprovedUserId = await conn.oneFirst(
-            sql`insert into users (sub) values ('Mr White') returning id`
+            sql`insert into users (sub, canonical_email) values ('Mr White', 'twwk@example.com') returning id`
           );
           const projectId = await conn.oneFirst(
             sql`INSERT INTO projects (name, slug, is_listed, access_control) values ('unlisted', 'unlisted', false, 'invite_only') returning id`

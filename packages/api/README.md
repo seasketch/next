@@ -68,7 +68,7 @@ Comments on database items will be reflected in the GraphQL API using the [graph
 
 ##### Customizing documentation further
 
-Smart Comments have some limitations, so the SeaSketch [api server](../api) features a custom postgraphile plugin that can be used to add additional documentation to any type or field. It can also be used to set the order of resources in the schema. To customize documentation, edit the [graphqlSchemaModifiers.ts](https://github.com/seasketch/next/blob/master/packages/db/src/graphqlSchemaModifiers.ts) file.
+Smart Comments have some limitations, so the SeaSketch [api server](../api) features a custom postgraphile plugin that can be used to add additional documentation to any type or field. It can also be used to set the order of resources in the schema. To customize documentation, edit the [graphqlSchemaModifiers.ts](https://github.com/seasketch/next/blob/master/packages/api/src/graphqlSchemaModifiers.ts) file.
 
 ##### Tips for good documentation
 
@@ -76,7 +76,7 @@ Smart Comments have some limitations, so the SeaSketch [api server](../api) feat
 - Document columns if there is any ambiguity in how they might be used
 - Use markdown when necessary to format documentation
 - Mention related queries or mutations when adding documentation to enhance discoverability
-- Always put custom queries or mutations towards the top of the schema and group fields with similar functionality using [graphqlSchemaModifiers.ts](https://github.com/seasketch/next/blob/master/packages/db/src/graphqlSchemaModifiers.ts)
+- Always put custom queries or mutations towards the top of the schema and group fields with similar functionality using [graphqlSchemaModifiers.ts](https://github.com/seasketch/next/blob/master/packages/api/src/graphqlSchemaModifiers.ts)
 
 ### Role and Row-level access control
 
@@ -90,6 +90,12 @@ The [postgraphile](https://www.graphile.org/postgraphile/)-based server exposes 
 - Lots of behavior can be customized by using [smart tags](https://www.graphile.org/postgraphile/smart-tags/) embedded in [database comments](https://www.graphile.org/postgraphile/smart-comments/).
 - Custom queries and mutations can be defined using [database functions](https://www.graphile.org/postgraphile/functions/)
 - Further customization can be done with application-code using [graphile plugins](https://www.graphile.org/postgraphile/make-extend-schema-plugin/). Examples can be found in `src/plugins`.
+
+## Task Runner
+
+Not all behavior of the system can be encapsulated in database stored procedures and custom resolvers. Some jobs need to be run outside of the request/response cycle, and others may need to run on a cron-like schedule. For this, SeaSketch uses [graphile-worker](https://github.com/graphile/worker). Tasks can be found under the [/tasks directory](https://github.com/seasketch/next/tree/master/packages/api/tasks), and are triggered by jobs held in the `graphile_worker.jobs` table.
+
+For cron-like tasks scheduling, jobs should be added as part of the database migration system. Other jobs may be created in response to data changes by using database triggers, such as in the case of [sending project invites](https://github.com/seasketch/next/tree/master/packages/api/migrations/committed/000055.sql#L42). Care should be taken not to overload the API servers with computationally taxing jobs, which they will run up to the concurrency limit set in `process.env.GRAPHILE_WORKER_CONCURRENCY`. In the case of expensive jobs, the task definition run on the API server should simply invoke a Lambda microservice.
 
 ## NPM Scripts
 
@@ -160,19 +166,3 @@ Shortcut to start a psql shell using the dev database connection string.
 #### `npm run db:schema`
 
 Writes the current database schema to `schema.sql`.
-
-### Services scripts
-
-The SeaSketch system consists of services beyond the GraphQL server and database. Typically, business logic will be implemented in the `@seasketch/api` exported modules and run in specialized lambda functions via cloudwatch events. For example, a lambda-based service will poll the database for queued project invites and send emails to users. These scheduled services are critical for functioning of SeaSketch but can be difficult to replicate outside of AWS. Instead, `npm scripts` should be made available to manually trigger such functions locally during development.
-
-#### `npm run services:rotatekeys`
-
-Runs the jwks key rotation routine in the local database. Use if the latest key in the local database jwks has expired.
-
-#### `npm run services:send-survey-invites`
-
-Runs the survey invite mailer process once.
-
-#### `npm run services:send-project-invites`
-
-Runs the project invite mailer process once.

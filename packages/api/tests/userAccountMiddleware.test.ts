@@ -1,7 +1,6 @@
 import { IncomingRequest } from "../src/middleware/IncomingRequest";
 import middleware from "../src/middleware/userAccountMiddleware";
 import pool from "../src/pool";
-import { Pool } from "pg";
 
 test("anonymous user, no req.user assigned", (done) => {
   const req = {} as IncomingRequest;
@@ -14,18 +13,18 @@ test("anonymous user, no req.user assigned", (done) => {
 
 test("user id retrieved using sub", (done) => {
   //@ts-ignore
-  pool.add("select get_or_create_user_by_sub($1)", ["string"], {
+  pool.add("select get_or_create_user_by_sub($1, $2)", ["string", "string"], {
     rowCount: 1,
     rows: [{ get_or_create_user_by_sub: 1 }],
   });
-  const req = ({
+  const req = {
     user: {
       sub: "google:1",
       permissions: [],
       "https://seasketch.org/canonical_email": "chad@example.com",
       "https://seasketch.org/email_verified": false,
     },
-  } as unknown) as IncomingRequest;
+  } as unknown as IncomingRequest;
   // @ts-ignore
   middleware(req, null, () => {
     expect(req.user?.id).toBe(1);
@@ -35,18 +34,18 @@ test("user id retrieved using sub", (done) => {
 
 test("user claims normalized (canonical_email, email_verified, superuser)", (done) => {
   //@ts-ignore
-  pool.add("select get_or_create_user_by_sub($1)", ["string"], {
+  pool.add("select get_or_create_user_by_sub($1, $2)", ["string", "string"], {
     rowCount: 1,
     rows: [{ get_or_create_user_by_sub: 1 }],
   });
-  const req = ({
+  const req = {
     user: {
       sub: "google:1",
       permissions: [],
       "https://seasketch.org/canonical_email": "chad@example.com",
       "https://seasketch.org/email_verified": false,
     },
-  } as unknown) as IncomingRequest;
+  } as unknown as IncomingRequest;
   // @ts-ignore
   middleware(req, null, () => {
     expect(req.user?.id).toBe(1);
@@ -59,18 +58,18 @@ test("user claims normalized (canonical_email, email_verified, superuser)", (don
 
 test("superuser role properly identified", (done) => {
   //@ts-ignore
-  pool.add("select get_or_create_user_by_sub($1)", ["string"], {
+  pool.add("select get_or_create_user_by_sub($1, $2)", ["string", "string"], {
     rowCount: 1,
     rows: [{ get_or_create_user_by_sub: 1 }],
   });
-  const req = ({
+  const req = {
     user: {
       sub: "google:1",
       "https://seasketch.org/superuser": true,
       "https://seasketch.org/canonical_email": "chad@example.com",
       "https://seasketch.org/email_verified": true,
     },
-  } as unknown) as IncomingRequest;
+  } as unknown as IncomingRequest;
   // @ts-ignore
   middleware(req, null, () => {
     expect(req.user?.superuser).toBe(true);
