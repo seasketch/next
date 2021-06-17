@@ -10,6 +10,7 @@ import Spinner from "./components/Spinner";
 
 const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
 const LazyProjectAdmin = React.lazy(() => import("./admin/AdminApp"));
+const LazyAuthLanding = React.lazy(() => import("./auth/ProjectInviteLanding"));
 
 function App() {
   const { t } = useTranslation(["homepage"]);
@@ -40,6 +41,9 @@ function App() {
           <Header />
         </Route>
         <Switch>
+          <Route path="/auth/projectInvite">
+            <LazyAuthLanding />
+          </Route>
           <Route path="/signin">
             <SignInPage />
           </Route>

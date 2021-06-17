@@ -136,6 +136,7 @@ describe("Access control", () => {
         await conn.any(sql`ROLLBACK;`);
       });
     });
+    test.todo("Email must be verified in order to create projects");
   });
 
   describe("Project updates", () => {

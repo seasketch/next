@@ -918,7 +918,7 @@ describe("Accepting Invites", () => {
           token = [token[0], token[1], token[2].slice(0, -1)].join(".");
           expect(
             verifyProjectInvite(asPg(conn), token, "https://seasketch.org")
-          ).rejects.toThrow(/sig/i);
+          ).rejects.toThrow(/invalid/i);
         }
       );
     });
@@ -982,7 +982,7 @@ describe("Accepting Invites", () => {
           token = [token[0], token[1], token[2].slice(0, -1)].join(".");
           expect(
             confirmProjectInvite(asPg(conn), token, "https://seasketch.org")
-          ).rejects.toThrow(/sig/i);
+          ).rejects.toThrow(/invalid/i);
         }
       );
     });

@@ -22,7 +22,6 @@ import {
   getMainDefinition,
 } from "@apollo/client/utilities";
 import { WebSocketLink } from "@apollo/client/link/ws";
-import { SubscriptionClient } from "subscriptions-transport-ws";
 
 function Auth0ProviderWithRouter(props: any) {
   const history = useHistory();
@@ -30,8 +29,9 @@ function Auth0ProviderWithRouter(props: any) {
     <Auth0Provider
       {...props}
       onRedirectCallback={(appState) => {
-        const location = appState.returnTo || "/";
-        history.replace(location);
+        if (appState.returnTo) {
+          history.replace(appState.returnTo);
+        }
       }}
       scope="openid profile email permissions"
       cacheLocation="localstorage"
@@ -62,44 +62,6 @@ function ApolloProviderWithToken(props: any) {
       },
     };
   });
-
-  // const authMiddleware = setContext((operation, { headers }) => {
-  //   console.log("middleware");
-  //   return auth
-  //     .getIdTokenClaims()
-  //     .then((data) => {
-  //       const token = data?.__raw;
-  //       console.log("token", token);
-  //       return {
-  //         ...headers,
-  //         authorization: token ? `Bearer ${token}` : null,
-  //       };
-  //     })
-  //     .catch((e) => {
-  //       console.error(e);
-  //     });
-  // });
-
-  // const authMiddleware = new ApolloLink((operation, forward) => {
-  //   // add the authorization to the headers
-  //   auth.getIdTokenClaims().then((idClaims) => {
-  //     const token = idClaims?.__raw || null;
-  //     operation.setContext({
-  //       headers: {
-  //         // eslint-disable-next-line i18next/no-literal-string
-  //         authorization: token ? `Bearer ${token}` : "",
-  //       }
-  //     });
-  //     forward(operation);
-  //   });
-  //   // return forward(operation);
-  // })
-
-  // console.log(
-  //   process.env
-  //     .REACT_APP_GRAPHQL_ENDPOINT!.replace(/http/, "ws")
-  //     .replace("graphql", "subscriptions")
-  // );
 
   const wsLink = new WebSocketLink({
     uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(/http/, "ws"),

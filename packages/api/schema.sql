@@ -1091,6 +1091,30 @@ COMMENT ON FUNCTION public.access_control_lists_groups(acl public.access_control
 
 
 --
+-- Name: account_exists(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.account_exists(email text) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select case when exists (select
+      1
+    from
+      users
+    where
+      canonical_email = email) 
+    then true else false end;
+  $$;
+
+
+--
+-- Name: FUNCTION account_exists(email text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.account_exists(email text) IS '@omit';
+
+
+--
 -- Name: add_group_to_acl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2188,7 +2212,8 @@ CREATE FUNCTION public.confirm_project_invite(invite_id integer) RETURNS integer
       select group_id, userid from 
         project_invite_groups
       where
-        project_invite_groups.invite_id = project_invite.id;
+        project_invite_groups.invite_id = project_invite.id
+      on conflict do nothing;
       return userid;
     end;
   $$;
@@ -3388,6 +3413,36 @@ CREATE FUNCTION public.disable_forum_posting("userId" integer, "projectId" integ
 --
 
 COMMENT ON FUNCTION public.disable_forum_posting("userId" integer, "projectId" integer) IS 'Ban a user from posting in the discussion forum';
+
+
+--
+-- Name: email_unsubscribed(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.email_unsubscribed(email text) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select case when exists (select
+      users.canonical_email,
+      email_notification_preferences.unsubscribe_all
+    from
+      users
+    inner join
+      email_notification_preferences
+    on
+      email_notification_preferences.user_id = users.id
+    where
+      canonical_email = email and
+      email_notification_preferences.unsubscribe_all = true
+    ) then true else false end;
+  $$;
+
+
+--
+-- Name: FUNCTION email_unsubscribed(email text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.email_unsubscribed(email text) IS '@omit';
 
 
 --
@@ -13059,6 +13114,14 @@ GRANT ALL ON FUNCTION public.access_control_lists_groups(acl public.access_contr
 
 
 --
+-- Name: FUNCTION account_exists(email text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.account_exists(email text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.account_exists(email text) TO anon;
+
+
+--
 -- Name: FUNCTION add_group_to_acl("aclId" integer, "groupId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -14065,6 +14128,14 @@ REVOKE ALL ON FUNCTION public.dropgeometrytable(schema_name character varying, t
 --
 
 REVOKE ALL ON FUNCTION public.dropgeometrytable(catalog_name character varying, schema_name character varying, table_name character varying) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION email_unsubscribed(email text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.email_unsubscribed(email text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.email_unsubscribed(email text) TO anon;
 
 
 --

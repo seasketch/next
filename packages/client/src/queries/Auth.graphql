@@ -1,0 +1,28 @@
+query VerifyProjectInvite($token: String!) {
+  verifyProjectInvite(token: $token) {
+    claims {
+      admin
+      email
+      fullname
+      inviteId
+      projectId
+      wasUsed
+      projectSlug
+    }
+    error
+    existingAccount
+  }
+}
+
+mutation ConfirmProjectInvite($token: String!) {
+  confirmProjectInvite(token: $token) {
+    admin
+    email
+    fullname
+    inviteId
+    projectId
+    projectName
+    wasUsed
+    projectSlug
+  }
+}

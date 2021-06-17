@@ -9,14 +9,17 @@ import { ManagementClient } from "auth0";
 import { DBClient } from "../dbClient";
 import { default as mustache } from "mustache";
 import sendEmail from "./sendEmail";
+import * as cache from "../cache";
 
-type ProjectInviteTokenClaims = {
+export type ProjectInviteTokenClaims = {
   projectId: number;
+  projectName: string;
   inviteId: number;
   admin: boolean;
-  fullname: string;
+  fullname?: string;
   email: string;
   emailId: number;
+  projectSlug: string;
 };
 
 export async function sendProjectInviteEmail(
@@ -35,6 +38,7 @@ export async function sendProjectInviteEmail(
     subject: string;
     template: string;
     projectName: string;
+    projectSlug: string;
   }[] = (
     await client.query(
       `
@@ -45,11 +49,11 @@ export async function sendProjectInviteEmail(
         project_invites.project_id as "projectId",
         project_invites.make_admin as "makeAdmin",
         project_invites.id as "inviteId",
-        users.id as "userId",
-        email_notification_preferences.unsubscribe_all as "unsubscribed",
+        email_unsubscribed(invite_emails.to_address) as "unsubscribed",
         projects.invite_email_subject as "subject",
         projects.invite_email_template_text as "template",
-        projects.name as "projectName"
+        projects.name as "projectName",
+        projects.slug as "projectSlug"
       from
         invite_emails
       inner join
@@ -60,14 +64,6 @@ export async function sendProjectInviteEmail(
         projects
       on
         project_invites.project_id = projects.id
-      left join
-        users
-      on
-        project_invites.email = users.canonical_email
-      left join
-        email_notification_preferences
-      on
-        email_notification_preferences.user_id = users.id
       where
         invite_emails.id = $1
         `,
@@ -90,12 +86,14 @@ export async function sendProjectInviteEmail(
       }
 
       const { token, expiration } = await createToken(client, {
+        projectName: inviteData.projectName,
         projectId: inviteData.projectId,
         fullname: inviteData.fullname,
         email: inviteData.email,
         admin: inviteData.makeAdmin,
         inviteId: inviteData.inviteId,
         emailId: inviteData.id,
+        projectSlug: inviteData.projectSlug,
       });
 
       const templateVars = {
@@ -205,7 +203,7 @@ export async function verifyProjectInvite(
   try {
     claims = await verify<ProjectInviteTokenClaims>(client, token, host);
   } catch (e) {
-    throw new Error("Invalid token signature");
+    throw e;
   }
   if (!claims.projectId) {
     throw new Error("projectId not present in claims");
@@ -246,13 +244,11 @@ export async function confirmProjectInvite(
   await client.query(
     `SELECT set_config('session.escalate_privileges', 'on', true)`
   );
-  // Most operations are completed in the sql function
   const userId = (
-    await client.query(`select confirm_project_invite($1)`, [claims.inviteId])
-  ).rows[0].confirm_project_invite;
-  await client.query(
-    `SELECT set_config('session.escalate_privileges', null, true)`
-  );
+    await client.query(
+      `select current_setting('session.user_id', true) as user_id`
+    )
+  ).rows[0].user_id;
   // verify email using the auth0 api (if necessary)
   const { emailVerified, sub } = (
     await client.query(
@@ -260,20 +256,33 @@ export async function confirmProjectInvite(
       [userId]
     )
   ).rows[0];
-  const auth0 = new ManagementClient({
-    clientId: process.env.AUTH0_CLIENT_ID,
-    clientSecret: process.env.AUTH0_CLIENT_SECRET,
-    domain: process.env.AUTH0_DOMAIN!,
-    scope: "update:users",
-  });
+  const auth0 = await getManagementClient();
   if (!emailVerified) {
     // TODO: test this operation on the production system manually
     await auth0.updateUser({ id: sub as string }, { email_verified: true });
+    await cache.set(`user:${sub}:emailVerified`, "true");
   }
+  await client.query(`select confirm_project_invite($1)`, [claims.inviteId]);
+  await client.query(
+    `SELECT set_config('session.escalate_privileges', null, true)`
+  );
   return {
     ...claims,
     wasUsed: true,
   };
+}
+
+let managementClient: ManagementClient;
+async function getManagementClient(): Promise<ManagementClient> {
+  if (!managementClient) {
+    managementClient = new ManagementClient({
+      clientId: process.env.AUTH0_CLIENT_ID,
+      clientSecret: process.env.AUTH0_CLIENT_SECRET,
+      domain: process.env.AUTH0_DOMAIN!,
+      scope: "update:users",
+    });
+  }
+  return managementClient;
 }
 
 function swap(kv: { [key: string]: string }) {

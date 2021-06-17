@@ -8160,12 +8160,19 @@ type ProjectInviteTokenClaims {
   fullname: String
   inviteId: Int!
   projectId: Int!
+  projectName: String!
+  projectSlug: String!
   wasUsed: Boolean!
 }
 
 type ProjectInviteTokenVerificationResults {
   claims: ProjectInviteTokenClaims
   error: String
+
+  """
+  Indicates whether there is an existing account that matches the email address on the invite
+  """
+  existingAccount: Boolean
 }
 
 """

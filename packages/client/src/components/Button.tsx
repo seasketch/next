@@ -51,7 +51,7 @@ export default function Button(props: ButtonProps) {
   } ${
     props.primary
       ? // eslint-disable-next-line
-        `text-white bg-primary-500 focus:outline-none focus:border-primary-600 focus:shadow-outline-blue active:bg-primary-600`
+        `btn-primary text-white bg-primary-500 focus:outline-none focus:border-primary-600 focus:shadow-outline-blue active:bg-primary-600`
       : // eslint-disable-next-line
         `text-gray-700 ${
           props.disabled ? "bg-gray-100" : "bg-white"

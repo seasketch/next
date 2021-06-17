@@ -27,7 +27,7 @@ export default function FullSidebar({
   const { t } = useTranslation("sidebar");
   const { slug } = useParams<{ slug: string }>();
   const { loginWithRedirect } = useAuth0();
-  const { data } = useCurrentProjectMetadataQuery();
+  const { data, loading, error, refetch } = useCurrentProjectMetadataQuery();
   const { user, logout } = useAuth0();
   let social: string | false = false;
   if (user) {
@@ -43,9 +43,10 @@ export default function FullSidebar({
     ? `${user.email || user.name} ${social ? `(${social})` : ""}`
     : false;
 
-  if (!data?.currentProject) {
-    return <div></div>;
-  }
+  // if (!data?.currentProject && !loading && !error) {
+  //   refetch();
+  //   return <div></div>;
+  // }
 
   const chooseSidebar = (sidebar: string) => () => {
     history.replace(`/${slug}/app/${sidebar}`);
@@ -157,7 +158,7 @@ export default function FullSidebar({
           icon={ForumsIcon}
           onClick={chooseSidebar("forums")}
         />
-        {project.sessionIsAdmin && (
+        {project?.sessionIsAdmin && (
           <NavItem
             onClick={() => history.push("./admin")}
             label={t("Project Administration")}

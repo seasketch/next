@@ -7123,6 +7123,8 @@ export type ProjectInviteTokenClaims = {
   fullname?: Maybe<Scalars['String']>;
   inviteId: Scalars['Int'];
   projectId: Scalars['Int'];
+  projectName: Scalars['String'];
+  projectSlug: Scalars['String'];
   wasUsed: Scalars['Boolean'];
 };
 
@@ -7130,6 +7132,8 @@ export type ProjectInviteTokenVerificationResults = {
   __typename?: 'ProjectInviteTokenVerificationResults';
   claims?: Maybe<ProjectInviteTokenClaims>;
   error?: Maybe<Scalars['String']>;
+  /** Indicates whether there is an existing account that matches the email address on the invite */
+  existingAccount?: Maybe<Scalars['Boolean']>;
 };
 
 /** Represents an update to a `Project`. Fields that are set will be updated. */
@@ -12385,6 +12389,36 @@ export type AddImageToSpriteMutation = (
   )> }
 );
 
+export type VerifyProjectInviteQueryVariables = Exact<{
+  token: Scalars['String'];
+}>;
+
+
+export type VerifyProjectInviteQuery = (
+  { __typename?: 'Query' }
+  & { verifyProjectInvite?: Maybe<(
+    { __typename?: 'ProjectInviteTokenVerificationResults' }
+    & Pick<ProjectInviteTokenVerificationResults, 'error' | 'existingAccount'>
+    & { claims?: Maybe<(
+      { __typename?: 'ProjectInviteTokenClaims' }
+      & Pick<ProjectInviteTokenClaims, 'admin' | 'email' | 'fullname' | 'inviteId' | 'projectId' | 'wasUsed' | 'projectSlug'>
+    )> }
+  )> }
+);
+
+export type ConfirmProjectInviteMutationVariables = Exact<{
+  token: Scalars['String'];
+}>;
+
+
+export type ConfirmProjectInviteMutation = (
+  { __typename?: 'Mutation' }
+  & { confirmProjectInvite?: Maybe<(
+    { __typename?: 'ProjectInviteTokenClaims' }
+    & Pick<ProjectInviteTokenClaims, 'admin' | 'email' | 'fullname' | 'inviteId' | 'projectId' | 'projectName' | 'wasUsed' | 'projectSlug'>
+  )> }
+);
+
 export type GetBasemapsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -14638,6 +14672,91 @@ export function useAddImageToSpriteMutation(baseOptions?: Apollo.MutationHookOpt
 export type AddImageToSpriteMutationHookResult = ReturnType<typeof useAddImageToSpriteMutation>;
 export type AddImageToSpriteMutationResult = Apollo.MutationResult<AddImageToSpriteMutation>;
 export type AddImageToSpriteMutationOptions = Apollo.BaseMutationOptions<AddImageToSpriteMutation, AddImageToSpriteMutationVariables>;
+export const VerifyProjectInviteDocument = gql`
+    query VerifyProjectInvite($token: String!) {
+  verifyProjectInvite(token: $token) {
+    claims {
+      admin
+      email
+      fullname
+      inviteId
+      projectId
+      wasUsed
+      projectSlug
+    }
+    error
+    existingAccount
+  }
+}
+    `;
+
+/**
+ * __useVerifyProjectInviteQuery__
+ *
+ * To run a query within a React component, call `useVerifyProjectInviteQuery` and pass it any options that fit your needs.
+ * When your component renders, `useVerifyProjectInviteQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useVerifyProjectInviteQuery({
+ *   variables: {
+ *      token: // value for 'token'
+ *   },
+ * });
+ */
+export function useVerifyProjectInviteQuery(baseOptions: Apollo.QueryHookOptions<VerifyProjectInviteQuery, VerifyProjectInviteQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<VerifyProjectInviteQuery, VerifyProjectInviteQueryVariables>(VerifyProjectInviteDocument, options);
+      }
+export function useVerifyProjectInviteLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<VerifyProjectInviteQuery, VerifyProjectInviteQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<VerifyProjectInviteQuery, VerifyProjectInviteQueryVariables>(VerifyProjectInviteDocument, options);
+        }
+export type VerifyProjectInviteQueryHookResult = ReturnType<typeof useVerifyProjectInviteQuery>;
+export type VerifyProjectInviteLazyQueryHookResult = ReturnType<typeof useVerifyProjectInviteLazyQuery>;
+export type VerifyProjectInviteQueryResult = Apollo.QueryResult<VerifyProjectInviteQuery, VerifyProjectInviteQueryVariables>;
+export const ConfirmProjectInviteDocument = gql`
+    mutation ConfirmProjectInvite($token: String!) {
+  confirmProjectInvite(token: $token) {
+    admin
+    email
+    fullname
+    inviteId
+    projectId
+    projectName
+    wasUsed
+    projectSlug
+  }
+}
+    `;
+export type ConfirmProjectInviteMutationFn = Apollo.MutationFunction<ConfirmProjectInviteMutation, ConfirmProjectInviteMutationVariables>;
+
+/**
+ * __useConfirmProjectInviteMutation__
+ *
+ * To run a mutation, you first call `useConfirmProjectInviteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useConfirmProjectInviteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [confirmProjectInviteMutation, { data, loading, error }] = useConfirmProjectInviteMutation({
+ *   variables: {
+ *      token: // value for 'token'
+ *   },
+ * });
+ */
+export function useConfirmProjectInviteMutation(baseOptions?: Apollo.MutationHookOptions<ConfirmProjectInviteMutation, ConfirmProjectInviteMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ConfirmProjectInviteMutation, ConfirmProjectInviteMutationVariables>(ConfirmProjectInviteDocument, options);
+      }
+export type ConfirmProjectInviteMutationHookResult = ReturnType<typeof useConfirmProjectInviteMutation>;
+export type ConfirmProjectInviteMutationResult = Apollo.MutationResult<ConfirmProjectInviteMutation>;
+export type ConfirmProjectInviteMutationOptions = Apollo.BaseMutationOptions<ConfirmProjectInviteMutation, ConfirmProjectInviteMutationVariables>;
 export const GetBasemapsDocument = gql`
     query GetBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
