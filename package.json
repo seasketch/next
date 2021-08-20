@@ -18,5 +18,6 @@
   "graphql-inspector": {
     "branch": "master",
     "schema": "packages/api/generated-schema.gql"
-  }
+  },
+  "license": "BSD-3-Clause"
 }
