@@ -4999,6 +4999,11 @@ export type Mutation = {
   removeUserFromGroup?: Maybe<RemoveUserFromGroupPayload>;
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
+  /**
+   * Re-sends an email verification link to the canonical email for the
+   * current user session
+   */
+  resendVerificationEmail: SendVerificationEmailResults;
   /** Remove participant admin privileges. */
   revokeAdminAccess?: Maybe<RevokeAdminAccessPayload>;
   /** Send all UNSENT invites in the current project. */
@@ -6461,7 +6466,7 @@ export type ProfilePatch = {
   email?: Maybe<Scalars['Email']>;
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
-  picture?: Maybe<Scalars['String']>;
+  picture?: Maybe<Scalars['Upload']>;
   userId?: Maybe<Scalars['Int']>;
 };
 
@@ -6627,6 +6632,7 @@ export type Project = Node & {
   slug: Scalars['String'];
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites: Array<Sprite>;
+  supportEmail: Scalars['String'];
   /** Listing of all Surveys accessible to the current user. */
   surveys: Array<Survey>;
   /** Public layer list. Cannot be edited directly. */
@@ -6895,6 +6901,16 @@ export enum ProjectAccessControlSetting {
    * datasets, sketch classes, and forums may be restricted via access control lists.
    */
   Public = 'PUBLIC'
+}
+
+export enum ProjectAccessStatus {
+  DeniedAdminsOnly = 'DENIED_ADMINS_ONLY',
+  DeniedAnon = 'DENIED_ANON',
+  DeniedEmailNotVerified = 'DENIED_EMAIL_NOT_VERIFIED',
+  DeniedNotApproved = 'DENIED_NOT_APPROVED',
+  DeniedNotRequested = 'DENIED_NOT_REQUESTED',
+  Granted = 'GRANTED',
+  ProjectDoesNotExist = 'PROJECT_DOES_NOT_EXIST'
 }
 
 /** A condition to be used against `Project` object types. All fields are tested for equality and combined with a logical ‘and.’ */
@@ -7260,6 +7276,16 @@ export enum ProjectsSharedBasemapsOrderBy {
   Natural = 'NATURAL'
 }
 
+export type PublicProjectDetail = {
+  __typename?: 'PublicProjectDetail';
+  accessControl?: Maybe<ProjectAccessControlSetting>;
+  id?: Maybe<Scalars['Int']>;
+  logoUrl?: Maybe<Scalars['String']>;
+  name?: Maybe<Scalars['String']>;
+  slug?: Maybe<Scalars['String']>;
+  supportEmail?: Maybe<Scalars['String']>;
+};
+
 /** All input for the `publishTableOfContents` mutation. */
 export type PublishTableOfContentsInput = {
   /**
@@ -7315,6 +7341,10 @@ export type Query = Node & {
    * `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
    */
   currentProject?: Maybe<Project>;
+  /** Use to indicate to a user why they cannot access the given project, if denied. */
+  currentProjectAccessStatus?: Maybe<ProjectAccessStatus>;
+  /** Executable by all users and used to display a "gate" should a user arrive directly on a project url without authorization. */
+  currentProjectPublicDetails?: Maybe<PublicProjectDetail>;
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
   /** Reads a single `DataLayer` using its globally unique `ID`. */
@@ -9079,6 +9109,12 @@ export type SendProjectInvitesPayload = {
   inviteEmails?: Maybe<Array<InviteEmail>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+export type SendVerificationEmailResults = {
+  __typename?: 'SendVerificationEmailResults';
+  error?: Maybe<Scalars['String']>;
+  success: Scalars['Boolean'];
 };
 
 /** All input for the `setFormFieldOrder` mutation. */
@@ -12419,6 +12455,30 @@ export type ConfirmProjectInviteMutation = (
   )> }
 );
 
+export type ResendEmailVerificationMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ResendEmailVerificationMutation = (
+  { __typename?: 'Mutation' }
+  & { resendVerificationEmail: (
+    { __typename?: 'SendVerificationEmailResults' }
+    & Pick<SendVerificationEmailResults, 'success' | 'error'>
+  ) }
+);
+
+export type RequestInviteOnlyProjectAccessMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type RequestInviteOnlyProjectAccessMutation = (
+  { __typename?: 'Mutation' }
+  & { joinProject?: Maybe<(
+    { __typename?: 'JoinProjectPayload' }
+    & Pick<JoinProjectPayload, 'clientMutationId'>
+  )> }
+);
+
 export type GetBasemapsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -12812,9 +12872,20 @@ export type CurrentProjectMetadataQueryVariables = Exact<{ [key: string]: never;
 
 export type CurrentProjectMetadataQuery = (
   { __typename?: 'Query' }
+  & Pick<Query, 'currentProjectAccessStatus'>
   & { currentProject?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
+  )>, currentProjectPublicDetails?: Maybe<(
+    { __typename?: 'PublicProjectDetail' }
+    & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail'>
+  )>, me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & Pick<Profile, 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
+    )> }
   )> }
 );
 
@@ -13876,6 +13947,34 @@ export type ProjectInviteEmailStatusSubscriptionSubscription = (
   )> }
 );
 
+export type UpdateProfileMutationVariables = Exact<{
+  userId: Scalars['Int'];
+  affiliations?: Maybe<Scalars['String']>;
+  email?: Maybe<Scalars['Email']>;
+  fullname?: Maybe<Scalars['String']>;
+  nickname?: Maybe<Scalars['String']>;
+  picture?: Maybe<Scalars['Upload']>;
+}>;
+
+
+export type UpdateProfileMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProfileByUserId?: Maybe<(
+    { __typename?: 'UpdateProfilePayload' }
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & { user?: Maybe<(
+        { __typename?: 'User' }
+        & Pick<User, 'id'>
+        & { profile?: Maybe<(
+          { __typename?: 'Profile' }
+          & Pick<Profile, 'picture'>
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
 export const UpdateTerrainExaggerationFragmentDoc = gql`
     fragment UpdateTerrainExaggeration on Basemap {
   terrainExaggeration
@@ -14757,6 +14856,72 @@ export function useConfirmProjectInviteMutation(baseOptions?: Apollo.MutationHoo
 export type ConfirmProjectInviteMutationHookResult = ReturnType<typeof useConfirmProjectInviteMutation>;
 export type ConfirmProjectInviteMutationResult = Apollo.MutationResult<ConfirmProjectInviteMutation>;
 export type ConfirmProjectInviteMutationOptions = Apollo.BaseMutationOptions<ConfirmProjectInviteMutation, ConfirmProjectInviteMutationVariables>;
+export const ResendEmailVerificationDocument = gql`
+    mutation ResendEmailVerification {
+  resendVerificationEmail {
+    success
+    error
+  }
+}
+    `;
+export type ResendEmailVerificationMutationFn = Apollo.MutationFunction<ResendEmailVerificationMutation, ResendEmailVerificationMutationVariables>;
+
+/**
+ * __useResendEmailVerificationMutation__
+ *
+ * To run a mutation, you first call `useResendEmailVerificationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useResendEmailVerificationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [resendEmailVerificationMutation, { data, loading, error }] = useResendEmailVerificationMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useResendEmailVerificationMutation(baseOptions?: Apollo.MutationHookOptions<ResendEmailVerificationMutation, ResendEmailVerificationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ResendEmailVerificationMutation, ResendEmailVerificationMutationVariables>(ResendEmailVerificationDocument, options);
+      }
+export type ResendEmailVerificationMutationHookResult = ReturnType<typeof useResendEmailVerificationMutation>;
+export type ResendEmailVerificationMutationResult = Apollo.MutationResult<ResendEmailVerificationMutation>;
+export type ResendEmailVerificationMutationOptions = Apollo.BaseMutationOptions<ResendEmailVerificationMutation, ResendEmailVerificationMutationVariables>;
+export const RequestInviteOnlyProjectAccessDocument = gql`
+    mutation RequestInviteOnlyProjectAccess($projectId: Int!) {
+  joinProject(input: {projectId: $projectId}) {
+    clientMutationId
+  }
+}
+    `;
+export type RequestInviteOnlyProjectAccessMutationFn = Apollo.MutationFunction<RequestInviteOnlyProjectAccessMutation, RequestInviteOnlyProjectAccessMutationVariables>;
+
+/**
+ * __useRequestInviteOnlyProjectAccessMutation__
+ *
+ * To run a mutation, you first call `useRequestInviteOnlyProjectAccessMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRequestInviteOnlyProjectAccessMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [requestInviteOnlyProjectAccessMutation, { data, loading, error }] = useRequestInviteOnlyProjectAccessMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useRequestInviteOnlyProjectAccessMutation(baseOptions?: Apollo.MutationHookOptions<RequestInviteOnlyProjectAccessMutation, RequestInviteOnlyProjectAccessMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RequestInviteOnlyProjectAccessMutation, RequestInviteOnlyProjectAccessMutationVariables>(RequestInviteOnlyProjectAccessDocument, options);
+      }
+export type RequestInviteOnlyProjectAccessMutationHookResult = ReturnType<typeof useRequestInviteOnlyProjectAccessMutation>;
+export type RequestInviteOnlyProjectAccessMutationResult = Apollo.MutationResult<RequestInviteOnlyProjectAccessMutation>;
+export type RequestInviteOnlyProjectAccessMutationOptions = Apollo.BaseMutationOptions<RequestInviteOnlyProjectAccessMutation, RequestInviteOnlyProjectAccessMutationVariables>;
 export const GetBasemapsDocument = gql`
     query GetBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -15725,6 +15890,26 @@ export const CurrentProjectMetadataDocument = gql`
     accessControl
     sessionIsAdmin
     isFeatured
+  }
+  currentProjectPublicDetails {
+    id
+    accessControl
+    slug
+    name
+    logoUrl
+    supportEmail
+  }
+  currentProjectAccessStatus
+  me {
+    id
+    profile {
+      fullname
+      nickname
+      email
+      picture
+      bio
+      affiliations
+    }
   }
 }
     `;
@@ -18145,3 +18330,50 @@ export function useProjectInviteEmailStatusSubscriptionSubscription(baseOptions?
       }
 export type ProjectInviteEmailStatusSubscriptionSubscriptionHookResult = ReturnType<typeof useProjectInviteEmailStatusSubscriptionSubscription>;
 export type ProjectInviteEmailStatusSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ProjectInviteEmailStatusSubscriptionSubscription>;
+export const UpdateProfileDocument = gql`
+    mutation UpdateProfile($userId: Int!, $affiliations: String, $email: Email, $fullname: String, $nickname: String, $picture: Upload) {
+  updateProfileByUserId(
+    input: {userId: $userId, patch: {affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
+  ) {
+    profile {
+      user {
+        id
+        profile {
+          picture
+        }
+      }
+    }
+  }
+}
+    `;
+export type UpdateProfileMutationFn = Apollo.MutationFunction<UpdateProfileMutation, UpdateProfileMutationVariables>;
+
+/**
+ * __useUpdateProfileMutation__
+ *
+ * To run a mutation, you first call `useUpdateProfileMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateProfileMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateProfileMutation, { data, loading, error }] = useUpdateProfileMutation({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *      affiliations: // value for 'affiliations'
+ *      email: // value for 'email'
+ *      fullname: // value for 'fullname'
+ *      nickname: // value for 'nickname'
+ *      picture: // value for 'picture'
+ *   },
+ * });
+ */
+export function useUpdateProfileMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProfileMutation, UpdateProfileMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateProfileMutation, UpdateProfileMutationVariables>(UpdateProfileDocument, options);
+      }
+export type UpdateProfileMutationHookResult = ReturnType<typeof useUpdateProfileMutation>;
+export type UpdateProfileMutationResult = Apollo.MutationResult<UpdateProfileMutation>;
+export type UpdateProfileMutationOptions = Apollo.BaseMutationOptions<UpdateProfileMutation, UpdateProfileMutationVariables>;

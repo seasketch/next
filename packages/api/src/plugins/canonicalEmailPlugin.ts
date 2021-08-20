@@ -1,5 +1,5 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
-import { getCanonicalEmails } from "../auth/auth0";
+import { getCanonicalEmails, client } from "../auth/auth0";
 
 const CanonicalEmailPlugin = makeExtendSchemaPlugin((build) => {
   return {
@@ -15,12 +15,42 @@ const CanonicalEmailPlugin = makeExtendSchemaPlugin((build) => {
         """
         canonicalEmail: String
       }
+
+      type SendVerificationEmailResults {
+        success: Boolean!
+        error: String
+      }
+
+      extend type Mutation {
+        """
+        Re-sends an email verification link to the canonical email for the
+        current user session
+        """
+        resendVerificationEmail: SendVerificationEmailResults!
+      }
     `,
     resolvers: {
       EmailNotificationPreference: {
         canonicalEmail: async (parent, args, context, info) => {
           const emails = await getCanonicalEmails([context.user.sub]);
           return emails[context.user.sub];
+        },
+      },
+      Mutation: {
+        resendVerificationEmail: async (_query, args, context, resolveInfo) => {
+          try {
+            const response = await client.sendEmailVerification({
+              user_id: context.user.sub,
+            });
+            return {
+              success: true,
+            };
+          } catch (e) {
+            return {
+              success: false,
+              error: e.toString(),
+            };
+          }
         },
       },
     },

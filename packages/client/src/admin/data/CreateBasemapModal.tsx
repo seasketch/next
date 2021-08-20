@@ -254,7 +254,7 @@ export default function CreateBasemapModal({
                       </Trans>
                     )
                   }
-                  id="url"
+                  name="url"
                   value={state.url}
                   label="URL"
                   onChange={(url) => {
@@ -268,7 +268,7 @@ export default function CreateBasemapModal({
               <div className="mt-4">
                 <TextInput
                   label={t("Basemap Name")}
-                  id="name"
+                  name="name"
                   value={state.name}
                   onChange={(name) => setState((old) => ({ ...old, name }))}
                 />

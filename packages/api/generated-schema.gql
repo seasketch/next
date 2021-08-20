@@ -6493,6 +6493,12 @@ type Mutation {
   ): RemoveValidChildSketchClassPayload
 
   """
+  Re-sends an email verification link to the canonical email for the
+  current user session
+  """
+  resendVerificationEmail: SendVerificationEmailResults!
+
+  """
   Remove participant admin privileges.
   
   """
@@ -7429,7 +7435,7 @@ input ProfilePatch {
   email: Email
   fullname: String
   nickname: String
-  picture: String
+  picture: Upload
   userId: Int
 }
 
@@ -7825,6 +7831,7 @@ type Project implements Node {
     """The method to use when ordering `Sprite`."""
     orderBy: [SpritesOrderBy!]
   ): [Sprite!]!
+  supportEmail: String!
 
   """Listing of all Surveys accessible to the current user."""
   surveys(
@@ -7913,6 +7920,16 @@ enum ProjectAccessControlSetting {
   datasets, sketch classes, and forums may be restricted via access control lists.
   """
   PUBLIC
+}
+
+enum ProjectAccessStatus {
+  DENIED_ADMINS_ONLY
+  DENIED_ANON
+  DENIED_EMAIL_NOT_VERIFIED
+  DENIED_NOT_APPROVED
+  DENIED_NOT_REQUESTED
+  GRANTED
+  PROJECT_DOES_NOT_EXIST
 }
 
 """
@@ -8325,6 +8342,15 @@ enum ProjectsSharedBasemapsOrderBy {
   NATURAL
 }
 
+type PublicProjectDetail {
+  accessControl: ProjectAccessControlSetting
+  id: Int
+  logoUrl: String
+  name: String
+  slug: String
+  supportEmail: String
+}
+
 """All input for the `publishTableOfContents` mutation."""
 input PublishTableOfContentsInput {
   """
@@ -8426,6 +8452,18 @@ type Query implements Node {
   
   """
   currentProject: Project
+
+  """
+  Use to indicate to a user why they cannot access the given project, if denied.
+  
+  """
+  currentProjectAccessStatus: ProjectAccessStatus
+
+  """
+  Executable by all users and used to display a "gate" should a user arrive directly on a project url without authorization.
+  
+  """
+  currentProjectPublicDetails: PublicProjectDetail
   dataLayer(id: Int!): DataLayer
   dataLayerByInteractivitySettingsId(interactivitySettingsId: Int!): DataLayer
 
@@ -9103,6 +9141,11 @@ type SendProjectInvitesPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+type SendVerificationEmailResults {
+  error: String
+  success: Boolean!
 }
 
 """All input for the `setFormFieldOrder` mutation."""

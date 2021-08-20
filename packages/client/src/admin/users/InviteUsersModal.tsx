@@ -194,7 +194,7 @@ export default function InviteUsersModal({
           <>
             <div className="max-w-lg mb-4">
               <TextInput
-                id="recipient"
+                name="recipient"
                 type="email"
                 label={t("Email")}
                 description={t(
@@ -214,7 +214,7 @@ export default function InviteUsersModal({
             </div>
             <div className="max-w-lg mb-4">
               <TextInput
-                id="fullname"
+                name="fullname"
                 label={t("Full Name")}
                 description={t("Optionally provide the recipient's name.")}
                 value={state.fullname}

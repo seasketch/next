@@ -31,6 +31,8 @@ function Auth0ProviderWithRouter(props: any) {
       onRedirectCallback={(appState) => {
         if (appState.returnTo) {
           history.replace(appState.returnTo);
+        } else {
+          history.replace("/");
         }
       }}
       scope="openid profile email permissions"

@@ -12,6 +12,7 @@ export default function Spinner(props: {
     <div
       style={props.style}
       className={`ml-3 inline-block inset-y-0 items-center pointer-events-none transition-opacity duration-500 opacity-50 ${props.className}`}
+      role="progressbar"
     >
       <svg
         className={`animate-spin ${

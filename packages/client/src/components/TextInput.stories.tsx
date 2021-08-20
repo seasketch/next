@@ -36,7 +36,7 @@ const Template: Story<TextInputOptions> = (args) => (
 
 export const Basic = Template.bind({});
 Basic.args = {
-  id: "project-name",
+  name: "project-name",
   label: "Project Name",
   placeholder: "My Project",
   required: true,
@@ -45,7 +45,7 @@ Basic.args = {
 
 export const ValidationError = Template.bind({});
 ValidationError.args = {
-  id: "project-name",
+  name: "project-name",
   label: "Project Name",
   error: "Name must be at least 3 characters",
   placeholder: "My Project",
@@ -55,7 +55,7 @@ ValidationError.args = {
 
 export const Saving = Template.bind({});
 Saving.args = {
-  id: "project-name",
+  name: "project-name",
   label: "Project Name",
   placeholder: "My Project",
   required: true,
@@ -65,7 +65,7 @@ Saving.args = {
 
 export const Saved = Template.bind({});
 Saved.args = {
-  id: "project-name",
+  name: "project-name",
   label: "Project Name",
   placeholder: "My Project",
   required: true,

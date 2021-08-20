@@ -1,8 +1,17 @@
+import {
+  FieldMetaProps,
+  FieldProps,
+  FormikFormProps,
+  FormikProps,
+  useField,
+  useFormik,
+  useFormikContext,
+} from "formik";
 import React, { useState, useEffect, KeyboardEvent } from "react";
 
 export interface TextInputOptions {
   /** Required id of input. Also referenced by labels. */
-  id: string;
+  name: string;
   /** This is a _controlled_ input so a value is required. */
   value: string;
   /** Label displayed above the input */
@@ -20,13 +29,15 @@ export interface TextInputOptions {
   autoFocus?: boolean;
   onKeyDown?: (e: KeyboardEvent) => void;
   type?: "text" | "email";
+  textarea?: boolean;
+  field?: any;
+  form?: FormikProps<any>;
+  meta?: FieldMetaProps<string>;
 }
 
 export default function TextInput(props: TextInputOptions) {
   const {
-    id,
     value,
-    error,
     placeholder,
     label,
     required,
@@ -36,8 +47,30 @@ export default function TextInput(props: TextInputOptions) {
     state,
     onKeyDown,
     type,
+    textarea,
+    field,
+    form,
+    meta,
   } = props;
   const [showSaved, setShowSaved] = useState(true);
+  let error = props.error;
+  const name = props.field?.name ? props.field.name : props.name;
+  if (
+    props.field &&
+    props.form &&
+    props.form?.touched &&
+    props.form.touched[name] &&
+    props.form.errors &&
+    props.form.errors[name]
+  ) {
+    const e = props.form.errors[name];
+    if (Array.isArray(e)) {
+      error = e.join(". ");
+    } else {
+      error = e!.toString();
+    }
+  }
+
   useEffect(() => {
     if (state === "SAVED" && showSaved) {
       const timeout = setTimeout(() => {
@@ -51,23 +84,33 @@ export default function TextInput(props: TextInputOptions) {
     }
   }, [state]);
 
+  const InputTag = textarea
+    ? // eslint-disable-next-line i18next/no-literal-string
+      `textarea`
+    : // eslint-disable-next-line i18next/no-literal-string
+      (`input` as keyof JSX.IntrinsicElements);
+
   return (
     <div>
       <label
-        htmlFor={id}
-        className="block text-sm font-medium leading-5 text-gray-700"
+        htmlFor={name}
+        className={`block text-sm font-medium leading-5 text-gray-700 ${
+          required && "required"
+        }`}
       >
         {label}
         {/* {required && " *"} */}
       </label>
 
       <div className="mt-1 relative rounded-md shadow-sm">
-        <input
+        <InputTag
           autoFocus={!!props.autoFocus}
+          // @ts-ignore
           type={props.type || "text"}
-          id={id}
+          name={name}
           onKeyDown={onKeyDown}
-          onChange={(e) => onChange && onChange(e.target.value)}
+          // @ts-ignore
+          onChange={(e) => onChange && onChange(e)}
           disabled={disabled}
           required={required}
           className={`block w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 ${
@@ -81,7 +124,8 @@ export default function TextInput(props: TextInputOptions) {
           placeholder={placeholder}
           value={value}
           aria-invalid={error ? "true" : "false"}
-          aria-describedby={error ? `${id}-error` : ""}
+          aria-describedby={error ? `${name}-error` : ""}
+          {...field}
         />
         {props.inputChildNode}
 
@@ -150,7 +194,7 @@ export default function TextInput(props: TextInputOptions) {
         )}
       </div>
       {error && (
-        <p className="mt-2 text-sm text-red-600" id={`${id}-error`}>
+        <p className="mt-2 text-sm text-red-600" id={`${name}-error`}>
           {error}
         </p>
       )}

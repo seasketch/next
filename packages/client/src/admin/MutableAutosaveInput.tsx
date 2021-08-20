@@ -57,7 +57,7 @@ export default function MutableAutosaveInput(props: {
     <TextInput
       autoFocus={props.autofocus}
       description={props.description}
-      id={props.propName}
+      name={props.propName}
       label={props.label}
       value={value}
       onChange={setValue}

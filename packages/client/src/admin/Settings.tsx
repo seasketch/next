@@ -141,7 +141,7 @@ function BasicSettingsForm(props: {
             </div>
             <div className="md:max-w-xs mt-5">
               <TextInput
-                id="url"
+                name="url"
                 label={t("Permanent Project URL")}
                 value={props.url}
                 disabled

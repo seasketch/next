@@ -26,3 +26,16 @@ mutation ConfirmProjectInvite($token: String!) {
     projectSlug
   }
 }
+
+mutation ResendEmailVerification {
+  resendVerificationEmail {
+    success
+    error
+  }
+}
+
+mutation RequestInviteOnlyProjectAccess($projectId: Int!) {
+  joinProject(input: { projectId: $projectId }) {
+    clientMutationId
+  }
+}

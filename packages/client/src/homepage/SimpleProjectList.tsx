@@ -16,7 +16,11 @@ export default function SimpleProjectList() {
     <div className="mx-auto bg-white shadow sm:rounded-md sm:my-4 max-w-lg">
       <ul>
         {data!.projectsConnection!.nodes.map((p) => (
-          <Link className="hover:bg-gray-50" to={`/${p!.slug!}`} key={p!.id}>
+          <Link
+            className="hover:bg-gray-50"
+            to={`/${p!.slug!}/app`}
+            key={p!.id}
+          >
             <li
               className="px-4 py-2 border-t border-gray-200"
               style={{ minHeight: 48 }}

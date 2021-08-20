@@ -51,3 +51,5 @@ export async function verifyEmail(sub: string) {
     }
   );
 }
+
+export const client = auth0;

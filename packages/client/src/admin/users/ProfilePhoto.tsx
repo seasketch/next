@@ -31,8 +31,8 @@ export default function ProfilePhoto({
         email={email || canonicalEmail}
         default={defaultImg || "404"}
         // @ts-ignore
-        fallback={<div></div>}
-        className="h-full p-2 w-auto inline rounded-full flex-shrink-0"
+        fallback={defaultImg ? undefined : <div></div>}
+        className="h-auto p-2 w-auto inline rounded-full flex-shrink-0"
       />
     );
   }

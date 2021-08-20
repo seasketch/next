@@ -82,7 +82,7 @@ export default function CreateGroupModal({
     >
       {/* <div className="w-96"> */}
       <TextInput
-        id="name"
+        name="name"
         error={error}
         label={t("Group Name")}
         required

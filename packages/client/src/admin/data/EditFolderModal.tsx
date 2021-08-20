@@ -149,7 +149,7 @@ export default function EditFolderModal({
               <TextInput
                 autoFocus
                 error={error ? error.message : undefined}
-                id="folder-name"
+                name="folder-name"
                 label={t("Name")}
                 disabled={loading || isLoading}
                 value={state.title}

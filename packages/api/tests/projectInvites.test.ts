@@ -883,11 +883,13 @@ describe("Accepting Invites", () => {
           const claims = await verifyProjectInvite(
             asPg(conn),
             token,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           expect(claims.wasUsed).toBe(false);
           expect(claims.projectId).toBe(projectId);
-          expect(claims.iss).toBe("https://seasketch.org");
+          expect(claims.iss).toContain(
+            process.env.HOST || "https://seasketch.org"
+          );
           expect(claims.inviteId).toBeTruthy();
         }
       );
@@ -917,7 +919,11 @@ describe("Accepting Invites", () => {
           let parts = token.split(".");
           token = [token[0], token[1], token[2].slice(0, -1)].join(".");
           expect(
-            verifyProjectInvite(asPg(conn), token, "https://seasketch.org")
+            verifyProjectInvite(
+              asPg(conn),
+              token,
+              process.env.HOST || "https://seasketch.org"
+            )
           ).rejects.toThrow(/invalid/i);
         }
       );
@@ -948,7 +954,7 @@ describe("Accepting Invites", () => {
           const claims = await verifyProjectInvite(
             asPg(conn),
             token,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           expect(claims.wasUsed).toBe(true);
         }
@@ -981,7 +987,11 @@ describe("Accepting Invites", () => {
           let parts = token.split(".");
           token = [token[0], token[1], token[2].slice(0, -1)].join(".");
           expect(
-            confirmProjectInvite(asPg(conn), token, "https://seasketch.org")
+            confirmProjectInvite(
+              asPg(conn),
+              token,
+              process.env.HOST || "https://seasketch.org"
+            )
           ).rejects.toThrow(/invalid/i);
         }
       );
@@ -1014,7 +1024,7 @@ describe("Accepting Invites", () => {
           const claims = await confirmProjectInvite(
             asPg(conn),
             token,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           expect(claims.admin).toBe(false);
           await clearSession(conn);
@@ -1069,7 +1079,7 @@ describe("Accepting Invites", () => {
           const claims = await confirmProjectInvite(
             asPg(conn),
             token,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           await clearSession(conn);
           const participant = await conn.one(
@@ -1085,7 +1095,7 @@ describe("Accepting Invites", () => {
           await confirmProjectInvite(
             asPg(conn),
             token,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           const participant2 = await conn.one(
             sql`select * from project_participants where user_id = ${adminId} and project_id = ${projectId}`
@@ -1120,7 +1130,7 @@ describe("Accepting Invites", () => {
           const claims = await confirmProjectInvite(
             asPg(conn),
             token,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           expect(claims.admin).toBe(true);
           await clearSession(conn);
@@ -1161,7 +1171,7 @@ describe("Accepting Invites", () => {
           const claims = await confirmProjectInvite(
             asPg(conn),
             token,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           expect(claims.admin).toBe(false);
           await clearSession(conn);
@@ -1208,7 +1218,7 @@ describe("Accepting Invites", () => {
           const claims = await confirmProjectInvite(
             asPg(conn),
             token,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           await clearSession(conn);
           const participant = await conn.one(
@@ -1375,12 +1385,16 @@ describe("Accepting Invites", () => {
           const claims = await confirmProjectInvite(
             asPg(conn),
             token,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           expect(claims.admin).toBe(false);
           await createSession(conn, userB, false, false, projectId);
           expect(
-            confirmProjectInvite(asPg(conn), token, "https://seasketch.org")
+            confirmProjectInvite(
+              asPg(conn),
+              token,
+              process.env.HOST || "https://seasketch.org"
+            )
           ).rejects.toThrow();
         }
       );
@@ -1577,7 +1591,7 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           const claims = await verify(
             asPg(conn),
             token as string,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           expect(claims.fullname).toBe("Bob");
           expect(claims.email).toBe("bob@example.com");
@@ -1609,7 +1623,7 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           const claims = await verify(
             asPg(conn),
             token as string,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           expect(claims.exp * 1000).toBeGreaterThan(
             new Date().getTime() + ms("89 days")
@@ -1643,7 +1657,7 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
           const claims = await verify(
             asPg(conn),
             token as string,
-            "https://seasketch.org"
+            process.env.HOST || "https://seasketch.org"
           );
           expect(claims.admin).toBe(true);
           expect(claims.exp * 1000).toBeGreaterThan(
