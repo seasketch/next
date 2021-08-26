@@ -17,12 +17,15 @@ export interface ButtonProps {
   /** Render a <label /> with htmlFor set */
   labelFor?: string;
   href?: string;
+  mailTo?: string;
   children?: React.ReactNode;
   autofocus?: boolean;
   /* Override default styles on button */
   buttonClassName?: string;
   small?: boolean;
   title?: string;
+  innerRef?: React.MutableRefObject<any>;
+  type?: "submit" | "button" | "reset";
 }
 
 export default function Button(props: ButtonProps) {
@@ -33,11 +36,17 @@ export default function Button(props: ButtonProps) {
       history.push(props.href!);
     };
   }
+  if (props.mailTo) {
+    onClick = () => {
+      // eslint-disable-next-line i18next/no-literal-string
+      window.location.href = `mailto:${props.mailTo}`;
+    };
+  }
   let label: string | React.ReactNode = props.label;
   if (props.children) {
     label = props.children;
   }
-  // eslint-disable-next-line
+  // eslint-disable-next-line i18next/no-literal-string
   const buttonClassName = `select-none ${
     props.disabled
       ? "opacity-75 pointer-events-none"
@@ -50,9 +59,9 @@ export default function Button(props: ButtonProps) {
     props.small ? "rounded" : "rounded-md"
   } ${
     props.primary
-      ? // eslint-disable-next-line
-        `text-white bg-primary-500 focus:outline-none focus:border-primary-600 focus:shadow-outline-blue active:bg-primary-600`
-      : // eslint-disable-next-line
+      ? // eslint-disable-next-line i18next/no-literal-string
+        `btn-primary text-white bg-primary-500 focus:outline-none focus:border-primary-600 focus:shadow-outline-blue active:bg-primary-600`
+      : // eslint-disable-next-line i18next/no-literal-string
         `text-gray-700 ${
           props.disabled ? "bg-gray-100" : "bg-white"
         } hover:text-gray-500 focus:border-blue-300 focus:shadow-outline-blue active:text-gray-800 active:bg-gray-50`
@@ -101,6 +110,8 @@ export default function Button(props: ButtonProps) {
         </label>
       ) : (
         <button
+          type={props.type || "button"}
+          ref={props.innerRef}
           autoFocus={props.autofocus}
           className={`${buttonClassName} ${props.buttonClassName}`}
         >

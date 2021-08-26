@@ -48,6 +48,7 @@
     "@types/mustache": "^4.1.1",
     "@types/redis": "^2.8.25",
     "@types/sanitize-html": "^1.27.0",
+    "@types/sharp": "^0.28.4",
     "@types/uuid": "^8.3.0",
     "auth0": "^2.27.0",
     "bytes": "^3.1.0",
@@ -63,6 +64,7 @@
     "pgmock2": "^2.0.6",
     "postgraphile-plugin-upload-field": "^1.0.0-alpha.10",
     "sanitize-html": "^2.3.0",
+    "sharp": "^0.28.3",
     "slugify": "^1.4.5",
     "uuid": "^8.3.0"
   },

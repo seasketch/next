@@ -51,7 +51,7 @@ export default function TableOfContentsItemAutosaveInput(props: {
   return (
     <TextInput
       description={props.description}
-      id={props.propName}
+      name={props.propName}
       label={props.label}
       value={value}
       onChange={setValue}

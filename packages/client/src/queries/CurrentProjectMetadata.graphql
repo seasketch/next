@@ -11,4 +11,24 @@ query CurrentProjectMetadata {
     sessionIsAdmin
     isFeatured
   }
+  currentProjectPublicDetails {
+    id
+    accessControl
+    slug
+    name
+    logoUrl
+    supportEmail
+  }
+  currentProjectAccessStatus
+  me {
+    id
+    profile {
+      fullname
+      nickname
+      email
+      picture
+      bio
+      affiliations
+    }
+  }
 }

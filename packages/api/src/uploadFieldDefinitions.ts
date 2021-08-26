@@ -2,7 +2,7 @@ import { FileUpload } from "graphql-upload";
 import * as S3 from "aws-sdk/clients/s3";
 import { v4 as uuid } from "uuid";
 import stream from "stream";
-import slugify from "slugify";
+import sharp from "sharp";
 
 const s3 = new S3.default({
   region: process.env.S3_REGION,
@@ -12,6 +12,20 @@ const s3 = new S3.default({
 });
 
 export default [
+  // {
+  //   match: ({
+  //     schema,
+  //     table,
+  //     column,
+  //     tags,
+  //   }: {
+  //     schema: string;
+  //     table: string;
+  //     column: string;
+  //     tags: string[];
+  //   }) => table === "user_profiles" && column === "picture",
+  //   resolve: resolveAvatarUrlUpload,
+  // },
   {
     match: ({
       schema,
@@ -27,22 +41,34 @@ export default [
       (schema === "public" &&
         ((table === "projects" && column === "logo_url") ||
           (table === "sprites" && column === "url"))) ||
-      (table === "basemaps" && column === "thumbnail"),
+      (table === "basemaps" && column === "thumbnail") ||
+      (table === "user_profiles" && column === "picture"),
     resolve: resolveLogoUrlUpload,
   },
 ];
 
-async function resolveLogoUrlUpload(upload: FileUpload) {
+async function resolveLogoUrlUpload(
+  upload: FileUpload,
+  args: any,
+  context: any,
+  info: any
+) {
   const { filename, createReadStream, mimetype, encoding } = upload;
   const stream = createReadStream();
-  const url = await savePublicImage(stream, mimetype, filename);
+  const url = await savePublicImage(
+    stream,
+    mimetype,
+    filename,
+    Object.keys(args.input.patch).indexOf("picture") !== -1
+  );
   return url;
 }
 
-async function savePublicImage(
+export async function savePublicImage(
   stream: any,
   mimetype: string,
-  filename: string
+  filename: string,
+  resize?: boolean
 ) {
   let ext = "jpg";
   if (mimetype === "image/png") {
@@ -60,9 +86,19 @@ async function savePublicImage(
   ) {
     throw new Error("Image must be of type PNG, JPEG, or GIF");
   }
-  stream.pipe(writeStream).on("error", (error: Error) => {
-    throw error;
-  });
+  if (resize) {
+    const avatarResizer = sharp().resize(128);
+    stream
+      .pipe(avatarResizer)
+      .pipe(writeStream)
+      .on("error", (error: Error) => {
+        throw error;
+      });
+  } else {
+    stream.pipe(writeStream).on("error", (error: Error) => {
+      throw error;
+    });
+  }
   await promise;
   return url;
 }
@@ -82,3 +118,12 @@ const uploadStream = (key: string, ContentType: string) => {
       .promise(),
   };
 };
+
+async function resolveAvatarUrlUpload(upload: FileUpload) {
+  console.log("resolve avatar");
+  const { filename, createReadStream, mimetype, encoding } = upload;
+  const stream = createReadStream();
+  // stream.pipe(avatarResizer);
+  const url = await savePublicImage(stream, mimetype, filename);
+  return url;
+}

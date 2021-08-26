@@ -1348,7 +1348,11 @@ describe("Invite tokens", () => {
           sql`select token from invite_emails where survey_invite_id = ${inviteId}`
         )) as string;
         expect(token.length).toBeGreaterThan(0);
-        const claims = await verify(asPg(conn), token, "seasketch.org");
+        const claims = await verify(
+          asPg(conn),
+          token,
+          process.env.HOST || "seasketch.org"
+        );
         expect(claims.projectId).toBe(projectId);
         expect(claims.surveyId).toBe(surveyId);
         expect(claims.accessType).toBe("PUBLIC");
@@ -1365,7 +1369,11 @@ describe("Invite tokens", () => {
         const token = (await conn.oneFirst(
           sql`select token from invite_emails where survey_invite_id = ${inviteId}`
         )) as string;
-        const claims = await verify(asPg(conn), token, "seasketch.org");
+        const claims = await verify(
+          asPg(conn),
+          token,
+          process.env.HOST || "seasketch.org"
+        );
         expect(claims.accessType).toBe("INVITE_ONLY");
         const expiresBy = (new Date().getTime() + ms("65 days")) / 1000;
         expect(claims.exp).toBeLessThan(expiresBy);
@@ -1384,7 +1392,11 @@ describe("Invite tokens", () => {
         const token = (await conn.oneFirst(
           sql`select token from invite_emails where survey_invite_id = ${inviteId}`
         )) as string;
-        const claims = await verify(asPg(conn), token, "seasketch.org");
+        const claims = await verify(
+          asPg(conn),
+          token,
+          process.env.HOST || "seasketch.org"
+        );
         expect(claims.accessType).toBe("PUBLIC");
         const expiresBy = (new Date().getTime() + ms("1 year")) / 1000;
         expect(claims.exp).toBeGreaterThan(expiresBy);
@@ -1406,7 +1418,7 @@ describe("Invite tokens", () => {
           const claims = await verifySurveyInvite(
             asPg(conn),
             token,
-            "seasketch.org"
+            process.env.HOST || "seasketch.org"
           );
           expect(claims.surveyId).toBe(surveyId);
           expect(claims.wasUsed).toBe(false);
@@ -1425,7 +1437,11 @@ describe("Invite tokens", () => {
           // create anon session
           await createSession(conn);
           expect(
-            verifySurveyInvite(asPg(conn), token, "seasketch.org")
+            verifySurveyInvite(
+              asPg(conn),
+              token,
+              process.env.HOST || "seasketch.org"
+            )
           ).rejects.toThrow();
         }
       );
@@ -1441,7 +1457,11 @@ describe("Invite tokens", () => {
           await createSession(conn);
           MockDate.set(new Date().getTime() + ms("65 days"));
           expect(
-            verifySurveyInvite(asPg(conn), token, "seasketch.org")
+            verifySurveyInvite(
+              asPg(conn),
+              token,
+              process.env.HOST || "seasketch.org"
+            )
           ).rejects.toThrow(/expired/i);
           MockDate.reset();
         }
@@ -1462,7 +1482,11 @@ describe("Invite tokens", () => {
           // create anon session
           await createSession(conn);
           expect(
-            verifySurveyInvite(asPg(conn), token, "seasketch.org")
+            verifySurveyInvite(
+              asPg(conn),
+              token,
+              process.env.HOST || "seasketch.org"
+            )
           ).rejects.toThrow();
         }
       );

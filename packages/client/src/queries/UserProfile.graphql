@@ -1,0 +1,63 @@
+# mutation UpdateProjectSettings(
+#   $slug: String!
+#   $clientMutationId: String
+#   $name: String
+#   $description: String
+#   $logoUrl: Upload
+#   $logoLink: String
+#   $isFeatured: Boolean
+# ) {
+#   updateProjectBySlug(
+#     input: {
+#       slug: $slug
+#       clientMutationId: $clientMutationId
+#       patch: {
+#         name: $name
+#         description: $description
+#         logoUrl: $logoUrl
+#         logoLink: $logoLink
+#         isFeatured: $isFeatured
+#       }
+#     }
+#   ) {
+#     clientMutationId
+#     project {
+#       id
+#       name
+#       description
+#       logoUrl
+#       logoLink
+#     }
+#   }
+# }
+
+mutation UpdateProfile(
+  $userId: Int!
+  $affiliations: String
+  $email: Email
+  $fullname: String
+  $nickname: String
+  $picture: Upload
+) {
+  updateProfileByUserId(
+    input: {
+      userId: $userId
+      patch: {
+        affiliations: $affiliations
+        email: $email
+        fullname: $fullname
+        nickname: $nickname
+        picture: $picture
+      }
+    }
+  ) {
+    profile {
+      user {
+        id
+        profile {
+          picture
+        }
+      }
+    }
+  }
+}

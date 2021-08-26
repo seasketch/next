@@ -43,14 +43,21 @@ export default function userAccountMiddlware(
     req.user.superuser = !!req.user["https://seasketch.org/superuser"];
 
     req.user.emailVerified = !!req.user["https://seasketch.org/email_verified"];
+
     const key = `userid-by-sub:${req.user.sub}`;
-    cache.get(key).then((userId) => {
+    cache.mget([key, `user:${req.user.sub}:emailVerified`]).then((values) => {
       if (!req.user) {
         throw new Error("req.user unset after cache.get");
       }
-      if (userId) {
-        req.user.id = parseInt(userId);
-        next();
+      if (values && values[0]) {
+        const [userId, verified] = values;
+        if (userId) {
+          req.user.id = parseInt(userId);
+          if (verified && verified === "true") {
+            req.user.emailVerified = true;
+          }
+          next();
+        }
       } else {
         getOrCreateUserId(req.user.sub, req.user.canonicalEmail!)
           .then((id) => {

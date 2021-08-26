@@ -96,6 +96,10 @@ export async function createSession(
   }
   if (userId) {
     await conn.any(sql`select set_config('session.user_id', ${userId}, true)`);
+    // console.log("set session.canonical_email", `test-${userId}@example.com`);
+    await conn.any(
+      sql`select set_config('session.canonical_email', ${`test-${userId}@example.com`}, true)`
+    );
   } else {
     await conn.any(sql`SET ROLE anon`);
   }
@@ -505,9 +509,9 @@ export function sleep(time: number) {
 export const asPg = (pool: DatabaseTransactionConnectionType) => {
   return {
     query: (query: string, values?: any[]) => {
-      return (pool.query(
+      return pool.query(
         sql`${raw(query, values)}`
-      ) as unknown) as Promise<QueryResult>;
+      ) as unknown as Promise<QueryResult>;
     },
   };
 };

@@ -172,3 +172,9 @@ input::placeholder {
   outline: none !important;
   box-shadow: none !important;
 }
+
+label.required:after {
+  content: "*";
+  margin-left: 2px;
+  opacity: 0.5;
+}

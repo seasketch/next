@@ -237,7 +237,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         <div className="w-128">
           <TextInput
             autoFocus
-            id="href"
+            name="href"
             value={linkModalState?.href || ""}
             // eslint-disable-next-line
             label="href"
@@ -252,7 +252,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         </div>
         <div className="mt-2">
           <TextInput
-            id="title"
+            name="title"
             value={linkModalState?.title || ""}
             // eslint-disable-next-line
             label="title"

@@ -345,6 +345,21 @@ CREATE TYPE public.project_access_control_setting AS ENUM (
 
 
 --
+-- Name: project_access_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.project_access_status AS ENUM (
+    'GRANTED',
+    'DENIED_ANON',
+    'DENIED_NOT_REQUESTED',
+    'DENIED_NOT_APPROVED',
+    'DENIED_ADMINS_ONLY',
+    'DENIED_EMAIL_NOT_VERIFIED',
+    'PROJECT_DOES_NOT_EXIST'
+);
+
+
+--
 -- Name: project_invite_details; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -364,6 +379,20 @@ CREATE TYPE public.project_invite_details AS (
 CREATE TYPE public.project_invite_options AS (
 	email public.email,
 	fullname text
+);
+
+
+--
+-- Name: public_project_details; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.public_project_details AS (
+	id integer,
+	name text,
+	slug text,
+	logo_url text,
+	access_control public.project_access_control_setting,
+	support_email text
 );
 
 
@@ -1088,6 +1117,30 @@ CREATE FUNCTION public.access_control_lists_groups(acl public.access_control_lis
 --
 
 COMMENT ON FUNCTION public.access_control_lists_groups(acl public.access_control_lists) IS '@simpleCollections only';
+
+
+--
+-- Name: account_exists(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.account_exists(email text) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select case when exists (select
+      1
+    from
+      users
+    where
+      canonical_email = email) 
+    then true else false end;
+  $$;
+
+
+--
+-- Name: FUNCTION account_exists(email text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.account_exists(email text) IS '@omit';
 
 
 --
@@ -2188,7 +2241,8 @@ CREATE FUNCTION public.confirm_project_invite(invite_id integer) RETURNS integer
       select group_id, userid from 
         project_invite_groups
       where
-        project_invite_groups.invite_id = project_invite.id;
+        project_invite_groups.invite_id = project_invite.id
+      on conflict do nothing;
       return userid;
     end;
   $$;
@@ -2633,6 +2687,9 @@ CREATE TABLE public.projects (
 You have been invited to join the {{projectName}} SeaSketch project. To sign up, just follow this link and you will be able to create an account and start exploring the application.
 
 {{inviteLink}}'::text NOT NULL,
+    support_email text NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    creator_id integer NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT name_min_length CHECK ((length(name) >= 4))
 );
@@ -2728,8 +2785,8 @@ CREATE FUNCTION public.create_project(name text, slug text, OUT project public.p
     AS $$
   begin
     if current_setting('session.email_verified', true) = 'true' then
-      insert into projects (name, slug, is_listed) 
-        values (name, slug, false) returning * into project;
+      insert into projects (name, slug, is_listed, creator_id, support_email) 
+        values (name, slug, false, current_setting('session.user_id', true)::int, current_setting('session.canonical_email', true)) returning * into project;
       insert into project_participants (
         user_id, 
         project_id, 
@@ -3175,6 +3232,112 @@ The current SeaSketch Project, which is determined by the `referer` or `x-ss-slu
 
 
 --
+-- Name: current_project_access_status(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.current_project_access_status() RETURNS public.project_access_status
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      access_control_setting project_access_control_setting;
+      approved_request boolean;
+      uid int;
+      admin_bit boolean;
+      pid int;
+      email_verified boolean;
+    begin
+      select nullif (current_setting('session.project_id', TRUE), '')::integer into pid;
+      select nullif (current_setting('session.user_id', TRUE), '')::integer into 
+      uid;
+      select is_admin(pid, uid) into admin_bit;
+      if current_setting('session.email_verified', TRUE) = 'true' then
+        email_verified = true;
+      else
+        email_verified = false;
+      end if;
+      SELECT
+        access_control
+      into
+        access_control_setting
+      FROM
+        projects
+      WHERE
+        id = pid;
+      if access_control_setting is null then
+        return 'PROJECT_DOES_NOT_EXIST'::project_access_status;
+      end if;
+      if session_has_project_access(pid) then
+        return 'GRANTED'::project_access_status;
+      end if;
+      if uid is null then
+        return 'DENIED_ANON'::project_access_status;
+      end if;
+      if access_control_setting = 'admins_only'::project_access_control_setting then
+        if admin_bit and email_verified = false then
+          return 'DENIED_EMAIL_NOT_VERIFIED'::project_access_status;
+        else
+          return 'DENIED_ADMINS_ONLY'::project_access_status;
+        end if;
+      end if;
+      -- access control setting must be invite_only
+      select 
+        approved into approved_request 
+      from 
+        project_participants 
+      where 
+        user_id = uid and project_id = pid;
+      if approved_request is null then
+        return 'DENIED_NOT_REQUESTED'::project_access_status;
+      elsif approved_request is false then
+        return 'DENIED_NOT_APPROVED'::project_access_status;
+      elsif email_verified is false then
+        return 'DENIED_EMAIL_NOT_VERIFIED'::project_access_status;
+      end if;
+      raise exception 'Unknown reason for denying project access. userid = %, project_id = %', uid, pid;
+    end;
+$$;
+
+
+--
+-- Name: FUNCTION current_project_access_status(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.current_project_access_status() IS '
+Use to indicate to a user why they cannot access the given project, if denied.
+';
+
+
+--
+-- Name: current_project_public_details(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.current_project_public_details() RETURNS public.public_project_details
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    id,
+    name,
+    slug,
+    logo_url,
+    access_control,
+    support_email
+  FROM
+    projects
+  WHERE
+    id = nullif (current_setting('session.project_id', TRUE), '')::integer
+$$;
+
+
+--
+-- Name: FUNCTION current_project_public_details(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.current_project_public_details() IS '
+Executable by all users and used to display a "gate" should a user arrive directly on a project url without authorization.
+';
+
+
+--
 -- Name: data_hosting_quota_left(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3388,6 +3551,36 @@ CREATE FUNCTION public.disable_forum_posting("userId" integer, "projectId" integ
 --
 
 COMMENT ON FUNCTION public.disable_forum_posting("userId" integer, "projectId" integer) IS 'Ban a user from posting in the discussion forum';
+
+
+--
+-- Name: email_unsubscribed(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.email_unsubscribed(email text) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select case when exists (select
+      users.canonical_email,
+      email_notification_preferences.unsubscribe_all
+    from
+      users
+    inner join
+      email_notification_preferences
+    on
+      email_notification_preferences.user_id = users.id
+    where
+      canonical_email = email and
+      email_notification_preferences.unsubscribe_all = true
+    ) then true else false end;
+  $$;
+
+
+--
+-- Name: FUNCTION email_unsubscribed(email text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.email_unsubscribed(email text) IS '@omit';
 
 
 --
@@ -11129,6 +11322,14 @@ ALTER TABLE ONLY public.project_participants
 
 
 --
+-- Name: projects projects_creator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.projects
+    ADD CONSTRAINT projects_creator_id_fkey FOREIGN KEY (creator_id) REFERENCES public.users(id);
+
+
+--
 -- Name: projects projects_data_sources_bucket_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13059,6 +13260,14 @@ GRANT ALL ON FUNCTION public.access_control_lists_groups(acl public.access_contr
 
 
 --
+-- Name: FUNCTION account_exists(email text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.account_exists(email text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.account_exists(email text) TO anon;
+
+
+--
 -- Name: FUNCTION add_group_to_acl("aclId" integer, "groupId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -13773,6 +13982,20 @@ GRANT SELECT(invite_email_template_text),UPDATE(invite_email_template_text) ON T
 
 
 --
+-- Name: COLUMN projects.support_email; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(support_email) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.created_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(created_at) ON TABLE public.projects TO anon;
+
+
+--
 -- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -13910,6 +14133,22 @@ REVOKE ALL ON FUNCTION public.crypt(text, text) FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.current_project() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.current_project() TO anon;
+
+
+--
+-- Name: FUNCTION current_project_access_status(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.current_project_access_status() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.current_project_access_status() TO anon;
+
+
+--
+-- Name: FUNCTION current_project_public_details(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.current_project_public_details() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.current_project_public_details() TO anon;
 
 
 --
@@ -14065,6 +14304,14 @@ REVOKE ALL ON FUNCTION public.dropgeometrytable(schema_name character varying, t
 --
 
 REVOKE ALL ON FUNCTION public.dropgeometrytable(catalog_name character varying, schema_name character varying, table_name character varying) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION email_unsubscribed(email text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.email_unsubscribed(email text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.email_unsubscribed(email text) TO anon;
 
 
 --

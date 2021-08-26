@@ -272,7 +272,7 @@ export default function EditInviteModal({
             <TextInput
               autoFocus
               disabled={data.projectInvite.status !== InviteStatus.Unsent}
-              id="recipient"
+              name="recipient"
               type="email"
               label={t("Email")}
               description={
@@ -295,7 +295,7 @@ export default function EditInviteModal({
           </div>
           <div className="max-w-lg mb-4">
             <TextInput
-              id="fullname"
+              name="fullname"
               label={t("Full Name")}
               description={t("Optionally provide the recipient's name.")}
               value={state.fullname}

@@ -42,7 +42,7 @@ export default function Settings() {
   }, [setHeaderState]);
   return (
     <>
-      <div className="pt-2 pb-6 md:py-6 max-h-full overflow-y-scroll">
+      <div className="pt-2 pb-6 md:py-6 max-h-full overflow-y-auto">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           {data && data.currentProject && (
             <BasicSettingsForm
@@ -141,7 +141,7 @@ function BasicSettingsForm(props: {
             </div>
             <div className="md:max-w-xs mt-5">
               <TextInput
-                id="url"
+                name="url"
                 label={t("Permanent Project URL")}
                 value={props.url}
                 disabled

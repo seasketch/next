@@ -18,11 +18,17 @@ const ProjectInvitesPlugin = makeExtendSchemaPlugin((build) => {
         fullname: String
         email: String!
         wasUsed: Boolean!
+        projectName: String!
+        projectSlug: String!
       }
 
       type ProjectInviteTokenVerificationResults {
         error: String
         claims: ProjectInviteTokenClaims
+        """
+        Indicates whether there is an existing account that matches the email address on the invite
+        """
+        existingAccount: Boolean
       }
 
       extend type Query {
@@ -67,7 +73,7 @@ const ProjectInvitesPlugin = makeExtendSchemaPlugin((build) => {
           const { pgClient } = context;
           const claims = await confirmProjectInvite(pgClient, args.token, HOST);
           return {
-            data: claims,
+            ...claims,
           };
         },
       },
@@ -80,8 +86,13 @@ const ProjectInvitesPlugin = makeExtendSchemaPlugin((build) => {
               args.token,
               HOST
             );
+            const { rows } = await context.pgClient.query(
+              `select account_exists($1)`,
+              [claims.email]
+            );
             return {
               claims,
+              existingAccount: rows[0].account_exists,
             };
           } catch (e) {
             return {

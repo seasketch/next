@@ -114,7 +114,7 @@ export default function CreateOptionalLayerModal({
           <TextInput
             autoFocus
             error={error ? error.message : undefined}
-            id="name"
+            name="name"
             label={t("Name")}
             disabled={isLoading}
             value={state.name}
@@ -160,7 +160,7 @@ export default function CreateOptionalLayerModal({
           <div className="max-w-xs mt-5">
             <TextInput
               error={error ? error.message : undefined}
-              id="firstOptionName"
+              name="firstOptionName"
               label={t("Default option name")}
               disabled={isLoading}
               value={state.firstOptionName || ""}

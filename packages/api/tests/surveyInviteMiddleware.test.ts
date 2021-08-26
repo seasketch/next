@@ -39,11 +39,11 @@ test("invite token claims are assigned from `x-ss-survey-invite-token`", async (
         rowCount: 1,
         rows: [{ is_disabled: false, limit_to_single_response: false }],
       });
-      const req = ({
+      const req = {
         headers: {
           "x-ss-survey-invite-token": token,
         },
-      } as unknown) as IncomingRequest;
+      } as unknown as IncomingRequest;
       // @ts-ignore
       middleware(req, {}, () => {
         expect(req.surveyInvite).toBeTruthy();
@@ -55,11 +55,11 @@ test("invite token claims are assigned from `x-ss-survey-invite-token`", async (
 });
 
 test("invalid tokens are ignored", (done) => {
-  const req = ({
+  const req = {
     headers: {
       "x-ss-survey-invite-token": "abc123",
     },
-  } as unknown) as IncomingRequest;
+  } as unknown as IncomingRequest;
   // @ts-ignore
   middleware(req, {}, () => {
     expect(req.surveyInvite).toBeUndefined();
