@@ -1,8 +1,6 @@
 import { sign, verify } from "../auth/jwks";
 import ms from "ms";
 const HOST = process.env.HOST || "seasketch.org";
-const SES_EMAIL_SOURCE =
-  process.env.SES_EMAIL_SOURCE || '"SeaSketch" <do-not-reply@seasketch.org>';
 // TODO: replace auth0 dependency with plain http requests to the management api
 // The library is incredibly bulky, adding 2.5MB to lambda sizes
 import { ManagementClient } from "auth0";
@@ -81,7 +79,7 @@ export async function sendProjectInviteEmail(
         return;
       }
 
-      if (!process.env.SES_EMAIL_SOURCE) {
+      if (!process.env.SES_EMAIL_SOURCE && process.env.NODE_ENV !== "test") {
         throw new Error(`SES_EMAIL_SOURCE environment variable not set`);
       }
 

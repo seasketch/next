@@ -31,7 +31,7 @@ export default function ProjectInviteLanding() {
             {!claims ? (
               <Trans>Welcome!</Trans>
             ) : (
-              <Trans>Welcome, {claims.fullname}!</Trans>
+              <Trans>Welcome, {auth0?.user?.name || claims.fullname}!</Trans>
             )}
           </span>
         </h2>

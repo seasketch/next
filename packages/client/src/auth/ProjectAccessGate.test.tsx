@@ -6,7 +6,6 @@ import { MockedProvider } from "@apollo/client/testing";
 import { useAuth0 } from "@auth0/auth0-react";
 import {
   AccessGranted,
-  AdminsOnly,
   Error404,
   Loading,
   AccessRequestScreen,
@@ -50,9 +49,30 @@ test("Error is shown if project doesn't exist", async () => {
 });
 
 test("Unauthorized users are blocked by admin-only projects and given the support email", async () => {
-  render(<AdminsOnly />);
+  render(<DeniedAdminsOnly />);
   await waitFor(() => {
     expect(screen.getByText(/administrators/)).toBeInTheDocument();
     expect(screen.getByText(/chad@underbluewaters.net/)).toBeInTheDocument();
+  });
+});
+
+test("Privileged access projects require a verified email", async () => {
+  render(<DeniedEmailNotVerified />);
+  await waitFor(() => {
+    expect(screen.getByText(/verify/)).toBeInTheDocument();
+  });
+});
+
+test("Invite-only projects deny access to unauthorized users", async () => {
+  render(<DeniedInviteOnly />);
+  await waitFor(() => {
+    expect(screen.getByText(/invitation/)).toBeInTheDocument();
+  });
+});
+
+test("Users with un-approved invite requests are blocked", async () => {
+  render(<DeniedNotApproved />);
+  await waitFor(() => {
+    expect(screen.getByText(/approved/)).toBeInTheDocument();
   });
 });

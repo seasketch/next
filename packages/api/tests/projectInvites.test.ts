@@ -1255,6 +1255,9 @@ describe("Accepting Invites", () => {
           );
           await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           await createSession(conn, userA, true, false, projectId);
+          await conn.any(
+            sql`select set_config('session.canonical_email', 'bob@example.com', true)`
+          );
           const uid = await conn.oneFirst(
             sql`select * from confirm_project_invite_with_verified_email(${projectId})`
           );
@@ -1425,6 +1428,9 @@ describe("Accepting Invites", () => {
           );
           await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           await createSession(conn, userA, true, false, projectId);
+          await conn.any(
+            sql`select set_config('session.canonical_email', 'bob@example.com', true)`
+          );
           const details = await conn.oneFirst(
             sql`select projects_invite(projects.*) from projects where id = ${projectId}`
           );

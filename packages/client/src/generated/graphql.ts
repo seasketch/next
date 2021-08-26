@@ -6503,6 +6503,8 @@ export type Project = Node & {
   basemapsConnection: BasemapsConnection;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
+  createdAt?: Maybe<Scalars['Datetime']>;
+  creatorId: Scalars['Int'];
   dataHostingQuota?: Maybe<Scalars['Int']>;
   dataHostingQuotaUsed?: Maybe<Scalars['Int']>;
   /**

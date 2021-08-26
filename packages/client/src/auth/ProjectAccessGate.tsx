@@ -89,7 +89,7 @@ export const ProjectAccessGate: React.FunctionComponent<{}> = (props) => {
   if (loading) {
     return (
       <div
-        style={{ height: "100vh" }}
+        style={{ height: "100%" }}
         className="w-full flex min-h-full h-96 justify-center text-center align-middle items-center content-center justify-items-center place-items-center place-content-center"
       >
         <Spinner />
@@ -271,8 +271,7 @@ export const ProjectAccessGate: React.FunctionComponent<{}> = (props) => {
               <b className="font-bold">
                 {data.currentProjectPublicDetails.name}
               </b>{" "}
-              can only be accessed by administrators. Sign in or create a
-              SeaSketch account to request access.
+              can only be accessed by project administrators.
             </Trans>
           );
         }
@@ -296,22 +295,25 @@ export const ProjectAccessGate: React.FunctionComponent<{}> = (props) => {
                 resendVerificationState.data?.resendVerificationEmail.success
               }
             />
-            <Button
-              onClick={() =>
-                auth0.loginWithRedirect({
-                  screen_hint: "signup",
-                  appState: {
-                    returnTo: window.location.pathname,
-                  },
-                })
-              }
-              label={<Trans>Create an account</Trans>}
-              buttonClassName="md:w-full"
-              disabled={
-                resendVerificationState.loading ||
-                resendVerificationState.data?.resendVerificationEmail.success
-              }
-            />
+            {data.currentProjectPublicDetails.accessControl !==
+              ProjectAccessControlSetting.AdminsOnly && (
+              <Button
+                onClick={() =>
+                  auth0.loginWithRedirect({
+                    screen_hint: "signup",
+                    appState: {
+                      returnTo: window.location.pathname,
+                    },
+                  })
+                }
+                label={<Trans>Create an account</Trans>}
+                buttonClassName="md:w-full"
+                disabled={
+                  resendVerificationState.loading ||
+                  resendVerificationState.data?.resendVerificationEmail.success
+                }
+              />
+            )}
           </>
         );
         break;
@@ -422,7 +424,7 @@ const DialogContainer: React.FunctionComponent<{
       }
       animate={{ x: "-50%", y: "-33.333%", opacity: 1 }}
       exit={{ x: props.exitToLeft ? -500 : 500, opacity: 0, y: "-33.333%" }}
-      className=" bg-white block sm:align-middle absolute sm:max-w-lg sm:rounded-lg px-4 text-left overflow-y-scroll pb-6 sm:overflow-hidden shadow-xl sm:p-6 flex-nowrap left-1/2 top-1/3 w-screen h-screen sm:w-max sm:h-auto max-h-full"
+      className=" bg-white block sm:align-middle absolute sm:max-w-lg sm:rounded-lg px-4 text-left overflow-y-auto pb-6 sm:overflow-hidden shadow-xl sm:p-6 flex-nowrap left-1/2 top-1/3 w-screen h-screen sm:w-max sm:h-auto max-h-full"
     >
       {props.children}
     </motion.div>

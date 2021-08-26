@@ -29,8 +29,8 @@
   },
   "eslint.workingDirectories": ["packages/client"],
   "[git-commit]": {
-    "editor.rulers": [
-      50
-    ]
-  }
+    "editor.rulers": [50]
+  },
+  "jest.rootPath": "packages/api",
+  "jest.showCoverageOnLoad": true
 }

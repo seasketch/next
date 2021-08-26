@@ -13,6 +13,14 @@ import {
 } from "../generated/graphql";
 import jwt from "jsonwebtoken";
 import { useAuth0 } from "@auth0/auth0-react";
+import {
+  ExpiredInvitation,
+  InvalidToken,
+  ValidInviteUnknownEmail,
+  ValidInviteSentToKnownEmail,
+  LoggedInAsDifferentUser,
+  LoggedInAsDifferentUserWhichHasExistingAccount,
+} from "./ProjectInviteLanding.stories";
 
 jest.mock("@auth0/auth0-react");
 
@@ -27,130 +35,27 @@ beforeEach(() => {
 });
 
 it("renders without crashing", () => {
-  const history = createMemoryHistory();
-  history.push("/auth/projectInvite?token=abc123");
-  render(
-    <Router history={history}>
-      <MockedProvider mocks={[]}>
-        <Landing />
-      </MockedProvider>
-    </Router>
-  );
+  render(<InvalidToken />);
 });
 
 describe("Ingress initial scenarios", () => {
   test("Invalid invitation", () => {
-    const history = createMemoryHistory();
-    history.push({ pathname: "/auth/projectInvite", search: "?token=abc123" });
-    render(
-      <Router history={history}>
-        <MockedProvider mocks={[]}>
-          <Landing />
-        </MockedProvider>
-      </Router>
-    );
+    render(<InvalidToken />);
     expect(screen.getByText(/could not parse/i)).toBeInTheDocument();
   });
 
   test("Expired invitation", async () => {
-    const history = createMemoryHistory();
-    const claims: ProjectInviteTokenClaims = {
-      email: "test@example.com",
-      projectName: "Test Project",
-      projectSlug: "test",
-      admin: false,
-      inviteId: 1,
-      wasUsed: false,
-      projectId: 1,
-    };
-    const token = jwt.sign(claims, "secret", {
-      expiresIn: -5,
-    });
-    history.push({
-      pathname: "/auth/projectInvite",
-      search: `?token=${token}`,
-    });
-    render(
-      <Router history={history}>
-        <MockedProvider
-          mocks={[
-            {
-              request: {
-                query: VerifyProjectInviteDocument,
-                variables: {
-                  token,
-                },
-              },
-              result: () => {
-                return {
-                  data: {
-                    verifyProjectInvite: {
-                      error: "jwt: expired",
-                      existingAccount: false,
-                    },
-                  },
-                };
-              },
-            },
-          ]}
-        >
-          <Landing />
-        </MockedProvider>
-      </Router>
-    );
+    render(<ExpiredInvitation />);
     await waitFor(() => {
       // Should show a message stating the invite is expired
       expect(screen.getByText(/expired/i)).toBeInTheDocument();
       // TODO: should show the admin email so they can be contacted
     });
   });
+
   describe("Anonymous user", () => {
     test("with invite sent to unregistered email", async () => {
-      const history = createMemoryHistory();
-      const claims: ProjectInviteTokenClaims = {
-        email: "test@example.com",
-        projectName: "Test Project",
-        projectSlug: "test",
-        admin: false,
-        inviteId: 1,
-        wasUsed: false,
-        projectId: 1,
-      };
-      const token = jwt.sign(claims, "secret", {
-        expiresIn: "1 day",
-      });
-      history.push({
-        pathname: "/auth/projectInvite",
-        search: `?token=${token}`,
-      });
-      render(
-        <Router history={history}>
-          <MockedProvider
-            mocks={[
-              {
-                request: {
-                  query: VerifyProjectInviteDocument,
-                  variables: {
-                    token,
-                  },
-                },
-                result: () => {
-                  return {
-                    data: {
-                      verifyProjectInvite: {
-                        claims,
-                        existingAccount: false,
-                      },
-                    },
-                  };
-                },
-              },
-            ]}
-          >
-            <Landing />
-          </MockedProvider>
-        </Router>
-      );
+      render(<ValidInviteUnknownEmail />);
       await waitFor(() => {
         expect(screen.getByText(/sign in/i)).toBeInTheDocument();
       });
@@ -168,51 +73,7 @@ describe("Ingress initial scenarios", () => {
       ).toBeInTheDocument();
     });
     test("with invite sent to known registered email", async () => {
-      const history = createMemoryHistory();
-      const claims: ProjectInviteTokenClaims = {
-        email: "test@example.com",
-        projectName: "Test Project",
-        projectSlug: "test",
-        admin: false,
-        inviteId: 1,
-        wasUsed: false,
-        projectId: 1,
-      };
-      const token = jwt.sign(claims, "secret", {
-        expiresIn: "1 day",
-      });
-      history.push({
-        pathname: "/auth/projectInvite",
-        search: `?token=${token}`,
-      });
-      render(
-        <Router history={history}>
-          <MockedProvider
-            mocks={[
-              {
-                request: {
-                  query: VerifyProjectInviteDocument,
-                  variables: {
-                    token,
-                  },
-                },
-                result: () => {
-                  return {
-                    data: {
-                      verifyProjectInvite: {
-                        claims,
-                        existingAccount: true,
-                      },
-                    },
-                  };
-                },
-              },
-            ]}
-          >
-            <Landing />
-          </MockedProvider>
-        </Router>
-      );
+      render(<ValidInviteSentToKnownEmail />);
       await waitFor(() => {
         expect(screen.getByText(/sign in/i)).toBeInTheDocument();
       });
@@ -314,7 +175,6 @@ describe("Ingress initial scenarios", () => {
     });
 
     test("with invite sent to different email address", async () => {
-      const history = createMemoryHistory();
       // @ts-ignore
       useAuth0.mockReturnValue({
         isAuthenticated: true,
@@ -324,67 +184,23 @@ describe("Ingress initial scenarios", () => {
         logout: jest.fn(),
         loginWithRedirect: jest.fn(),
       });
-      const claims: ProjectInviteTokenClaims = {
-        email: "test@example.com",
-        projectName: "Test Project",
-        projectSlug: "test",
-        admin: false,
-        inviteId: 1,
-        wasUsed: false,
-        projectId: 1,
-      };
-      const token = jwt.sign(claims, "secret", {
-        expiresIn: "1 day",
-      });
-      history.push({
-        pathname: "/auth/projectInvite",
-        search: `?token=${token}`,
-      });
-      render(
-        <Router history={history}>
-          <MockedProvider
-            mocks={[
-              {
-                request: {
-                  query: VerifyProjectInviteDocument,
-                  variables: {
-                    token,
-                  },
-                },
-                result: () => {
-                  return {
-                    data: {
-                      verifyProjectInvite: {
-                        claims,
-                        existingAccount: false,
-                      },
-                    },
-                  };
-                },
-              },
-            ]}
-          >
-            <Landing />
-          </MockedProvider>
-        </Router>
-      );
+      render(<LoggedInAsDifferentUser />);
       await waitFor(() => {
         // User should be given option to accept with current account
         expect(
           screen.getByText(/accept as userA@example.com/i)
         ).toBeInTheDocument();
-        // Or to logout and login/register under a different account
-        expect(screen.getByText(/another account/i)).toBeInTheDocument();
-        expect(
-          screen.queryByText(/accept/i, {
-            selector: ".btn-primary",
-          })
-        ).toBeInTheDocument();
       });
+      // Or to logout and login/register under a different account
+      expect(screen.getByText(/another account/i)).toBeInTheDocument();
+      expect(
+        screen.queryByText(/accept/i, {
+          selector: ".btn-primary",
+        })
+      ).toBeInTheDocument();
     });
 
     test("with invite sent to different email address, for which an account already exists", async () => {
-      const history = createMemoryHistory();
       // @ts-ignore
       useAuth0.mockReturnValue({
         isAuthenticated: true,
@@ -394,50 +210,7 @@ describe("Ingress initial scenarios", () => {
         logout: jest.fn(),
         loginWithRedirect: jest.fn(),
       });
-      const claims: ProjectInviteTokenClaims = {
-        email: "test@example.com",
-        projectName: "Test Project",
-        projectSlug: "test",
-        admin: false,
-        inviteId: 1,
-        wasUsed: false,
-        projectId: 1,
-      };
-      const token = jwt.sign(claims, "secret", {
-        expiresIn: "1 day",
-      });
-      history.push({
-        pathname: "/auth/projectInvite",
-        search: `?token=${token}`,
-      });
-      render(
-        <Router history={history}>
-          <MockedProvider
-            mocks={[
-              {
-                request: {
-                  query: VerifyProjectInviteDocument,
-                  variables: {
-                    token,
-                  },
-                },
-                result: () => {
-                  return {
-                    data: {
-                      verifyProjectInvite: {
-                        claims,
-                        existingAccount: true,
-                      },
-                    },
-                  };
-                },
-              },
-            ]}
-          >
-            <Landing />
-          </MockedProvider>
-        </Router>
-      );
+      render(<LoggedInAsDifferentUserWhichHasExistingAccount />);
       await waitFor(() => {
         // User should be given option to accept with current account still
         expect(

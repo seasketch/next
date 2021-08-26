@@ -2,7 +2,6 @@ import React from "react";
 import { Story, Meta } from "@storybook/react/types-6-0";
 import { ProfileForm, ProjectAccessGate } from "./ProjectAccessGate";
 import { MockedProvider } from "@apollo/client/testing";
-import { useAuth0 } from "@auth0/auth0-react";
 import { Auth0Provider, Auth0Context } from "@auth0/auth0-react";
 import {
   CurrentProjectMetadataDocument,
@@ -56,7 +55,7 @@ const mockedProjectMetadata = {
 
 const Template: Story<{ metadata: any; delay?: number }> = (props) => {
   return (
-    <div style={{ width: "100vw", height: "100vh" }}>
+    <div style={{ width: "100%" }}>
       <Auth0Context.Provider
         // @ts-ignore
         value={{
@@ -113,16 +112,16 @@ export const Error404 = () => (
 
 // ProjectAccessStatus.DeniedAdminsOnly
 
-export const AdminsOnly = () => (
-  <Template
-    metadata={{
-      data: {
-        ...mockedProjectMetadata.data,
-        currentProjectAccessStatus: ProjectAccessStatus.DeniedAdminsOnly,
-      },
-    }}
-  />
-);
+// export const AdminsOnly = () => (
+//   <Template
+//     metadata={{
+//       data: {
+//         ...mockedProjectMetadata.data,
+//         currentProjectAccessStatus: ProjectAccessStatus.DeniedAdminsOnly,
+//       },
+//     }}
+//   />
+// );
 
 export const DeniedAnon = () => (
   <Template
@@ -141,6 +140,26 @@ export const DeniedAdminsOnly = () => (
       data: {
         ...mockedProjectMetadata.data,
         currentProjectAccessStatus: ProjectAccessStatus.DeniedAdminsOnly,
+      },
+    }}
+  />
+);
+
+export const DeniedAdminsOnlyAndAnon = () => (
+  <Template
+    metadata={{
+      data: {
+        ...mockedProjectMetadata.data,
+        currentProject: {
+          ...project,
+          accessControl: ProjectAccessControlSetting.AdminsOnly,
+        },
+        currentProjectPublicDetails: {
+          ...currentProjectPublicDetails,
+          accessControl: ProjectAccessControlSetting.AdminsOnly,
+        },
+
+        currentProjectAccessStatus: ProjectAccessStatus.DeniedAnon,
       },
     }}
   />
