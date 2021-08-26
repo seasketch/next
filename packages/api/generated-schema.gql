@@ -7516,6 +7516,8 @@ type Project implements Node {
 
   """Reads a single `CommunityGuideline` that is related to this `Project`."""
   communityGuidelines: CommunityGuideline
+  createdAt: Datetime
+  creatorId: Int!
   dataHostingQuota: Int
   dataHostingQuotaUsed: Int
 
