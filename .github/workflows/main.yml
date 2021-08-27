@@ -50,13 +50,13 @@ jobs:
       - name: Install lerna
           run: |
             npm install
-        - name: Install dependencies
-          run: |
-            lerna bootstrap --scope=client
-        - name: Build client
-          working-directory: ./packages/client
-          run: |
-            npm run build
+      - name: Install dependencies
+        run: |
+          lerna bootstrap --scope=client
+      - name: Build client
+        working-directory: ./packages/client
+        run: |
+          npm run build
   test-graphql:
     name: Test GraphQL API Server
     runs-on: ubuntu-latest
