@@ -81,6 +81,7 @@
     "mapbox-gl": "2.3.0-beta.1",
     "mapbox-gl-draw-rectangle-mode": "^1.0.4",
     "mapbox-gl-draw-rectangle-restrict-area": "^3.1.0",
+    "mapbox-gl-esri-feature-layers": "^0.1.1",
     "mustache": "^4.1.0",
     "nanoid": "^3.1.20",
     "papaparse": "^5.3.0",
