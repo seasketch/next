@@ -1,9 +1,20 @@
 name: CI/CD
 on: push
 jobs:
-  build-graphql:
-    name: Setup GraphQL API Server
+  test-graphql:
+    name: Test GraphQL API Server
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: underbluewaters/seasketch_db_base
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: password
+      redis:
+        image: "redis:alpine"
+        ports:
+          - "6379:6379"
     steps:
       - uses: actions/checkout@v2
       - name: Cache node modules
@@ -27,7 +38,27 @@ jobs:
       - name: Install dependencies
         run: |
           lerna bootstrap --scope=@seasketch/api
-  build-client:
+      - name: Init docker db
+        working-directory: ./packages/api
+        env:
+          TEST_DB: postgres://postgres:password@localhost:5432/
+        run: |
+          node tests/init_dockerdb.js
+      - name: Run Tests
+        working-directory: ./packages/api
+        run: |
+          npx jest --ci --reporters=default --reporters=jest-junit
+        env:
+          TEST_DB: postgres://postgres:password@localhost:5432/
+          SES_EMAIL_SOURCE: do-not-reply@seasketch.org
+      - uses: IgnusG/jest-report-action@v2.3.1
+        if: always()
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: ./packages/api
+          check-name: API Test Output
+          run-name: api
+  test-client:
     name: Build Client
     runs-on: ubuntu-latest
     steps:
@@ -53,45 +84,7 @@ jobs:
       - name: Install dependencies
         run: |
           lerna bootstrap --scope=client
-      - name: Build client
-        env:
-          SKIP_PREFLIGHT_CHECK: true
+      - name: Test client
         working-directory: ./packages/client
         run: |
-          npm run build
-  test-graphql:
-    name: Test GraphQL API Server
-    runs-on: ubuntu-latest
-    needs: build-graphql
-    services:
-      postgres:
-        image: underbluewaters/seasketch_db_base
-        ports:
-          - "5432:5432"
-        env:
-          POSTGRES_PASSWORD: password
-      redis:
-        image: "redis:alpine"
-        ports:
-          - "6379:6379"
-    steps:
-      - name: Init docker db
-        working-directory: ./packages/api
-        env:
-          TEST_DB: postgres://postgres:password@localhost:5432/
-        run: |
-          node tests/init_dockerdb.js
-      - name: Run Tests
-        working-directory: ./packages/api
-        run: |
-          npx jest --ci --reporters=default --reporters=jest-junit
-        env:
-          TEST_DB: postgres://postgres:password@localhost:5432/
-          SES_EMAIL_SOURCE: do-not-reply@seasketch.org
-      - uses: IgnusG/jest-report-action@v2.3.1
-        if: always()
-        with:
-          access-token: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: ./packages/api
-          check-name: API Test Output
-          run-name: api
+          npm run test
