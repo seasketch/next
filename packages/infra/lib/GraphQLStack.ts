@@ -99,7 +99,17 @@ export class GraphQLStack extends cdk.Stack {
     service.targetGroup.configureHealthCheck({
       path: "/favicon.ico",
       port: "3857",
+      interval: cdk.Duration.seconds(5),
+      healthyHttpCodes: "200",
+      healthyThresholdCount: 2,
+      unhealthyThresholdCount: 3,
+      timeout: cdk.Duration.seconds(4),
     });
+
+    service.targetGroup.setAttribute(
+      "deregistration_delay.timeout_seconds",
+      "30"
+    );
 
     service.taskDefinition.taskRole.addToPrincipalPolicy(
       new PolicyStatement({
