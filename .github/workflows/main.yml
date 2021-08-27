@@ -86,5 +86,7 @@ jobs:
           lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
       - name: Test client
         working-directory: ./packages/client
+        env:
+          SKIP_PREFLIGHT_CHECK: true
         run: |
           npm run test
