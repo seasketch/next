@@ -54,6 +54,8 @@ jobs:
         run: |
           lerna bootstrap --scope=client
       - name: Build client
+        env:
+          SKIP_PREFLIGHT_CHECK: true
         working-directory: ./packages/client
         run: |
           npm run build
