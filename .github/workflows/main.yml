@@ -48,8 +48,8 @@ jobs:
         with:
           node-version: "16"
       - name: Install lerna
-          run: |
-            npm install
+        run: |
+          npm install
       - name: Install dependencies
         run: |
           lerna bootstrap --scope=client
