@@ -59,7 +59,7 @@ jobs:
           check-name: API Test Output
           run-name: api
   test-client:
-    name: Build Client
+    name: Test React Client
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -83,7 +83,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap --scope=client
+          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
       - name: Test client
         working-directory: ./packages/client
         run: |
