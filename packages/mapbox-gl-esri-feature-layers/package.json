@@ -25,7 +25,8 @@
   },
   "scripts": {
     "test": "echo \"Error: run tests from root\" && exit 1",
-    "build": "tsc"
+    "build": "tsc",
+    "postinstall": "npm run build"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
