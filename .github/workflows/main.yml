@@ -91,7 +91,7 @@ jobs:
         run: |
           npm run test
   build-client:
-    name: Test React Client
+    name: Build React Client
     runs-on: ubuntu-latest
     needs: test-client
     steps:
