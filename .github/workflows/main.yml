@@ -61,39 +61,39 @@ jobs:
           working-directory: ./packages/api
           check-name: API Test Output
           run-name: api
-  build-server-container:
-    name: Build server container
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Cache node modules
-        uses: actions/cache@v2
-        env:
-          cache-name: cache-infra-node-modules
-        with:
-          # npm cache files are stored in `~/.npm` on Linux/macOS
-          path: |
-            node_modules
-            */*/node_modules
-            ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-      - uses: actions/setup-node@v2
-        with:
-          node-version: "16"
-      - name: Install lerna
-        run: |
-          npm install
-      - name: Install dependencies
-        run: |
-          lerna bootstrap --scope=@seasketch/api --scope=@seasketch/infra
-      - name: Build container
-        working-directory: ./packages/infra/containers/graphql
-        run: |
-          docker build --build-arg commit=${{ github.sha }} .
+  # build-server-container:
+  #   name: Build server container
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Cache node modules
+  #       uses: actions/cache@v2
+  #       env:
+  #         cache-name: cache-infra-node-modules
+  #       with:
+  #         # npm cache files are stored in `~/.npm` on Linux/macOS
+  #         path: |
+  #           node_modules
+  #           */*/node_modules
+  #           ~/.npm
+  #         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-build-${{ env.cache-name }}-
+  #           ${{ runner.os }}-build-
+  #           ${{ runner.os }}-
+  #     - uses: actions/setup-node@v2
+  #       with:
+  #         node-version: "16"
+  #     - name: Install lerna
+  #       run: |
+  #         npm install
+  #     - name: Install dependencies
+  #       run: |
+  #         lerna bootstrap --scope=@seasketch/api --scope=@seasketch/infra
+  #     - name: Build container
+  #       working-directory: ./packages/infra/containers/graphql
+  #       run: |
+  #         docker build --build-arg commit=${{ github.sha }} .
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest
@@ -180,7 +180,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - test-server
-      - build-server-container
+      # - build-server-container
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -195,6 +195,53 @@ jobs:
       - name: Run migrations using ecs exec
         run: |
           unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh" --interactive | tee /dev/stderr | grep "database migrations complete"
+  deploy-server:
+    name: Deploy GraphQL Server
+    runs-on: ubuntu-latest
+    needs: test-server
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-server-deploy-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: Install lerna
+        run: |
+          npm install
+      - name: Install CDK
+        run: |
+          npm install -g aws-cdk typescript
+      - name: Install dependencies
+        run: |
+          lerna bootstrap --scope=infra --scope=@seasketch/api
+      - name: Deploy server
+        working-directory: ./packages/infra
+        env:
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          cdk deploy SeaSketchGraphQLServer
   deploy-client:
     name: Deploy React Client
     runs-on: ubuntu-latest
@@ -203,7 +250,7 @@ jobs:
       - run-migrations
       - test-client
       - build-client
-      - build-server-container
+      - deploy-server
     steps:
       - name: Download client build artifact
         uses: actions/download-artifact@v2
