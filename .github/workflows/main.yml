@@ -142,8 +142,6 @@ jobs:
         with:
           name: client-build
           path: ./packages/client/build
-          options:
-            retentionDays: 1
   run-migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
