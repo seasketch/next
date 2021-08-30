@@ -62,7 +62,7 @@ jobs:
           check-name: API Test Output
           run-name: api
   test-client:
-    name: Test React Client
+    name: Test and Build React Client
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -108,7 +108,10 @@ jobs:
           cache-name: cache-node-modules
         with:
           # npm cache files are stored in `~/.npm` on Linux/macOS
-          path: ~/.npm
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-build-${{ env.cache-name }}-
