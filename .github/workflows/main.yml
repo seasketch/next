@@ -148,4 +148,4 @@ jobs:
           sudo apt-get install expect
       - name: Run migrations using ecs exec
         run: |
-          aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh" --interactive | grep "database migrations complete"
+          unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh" --interactive | grep "database migrations complete"
