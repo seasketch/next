@@ -134,6 +134,7 @@ jobs:
           REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
           REACT_APP_GRAPHQL_ENDPOINT: ${{ secrets.REACT_APP_GRAPHQL_ENDPOINT }}
           REACT_APP_PUBLIC_URL: ${{ secrets.REACT_APP_PUBLIC_URL }}
+          REACT_APP_GIT_SHA: ${{ github.sha }}
         run: |
           npm run build
       - name: Store build artifact
@@ -141,6 +142,8 @@ jobs:
         with:
           name: client-build
           path: ./packages/client/build
+          options:
+            retentionDays: 1
   run-migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
