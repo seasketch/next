@@ -91,7 +91,7 @@ jobs:
         run: |
           lerna bootstrap --scope=@seasketch/api --scope=@seasketch/infra
       - name: Build container
-          working-directory: ./packages/infra/containers/graphql
+        working-directory: ./packages/infra/containers/graphql
         run: |
           docker build .
   test-client:
