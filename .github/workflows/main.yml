@@ -154,6 +154,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - test-server
+      - run-migrations
       - test-client
       - build-client
     steps:
