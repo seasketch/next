@@ -182,6 +182,7 @@ jobs:
         env:
           S3_BUCKET: ${{ secrets.S3_CLIENT_BUCKET}}
         run: |
+          ls -l
           if [[ -z "$S3_BUCKET" ]]; then
             echo "S3_BUCKET could not be found" 1>&2
             exit 1
