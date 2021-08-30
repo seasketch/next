@@ -93,7 +93,7 @@ jobs:
       - name: Build container
         working-directory: ./packages/infra/containers/graphql
         run: |
-          docker build .
+          docker build --build-arg commit=${{ github.sha }} .
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest
