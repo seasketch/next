@@ -1,7 +1,7 @@
 name: CI/CD
 on: push
 jobs:
-  test-graphql:
+  test-server:
     name: Test GraphQL API Server
     runs-on: ubuntu-latest
     services:
@@ -62,7 +62,7 @@ jobs:
           check-name: API Test Output
           run-name: api
   test-client:
-    name: Test and Build React Client
+    name: Test React Client
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -132,3 +132,17 @@ jobs:
           SKIP_PREFLIGHT_CHECK: true
         run: |
           npm run build
+  run-migrations:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    needs: test-server
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: Run migrations using ecs exec
+        run: |
+          aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh" --interactive
