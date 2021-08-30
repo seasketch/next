@@ -178,7 +178,9 @@ jobs:
   run-migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
-    needs: test-server
+    needs:
+      - test-server
+      - build-server-container
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
