@@ -149,3 +149,17 @@ jobs:
       - name: Run migrations using ecs exec
         run: |
           unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh" --interactive | tee /dev/stderr | grep "database migrations complete"
+  deploy-client:
+    name: Deploy React Client
+    runs-on: ubuntu-latest
+    needs:
+      - test-server
+      - test-client
+      - build-client
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
