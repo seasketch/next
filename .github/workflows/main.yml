@@ -144,8 +144,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
       - name: Install unbuffer command
-          run: |
-            sudo apt-get install expect
+        run: |
+          sudo apt-get install expect
       - name: Run migrations using ecs exec
         run: |
           unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh" --interactive
