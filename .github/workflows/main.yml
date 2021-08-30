@@ -137,11 +137,10 @@ jobs:
         run: |
           npm run build
       - name: Store build artifact
-        working-directory: ./packages/client
         uses: actions/upload-artifact@v2
         with:
           name: client-build
-          path: build
+          path: ./packages/client/build
   run-migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
