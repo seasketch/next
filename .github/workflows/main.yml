@@ -20,7 +20,7 @@ jobs:
       - name: Cache node modules
         uses: actions/cache@v2
         env:
-          cache-name: cache-node-modules
+          cache-name: cache-server-node-modules
         with:
           # npm cache files are stored in `~/.npm` on Linux/macOS
           path: |
@@ -61,6 +61,39 @@ jobs:
           working-directory: ./packages/api
           check-name: API Test Output
           run-name: api
+  build-server-container:
+    name: Build server container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-infra-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: Install lerna
+        run: |
+          npm install
+      - name: Install dependencies
+        run: |
+          lerna bootstrap --scope=@seasketch/api --scope=@seasketch/infra
+      - name: Build container
+          working-directory: ./packages/infra/containers/graphql
+        run: |
+          docker build .
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest
@@ -69,7 +102,7 @@ jobs:
       - name: Cache node modules
         uses: actions/cache@v2
         env:
-          cache-name: cache-node-modules
+          cache-name: cache-client-node-modules
         with:
           # npm cache files are stored in `~/.npm` on Linux/macOS
           path: |
@@ -104,7 +137,7 @@ jobs:
       - name: Cache node modules
         uses: actions/cache@v2
         env:
-          cache-name: cache-node-modules
+          cache-name: cache-client-node-modules
         with:
           # npm cache files are stored in `~/.npm` on Linux/macOS
           path: |
@@ -168,6 +201,7 @@ jobs:
       - run-migrations
       - test-client
       - build-client
+      - build-server-container
     steps:
       - name: Download client build artifact
         uses: actions/download-artifact@v2
