@@ -6,7 +6,7 @@ RUN apk --no-cache add git openssh
 # RUN ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts
 RUN npm install -g lerna
 ARG commit
-RUN git clone git@github.com:seasketch/next.git /var/seasketch && cd /var/seasketch && git checkout $commit
+RUN git clone https://github.com/seasketch/next.git /var/seasketch && cd /var/seasketch && git checkout $commit
 WORKDIR /var/seasketch/packages/api
 RUN npx lerna bootstrap --scope=@seasketch/api && npm run build
 
