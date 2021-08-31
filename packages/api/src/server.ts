@@ -34,6 +34,7 @@ import { default as PgPubsub } from "@graphile/pg-pubsub";
 import bytes from "bytes";
 import { run } from "graphile-worker";
 import cors from "cors";
+import VersionPlugin from "./plugins/versionPlugin";
 
 const app = express();
 
@@ -194,6 +195,7 @@ app.use(
       reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
       SpritesPlugin,
+      VersionPlugin,
     ],
     graphileBuildOptions: {
       pgOmitListSuffix: true,

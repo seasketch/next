@@ -1,6 +1,26 @@
 name: CI/CD
 on: push
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    # Set job outputs to values from filter step
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      client: ${{ steps.filter.outputs.client }}
+      migrations: ${{ steps.filter.outputs.migrations }}
+    steps:
+      - uses: actions/checkout@v2
+      # For pull requests it's not necessary to checkout the code
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'packages/api/**'
+            client:
+              - 'packages/client/**'
+            migrations:
+              - 'packages/api/migrations/**'
   test-server:
     name: Test GraphQL API Server
     runs-on: ubuntu-latest
