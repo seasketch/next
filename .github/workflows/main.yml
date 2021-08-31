@@ -231,6 +231,10 @@ jobs:
       - name: Install CDK
         run: |
           npm install -g aws-cdk typescript
+      # See https://github.com/aws/aws-cdk/tree/master/packages/%40aws-cdk/aws-lambda-nodejs#local-bundling
+      - name: Install esbuild
+        run: |
+          npm install --save-dev esbuild@0
       - name: Install dependencies
         run: |
           lerna bootstrap
