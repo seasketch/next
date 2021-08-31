@@ -6,11 +6,11 @@ jobs:
     name: Get deployed software versions
     steps:
       - name: Get graphql server version
-        outputs:
-          server_sha:
-            description: git hash for currently deploy graphql server software
-          server_version:
-            description: currently deployed graphql server software version
+        # outputs:
+        #   server_sha:
+        #     description: git hash for currently deploy graphql server software
+        #   server_version:
+        #     description: currently deployed graphql server software version
         run: |
           export DATA=`curl -X "POST" "https://api.seasket.ch/graphql" \
           -H 'Content-Type: application/json; charset=utf-8' \
