@@ -233,7 +233,7 @@ jobs:
           npm install -g aws-cdk typescript
       - name: Install dependencies
         run: |
-          lerna bootstrap --scope=infra --scope @seasketch/email-status-handler
+          lerna bootstrap
       - name: Synth CDK
         run: |
           cdk synth
