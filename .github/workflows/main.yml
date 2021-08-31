@@ -15,7 +15,7 @@ jobs:
           echo "::set-output name=server-version::`echo $DATA | jq -r '.data.version'`"
           echo "::set-output name=server-sha::`echo $DATA | jq -r '.data.sha'`"
           echo `echo $DATA | jq -r '.data.version'`
-          `echo $DATA | jq -r '.data.sha'`
+          echo `echo $DATA | jq -r '.data.sha'`
   changes:
     runs-on: ubuntu-latest
     # Set job outputs to values from filter step
