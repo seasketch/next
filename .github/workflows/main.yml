@@ -5,10 +5,11 @@ jobs:
     runs-on: ubuntu-latest
     name: Get deployed software versions
     outputs:
-      server_sha: ${{ steps.versions.outputs.server_sha }}
-      server_version: ${{ steps.versions.outputs.server_version }}
+      server_sha: ${{ steps.server.outputs.server_sha }}
+      server_version: ${{ steps.server.outputs.server_version }}
     steps:
       - name: Get graphql server version
+        id: server
         run: |
           export DATA=`curl -X "POST" "https://api.seasket.ch/graphql" \
           -H 'Content-Type: application/json; charset=utf-8' \
