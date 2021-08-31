@@ -21,16 +21,8 @@ jobs:
           echo "::set-output name=server_sha::`echo $DATA | jq -r '.data.sha'`"
           echo `echo $DATA | jq -r '.data.version'`
           echo `echo $DATA | jq -r '.data.sha'`
-  test_versions:
-    needs: versions
-    runs-on: ubuntu-latest
-    name: Display versions
-    steps:
-      - name: echo
-        run: |
-          echo ${{ needs.versions.outputs.server_sha }}
-          echo ${{ needs.versions.outputs.server_version }}
   changes:
+    name: Detect changes since last release
     runs-on: ubuntu-latest
     # Set job outputs to values from filter step
     outputs:
