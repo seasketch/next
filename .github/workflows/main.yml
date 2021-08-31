@@ -5,15 +5,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Get graphql server version
-      run: |
-        export DATA=`curl -X "POST" "https://api.seasket.ch/graphql" \
-        -H 'Content-Type: application/json; charset=utf-8' \
-        -d $'{
-          "query": "query{version sha}",
-          "variables": {}
-        }'`
-        echo "::set-output name=server-version::`echo $DATA | jq -r '.data.version'`"
-        echo "::set-output name=server-sha::`echo $DATA | jq -r '.data.sha'`"
+        run: |
+          export DATA=`curl -X "POST" "https://api.seasket.ch/graphql" \
+          -H 'Content-Type: application/json; charset=utf-8' \
+          -d $'{
+            "query": "query{version sha}",
+            "variables": {}
+          }'`
+          echo "::set-output name=server-version::`echo $DATA | jq -r '.data.version'`"
+          echo "::set-output name=server-sha::`echo $DATA | jq -r '.data.sha'`"
   changes:
     runs-on: ubuntu-latest
     # Set job outputs to values from filter step
