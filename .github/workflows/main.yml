@@ -21,11 +21,14 @@ jobs:
       api: ${{ steps.filter.outputs.api }}
       client: ${{ steps.filter.outputs.client }}
       migrations: ${{ steps.filter.outputs.migrations }}
+    needs:
+      - get-deployed-versions
     steps:
       - uses: actions/checkout@v2
       # For pull requests it's not necessary to checkout the code
       - uses: dorny/paths-filter@v2
         id: filter
+        base: ${{steps.get-deployed-versions.outputs.server-version}}
         with:
           filters: |
             api:
@@ -37,6 +40,7 @@ jobs:
   test-server:
     name: Test GraphQL API Server
     runs-on: ubuntu-latest
+    needs: changes
     services:
       postgres:
         image: underbluewaters/seasketch_db_base
@@ -130,6 +134,7 @@ jobs:
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest
+    needs: changes
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -165,6 +170,7 @@ jobs:
   build-client:
     name: Build React Client
     runs-on: ubuntu-latest
+    needs: changes
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -213,6 +219,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - test-server
+      - changes
       # - build-server-container
     steps:
       - name: Configure AWS credentials
@@ -231,7 +238,9 @@ jobs:
   deploy-server:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
-    needs: test-server
+    needs:
+      - test-server
+      - changes
     steps:
       - uses: actions/checkout@v2
       - name: Configure AWS credentials
@@ -284,6 +293,7 @@ jobs:
       - test-client
       - build-client
       - deploy-server
+      - changes
     steps:
       - name: Download client build artifact
         uses: actions/download-artifact@v2
