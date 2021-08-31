@@ -27,8 +27,8 @@ jobs:
     steps:
       - name: echo
         run: |
-          echo ${{ jobs.versions.outputs.server_sha }}
-          echo ${{ jobs.versions.outputs.server_version }}
+          echo ${{ needs.versions.outputs.server_sha }}
+          echo ${{ needs.versions.outputs.server_version }}
   changes:
     runs-on: ubuntu-latest
     # Set job outputs to values from filter step
@@ -44,7 +44,7 @@ jobs:
       - uses: dorny/paths-filter@v2
         id: filter
         with:
-          base: ${{ steps.versions.outputs.server_sha }}
+          base: ${{ needs.versions.outputs.server_sha }}
           filters: |
             api:
               - 'packages/api/**'
