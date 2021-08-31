@@ -233,7 +233,7 @@ jobs:
           npm install -g aws-cdk typescript
       - name: Install dependencies
         run: |
-          lerna bootstrap
+          lerna bootstrap --scope=infra
       - name: Deploy server
         working-directory: ./packages/infra
         env:
