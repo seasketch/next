@@ -27,8 +27,8 @@ jobs:
     steps:
       - name: echo
         run: |
-          echo ${{ steps.versions.outputs.server_sha }}
-          echo ${{ steps.versions.outputs.server_version }}
+          echo ${{ jobs.versions.outputs.server_sha }}
+          echo ${{ jobs.versions.outputs.server_version }}
   changes:
     runs-on: ubuntu-latest
     # Set job outputs to values from filter step
