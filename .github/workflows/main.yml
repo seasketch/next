@@ -28,8 +28,8 @@ jobs:
       # For pull requests it's not necessary to checkout the code
       - uses: dorny/paths-filter@v2
         id: filter
-        base: ${{steps.get-deployed-versions.outputs.server-version}}
         with:
+          base: ${{steps.get-deployed-versions.outputs.server-version}}
           filters: |
             api:
               - 'packages/api/**'
