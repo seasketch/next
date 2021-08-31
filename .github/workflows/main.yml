@@ -31,7 +31,7 @@ jobs:
       - uses: dorny/paths-filter@v2
         id: filter
         with:
-          base: ${{steps.get-deployed-versions.outputs.server-version}}
+          base: ${{steps.get-deployed-versions.outputs.server-sha}}
           filters: |
             api:
               - 'packages/api/**'
