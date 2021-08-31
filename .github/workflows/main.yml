@@ -231,16 +231,9 @@ jobs:
       - name: Install CDK
         run: |
           npm install -g aws-cdk typescript
-      # See https://github.com/aws/aws-cdk/tree/master/packages/%40aws-cdk/aws-lambda-nodejs#local-bundling
-      - name: Install esbuild
-        run: |
-          npm install --save-dev esbuild@0
       - name: Install dependencies
         run: |
           lerna bootstrap
-      # - name: Synth CDK
-      #   run: |
-      #     cdk synth
       - name: Deploy server
         working-directory: ./packages/infra
         env:
@@ -248,7 +241,7 @@ jobs:
           AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
           COMMIT: ${{ github.sha }}
         run: |
-          cdk deploy SeaSketchGraphQLServer
+          cdk deploy -e SeaSketchGraphQLServer
   deploy-client:
     name: Deploy React Client
     runs-on: ubuntu-latest
