@@ -14,6 +14,8 @@ jobs:
           }'`
           echo "::set-output name=server-version::`echo $DATA | jq -r '.data.version'`"
           echo "::set-output name=server-sha::`echo $DATA | jq -r '.data.sha'`"
+          echo `echo $DATA | jq -r '.data.version'`
+          `echo $DATA | jq -r '.data.sha'`
   changes:
     runs-on: ubuntu-latest
     # Set job outputs to values from filter step
@@ -98,39 +100,6 @@ jobs:
           working-directory: ./packages/api
           check-name: API Test Output
           run-name: api
-  # build-server-container:
-  #   name: Build server container
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - name: Cache node modules
-  #       uses: actions/cache@v2
-  #       env:
-  #         cache-name: cache-infra-node-modules
-  #       with:
-  #         # npm cache files are stored in `~/.npm` on Linux/macOS
-  #         path: |
-  #           node_modules
-  #           */*/node_modules
-  #           ~/.npm
-  #         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-build-${{ env.cache-name }}-
-  #           ${{ runner.os }}-build-
-  #           ${{ runner.os }}-
-  #     - uses: actions/setup-node@v2
-  #       with:
-  #         node-version: "16"
-  #     - name: Install lerna
-  #       run: |
-  #         npm install
-  #     - name: Install dependencies
-  #       run: |
-  #         lerna bootstrap --scope=@seasketch/api --scope=@seasketch/infra
-  #     - name: Build container
-  #       working-directory: ./packages/infra/containers/graphql
-  #       run: |
-  #         docker build --build-arg commit=${{ github.sha }} .
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest
@@ -238,6 +207,7 @@ jobs:
   deploy-server:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
+    if: never()
     needs:
       - test-server
       - changes
@@ -287,6 +257,7 @@ jobs:
   deploy-client:
     name: Deploy React Client
     runs-on: ubuntu-latest
+    if: never()
     needs:
       - test-server
       - run-migrations
