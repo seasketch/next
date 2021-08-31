@@ -207,7 +207,7 @@ jobs:
   deploy-server:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
-    if: never()
+    if: false
     needs:
       - test-server
       - changes
@@ -257,7 +257,7 @@ jobs:
   deploy-client:
     name: Deploy React Client
     runs-on: ubuntu-latest
-    if: never()
+    if: false
     needs:
       - test-server
       - run-migrations
