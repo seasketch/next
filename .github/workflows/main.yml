@@ -4,6 +4,11 @@ jobs:
   versions:
     runs-on: ubuntu-latest
     name: Get deployed software versions
+    outputs:
+      serverSha:
+        description: git hash for currently deploy graphql server software
+      serverVersion:
+        description: currently deployed graphql server software version
     steps:
       - name: Get graphql server version
         run: |
@@ -32,8 +37,7 @@ jobs:
       - uses: dorny/paths-filter@v2
         id: filter
         with:
-          # base: ${{ steps.versions.outputs.serverSha }}
-          base: foo
+          base: ${{ steps.versions.outputs.serverSha }}
           filters: |
             api:
               - 'packages/api/**'
