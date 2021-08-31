@@ -1,8 +1,9 @@
 name: CI/CD
 on: push
 jobs:
-  get-deployed-versions:
+  versions:
     runs-on: ubuntu-latest
+    name: Get deployed software versions
     steps:
       - name: Get graphql server version
         run: |
@@ -12,8 +13,8 @@ jobs:
             "query": "query{version sha}",
             "variables": {}
           }'`
-          echo "::set-output name=server-version::`echo $DATA | jq -r '.data.version'`"
-          echo "::set-output name=server-sha::`echo $DATA | jq -r '.data.sha'`"
+          echo "::set-output name=serverVersion::`echo $DATA | jq -r '.data.version'`"
+          echo "::set-output name=serverSha::`echo $DATA | jq -r '.data.sha'`"
           echo `echo $DATA | jq -r '.data.version'`
           echo `echo $DATA | jq -r '.data.sha'`
   changes:
@@ -24,14 +25,14 @@ jobs:
       client: ${{ steps.filter.outputs.client }}
       migrations: ${{ steps.filter.outputs.migrations }}
     needs:
-      - get-deployed-versions
+      - versions
     steps:
       - uses: actions/checkout@v2
       # For pull requests it's not necessary to checkout the code
       - uses: dorny/paths-filter@v2
         id: filter
         with:
-          base: ${{steps.get-deployed-versions.outputs.server-sha}}
+          base: ${{ steps.versions.outputs.serverSha }}
           filters: |
             api:
               - 'packages/api/**'
