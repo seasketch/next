@@ -5,9 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Get deployed software versions
     outputs:
-      serverSha:
+      server_sha:
         description: git hash for currently deploy graphql server software
-      serverVersion:
+      server_version:
         description: currently deployed graphql server software version
     steps:
       - name: Get graphql server version
@@ -18,10 +18,18 @@ jobs:
             "query": "query{version sha}",
             "variables": {}
           }'`
-          echo "::set-output name=serverVersion::`echo $DATA | jq -r '.data.version'`"
-          echo "::set-output name=serverSha::`echo $DATA | jq -r '.data.sha'`"
+          echo "::set-output name=server_version::`echo $DATA | jq -r '.data.version'`"
+          echo "::set-output name=server_sha::`echo $DATA | jq -r '.data.sha'`"
           echo `echo $DATA | jq -r '.data.version'`
           echo `echo $DATA | jq -r '.data.sha'`
+  test_versions:
+    runs-on: ubuntu-latest
+    name: Display versions
+    steps:
+      - name: echo
+        run: |
+          echo ${{ steps.versions.outputs.server_sha }}
+          echo ${{ steps.versions.outputs.server_version }}
   changes:
     runs-on: ubuntu-latest
     # Set job outputs to values from filter step
@@ -37,7 +45,7 @@ jobs:
       - uses: dorny/paths-filter@v2
         id: filter
         with:
-          base: ${{ steps.versions.outputs.serverSha }}
+          base: ${{ steps.versions.outputs.server_sha }}
           filters: |
             api:
               - 'packages/api/**'
