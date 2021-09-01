@@ -1,6 +1,7 @@
 {
   "name": "@seasketch/email-status-handler",
   "version": "1.0.0",
+  "private": true,
   "description": "Lambdas for handling incoming SES email status notifications",
   "keywords": [
     "seasketch"
