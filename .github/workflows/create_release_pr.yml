@@ -42,7 +42,8 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
-          # base: origin/master
+          base: master
+          branch: ${{ github.branch }}
           title: Release ${{steps.release_version.outputs.version}}
       - name: Bump version and push tag
         id: tag_version
