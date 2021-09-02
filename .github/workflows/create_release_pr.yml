@@ -33,9 +33,9 @@ jobs:
           git config --global user.email "releases@seasketch.org"
           git config --global user.name "Release Manager"
           lerna version --conventional-commits --no-push --yes
-        - name: Create Pull Request
-          uses: peter-evans/create-pull-request@v3
-          
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+
   # versions:
   #   runs-on: ubuntu-latest
   #   name: Get deployed software versions
