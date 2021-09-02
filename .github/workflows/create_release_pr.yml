@@ -32,7 +32,7 @@ jobs:
         run: |
           npm install compare-versions
           node -e "var compareVersions = require('compare-versions'); console.log([require('./packages/api/package.json').version, require('./packages/client/package.json').version, require('./packages/infra/package.json').version].sort(compareVersions).reverse()[0])"
-          git checkout -- package-lock.json
+          git checkout -- package-lock.json package.json
       - name: run lerna version
         run: |
           git config --global user.email "releases@seasketch.org"
