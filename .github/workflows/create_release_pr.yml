@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
       - name: run lerna version
         run: |
-          lerna version --conventional-commits --no-push
+          lerna version --conventional-commits --no-push --yes
           cat ./packages/api/CHANGELOG.md
 
   # versions:
