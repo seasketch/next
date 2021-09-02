@@ -48,6 +48,7 @@ jobs:
         uses: mathieudutour/github-tag-action@v5.6
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: v${{steps.release_version.outputs.version}}
   # versions:
   #   runs-on: ubuntu-latest
   #   name: Get deployed software versions
