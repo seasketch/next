@@ -42,8 +42,8 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
-          base: master
-          branch: feature-ci-cd-actions
+          # base: master
+          # branch: feature-ci-cd-actions
           author: Release Manager <releases@seasketch.org>
           title: Release ${{steps.release_version.outputs.version}}
       # - name: Bump version and push tag
