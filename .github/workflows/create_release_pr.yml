@@ -32,7 +32,7 @@ jobs:
         run: |
           git config --global user.email "releases@seasketch.org"
           git config --global user.name "Release Manager"
-          lerna version --conventional-commits --no-push --yes --amend
+          lerna version --conventional-commits --no-push --yes
       - name: Get highest version
         id: release_version
         run: |

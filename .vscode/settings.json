@@ -33,5 +33,5 @@
   },
   "jest.rootPath": "packages/api",
   "jest.showCoverageOnLoad": true,
-  "conventionalCommits.scopes": ["ci"]
+  "conventionalCommits.scopes": ["ci", "ci"]
 }
