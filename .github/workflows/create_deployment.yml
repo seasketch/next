@@ -1,0 +1,188 @@
+name: Create Release Tags
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+jobs:
+  tag_release:
+    runs-on: ubuntu-latest
+    if: contains( github.event.pull_request.labels.*.name, 'release') && github.event.pull_request.merged == true
+    name: Create a release tag
+    steps:
+      - name: Get tag name
+        id: get_tag
+        run: |
+          echo ${{ github.event.pull_request.title }} | grep -Eo '[[:digit:]]+.[[:digit:]]+.[[:digit:]]$'
+          echo "::set-output name=tag::`echo ${{ github.event.pull_request.title }} | grep -Eo '[[:digit:]]+.[[:digit:]]+.[[:digit:]]$'`"
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v5.6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{steps.get_tag.outputs.tag}}
+  versions:
+    runs-on: ubuntu-latest
+    name: Get deployed software versions
+    outputs:
+      server_sha: ${{ steps.server.outputs.server_sha }}
+      server_version: ${{ steps.server.outputs.server_version }}
+    steps:
+      - name: Get graphql server version
+        id: server
+        run: |
+          export DATA=`curl -X "POST" "https://api.seasket.ch/graphql" \
+          -H 'Content-Type: application/json; charset=utf-8' \
+          -d $'{
+            "query": "query{version sha}",
+            "variables": {}
+          }'`
+          echo "::set-output name=server_version::`echo $DATA | jq -r '.data.version'`"
+          echo "::set-output name=server_sha::`echo $DATA | jq -r '.data.sha'`"
+          echo `echo $DATA | jq -r '.data.version'`
+          echo `echo $DATA | jq -r '.data.sha'`
+  changes:
+    name: Detect changes since last release
+    runs-on: ubuntu-latest
+    # Set job outputs to values from filter step
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      client: ${{ steps.filter.outputs.client }}
+      migrations: ${{ steps.filter.outputs.migrations }}
+    needs:
+      - versions
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          base: ${{ needs.versions.outputs.server_sha }}
+          filters: |
+            api:
+              - 'packages/api/**'
+            client:
+              - 'packages/client/**'
+            migrations:
+              - 'packages/api/migrations/**'
+  run-migrations:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    needs:
+      - test-server
+      - changes
+    if: ${{ needs.changes.outputs.migrations }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: Install unbuffer command
+        run: |
+          sudo apt-get install expect
+      # This remote command must succeed with the message "database migrations complete"
+      - name: Run migrations using ecs exec
+        run: |
+          unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh" --interactive | tee /dev/stderr | grep "database migrations complete"
+  deploy-server:
+    name: Deploy GraphQL Server
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.api }}
+    needs:
+      - changes
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-server-deploy-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install lerna
+        run: |
+          npm install
+      - name: Install CDK
+        run: |
+          npm install -g aws-cdk typescript
+      - name: Install dependencies
+        run: |
+          lerna bootstrap --scope=infra
+      - name: Deploy server
+        working-directory: ./packages/infra
+        env:
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          cdk deploy -e SeaSketchGraphQLServer
+  deploy-client:
+    name: Deploy React Client
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.client && (needs.run-migrations != 'failure' && needs.deploy-server != 'failure') }}
+    needs:
+      - run-migrations
+      - deploy-server
+      - changes
+    steps:
+      - name: Download client build artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: client-build
+          path: ./build
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: Update deployment
+        env:
+          S3_BUCKET: ${{ secrets.S3_CLIENT_BUCKET}}
+        run: |
+          ls -l
+          if [[ -z "$S3_BUCKET" ]]; then
+            echo "S3_BUCKET could not be found" 1>&2
+            exit 1
+          fi
+
+          echo "Uploading files to $S3_BUCKET..."
+          aws s3 sync build $S3_BUCKET \
+            --acl public-read \
+            --cache-control max-age=31536000 \
+            --exclude service-worker.js \
+            --exclude manifest.json \
+            --exclude index.html \
+            --delete
+
+          echo "Uploading manifest.json"
+          aws s3 cp build/manifest.json $S3_BUCKET/manifest.json \
+            --metadata-directive REPLACE \
+            --cache-control max-age=0,no-cache,no-store,must-revalidate \
+            --content-type application/json \
+            --acl public-read
+
+          echo "Uploading index.html"
+          aws s3 cp build/index.html $S3_BUCKET/index.html \
+            --metadata-directive REPLACE \
+            --cache-control max-age=0,no-cache,no-store,must-revalidate \
+            --content-type text/html \
+            --acl public-read
