@@ -54,6 +54,9 @@ jobs:
           npm install compare-versions
           echo "::set-output name=version::`node -e "var compareVersions = require('compare-versions'); console.log(require("./list.json").map((p) => p.version).sort(compareVersions).reverse()[0])"`"
           git checkout -- package-lock.json package.json
+      - name: Generate changelogs
+        run: |
+          npx conventional-changelog -p angular > short_changelog.md
       - name: Create pull request message
         id: pull_request_message
         run: |
