@@ -32,7 +32,7 @@ export class GraphQLStack extends cdk.Stack {
     }
   ) {
     super(scope, id, props);
-    const { AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID } = process.env;
+    const { AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID, GIT_SHA } = process.env;
     if (!AUTH0_CLIENT_ID || !AUTH0_CLIENT_SECRET) {
       throw new Error(
         `AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID environment variables must be set`
@@ -82,6 +82,7 @@ export class GraphQLStack extends cdk.Stack {
             REDIS_HOST: props.redisHost,
             SES_EMAIL_SOURCE: props.emailSource,
             GRAPHILE_WORKER_CONCURRENCY: "5",
+            GIT_SHA: process.env.COMMIT,
           },
           containerPort: 3857,
         },
