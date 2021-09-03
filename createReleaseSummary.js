@@ -32,7 +32,7 @@ if (migrations.length > 1) {
   console.log(`## 🚨 This change will trigger a database migration\n`);
   for (const migration of migrationItems) {
     if (migration.length) {
-      console.log(`  * ${migration}`);
+      console.log(`  * [${migration}](seasketch.org)`);
     }
   }
 }
