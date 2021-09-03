@@ -73,6 +73,7 @@ jobs:
         with:
           # base: master
           # branch: feature-ci-cd-actions
+          token: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
           author: Release Manager <releases@seasketch.org>
           committer: Release Manager <releases@seasketch.org>
           title: Release ${{steps.release_version.outputs.version}}
