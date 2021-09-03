@@ -80,7 +80,7 @@ jobs:
           token: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
           author: Release Manager <releases@seasketch.org>
           committer: Release Manager <releases@seasketch.org>
-          title: Release ${{steps.release_version.outputs.version}}
+          title: 🚀 Release ${{steps.release_version.outputs.version}}
           body: |
             ${{ steps.pull_request_message.outputs.message }}
       # Do this within deployment pipeline
