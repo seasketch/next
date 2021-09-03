@@ -1,9 +1,9 @@
 name: Create Release Tags
 on:
-pull_request:
-  types: [closed]
-  # branches:
-  #   - master
+  pull_request:
+    types: [closed]
+    # branches:
+    #   - master
 jobs:
   tag_release:
     runs-on: ubuntu-latest
