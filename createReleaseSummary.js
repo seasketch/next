@@ -24,6 +24,8 @@ for (const package of changed) {
   console.log(`| ${name} | ${version} → ${updated.version} |`);
 }
 
+console.log("");
+
 const migrations = fs.readFileSync("./migrations.txt").toString();
 const migrationItems = migrations.split("\n");
 if (migrations.length > 1) {
