@@ -57,7 +57,7 @@ append(
     .readFileSync("./short_changelog.md")
     .toString()
     .split("\n")
-    .slice(4)
+    .slice(2)
     .join("\n")
 );
 

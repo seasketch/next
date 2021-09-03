@@ -59,7 +59,7 @@ jobs:
         run: |
           npx standard-changelog -i .changelog.md
           echo "# v${{steps.release_version.outputs.version}} (`date +%D`)" > short_changelog.md
-          tail -n +1 .changelog.md >> short_changelog.md
+          tail -n +3 .changelog.md >> short_changelog.md
           cat short_changelog.md | cat - CHANGELOG.md > temp && mv temp CHANGELOG.md
           git add CHANGELOG.md
           git commit -m 'Update Changelog for v${{steps.release_version.outputs.version}}'
