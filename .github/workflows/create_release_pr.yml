@@ -43,6 +43,7 @@ jobs:
         run: |
           git config --global user.email "releases@seasketch.org"
           git config --global user.name "Release Manager"
+          git checkout --
           npx lerna version --conventional-commits --no-push --yes
       - name: get new package versions
         run: |
