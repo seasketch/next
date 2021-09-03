@@ -8,6 +8,9 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: "16"
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Cache node modules
         uses: actions/cache@v2
         env:
@@ -24,13 +27,10 @@ jobs:
             ${{ runner.os }}-
       - name: Install lerna
         run: |
-          npm install -g lerna
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
+          npm install
       - name: get changed packages
         run: |
-          lerna changed --all --json > changed.json
+          npx lerna changed --all --json > changed.json
       - name: get previous tag
         id: prev_tag
         run: |
@@ -43,10 +43,10 @@ jobs:
         run: |
           git config --global user.email "releases@seasketch.org"
           git config --global user.name "Release Manager"
-          lerna version --conventional-commits --no-push --yes
+          npx lerna version --conventional-commits --no-push --yes
       - name: get new package versions
         run: |
-          lerna list -a --json > list.json
+          npx lerna list -a --json > list.json
       - name: Get highest version
         id: release_version
         run: |
