@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Must be run from monorepo root
 const changed = require("./changed.json");
-const list = require(".list.json");
+const list = require("./list.json");
 const child_process = require("child_process");
 const fs = require("fs");
 
