@@ -1,6 +1,6 @@
 {
   "name": "mapbox-gl-esri-feature-layers",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Fetch data from Esri feature layers and convert styles to mapbox-gl-style for use in mapbox-gl-js",
   "keywords": [
