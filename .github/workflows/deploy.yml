@@ -2,9 +2,9 @@ name: Production Deployment
 on:
   push:
     tags:
-      - v*
-    branches:
-      - *
+      - "**"
+    # branches:
+    #   - *
 jobs:
   do-nothing:
     steps:
