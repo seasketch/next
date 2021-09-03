@@ -56,7 +56,8 @@ jobs:
           git checkout -- package-lock.json package.json
       - name: Generate changelogs
         run: |
-          npx conventional-changelog -p angular > short_changelog.md
+          npx standard-changelog -i .changelog.md
+          tail -n +4 .changelog.md > short_changelog.md
       - name: Create pull request message
         id: pull_request_message
         run: |
