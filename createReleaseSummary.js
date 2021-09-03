@@ -5,6 +5,7 @@ const list = require("./list.json");
 const child_process = require("child_process");
 const fs = require("fs");
 const core = require("@actions/core");
+const path = require("path");
 
 let output = ``;
 const append = (str) => {
@@ -37,8 +38,11 @@ const migrationItems = migrations.split("\n");
 if (migrations.length > 1) {
   append(`## 🚨 This change will trigger a database migration\n`);
   for (const migration of migrationItems) {
+    const fname = path.basename(migration);
     if (migration.length) {
-      append(`[${migration}](seasketch.org)`);
+      append(
+        `[${fname}](https://github.com/seasketch/next/blob/master/${migration})`
+      );
     }
   }
 }
