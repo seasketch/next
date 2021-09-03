@@ -1,7 +1,8 @@
 name: Release PR Manager
 on:
   push:
-    - master
+    branches:
+      - master
     # branches-ignore:
     #   - create-pull-request/patch
 jobs:
