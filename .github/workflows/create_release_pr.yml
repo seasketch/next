@@ -37,7 +37,8 @@ jobs:
           echo "::set-output name=tag::`npx git-semver-tags --lerna | head -n 1`"
       - name: detect migrations
         run: |
-          git diff --name-only ${{ steps.prev_tag.outputs.tag }} -- packages/api/migrations/committed/ > migrations.txt
+          git diff --name-only ${{ steps.prev_tag.outputs.tag }} -- packages/api/migrations/committed
+          git diff --name-only ${{ steps.prev_tag.outputs.tag }} -- packages/api/migrations/committed > migrations.txt
           [ -s migrations.txt ] || echo "::set-output name=has_migrations::yes"
       - name: run lerna version
         run: |
