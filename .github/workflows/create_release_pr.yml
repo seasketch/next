@@ -81,6 +81,8 @@ jobs:
           author: Release Manager <releases@seasketch.org>
           committer: Release Manager <releases@seasketch.org>
           title: 🚀 Release ${{steps.release_version.outputs.version}}
+          labels: |
+            release
           body: |
             ${{ steps.pull_request_message.outputs.message }}
       # Do this within deployment pipeline
