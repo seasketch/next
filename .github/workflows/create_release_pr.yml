@@ -58,7 +58,7 @@ jobs:
       - name: Generate changelogs
         run: |
           npx standard-changelog -i .changelog.md
-          echo "# v${{steps.release_version.outputs.version}}\n\n" > short_changelog.md
+          echo "# v${{steps.release_version.outputs.version}} (`date +%D`)" > short_changelog.md
           tail -n +1 .changelog.md >> short_changelog.md
           cat short_changelog.md | cat - CHANGELOG.md > temp && mv temp CHANGELOG.md
           git add CHANGELOG.md
