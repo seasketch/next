@@ -57,7 +57,7 @@ jobs:
       - name: Create pull request message
         id: pull_request_message
         run: |
-          node packages/infra/bin/getLatestChanges.js > message.md
+          node ./createReleaseSummary.js > message.md
           cat message.md
           echo "::set-output name=message::`cat message.md`"
       - name: Create Pull Request
