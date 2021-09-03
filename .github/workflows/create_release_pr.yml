@@ -1,8 +1,9 @@
 name: Release PR Manager
 on:
   push:
-    branches-ignore:
-      - create-pull-request/patch
+    - master
+    # branches-ignore:
+    #   - create-pull-request/patch
 jobs:
   create_or_update_pr:
     # if: ${{github.actor != 'seasketch-release-manager'}}
