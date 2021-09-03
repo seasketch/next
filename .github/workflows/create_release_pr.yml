@@ -59,7 +59,10 @@ jobs:
         run: |
           npx standard-changelog -i .changelog.md
           echo "# v${{steps.release_version.outputs.version}}\n\n" > short_changelog.md
-          tail -n +1 .changelog.md > short_changelog.md
+          tail -n +1 .changelog.md >> short_changelog.md
+          cat short_changelog | cat - CHANGELOG.md > temp && mv temp CHANGELOG.md
+          git add CHANGELOG.md
+          git commit -m 'Update Changelog for v${{steps.release_version.outputs.version}}'
       - name: Create pull request message
         id: pull_request_message
         run: |
