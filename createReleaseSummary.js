@@ -38,8 +38,8 @@ if (migrations.length > 1) {
 console.log("\n## Changelog\n");
 
 console.log(
-  child_process
-    .execSync(`npx conventional-changelog -p angular`)
+  fs
+    .readFileSync("./short_changelog.md")
     .toString()
     .split("\n")
     .slice(3)
