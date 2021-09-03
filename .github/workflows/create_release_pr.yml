@@ -57,7 +57,7 @@ jobs:
       - name: Generate changelogs
         run: |
           npx standard-changelog -i .changelog.md
-          tail -n +3 .changelog.md > short_changelog.md
+          tail -n +1 .changelog.md > short_changelog.md
       - name: Create pull request message
         id: pull_request_message
         run: |
