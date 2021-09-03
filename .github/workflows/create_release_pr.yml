@@ -1,8 +1,10 @@
 name: Release PR Manager
 on: push
+  branches-ignore:
+    - create-pull-request/patch
 jobs:
   create_or_update_pr:
-    if: ${{github.actor != 'seasketch-release-manager'}}
+    # if: ${{github.actor != 'seasketch-release-manager'}}
     runs-on: ubuntu-latest
     name: Create or update release pull-request
     steps:
