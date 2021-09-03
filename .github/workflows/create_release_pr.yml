@@ -73,8 +73,6 @@ jobs:
           title: Release ${{steps.release_version.outputs.version}}
           body: |
             ${{ steps.pull_request_message.outputs.message }}
-      - name: Link to PR
-        url: steps.pr.outputs.
       # Do this within deployment pipeline
       # - name: Bump version and push tag
       #   id: tag_version
