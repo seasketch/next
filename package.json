@@ -19,5 +19,8 @@
     "branch": "master",
     "schema": "packages/api/generated-schema.gql"
   },
-  "license": "BSD-3-Clause"
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "conventional-changelog": "^3.1.24"
+  }
 }
