@@ -74,6 +74,7 @@ jobs:
           # base: master
           # branch: feature-ci-cd-actions
           author: Release Manager <releases@seasketch.org>
+          committer: Release Manager <releases@seasketch.org>
           title: Release ${{steps.release_version.outputs.version}}
           body: |
             ${{ steps.pull_request_message.outputs.message }}
