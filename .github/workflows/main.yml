@@ -60,7 +60,7 @@ jobs:
           access-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: ./packages/api
           check-name: API Test Output
-          run-name: test-server
+          run-name: Test GraphQL API Server
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest
@@ -102,7 +102,7 @@ jobs:
           access-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: ./packages/client
           check-name: React Client Test Output
-          run-name: test-client
+          run-name: Test React Client
   build-client:
     name: Build React Client
     runs-on: ubuntu-latest
