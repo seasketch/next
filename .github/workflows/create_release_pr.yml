@@ -62,14 +62,7 @@ jobs:
       - name: Create pull request message
         id: pull_request_message
         run: |
-          node ./createReleaseSummary.js > message.md
-          cat message.md
-          body=$(cat message.md)
-          body="${body//'%'/'%25'}"
-          body="${body//$'\n'/'%0A'}"
-          body="${body//$'\r'/'%0D'}" 
-          echo $body
-          echo ::set-output name=message::$body
+          node ./createReleaseSummary.js
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:

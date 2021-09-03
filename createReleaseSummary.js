@@ -4,12 +4,18 @@ const changed = require("./changed.json");
 const list = require("./list.json");
 const child_process = require("child_process");
 const fs = require("fs");
+const core = require("@actions/core");
 
-console.log(
+let output = ``;
+const append = (str) => {
+  output += str + "\n";
+};
+
+append(
   "Approving this pull request will start the production deployment pipeline.\n"
 );
 
-console.log(`
+append(`
 ## Updated Packages
 
 | package name | updated version |
@@ -21,25 +27,25 @@ for (const package of changed) {
   if (!updated) {
     throw new Error(`Could not find ${name} in list of updated packages`);
   }
-  console.log(`| ${name} | ${version} → ${updated.version} |`);
+  append(`| ${name} | ${version} → ${updated.version} |`);
 }
 
-console.log("");
+append("");
 
 const migrations = fs.readFileSync("./migrations.txt").toString();
 const migrationItems = migrations.split("\n");
 if (migrations.length > 1) {
-  console.log(`## 🚨 This change will trigger a database migration\n`);
+  append(`## 🚨 This change will trigger a database migration\n`);
   for (const migration of migrationItems) {
     if (migration.length) {
-      console.log(`[${migration}](seasketch.org)`);
+      append(`[${migration}](seasketch.org)`);
     }
   }
 }
 
-console.log("\n## Changelog\n");
+append("\n## Changelog\n");
 
-console.log(
+append(
   fs
     .readFileSync("./short_changelog.md")
     .toString()
@@ -47,3 +53,7 @@ console.log(
     .slice(3)
     .join("\n")
 );
+
+core.setOutput("message", output);
+
+console.log(output);
