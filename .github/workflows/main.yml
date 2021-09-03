@@ -54,13 +54,13 @@ jobs:
         env:
           TEST_DB: postgres://postgres:password@localhost:5432/
           SES_EMAIL_SOURCE: do-not-reply@seasketch.org
-      - uses: IgnusG/jest-report-action@v2.3.1
+      - uses: IgnusG/jest-report-action@v2.3.3
         if: always()
         with:
           access-token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: ./packages/api
           check-name: API Test Output
-          run-name: api
+          run-name: test-server
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest
@@ -95,7 +95,14 @@ jobs:
         env:
           SKIP_PREFLIGHT_CHECK: true
         run: |
-          npm run test
+          npm run test -- --ci --testResultsProcessor="jest-junit" --watchAll=false
+      - uses: IgnusG/jest-report-action@v2.3.3
+        if: always()
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: ./packages/client
+          check-name: React Client Test Output
+          run-name: test-client
   build-client:
     name: Build React Client
     runs-on: ubuntu-latest
