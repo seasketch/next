@@ -37,6 +37,7 @@ const migrations = fs.readFileSync("./migrations.txt").toString();
 const migrationItems = migrations.split("\n");
 if (migrations.length > 1) {
   append(`## 🚨 This change will trigger a database migration\n`);
+  append(`These changes should be reviewed before proceeding.`);
   for (const migration of migrationItems) {
     const fname = path.basename(migration);
     if (migration.length) {
