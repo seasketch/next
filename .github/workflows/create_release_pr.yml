@@ -53,7 +53,7 @@ jobs:
         id: release_version
         run: |
           npm install compare-versions
-          echo "::set-output name=version::`node -e "var compareVersions = require('compare-versions'); console.log(require('./list.json').map((p) => p.version).sort(compareVersions).reverse()[0])"`"
+          echo "::set-output name=version::`node -e "var compareVersions = require('compare-versions'); console.log(require('./list.json').filter((p) => p.name === 'client' || p.name === '@seasketch/api').map((p) => p.version).sort(compareVersions).reverse()[0])"`"
           git checkout -- package-lock.json package.json
       - name: Generate changelogs
         run: |
