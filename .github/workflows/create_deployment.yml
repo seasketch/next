@@ -71,7 +71,6 @@ jobs:
     name: Get deployed software versions
     needs:
       - tag_release
-      - tag_lerna_releases
     outputs:
       server_sha: ${{ steps.server.outputs.server_sha }}
       server_version: ${{ steps.server.outputs.server_version }}
