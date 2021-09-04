@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - staging
+    tags-ignore:
+      - "**"
     # branches-ignore:
     #   - create-pull-request/patch
 jobs:
