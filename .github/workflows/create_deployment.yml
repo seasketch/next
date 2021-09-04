@@ -53,18 +53,25 @@ jobs:
             const packages = require("./list.json");
             for (const package of packages) {
               const { name, version } = package;
-              console.log(`creating ${name}@${version}`);
-              const res = await github.git.createTag({
+              const newTag = `${name}@${version}`;
+              // console.log(`creating ${newTag}`);
+              // const res = await github.git.createTag({
+              //   owner: "seasketch",
+              //   repo: "next",
+              //   tag: newTag,
+              //   message: newTag,
+              //   object: "${{github.sha}}",
+              //   type: 'commit',
+              //   tagger: {
+              //     name: "SeaSketch Release Manager",
+              //     email: "releases@seasketch.org"
+              //   }
+              // });
+              const res = await github.git.createRef({
                 owner: "seasketch",
                 repo: "next",
-                tag: `${name}@${version}`,
-                message: `${name}@${version}`,
-                object: "${{github.sha}}",
-                type: 'commit',
-                tagger: {
-                  name: "SeaSketch Release Manager",
-                  email: "releases@seasketch.org"
-                }
+                ref: `refs/tags/${newTag}`,
+                sha: "${{github.sha}}"
               });
               console.log('res', res);
             }
