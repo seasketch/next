@@ -23,7 +23,6 @@ jobs:
   tag_lerna_releases:
     runs-on: ubuntu-latest
     needs: tag_release
-    id: lerna
     name: Tag lerna releases
     steps:
       - name: get lerna versions
@@ -54,7 +53,7 @@ jobs:
     name: Get deployed software versions
     needs:
       - tag_release
-      - lerna
+      - tag_lerna_releases
     outputs:
       server_sha: ${{ steps.server.outputs.server_sha }}
       server_version: ${{ steps.server.outputs.server_version }}
