@@ -58,7 +58,7 @@ jobs:
                 repo: "next",
                 tag: `${name}@${version}`,
                 message: `${name}@${version}`,
-                object: ${{github.sha}},
+                object: "${{github.sha}}",
                 type: 'commit',
                 tagger: {
                   name: "SeaSketch Release Manager",
