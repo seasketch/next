@@ -7434,6 +7434,8 @@ export type Query = Node & {
    */
   query: Query;
   sessionIsBannedFromPosting?: Maybe<Scalars['Boolean']>;
+  /** Reference to release in source control */
+  sha?: Maybe<Scalars['String']>;
   sharedBasemaps?: Maybe<Basemap>;
   sketch?: Maybe<Sketch>;
   /** Reads a single `Sketch` using its globally unique `ID`. */
@@ -7506,6 +7508,8 @@ export type Query = Node & {
    * [see the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)
    */
   verifySurveyInvite?: Maybe<SurveyInviteTokenVerificationResults>;
+  /** GraphQL server software version */
+  version: Scalars['String'];
 };
 
 

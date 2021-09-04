@@ -8802,6 +8802,9 @@ type Query implements Node {
   """
   query: Query!
   sessionIsBannedFromPosting(pid: Int): Boolean
+
+  """Reference to release in source control"""
+  sha: String
   sharedBasemaps: Basemap
   sketch(id: Int!): Sketch
 
@@ -8969,6 +8972,9 @@ type Query implements Node {
     """JWT string"""
     token: String!
   ): SurveyInviteTokenVerificationResults
+
+  """GraphQL server software version"""
+  version: String!
 }
 
 enum RasterDemEncoding {
