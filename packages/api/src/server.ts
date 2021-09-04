@@ -14,8 +14,8 @@ import postgisPlugin from "@graphile/postgis";
 import CanonicalEmailPlugin from "./plugins/canonicalEmailPlugin";
 import ProjectInviteStateSubscriptionPlugin from "./plugins/ProjectInviteStateSubscriptionPlugin";
 import SanitizeInteractivityTemplatesPlugin from "./plugins/sanitizeInteractivityTemplatesPlugin";
-import DataSourcePlugin from "./plugins/dataSourcePlugin";
 import SpritesPlugin from "./plugins/spritesPlugin";
+import DataSourcePlugin from "./plugins/dataSourcePlugin";
 import { getJWKS, rotateKeys } from "./auth/jwks";
 import authorizationMiddleware from "./middleware/authorizationMiddleware";
 import userAccountMiddlware from "./middleware/userAccountMiddleware";
@@ -34,6 +34,7 @@ import { default as PgPubsub } from "@graphile/pg-pubsub";
 import bytes from "bytes";
 import { run } from "graphile-worker";
 import cors from "cors";
+import VersionPlugin from "./plugins/versionPlugin";
 
 const app = express();
 
@@ -194,6 +195,7 @@ app.use(
       reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
       SpritesPlugin,
+      VersionPlugin,
     ],
     graphileBuildOptions: {
       pgOmitListSuffix: true,

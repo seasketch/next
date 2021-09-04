@@ -1,6 +1,7 @@
 {
   "name": "@seasketch/email-status-handler",
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "private": true,
   "description": "Lambdas for handling incoming SES email status notifications",
   "keywords": [
     "seasketch"
@@ -25,8 +26,8 @@
     "url": "https://github.com/seasketch/next/issues"
   },
   "dependencies": {
-    "@seasketch/api": "^0.1.1",
-    "@seasketch/lambda-db-client": "^1.0.0",
+    "@seasketch/api": "^0.1.0",
+    "@seasketch/lambda-db-client": "^1.1.0",
     "aws-sdk": "^2.910.0",
     "mustache": "^4.2.0"
   },

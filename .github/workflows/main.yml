@@ -1,0 +1,151 @@
+name: CI
+on: [push]
+jobs:
+  test-server:
+    name: Test GraphQL API Server
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: underbluewaters/seasketch_db_base
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: password
+      redis:
+        image: "redis:alpine"
+        ports:
+          - "6379:6379"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-server-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install lerna
+        run: |
+          npm install
+      - name: Install dependencies
+        run: |
+          lerna bootstrap --scope=@seasketch/api
+      - name: Init docker db
+        working-directory: ./packages/api
+        env:
+          TEST_DB: postgres://postgres:password@localhost:5432/
+        run: |
+          node tests/init_dockerdb.js
+      - name: Run Tests
+        working-directory: ./packages/api
+        run: |
+          npx jest --ci --reporters=default --reporters=jest-junit
+        env:
+          TEST_DB: postgres://postgres:password@localhost:5432/
+          SES_EMAIL_SOURCE: do-not-reply@seasketch.org
+      - uses: IgnusG/jest-report-action@v2.3.3
+        if: always()
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: ./packages/api
+          check-name: API Test Output
+          run-name: Test GraphQL API Server
+  test-client:
+    name: Test React Client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-client-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install lerna
+        run: |
+          npm install
+      - name: Install dependencies
+        run: |
+          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
+      - name: Test client
+        working-directory: ./packages/client
+        env:
+          SKIP_PREFLIGHT_CHECK: true
+        run: |
+          npm run test -- --ci --testResultsProcessor="jest-junit" --watchAll=false
+      - uses: IgnusG/jest-report-action@v2.3.3
+        if: always()
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: ./packages/client
+          check-name: React Client Test Output
+          run-name: Test React Client
+  build-client:
+    name: Build React Client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-client-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install lerna
+        run: |
+          npm install
+      - name: Install dependencies
+        run: |
+          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
+      - name: Build client
+        working-directory: ./packages/client
+        env:
+          SKIP_PREFLIGHT_CHECK: true
+          REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+          REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
+          REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
+          REACT_APP_GRAPHQL_ENDPOINT: ${{ secrets.REACT_APP_GRAPHQL_ENDPOINT }}
+          REACT_APP_PUBLIC_URL: ${{ secrets.REACT_APP_PUBLIC_URL }}
+          REACT_APP_GIT_SHA: ${{ github.sha }}
+        run: |
+          npm run build
+      - name: Store build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: client-build
+          path: ./packages/client/build
