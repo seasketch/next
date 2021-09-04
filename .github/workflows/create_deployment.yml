@@ -53,7 +53,7 @@ jobs:
             const packages = require("./list.json");
             for (const package of packages) {
               const { name, version } = package;
-              await octokit.git.createTag({
+              await github.git.createTag({
                 owner: "seasketch",
                 repo: "next",
                 tag: `${name}@${version}`,
