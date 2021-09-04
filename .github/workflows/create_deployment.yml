@@ -53,7 +53,8 @@ jobs:
             const packages = require("./list.json");
             for (const package of packages) {
               const { name, version } = package;
-              await github.git.createTag({
+              console.log(`creating ${name}@${version}`);
+              const res = await github.git.createTag({
                 owner: "seasketch",
                 repo: "next",
                 tag: `${name}@${version}`,
@@ -65,6 +66,7 @@ jobs:
                   email: "releases@seasketch.org"
                 }
               });
+              console.log('res', res);
             }
   versions:
     runs-on: ubuntu-latest
