@@ -66,6 +66,7 @@ jobs:
                 }
               });
             }
+
   versions:
     runs-on: ubuntu-latest
     name: Get deployed software versions
