@@ -32,6 +32,5 @@
     "editor.rulers": [50]
   },
   "jest.rootPath": "packages/api",
-  "jest.showCoverageOnLoad": true,
-  "conventionalCommits.scopes": ["ci", "ci"]
+  "jest.showCoverageOnLoad": true
 }

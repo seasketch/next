@@ -1,6 +1,6 @@
 {
   "name": "mapbox-gl-esri-feature-layers",
-  "version": "0.1.2",
+  "version": "0.1.1",
   "private": true,
   "description": "Fetch data from Esri feature layers and convert styles to mapbox-gl-style for use in mapbox-gl-js",
   "keywords": [
@@ -25,8 +25,7 @@
   },
   "scripts": {
     "test": "echo \"Error: run tests from root\" && exit 1",
-    "build": "tsc",
-    "postinstall": "npm run build"
+    "build": "tsc"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"

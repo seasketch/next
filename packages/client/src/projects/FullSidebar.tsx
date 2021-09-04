@@ -313,19 +313,6 @@ export default function FullSidebar({
               <a className="mx-1" href="mailto:support@seasketch.org">
                 {t("Contact")}
               </a>
-
-              <a
-                className="mx-1"
-                target="_blank"
-                rel="noreferrer"
-                href="https://github.com/seasketch/next/releases"
-              >
-                {
-                  // eslint-disable-next-line i18next/no-literal-string
-                  "v"
-                }
-                {process.env.REACT_APP_CLIENT_VERSION}
-              </a>
             </nav>
           </div>
         </div>

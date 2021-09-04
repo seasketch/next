@@ -9,7 +9,6 @@ RUN ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts
 # startup messages
 COPY ./github.sh /etc/profile.d/
 COPY ./pg.sh /etc/profile.d/
-COPY ./migrate.sh /home/
 RUN chmod u+x /etc/profile.d/pg.sh
 RUN chmod u+x /etc/profile.d/github.sh
 # # # You will need to make sure deploy keys are in github before the next command can be run!

@@ -1,5 +1,4 @@
 #!/bin/sh
-
 export $(node ../infra/lib/getClientBucket.js)
 if [[ -z "$S3_BUCKET" ]]; then
     echo "S3_BUCKET could not be found" 1>&2

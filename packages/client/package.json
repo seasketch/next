@@ -73,7 +73,6 @@
     "graphql": "^15.3.0",
     "gzip-size": "^5.1.1",
     "i18next": "^19.7.0",
-    "jest-junit": "^12.2.0",
     "jsonlint": "^1.6.3",
     "jsonlint-mod": "^1.7.6",
     "lodash.debounce": "^4.0.8",
@@ -82,7 +81,7 @@
     "mapbox-gl": "2.3.0-beta.1",
     "mapbox-gl-draw-rectangle-mode": "^1.0.4",
     "mapbox-gl-draw-rectangle-restrict-area": "^3.1.0",
-    "mapbox-gl-esri-feature-layers": "^0.1.2",
+    "mapbox-gl-esri-feature-layers": "^0.1.1",
     "mustache": "^4.1.0",
     "nanoid": "^3.1.20",
     "papaparse": "^5.3.0",
@@ -138,7 +137,7 @@
     "worker-loader": "^2.0.0"
   },
   "scripts": {
-    "build": "REACT_APP_CLIENT_VERSION=`node -e \"console.log(require('./package.json').version)\"` REACT_APP_GIT_SHA=`git rev-parse --short HEAD` craco build",
+    "build": "craco build",
     "test": "craco test",
     "eject": "react-scripts eject",
     "extract-translations": "NODE_ENV=development npx babel -f .babelrc 'src/**/*.{js,jsx,ts,tsx}' > /dev/null && echo 'Translations extracted to extractedTranslations/'",
