@@ -18,7 +18,7 @@ jobs:
         env:
           EVENT: ${{ toJSON(github.event.push) }}
           NAMES: ${{ toJSON(github.event.push.commits.*.author.name) }}
-          AUTHORS: ${{ github.event.push.commits.*.author }}
+          AUTHORS: ${{ toJSON(github.event.push.commits.*.author) }}
         with:
           script: |
             console.log(process.env.NAMES);
