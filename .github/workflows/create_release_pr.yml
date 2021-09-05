@@ -20,6 +20,8 @@ jobs:
             console.log(context);
             console.log(context.author);
             console.log(context.committer);
+            console.log(context.payload);
+            console.log(context.payload.head_commit);
       - uses: actions/setup-node@v2
         with:
           node-version: "16"
