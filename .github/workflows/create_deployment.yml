@@ -309,7 +309,7 @@ jobs:
             ];
             const failedJobs = jobs.filter(
               ({ result }) =>
-                result != "failure" && result != "cancelled"
+                result == "failure" || result == "cancelled"
             );
             const success = failedJobs.length == 0;
             const cancelled = jobs.filter(({result}) => result == "cancelled").length > 0;
@@ -327,7 +327,7 @@ jobs:
             ${jobs
               .map(
                 ({name, result}) =>
-                  `  - [${result == "success" ? "x" : ""}] ${name} [${
+                  `  - [${result == "success" ? "x" : " "}] ${name} [${
                     result
                   }]`
               )
