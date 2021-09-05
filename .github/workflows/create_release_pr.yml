@@ -17,11 +17,10 @@ jobs:
         name: debug context
         with:
           script: |
-            console.log(context);
-            console.log(context.author);
-            console.log(context.committer);
-            console.log(context.payload);
-            console.log(context.payload.head_commit);
+            if (context?.payload?.head_commit?.author?.name === "SeaSketch Release Manager") {
+              // abort
+              process.exit(78);
+            }
       - uses: actions/setup-node@v2
         with:
           node-version: "16"
