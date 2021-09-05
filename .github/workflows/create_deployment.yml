@@ -293,9 +293,16 @@ jobs:
         name: create comment
         with:
           script: |
-            const jobs = ['deploy_server', 'deploy_client', 'run_migrations'];
-            const success = jobs.map((id) => needs[id].result != 'failure' && needs[id].result != 'cancelled');
-            const cancelled = jobs.find((id) => needs[id].result == 'cancelled');
+            const jobs = ["deploy_server", "deploy_client", "run_migrations"].map((id) => ({
+              name: id,
+              result: context.needs[id].result,
+            }));
+            const failedJobs = jobs.filter(
+              ({ result }) =>
+                result != "failure" && result != "cancelled"
+            );
+            const success = failedJobs.length == 0;
+            const cancelled = jobs.filter(({result}) => result == "cancelled").length > 0;
             let title = "Deployment Success";
             if (!success) {
               if (cancelled) {
@@ -307,12 +314,19 @@ jobs:
             const body = `
             ### ${title}
 
-            ${ jobs.map((id) => `  - [${needs[id].result != 'failure' && needs[id].result != 'cancelled' ? "x" : ""}] ${id}${needs[id].result == 'cancelled'} ? " (cancelled)" : ""`).join("\n")}
+            ${jobs
+              .map(
+                ({name, result}) =>
+                  `  - [${result == "success" ? "x" : ""}] ${name} [${
+                    result
+                  }]`
+              )
+              .join("\n")}
             `;
             console.log(body);
             github.issues.createComment({
               owner: "seasketch",
               repo: "next",
               issue_number: "${{github.event.pull_request.number}}",
-              body: body
+              body: body,
             });
