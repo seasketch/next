@@ -80,7 +80,7 @@ jobs:
           cat short_changelog.md | cat - CHANGELOG.md > temp && mv temp CHANGELOG.md
           git add CHANGELOG.md
           # git commit -m 'Update Changelog for v${{steps.release_version.outputs.version}}'
-          git commit --amend
+          git commit --amend --no-edit
       - name: Create pull request message
         id: pull_request_message
         run: |
