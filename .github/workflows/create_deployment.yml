@@ -181,7 +181,7 @@ jobs:
   build_client:
     name: Build React Client
     runs-on: ubuntu-latest
-    if: ${{ false }}
+    if: ${{ needs.changes.outputs.client }}
     needs:
       - changes
     steps:
