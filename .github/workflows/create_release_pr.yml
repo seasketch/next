@@ -13,6 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     name: Create or update release pull-request
     steps:
+      - uses: actions/github-script@v4
+        name: debug event
+        env:
+          EVENT: ${{ github.event.push }}
+          NAMES: ${{ github.event.push.commits.*.author.name }}
+          AUTHORS: ${{ github.event.push.commits.*.author }}
+        with:
+          script: |
+            console.log(process.env.NAMES);
+            console.log(process.env.AUTHORS);
+            console.log(process.env.EVENT);
       - uses: actions/setup-node@v2
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         with:
