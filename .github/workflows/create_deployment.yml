@@ -114,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - changes
-    if: ${{ false && needs.changes.outputs.migrations }}
+    if: ${{ needs.changes.outputs.migrations }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -132,7 +132,7 @@ jobs:
   deploy_server:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
-    if: ${{ false && needs.changes.outputs.api }}
+    if: ${{ needs.changes.outputs.api }}
     needs:
       - changes
     steps:
@@ -230,7 +230,7 @@ jobs:
   deploy_client:
     name: Deploy React Client
     runs-on: ubuntu-latest
-    if: ${{ false && needs.changes.outputs.client && (needs.run_migrations != 'failure' && needs.deploy_server != 'failure') }}
+    if: ${{ needs.changes.outputs.client && (needs.run_migrations != 'failure' && needs.deploy_server != 'failure') }}
     needs:
       - run_migrations
       - deploy_server
