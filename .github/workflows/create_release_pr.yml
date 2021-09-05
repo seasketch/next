@@ -16,8 +16,8 @@ jobs:
       - uses: actions/github-script@v4
         name: debug event
         env:
-          EVENT: ${{ github.event.push }}
-          NAMES: ${{ github.event.push.commits.*.author.name }}
+          EVENT: ${{ toJSON(github.event.push) }}
+          NAMES: ${{ toJSON(github.event.push.commits.*.author.name) }}
           AUTHORS: ${{ github.event.push.commits.*.author }}
         with:
           script: |
