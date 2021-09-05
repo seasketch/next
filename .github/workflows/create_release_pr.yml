@@ -13,6 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     name: Create or update release pull-request
     steps:
+      - uses: actions/github-script@v4
+        name: tag lerna versions
+        with:
+          script: |
+            console.log(context);
       - uses: actions/setup-node@v2
         with:
           node-version: "16"
