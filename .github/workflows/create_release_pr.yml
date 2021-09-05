@@ -9,7 +9,7 @@ on:
     #   - create-pull-request/patch
 jobs:
   create_or_update_pr:
-    if: ${{!contains( github.event.push.commits.*.author.name, 'SeaSketch Release Manager')}}
+    if: ${{!contains( github.event.push.commits.*.author.name, 'seasketch-release-manager')}}
     runs-on: ubuntu-latest
     name: Create or update release pull-request
     steps:
