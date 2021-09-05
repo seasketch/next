@@ -280,12 +280,12 @@ jobs:
             --acl public-read
   update_pr:
     - name: Update PR w/comment
-    - needs:
-      - deploy_client
-      - deploy_server
-      - run_migrations
-    if: ${{ always() }}
-    - uses: actions/github-script@v4
+      needs:
+        - deploy_client
+        - deploy_server
+        - run_migrations
+      if: ${{ always() }}
+      uses: actions/github-script@v4
         name: create comment
         with:
           script: |
