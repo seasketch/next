@@ -279,36 +279,37 @@ jobs:
             --content-type text/html \
             --acl public-read
   update_pr:
-    - name: Update PR w/comment
-      needs:
-        - deploy_client
-        - deploy_server
-        - run_migrations
-      if: ${{ always() }}
-      uses: actions/github-script@v4
-      name: create comment
-      with:
-        script: |
-          const jobs = ['deploy_server', 'deploy_client', 'run_migrations'];
-          const success = jobs.map((id) => needs[id].result != 'failure' && needs[id].result != 'cancelled');
-          const cancelled = jobs.find((id) => needs[id].result == 'cancelled');
-          let title = "Deployment Success";
-          if (!success) {
-            if (cancelled) {
-              title = "Deployment Cancelled";
-            } else {
-              title = "Deployment Failed";
+    name: Update PR w/comment
+    needs:
+      - deploy_client
+      - deploy_server
+      - run_migrations
+    if: ${{ always() }}
+    steps:
+      - uses: actions/github-script@v4
+        name: create comment
+        with:
+          script: |
+            const jobs = ['deploy_server', 'deploy_client', 'run_migrations'];
+            const success = jobs.map((id) => needs[id].result != 'failure' && needs[id].result != 'cancelled');
+            const cancelled = jobs.find((id) => needs[id].result == 'cancelled');
+            let title = "Deployment Success";
+            if (!success) {
+              if (cancelled) {
+                title = "Deployment Cancelled";
+              } else {
+                title = "Deployment Failed";
+              }
             }
-          }
-          const body = `
-          ### ${title}
+            const body = `
+            ### ${title}
 
-          ${ jobs.map((id) => `  - [${needs[id].result != 'failure' && needs[id].result != 'cancelled' ? "x" : ""}] ${id}${needs[id].result == 'cancelled'} ? " (cancelled)" : ""`).join("\n")}
-          `;
-          console.log(body);
-          github.issues.createComment({
-            owner: "seasketch",
-            repo: "next",
-            issue_number: github.event.pull_request.number,
-            body: body
-          });
+            ${ jobs.map((id) => `  - [${needs[id].result != 'failure' && needs[id].result != 'cancelled' ? "x" : ""}] ${id}${needs[id].result == 'cancelled'} ? " (cancelled)" : ""`).join("\n")}
+            `;
+            console.log(body);
+            github.issues.createComment({
+              owner: "seasketch",
+              repo: "next",
+              issue_number: github.event.pull_request.number,
+              body: body
+            });
