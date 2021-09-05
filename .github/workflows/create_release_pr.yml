@@ -9,20 +9,10 @@ on:
     #   - create-pull-request/patch
 jobs:
   create_or_update_pr:
-    if: ${{github.actor != 'seasketch-release-manager'}}
+    if: ${{!contains( github.event.push.commits.*.author.name, 'SeaSketch Release Manager')}}
     runs-on: ubuntu-latest
     name: Create or update release pull-request
     steps:
-      - uses: actions/github-script@v4
-        id: is_deployment
-        name: Check if push is itself a deployment
-        with:
-          script: |
-            if (context.payload && context.payload.head_commit && context.payload.head_commit.author.name === "SeaSketch Release Manager") {
-              core.setOutput('is_deployment', true);
-            } else {
-              core.setOutput('is_deployment', false);
-            }
       - uses: actions/setup-node@v2
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         with:
