@@ -14,10 +14,12 @@ jobs:
     name: Create or update release pull-request
     steps:
       - uses: actions/github-script@v4
-        name: tag lerna versions
+        name: debug context
         with:
           script: |
             console.log(context);
+            console.log(context.author);
+            console.log(context.committer);
       - uses: actions/setup-node@v2
         with:
           node-version: "16"
@@ -75,7 +77,8 @@ jobs:
           tail -n +3 .changelog.md >> short_changelog.md
           cat short_changelog.md | cat - CHANGELOG.md > temp && mv temp CHANGELOG.md
           git add CHANGELOG.md
-          git commit -m 'Update Changelog for v${{steps.release_version.outputs.version}}'
+          # git commit -m 'Update Changelog for v${{steps.release_version.outputs.version}}'
+          git commit --amend
       - name: Create pull request message
         id: pull_request_message
         run: |
