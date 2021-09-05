@@ -17,8 +17,8 @@ jobs:
         name: debug event
         env:
           EVENT: ${{ toJSON(github.event) }}
-          COMMITS: ${{ toJSON(github.event.commits }}
-          PUSH_COMMITS: ${{ toJSON(github.event.push.commits }}
+          COMMITS: ${{ toJSON(github.event.commits) }}
+          PUSH_COMMITS: ${{ toJSON(github.event.push.commits) }}
           NAMES: ${{ toJSON(github.event.commits.*.author.name) }}
           AUTHORS: ${{ toJSON(github.event.commits.*.author) }}
         with:
