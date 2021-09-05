@@ -178,7 +178,7 @@ jobs:
           COMMIT: ${{ github.sha }}
         run: |
           cdk deploy -e SeaSketchGraphQLServer
-  build-client:
+  build_client:
     name: Build React Client
     runs-on: ubuntu-latest
     if: ${{ false }}
