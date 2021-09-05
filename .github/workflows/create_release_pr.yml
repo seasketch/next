@@ -18,7 +18,7 @@ jobs:
         name: Check if push is itself a deployment
         with:
           script: |
-            if (context?.payload?.head_commit?.author?.name === "SeaSketch Release Manager") {
+            if (context.payload && context.payload.head_commit && context.payload.head_commit.author.name === "SeaSketch Release Manager") {
               core.setOutput('is_deployment', true);
             } else {
               core.setOutput('is_deployment', false);
