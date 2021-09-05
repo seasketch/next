@@ -55,19 +55,6 @@ jobs:
             for (const package of packages) {
               const { name, version } = package;
               const newTag = `${name}@${version}`;
-              // console.log(`creating ${newTag}`);
-              // const res = await github.git.createTag({
-              //   owner: "seasketch",
-              //   repo: "next",
-              //   tag: newTag,
-              //   message: newTag,
-              //   object: "${{github.sha}}",
-              //   type: 'commit',
-              //   tagger: {
-              //     name: "SeaSketch Release Manager",
-              //     email: "releases@seasketch.org"
-              //   }
-              // });
               const res = await github.git.createRef({
                 owner: "seasketch",
                 repo: "next",
@@ -122,7 +109,7 @@ jobs:
               - 'packages/client/**'
             migrations:
               - 'packages/api/migrations/**'
-  run-migrations:
+  run_migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
     needs:
@@ -142,7 +129,7 @@ jobs:
       - name: Run migrations using ecs exec
         run: |
           unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh" --interactive | tee /dev/stderr | grep "database migrations complete"
-  deploy-server:
+  deploy_server:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.api }}
@@ -239,13 +226,13 @@ jobs:
         with:
           name: client-build
           path: ./packages/client/build
-  deploy-client:
+  deploy_client:
     name: Deploy React Client
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.client && (needs.run-migrations != 'failure' && needs.deploy-server != 'failure') }}
+    if: ${{ needs.changes.outputs.client && (needs.run_migrations != 'failure' && needs.deploy_server != 'failure') }}
     needs:
-      - run-migrations
-      - deploy-server
+      - run_migrations
+      - deploy_server
       - changes
     steps:
       - name: Download client build artifact
@@ -291,3 +278,37 @@ jobs:
             --cache-control max-age=0,no-cache,no-store,must-revalidate \
             --content-type text/html \
             --acl public-read
+  update_pr:
+    - name: Update PR w/comment
+    - needs:
+      - deploy_client
+      - deploy_server
+      - run_migrations
+    if: ${{ always() }}
+    - uses: actions/github-script@v4
+        name: create comment
+        with:
+          script: |
+            const jobs = ['deploy_server', 'deploy_client', 'run_migrations'];
+            const success = jobs.map((id) => needs[id].result != 'failure' && needs[id].result != 'cancelled');
+            const cancelled = jobs.find((id) => needs[id].result == 'cancelled');
+            let title = "Deployment Success";
+            if (!success) {
+              if (cancelled) {
+                title = "Deployment Cancelled";
+              } else {
+                title = "Deployment Failed";
+              }
+            }
+            const body = `
+            ### ${title}
+
+            ${ jobs.map((id) => `  - [${needs[id].result != 'failure' && needs[id].result != 'cancelled' ? "x" : ""}] ${id}${needs[id].result == 'cancelled'} ? " (cancelled)" : ""`).join("\n")}
+            `;
+            console.log(body);
+            github.issues.createComment({
+              owner: "seasketch",
+              repo: "next",
+              issue_number: github.event.pull_request.number,
+              body: body
+            });

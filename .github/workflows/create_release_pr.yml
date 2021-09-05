@@ -3,31 +3,27 @@ on:
   push:
     branches:
       - staging
-    tags-ignore:
-      - "**"
-    # branches-ignore:
-    #   - create-pull-request/patch
 jobs:
   create_or_update_pr:
-    if: ${{!contains( github.event.commits.*.author.name, 'seasketch-release-manager')}}
+    if: ${{!contains( github.event.commits.*.author.username, 'seasketch-release-manager')}}
     runs-on: ubuntu-latest
     name: Create or update release pull-request
     steps:
-      - uses: actions/github-script@v4
-        name: debug event
-        env:
-          EVENT: ${{ toJSON(github.event) }}
-          COMMITS: ${{ toJSON(github.event.commits) }}
-          PUSH_COMMITS: ${{ toJSON(github.event.push.commits) }}
-          NAMES: ${{ toJSON(github.event.commits.*.author.name) }}
-          AUTHORS: ${{ toJSON(github.event.commits.*.author) }}
-        with:
-          script: |
-            console.log(process.env.NAMES);
-            console.log(process.env.AUTHORS);
-            console.log(process.env.EVENT);
-            console.log(process.env.COMMITS);
-            console.log(process.env.PUSH_COMMITS);
+      # - uses: actions/github-script@v4
+      #   name: debug event
+      #   env:
+      #     EVENT: ${{ toJSON(github.event) }}
+      #     COMMITS: ${{ toJSON(github.event.commits) }}
+      #     PUSH_COMMITS: ${{ toJSON(github.event.push.commits) }}
+      #     NAMES: ${{ toJSON(github.event.commits.*.author.name) }}
+      #     AUTHORS: ${{ toJSON(github.event.commits.*.author) }}
+      #   with:
+      #     script: |
+      #       console.log(process.env.NAMES);
+      #       console.log(process.env.AUTHORS);
+      #       console.log(process.env.EVENT);
+      #       console.log(process.env.COMMITS);
+      #       console.log(process.env.PUSH_COMMITS);
       - uses: actions/setup-node@v2
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         with:
