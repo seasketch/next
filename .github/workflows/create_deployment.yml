@@ -95,7 +95,7 @@ jobs:
       migrations: ${{ steps.filter.outputs.migrations }}
     needs:
       - tag_release
-      - versions
+      # - versions
     steps:
       - uses: actions/checkout@v2
       - uses: dorny/paths-filter@v2
