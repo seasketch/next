@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [staging]
     types: [closed]
-    tags: *
+    tags: "**"
 jobs:
   tag_release:
     runs-on: ubuntu-latest
