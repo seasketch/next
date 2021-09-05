@@ -24,16 +24,16 @@ jobs:
               core.setOutput('is_deployment', false);
             }
       - uses: actions/setup-node@v2
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         with:
           node-version: "16"
       - uses: actions/checkout@v2
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         with:
           fetch-depth: 0
       - name: Cache node modules
         uses: actions/cache@v2
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         env:
           cache-name: cache-lerna-version-node-modules
         with:
@@ -47,44 +47,44 @@ jobs:
             ${{ runner.os }}-build-
             ${{ runner.os }}-
       - name: Install lerna
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         run: |
           npm install
       - name: get changed packages
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         run: |
           npx lerna changed --all --json > changed.json
       - name: get previous tag
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         id: prev_tag
         run: |
           echo "::set-output name=tag::`npx git-semver-tags --lerna | head -n 1`"
       - name: detect migrations
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         run: |
           git diff --name-only ${{ steps.prev_tag.outputs.tag }} -- packages/api/migrations/committed
           git diff --name-only ${{ steps.prev_tag.outputs.tag }} -- packages/api/migrations/committed > migrations.txt
           [ -s migrations.txt ] || echo "::set-output name=has_migrations::yes"
       - name: run lerna version
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         run: |
           git config --global user.email "releases@seasketch.org"
           git config --global user.name "Release Manager"
           git checkout --
           npx lerna version --conventional-commits --no-push --yes
       - name: get new package versions
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         run: |
           npx lerna list -a --json > list.json
       - name: Get highest version
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         id: release_version
         run: |
           npm install compare-versions
           echo "::set-output name=version::`node -e "var compareVersions = require('compare-versions'); console.log(require('./list.json').filter((p) => p.name === 'client' || p.name === '@seasketch/api').map((p) => p.version).sort(compareVersions).reverse()[0])"`"
           git checkout -- package-lock.json package.json
       - name: Generate changelogs
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         run: |
           npx standard-changelog -i .changelog.md
           echo "# v${{steps.release_version.outputs.version}} (`date +%D`)" > short_changelog.md
@@ -94,12 +94,12 @@ jobs:
           # git commit -m 'Update Changelog for v${{steps.release_version.outputs.version}}'
           git commit --amend --no-edit
       - name: Create pull request message
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         id: pull_request_message
         run: |
           node ./createReleaseSummary.js
       - name: Create Pull Request
-        if: ${{ steps.is_deployment.outputs.is_deployment === false }}
+        if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         id: pr
         uses: peter-evans/create-pull-request@v3
         with:
