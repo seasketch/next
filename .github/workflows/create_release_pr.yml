@@ -14,12 +14,14 @@ jobs:
     name: Create or update release pull-request
     steps:
       - uses: actions/github-script@v4
-        name: debug context
+        id: is_deployment
+        name: Check if push is itself a deployment
         with:
           script: |
             if (context?.payload?.head_commit?.author?.name === "SeaSketch Release Manager") {
-              // abort
-              process.exit(78);
+              core.setOutput('is_deployment', true);
+            } else {
+              core.setOutput('is_deployment', false);
             }
       - uses: actions/setup-node@v2
         with:
