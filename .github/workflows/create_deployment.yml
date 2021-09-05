@@ -293,10 +293,20 @@ jobs:
         name: create comment
         with:
           script: |
-            const jobs = ["deploy_server", "deploy_client", "run_migrations"].map((id) => ({
-              name: id,
-              result: context.needs[id].result,
-            }));
+            const jobs = [
+              {
+                name: "deploy_server",
+                result: "${{needs.deploy_server.result}}"
+              },
+              {
+                name: "deploy_client",
+                result: "${{needs.deploy_client.result}}"
+              },
+              {
+                name: "run_migrations",
+                result: "${{needs.run_migrations.result}}"
+              }
+            ];
             const failedJobs = jobs.filter(
               ({ result }) =>
                 result != "failure" && result != "cancelled"
