@@ -280,6 +280,7 @@ jobs:
             --acl public-read
   update_pr:
     name: Update PR w/comment
+    runs-on: ubuntu-latest
     needs:
       - deploy_client
       - deploy_server
