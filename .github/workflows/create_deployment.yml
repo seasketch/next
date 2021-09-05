@@ -114,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - changes
-    if: ${{ needs.changes.outputs.migrations }}
+    if: ${{ false && needs.changes.outputs.migrations }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -132,7 +132,7 @@ jobs:
   deploy_server:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.api }}
+    if: ${{ false && needs.changes.outputs.api }}
     needs:
       - changes
     steps:
@@ -181,6 +181,7 @@ jobs:
   build-client:
     name: Build React Client
     runs-on: ubuntu-latest
+    if: ${{ false }}
     needs:
       - changes
     steps:
@@ -229,10 +230,11 @@ jobs:
   deploy_client:
     name: Deploy React Client
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.client && (needs.run_migrations != 'failure' && needs.deploy_server != 'failure') }}
+    if: ${{ false && needs.changes.outputs.client && (needs.run_migrations != 'failure' && needs.deploy_server != 'failure') }}
     needs:
       - run_migrations
       - deploy_server
+      - build_client
       - changes
     steps:
       - name: Download client build artifact
@@ -311,6 +313,6 @@ jobs:
             github.issues.createComment({
               owner: "seasketch",
               repo: "next",
-              issue_number: github.event.pull_request.number,
+              issue_number: context.event.pull_request.number,
               body: body
             });
