@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.5.7](https://github.com/seasketch/next/compare/client@0.5.6...client@0.5.7) (2021-09-06)
+
+
+### Bug Fixes
+
+* **ci:** :art: client hotfix test ([a2e18bb](https://github.com/seasketch/next/commit/a2e18bb6e300384f54ddee9f933056ce7efa08be))
+
+
+
+
+
 ## [0.5.6](https://github.com/seasketch/next/compare/client@0.5.5...client@0.5.6) (2021-09-06)
 
 **Note:** Version bump only for package client
