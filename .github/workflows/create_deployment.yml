@@ -323,7 +323,7 @@ jobs:
             const body = `
             ### ${title}
 
-            Via [workflow run](https://github.com/seasketch/next/actions/runs/${{github.run_id}}).
+            Via [workflow run #${{github.run_id}}](https://github.com/seasketch/next/actions/runs/${{github.run_id}}).
 
             ${jobs
               .map(
