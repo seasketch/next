@@ -49,13 +49,27 @@ jobs:
             for (const package of packages) {
               const { name, version } = package;
               const newTag = `${name}@${version}`;
-              const res = await github.git.createRef({
+              await github.git.createTag({
+                owner: "seasketch",
+                repo: "next",
+                tag: newTag,
+                message: newTag,
+                type: "commit"
+              });
+              await github.git.createRef({
                 owner: "seasketch",
                 repo: "next",
                 ref: `refs/tags/${newTag}`,
                 sha: "${{github.sha}}"
               });
             }
+            await github.git.createTag({
+              owner: "seasketch",
+              repo: "next",
+              tag: `v${{steps.get_tag.outputs.tag}}`,
+              message: newTag,
+              type: `Release v${{steps.get_tag.outputs.tag}}`
+            });
             await github.git.createRef({
               owner: "seasketch",
               repo: "next",
