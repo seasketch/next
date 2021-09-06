@@ -49,7 +49,7 @@ jobs:
             for (const package of packages) {
               const { name, version } = package;
               const newTag = `${name}@${version}`;
-              await github.git.createTag({
+              const annotatedTag = await github.git.createTag({
                 owner: "seasketch",
                 repo: "next",
                 tag: newTag,
@@ -61,10 +61,10 @@ jobs:
                 owner: "seasketch",
                 repo: "next",
                 ref: `refs/tags/${newTag}`,
-                sha: "${{github.sha}}"
+                sha: annotatedTag.data.sha
               });
             }
-            await github.git.createTag({
+            const annotatedTag = await github.git.createTag({
               owner: "seasketch",
               repo: "next",
               tag: `v${{steps.get_tag.outputs.tag}}`,
@@ -76,7 +76,7 @@ jobs:
               owner: "seasketch",
               repo: "next",
               ref: `refs/tags/v${{steps.get_tag.outputs.tag}}`,
-              sha: "${{github.sha}}"
+              sha: annotatedTag.data.sha
             });
   # versions:
   #   runs-on: ubuntu-latest
