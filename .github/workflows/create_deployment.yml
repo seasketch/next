@@ -151,6 +151,7 @@ jobs:
       - uses: avakar/create-deployment@v1
         id: create
         with:
+          ref: ${{github.base_ref}}
           required_contexts: ""
           auto_merge: false
           task: "deploy:migrations"
@@ -167,6 +168,7 @@ jobs:
       - uses: avakar/create-deployment@v1
         id: create
         with:
+          ref: ${{github.base_ref}}
           required_contexts: ""
           auto_merge: false
           task: "deploy:api"
@@ -183,6 +185,7 @@ jobs:
       - uses: avakar/create-deployment@v1
         id: create
         with:
+          ref: ${{github.base_ref}}
           required_contexts: ""
           auto_merge: false
           task: "deploy:client"
