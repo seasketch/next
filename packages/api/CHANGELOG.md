@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/seasketch/next/compare/@seasketch/api@0.2.5...@seasketch/api@0.5.0) (2021-09-06)
+
+
+### Features
+
+* **ci:** simple migration feat test ([6a8669e](https://github.com/seasketch/next/commit/6a8669e483946eb4f4599726a0cb092d06b50024))
+
+
+
+
+
 # [0.4.0](https://github.com/seasketch/next/compare/@seasketch/api@0.2.5...@seasketch/api@0.4.0) (2021-09-06)
 
 
