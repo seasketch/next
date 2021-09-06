@@ -311,7 +311,7 @@ jobs:
               ({ result }) =>
                 result == "failure" || result == "cancelled"
             );
-            const success = failedJobs.length == 0;
+            const success = jobs.filter((j) => j.result == 'success').length > 0;
             const cancelled = jobs.filter(({result}) => result == "cancelled").length > 0;
             let title = "Deployment Success";
             if (!success) {
@@ -323,6 +323,8 @@ jobs:
             }
             const body = `
             ### ${title}
+
+            Via [workflow run](https://github.com/seasketch/next/actions/runs/${{github.run_id}}).
 
             ${jobs
               .map(
