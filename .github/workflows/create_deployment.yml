@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     if: contains( github.event.pull_request.labels.*.name, 'release') && github.event.pull_request.merged == true
     name: Create release tags
+    outputs:
+      tag: v${{ steps.get_tag.outputs.tag }}
     steps:
       - name: Get tag name
         id: get_tag
@@ -145,8 +147,9 @@ jobs:
     if: ${{ needs.changes.outputs.migrations == 'true' }}
     needs:
       - changes
+      - get_tag
     outputs:
-      deployment_id: ${{ steps.create.outputs.deployment_id }}
+      deployment_id: ${{ needs.get_tag.outputs.tag }}
     steps:
       - uses: avakar/create-deployment@v1
         id: create
@@ -162,8 +165,9 @@ jobs:
     if: ${{ needs.changes.outputs.api == 'true' }}
     needs:
       - changes
+      - get_tag
     outputs:
-      deployment_id: ${{ steps.create.outputs.deployment_id }}
+      deployment_id: ${{ needs.get_tag.outputs.tag }}
     steps:
       - uses: avakar/create-deployment@v1
         id: create
@@ -178,9 +182,10 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.client == 'true' }}
     outputs:
-      deployment_id: ${{ steps.create.outputs.deployment_id }}
+      deployment_id: ${{ needs.get_tag.outputs.tag }}
     needs:
       - changes
+      - get_tag
     steps:
       - uses: avakar/create-deployment@v1
         id: create
