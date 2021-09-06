@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.2.12](https://github.com/seasketch/next/compare/@seasketch/email-status-handler@1.2.11...@seasketch/email-status-handler@1.2.12) (2021-09-06)
+
+**Note:** Version bump only for package @seasketch/email-status-handler
+
+
+
+
+
 ## [1.2.11](https://github.com/seasketch/next/compare/@seasketch/email-status-handler@1.2.10...@seasketch/email-status-handler@1.2.11) (2021-09-06)
 
 **Note:** Version bump only for package @seasketch/email-status-handler
