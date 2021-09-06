@@ -54,7 +54,8 @@ jobs:
                 repo: "next",
                 tag: newTag,
                 message: newTag,
-                type: "commit"
+                type: "commit",
+                object: "${{github.sha}}"
               });
               await github.git.createRef({
                 owner: "seasketch",
@@ -68,7 +69,8 @@ jobs:
               repo: "next",
               tag: `v${{steps.get_tag.outputs.tag}}`,
               message: newTag,
-              type: `Release v${{steps.get_tag.outputs.tag}}`
+              type: `Release v${{steps.get_tag.outputs.tag}}`,
+              object: "${{github.sha}}"
             });
             await github.git.createRef({
               owner: "seasketch",
