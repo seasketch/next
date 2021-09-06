@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// Must be run from monorepo root
 const changed = require("./changed.json");
 const list = require("./list.json");
 const child_process = require("child_process");
@@ -51,6 +50,10 @@ if (migrations.length > 1) {
 }
 
 append("\n## Changelog\n");
+
+append(
+  `The changelog includes all [conventional commits](). Review the [full commit log](https://github.com/seasketch/next/compare/${process.env.PREVIOUS_TAG}...${process.env.BRANCH}) for commits that don't follow this convention.\n`
+);
 
 append(
   fs
