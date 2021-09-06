@@ -8,6 +8,7 @@ jobs:
     if: ${{!contains( github.event.commits.*.author.username, 'seasketch-release-manager')}}
     runs-on: ubuntu-latest
     name: Create or update release pull-request
+    continue-on-error: true
     steps:
       # - uses: actions/github-script@v4
       #   name: debug event

@@ -52,6 +52,10 @@ if (migrations.length > 1) {
 append("\n## Changelog\n");
 
 append(
+  `The changelog includes all [conventional commits](). Review the [full commit log](https://github.com/seasketch/next/compare/${process.env.PREVIOUS_TAG}...${process.env.BRANCH}) for commits that don't follow this convention.\n`
+);
+
+append(
   fs
     .readFileSync("./short_changelog.md")
     .toString()
