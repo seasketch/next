@@ -2,6 +2,17 @@
 
 ### Bug Fixes
 
+* **docs:** :memo: docs update ([1218e05](https://github.com/seasketch/next/commit/1218e05135739c8b9799c5c6ada59d700f8472cc))
+* **docs:** :memo: Docs update for api ([2576181](https://github.com/seasketch/next/commit/25761814857dddfd7e336aa35d13f0014a6f0307))
+* **docs:** :memo: documentation update for client ([59fe4c1](https://github.com/seasketch/next/commit/59fe4c1a15013302b08c48707b9fd039b8a209dc))
+
+
+
+
+# v0.5.11 (09/06/21)
+
+### Bug Fixes
+
 * **docs:** :memo: Docs update for api ([2576181](https://github.com/seasketch/next/commit/25761814857dddfd7e336aa35d13f0014a6f0307))
 * **docs:** :memo: documentation update for client ([59fe4c1](https://github.com/seasketch/next/commit/59fe4c1a15013302b08c48707b9fd039b8a209dc))
 
