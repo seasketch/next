@@ -35,7 +35,7 @@ The [Tailwind CSS framework](https://tailwindcss.com) is included and used for s
 
 ## Deploying changes
 
-Use the automated release process.
+Use the automated release pipeline in via GitHub Actions and pull request.
 
 ## Available Scripts
 
