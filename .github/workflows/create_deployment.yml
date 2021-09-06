@@ -263,7 +263,7 @@ jobs:
   deploy_client:
     name: Deploy React Client
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.client == 'true' && !contains(needs.*.result == 'failure') }}
+    if: ${{ needs.changes.outputs.client == 'true' && !contains(needs.*.result, 'failure') }}
     needs:
       - run_migrations
       - deploy_server
