@@ -72,3 +72,4 @@ Generates types from `gql` template tags and stores them in `src/generated/graph
 Starts a storybook server on localhost:8080 where documentation and examples for reusable components can be referenced.
 test
 test
+test
