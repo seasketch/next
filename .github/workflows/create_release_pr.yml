@@ -100,7 +100,7 @@ jobs:
         id: pull_request_message
         env:
           BRANCH: ${{ github.sha }}
-          PREVIOUS_TAG: ${{ steps.prev_tag.output.tag }}
+          PREVIOUS_TAG: ${{ steps.prev_tag.outputs.tag }}
         run: |
           node ./createReleaseSummary.js
       - name: Create Pull Request
