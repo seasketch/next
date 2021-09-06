@@ -98,6 +98,9 @@ jobs:
       - name: Create pull request message
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         id: pull_request_message
+        env:
+          BRANCH: ${{ github.sha }}
+          PREVIOUS_TAG: ${{ steps.prev_tag.output.tag }}
         run: |
           node ./createReleaseSummary.js
       - name: Create Pull Request
