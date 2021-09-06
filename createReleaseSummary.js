@@ -6,6 +6,8 @@ const fs = require("fs");
 const core = require("@actions/core");
 const path = require("path");
 
+const AUTO_DEPLOYED_PACKAGES = ["@seasketch/api", "client"];
+
 let output = ``;
 const append = (str) => {
   output += str + "\n";
@@ -27,10 +29,23 @@ for (const package of changed) {
   if (!updated) {
     throw new Error(`Could not find ${name} in list of updated packages`);
   }
-  append(`| ${name} | ${version} → ${updated.version} |`);
+  append(
+    `| ${name} ${
+      AUTO_DEPLOYED_PACKAGES.indexOf(name) === -1 ? ":safety_vest:" : ""
+    }| ${version} → ${updated.version} |`
+  );
 }
 
 append("");
+
+if (
+  changed.filter(({ name }) => AUTO_DEPLOYED_PACKAGES.indexOf(name) === -1)
+    .length > 0
+) {
+  append(
+    ":safety_vest: Some packages may require manual deployment via CDK.\n"
+  );
+}
 
 const migrations = fs.readFileSync("./migrations.txt").toString();
 const migrationItems = migrations.split("\n");
