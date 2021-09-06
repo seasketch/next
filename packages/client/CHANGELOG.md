@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.5.11](https://github.com/seasketch/next/compare/client@0.5.9...client@0.5.11) (2021-09-06)
+
+
+### Bug Fixes
+
+* **docs:** :memo: documentation update for client ([59fe4c1](https://github.com/seasketch/next/commit/59fe4c1a15013302b08c48707b9fd039b8a209dc))
+
+
+
+
+
 ## [0.5.10](https://github.com/seasketch/next/compare/client@0.5.9...client@0.5.10) (2021-09-06)
 
 
