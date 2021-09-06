@@ -68,8 +68,8 @@ jobs:
               owner: "seasketch",
               repo: "next",
               tag: `v${{steps.get_tag.outputs.tag}}`,
-              message: newTag,
-              type: `Release v${{steps.get_tag.outputs.tag}}`,
+              type: "commit",
+              message: `Release v${{steps.get_tag.outputs.tag}}`,
               object: "${{github.sha}}"
             });
             await github.git.createRef({
