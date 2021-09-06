@@ -56,7 +56,7 @@ Complex data migrations are not explicitly handled by the framework we are using
 
 ### Production migrations
 
-Use the pull-request based deployment pipeline.
+Use the PR based deployment pipeline.
 
 ### Authoring Documentation
 
