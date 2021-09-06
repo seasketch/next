@@ -255,14 +255,15 @@ jobs:
       - uses: actions/github-script@v4
         with:
           script: |
+            console.log(${{needs.changes.outputs.client == 'true' && !contains(needs.*.result == 'failure')}});
             console.log("${{ needs.changes.outputs.client }}");
-            console.log("${{ toJSON(needs) }}");
+            console.log(`${{ toJSON(needs) }}`);
             console.log("${{ needs.run_migrations.result }}");
             console.log("${{ needs.deploy_server.result }}");
   deploy_client:
     name: Deploy React Client
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.client == 'true' && (needs.run_migrations.result != 'failure' && needs.deploy_server.result != 'failure') }}
+    if: ${{ needs.changes.outputs.client == 'true' && !contains(needs.*.result == 'failure') }}
     needs:
       - run_migrations
       - deploy_server
