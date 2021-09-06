@@ -2,6 +2,17 @@
 
 ### Bug Fixes
 
+* **ci:** test ([5191c68](https://github.com/seasketch/next/commit/5191c68bcfe40a55df3b3737bbeb4d6a5648c534))
+* **ci:** test ([f535361](https://github.com/seasketch/next/commit/f535361ea9d50fd38d6489f0d2158778f227d6f7))
+* **ci:** wip ([2b1bc69](https://github.com/seasketch/next/commit/2b1bc69153ac47be23304a196e20b449a8b09c38))
+
+
+
+
+# v0.5.11 (09/06/21)
+
+### Bug Fixes
+
 * **ci:** test ([f535361](https://github.com/seasketch/next/commit/f535361ea9d50fd38d6489f0d2158778f227d6f7))
 * **ci:** wip ([2b1bc69](https://github.com/seasketch/next/commit/2b1bc69153ac47be23304a196e20b449a8b09c38))
 
