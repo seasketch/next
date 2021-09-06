@@ -146,7 +146,7 @@ jobs:
     needs:
       - changes
     outputs:
-      deployment_id: ${{ steps.create.outputs.api }}
+      deployment_id: ${{ steps.create.outputs.deployment_id }}
     steps:
       - uses: avakar/create-deployment@v1
         id: create
@@ -162,7 +162,7 @@ jobs:
     needs:
       - changes
     outputs:
-      deployment_id: ${{ steps.create.outputs.api }}
+      deployment_id: ${{ steps.create.outputs.deployment_id }}
     steps:
       - uses: avakar/create-deployment@v1
         id: create
@@ -176,7 +176,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.client == 'true' }}
     outputs:
-      deployment_id: ${{ steps.create.outputs.api }}
+      deployment_id: ${{ steps.create.outputs.deployment_id }}
     needs:
       - changes
     steps:
