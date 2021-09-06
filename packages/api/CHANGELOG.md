@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.2.2](https://github.com/seasketch/next/compare/@seasketch/api@0.2.0...@seasketch/api@0.2.2) (2021-09-06)
+
+
+### Bug Fixes
+
+* **ci:** :fire: migrations hotfix ([7cc1ffd](https://github.com/seasketch/next/commit/7cc1ffd234e1c705fd798ac7f07c804e6c9ed708))
+
+
+
+
+
 ## [0.2.1](https://github.com/seasketch/next/compare/@seasketch/api@0.2.0...@seasketch/api@0.2.1) (2021-09-06)
 
 

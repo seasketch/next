@@ -1,3 +1,12 @@
+# v0.5.3 (09/06/21)
+
+### Bug Fixes
+
+* **ci:** :fire: migrations hotfix ([7cc1ffd](https://github.com/seasketch/next/commit/7cc1ffd234e1c705fd798ac7f07c804e6c9ed708))
+
+
+
+
 # v0.5.2 (09/06/21)
 
 ### Bug Fixes
