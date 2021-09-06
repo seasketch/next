@@ -60,7 +60,7 @@ jobs:
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         id: prev_tag
         run: |
-          echo "::set-output name=tag::`npx git-semver-tags --lerna | head -n 1`"
+          echo "::set-output name=tag::`git describe --abbrev=0 --match "v*"`"
       - name: detect migrations
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         run: |
@@ -78,11 +78,14 @@ jobs:
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         run: |
           npx lerna list -a --json > list.json
+          cat list.json
       - name: Get highest version
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         id: release_version
         run: |
-          echo "::set-output name=version::`git describe --abbrev=0 --match "v*" | grep -Eo '[[:digit:]]+.[[:digit:]]+.[[:digit:]]+$'`"
+          npm install compare-versions
+          echo "::set-output name=version::`node -e "var compareVersions = require('compare-versions'); console.log(require('./list.json').filter((p) => p.name === 'client' || p.name === '@seasketch/api').map((p) => p.version).sort(compareVersions).reverse()[0])"`"
+          git checkout -- package-lock.json package.json
       - name: Generate changelogs
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         run: |
