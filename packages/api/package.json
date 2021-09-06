@@ -1,6 +1,6 @@
 {
   "name": "@seasketch/api",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "SeaSketch GraphQL API",
   "author": "Chad Burt <chad@underbluewaters.net>",
   "homepage": "https://github.com/seasketch/next#readme",
