@@ -73,7 +73,7 @@ jobs:
                 tag: newTag,
                 message: newTag,
                 type: "commit",
-                object: "${{github.base_ref}}"
+                object: "${{github.sha}}"
               });
               await github.git.createRef({
                 owner: "seasketch",
@@ -88,7 +88,7 @@ jobs:
               tag: `v${{steps.get_tag.outputs.tag}}`,
               type: "commit",
               message: `Release v${{steps.get_tag.outputs.tag}}`,
-              object: "${{github.base_ref}}"
+              object: "${{github.sha}}"
             });
             await github.git.createRef({
               owner: "seasketch",
