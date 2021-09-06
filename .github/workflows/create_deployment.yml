@@ -13,9 +13,7 @@ jobs:
         name: create comment
         with:
           script: |
-            const body = `
-
-            Started deployment [workflow run #${{github.run_id}}](https://github.com/seasketch/next/actions/runs/${{github.run_id}}).
+            const body = `Started deployment [workflow run #${{github.run_id}}](https://github.com/seasketch/next/actions/runs/${{github.run_id}}).`;
 
             github.issues.createComment({
               owner: "seasketch",
