@@ -255,7 +255,7 @@ jobs:
       - uses: actions/github-script@v4
         with:
           script: |
-            console.log(${{needs.changes.outputs.client == 'true' && !contains(needs.*.result == 'failure')}});
+            console.log(${{needs.changes.outputs.client == 'true' && !contains(needs.*.result, 'failure')}});
             console.log("${{ needs.changes.outputs.client }}");
             console.log(`${{ toJSON(needs) }}`);
             console.log("${{ needs.run_migrations.result }}");
