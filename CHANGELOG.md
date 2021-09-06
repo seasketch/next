@@ -1,3 +1,12 @@
+# v0.5.16 (09/06/21)
+
+### Bug Fixes
+
+* **ci:** testing ([d3c2f9f](https://github.com/seasketch/next/commit/d3c2f9f2a27143a8c59636545d9b6575cb6a694d))
+
+
+
+
 # v0.5.15 (09/06/21)
 
 
