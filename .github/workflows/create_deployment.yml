@@ -148,7 +148,7 @@ jobs:
     steps:
       - uses: avakar/create-deployment@v1
         with:
-          required_contexts: []
+          required_contexts: ""
           auto_merge: false
           task: "deploy:migrations"
         env:
@@ -161,7 +161,7 @@ jobs:
     steps:
       - uses: avakar/create-deployment@v1
         with:
-          required_contexts: []
+          required_contexts: ""
           auto_merge: false
           task: "deploy:api"
         env:
@@ -174,7 +174,7 @@ jobs:
     steps:
       - uses: avakar/create-deployment@v1
         with:
-          required_contexts: []
+          required_contexts: ""
           auto_merge: false
           task: "deploy:client"
         env:
