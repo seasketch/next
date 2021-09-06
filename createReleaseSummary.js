@@ -30,9 +30,9 @@ for (const package of changed) {
     throw new Error(`Could not find ${name} in list of updated packages`);
   }
   append(
-    `| ${name} ${
+    `| ${name} | ${version} → ${updated.version} ${
       AUTO_DEPLOYED_PACKAGES.indexOf(name) === -1 ? ":safety_vest:" : ""
-    }| ${version} → ${updated.version} |`
+    }|`
   );
 }
 
