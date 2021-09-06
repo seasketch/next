@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/seasketch/next/compare/client@0.2.0...client@0.5.0) (2021-09-06)
+
+
+### Bug Fixes
+
+* **ci:** :construction: test hotfix ([684d1de](https://github.com/seasketch/next/commit/684d1de5627bc5eb7fe85aa1688872c77b056886))
+
+
+### Features
+
+* **ci:** :zap: Test feature ([ffcf758](https://github.com/seasketch/next/commit/ffcf758919fe888247e0adfd3d10df907b108dd9))
+
+
+
+
+
 # [0.4.0](https://github.com/seasketch/next/compare/client@0.2.0...client@0.4.0) (2021-09-06)
 
 
