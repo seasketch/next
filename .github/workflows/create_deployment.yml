@@ -46,12 +46,12 @@ jobs:
           npm install
       - name: get lerna versions
         run: |
-          npx lerna list -a --json > list.json
+          npx lerna changed -a --json > changed.json
       - uses: actions/github-script@v4
         name: tag lerna versions
         with:
           script: |
-            const packages = require("./list.json");
+            const packages = require("./changed.json");
             for (const package of packages) {
               const { name, version } = package;
               const newTag = `${name}@${version}`;
