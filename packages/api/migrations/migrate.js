@@ -1,6 +1,7 @@
 const AWS = require("aws-sdk");
 const { Client } = require("pg");
 const graphile = require("graphile-migrate");
+const fs = require("fs");
 const path = require("path");
 const signer = new AWS.RDS.Signer();
 const { workerUtils } = require("graphile-worker");
