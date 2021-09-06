@@ -1,3 +1,17 @@
+# v0.5.8 (09/06/21)
+
+### Bug Fixes
+
+* **ci:** :art: client hotfix test ([a2e18bb](https://github.com/seasketch/next/commit/a2e18bb6e300384f54ddee9f933056ce7efa08be))
+
+
+### Features
+
+* **ci:** simple migration feat test ([6a8669e](https://github.com/seasketch/next/commit/6a8669e483946eb4f4599726a0cb092d06b50024))
+
+
+
+
 # v0.5.7 (09/06/21)
 
 ### Bug Fixes
