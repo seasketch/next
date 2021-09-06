@@ -5,6 +5,24 @@ on:
     types: [closed]
     tags: "**"
 jobs:
+  notify_pr:
+    name: Notify PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v4
+        name: create comment
+        with:
+          script: |
+            const body = `
+
+            Started deployment [workflow run #${{github.run_id}}](https://github.com/seasketch/next/actions/runs/${{github.run_id}}).
+
+            github.issues.createComment({
+              owner: "seasketch",
+              repo: "next",
+              issue_number: "${{github.event.pull_request.number}}",
+              body: body,
+            });
   tag_release:
     runs-on: ubuntu-latest
     if: contains( github.event.pull_request.labels.*.name, 'release') && github.event.pull_request.merged == true
@@ -124,12 +142,45 @@ jobs:
               - 'packages/client/**'
             migrations:
               - 'packages/api/migrations/**'
+  create_migration_deployment:
+    if: ${{ needs.changes.outputs.migrations == 'true' }}
+    needs:
+      - changes
+    steps:
+      - uses: avakar/create-deployment@v1
+          with:
+            auto_merge: false
+            task: 'deploy:migrations'
+          env:
+            GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+  create_api_deployment:
+    if: ${{ needs.changes.outputs.api == 'true' }}
+    needs:
+      - changes
+    steps:
+      - uses: avakar/create-deployment@v1
+          with:
+            auto_merge: false
+            task: 'deploy:api'
+          env:
+            GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+  create_client_deployment:
+    if: ${{ needs.changes.outputs.client == 'true' }}
+    needs:
+      - changes
+    steps:
+      - uses: avakar/create-deployment@v1
+          with:
+            auto_merge: false
+            task: 'deploy:client'
+          env:
+            GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
   run_migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
     needs:
-      - changes
-    if: ${{ needs.changes.outputs.migrations == 'true' }}
+      - create_migration_deployment
+    # if: ${{ needs.changes.outputs.migrations == 'true' }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -147,9 +198,9 @@ jobs:
   deploy_server:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.api == 'true' }}
+    # if: ${{ needs.changes.outputs.api == 'true' }}
     needs:
-      - changes
+      - create_api_deployment
     steps:
       - uses: actions/checkout@v2
       - name: Configure AWS credentials
@@ -196,10 +247,16 @@ jobs:
   build_client:
     name: Build React Client
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.client == 'true' }}
+    # if: ${{ needs.changes.outputs.client == 'true' }}
     needs:
-      - changes
+      - create_client_deployment
     steps:
+      - uses: avakar/set-deployment-status@v1
+        with:
+          state: in_progress
+          deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
@@ -251,6 +308,7 @@ jobs:
       - deploy_server
       - build_client
       - changes
+      - create_client_deployment
     steps:
       - name: Download client build artifact
         uses: actions/download-artifact@v2
@@ -295,6 +353,19 @@ jobs:
             --cache-control max-age=0,no-cache,no-store,must-revalidate \
             --content-type text/html \
             --acl public-read
+      - uses: avakar/set-deployment-status@v1
+        with:
+          state: success
+          deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: avakar/set-deployment-status@v1
+        if: ${{failure()}}
+        with:
+          state: failure
+          deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   update_pr:
     name: Update PR w/comment
     runs-on: ubuntu-latest
