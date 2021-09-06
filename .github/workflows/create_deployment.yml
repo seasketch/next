@@ -149,7 +149,7 @@ jobs:
       - changes
       - get_tag
     outputs:
-      deployment_id: ${{ needs.get_tag.outputs.tag }}
+      deployment_id: ${{ needs.tag_release.outputs.tag }}
     steps:
       - uses: avakar/create-deployment@v1
         id: create
@@ -167,7 +167,7 @@ jobs:
       - changes
       - get_tag
     outputs:
-      deployment_id: ${{ needs.get_tag.outputs.tag }}
+      deployment_id: ${{ needs.tag_release.outputs.tag }}
     steps:
       - uses: avakar/create-deployment@v1
         id: create
@@ -182,7 +182,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.client == 'true' }}
     outputs:
-      deployment_id: ${{ needs.get_tag.outputs.tag }}
+      deployment_id: ${{ needs.tag_release.outputs.tag }}
     needs:
       - changes
       - get_tag
