@@ -56,7 +56,7 @@ Complex data migrations are not explicitly handled by the framework we are using
 
 ### Production migrations
 
-TBD workflow will likely involve a GitHub Actions based continuous deployment system that runs migrations automatically when tests on master pass.
+Use the pull-request based deployment pipeline.
 
 ### Authoring Documentation
 
