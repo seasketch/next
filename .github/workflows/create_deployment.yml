@@ -142,60 +142,58 @@ jobs:
               - 'packages/client/**'
             migrations:
               - 'packages/api/migrations/**'
-  create_migration_deployment:
+  create_deployment:
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.migrations == 'true' }}
     needs:
-      - changes
       - tag_release
-    outputs:
-      deployment_id: ${{ steps.create.outputs.deployment_id }}
+    # outputs:
+    #   deployment_id: ${{ steps.create.outputs.deployment_id }}
     steps:
       - uses: avakar/create-deployment@v1
-        id: create
+        # id: create
         with:
-          ref: ${{github.base_ref}}
+          # ref: ${{github.base_ref}}
           required_contexts: ""
           auto_merge: false
-          task: "deploy:migrations"
+          # task: "deploy:migrations"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  create_api_deployment:
-    runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.api == 'true' }}
-    needs:
-      - changes
-      - tag_release
-    outputs:
-      deployment_id: ${{ steps.create.outputs.deployment_id }}
-    steps:
-      - uses: avakar/create-deployment@v1
-        id: create
-        with:
-          ref: ${{github.base_ref}}
-          required_contexts: ""
-          auto_merge: false
-          task: "deploy:api"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  create_client_deployment:
-    runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.client == 'true' }}
-    outputs:
-      deployment_id: ${{ steps.create.outputs.deployment_id }}
-    needs:
-      - changes
-      - tag_release
-    steps:
-      - uses: avakar/create-deployment@v1
-        id: create
-        with:
-          ref: ${{github.base_ref}}
-          required_contexts: ""
-          auto_merge: false
-          task: "deploy:client"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # create_api_deployment:
+  #   runs-on: ubuntu-latest
+  #   if: ${{ needs.changes.outputs.api == 'true' }}
+  #   needs:
+  #     - changes
+  #     - tag_release
+  #   outputs:
+  #     deployment_id: ${{ steps.create.outputs.deployment_id }}
+  #   steps:
+  #     - uses: avakar/create-deployment@v1
+  #       id: create
+  #       with:
+  #         ref: ${{github.base_ref}}
+  #         required_contexts: ""
+  #         auto_merge: false
+  #         task: "deploy:api"
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # create_client_deployment:
+  #   runs-on: ubuntu-latest
+  #   if: ${{ needs.changes.outputs.client == 'true' }}
+  #   outputs:
+  #     deployment_id: ${{ steps.create.outputs.deployment_id }}
+  #   needs:
+  #     - changes
+  #     - tag_release
+  #   steps:
+  #     - uses: avakar/create-deployment@v1
+  #       id: create
+  #       with:
+  #         ref: ${{github.base_ref}}
+  #         required_contexts: ""
+  #         auto_merge: false
+  #         task: "deploy:client"
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   run_migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
@@ -275,7 +273,7 @@ jobs:
       - uses: avakar/set-deployment-status@v1
         with:
           state: in_progress
-          deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
+          # deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v2
@@ -320,6 +318,13 @@ jobs:
         with:
           name: client-build
           path: ./packages/client/build
+      - uses: avakar/set-deployment-status@v1
+        if: ${{failure()}}
+        with:
+          state: failure
+          # deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   deploy_client:
     name: Deploy React Client
     runs-on: ubuntu-latest
