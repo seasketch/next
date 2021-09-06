@@ -35,7 +35,7 @@ The [Tailwind CSS framework](https://tailwindcss.com) is included and used for s
 
 ## Deploying changes
 
-TBD, but likely the production app will be updated using a continuous deployment deployment system based on GitHub Actions.
+Use the automated release process.
 
 ## Available Scripts
 
