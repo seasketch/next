@@ -13,7 +13,7 @@ jobs:
       - name: Get tag name
         id: get_tag
         run: |
-          echo ${{ github.event.pull_request.title }} | grep -Eo '[[:digit:]]+.[[:digit:]]+.[[:digit:]]$'
+          echo ${{ github.event.pull_request.title }} | grep -Eo '[[:digit:]]+.[[:digit:]]+.[[:digit:]]+$'
           echo "::set-output name=tag::`echo ${{ github.event.pull_request.title }} | grep -Eo '[[:digit:]]+.[[:digit:]]+.[[:digit:]]$'`"
       - uses: actions/setup-node@v2
         with:
