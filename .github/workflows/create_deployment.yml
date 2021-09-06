@@ -24,7 +24,7 @@ jobs:
   tag_release:
     runs-on: ubuntu-latest
     if: contains( github.event.pull_request.labels.*.name, 'release') && github.event.pull_request.merged == true
-    name: Create a release tags
+    name: Create release tags
     steps:
       - name: Get tag name
         id: get_tag
@@ -151,7 +151,7 @@ jobs:
           auto_merge: false
           task: "deploy:migrations"
         env:
-          GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   create_api_deployment:
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.api == 'true' }}
@@ -163,7 +163,7 @@ jobs:
           auto_merge: false
           task: "deploy:api"
         env:
-          GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   create_client_deployment:
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.client == 'true' }}
@@ -175,7 +175,7 @@ jobs:
           auto_merge: false
           task: "deploy:client"
         env:
-          GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   run_migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
