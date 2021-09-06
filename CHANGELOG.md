@@ -1,3 +1,18 @@
+# v0.4.0 (09/06/21)
+
+### Bug Fixes
+
+* **ci:** :bug: Quick hotfix CI test ([23e026b](https://github.com/seasketch/next/commit/23e026bf20bc92ee42881cc20f719270ed589ba1))
+* **ci:** :construction: test hotfix ([684d1de](https://github.com/seasketch/next/commit/684d1de5627bc5eb7fe85aa1688872c77b056886))
+
+
+### Features
+
+* **ci:** :zap: Test feature ([ffcf758](https://github.com/seasketch/next/commit/ffcf758919fe888247e0adfd3d10df907b108dd9))
+
+
+
+
 # v0.3.0 (09/06/21)
 
 ### Bug Fixes
