@@ -346,19 +346,6 @@ jobs:
             --cache-control max-age=0,no-cache,no-store,must-revalidate \
             --content-type text/html \
             --acl public-read
-      - uses: avakar/set-deployment-status@v1
-        with:
-          state: success
-          deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: avakar/set-deployment-status@v1
-        if: ${{failure()}}
-        with:
-          state: failure
-          deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   update_pr:
     name: Update PR w/comment
     runs-on: ubuntu-latest
@@ -368,6 +355,20 @@ jobs:
       - run_migrations
     if: ${{ always() }}
     steps:
+      - uses: avakar/set-deployment-status@v1
+        if: ${{failure()}}
+        with:
+          state: failure
+          # deployment_id: ${{ needs.create_deployment.outputs.deployment_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: avakar/set-deployment-status@v1
+        if: ${{success()}}
+        with:
+          state: success
+          # deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/github-script@v4
         name: create comment
         with:
