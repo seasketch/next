@@ -82,9 +82,7 @@ jobs:
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         id: release_version
         run: |
-          npm install compare-versions
-          echo "::set-output name=version::`node -e "var compareVersions = require('compare-versions'); console.log(require('./list.json').filter((p) => p.name === 'client' || p.name === '@seasketch/api').map((p) => p.version).sort(compareVersions).reverse()[0])"`"
-          git checkout -- package-lock.json package.json
+          echo "::set-output name=version::`git describe --abbrev=0 --match "v*" | grep -Eo '[[:digit:]]+.[[:digit:]]+.[[:digit:]]+$'`"
       - name: Generate changelogs
         if: ${{ steps.is_deployment.outputs.is_deployment == false }}
         run: |
