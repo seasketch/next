@@ -148,33 +148,33 @@ jobs:
       - changes
     steps:
       - uses: avakar/create-deployment@v1
-          with:
-            auto_merge: false
-            task: 'deploy:migrations'
-          env:
-            GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        with:
+          auto_merge: false
+          task: "deploy:migrations"
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
   create_api_deployment:
     if: ${{ needs.changes.outputs.api == 'true' }}
     needs:
       - changes
     steps:
       - uses: avakar/create-deployment@v1
-          with:
-            auto_merge: false
-            task: 'deploy:api'
-          env:
-            GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        with:
+          auto_merge: false
+          task: "deploy:api"
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
   create_client_deployment:
     if: ${{ needs.changes.outputs.client == 'true' }}
     needs:
       - changes
     steps:
       - uses: avakar/create-deployment@v1
-          with:
-            auto_merge: false
-            task: 'deploy:client'
-          env:
-            GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        with:
+          auto_merge: false
+          task: "deploy:client"
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
   run_migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
