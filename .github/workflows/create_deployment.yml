@@ -8,7 +8,7 @@ jobs:
   tag_release:
     runs-on: ubuntu-latest
     if: contains( github.event.pull_request.labels.*.name, 'release') && github.event.pull_request.merged == true
-    name: Create a release tag
+    name: Create a release tags
     steps:
       - name: Get tag name
         id: get_tag
@@ -101,7 +101,7 @@ jobs:
   #         echo `echo $DATA | jq -r '.data.version'`
   #         echo `echo $DATA | jq -r '.data.sha'`
   changes:
-    name: Detect changes since last release
+    name: Detect changed packages
     runs-on: ubuntu-latest
     # Set job outputs to values from filter step
     outputs:
@@ -242,6 +242,23 @@ jobs:
         with:
           name: client-build
           path: ./packages/client/build
+  debug_skip_logic:
+    name: Debug skip logic
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs:
+      - run_migrations
+      - deploy_server
+      - build_client
+      - changes
+    steps:
+      - uses: actions/github-script@v4
+        with:
+          script: |
+            console.log("${{ needs.changes.outputs.client }}");
+            console.log("${{ toJSON(needs) }}");
+            console.log("${{ needs.run_migrations.result }}");
+            console.log("${{ needs.deploy_server.result }}");
   deploy_client:
     name: Deploy React Client
     runs-on: ubuntu-latest
