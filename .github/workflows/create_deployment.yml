@@ -59,7 +59,7 @@ jobs:
             await github.git.createRef({
               owner: "seasketch",
               repo: "next",
-              ref: `refs/tags/${{steps.get_tag.outputs.tag}}`,
+              ref: `refs/tags/v${{steps.get_tag.outputs.tag}}`,
               sha: "${{github.sha}}"
             });
   # versions:
