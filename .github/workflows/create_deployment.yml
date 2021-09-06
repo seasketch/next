@@ -73,7 +73,7 @@ jobs:
                 tag: newTag,
                 message: newTag,
                 type: "commit",
-                object: "${{github.sha}}"
+                object: "${{github.base_ref}}"
               });
               await github.git.createRef({
                 owner: "seasketch",
@@ -88,7 +88,7 @@ jobs:
               tag: `v${{steps.get_tag.outputs.tag}}`,
               type: "commit",
               message: `Release v${{steps.get_tag.outputs.tag}}`,
-              object: "${{github.sha}}"
+              object: "${{github.base_ref}}"
             });
             await github.git.createRef({
               owner: "seasketch",
@@ -149,7 +149,7 @@ jobs:
       - changes
       - tag_release
     outputs:
-      deployment_id: ${{ needs.tag_release.outputs.tag }}
+      deployment_id: ${{ steps.create.outputs.tag }}
     steps:
       - uses: avakar/create-deployment@v1
         id: create
@@ -167,7 +167,7 @@ jobs:
       - changes
       - tag_release
     outputs:
-      deployment_id: ${{ needs.tag_release.outputs.tag }}
+      deployment_id: ${{ steps.create.outputs.tag }}
     steps:
       - uses: avakar/create-deployment@v1
         id: create
@@ -182,7 +182,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.client == 'true' }}
     outputs:
-      deployment_id: ${{ needs.tag_release.outputs.tag }}
+      deployment_id: ${{ steps.create.outputs.tag }}
     needs:
       - changes
       - tag_release
