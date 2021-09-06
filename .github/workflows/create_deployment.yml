@@ -147,7 +147,7 @@ jobs:
     if: ${{ needs.changes.outputs.migrations == 'true' }}
     needs:
       - changes
-      - get_tag
+      - tag_release
     outputs:
       deployment_id: ${{ needs.tag_release.outputs.tag }}
     steps:
@@ -165,7 +165,7 @@ jobs:
     if: ${{ needs.changes.outputs.api == 'true' }}
     needs:
       - changes
-      - get_tag
+      - tag_release
     outputs:
       deployment_id: ${{ needs.tag_release.outputs.tag }}
     steps:
@@ -185,7 +185,7 @@ jobs:
       deployment_id: ${{ needs.tag_release.outputs.tag }}
     needs:
       - changes
-      - get_tag
+      - tag_release
     steps:
       - uses: avakar/create-deployment@v1
         id: create
