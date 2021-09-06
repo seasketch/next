@@ -59,7 +59,7 @@ jobs:
             await github.git.createRef({
               owner: "seasketch",
               repo: "next",
-              ref: `refs/tags/${{steps.get_tag.outputs.tag}}`,
+              ref: `refs/tags/v${{steps.get_tag.outputs.tag}}`,
               sha: "${{github.sha}}"
             });
   # versions:
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - changes
-    if: ${{ needs.changes.outputs.migrations }}
+    if: ${{ needs.changes.outputs.migrations == 'true' }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -131,7 +131,7 @@ jobs:
   deploy_server:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.api }}
+    if: ${{ needs.changes.outputs.api == 'true' }}
     needs:
       - changes
     steps:
@@ -180,7 +180,7 @@ jobs:
   build_client:
     name: Build React Client
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.client }}
+    if: ${{ needs.changes.outputs.client == 'true' }}
     needs:
       - changes
     steps:
@@ -229,7 +229,7 @@ jobs:
   deploy_client:
     name: Deploy React Client
     runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.client && (needs.run_migrations != 'failure' && needs.deploy_server != 'failure') }}
+    if: ${{ needs.changes.outputs.client == 'true' && (needs.run_migrations != 'failure' && needs.deploy_server != 'failure') }}
     needs:
       - run_migrations
       - deploy_server
@@ -323,7 +323,7 @@ jobs:
             const body = `
             ### ${title}
 
-            Via [workflow run](https://github.com/seasketch/next/actions/runs/${{github.run_id}}).
+            Via [workflow run #${{github.run_id}}](https://github.com/seasketch/next/actions/runs/${{github.run_id}}).
 
             ${jobs
               .map(
