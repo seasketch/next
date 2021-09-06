@@ -146,8 +146,8 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - tag_release
-    # outputs:
-    #   deployment_id: ${{ steps.create.outputs.deployment_id }}
+    outputs:
+      deployment_id: ${{ steps.create.outputs.deployment_id }}
     steps:
       - uses: avakar/create-deployment@v1
         # id: create
@@ -155,6 +155,7 @@ jobs:
           # ref: ${{github.base_ref}}
           required_contexts: ""
           auto_merge: false
+          description: "SeaSketch ${{needs.tag_release.outputs.tag}}}"
           # task: "deploy:migrations"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -240,7 +241,7 @@ jobs:
       - uses: avakar/set-deployment-status@v1
         with:
           state: in_progress
-          # deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
+          deployment_id: ${{ needs.create_deployment.outputs.deployment_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v2
@@ -289,7 +290,7 @@ jobs:
         if: ${{failure()}}
         with:
           state: failure
-          # deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
+          deployment_id: ${{ needs.create_deployment.outputs.deployment_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   deploy_client:
@@ -359,14 +360,14 @@ jobs:
         if: ${{failure()}}
         with:
           state: failure
-          # deployment_id: ${{ needs.create_deployment.outputs.deployment_id }}
+          deployment_id: ${{ needs.create_deployment.outputs.deployment_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: avakar/set-deployment-status@v1
         if: ${{success()}}
         with:
           state: success
-          # deployment_id: ${{ needs.create_client_deployment.outputs.deployment_id }}
+          deployment_id: ${{ needs.create_deployment.outputs.deployment_id }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/github-script@v4
