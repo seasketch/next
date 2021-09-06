@@ -145,8 +145,11 @@ jobs:
     if: ${{ needs.changes.outputs.migrations == 'true' }}
     needs:
       - changes
+    outputs:
+      deployment_id: ${{ steps.create.outputs.api }}
     steps:
       - uses: avakar/create-deployment@v1
+        id: create
         with:
           required_contexts: ""
           auto_merge: false
@@ -158,8 +161,11 @@ jobs:
     if: ${{ needs.changes.outputs.api == 'true' }}
     needs:
       - changes
+    outputs:
+      deployment_id: ${{ steps.create.outputs.api }}
     steps:
       - uses: avakar/create-deployment@v1
+        id: create
         with:
           required_contexts: ""
           auto_merge: false
@@ -169,10 +175,13 @@ jobs:
   create_client_deployment:
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.client == 'true' }}
+    outputs:
+      deployment_id: ${{ steps.create.outputs.api }}
     needs:
       - changes
     steps:
       - uses: avakar/create-deployment@v1
+        id: create
         with:
           required_contexts: ""
           auto_merge: false
