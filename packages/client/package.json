@@ -73,6 +73,7 @@
     "graphql": "^15.3.0",
     "gzip-size": "^5.1.1",
     "i18next": "^19.7.0",
+    "jest-junit": "^12.2.0",
     "jsonlint": "^1.6.3",
     "jsonlint-mod": "^1.7.6",
     "lodash.debounce": "^4.0.8",
