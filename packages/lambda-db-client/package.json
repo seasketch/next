@@ -1,6 +1,6 @@
 {
   "name": "@seasketch/lambda-db-client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Used by various lambda services to connect to the db",
   "keywords": [
     "seasketch"

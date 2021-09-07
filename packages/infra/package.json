@@ -1,6 +1,6 @@
 {
   "name": "infra",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "bin": {
     "infra": "bin/infra.js"
   },
