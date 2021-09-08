@@ -1,0 +1,182 @@
+name: Check for deployment messages
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  create_deployment:
+    name: Create Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: khan/pull-request-comment-trigger@master
+        id: check
+        with:
+          trigger: "/deploy"
+          reaction: rocket
+          prefix_only: true
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      - uses: actions/github-script@v4
+        if: steps.check.outputs.triggered == 'true'
+        id: flags
+        with:
+          script: |
+            const comment = context.payload.comment.body;
+            const flags = comment.match(/(--[-\w]+)/g).map((f) => f.replace("--", ""));
+            console.log(flags);
+            const outputs = [
+              // run all deployments regardless of code changes (migrations, client, api)
+              "force", 
+              // skip unit tests and other required checks
+              "skip-checks",
+              // skip auto-merging pull request upon successful deployment
+              "skip-merge"
+            ];
+            for (const flag of outputs) {
+              if (flags.indexOf(flag) !== -1) {
+                core.setOutput(flag, "true");
+              } else {
+                core.setOutput(flag, "false");
+              }
+            }
+            if (flags.indexOf("skip-checks") !== -1) {
+              core.setOutput("required_contexts", "");
+            } else {
+              core.setOutput("required_contexts", "Test GraphQL API Server,Test React Client");
+            }
+      - uses: actions/github-script@v4
+        if: steps.check.outputs.triggered == 'true'
+        id: get_pr_status
+        with:
+          script: |
+            const query = `query ($owner: String!, $repo: String!, $pull_number: Int!) {
+              repository(owner: $owner, name: $repo) {
+                pullRequest(number: $pull_number) {
+                  headRefOid
+                }
+              }
+            }`;
+
+            const variables = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: ${{  github.event.issue.number }}
+            }
+            const data = await github.graphql(query, variables);
+            core.setOutput("head_ref", data.repository.pullRequest.headRefOid);
+      # TODO: don't proceed unless contains ref of latest deployment
+      # TODO: be sure user is allowed to deploy (best handled by environments?)
+      # TODO: make sure branch is not behind master
+      - uses: actions/checkout@v2
+        if: steps.check.outputs.triggered == 'true'
+        with:
+          ref: ${{steps.get_pr_status.head_ref}}
+          fetch-depth: 0
+      - uses: actions/github-script@v4
+        if: steps.check.outputs.triggered == 'true'
+        id: get_deployments
+        with:
+          script: |
+            const query = `query($owner: String!, $repo: String!, $env: [String!]) { 
+              repository(owner: $owner, name: $repo) {
+                deployments(environments: $env, last: 100) {
+                  nodes {
+                    id
+                    createdAt
+                    state
+                    commitOid
+                    commit {
+                      oid
+                      associatedPullRequests(first: 2) {
+                        nodes {
+                          id
+                          title
+                          number
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }`;
+            const variables = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              env: ['production']
+            }
+            const data = await github.graphql(query, variables)
+            const lockedStates = ['PENDING', 'QUEUED', 'IN_PROGRESS', 'WAITING'];
+            const activeDeployment = data.repository.deployments.nodes.find(({state}) => state == 'ACTIVE');
+            const lockingDeployments = data.repository.deployments.nodes.filter(({state}) => lockedStates.indexOf(state) != -1);
+            if (activeDeployment) {
+              core.setOutput('active_ref', activeDeployment.commitOid);
+              core.setOutput('has_active_ref', 'true');
+            } else {
+              core.setOutput('has_active_ref', 'false');
+            }
+            if (lockingDeployments.length) {
+              core.setOutput('locked', 'true');
+              core.setOutput('locked_ref', lockingDeployments[0].commitOid);
+            } else {
+              core.setOutput('locked', 'false');
+            }
+            if (lockingDeployments.length) {
+              core.setFailed(`Deployment ${lockingDeployments[0].commitOid} already in progress`);
+            }
+      - uses: dorny/paths-filter@v2
+        if: steps.check.outputs.triggered == 'true'
+        name: get changed packages
+        id: changed_paths
+        with:
+          base: ${{ steps.get_deployments.outputs.active_ref }}
+          list-files: "escape"
+          filters: |
+            api:
+              - 'packages/api/**'
+            client:
+              - 'packages/client/**'
+            migrations:
+              - 'packages/api/migrations/committed/**'
+            infra:
+              - 'packages/infra/**'
+            unmanaged_packages:
+              - 'packages/!(api|client|infra)/**'
+      - uses: actions/github-script@v4
+        if: steps.check.outputs.triggered == 'true'
+        name: create payload
+        id: payload
+        with:
+          script: |
+            const files = "${{steps.changed_paths.outputs.migrations_files}}";
+            let numMigrations = 0;
+            if (files.length > 0) {
+              numMigrations = files.split(",").length;
+            }
+
+            const hasClientChanges = "${{steps.changed_paths.outputs.client}}" === 'true';
+            const hasApiChanges = "${{steps.changed_paths.outputs.api}}" === 'true';
+            return {
+              numMigrations,
+              hasClientChanges,
+              hasApiChanges,
+              force: ${{steps.flags.outputs.force}},
+              skipMerge: ${{steps.flags.outputs['skip-merge']}}
+            };
+      - uses: avakar/create-deployment@v1
+        if: steps.check.outputs.triggered == 'true'
+        with:
+          ref: ${{ steps.get_pr_status.outputs.head_ref }}
+          payload: ${{toJSON(steps.payload.outputs.result)}}
+          required_contexts: ${{ steps.flags.outputs.required_contexts}}
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASER_GITHUB_TOKEN }}
+      - uses: actions/github-script@v4
+        name: Comment on issue upon failure
+        if: failure()
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `:warning: Create deployment task failed. [View job](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{github.run_id}})`
+            })

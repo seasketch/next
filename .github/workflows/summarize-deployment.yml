@@ -12,51 +12,51 @@ jobs:
         id: next_version
         run: |
           echo "::set-output name=version::`git describe --first-parent`"
-      - uses: actions/github-script@v4
-        id: get_deployments
-        with:
-          script: |
-            const query = `query($owner: String!, $repo: String!, $env: [String!]) { 
-              repository(owner: $owner, name: $repo) {
-                deployments(environments: $env, last: 100) {
-                  nodes {
-                    id
-                    createdAt
-                    state
-                    commitOid
-                    commit {
-                      oid
-                      associatedPullRequests(first: 2) {
-                        nodes {
-                          id
-                          title
-                          number
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }`;
-            const variables = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              env: ['production']
-            }
-            const data = await github.graphql(query, variables)
-            const lockedStates = ['PENDING', 'QUEUED', 'IN_PROGRESS', 'WAITING'];
-            const activeDeployment = data.repository.deployments.nodes.find(({state}) => state == 'ACTIVE');
-            const lockingDeployments = data.repository.deployments.nodes.filter(({state}) => lockedStates.indexOf(state) != -1);
-            if (activeDeployment) {
-              console.log('active', activeDeployment);
-              core.setOutput('active_ref', activeDeployment.commitOid);
-              core.setOutput('has_active_ref', 'true');
-            } else {
-              core.setOutput('has_active_ref', 'false');
-            }
-            if (lockingDeployments.length) {
-              console.log('locking', lockingDeployments);
-            }
+      # - uses: actions/github-script@v4
+      #   id: get_deployments
+      #   with:
+      #     script: |
+      #       const query = `query($owner: String!, $repo: String!, $env: [String!]) {
+      #         repository(owner: $owner, name: $repo) {
+      #           deployments(environments: $env, last: 100) {
+      #             nodes {
+      #               id
+      #               createdAt
+      #               state
+      #               commitOid
+      #               commit {
+      #                 oid
+      #                 associatedPullRequests(first: 2) {
+      #                   nodes {
+      #                     id
+      #                     title
+      #                     number
+      #                   }
+      #                 }
+      #               }
+      #             }
+      #           }
+      #         }
+      #       }`;
+      #       const variables = {
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         env: ['production']
+      #       }
+      #       const data = await github.graphql(query, variables)
+      #       const lockedStates = ['PENDING', 'QUEUED', 'IN_PROGRESS', 'WAITING'];
+      #       const activeDeployment = data.repository.deployments.nodes.find(({state}) => state == 'ACTIVE');
+      #       const lockingDeployments = data.repository.deployments.nodes.filter(({state}) => lockedStates.indexOf(state) != -1);
+      #       if (activeDeployment) {
+      #         console.log('active', activeDeployment);
+      #         core.setOutput('active_ref', activeDeployment.commitOid);
+      #         core.setOutput('has_active_ref', 'true');
+      #       } else {
+      #         core.setOutput('has_active_ref', 'false');
+      #       }
+      #       if (lockingDeployments.length) {
+      #         console.log('locking', lockingDeployments);
+      #       }
       - uses: dorny/paths-filter@v2
         name: get changed packages
         id: changed_paths
