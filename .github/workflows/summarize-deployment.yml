@@ -1,0 +1,127 @@
+name: Summarize Deployment
+on: [pull_request]
+jobs:
+  summarize_deployment_steps:
+    runs-on: ubuntu-latest
+    name: Summarize deployment steps
+    steps:
+      # - uses: actions/setup-node@v2
+      #   with:
+      #     node-version: "16"
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/github-script@v4
+        id: active_deployment
+        with:
+          script: |
+            const query = `query($owner: String!, $repo: String!, $env: String!) { 
+              repository(owner: $owner, name: $repo) {
+                deployments(environments:$env, last: 100) {
+                  nodes {
+                    id
+                    createdAt
+                    state
+                    task
+                    commit {
+                      oid
+                    }
+                  }
+                }
+              }
+            }`;
+            const variables = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              env: 'production'
+            }
+            const result = await github.graphql(query, variables)
+            console.log(result);
+            const activeDeployment = result.data.repository.deployments.nodes.find(({state} => state == 'ACTIVE'));
+            if (activeDeployment) {
+              console.log('active', activeDeployment);
+            }
+      # - name: Cache node modules
+      #   uses: actions/cache@v2
+      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
+      #   env:
+      #     cache-name: cache-lerna-version-node-modules
+      #   with:
+      #     path: |
+      #       node_modules
+      #       */*/node_modules
+      #       ~/.npm
+      #     key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-build-${{ env.cache-name }}-
+      #       ${{ runner.os }}-build-
+      #       ${{ runner.os }}-
+      # - name: Install lerna
+      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
+      #   run: |
+      #     npm install
+      # - name: get changed packages
+      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
+      #   run: |
+      #     npx lerna changed --all --json > changed.json
+      # - name: get previous deployment ref
+      #   id: prev_ref
+      #   run: |
+      #     echo "::set-output name=tag::`npx git-semver-tags --lerna | head -n 1`"
+      # - name: detect migrations
+      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
+      #   run: |
+      #     git diff --name-only ${{ steps.prev_tag.outputs.tag }} -- packages/api/migrations/committed
+      #     git diff --name-only ${{ steps.prev_tag.outputs.tag }} -- packages/api/migrations/committed > migrations.txt
+      #     [ -s migrations.txt ] || echo "::set-output name=has_migrations::yes"
+      # - name: run lerna version
+      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
+      #   run: |
+      #     git config --global user.email "releases@seasketch.org"
+      #     git config --global user.name "Release Manager"
+      #     git checkout --
+      #     npx lerna version --conventional-commits --no-push --yes
+      # - name: get new package versions
+      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
+      #   run: |
+      #     npx lerna list -a --json > list.json
+      # - name: Get highest version
+      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
+      #   id: release_version
+      #   run: |
+      #     npm install compare-versions
+      #     echo "::set-output name=version::`node -e "var compareVersions = require('compare-versions'); console.log(require('./list.json').filter((p) => p.name === 'client' || p.name === '@seasketch/api').map((p) => p.version).sort(compareVersions).reverse()[0])"`"
+      #     git checkout -- package-lock.json package.json
+      # - name: Generate changelogs
+      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
+      #   run: |
+      #     npx standard-changelog -i .changelog.md
+      #     echo "# v${{steps.release_version.outputs.version}} (`date +%D`)" > short_changelog.md
+      #     tail -n +3 .changelog.md >> short_changelog.md
+      #     cat short_changelog.md | cat - CHANGELOG.md > temp && mv temp CHANGELOG.md
+      #     git add CHANGELOG.md
+      #     # git commit -m 'Update Changelog for v${{steps.release_version.outputs.version}}'
+      #     git commit --amend --no-edit
+      # - name: Create pull request message
+      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
+      #   id: pull_request_message
+      #   env:
+      #     BRANCH: ${{ github.sha }}
+      #     PREVIOUS_TAG: ${{ steps.prev_tag.outputs.tag }}
+      #   run: |
+      #     node ./createReleaseSummary.js
+      # - name: Create Pull Request
+      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
+      #   id: pr
+      #   uses: peter-evans/create-pull-request@v3
+      #   with:
+      #     # base: master
+      #     # branch: feature-ci-cd-actions
+      #     token: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
+      #     author: Release Manager <releases@seasketch.org>
+      #     committer: Release Manager <releases@seasketch.org>
+      #     title: 🚀 Release ${{steps.release_version.outputs.version}}
+      #     labels: |
+      #       release
+      #     body: |
+      #       ${{ steps.pull_request_message.outputs.message }}
