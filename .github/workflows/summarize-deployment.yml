@@ -5,26 +5,34 @@ jobs:
     runs-on: ubuntu-latest
     name: Summarize deployment steps
     steps:
-      # - uses: actions/setup-node@v2
-      #   with:
-      #     node-version: "16"
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: Get next version
+        id: next_version
+        run: |
+          echo "::set-output name=version::`git describe --first-parent`"
       - uses: actions/github-script@v4
-        id: active_deployment
+        id: get_deployments
         with:
           script: |
-            const query = `query($owner: String!, $repo: String!, $env: String!) { 
+            const query = `query($owner: String!, $repo: String!, $env: [String!]) { 
               repository(owner: $owner, name: $repo) {
-                deployments(environments:$env, last: 100) {
+                deployments(environments: $env, last: 100) {
                   nodes {
                     id
                     createdAt
                     state
-                    task
+                    commitOid
                     commit {
                       oid
+                      associatedPullRequests(first: 2) {
+                        nodes {
+                          id
+                          title
+                          number
+                        }
+                      }
                     }
                   }
                 }
@@ -33,95 +41,79 @@ jobs:
             const variables = {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              env: 'production'
+              env: ['production']
             }
-            const result = await github.graphql(query, variables)
-            console.log(result);
-            const activeDeployment = result.data.repository.deployments.nodes.find(({state} => state == 'ACTIVE'));
+            const data = await github.graphql(query, variables)
+            const lockedStates = ['PENDING', 'QUEUED', 'IN_PROGRESS', 'WAITING'];
+            const activeDeployment = data.repository.deployments.nodes.find(({state}) => state == 'ACTIVE');
+            const lockingDeployments = data.repository.deployments.nodes.filter(({state}) => lockedStates.indexOf(state) != -1);
             if (activeDeployment) {
               console.log('active', activeDeployment);
+              core.setOutput('active_ref', activeDeployment.commitOid);
+              core.setOutput('has_active_ref', 'true');
+            } else {
+              core.setOutput('has_active_ref', 'false');
             }
-      # - name: Cache node modules
-      #   uses: actions/cache@v2
-      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
-      #   env:
-      #     cache-name: cache-lerna-version-node-modules
-      #   with:
-      #     path: |
-      #       node_modules
-      #       */*/node_modules
-      #       ~/.npm
-      #     key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-build-${{ env.cache-name }}-
-      #       ${{ runner.os }}-build-
-      #       ${{ runner.os }}-
-      # - name: Install lerna
-      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
-      #   run: |
-      #     npm install
-      # - name: get changed packages
-      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
-      #   run: |
-      #     npx lerna changed --all --json > changed.json
-      # - name: get previous deployment ref
-      #   id: prev_ref
-      #   run: |
-      #     echo "::set-output name=tag::`npx git-semver-tags --lerna | head -n 1`"
-      # - name: detect migrations
-      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
-      #   run: |
-      #     git diff --name-only ${{ steps.prev_tag.outputs.tag }} -- packages/api/migrations/committed
-      #     git diff --name-only ${{ steps.prev_tag.outputs.tag }} -- packages/api/migrations/committed > migrations.txt
-      #     [ -s migrations.txt ] || echo "::set-output name=has_migrations::yes"
-      # - name: run lerna version
-      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
-      #   run: |
-      #     git config --global user.email "releases@seasketch.org"
-      #     git config --global user.name "Release Manager"
-      #     git checkout --
-      #     npx lerna version --conventional-commits --no-push --yes
-      # - name: get new package versions
-      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
-      #   run: |
-      #     npx lerna list -a --json > list.json
-      # - name: Get highest version
-      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
-      #   id: release_version
-      #   run: |
-      #     npm install compare-versions
-      #     echo "::set-output name=version::`node -e "var compareVersions = require('compare-versions'); console.log(require('./list.json').filter((p) => p.name === 'client' || p.name === '@seasketch/api').map((p) => p.version).sort(compareVersions).reverse()[0])"`"
-      #     git checkout -- package-lock.json package.json
-      # - name: Generate changelogs
-      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
-      #   run: |
-      #     npx standard-changelog -i .changelog.md
-      #     echo "# v${{steps.release_version.outputs.version}} (`date +%D`)" > short_changelog.md
-      #     tail -n +3 .changelog.md >> short_changelog.md
-      #     cat short_changelog.md | cat - CHANGELOG.md > temp && mv temp CHANGELOG.md
-      #     git add CHANGELOG.md
-      #     # git commit -m 'Update Changelog for v${{steps.release_version.outputs.version}}'
-      #     git commit --amend --no-edit
-      # - name: Create pull request message
-      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
-      #   id: pull_request_message
-      #   env:
-      #     BRANCH: ${{ github.sha }}
-      #     PREVIOUS_TAG: ${{ steps.prev_tag.outputs.tag }}
-      #   run: |
-      #     node ./createReleaseSummary.js
-      # - name: Create Pull Request
-      #   if: ${{ steps.is_deployment.outputs.is_deployment == false }}
-      #   id: pr
-      #   uses: peter-evans/create-pull-request@v3
-      #   with:
-      #     # base: master
-      #     # branch: feature-ci-cd-actions
-      #     token: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
-      #     author: Release Manager <releases@seasketch.org>
-      #     committer: Release Manager <releases@seasketch.org>
-      #     title: 🚀 Release ${{steps.release_version.outputs.version}}
-      #     labels: |
-      #       release
-      #     body: |
-      #       ${{ steps.pull_request_message.outputs.message }}
+            if (lockingDeployments.length) {
+              console.log('locking', lockingDeployments);
+            }
+      - uses: dorny/paths-filter@v2
+        name: get changed packages
+        id: changed_paths
+        with:
+          # 'base' input parameter is ignored when action is triggered by pull request event
+          # base: ${{ steps.get_deployments.outputs.active_ref }}
+          list-files: "escape"
+          filters: |
+            api:
+              - 'packages/api/**'
+            client:
+              - 'packages/client/**'
+            migrations:
+              - 'packages/api/migrations/committed/**'
+            infra:
+              - 'packages/infra/**'
+            unmanaged_packages:
+              - 'packages/!(api|client|infra)/**'
+      - uses: actions/github-script@v4
+        name: create summary output
+        id: summary
+        with:
+          script: |
+            const files = "${{steps.changed_paths.outputs.migrations_files}}";
+            let numMigrations = 0;
+            if (files.length > 0) {
+              numMigrations = files.split(",").length;
+            }
+
+            let summary = `
+
+            ## Updated Packages
+
+            | package name | status |
+            | :---         |  :---: |
+            | client       | ${"${{steps.changed_paths.outputs.client}}" === 'true' ? "🟢" : "⚪"}|
+            | api server   | ${"${{steps.changed_paths.outputs.api}}" === 'true' ? "🟢" : "⚪"}|
+            | infra   | ${"${{steps.changed_paths.outputs.infra}}" === 'true' ? ":safety_vest:" : "⚪"}|
+            | migrations   | ${ numMigrations > 0 ? `${numMigrations} 🚨` : "⚪"} |
+            | unmanaged packages | ${"${{steps.changed_paths.outputs.unmanaged_packages}}" === 'true' ? ":safety_vest:" : "⚪"}|
+
+            If database migrations are present, they will be run before updating the server. Client updates will wait until the api server is updated, if necessary.
+
+            `;
+
+            if ("${{steps.changed_paths.outputs.unmanaged_packages}}" === 'true' || "${{steps.changed_paths.outputs.infra}}" === 'true') {
+              summary += ":safety_vest: Some packages may require [manual deployment via CDK](https://github.com/seasketch/next/tree/master/packages/infra). Automated deployments currently only support updating the api server, client, and running database migrations."
+            }
+
+            return {
+              summary: "This PR may be deployed to production by commenting with `/deploy`.",
+              text_description: summary.toString(),
+            }
+      - uses: LouisBrunner/checks-action@v1.2.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          conclusion: "success"
+          name: Deployment Options Summary
+          status: completed
+          output: ${{ steps.summary.outputs.result}}
