@@ -21,7 +21,7 @@ jobs:
         with:
           script: |
             const comment = context.payload.comment.body;
-            const flags = comment.match(/(--[-\w]+)/g).map((f) => f.replace("--", ""));
+            const flags = (comment.match(/(--[-\w]+)/g) || []).map((f) => f.replace("--", ""));
             console.log(flags);
             const outputs = [
               // run all deployments regardless of code changes (migrations, client, api)
@@ -162,6 +162,7 @@ jobs:
               skipMerge: ${{steps.flags.outputs['skip-merge']}}
             };
       - uses: avakar/create-deployment@v1
+        id: create_deployment
         if: steps.check.outputs.triggered == 'true'
         with:
           ref: ${{ steps.get_pr_status.outputs.head_ref }}
@@ -174,9 +175,16 @@ jobs:
         if: failure()
         with:
           script: |
+            let message = "Create deployment task failed";
+            if ("${{steps.get_deployments.conclusion}}" === "failure") {
+              message = "Deployment failed. There may be another deployment in progress.";
+            }
+            if ("${{steps.create_deployment.conclusion}}" === "failure") {
+              message = "Deployment failed. Have tests passed? Use `--skip-checks` with care if needed.";
+            }
             github.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `:warning: Create deployment task failed. [View job](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{github.run_id}})`
+              body: `:warning: ${message} [View job](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{github.run_id}})`
             })
