@@ -234,8 +234,8 @@ jobs:
     name: Merge Pull Request if present
     runs-on: ubuntu-latest
     needs:
-      - deploy-client
-      - deploy-server
+      - deploy_client
+      - deploy_server
       - changes
     steps:
       - uses: juliangruber/merge-pull-request-action@v1
