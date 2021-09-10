@@ -34,6 +34,7 @@ import { default as PgPubsub } from "@graphile/pg-pubsub";
 import bytes from "bytes";
 import { run } from "graphile-worker";
 import cors from "cors";
+import BuildPlugin from "./plugins/buildPlugin";
 
 const app = express();
 
@@ -191,6 +192,7 @@ app.use(
       SanitizeInteractivityTemplatesPlugin,
       orderTopicsByDateAndStickyPlugin,
       ProjectInviteStateSubscriptionPlugin,
+      BuildPlugin,
       reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
       SpritesPlugin,
