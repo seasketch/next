@@ -64,14 +64,13 @@ jobs:
             const data = await github.graphql(query, variables);
             console.log(data);
             core.setOutput("head_ref", data.repository.pullRequest.headRefOid);
-      # TODO: don't proceed unless contains ref of latest deployment
       # TODO: be sure user is allowed to deploy (best handled by environments?)
-      # TODO: make sure branch is not behind master
-      # - uses: actions/checkout@v2
-      #   if: steps.check.outputs.triggered == 'true'
-      #   with:
-      #     ref: ${{steps.get_pr_status.outputs.head_ref}}
-      #     fetch-depth: 0
+      # TODO: don't proceed unless contains ref of latest deployment
+      - uses: actions/checkout@v2
+        if: steps.check.outputs.triggered == 'true'
+        with:
+          ref: ${{steps.get_pr_status.outputs.head_ref}}
+          fetch-depth: 0
       - uses: actions/github-script@v4
         if: steps.check.outputs.triggered == 'true'
         id: get_deployments
@@ -124,7 +123,7 @@ jobs:
               core.setFailed(`Deployment ${lockingDeployments[0].commitOid} already in progress`);
             }
             console.log('base - activeDeployment commit oid', activeDeployment.commitOid);
-            console.log('ref - pr head ref', '${{steps.get_pr_status.head_ref}}');
+            console.log('ref - pr head ref', '${{steps.get_pr_status.outputs.head_ref}}');
             console.log('git sha... ${{github.sha}}');
       - uses: dorny/paths-filter@v2
         if: steps.check.outputs.triggered == 'true'
