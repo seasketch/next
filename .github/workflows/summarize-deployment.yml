@@ -106,6 +106,16 @@ jobs:
               summary += ":safety_vest: Some packages may require [manual deployment via CDK](https://github.com/seasketch/next/tree/master/packages/infra). Automated deployments currently only support updating the api server, client, and running database migrations."
             }
 
+            summary += `
+
+            \`/deploy\` can be called with the following optional flags:
+
+              * \`--skip-checks\` will skip required unit test runs
+              * \`--force\` will force a deployment of api, client, and migrations regardless of code changes
+              * \`--skip-merge\` can be used if you'd like to manually merge into \`master\` after deploy
+              
+            `;
+
             return {
               summary: "This PR may be deployed to production by commenting with `/deploy`.",
               text_description: summary.toString(),
