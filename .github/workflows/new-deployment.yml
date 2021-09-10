@@ -236,13 +236,13 @@ jobs:
     needs:
       - deploy_client
       - deploy_server
-      - changes
+      - new_deployment
     steps:
       - uses: juliangruber/merge-pull-request-action@v1
-        if: ${{ needs.changes.outputs.skip_merge == 'false' && needs.changes.outputs.has_pr == 'true' }}
+        if: ${{ needs.new_deployment.outputs.skip_merge == 'false' && needs.new_deployment.outputs.has_pr == 'true' }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          number: ${{ needs.changes.outputs.pr }}
+          number: ${{ needs.new_deployment.outputs.pr }}
           method: squash
   update_status:
     name: Update deployment status
