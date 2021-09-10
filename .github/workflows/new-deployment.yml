@@ -48,7 +48,7 @@ jobs:
             core.setOutput('client', payload.hasClientChanges ? "true" : "false");
             core.setOutput('api', payload.hasApiChanges ? "true" : "false");
             core.setOutput('force', payload.force ? "true" : "false");
-            core.setOutput('skip_merge', payload.skipMerge ? "true" : "false");
+            core.setOutput('skip_merge', payload.skipMerge ? "false" : "true");
             if (payload.pr) {
               core.setOutput('pr', payload.pr.toString());
               core.setOutput('has_pr', 'true');
