@@ -30,6 +30,17 @@ There are a lot of build scripts and dev servers needed to run the entire stack.
 
 ![tasks in vscode](https://user-images.githubusercontent.com/511063/93515779-ff207700-f8dd-11ea-8ceb-e9e663161e4f.png)
 
-#### Releases
+## Deployments
 
-Each package is versioned independently. Run `npm run release` from the top of the repo to assign new versions, create changelogs, tag, and create releases for _all_ packages in the monorepo based on semantic versioning rules. Use [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) to ensure proper versioning and changelog generation.
+This project is managed using the [GitHub Flow pattern](https://guides.github.com/introduction/flow/) and GitHub Actions. To make changes...
+
+1. Do work on a feature branch and create a pull request
+2. Ensure automated checks pass, including unit and end-to-end tests
+3. Checkout the **Deployment Options Summary** to see how changes will impact production.
+4. Comment with `/deploy` to the pull request to start an automated deployment and merge the pull request to `master`.
+
+In general, try not to merge directly into `master`, but if you do, make absolutely certain all changes to `master` are deployable.
+
+<img width="500" src="https://user-images.githubusercontent.com/511063/132918530-4e0350f0-19bd-4186-89fb-c8aaf3cbf5b9.png">
+
+<img width="400" src="https://user-images.githubusercontent.com/511063/132918977-66d472a3-b87f-4ed8-8d6a-00f81d05b0ce.png">
