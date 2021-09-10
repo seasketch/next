@@ -62,6 +62,7 @@ jobs:
               pull_number: ${{  github.event.issue.number }}
             }
             const data = await github.graphql(query, variables);
+            console.log(data);
             core.setOutput("head_ref", data.repository.pullRequest.headRefOid);
       # TODO: don't proceed unless contains ref of latest deployment
       # TODO: be sure user is allowed to deploy (best handled by environments?)
