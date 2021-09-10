@@ -128,6 +128,7 @@ jobs:
         id: changed_paths
         with:
           base: ${{ steps.get_deployments.outputs.active_ref }}
+          ref: ${{steps.get_pr_status.head_ref}}
           list-files: "escape"
           filters: |
             api:
