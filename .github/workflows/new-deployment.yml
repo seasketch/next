@@ -4,6 +4,7 @@ jobs:
   new_deployment:
     name: New deployment
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       migrations: ${{ steps.changes.outputs.migrations }}
       api: ${{ steps.changes.outputs.api }}
@@ -48,6 +49,7 @@ jobs:
   run_migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
+    environment: production
     needs:
       - new_deployment
     if: ${{ needs.new_deployment.outputs.migrations || needs.new_deployment.outputs.force }}
@@ -68,6 +70,7 @@ jobs:
   deploy_server:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
+    environment: production
     if: ${{ needs.new_deployment.outputs.api || needs.new_deployment.outputs.force}}
     needs:
       - new_deployment
@@ -119,6 +122,7 @@ jobs:
   build_client:
     name: Build React Client
     runs-on: ubuntu-latest
+    environment: production
     if: ${{ needs.new_deployment.outputs.client || needs.new_deployment.outputs.force }}
     needs:
       - new_deployment
@@ -168,6 +172,7 @@ jobs:
   deploy_client:
     name: Deploy React Client
     runs-on: ubuntu-latest
+    environment: production
     if: ${{ (needs.new_deployment.outputs.client || needs.new_deployment.outputs.force) && (needs.run_migrations.result != 'failure' && needs.deploy_server.result != 'failure') }}
     needs:
       - run_migrations
@@ -221,6 +226,7 @@ jobs:
   update_status:
     name: Update deployment status
     runs-on: ubuntu-latest
+    environment: production
     needs:
       - deploy_client
       - deploy_server
