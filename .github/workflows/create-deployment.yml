@@ -155,6 +155,10 @@ jobs:
 
             const hasClientChanges = "${{steps.changed_paths.outputs.client}}" === 'true';
             const hasApiChanges = "${{steps.changed_paths.outputs.api}}" === 'true';
+            if (!${{steps.flags.outputs.force}} && !hasClientChanges && !hasApiChanges && numMigrations < 1) {
+              core.setFailed(`Cowardly refusing to create a deployment that has no actionable changes.`);
+            }
+
             return {
               numMigrations,
               hasClientChanges,
