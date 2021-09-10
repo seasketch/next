@@ -167,7 +167,8 @@ jobs:
               hasClientChanges,
               hasApiChanges,
               force: ${{steps.flags.outputs.force}},
-              skipMerge: ${{steps.flags.outputs['skip-merge']}}
+              skipMerge: ${{steps.flags.outputs['skip-merge']}},
+              pr: ${{  github.event.issue.number }}
             };
       - uses: avakar/create-deployment@v1
         id: create_deployment
