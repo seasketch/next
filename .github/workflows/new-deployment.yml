@@ -10,6 +10,8 @@ jobs:
       api: ${{ steps.changes.outputs.api }}
       client: ${{ steps.changes.outputs.client }}
       build_label: ${{ steps.short_sha.outputs.sha }}
+      pr: ${{ steps.changes.outputs.pr }}
+      has_pr: ${{ steps.changes.outputs.has_pr }}
     steps:
       - name: Update deployment status
         uses: rsotnychenko/deployment-status-update@0.2.0
@@ -46,6 +48,11 @@ jobs:
             core.setOutput('client', payload.hasClientChanges ? "true" : "false");
             core.setOutput('api', payload.hasApiChanges ? "true" : "false");
             core.setOutput('force', payload.force ? "true" : "false");
+            core.setOutput('skip_merge', payload.skipMerge ? "true" : "false");
+            if (payload.pr) {
+              core.setOutput('pr', payload.pr.toString());
+              core.setOutput('has_pr', 'true');
+            }
   run_migrations:
     name: Run Database Migrations
     runs-on: ubuntu-latest
@@ -223,6 +230,17 @@ jobs:
             --cache-control max-age=0,no-cache,no-store,must-revalidate \
             --content-type text/html \
             --acl public-read
+  - name: Merge Pull Request if present
+    uses: juliangruber/merge-pull-request-action@v1
+    if: ${{ needs.changes.outputs.skip_merge == 'false' && needs.changes.outputs.has_pr == 'true' }}
+    needs:
+      - deploy-client
+      - deploy-server
+      - changes
+    with:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+      number: ${{ needs.changes.outputs.pr }}
+      method: squash
   update_status:
     name: Update deployment status
     runs-on: ubuntu-latest
