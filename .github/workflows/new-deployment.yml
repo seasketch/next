@@ -64,7 +64,7 @@ jobs:
       # This remote command must succeed with the message "database migrations complete"
       - name: Run migrations using ecs exec
         run: |
-          unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh" --interactive | tee /dev/stderr | grep "database migrations complete"
+          unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh ${{github.sha}}" --interactive | tee /dev/stderr | grep "database migrations complete"
   deploy_server:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
@@ -113,6 +113,7 @@ jobs:
           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
           AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
           COMMIT: ${{ github.sha }}
+          BUILD: ${{ needs.new_deployment.outputs.build_label }}
         run: |
           cdk deploy -e SeaSketchGraphQLServer
   build_client:
@@ -156,7 +157,7 @@ jobs:
           REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
           REACT_APP_GRAPHQL_ENDPOINT: ${{ secrets.REACT_APP_GRAPHQL_ENDPOINT }}
           REACT_APP_PUBLIC_URL: ${{ secrets.REACT_APP_PUBLIC_URL }}
-          REACT_APP_GIT_SHA: ${{ github.sha }}
+          REACT_APP_BUILD: ${{ needs.new_deployment.outputs.build_label }}
         run: |
           npm run build
       - name: Store build artifact
