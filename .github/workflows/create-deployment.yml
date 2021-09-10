@@ -67,11 +67,11 @@ jobs:
       # TODO: don't proceed unless contains ref of latest deployment
       # TODO: be sure user is allowed to deploy (best handled by environments?)
       # TODO: make sure branch is not behind master
-      - uses: actions/checkout@v2
-        if: steps.check.outputs.triggered == 'true'
-        with:
-          ref: ${{steps.get_pr_status.head_ref}}
-          fetch-depth: 0
+      # - uses: actions/checkout@v2
+      #   if: steps.check.outputs.triggered == 'true'
+      #   with:
+      #     ref: ${{steps.get_pr_status.outputs.head_ref}}
+      #     fetch-depth: 0
       - uses: actions/github-script@v4
         if: steps.check.outputs.triggered == 'true'
         id: get_deployments
@@ -132,7 +132,7 @@ jobs:
         id: changed_paths
         with:
           base: ${{ steps.get_deployments.outputs.active_ref }}
-          ref: ${{steps.get_pr_status.head_ref}}
+          ref: ${{steps.get_pr_status.outputs.head_ref}}
           list-files: "escape"
           filters: |
             api:
