@@ -9,8 +9,10 @@ RUN ssh-keyscan -H github.com >> /etc/ssh/ssh_known_hosts
 # startup messages
 COPY ./github.sh /etc/profile.d/
 COPY ./pg.sh /etc/profile.d/
+COPY ./migrate.sh /home/
 RUN chmod u+x /etc/profile.d/pg.sh
 RUN chmod u+x /etc/profile.d/github.sh
+RUN chmod u+x /home/migrate.sh
 # # # You will need to make sure deploy keys are in github before the next command can be run!
 RUN git clone git@github.com:seasketch/next.git
 WORKDIR /usr/src/app/next/packages/api
