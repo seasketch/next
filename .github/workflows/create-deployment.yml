@@ -122,6 +122,9 @@ jobs:
             if (lockingDeployments.length) {
               core.setFailed(`Deployment ${lockingDeployments[0].commitOid} already in progress`);
             }
+            console.log('base - activeDeployment commit oid', activeDeployment.commitOid);
+            console.log('ref - pr head ref', '${{steps.get_pr_status.head_ref}}');
+            console.log('git sha... ${{github.sha}}');
       - uses: dorny/paths-filter@v2
         if: steps.check.outputs.triggered == 'true'
         name: get changed packages
