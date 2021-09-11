@@ -12,6 +12,7 @@ jobs:
       build_label: ${{ steps.short_sha.outputs.sha }}
       pr: ${{ steps.changes.outputs.pr }}
       has_pr: ${{ steps.changes.outputs.has_pr }}
+      skip_merge: ${{ steps.changes.outputs.skip_merge }}
     steps:
       - name: Update deployment status
         uses: rsotnychenko/deployment-status-update@0.2.0
@@ -48,7 +49,7 @@ jobs:
             core.setOutput('client', payload.hasClientChanges ? "true" : "false");
             core.setOutput('api', payload.hasApiChanges ? "true" : "false");
             core.setOutput('force', payload.force ? "true" : "false");
-            core.setOutput('skip_merge', payload.skipMerge ? "false" : "true");
+            core.setOutput('skip_merge', payload.skipMerge ? "true" : "false");
             if (payload.pr) {
               core.setOutput('pr', payload.pr.toString());
               core.setOutput('has_pr', 'true');
