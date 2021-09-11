@@ -73,7 +73,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/github-script@v4
         if: steps.check.outputs.triggered == 'true'
-        id: get_deployments
+        id: deployments
         with:
           script: |
             const query = `query($owner: String!, $repo: String!, $env: [String!]) { 
@@ -130,7 +130,7 @@ jobs:
         name: get changed packages
         id: changed_paths
         with:
-          base: ${{ steps.get_deployments.outputs.active_ref }}
+          base: ${{ steps.deployments.outputs.active_ref }}
           ref: ${{steps.get_pr_status.outputs.head_ref}}
           list-files: "escape"
           filters: |
@@ -155,10 +155,11 @@ jobs:
             if (files.length > 0) {
               numMigrations = files.split(",").length;
             }
-
+            console.log('steps', ${{toJSON(steps)}})
+            console.log(`!${{steps.flags.outputs.force}}`, !${{steps.flags.outputs.force}});
             const hasClientChanges = "${{steps.changed_paths.outputs.client}}" === 'true';
             const hasApiChanges = "${{steps.changed_paths.outputs.api}}" === 'true';
-            if (!${{steps.flags.outputs.force == 'true'}} && !hasClientChanges && !hasApiChanges && numMigrations < 1) {
+            if (!${{steps.flags.outputs.force}} && !hasClientChanges && !hasApiChanges && numMigrations < 1) {
               core.setFailed(`Cowardly refusing to create a deployment that has no actionable changes.`);
             }
 
@@ -185,7 +186,7 @@ jobs:
         with:
           script: |
             let message = "Create deployment task failed";
-            if ("${{steps.get_deployments.conclusion}}" === "failure") {
+            if ("${{steps.deployments.conclusion}}" === "failure") {
               message = "Deployment failed. There may be another deployment in progress.";
             }
             if ("${{steps.create_deployment.conclusion}}" === "failure") {
