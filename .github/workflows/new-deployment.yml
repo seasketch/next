@@ -14,14 +14,14 @@ jobs:
       has_pr: ${{ steps.changes.outputs.has_pr }}
       skip_merge: ${{ steps.changes.outputs.skip_merge }}
     steps:
-      - name: Update deployment status
-        uses: rsotnychenko/deployment-status-update@0.2.0
-        with:
-          status: in_progress
-          run_id: ${{ github.run_id }}
-          description: Processing new deployment
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Update deployment status
+      #   uses: rsotnychenko/deployment-status-update@0.2.0
+      #   with:
+      #     status: in_progress
+      #     run_id: ${{ github.run_id }}
+      #     description: Processing new deployment
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
@@ -245,44 +245,44 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           number: ${{ needs.new_deployment.outputs.pr }}
           method: squash
-  update_status:
-    name: Update deployment status
-    runs-on: ubuntu-latest
-    environment: production
-    needs:
-      - deploy_client
-      - deploy_server
-      - run_migrations
-    if: ${{ always() }}
-    steps:
-      - uses: actions/github-script@v4
-        name: create comment
-        with:
-          script: |
-            const jobs = [
-              {
-                name: "deploy_server",
-                result: "${{needs.deploy_server.result}}"
-              },
-              {
-                name: "deploy_client",
-                result: "${{needs.deploy_client.result}}"
-              },
-              {
-                name: "run_migrations",
-                result: "${{needs.run_migrations.result}}"
-              }
-            ];
-            const failedJobs = jobs.filter(
-              ({ result }) =>
-                result == "failure" || result == "cancelled"
-            );
-            const success = jobs.filter((j) => j.result == 'success').length > 0;
-            const cancelled = jobs.filter(({result}) => result == "cancelled").length > 0;
-            github.repos.createDeploymentStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              deployment_id: "${{github.event.deployment.id}}",
-              state: failedJobs.length > 0 || cancelled ? "failure" : "success",
-              environment_url: "${{ secrets.REACT_APP_PUBLIC_URL }}"
-            });
+  # update_status:
+  #   name: Update deployment status
+  #   runs-on: ubuntu-latest
+  #   environment: production
+  #   needs:
+  #     - deploy_client
+  #     - deploy_server
+  #     - run_migrations
+  #   if: ${{ always() }}
+  #   steps:
+  #     - uses: actions/github-script@v4
+  #       name: create comment
+  #       with:
+  #         script: |
+  #           const jobs = [
+  #             {
+  #               name: "deploy_server",
+  #               result: "${{needs.deploy_server.result}}"
+  #             },
+  #             {
+  #               name: "deploy_client",
+  #               result: "${{needs.deploy_client.result}}"
+  #             },
+  #             {
+  #               name: "run_migrations",
+  #               result: "${{needs.run_migrations.result}}"
+  #             }
+  #           ];
+  #           const failedJobs = jobs.filter(
+  #             ({ result }) =>
+  #               result == "failure" || result == "cancelled"
+  #           );
+  #           const success = jobs.filter((j) => j.result == 'success').length > 0;
+  #           const cancelled = jobs.filter(({result}) => result == "cancelled").length > 0;
+  #           github.repos.createDeploymentStatus({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             deployment_id: "${{github.event.deployment.id}}",
+  #             state: failedJobs.length > 0 || cancelled ? "failure" : "success",
+  #             environment_url: "${{ secrets.REACT_APP_PUBLIC_URL }}"
+  #           });
