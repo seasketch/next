@@ -6,6 +6,9 @@ jobs:
   create_deployment:
     name: Create Deployment
     runs-on: ubuntu-latest
+    outputs:
+      force: ${{ steps.flags.outputs.force }}
+      migrations: ${{ steps.changed_paths.outputs.migrations }}
     steps:
       - uses: khan/pull-request-comment-trigger@master
         id: check
@@ -101,7 +104,7 @@ jobs:
             const variables = {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              env: ['production']
+              env: ['production_client', 'production_server', 'production_db_migrations', 'production']
             }
             const data = await github.graphql(query, variables)
             const lockedStates = ['PENDING', 'QUEUED', 'IN_PROGRESS', 'WAITING'];
@@ -120,7 +123,7 @@ jobs:
               core.setOutput('locked', 'false');
             }
             if (lockingDeployments.length) {
-              core.setFailed(`Deployment ${lockingDeployments[0].commitOid} already in progress`);
+              core.setFailed(`Deployments already in progress`);
             }
             console.log('base - activeDeployment commit oid', activeDeployment.commitOid);
             console.log('ref - pr head ref', '${{steps.get_pr_status.outputs.head_ref}}');
@@ -144,57 +147,78 @@ jobs:
               - 'packages/infra/**'
             unmanaged_packages:
               - 'packages/!(api|client|infra)/**'
-      - uses: actions/github-script@v4
-        if: steps.check.outputs.triggered == 'true'
-        name: create payload
-        id: payload
-        with:
-          script: |
-            const files = "${{steps.changed_paths.outputs.migrations_files}}";
-            let numMigrations = 0;
-            if (files.length > 0) {
-              numMigrations = files.split(",").length;
-            }
-            console.log('steps', ${{toJSON(steps)}})
-            console.log(`!${{steps.flags.outputs.force}}`, !${{steps.flags.outputs.force}});
-            const hasClientChanges = "${{steps.changed_paths.outputs.client}}" === 'true';
-            const hasApiChanges = "${{steps.changed_paths.outputs.api}}" === 'true';
-            if (!${{steps.flags.outputs.force}} && !hasClientChanges && !hasApiChanges && numMigrations < 1) {
-              core.setFailed(`Cowardly refusing to create a deployment that has no actionable changes.`);
-            }
+      # - uses: actions/github-script@v4
+      #   if: steps.check.outputs.triggered == 'true'
+      #   name: create payload
+      #   id: payload
+      #   with:
+      #     script: |
+      #       const files = "${{steps.changed_paths.outputs.migrations_files}}";
+      #       let numMigrations = 0;
+      #       if (files.length > 0) {
+      #         numMigrations = files.split(",").length;
+      #       }
+      #       console.log('steps', ${{toJSON(steps)}})
+      #       console.log(`!${{steps.flags.outputs.force}}`, !${{steps.flags.outputs.force}});
+      #       const hasClientChanges = "${{steps.changed_paths.outputs.client}}" === 'true';
+      #       const hasApiChanges = "${{steps.changed_paths.outputs.api}}" === 'true';
+      #       if (!${{steps.flags.outputs.force}} && !hasClientChanges && !hasApiChanges && numMigrations < 1) {
+      #         core.setFailed(`Cowardly refusing to create a deployment that has no actionable changes.`);
+      #       }
 
-            return {
-              numMigrations,
-              hasClientChanges,
-              hasApiChanges,
-              force: ${{steps.flags.outputs.force}},
-              skipMerge: ${{steps.flags.outputs['skip-merge']}},
-              pr: ${{  github.event.issue.number }}
-            };
-      - uses: avakar/create-deployment@v1
-        id: create_deployment
-        if: steps.check.outputs.triggered == 'true'
+      #       return {
+      #         numMigrations,
+      #         hasClientChanges,
+      #         hasApiChanges,
+      #         force: ${{steps.flags.outputs.force}},
+      #         skipMerge: ${{steps.flags.outputs['skip-merge']}},
+      #         pr: ${{  github.event.issue.number }}
+      #       };
+      # - uses: avakar/create-deployment@v1
+      #   id: create_deployment
+      #   if: steps.check.outputs.triggered == 'true'
+      #   with:
+      #     ref: ${{ steps.get_pr_status.outputs.head_ref }}
+      #     payload: ${{toJSON(steps.payload.outputs.result)}}
+      #     required_contexts: ${{ steps.flags.outputs.required_contexts}}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.RELEASER_GITHUB_TOKEN }}
+      # - uses: actions/github-script@v4
+      #   name: Comment on issue upon failure
+      #   if: failure()
+      #   with:
+      #     script: |
+      #       let message = "Create deployment task failed";
+      #       if ("${{steps.deployments.conclusion}}" === "failure") {
+      #         message = "Deployment failed. There may be another deployment in progress.";
+      #       }
+      #       if ("${{steps.create_deployment.conclusion}}" === "failure") {
+      #         message = "Deployment failed. Have tests passed? Use `--skip-checks` with care if needed.";
+      #       }
+      #       github.issues.createComment({
+      #         issue_number: context.issue.number,
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         body: `:warning: ${message} [View job](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{github.run_id}})`
+      #       })
+  run_migrations:
+    name: Run Database Migrations
+    runs-on: ubuntu-latest
+    environment: production_db_migrations
+    needs:
+      - create_deployment
+    if: ${{ needs.create_deployment.outputs.migrations || needs.create_deployment.outputs.force }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          ref: ${{ steps.get_pr_status.outputs.head_ref }}
-          payload: ${{toJSON(steps.payload.outputs.result)}}
-          required_contexts: ${{ steps.flags.outputs.required_contexts}}
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASER_GITHUB_TOKEN }}
-      - uses: actions/github-script@v4
-        name: Comment on issue upon failure
-        if: failure()
-        with:
-          script: |
-            let message = "Create deployment task failed";
-            if ("${{steps.deployments.conclusion}}" === "failure") {
-              message = "Deployment failed. There may be another deployment in progress.";
-            }
-            if ("${{steps.create_deployment.conclusion}}" === "failure") {
-              message = "Deployment failed. Have tests passed? Use `--skip-checks` with care if needed.";
-            }
-            github.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `:warning: ${message} [View job](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{github.run_id}})`
-            })
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: Install unbuffer command
+        run: |
+          sudo apt-get install expect
+      # This remote command must succeed with the message "database migrations complete"
+      - name: Run migrations using ecs exec
+        run: |
+          unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh ${{github.sha}}" --interactive | tee /dev/stderr | grep "database migrations complete"
