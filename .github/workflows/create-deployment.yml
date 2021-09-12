@@ -150,15 +150,15 @@ jobs:
             unmanaged_packages:
               - 'packages/!(api|client|infra)/**'
       - uses: avakar/create-deployment@v1
-          id: create_migration_deployment
-          if: steps.check.outputs.triggered == 'true' && (steps.changed_paths.outputs.migrations || steps.flags.outputs.force)
-          with:
-            ref: ${{ steps.get_pr_status.outputs.head_ref }}
-            payload: ${{toJSON(steps.payload.outputs.result)}}
-            environment: production_db_migrations
-            required_contexts: ${{ steps.flags.outputs.required_contexts}}
-          env:
-            GITHUB_TOKEN: ${{ secrets.RELEASER_GITHUB_TOKEN }}
+        id: create_migration_deployment
+        if: steps.check.outputs.triggered == 'true' && (steps.changed_paths.outputs.migrations || steps.flags.outputs.force)
+        with:
+          ref: ${{ steps.get_pr_status.outputs.head_ref }}
+          payload: ${{toJSON(steps.payload.outputs.result)}}
+          environment: production_db_migrations
+          required_contexts: ${{ steps.flags.outputs.required_contexts}}
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASER_GITHUB_TOKEN }}
   # run_migrations:
   #   name: Run Database Migrations
   #   runs-on: ubuntu-latest
