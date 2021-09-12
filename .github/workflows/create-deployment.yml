@@ -153,7 +153,8 @@ jobs:
         id: create_migration_deployment
         if: steps.check.outputs.triggered == 'true' && (steps.changed_paths.outputs.migrations || steps.flags.outputs.force)
         with:
-          ref: ${{ steps.get_pr_status.outputs.head_ref }}
+          # ref: ${{ steps.get_pr_status.outputs.head_ref }}
+          ref: "feature-continuous-deployment"
           payload: '{"skip-merge": "${{steps.flags.outputs.skip-merge}}}"}'
           environment: production_db_migrations
           # environment_url: https://api.seasket.ch/graphiql
