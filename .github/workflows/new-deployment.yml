@@ -1,319 +1,319 @@
-name: Handle new deployment
-on: [deployment]
-jobs:
-  new_deployment:
-    name: New deployment
-    runs-on: ubuntu-latest
-    outputs:
-      migrations: ${{ steps.changes.outputs.migrations }}
-      api: ${{ steps.changes.outputs.api }}
-      client: ${{ steps.changes.outputs.client }}
-      build_label: ${{ steps.short_sha.outputs.sha }}
-      # pr: ${{ steps.changes.outputs.pr }}
-      # has_pr: ${{ steps.changes.outputs.has_pr }}
-      # skip_merge: ${{ steps.changes.outputs.skip_merge }}
-    steps:
-      # - name: Update deployment status
-      #   uses: rsotnychenko/deployment-status-update@0.2.0
-      #   with:
-      #     status: in_progress
-      #     run_id: ${{ github.run_id }}
-      #     description: Processing new deployment
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - id: short_sha
-        run: |
-          echo "::set-output name=sha::`git rev-parse --short HEAD`"
-      # Incoming payload should look something like:
-      #  {
-      #   numMigrations: 4,
-      #   hasClientChanges: true,
-      #   hasApiChanges: true,
-      #   // mostly for debugging, to force all deployment steps
-      #   force: false
-      # };
-      - uses: actions/github-script@v4
-        name: make sure there are changes to deploy
-        id: changes
-        with:
-          script: |
-            console.log(${{toJSON(github.event.deployment)}})
-            core.setOutput('migrations', "false");
-            core.setOutput('api', "false");
-            core.setOutput('server', "false");
-            switch ("${{github.event.deployment.environment}}") {
-              case "production_db_migrations":
-                core.setOutput('migrations', "true");
-                break;
-              case "production_server":
-                core.setOutput('server', "true");
-                break;
-              case "production_client":
-                core.setOutput('client', "true");
-                break;
-              default:
-                break;
-            }
-  run_migrations:
-    name: Run Database Migrations
-    runs-on: ubuntu-latest
-    environment: ${{github.event.deployment.environment}}
-    needs:
-      - new_deployment
-    if: ${{ needs.new_deployment.outputs.migrations || needs.new_deployment.outputs.force }}
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - name: Install unbuffer command
-        run: |
-          sudo apt-get install expect
-      # This remote command must succeed with the message "database migrations complete"
-      - name: Run migrations using ecs exec
-        run: |
-          unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh ${{github.sha}}" --interactive | tee /dev/stderr | grep "database migrations complete"
-  deploy_server:
-    name: Deploy GraphQL Server
-    runs-on: ubuntu-latest
-    environment: ${{github.event.deployment.environment}}
-    if: ${{ needs.new_deployment.outputs.api || needs.new_deployment.outputs.force}}
-    needs:
-      - new_deployment
-    steps:
-      - uses: actions/checkout@v2
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: "16"
-      - name: Cache node modules
-        uses: actions/cache@v2
-        env:
-          cache-name: cache-server-deploy-node-modules
-        with:
-          # npm cache files are stored in `~/.npm` on Linux/macOS
-          path: |
-            node_modules
-            */*/node_modules
-            ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-      - name: Install lerna
-        run: |
-          npm install
-      - name: Install CDK
-        run: |
-          npm install -g aws-cdk typescript
-      - name: Install dependencies
-        run: |
-          lerna bootstrap --scope=infra
-      - name: Deploy server
-        working-directory: ./packages/infra
-        env:
-          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
-          AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
-          COMMIT: ${{ github.sha }}
-          BUILD: ${{ needs.new_deployment.outputs.build_label }}
-        run: |
-          cdk deploy -e SeaSketchGraphQLServer
-  # build_client:
-  #   name: Build React Client
-  #   runs-on: ubuntu-latest
-  #   environment: ${{github.event.deployment.environment}}
-  #   if: ${{ needs.new_deployment.outputs.client || needs.new_deployment.outputs.force }}
-  #   needs:
-  #     - new_deployment
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions/setup-node@v2
-  #       with:
-  #         node-version: "16"
-  #     - name: Cache node modules
-  #       uses: actions/cache@v2
-  #       env:
-  #         cache-name: cache-client-node-modules
-  #       with:
-  #         # npm cache files are stored in `~/.npm` on Linux/macOS
-  #         path: |
-  #           node_modules
-  #           */*/node_modules
-  #           ~/.npm
-  #         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-build-${{ env.cache-name }}-
-  #           ${{ runner.os }}-build-
-  #           ${{ runner.os }}-
-  #     - name: Install lerna
-  #       run: |
-  #         npm install
-  #     - name: Install dependencies
-  #       run: |
-  #         lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
-  #     - name: Build client
-  #       working-directory: ./packages/client
-  #       env:
-  #         SKIP_PREFLIGHT_CHECK: true
-  #         REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
-  #         REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
-  #         REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
-  #         REACT_APP_GRAPHQL_ENDPOINT: ${{ secrets.REACT_APP_GRAPHQL_ENDPOINT }}
-  #         REACT_APP_PUBLIC_URL: ${{ secrets.REACT_APP_PUBLIC_URL }}
-  #         REACT_APP_BUILD: ${{ needs.new_deployment.outputs.build_label }}
-  #       run: |
-  #         npm run build
-  #     - name: Store build artifact
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: client-build
-  #         path: ./packages/client/build
-  deploy_client:
-    name: Deploy React Client
-    runs-on: ubuntu-latest
-    environment: ${{github.event.deployment.environment}}
-    if: needs.new_deployment.outputs.client || needs.new_deployment.outputs.force
-    needs:
-      - new_deployment
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: "16"
-      - name: Cache node modules
-        uses: actions/cache@v2
-        env:
-          cache-name: cache-client-node-modules
-        with:
-          # npm cache files are stored in `~/.npm` on Linux/macOS
-          path: |
-            node_modules
-            */*/node_modules
-            ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-      - name: Install lerna
-        run: |
-          npm install
-      - name: Install dependencies
-        run: |
-          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
-      - name: Build client
-        working-directory: ./packages/client
-        env:
-          SKIP_PREFLIGHT_CHECK: true
-          REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
-          REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
-          REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
-          REACT_APP_GRAPHQL_ENDPOINT: ${{ secrets.REACT_APP_GRAPHQL_ENDPOINT }}
-          REACT_APP_PUBLIC_URL: ${{ secrets.REACT_APP_PUBLIC_URL }}
-          REACT_APP_BUILD: ${{ needs.new_deployment.outputs.build_label }}
-        run: |
-          npm run build
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - name: Update deployment
-        env:
-          S3_BUCKET: ${{ secrets.S3_CLIENT_BUCKET}}
-        run: |
-          ls -l
-          if [[ -z "$S3_BUCKET" ]]; then
-            echo "S3_BUCKET could not be found" 1>&2
-            exit 1
-          fi
+# name: Handle new deployment
+# on: [deployment]
+# jobs:
+#   new_deployment:
+#     name: New deployment
+#     runs-on: ubuntu-latest
+#     outputs:
+#       migrations: ${{ steps.changes.outputs.migrations }}
+#       api: ${{ steps.changes.outputs.api }}
+#       client: ${{ steps.changes.outputs.client }}
+#       build_label: ${{ steps.short_sha.outputs.sha }}
+#       # pr: ${{ steps.changes.outputs.pr }}
+#       # has_pr: ${{ steps.changes.outputs.has_pr }}
+#       # skip_merge: ${{ steps.changes.outputs.skip_merge }}
+#     steps:
+#       # - name: Update deployment status
+#       #   uses: rsotnychenko/deployment-status-update@0.2.0
+#       #   with:
+#       #     status: in_progress
+#       #     run_id: ${{ github.run_id }}
+#       #     description: Processing new deployment
+#       #   env:
+#       #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       - uses: actions/checkout@v2
+#         with:
+#           fetch-depth: 0
+#       - id: short_sha
+#         run: |
+#           echo "::set-output name=sha::`git rev-parse --short HEAD`"
+#       # Incoming payload should look something like:
+#       #  {
+#       #   numMigrations: 4,
+#       #   hasClientChanges: true,
+#       #   hasApiChanges: true,
+#       #   // mostly for debugging, to force all deployment steps
+#       #   force: false
+#       # };
+#       - uses: actions/github-script@v4
+#         name: make sure there are changes to deploy
+#         id: changes
+#         with:
+#           script: |
+#             console.log(${{toJSON(github.event.deployment)}})
+#             core.setOutput('migrations', "false");
+#             core.setOutput('api', "false");
+#             core.setOutput('server', "false");
+#             switch ("${{github.event.deployment.environment}}") {
+#               case "production_db_migrations":
+#                 core.setOutput('migrations', "true");
+#                 break;
+#               case "production_server":
+#                 core.setOutput('server', "true");
+#                 break;
+#               case "production_client":
+#                 core.setOutput('client', "true");
+#                 break;
+#               default:
+#                 break;
+#             }
+#   run_migrations:
+#     name: Run Database Migrations
+#     runs-on: ubuntu-latest
+#     environment: ${{github.event.deployment.environment}}
+#     needs:
+#       - new_deployment
+#     if: ${{ needs.new_deployment.outputs.migrations || needs.new_deployment.outputs.force }}
+#     steps:
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v1
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: us-west-2
+#       - name: Install unbuffer command
+#         run: |
+#           sudo apt-get install expect
+#       # This remote command must succeed with the message "database migrations complete"
+#       - name: Run migrations using ecs exec
+#         run: |
+#           unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh ${{github.sha}}" --interactive | tee /dev/stderr | grep "database migrations complete"
+#   deploy_server:
+#     name: Deploy GraphQL Server
+#     runs-on: ubuntu-latest
+#     environment: ${{github.event.deployment.environment}}
+#     if: ${{ needs.new_deployment.outputs.api || needs.new_deployment.outputs.force}}
+#     needs:
+#       - new_deployment
+#     steps:
+#       - uses: actions/checkout@v2
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v1
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: us-west-2
+#       - uses: actions/setup-node@v2
+#         with:
+#           node-version: "16"
+#       - name: Cache node modules
+#         uses: actions/cache@v2
+#         env:
+#           cache-name: cache-server-deploy-node-modules
+#         with:
+#           # npm cache files are stored in `~/.npm` on Linux/macOS
+#           path: |
+#             node_modules
+#             */*/node_modules
+#             ~/.npm
+#           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+#           restore-keys: |
+#             ${{ runner.os }}-build-${{ env.cache-name }}-
+#             ${{ runner.os }}-build-
+#             ${{ runner.os }}-
+#       - name: Install lerna
+#         run: |
+#           npm install
+#       - name: Install CDK
+#         run: |
+#           npm install -g aws-cdk typescript
+#       - name: Install dependencies
+#         run: |
+#           lerna bootstrap --scope=infra
+#       - name: Deploy server
+#         working-directory: ./packages/infra
+#         env:
+#           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+#           AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+#           COMMIT: ${{ github.sha }}
+#           BUILD: ${{ needs.new_deployment.outputs.build_label }}
+#         run: |
+#           cdk deploy -e SeaSketchGraphQLServer
+#   # build_client:
+#   #   name: Build React Client
+#   #   runs-on: ubuntu-latest
+#   #   environment: ${{github.event.deployment.environment}}
+#   #   if: ${{ needs.new_deployment.outputs.client || needs.new_deployment.outputs.force }}
+#   #   needs:
+#   #     - new_deployment
+#   #   steps:
+#   #     - uses: actions/checkout@v2
+#   #     - uses: actions/setup-node@v2
+#   #       with:
+#   #         node-version: "16"
+#   #     - name: Cache node modules
+#   #       uses: actions/cache@v2
+#   #       env:
+#   #         cache-name: cache-client-node-modules
+#   #       with:
+#   #         # npm cache files are stored in `~/.npm` on Linux/macOS
+#   #         path: |
+#   #           node_modules
+#   #           */*/node_modules
+#   #           ~/.npm
+#   #         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+#   #         restore-keys: |
+#   #           ${{ runner.os }}-build-${{ env.cache-name }}-
+#   #           ${{ runner.os }}-build-
+#   #           ${{ runner.os }}-
+#   #     - name: Install lerna
+#   #       run: |
+#   #         npm install
+#   #     - name: Install dependencies
+#   #       run: |
+#   #         lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
+#   #     - name: Build client
+#   #       working-directory: ./packages/client
+#   #       env:
+#   #         SKIP_PREFLIGHT_CHECK: true
+#   #         REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+#   #         REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
+#   #         REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
+#   #         REACT_APP_GRAPHQL_ENDPOINT: ${{ secrets.REACT_APP_GRAPHQL_ENDPOINT }}
+#   #         REACT_APP_PUBLIC_URL: ${{ secrets.REACT_APP_PUBLIC_URL }}
+#   #         REACT_APP_BUILD: ${{ needs.new_deployment.outputs.build_label }}
+#   #       run: |
+#   #         npm run build
+#   #     - name: Store build artifact
+#   #       uses: actions/upload-artifact@v2
+#   #       with:
+#   #         name: client-build
+#   #         path: ./packages/client/build
+#   deploy_client:
+#     name: Deploy React Client
+#     runs-on: ubuntu-latest
+#     environment: ${{github.event.deployment.environment}}
+#     if: needs.new_deployment.outputs.client || needs.new_deployment.outputs.force
+#     needs:
+#       - new_deployment
+#     steps:
+#       - uses: actions/checkout@v2
+#       - uses: actions/setup-node@v2
+#         with:
+#           node-version: "16"
+#       - name: Cache node modules
+#         uses: actions/cache@v2
+#         env:
+#           cache-name: cache-client-node-modules
+#         with:
+#           # npm cache files are stored in `~/.npm` on Linux/macOS
+#           path: |
+#             node_modules
+#             */*/node_modules
+#             ~/.npm
+#           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+#           restore-keys: |
+#             ${{ runner.os }}-build-${{ env.cache-name }}-
+#             ${{ runner.os }}-build-
+#             ${{ runner.os }}-
+#       - name: Install lerna
+#         run: |
+#           npm install
+#       - name: Install dependencies
+#         run: |
+#           lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
+#       - name: Build client
+#         working-directory: ./packages/client
+#         env:
+#           SKIP_PREFLIGHT_CHECK: true
+#           REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+#           REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
+#           REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
+#           REACT_APP_GRAPHQL_ENDPOINT: ${{ secrets.REACT_APP_GRAPHQL_ENDPOINT }}
+#           REACT_APP_PUBLIC_URL: ${{ secrets.REACT_APP_PUBLIC_URL }}
+#           REACT_APP_BUILD: ${{ needs.new_deployment.outputs.build_label }}
+#         run: |
+#           npm run build
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v1
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: us-west-2
+#       - name: Update deployment
+#         env:
+#           S3_BUCKET: ${{ secrets.S3_CLIENT_BUCKET}}
+#         run: |
+#           ls -l
+#           if [[ -z "$S3_BUCKET" ]]; then
+#             echo "S3_BUCKET could not be found" 1>&2
+#             exit 1
+#           fi
 
-          echo "Uploading files to $S3_BUCKET..."
-          aws s3 sync build $S3_BUCKET \
-            --acl public-read \
-            --cache-control max-age=31536000 \
-            --exclude service-worker.js \
-            --exclude manifest.json \
-            --exclude index.html \
-            --delete
+#           echo "Uploading files to $S3_BUCKET..."
+#           aws s3 sync build $S3_BUCKET \
+#             --acl public-read \
+#             --cache-control max-age=31536000 \
+#             --exclude service-worker.js \
+#             --exclude manifest.json \
+#             --exclude index.html \
+#             --delete
 
-          echo "Uploading manifest.json"
-          aws s3 cp build/manifest.json $S3_BUCKET/manifest.json \
-            --metadata-directive REPLACE \
-            --cache-control max-age=0,no-cache,no-store,must-revalidate \
-            --content-type application/json \
-            --acl public-read
+#           echo "Uploading manifest.json"
+#           aws s3 cp build/manifest.json $S3_BUCKET/manifest.json \
+#             --metadata-directive REPLACE \
+#             --cache-control max-age=0,no-cache,no-store,must-revalidate \
+#             --content-type application/json \
+#             --acl public-read
 
-          echo "Uploading index.html"
-          aws s3 cp build/index.html $S3_BUCKET/index.html \
-            --metadata-directive REPLACE \
-            --cache-control max-age=0,no-cache,no-store,must-revalidate \
-            --content-type text/html \
-            --acl public-read
-  # merge_pull_request:
-  #   name: Merge Pull Request if present
-  #   runs-on: ubuntu-latest
-  #   needs:
-  #     - deploy_client
-  #     - deploy_server
-  #     - new_deployment
-  #   steps:
-  #     - uses: juliangruber/merge-pull-request-action@v1
-  #       if: ${{ needs.new_deployment.outputs.skip_merge == 'false' && needs.new_deployment.outputs.has_pr == 'true' }}
-  #       with:
-  #         github-token: ${{ secrets.GITHUB_TOKEN }}
-  #         number: ${{ needs.new_deployment.outputs.pr }}
-  #         method: squash
-  # # update_status:
-  #   name: Update deployment status
-  #   runs-on: ubuntu-latest
-  #   environment: production
-  #   needs:
-  #     - deploy_client
-  #     - deploy_server
-  #     - run_migrations
-  #   if: ${{ always() }}
-  #   steps:
-  #     - uses: actions/github-script@v4
-  #       name: create comment
-  #       with:
-  #         script: |
-  #           const jobs = [
-  #             {
-  #               name: "deploy_server",
-  #               result: "${{needs.deploy_server.result}}"
-  #             },
-  #             {
-  #               name: "deploy_client",
-  #               result: "${{needs.deploy_client.result}}"
-  #             },
-  #             {
-  #               name: "run_migrations",
-  #               result: "${{needs.run_migrations.result}}"
-  #             }
-  #           ];
-  #           const failedJobs = jobs.filter(
-  #             ({ result }) =>
-  #               result == "failure" || result == "cancelled"
-  #           );
-  #           const success = jobs.filter((j) => j.result == 'success').length > 0;
-  #           const cancelled = jobs.filter(({result}) => result == "cancelled").length > 0;
-  #           github.repos.createDeploymentStatus({
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             deployment_id: "${{github.event.deployment.id}}",
-  #             state: failedJobs.length > 0 || cancelled ? "failure" : "success",
-  #             environment_url: "${{ secrets.REACT_APP_PUBLIC_URL }}"
-  #           });
+#           echo "Uploading index.html"
+#           aws s3 cp build/index.html $S3_BUCKET/index.html \
+#             --metadata-directive REPLACE \
+#             --cache-control max-age=0,no-cache,no-store,must-revalidate \
+#             --content-type text/html \
+#             --acl public-read
+#   # merge_pull_request:
+#   #   name: Merge Pull Request if present
+#   #   runs-on: ubuntu-latest
+#   #   needs:
+#   #     - deploy_client
+#   #     - deploy_server
+#   #     - new_deployment
+#   #   steps:
+#   #     - uses: juliangruber/merge-pull-request-action@v1
+#   #       if: ${{ needs.new_deployment.outputs.skip_merge == 'false' && needs.new_deployment.outputs.has_pr == 'true' }}
+#   #       with:
+#   #         github-token: ${{ secrets.GITHUB_TOKEN }}
+#   #         number: ${{ needs.new_deployment.outputs.pr }}
+#   #         method: squash
+#   # # update_status:
+#   #   name: Update deployment status
+#   #   runs-on: ubuntu-latest
+#   #   environment: production
+#   #   needs:
+#   #     - deploy_client
+#   #     - deploy_server
+#   #     - run_migrations
+#   #   if: ${{ always() }}
+#   #   steps:
+#   #     - uses: actions/github-script@v4
+#   #       name: create comment
+#   #       with:
+#   #         script: |
+#   #           const jobs = [
+#   #             {
+#   #               name: "deploy_server",
+#   #               result: "${{needs.deploy_server.result}}"
+#   #             },
+#   #             {
+#   #               name: "deploy_client",
+#   #               result: "${{needs.deploy_client.result}}"
+#   #             },
+#   #             {
+#   #               name: "run_migrations",
+#   #               result: "${{needs.run_migrations.result}}"
+#   #             }
+#   #           ];
+#   #           const failedJobs = jobs.filter(
+#   #             ({ result }) =>
+#   #               result == "failure" || result == "cancelled"
+#   #           );
+#   #           const success = jobs.filter((j) => j.result == 'success').length > 0;
+#   #           const cancelled = jobs.filter(({result}) => result == "cancelled").length > 0;
+#   #           github.repos.createDeploymentStatus({
+#   #             owner: context.repo.owner,
+#   #             repo: context.repo.repo,
+#   #             deployment_id: "${{github.event.deployment.id}}",
+#   #             state: failedJobs.length > 0 || cancelled ? "failure" : "success",
+#   #             environment_url: "${{ secrets.REACT_APP_PUBLIC_URL }}"
+#   #           });
