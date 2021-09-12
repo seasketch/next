@@ -174,7 +174,7 @@ jobs:
     name: Deploy GraphQL Server
     runs-on: ubuntu-latest
     environment: production_server
-    if: ${{ needs.run_migrations.result != 'failure' && (needs.create_deployment.outputs.api || needs.new_deployment.outputs.force) }}
+    if: ${{ needs.run_migrations.result != 'failure' && (needs.create_deployment.outputs.api || needs.create_deployment.outputs.force) }}
     needs:
       - create_deployment
       - run_migrations
