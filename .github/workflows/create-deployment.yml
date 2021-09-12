@@ -229,7 +229,7 @@ jobs:
     if: ${{ (needs.create_deployment.outputs.client || needs.create_deployment.outputs.force) && (needs.run_migrations.result != 'failure') }}
     needs:
       - run_migrations
-      - new_deployment
+      - create_deployment
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
