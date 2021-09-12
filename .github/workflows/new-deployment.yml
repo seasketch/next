@@ -58,8 +58,9 @@ jobs:
               default:
                 break;
             }
-  "deploy:migrations":
+  run_migrations:
     name: Run Database Migrations
+    id: "deploy:migrations"
     runs-on: ubuntu-latest
     environment: ${{github.event.deployment.environment}}
     needs:
