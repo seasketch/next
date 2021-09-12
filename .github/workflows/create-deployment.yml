@@ -155,9 +155,8 @@ jobs:
         with:
           ref: ${{ steps.get_pr_status.outputs.head_ref }}
           payload: '{"skip-merge": "${{steps.flags.outputs.skip-merge}}}"}'
-          environment:
-            name: production_db_migrations
-            url: https://api.seasket.ch/graphiql
+          environment: production_db_migrations
+          # environment_url: https://api.seasket.ch/graphiql
           required_contexts: ${{ steps.flags.outputs.required_contexts}}
           task: "deploy"
           auto_merge: true
