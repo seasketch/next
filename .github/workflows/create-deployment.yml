@@ -135,8 +135,8 @@ jobs:
         name: get changed packages
         id: changed_paths
         with:
-          base: ${{ steps.deployments.outputs.active_ref }}
-          ref: ${{steps.get_pr_status.outputs.head_ref}}
+          # base: ${{ steps.deployments.outputs.active_ref }}
+          # ref: ${{steps.get_pr_status.outputs.head_ref}}
           list-files: "escape"
           filters: |
             api:
@@ -231,7 +231,7 @@ jobs:
       - run_migrations
       - new_deployment
     steps:
-            - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
           node-version: "16"
