@@ -150,6 +150,7 @@ jobs:
           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
           AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
           BUILD: ${{ needs.detect_changes.outputs.build_label }}
+          COMMIT: ${{ needs.detect_changes.outputs.build_label }}
         run: |
           cdk deploy -e SeaSketchGraphQLServer
   deploy_client:
