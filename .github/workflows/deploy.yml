@@ -101,7 +101,7 @@ jobs:
   deploy_server:
     runs-on: ubuntu-latest
     name: Deploy Server
-    if: github.event.inputs.force == 'true' || needs.detect_changes.outputs.api == 'true'
+    if: always() && needs.run_migrations.result != 'failure' && (github.event.inputs.force == 'true' || needs.detect_changes.outputs.api == 'true')
     concurrency: ${{github.event.inputs.environment }}_server
     environment:
       name: ${{github.event.inputs.environment }}_server
