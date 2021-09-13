@@ -56,7 +56,7 @@ Complex data migrations are not explicitly handled by the framework we are using
 
 ### Production migrations
 
-TBD workflow will likely involve a GitHub Actions based continuous deployment system that runs migrations automatically when tests on master pass.
+Starting an [automated deployment](https://github.com/seasketch/next#deployments) using a pull request is the most common method. If necessary, you can [connect to a maintenance bastion](https://github.com/seasketch/next/tree/master/packages/infra#the-maintenance-stack) to interact with the production database directly.
 
 ### Authoring Documentation
 

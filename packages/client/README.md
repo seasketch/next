@@ -35,7 +35,7 @@ The [Tailwind CSS framework](https://tailwindcss.com) is included and used for s
 
 ## Deploying changes
 
-TBD, but likely the production app will be updated using a continuous deployment deployment system based on GitHub Actions.
+Start an [automated deployment](https://github.com/seasketch/next#deployments) using a pull request.
 
 ## Available Scripts
 

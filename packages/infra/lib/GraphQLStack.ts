@@ -82,6 +82,7 @@ export class GraphQLStack extends cdk.Stack {
             REDIS_HOST: props.redisHost,
             SES_EMAIL_SOURCE: props.emailSource,
             GRAPHILE_WORKER_CONCURRENCY: "5",
+            BUILD: process.env.BUILD || "dev",
           },
           containerPort: 3857,
         },

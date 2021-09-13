@@ -2,6 +2,10 @@
 
 SeaSketch hosting infrastructure is defined and maintained as an [AWS CDK App](https://docs.aws.amazon.com/cdk/latest/guide/home.html). See `bin/infra.js` for the details, and the `lib/*Stack.ts` files for each component of the deployment.
 
+**CDK should not be used to do routine deployments!**
+
+Instead, start an [automated deployment](https://github.com/seasketch/next#deployments) using a pull request if it involves simple code changes to the client or api server, or database migrations.
+
 ## Deploying and updating stacks
 
 The CDK _App_ that defines the SeaSketch infrastructure consists of multiple _Stacks_. This makes it possible to do deployments of multiple parts of the application in isolation.

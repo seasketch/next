@@ -1,0 +1,74 @@
+name: Summarize Deployment
+on: [pull_request]
+jobs:
+  summarize_deployment_steps:
+    runs-on: ubuntu-latest
+    name: Summarize deployment steps
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Get next version
+        id: next_version
+        run: |
+          echo "::set-output name=version::`git describe --first-parent`"
+      - uses: dorny/paths-filter@v2
+        name: get changed packages
+        id: changed_paths
+        with:
+          # 'base' input parameter is ignored when action is triggered by pull request event
+          # base: ${{ steps.get_deployments.outputs.active_ref }}
+          list-files: "escape"
+          filters: |
+            api:
+              - 'packages/api/**'
+            client:
+              - 'packages/client/**'
+            migrations:
+              - 'packages/api/migrations/committed/**'
+            infra:
+              - 'packages/infra/**'
+            unmanaged_packages:
+              - 'packages/!(api|client|infra)/**'
+      - uses: actions/github-script@v4
+        name: create summary output
+        id: summary
+        with:
+          script: |
+            const files = "${{steps.changed_paths.outputs.migrations_files}}";
+            let numMigrations = 0;
+            if (files.length > 0) {
+              numMigrations = files.split(",").length;
+            }
+
+            let summary = `
+
+            ## Updated Packages
+
+            | package name | status |
+            | :---         |  :---: |
+            | client       | ${"${{steps.changed_paths.outputs.client}}" === 'true' ? "🟢" : "⚪"}|
+            | api server   | ${"${{steps.changed_paths.outputs.api}}" === 'true' ? "🟢" : "⚪"}|
+            | infra   | ${"${{steps.changed_paths.outputs.infra}}" === 'true' ? ":safety_vest:" : "⚪"}|
+            | migrations   | ${ numMigrations > 0 ? `${numMigrations} 🚨` : "⚪"} |
+            | unmanaged packages | ${"${{steps.changed_paths.outputs.unmanaged_packages}}" === 'true' ? ":safety_vest:" : "⚪"}|
+
+            If database migrations are present, they will be run before updating the server. Client updates will wait until the api server is updated, if necessary.
+
+            `;
+
+            if ("${{steps.changed_paths.outputs.unmanaged_packages}}" === 'true' || "${{steps.changed_paths.outputs.infra}}" === 'true') {
+              summary += ":safety_vest: Some packages may require [manual deployment via CDK](https://github.com/seasketch/next/tree/master/packages/infra). Automated deployments currently only support updating the api server, client, and running database migrations."
+            }
+
+            return {
+              summary: "This PR may be deployed to production from the [Create Deployment Action](https://github.com/seasketch/next/actions/workflows/deploy.yml).",
+              text_description: summary.toString(),
+            }
+      - uses: LouisBrunner/checks-action@v1.2.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          conclusion: "success"
+          name: Deployment Options Summary
+          status: completed
+          output: ${{ steps.summary.outputs.result}}

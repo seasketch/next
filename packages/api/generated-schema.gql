@@ -8438,6 +8438,15 @@ type Query implements Node {
     """The method to use when ordering `Basemap`."""
     orderBy: [BasemapsOrderBy!] = [PRIMARY_KEY_ASC]
   ): BasemapsConnection
+
+  """
+  GraphQL server software build identifier. During a deployment, if changes are
+  not detected in software modules some may be skipped. So, client and server
+  version could differ.
+  
+  We return "dev" if build cannot be determined from deployment environment.
+  """
+  build: String!
   communityGuideline(projectId: Int!): CommunityGuideline
 
   """Reads a single `CommunityGuideline` using its globally unique `ID`."""

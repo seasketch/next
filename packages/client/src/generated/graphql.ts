@@ -7335,6 +7335,14 @@ export type Query = Node & {
   basemapByNodeId?: Maybe<Basemap>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemapsConnection?: Maybe<BasemapsConnection>;
+  /**
+   * GraphQL server software build identifier. During a deployment, if changes are
+   * not detected in software modules some may be skipped. So, client and server
+   * version could differ.
+   *
+   * We return "dev" if build cannot be determined from deployment environment.
+   */
+  build: Scalars['String'];
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
   communityGuidelineByNodeId?: Maybe<CommunityGuideline>;
