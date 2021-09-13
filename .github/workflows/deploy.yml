@@ -159,7 +159,7 @@ jobs:
     if: github.event.inputs.force == 'true' || needs.detect_changes.outputs.client == 'true'
     concurrency: ${{github.event.inputs.environment }}_client
     environment:
-      name: ${{github.event.inputs.environment }}_client
+      name: ${{github.event.inputs.environment}}_client
       url: https://next.seasket.ch/
     needs:
       - detect_changes
@@ -208,6 +208,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
       - name: Update deployment
+        working-directory: ./packages/client
         env:
           S3_BUCKET: ${{ secrets.S3_CLIENT_BUCKET}}
         run: |
