@@ -148,8 +148,7 @@ jobs:
         working-directory: ./packages/infra
         env:
           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
-          AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
-          COMMIT: ${{ github.sha }}
+          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
           BUILD: ${{ needs.detect_changes.outputs.build_label }}
         run: |
           cdk deploy -e SeaSketchGraphQLServer
