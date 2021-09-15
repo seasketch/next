@@ -3557,12 +3557,8 @@ export type FormElement = Node & {
    * update.
    */
   position: Scalars['Int'];
-  /**
-   * Indicates the input type. Each input type has a client-side component
-   * implementation with custom configuration properties stored in
-   * `componentSettings`.
-   */
-  type: FormFieldType;
+  type?: Maybe<FormElementType>;
+  typeId: Scalars['String'];
 };
 
 
@@ -3614,12 +3610,7 @@ export type FormElementInput = {
    * update.
    */
   position?: Maybe<Scalars['Int']>;
-  /**
-   * Indicates the input type. Each input type has a client-side component
-   * implementation with custom configuration properties stored in
-   * `componentSettings`.
-   */
-  type: FormFieldType;
+  typeId: Scalars['String'];
 };
 
 /** Represents an update to a `FormElement`. Fields that are set will be updated. */
@@ -3640,12 +3631,7 @@ export type FormElementPatch = {
    * update.
    */
   position?: Maybe<Scalars['Int']>;
-  /**
-   * Indicates the input type. Each input type has a client-side component
-   * implementation with custom configuration properties stored in
-   * `componentSettings`.
-   */
-  type?: Maybe<FormFieldType>;
+  typeId?: Maybe<Scalars['String']>;
 };
 
 /** A `FormElement` edge in the connection. */
@@ -3668,22 +3654,73 @@ export enum FormElementsOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+/** Identifies the type of element in a form, including metadata about that element type. */
+export type FormElementType = Node & {
+  __typename?: 'FormElementType';
+  componentName: Scalars['String'];
+  isHidden: Scalars['Boolean'];
+  /**
+   * Whether the element is an input that collects information from users or
+   * contains presentational content like a Welcome Message component.
+   */
+  isInput: Scalars['Boolean'];
+  /** These elements can only be added to a form once. */
+  isSingleUseOnly: Scalars['Boolean'];
+  /** If true, the element type should only be added to forms related to a survey. */
+  isSurveysOnly: Scalars['Boolean'];
+  /**
+   * Control form element deployment with feature-flags. If this flag is enabled,
+   * the form element should only appear as an option for addition to superuser
+   * roles. Once added to a form however, it is visible to all users. No
+   * access-control is enforced other than hiding the option in the client.
+   */
+  label: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+};
+
 /**
- * FormElement input types. Each type will need a custom client-side component.
- * This list will expand as the application supports new types. New types can be
- * added by using the command:
- *
- * `alter type form_field_type add value 'NEW_TYPE';`
+ * A condition to be used against `FormElementType` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
  */
-export enum FormFieldType {
-  /** Non-input type field. Used to insert headers into a form */
-  Section = 'SECTION',
-  /** HTML select field. May support multiple choices */
-  Select = 'SELECT',
-  /** HTML textarea field */
-  Textarea = 'TEXTAREA',
-  /** The simplest input type, a plain html `<input type="text" />` */
-  Textinput = 'TEXTINPUT'
+export type FormElementTypeCondition = {
+  /** Checks for equality with the object’s `componentName` field. */
+  componentName?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `label` field. */
+  label?: Maybe<Scalars['String']>;
+};
+
+/** A connection to a list of `FormElementType` values. */
+export type FormElementTypesConnection = {
+  __typename?: 'FormElementTypesConnection';
+  /** A list of edges which contains the `FormElementType` and cursor to aid in pagination. */
+  edges: Array<FormElementTypesEdge>;
+  /** A list of `FormElementType` objects. */
+  nodes: Array<FormElementType>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `FormElementType` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `FormElementType` edge in the connection. */
+export type FormElementTypesEdge = {
+  __typename?: 'FormElementTypesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `FormElementType` at the end of the edge. */
+  node: FormElementType;
+};
+
+/** Methods to use when ordering `FormElementType`. */
+export enum FormElementTypesOrderBy {
+  ComponentNameAsc = 'COMPONENT_NAME_ASC',
+  ComponentNameDesc = 'COMPONENT_NAME_DESC',
+  LabelAsc = 'LABEL_ASC',
+  LabelDesc = 'LABEL_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
 /** A connection to a list of `Form` values. */
@@ -7382,6 +7419,12 @@ export type Query = Node & {
   formElement?: Maybe<FormElement>;
   /** Reads a single `FormElement` using its globally unique `ID`. */
   formElementByNodeId?: Maybe<FormElement>;
+  formElementType?: Maybe<FormElementType>;
+  formElementTypeByLabel?: Maybe<FormElementType>;
+  /** Reads a single `FormElementType` using its globally unique `ID`. */
+  formElementTypeByNodeId?: Maybe<FormElementType>;
+  /** Reads and enables pagination through a set of `FormElementType`. */
+  formElementTypesConnection?: Maybe<FormElementTypesConnection>;
   forum?: Maybe<Forum>;
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
@@ -7996,6 +8039,76 @@ export type QueryFormElementArgs = {
  */
 export type QueryFormElementByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormElementTypeArgs = {
+  componentName: Scalars['String'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormElementTypeByLabelArgs = {
+  label: Scalars['String'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormElementTypeByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormElementTypesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<FormElementTypeCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<FormElementTypesOrderBy>>;
 };
 
 

@@ -2465,7 +2465,7 @@ CREATE FUNCTION public.create_form_template_from_sketch_class("sketchClassId" in
           form_id, 
           name, 
           description, 
-          type, 
+          type_id, 
           is_required, 
           export_id, 
           position, 
@@ -2475,7 +2475,7 @@ CREATE FUNCTION public.create_form_template_from_sketch_class("sketchClassId" in
         form.id, 
         name, 
         description, 
-        type, 
+        type_id, 
         is_required, 
         export_id, 
         position, 
@@ -2507,7 +2507,7 @@ CREATE FUNCTION public.create_form_template_from_survey("surveyId" integer, "tem
           form_id, 
           name, 
           description, 
-          type, 
+          type_id, 
           is_required, 
           export_id, 
           position, 
@@ -2517,7 +2517,7 @@ CREATE FUNCTION public.create_form_template_from_survey("surveyId" integer, "tem
         form.id, 
         name, 
         description, 
-        type, 
+        type_id, 
         is_required, 
         export_id, 
         position, 
@@ -3609,6 +3609,155 @@ COMMENT ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" in
 
 
 --
+-- Name: form_element_types; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.form_element_types (
+    component_name text NOT NULL,
+    label text NOT NULL,
+    is_input boolean DEFAULT false NOT NULL,
+    is_surveys_only boolean DEFAULT false NOT NULL,
+    is_hidden boolean DEFAULT false NOT NULL,
+    is_single_use_only boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: TABLE form_element_types; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.form_element_types IS 'Identifies the type of element in a form, including metadata about that element type.';
+
+
+--
+-- Name: COLUMN form_element_types.label; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_element_types.label IS 'Control form element deployment with feature-flags. If this flag is enabled, the form element should only appear as an option for addition to superuser roles. Once added to a form however, it is visible to all users. No access-control is enforced other than hiding the option in the client.';
+
+
+--
+-- Name: COLUMN form_element_types.is_input; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_element_types.is_input IS 'Whether the element is an input that collects information from users or contains presentational content like a Welcome Message component.';
+
+
+--
+-- Name: COLUMN form_element_types.is_surveys_only; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_element_types.is_surveys_only IS 'If true, the element type should only be added to forms related to a survey.';
+
+
+--
+-- Name: COLUMN form_element_types.is_single_use_only; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_element_types.is_single_use_only IS 'These elements can only be added to a form once.';
+
+
+--
+-- Name: form_elements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.form_elements (
+    id integer NOT NULL,
+    form_id integer NOT NULL,
+    name text NOT NULL,
+    description text,
+    is_required boolean DEFAULT false NOT NULL,
+    export_id text NOT NULL,
+    "position" integer DEFAULT 1 NOT NULL,
+    component_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    type_id text NOT NULL,
+    CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
+    CONSTRAINT form_fields_description_check CHECK ((char_length(description) < 500)),
+    CONSTRAINT form_fields_position_check CHECK (("position" > 0))
+);
+
+
+--
+-- Name: TABLE form_elements; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.form_elements IS '
+@omit all
+*FormElements* represent input fields or read-only content in a form. Records contain fields to support
+generic functionality like name, description, position, and isRequired. They 
+also have a JSON `componentSettings` field that can have custom data to support
+a particular input type, indicated by the `type` field.
+
+Project administrators have full control over managing form elements through
+graphile-generated CRUD mutations.
+';
+
+
+--
+-- Name: COLUMN form_elements.form_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.form_id IS 'Form this field belongs to.';
+
+
+--
+-- Name: COLUMN form_elements.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.name IS 'Question label';
+
+
+--
+-- Name: COLUMN form_elements.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.description IS 'Question description. Max length 500 characters';
+
+
+--
+-- Name: COLUMN form_elements.is_required; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.is_required IS 'Users must provide input for these fields before submission.';
+
+
+--
+-- Name: COLUMN form_elements.export_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.export_id IS 'Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports';
+
+
+--
+-- Name: COLUMN form_elements."position"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements."position" IS '
+Determines order of field display. Clients should display fields in ascending 
+order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
+update.
+';
+
+
+--
+-- Name: COLUMN form_elements.component_settings; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.component_settings IS 'Type-specific configuration. For example, a Choice field might have a list of valid choices.';
+
+
+--
+-- Name: form_elements_type(public.form_elements); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.form_elements_type(e public.form_elements) RETURNS public.form_element_types
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from form_element_types where e.type_id = form_element_types.component_name;
+$$;
+
+
+--
 -- Name: get_or_create_user_by_sub(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3837,7 +3986,7 @@ CREATE FUNCTION public.initialize_sketch_class_form_from_template(sketch_class_i
           form_id, 
           name, 
           description, 
-          type, 
+          type_id, 
           is_required, 
           export_id, 
           position, 
@@ -3847,7 +3996,7 @@ CREATE FUNCTION public.initialize_sketch_class_form_from_template(sketch_class_i
         form.id, 
         name, 
         description, 
-        type, 
+        type_id, 
         is_required, 
         export_id, 
         position, 
@@ -3890,7 +4039,7 @@ CREATE FUNCTION public.initialize_survey_form_from_template(survey_id integer, t
           form_id, 
           name, 
           description, 
-          type, 
+          type_id, 
           is_required, 
           export_id, 
           position, 
@@ -3900,7 +4049,7 @@ CREATE FUNCTION public.initialize_survey_form_from_template(survey_id integer, t
         form.id, 
         name, 
         description, 
-        type, 
+        type_id, 
         is_required, 
         export_id, 
         position, 
@@ -6954,102 +7103,6 @@ COMMENT ON FUNCTION public.session_on_acl(acl_id integer) IS '@omit';
 
 
 --
--- Name: form_elements; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.form_elements (
-    id integer NOT NULL,
-    form_id integer NOT NULL,
-    name text NOT NULL,
-    description text,
-    type public.form_field_type NOT NULL,
-    is_required boolean DEFAULT false NOT NULL,
-    export_id text NOT NULL,
-    "position" integer DEFAULT 1 NOT NULL,
-    component_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
-    CONSTRAINT form_fields_description_check CHECK ((char_length(description) < 500)),
-    CONSTRAINT form_fields_position_check CHECK (("position" > 0))
-);
-
-
---
--- Name: TABLE form_elements; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.form_elements IS '
-@omit all
-*FormElements* represent input fields or read-only content in a form. Records contain fields to support
-generic functionality like name, description, position, and isRequired. They 
-also have a JSON `componentSettings` field that can have custom data to support
-a particular input type, indicated by the `type` field.
-
-Project administrators have full control over managing form elements through
-graphile-generated CRUD mutations.
-';
-
-
---
--- Name: COLUMN form_elements.form_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.form_id IS 'Form this field belongs to.';
-
-
---
--- Name: COLUMN form_elements.name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.name IS 'Question label';
-
-
---
--- Name: COLUMN form_elements.description; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.description IS 'Question description. Max length 500 characters';
-
-
---
--- Name: COLUMN form_elements.type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.type IS 'Indicates the input type. Each input type has a client-side component implementation with custom configuration properties stored in `componentSettings`.';
-
-
---
--- Name: COLUMN form_elements.is_required; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.is_required IS 'Users must provide input for these fields before submission.';
-
-
---
--- Name: COLUMN form_elements.export_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.export_id IS 'Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports';
-
-
---
--- Name: COLUMN form_elements."position"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements."position" IS '
-Determines order of field display. Clients should display fields in ascending 
-order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
-update.
-';
-
-
---
--- Name: COLUMN form_elements.component_settings; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.component_settings IS 'Type-specific configuration. For example, a Choice field might have a list of valid choices.';
-
-
---
 -- Name: set_form_element_order(integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9784,6 +9837,22 @@ ALTER TABLE ONLY public.form_conditional_rendering_rules
 
 
 --
+-- Name: form_element_types form_element_types_label_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_element_types
+    ADD CONSTRAINT form_element_types_label_key UNIQUE (label);
+
+
+--
+-- Name: form_element_types form_element_types_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_element_types
+    ADD CONSTRAINT form_element_types_pkey PRIMARY KEY (component_name);
+
+
+--
 -- Name: form_elements form_fields_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11106,6 +11175,14 @@ COMMENT ON CONSTRAINT form_conditional_rendering_rules_field_id_fkey ON public.f
 
 ALTER TABLE ONLY public.form_conditional_rendering_rules
     ADD CONSTRAINT form_conditional_rendering_rules_predicate_field_id_fkey FOREIGN KEY (predicate_field_id) REFERENCES public.form_elements(id);
+
+
+--
+-- Name: form_elements form_elements_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_elements
+    ADD CONSTRAINT form_elements_type_id_fkey FOREIGN KEY (type_id) REFERENCES public.form_element_types(component_name) ON DELETE CASCADE;
 
 
 --
@@ -14358,6 +14435,78 @@ REVOKE ALL ON FUNCTION public.find_srid(character varying, character varying, ch
 
 
 --
+-- Name: TABLE form_element_types; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.form_element_types TO anon;
+
+
+--
+-- Name: TABLE form_elements; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.form_elements TO anon;
+GRANT INSERT,DELETE ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.name; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(name) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.description; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(description) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.is_required; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_required) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.export_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(export_id) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements."position"; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE("position") ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.component_settings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(component_settings) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.type_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(type_id) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: FUNCTION form_elements_type(e public.form_elements); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.form_elements_type(e public.form_elements) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.form_elements_type(e public.form_elements) TO anon;
+
+
+--
 -- Name: FUNCTION gen_random_bytes(integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17287,63 +17436,6 @@ GRANT ALL ON FUNCTION public.session_is_superuser() TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.session_on_acl(acl_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.session_on_acl(acl_id integer) TO anon;
-
-
---
--- Name: TABLE form_elements; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.form_elements TO anon;
-GRANT INSERT,DELETE ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.name; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(name) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.description; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(description) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.type; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(type) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.is_required; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(is_required) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.export_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(export_id) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements."position"; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE("position") ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.component_settings; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(component_settings) ON TABLE public.form_elements TO seasketch_user;
 
 
 --
