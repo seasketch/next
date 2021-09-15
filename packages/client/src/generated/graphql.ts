@@ -708,8 +708,8 @@ export type CreateFormConditionalRenderingRulePayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `FormField` that is related to this `FormConditionalRenderingRule`. */
-  field?: Maybe<FormField>;
+  /** Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`. */
+  field?: Maybe<FormElement>;
   /** The `FormConditionalRenderingRule` that was created by this mutation. */
   formConditionalRenderingRule?: Maybe<FormConditionalRenderingRule>;
   /** An edge for our `FormConditionalRenderingRule`. May be used by Relay 1. */
@@ -724,39 +724,39 @@ export type CreateFormConditionalRenderingRulePayloadFormConditionalRenderingRul
   orderBy?: Maybe<Array<FormConditionalRenderingRulesOrderBy>>;
 };
 
-/** All input for the create `FormField` mutation. */
-export type CreateFormFieldInput = {
+/** All input for the create `FormElement` mutation. */
+export type CreateFormElementInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** The `FormField` to be created by this mutation. */
-  formField: FormFieldInput;
+  /** The `FormElement` to be created by this mutation. */
+  formElement: FormElementInput;
 };
 
-/** The output of our create `FormField` mutation. */
-export type CreateFormFieldPayload = {
-  __typename?: 'CreateFormFieldPayload';
+/** The output of our create `FormElement` mutation. */
+export type CreateFormElementPayload = {
+  __typename?: 'CreateFormElementPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Form` that is related to this `FormField`. */
+  /** Reads a single `Form` that is related to this `FormElement`. */
   form?: Maybe<Form>;
-  /** The `FormField` that was created by this mutation. */
-  formField?: Maybe<FormField>;
-  /** An edge for our `FormField`. May be used by Relay 1. */
-  formFieldEdge?: Maybe<FormFieldsEdge>;
+  /** The `FormElement` that was created by this mutation. */
+  formElement?: Maybe<FormElement>;
+  /** An edge for our `FormElement`. May be used by Relay 1. */
+  formElementEdge?: Maybe<FormElementsEdge>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
 
-/** The output of our create `FormField` mutation. */
-export type CreateFormFieldPayloadFormFieldEdgeArgs = {
-  orderBy?: Maybe<Array<FormFieldsOrderBy>>;
+/** The output of our create `FormElement` mutation. */
+export type CreateFormElementPayloadFormElementEdgeArgs = {
+  orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the `createFormTemplateFromSketchClass` mutation. */
@@ -2370,8 +2370,8 @@ export type DeleteFormConditionalRenderingRulePayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   deletedFormConditionalRenderingRuleNodeId?: Maybe<Scalars['ID']>;
-  /** Reads a single `FormField` that is related to this `FormConditionalRenderingRule`. */
-  field?: Maybe<FormField>;
+  /** Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`. */
+  field?: Maybe<FormElement>;
   /** The `FormConditionalRenderingRule` that was deleted by this mutation. */
   formConditionalRenderingRule?: Maybe<FormConditionalRenderingRule>;
   /** An edge for our `FormConditionalRenderingRule`. May be used by Relay 1. */
@@ -2386,19 +2386,19 @@ export type DeleteFormConditionalRenderingRulePayloadFormConditionalRenderingRul
   orderBy?: Maybe<Array<FormConditionalRenderingRulesOrderBy>>;
 };
 
-/** All input for the `deleteFormFieldByNodeId` mutation. */
-export type DeleteFormFieldByNodeIdInput = {
+/** All input for the `deleteFormElementByNodeId` mutation. */
+export type DeleteFormElementByNodeIdInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `FormField` to be deleted. */
+  /** The globally unique `ID` which will identify a single `FormElement` to be deleted. */
   nodeId: Scalars['ID'];
 };
 
-/** All input for the `deleteFormField` mutation. */
-export type DeleteFormFieldInput = {
+/** All input for the `deleteFormElement` mutation. */
+export type DeleteFormElementInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
@@ -2407,29 +2407,29 @@ export type DeleteFormFieldInput = {
   id: Scalars['Int'];
 };
 
-/** The output of our delete `FormField` mutation. */
-export type DeleteFormFieldPayload = {
-  __typename?: 'DeleteFormFieldPayload';
+/** The output of our delete `FormElement` mutation. */
+export type DeleteFormElementPayload = {
+  __typename?: 'DeleteFormElementPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  deletedFormFieldNodeId?: Maybe<Scalars['ID']>;
-  /** Reads a single `Form` that is related to this `FormField`. */
+  deletedFormElementNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `Form` that is related to this `FormElement`. */
   form?: Maybe<Form>;
-  /** The `FormField` that was deleted by this mutation. */
-  formField?: Maybe<FormField>;
-  /** An edge for our `FormField`. May be used by Relay 1. */
-  formFieldEdge?: Maybe<FormFieldsEdge>;
+  /** The `FormElement` that was deleted by this mutation. */
+  formElement?: Maybe<FormElement>;
+  /** An edge for our `FormElement`. May be used by Relay 1. */
+  formElementEdge?: Maybe<FormElementsEdge>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
 
-/** The output of our delete `FormField` mutation. */
-export type DeleteFormFieldPayloadFormFieldEdgeArgs = {
-  orderBy?: Maybe<Array<FormFieldsOrderBy>>;
+/** The output of our delete `FormElement` mutation. */
+export type DeleteFormElementPayloadFormElementEdgeArgs = {
+  orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the `deleteForm` mutation. */
@@ -3369,7 +3369,7 @@ export enum FieldRuleOperator {
  * Forms are used to add attributes to spatial features. In Surveys, Forms are used
  * in support of gathering response data.
  *
- * Forms have any number of *FormFields* ordered by a `position` field, and form
+ * Forms have any number of *FormElements* ordered by a `position` field, and form
  * contents may be hidden depending on the evaluation of *FormConditionalRenderingRules*.
  *
  * Forms typically belong to either a *Survey* or *SketchClass* exclusively. Some
@@ -3379,8 +3379,8 @@ export enum FieldRuleOperator {
  */
 export type Form = Node & {
   __typename?: 'Form';
-  /** List of all FormFields in this form. */
-  formFields: Array<FormField>;
+  /** List of all FormElements in this form. */
+  formElements: Array<FormElement>;
   id: Scalars['Int'];
   /**
    * SeaSetch superusers can create template forms than can be used when creating
@@ -3412,7 +3412,7 @@ export type Form = Node & {
  * Forms are used to add attributes to spatial features. In Surveys, Forms are used
  * in support of gathering response data.
  *
- * Forms have any number of *FormFields* ordered by a `position` field, and form
+ * Forms have any number of *FormElements* ordered by a `position` field, and form
  * contents may be hidden depending on the evaluation of *FormConditionalRenderingRules*.
  *
  * Forms typically belong to either a *Survey* or *SketchClass* exclusively. Some
@@ -3420,11 +3420,11 @@ export type Form = Node & {
  * Only superusers can create form templates, and clients should provide templates
  * as an option when creating new forms.
  */
-export type FormFormFieldsArgs = {
-  condition?: Maybe<FormFieldCondition>;
+export type FormFormElementsArgs = {
+  condition?: Maybe<FormElementCondition>;
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<FormFieldsOrderBy>>;
+  orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
 /** A condition to be used against `Form` object types. All fields are tested for equality and combined with a logical ‘and.’ */
@@ -3450,8 +3450,8 @@ export type FormCondition = {
  */
 export type FormConditionalRenderingRule = Node & {
   __typename?: 'FormConditionalRenderingRule';
-  /** Reads a single `FormField` that is related to this `FormConditionalRenderingRule`. */
-  field?: Maybe<FormField>;
+  /** Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`. */
+  field?: Maybe<FormElement>;
   /** Field that will be hidden unless the rule evaluates true */
   fieldId: Scalars['Int'];
   id: Scalars['Int'];
@@ -3522,16 +3522,16 @@ export enum FormConditionalRenderingRulesOrderBy {
 }
 
 /**
- * *FormFields* represent input fields in a form. Records contain fields to support
+ * *FormElements* represent input fields or read-only content in a form. Records contain fields to support
  * generic functionality like name, description, position, and isRequired. They
  * also have a JSON `componentSettings` field that can have custom data to support
  * a particular input type, indicated by the `type` field.
  *
- * Project administrators have full control over managing form fields through
+ * Project administrators have full control over managing form elements through
  * graphile-generated CRUD mutations.
  */
-export type FormField = Node & {
-  __typename?: 'FormField';
+export type FormElement = Node & {
+  __typename?: 'FormElement';
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings: Scalars['JSON'];
   /** Set of rules that determine the visibility of this field. */
@@ -3540,7 +3540,7 @@ export type FormField = Node & {
   description?: Maybe<Scalars['String']>;
   /** Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports */
   exportId: Scalars['String'];
-  /** Reads a single `Form` that is related to this `FormField`. */
+  /** Reads a single `Form` that is related to this `FormElement`. */
   form?: Maybe<Form>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
@@ -3553,7 +3553,7 @@ export type FormField = Node & {
   nodeId: Scalars['ID'];
   /**
    * Determines order of field display. Clients should display fields in ascending
-   * order. Cannot be changed individually. Use `setFormFieldOrder()` mutation to
+   * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
    */
   position: Scalars['Int'];
@@ -3567,15 +3567,15 @@ export type FormField = Node & {
 
 
 /**
- * *FormFields* represent input fields in a form. Records contain fields to support
+ * *FormElements* represent input fields or read-only content in a form. Records contain fields to support
  * generic functionality like name, description, position, and isRequired. They
  * also have a JSON `componentSettings` field that can have custom data to support
  * a particular input type, indicated by the `type` field.
  *
- * Project administrators have full control over managing form fields through
+ * Project administrators have full control over managing form elements through
  * graphile-generated CRUD mutations.
  */
-export type FormFieldConditionalRenderingRulesArgs = {
+export type FormElementConditionalRenderingRulesArgs = {
   condition?: Maybe<FormConditionalRenderingRuleCondition>;
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -3583,18 +3583,18 @@ export type FormFieldConditionalRenderingRulesArgs = {
 };
 
 /**
- * A condition to be used against `FormField` object types. All fields are tested
+ * A condition to be used against `FormElement` object types. All fields are tested
  * for equality and combined with a logical ‘and.’
  */
-export type FormFieldCondition = {
+export type FormElementCondition = {
   /** Checks for equality with the object’s `formId` field. */
   formId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
 };
 
-/** An input for mutations affecting `FormField` */
-export type FormFieldInput = {
+/** An input for mutations affecting `FormElement` */
+export type FormElementInput = {
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
   /** Question description. Max length 500 characters */
@@ -3610,7 +3610,7 @@ export type FormFieldInput = {
   name: Scalars['String'];
   /**
    * Determines order of field display. Clients should display fields in ascending
-   * order. Cannot be changed individually. Use `setFormFieldOrder()` mutation to
+   * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
    */
   position?: Maybe<Scalars['Int']>;
@@ -3622,8 +3622,8 @@ export type FormFieldInput = {
   type: FormFieldType;
 };
 
-/** Represents an update to a `FormField`. Fields that are set will be updated. */
-export type FormFieldPatch = {
+/** Represents an update to a `FormElement`. Fields that are set will be updated. */
+export type FormElementPatch = {
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
   /** Question description. Max length 500 characters */
@@ -3636,7 +3636,7 @@ export type FormFieldPatch = {
   name?: Maybe<Scalars['String']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
-   * order. Cannot be changed individually. Use `setFormFieldOrder()` mutation to
+   * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
    */
   position?: Maybe<Scalars['Int']>;
@@ -3648,17 +3648,17 @@ export type FormFieldPatch = {
   type?: Maybe<FormFieldType>;
 };
 
-/** A `FormField` edge in the connection. */
-export type FormFieldsEdge = {
-  __typename?: 'FormFieldsEdge';
+/** A `FormElement` edge in the connection. */
+export type FormElementsEdge = {
+  __typename?: 'FormElementsEdge';
   /** A cursor for use in pagination. */
   cursor?: Maybe<Scalars['Cursor']>;
-  /** The `FormField` at the end of the edge. */
-  node: FormField;
+  /** The `FormElement` at the end of the edge. */
+  node: FormElement;
 };
 
-/** Methods to use when ordering `FormField`. */
-export enum FormFieldsOrderBy {
+/** Methods to use when ordering `FormElement`. */
+export enum FormElementsOrderBy {
   FormIdAsc = 'FORM_ID_ASC',
   FormIdDesc = 'FORM_ID_DESC',
   IdAsc = 'ID_ASC',
@@ -3669,7 +3669,7 @@ export enum FormFieldsOrderBy {
 }
 
 /**
- * FormField input types. Each type will need a custom client-side component.
+ * FormElement input types. Each type will need a custom client-side component.
  * This list will expand as the application supports new types. New types can be
  * added by using the command:
  *
@@ -4757,8 +4757,8 @@ export type Mutation = {
   createDataSourcesBucket?: Maybe<CreateDataSourcesBucketPayload>;
   /** Creates a single `FormConditionalRenderingRule`. */
   createFormConditionalRenderingRule?: Maybe<CreateFormConditionalRenderingRulePayload>;
-  /** Creates a single `FormField`. */
-  createFormField?: Maybe<CreateFormFieldPayload>;
+  /** Creates a single `FormElement`. */
+  createFormElement?: Maybe<CreateFormElementPayload>;
   createFormTemplateFromSketchClass?: Maybe<CreateFormTemplateFromSketchClassPayload>;
   createFormTemplateFromSurvey?: Maybe<CreateFormTemplateFromSurveyPayload>;
   /** Creates a single `Forum`. */
@@ -4847,10 +4847,10 @@ export type Mutation = {
   deleteFormConditionalRenderingRule?: Maybe<DeleteFormConditionalRenderingRulePayload>;
   /** Deletes a single `FormConditionalRenderingRule` using its globally unique id. */
   deleteFormConditionalRenderingRuleByNodeId?: Maybe<DeleteFormConditionalRenderingRulePayload>;
-  /** Deletes a single `FormField` using a unique key. */
-  deleteFormField?: Maybe<DeleteFormFieldPayload>;
-  /** Deletes a single `FormField` using its globally unique id. */
-  deleteFormFieldByNodeId?: Maybe<DeleteFormFieldPayload>;
+  /** Deletes a single `FormElement` using a unique key. */
+  deleteFormElement?: Maybe<DeleteFormElementPayload>;
+  /** Deletes a single `FormElement` using its globally unique id. */
+  deleteFormElementByNodeId?: Maybe<DeleteFormElementPayload>;
   /** Deletes a single `Forum` using a unique key. */
   deleteForum?: Maybe<DeleteForumPayload>;
   /** Deletes a single `Forum` using its globally unique id. */
@@ -5016,12 +5016,12 @@ export type Mutation = {
    */
   sendSurveyInviteReminder?: Maybe<Scalars['Int']>;
   /**
-   * Sets the positions of all fields in a form at once. Any missing field ids from
+   * Sets the positions of all elements in a form at once. Any missing element ids from
    * the input will be positioned at the end of the form.
    *
-   * Use this instead of trying to manage the position of form fields individually.
+   * Use this instead of trying to manage the position of form elements individually.
    */
-  setFormFieldOrder?: Maybe<SetFormFieldOrderPayload>;
+  setFormElementOrder?: Maybe<SetFormElementOrderPayload>;
   /**
    * Set the order in which discussion forums will be displayed. Provide a list of
    * forum IDs in the correct order. Missing ids will be added to the end of the list.
@@ -5088,10 +5088,10 @@ export type Mutation = {
   updateFormConditionalRenderingRule?: Maybe<UpdateFormConditionalRenderingRulePayload>;
   /** Updates a single `FormConditionalRenderingRule` using its globally unique id and a patch. */
   updateFormConditionalRenderingRuleByNodeId?: Maybe<UpdateFormConditionalRenderingRulePayload>;
-  /** Updates a single `FormField` using a unique key and a patch. */
-  updateFormField?: Maybe<UpdateFormFieldPayload>;
-  /** Updates a single `FormField` using its globally unique id and a patch. */
-  updateFormFieldByNodeId?: Maybe<UpdateFormFieldPayload>;
+  /** Updates a single `FormElement` using a unique key and a patch. */
+  updateFormElement?: Maybe<UpdateFormElementPayload>;
+  /** Updates a single `FormElement` using its globally unique id and a patch. */
+  updateFormElementByNodeId?: Maybe<UpdateFormElementPayload>;
   /** Updates a single `Forum` using a unique key and a patch. */
   updateForum?: Maybe<UpdateForumPayload>;
   /** Updates a single `Forum` using its globally unique id and a patch. */
@@ -5273,8 +5273,8 @@ export type MutationCreateFormConditionalRenderingRuleArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateFormFieldArgs = {
-  input: CreateFormFieldInput;
+export type MutationCreateFormElementArgs = {
+  input: CreateFormElementInput;
 };
 
 
@@ -5489,14 +5489,14 @@ export type MutationDeleteFormConditionalRenderingRuleByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteFormFieldArgs = {
-  input: DeleteFormFieldInput;
+export type MutationDeleteFormElementArgs = {
+  input: DeleteFormElementInput;
 };
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteFormFieldByNodeIdArgs = {
-  input: DeleteFormFieldByNodeIdInput;
+export type MutationDeleteFormElementByNodeIdArgs = {
+  input: DeleteFormElementByNodeIdInput;
 };
 
 
@@ -5824,8 +5824,8 @@ export type MutationSendSurveyInviteReminderArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationSetFormFieldOrderArgs = {
-  input: SetFormFieldOrderInput;
+export type MutationSetFormElementOrderArgs = {
+  input: SetFormElementOrderInput;
 };
 
 
@@ -5980,14 +5980,14 @@ export type MutationUpdateFormConditionalRenderingRuleByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateFormFieldArgs = {
-  input: UpdateFormFieldInput;
+export type MutationUpdateFormElementArgs = {
+  input: UpdateFormElementInput;
 };
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateFormFieldByNodeIdArgs = {
-  input: UpdateFormFieldByNodeIdInput;
+export type MutationUpdateFormElementByNodeIdArgs = {
+  input: UpdateFormElementByNodeIdInput;
 };
 
 
@@ -7379,9 +7379,9 @@ export type Query = Node & {
   formConditionalRenderingRule?: Maybe<FormConditionalRenderingRule>;
   /** Reads a single `FormConditionalRenderingRule` using its globally unique `ID`. */
   formConditionalRenderingRuleByNodeId?: Maybe<FormConditionalRenderingRule>;
-  formField?: Maybe<FormField>;
-  /** Reads a single `FormField` using its globally unique `ID`. */
-  formFieldByNodeId?: Maybe<FormField>;
+  formElement?: Maybe<FormElement>;
+  /** Reads a single `FormElement` using its globally unique `ID`. */
+  formElementByNodeId?: Maybe<FormElement>;
   forum?: Maybe<Forum>;
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
@@ -7978,7 +7978,7 @@ export type QueryFormConditionalRenderingRuleByNodeIdArgs = {
  * for each database table. These are unlikely to be needed often but may possibly
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
-export type QueryFormFieldArgs = {
+export type QueryFormElementArgs = {
   id: Scalars['Int'];
 };
 
@@ -7994,7 +7994,7 @@ export type QueryFormFieldArgs = {
  * for each database table. These are unlikely to be needed often but may possibly
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
-export type QueryFormFieldByNodeIdArgs = {
+export type QueryFormElementByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
@@ -9127,25 +9127,25 @@ export type SendVerificationEmailResults = {
   success: Scalars['Boolean'];
 };
 
-/** All input for the `setFormFieldOrder` mutation. */
-export type SetFormFieldOrderInput = {
+/** All input for the `setFormElementOrder` mutation. */
+export type SetFormElementOrderInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  fieldIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  elementIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
 };
 
-/** The output of our `setFormFieldOrder` mutation. */
-export type SetFormFieldOrderPayload = {
-  __typename?: 'SetFormFieldOrderPayload';
+/** The output of our `setFormElementOrder` mutation. */
+export type SetFormElementOrderPayload = {
+  __typename?: 'SetFormElementOrderPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  formFields?: Maybe<Array<FormField>>;
+  formElements?: Maybe<Array<FormElement>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -10971,8 +10971,8 @@ export type UpdateFormConditionalRenderingRulePayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `FormField` that is related to this `FormConditionalRenderingRule`. */
-  field?: Maybe<FormField>;
+  /** Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`. */
+  field?: Maybe<FormElement>;
   /** The `FormConditionalRenderingRule` that was updated by this mutation. */
   formConditionalRenderingRule?: Maybe<FormConditionalRenderingRule>;
   /** An edge for our `FormConditionalRenderingRule`. May be used by Relay 1. */
@@ -10987,53 +10987,53 @@ export type UpdateFormConditionalRenderingRulePayloadFormConditionalRenderingRul
   orderBy?: Maybe<Array<FormConditionalRenderingRulesOrderBy>>;
 };
 
-/** All input for the `updateFormFieldByNodeId` mutation. */
-export type UpdateFormFieldByNodeIdInput = {
+/** All input for the `updateFormElementByNodeId` mutation. */
+export type UpdateFormElementByNodeIdInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `FormField` to be updated. */
+  /** The globally unique `ID` which will identify a single `FormElement` to be updated. */
   nodeId: Scalars['ID'];
-  /** An object where the defined keys will be set on the `FormField` being updated. */
-  patch: FormFieldPatch;
+  /** An object where the defined keys will be set on the `FormElement` being updated. */
+  patch: FormElementPatch;
 };
 
-/** All input for the `updateFormField` mutation. */
-export type UpdateFormFieldInput = {
+/** All input for the `updateFormElement` mutation. */
+export type UpdateFormElementInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
-  /** An object where the defined keys will be set on the `FormField` being updated. */
-  patch: FormFieldPatch;
+  /** An object where the defined keys will be set on the `FormElement` being updated. */
+  patch: FormElementPatch;
 };
 
-/** The output of our update `FormField` mutation. */
-export type UpdateFormFieldPayload = {
-  __typename?: 'UpdateFormFieldPayload';
+/** The output of our update `FormElement` mutation. */
+export type UpdateFormElementPayload = {
+  __typename?: 'UpdateFormElementPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Form` that is related to this `FormField`. */
+  /** Reads a single `Form` that is related to this `FormElement`. */
   form?: Maybe<Form>;
-  /** The `FormField` that was updated by this mutation. */
-  formField?: Maybe<FormField>;
-  /** An edge for our `FormField`. May be used by Relay 1. */
-  formFieldEdge?: Maybe<FormFieldsEdge>;
+  /** The `FormElement` that was updated by this mutation. */
+  formElement?: Maybe<FormElement>;
+  /** An edge for our `FormElement`. May be used by Relay 1. */
+  formElementEdge?: Maybe<FormElementsEdge>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
 
-/** The output of our update `FormField` mutation. */
-export type UpdateFormFieldPayloadFormFieldEdgeArgs = {
-  orderBy?: Maybe<Array<FormFieldsOrderBy>>;
+/** The output of our update `FormElement` mutation. */
+export type UpdateFormElementPayloadFormElementEdgeArgs = {
+  orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the `updateForumByNodeId` mutation. */

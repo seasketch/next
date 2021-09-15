@@ -621,7 +621,7 @@ export async function verifySessionCanAccessSurveyResources(
     (await conn.any(sql`select 1 from forms where id = ${formId}`)).length
   ).toBe(1);
   expect(
-    (await conn.any(sql`select 1 from form_fields where id = ${fieldId}`))
+    (await conn.any(sql`select 1 from form_elements where id = ${fieldId}`))
       .length
   ).toBe(1);
   expect(

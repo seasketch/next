@@ -1513,10 +1513,10 @@ describe("content access", () => {
           sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
         );
         const fieldId = await conn.oneFirst(
-          sql`insert into form_fields (form_id, name, type, export_id) values (${formId}, 'field 1', 'TEXTAREA', 'field1') returning id`
+          sql`insert into form_elements (form_id, name, type, export_id) values (${formId}, 'field 1', 'TEXTAREA', 'field1') returning id`
         );
         const field2Id = await conn.oneFirst(
-          sql`insert into form_fields (form_id, name, type, export_id) values (${formId}, 'yep nope', 'TEXTINPUT', 'field2') returning id`
+          sql`insert into form_elements (form_id, name, type, export_id) values (${formId}, 'yep nope', 'TEXTINPUT', 'field2') returning id`
         );
         const ruleId = await conn.oneFirst(
           sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${fieldId}, ${field2Id}, 'nope', '=') returning id`
@@ -1557,10 +1557,10 @@ describe("content access", () => {
           sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
         );
         const fieldId = await conn.oneFirst(
-          sql`insert into form_fields (form_id, name, type, export_id) values (${formId}, 'field 1', 'TEXTAREA', 'field1') returning id`
+          sql`insert into form_elements (form_id, name, type, export_id) values (${formId}, 'field 1', 'TEXTAREA', 'field1') returning id`
         );
         const field2Id = await conn.oneFirst(
-          sql`insert into form_fields (form_id, name, type, export_id) values (${formId}, 'yep nope', 'TEXTINPUT', 'field2') returning id`
+          sql`insert into form_elements (form_id, name, type, export_id) values (${formId}, 'yep nope', 'TEXTINPUT', 'field2') returning id`
         );
         const ruleId = await conn.oneFirst(
           sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${fieldId}, ${field2Id}, 'nope', '=') returning id`
@@ -1621,10 +1621,10 @@ describe("content access", () => {
           sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
         );
         const fieldId = await conn.oneFirst(
-          sql`insert into form_fields (form_id, name, type, export_id) values (${formId}, 'field 1', 'TEXTAREA', 'field1') returning id`
+          sql`insert into form_elements (form_id, name, type, export_id) values (${formId}, 'field 1', 'TEXTAREA', 'field1') returning id`
         );
         const field2Id = await conn.oneFirst(
-          sql`insert into form_fields (form_id, name, type, export_id) values (${formId}, 'yep nope', 'TEXTINPUT', 'field2') returning id`
+          sql`insert into form_elements (form_id, name, type, export_id) values (${formId}, 'yep nope', 'TEXTINPUT', 'field2') returning id`
         );
         const ruleId = await conn.oneFirst(
           sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${fieldId}, ${field2Id}, 'nope', '=') returning id`

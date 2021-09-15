@@ -2396,7 +2396,7 @@ Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
 Forms are used to add attributes to spatial features. In Surveys, Forms are used
 in support of gathering response data.
 
-Forms have any number of *FormFields* ordered by a `position` field, and form 
+Forms have any number of *FormElements* ordered by a `position` field, and form 
 contents may be hidden depending on the evaluation of *FormConditionalRenderingRules*.
 
 Forms typically belong to either a *Survey* or *SketchClass* exclusively. Some
@@ -2461,7 +2461,7 @@ CREATE FUNCTION public.create_form_template_from_sketch_class("sketchClassId" in
       select id into original_id from forms where sketch_class_id = "sketchClassId";
       insert into forms (sketch_class_id, is_template, template_name, template_type) values (null, true, "templateName", template_type) returning * into form;
       insert into 
-        form_fields (
+        form_elements (
           form_id, 
           name, 
           description, 
@@ -2481,7 +2481,7 @@ CREATE FUNCTION public.create_form_template_from_sketch_class("sketchClassId" in
         position, 
         component_settings
       from
-        form_fields
+        form_elements
       where
         form_id = original_id;
       return form;
@@ -2503,7 +2503,7 @@ CREATE FUNCTION public.create_form_template_from_survey("surveyId" integer, "tem
       select id into original_id from forms where survey_id = "surveyId";
       insert into forms (survey_id, is_template, template_name, template_type) values (null, true, "templateName", template_type) returning * into form;
       insert into 
-        form_fields (
+        form_elements (
           form_id, 
           name, 
           description, 
@@ -2523,7 +2523,7 @@ CREATE FUNCTION public.create_form_template_from_survey("surveyId" integer, "tem
         position, 
         component_settings
       from
-        form_fields
+        form_elements
       where
         form_id = original_id;
       return form;
@@ -3833,7 +3833,7 @@ CREATE FUNCTION public.initialize_sketch_class_form_from_template(sketch_class_i
       end if;
       insert into forms (sketch_class_id) values (sketch_class_id) returning * into form;
       insert into 
-        form_fields (
+        form_elements (
           form_id, 
           name, 
           description, 
@@ -3853,9 +3853,9 @@ CREATE FUNCTION public.initialize_sketch_class_form_from_template(sketch_class_i
         position, 
         component_settings
       from
-        form_fields
+        form_elements
       where
-        form_fields.form_id = template_id;
+        form_elements.form_id = template_id;
       return form;
     end
   $$;
@@ -3886,7 +3886,7 @@ CREATE FUNCTION public.initialize_survey_form_from_template(survey_id integer, t
       end if;
       insert into forms (survey_id) values (survey_id) returning * into form;
       insert into 
-        form_fields (
+        form_elements (
           form_id, 
           name, 
           description, 
@@ -3906,9 +3906,9 @@ CREATE FUNCTION public.initialize_survey_form_from_template(survey_id integer, t
         position, 
         component_settings
       from
-        form_fields
+        form_elements
       where
-        form_fields.form_id = template_id;
+        form_elements.form_id = template_id;
       return form;
     end
   $$;
@@ -4669,7 +4669,7 @@ COMMENT ON FUNCTION public.project_id_for_form_id(fid integer) IS '@omit';
 CREATE FUNCTION public.project_id_from_field_id(fid integer) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select project_id_for_form_id((select form_id from form_fields where form_fields.id = fid))
+    select project_id_for_form_id((select form_id from form_elements where form_elements.id = fid))
   $$;
 
 
@@ -6954,10 +6954,10 @@ COMMENT ON FUNCTION public.session_on_acl(acl_id integer) IS '@omit';
 
 
 --
--- Name: form_fields; Type: TABLE; Schema: public; Owner: -
+-- Name: form_elements; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.form_fields (
+CREATE TABLE public.form_elements (
     id integer NOT NULL,
     form_id integer NOT NULL,
     name text NOT NULL,
@@ -6974,86 +6974,86 @@ CREATE TABLE public.form_fields (
 
 
 --
--- Name: TABLE form_fields; Type: COMMENT; Schema: public; Owner: -
+-- Name: TABLE form_elements; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.form_fields IS '
+COMMENT ON TABLE public.form_elements IS '
 @omit all
-*FormFields* represent input fields in a form. Records contain fields to support
+*FormElements* represent input fields or read-only content in a form. Records contain fields to support
 generic functionality like name, description, position, and isRequired. They 
 also have a JSON `componentSettings` field that can have custom data to support
 a particular input type, indicated by the `type` field.
 
-Project administrators have full control over managing form fields through
+Project administrators have full control over managing form elements through
 graphile-generated CRUD mutations.
 ';
 
 
 --
--- Name: COLUMN form_fields.form_id; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN form_elements.form_id; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.form_fields.form_id IS 'Form this field belongs to.';
-
-
---
--- Name: COLUMN form_fields.name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_fields.name IS 'Question label';
+COMMENT ON COLUMN public.form_elements.form_id IS 'Form this field belongs to.';
 
 
 --
--- Name: COLUMN form_fields.description; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN form_elements.name; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.form_fields.description IS 'Question description. Max length 500 characters';
-
-
---
--- Name: COLUMN form_fields.type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_fields.type IS 'Indicates the input type. Each input type has a client-side component implementation with custom configuration properties stored in `componentSettings`.';
+COMMENT ON COLUMN public.form_elements.name IS 'Question label';
 
 
 --
--- Name: COLUMN form_fields.is_required; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN form_elements.description; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.form_fields.is_required IS 'Users must provide input for these fields before submission.';
-
-
---
--- Name: COLUMN form_fields.export_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_fields.export_id IS 'Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports';
+COMMENT ON COLUMN public.form_elements.description IS 'Question description. Max length 500 characters';
 
 
 --
--- Name: COLUMN form_fields."position"; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN form_elements.type; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.form_fields."position" IS '
+COMMENT ON COLUMN public.form_elements.type IS 'Indicates the input type. Each input type has a client-side component implementation with custom configuration properties stored in `componentSettings`.';
+
+
+--
+-- Name: COLUMN form_elements.is_required; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.is_required IS 'Users must provide input for these fields before submission.';
+
+
+--
+-- Name: COLUMN form_elements.export_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.export_id IS 'Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports';
+
+
+--
+-- Name: COLUMN form_elements."position"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements."position" IS '
 Determines order of field display. Clients should display fields in ascending 
-order. Cannot be changed individually. Use `setFormFieldOrder()` mutation to 
+order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
 update.
 ';
 
 
 --
--- Name: COLUMN form_fields.component_settings; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN form_elements.component_settings; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.form_fields.component_settings IS 'Type-specific configuration. For example, a Choice field might have a list of valid choices.';
+COMMENT ON COLUMN public.form_elements.component_settings IS 'Type-specific configuration. For example, a Choice field might have a list of valid choices.';
 
 
 --
--- Name: set_form_field_order(integer[]); Type: FUNCTION; Schema: public; Owner: -
+-- Name: set_form_element_order(integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.set_form_field_order("fieldIds" integer[]) RETURNS SETOF public.form_fields
+CREATE FUNCTION public.set_form_element_order("elementIds" integer[]) RETURNS SETOF public.form_elements
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -7065,13 +7065,13 @@ CREATE FUNCTION public.set_form_field_order("fieldIds" integer[]) RETURNS SETOF 
       field record;
     begin
       select
-        form_fields.form_id
+        form_elements.form_id
       into
         formid
       from
-        form_fields
+        form_elements
       where
-        id = any("fieldIds")
+        id = any("elementIds")
       limit 1;
       -- raise exception if session is not an admin
       select
@@ -7110,25 +7110,25 @@ CREATE FUNCTION public.set_form_field_order("fieldIds" integer[]) RETURNS SETOF 
       pos = 1;
       -- select fields in order of fieldIDs
       -- loop through each, setting a position
-      for field in select * from form_fields where form_id = formid order by array_position("fieldIds", id) loop
-        update form_fields set position = pos where id = field.id;
+      for field in select * from form_elements where form_id = formid order by array_position("elementIds", id) loop
+        update form_elements set position = pos where id = field.id;
         pos = pos + 1;
       end loop;
       -- return all the fields in this form
-      return query select * from form_fields where form_fields.form_id = form_id order by position asc;
+      return query select * from form_elements where form_elements.form_id = form_id order by position asc;
     end
   $$;
 
 
 --
--- Name: FUNCTION set_form_field_order("fieldIds" integer[]); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION set_form_element_order("elementIds" integer[]); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.set_form_field_order("fieldIds" integer[]) IS '
-Sets the positions of all fields in a form at once. Any missing field ids from
+COMMENT ON FUNCTION public.set_form_element_order("elementIds" integer[]) IS '
+Sets the positions of all elements in a form at once. Any missing element ids from
 the input will be positioned at the end of the form.
 
-Use this instead of trying to manage the position of form fields individually.
+Use this instead of trying to manage the position of form elements individually.
 ';
 
 
@@ -8992,7 +8992,7 @@ ALTER TABLE public.form_conditional_rendering_rules ALTER COLUMN id ADD GENERATE
 -- Name: form_fields_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-ALTER TABLE public.form_fields ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+ALTER TABLE public.form_elements ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME public.form_fields_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -9784,10 +9784,10 @@ ALTER TABLE ONLY public.form_conditional_rendering_rules
 
 
 --
--- Name: form_fields form_fields_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: form_elements form_fields_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.form_fields
+ALTER TABLE ONLY public.form_elements
     ADD CONSTRAINT form_fields_pkey PRIMARY KEY (id);
 
 
@@ -10273,7 +10273,7 @@ CREATE INDEX form_conditional_rendering_rules_field_id_idx ON public.form_condit
 -- Name: form_fields_form_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX form_fields_form_id_idx ON public.form_fields USING btree (form_id);
+CREATE INDEX form_fields_form_id_idx ON public.form_elements USING btree (form_id);
 
 
 --
@@ -11087,7 +11087,7 @@ ALTER TABLE ONLY public.email_notification_preferences
 --
 
 ALTER TABLE ONLY public.form_conditional_rendering_rules
-    ADD CONSTRAINT form_conditional_rendering_rules_field_id_fkey FOREIGN KEY (field_id) REFERENCES public.form_fields(id);
+    ADD CONSTRAINT form_conditional_rendering_rules_field_id_fkey FOREIGN KEY (field_id) REFERENCES public.form_elements(id);
 
 
 --
@@ -11105,22 +11105,22 @@ COMMENT ON CONSTRAINT form_conditional_rendering_rules_field_id_fkey ON public.f
 --
 
 ALTER TABLE ONLY public.form_conditional_rendering_rules
-    ADD CONSTRAINT form_conditional_rendering_rules_predicate_field_id_fkey FOREIGN KEY (predicate_field_id) REFERENCES public.form_fields(id);
+    ADD CONSTRAINT form_conditional_rendering_rules_predicate_field_id_fkey FOREIGN KEY (predicate_field_id) REFERENCES public.form_elements(id);
 
 
 --
--- Name: form_fields form_fields_form_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: form_elements form_fields_form_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.form_fields
+ALTER TABLE ONLY public.form_elements
     ADD CONSTRAINT form_fields_form_id_fkey FOREIGN KEY (form_id) REFERENCES public.forms(id) ON DELETE CASCADE;
 
 
 --
--- Name: CONSTRAINT form_fields_form_id_fkey ON form_fields; Type: COMMENT; Schema: public; Owner: -
+-- Name: CONSTRAINT form_fields_form_id_fkey ON form_elements; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON CONSTRAINT form_fields_form_id_fkey ON public.form_fields IS '@simpleCollections only';
+COMMENT ON CONSTRAINT form_fields_form_id_fkey ON public.form_elements IS '@simpleCollections only';
 
 
 --
@@ -11877,16 +11877,16 @@ CREATE POLICY form_conditional_rendering_rules_select ON public.form_conditional
 
 
 --
--- Name: form_fields; Type: ROW SECURITY; Schema: public; Owner: -
+-- Name: form_elements; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
-ALTER TABLE public.form_fields ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.form_elements ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: form_fields form_fields_admin; Type: POLICY; Schema: public; Owner: -
+-- Name: form_elements form_fields_admin; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY form_fields_admin ON public.form_fields TO seasketch_user USING (public.session_is_admin(public.project_id_for_form_id(form_id))) WITH CHECK (public.session_is_admin(public.project_id_for_form_id(form_id)));
+CREATE POLICY form_fields_admin ON public.form_elements TO seasketch_user USING (public.session_is_admin(public.project_id_for_form_id(form_id))) WITH CHECK (public.session_is_admin(public.project_id_for_form_id(form_id)));
 
 
 --
@@ -11907,10 +11907,10 @@ CREATE POLICY forms_admin ON public.forms TO seasketch_user USING (public.sessio
 
 
 --
--- Name: form_fields forms_fields_select; Type: POLICY; Schema: public; Owner: -
+-- Name: form_elements forms_fields_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY forms_fields_select ON public.form_fields FOR SELECT TO anon USING (public.session_can_access_form(form_id));
+CREATE POLICY forms_fields_select ON public.form_elements FOR SELECT TO anon USING (public.session_can_access_form(form_id));
 
 
 --
@@ -17290,68 +17290,68 @@ GRANT ALL ON FUNCTION public.session_on_acl(acl_id integer) TO anon;
 
 
 --
--- Name: TABLE form_fields; Type: ACL; Schema: public; Owner: -
+-- Name: TABLE form_elements; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT ON TABLE public.form_fields TO anon;
-GRANT INSERT,DELETE ON TABLE public.form_fields TO seasketch_user;
-
-
---
--- Name: COLUMN form_fields.name; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(name) ON TABLE public.form_fields TO seasketch_user;
+GRANT SELECT ON TABLE public.form_elements TO anon;
+GRANT INSERT,DELETE ON TABLE public.form_elements TO seasketch_user;
 
 
 --
--- Name: COLUMN form_fields.description; Type: ACL; Schema: public; Owner: -
+-- Name: COLUMN form_elements.name; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(description) ON TABLE public.form_fields TO seasketch_user;
-
-
---
--- Name: COLUMN form_fields.type; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(type) ON TABLE public.form_fields TO seasketch_user;
+GRANT UPDATE(name) ON TABLE public.form_elements TO seasketch_user;
 
 
 --
--- Name: COLUMN form_fields.is_required; Type: ACL; Schema: public; Owner: -
+-- Name: COLUMN form_elements.description; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(is_required) ON TABLE public.form_fields TO seasketch_user;
-
-
---
--- Name: COLUMN form_fields.export_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(export_id) ON TABLE public.form_fields TO seasketch_user;
+GRANT UPDATE(description) ON TABLE public.form_elements TO seasketch_user;
 
 
 --
--- Name: COLUMN form_fields."position"; Type: ACL; Schema: public; Owner: -
+-- Name: COLUMN form_elements.type; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE("position") ON TABLE public.form_fields TO seasketch_user;
-
-
---
--- Name: COLUMN form_fields.component_settings; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(component_settings) ON TABLE public.form_fields TO seasketch_user;
+GRANT UPDATE(type) ON TABLE public.form_elements TO seasketch_user;
 
 
 --
--- Name: FUNCTION set_form_field_order("fieldIds" integer[]); Type: ACL; Schema: public; Owner: -
+-- Name: COLUMN form_elements.is_required; Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.set_form_field_order("fieldIds" integer[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.set_form_field_order("fieldIds" integer[]) TO seasketch_user;
+GRANT UPDATE(is_required) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.export_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(export_id) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements."position"; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE("position") ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.component_settings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(component_settings) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: FUNCTION set_form_element_order("elementIds" integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_form_element_order("elementIds" integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_form_element_order("elementIds" integer[]) TO seasketch_user;
 
 
 --

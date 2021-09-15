@@ -817,9 +817,9 @@ type CreateFormConditionalRenderingRulePayload {
   clientMutationId: String
 
   """
-  Reads a single `FormField` that is related to this `FormConditionalRenderingRule`.
+  Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`.
   """
-  field: FormField
+  field: FormElement
 
   """The `FormConditionalRenderingRule` that was created by this mutation."""
   formConditionalRenderingRule: FormConditionalRenderingRule
@@ -838,37 +838,37 @@ type CreateFormConditionalRenderingRulePayload {
   query: Query
 }
 
-"""All input for the create `FormField` mutation."""
-input CreateFormFieldInput {
+"""All input for the create `FormElement` mutation."""
+input CreateFormElementInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
 
-  """The `FormField` to be created by this mutation."""
-  formField: FormFieldInput!
+  """The `FormElement` to be created by this mutation."""
+  formElement: FormElementInput!
 }
 
-"""The output of our create `FormField` mutation."""
-type CreateFormFieldPayload {
+"""The output of our create `FormElement` mutation."""
+type CreateFormElementPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
 
-  """Reads a single `Form` that is related to this `FormField`."""
+  """Reads a single `Form` that is related to this `FormElement`."""
   form: Form
 
-  """The `FormField` that was created by this mutation."""
-  formField: FormField
+  """The `FormElement` that was created by this mutation."""
+  formElement: FormElement
 
-  """An edge for our `FormField`. May be used by Relay 1."""
-  formFieldEdge(
-    """The method to use when ordering `FormField`."""
-    orderBy: [FormFieldsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): FormFieldsEdge
+  """An edge for our `FormElement`. May be used by Relay 1."""
+  formElementEdge(
+    """The method to use when ordering `FormElement`."""
+    orderBy: [FormElementsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormElementsEdge
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -2855,9 +2855,9 @@ type DeleteFormConditionalRenderingRulePayload {
   deletedFormConditionalRenderingRuleNodeId: ID
 
   """
-  Reads a single `FormField` that is related to this `FormConditionalRenderingRule`.
+  Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`.
   """
-  field: FormField
+  field: FormElement
 
   """The `FormConditionalRenderingRule` that was deleted by this mutation."""
   formConditionalRenderingRule: FormConditionalRenderingRule
@@ -2876,8 +2876,8 @@ type DeleteFormConditionalRenderingRulePayload {
   query: Query
 }
 
-"""All input for the `deleteFormFieldByNodeId` mutation."""
-input DeleteFormFieldByNodeIdInput {
+"""All input for the `deleteFormElementByNodeId` mutation."""
+input DeleteFormElementByNodeIdInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
@@ -2885,13 +2885,13 @@ input DeleteFormFieldByNodeIdInput {
   clientMutationId: String
 
   """
-  The globally unique `ID` which will identify a single `FormField` to be deleted.
+  The globally unique `ID` which will identify a single `FormElement` to be deleted.
   """
   nodeId: ID!
 }
 
-"""All input for the `deleteFormField` mutation."""
-input DeleteFormFieldInput {
+"""All input for the `deleteFormElement` mutation."""
+input DeleteFormElementInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
@@ -2900,26 +2900,26 @@ input DeleteFormFieldInput {
   id: Int!
 }
 
-"""The output of our delete `FormField` mutation."""
-type DeleteFormFieldPayload {
+"""The output of our delete `FormElement` mutation."""
+type DeleteFormElementPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  deletedFormFieldNodeId: ID
+  deletedFormElementNodeId: ID
 
-  """Reads a single `Form` that is related to this `FormField`."""
+  """Reads a single `Form` that is related to this `FormElement`."""
   form: Form
 
-  """The `FormField` that was deleted by this mutation."""
-  formField: FormField
+  """The `FormElement` that was deleted by this mutation."""
+  formElement: FormElement
 
-  """An edge for our `FormField`. May be used by Relay 1."""
-  formFieldEdge(
-    """The method to use when ordering `FormField`."""
-    orderBy: [FormFieldsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): FormFieldsEdge
+  """An edge for our `FormElement`. May be used by Relay 1."""
+  formElementEdge(
+    """The method to use when ordering `FormElement`."""
+    orderBy: [FormElementsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormElementsEdge
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -4012,7 +4012,7 @@ Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
 Forms are used to add attributes to spatial features. In Surveys, Forms are used
 in support of gathering response data.
 
-Forms have any number of *FormFields* ordered by a `position` field, and form 
+Forms have any number of *FormElements* ordered by a `position` field, and form 
 contents may be hidden depending on the evaluation of *FormConditionalRenderingRules*.
 
 Forms typically belong to either a *Survey* or *SketchClass* exclusively. Some
@@ -4022,12 +4022,12 @@ as an option when creating new forms.
 
 """
 type Form implements Node {
-  """List of all FormFields in this form."""
-  formFields(
+  """List of all FormElements in this form."""
+  formElements(
     """
     A condition to be used in determining which values should be returned by the collection.
     """
-    condition: FormFieldCondition
+    condition: FormElementCondition
 
     """Only read the first `n` values of the set."""
     first: Int
@@ -4035,9 +4035,9 @@ type Form implements Node {
     """Skip the first `n` values."""
     offset: Int
 
-    """The method to use when ordering `FormField`."""
-    orderBy: [FormFieldsOrderBy!]
-  ): [FormField!]!
+    """The method to use when ordering `FormElement`."""
+    orderBy: [FormElementsOrderBy!]
+  ): [FormElement!]!
   id: Int!
 
   """
@@ -4103,9 +4103,9 @@ SHOW fieldB if fieldA GREATER_THAN 5
 """
 type FormConditionalRenderingRule implements Node {
   """
-  Reads a single `FormField` that is related to this `FormConditionalRenderingRule`.
+  Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`.
   """
-  field: FormField
+  field: FormElement
 
   """Field that will be hidden unless the rule evaluates true"""
   fieldId: Int!
@@ -4192,16 +4192,16 @@ enum FormConditionalRenderingRulesOrderBy {
 }
 
 """
-*FormFields* represent input fields in a form. Records contain fields to support
+*FormElements* represent input fields or read-only content in a form. Records contain fields to support
 generic functionality like name, description, position, and isRequired. They 
 also have a JSON `componentSettings` field that can have custom data to support
 a particular input type, indicated by the `type` field.
 
-Project administrators have full control over managing form fields through
+Project administrators have full control over managing form elements through
 graphile-generated CRUD mutations.
 
 """
-type FormField implements Node {
+type FormElement implements Node {
   """
   Type-specific configuration. For example, a Choice field might have a list of valid choices.
   """
@@ -4232,7 +4232,7 @@ type FormField implements Node {
   """
   exportId: String!
 
-  """Reads a single `Form` that is related to this `FormField`."""
+  """Reads a single `Form` that is related to this `FormElement`."""
   form: Form
 
   """Form this field belongs to."""
@@ -4252,7 +4252,7 @@ type FormField implements Node {
 
   """
   Determines order of field display. Clients should display fields in ascending 
-  order. Cannot be changed individually. Use `setFormFieldOrder()` mutation to 
+  order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
   update.
   
   """
@@ -4267,10 +4267,10 @@ type FormField implements Node {
 }
 
 """
-A condition to be used against `FormField` object types. All fields are tested
+A condition to be used against `FormElement` object types. All fields are tested
 for equality and combined with a logical ‘and.’
 """
-input FormFieldCondition {
+input FormElementCondition {
   """Checks for equality with the object’s `formId` field."""
   formId: Int
 
@@ -4278,8 +4278,8 @@ input FormFieldCondition {
   id: Int
 }
 
-"""An input for mutations affecting `FormField`"""
-input FormFieldInput {
+"""An input for mutations affecting `FormElement`"""
+input FormElementInput {
   """
   Type-specific configuration. For example, a Choice field might have a list of valid choices.
   """
@@ -4305,7 +4305,7 @@ input FormFieldInput {
 
   """
   Determines order of field display. Clients should display fields in ascending 
-  order. Cannot be changed individually. Use `setFormFieldOrder()` mutation to 
+  order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
   update.
   
   """
@@ -4320,9 +4320,9 @@ input FormFieldInput {
 }
 
 """
-Represents an update to a `FormField`. Fields that are set will be updated.
+Represents an update to a `FormElement`. Fields that are set will be updated.
 """
-input FormFieldPatch {
+input FormElementPatch {
   """
   Type-specific configuration. For example, a Choice field might have a list of valid choices.
   """
@@ -4344,7 +4344,7 @@ input FormFieldPatch {
 
   """
   Determines order of field display. Clients should display fields in ascending 
-  order. Cannot be changed individually. Use `setFormFieldOrder()` mutation to 
+  order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
   update.
   
   """
@@ -4358,17 +4358,17 @@ input FormFieldPatch {
   type: FormFieldType
 }
 
-"""A `FormField` edge in the connection."""
-type FormFieldsEdge {
+"""A `FormElement` edge in the connection."""
+type FormElementsEdge {
   """A cursor for use in pagination."""
   cursor: Cursor
 
-  """The `FormField` at the end of the edge."""
-  node: FormField!
+  """The `FormElement` at the end of the edge."""
+  node: FormElement!
 }
 
-"""Methods to use when ordering `FormField`."""
-enum FormFieldsOrderBy {
+"""Methods to use when ordering `FormElement`."""
+enum FormElementsOrderBy {
   FORM_ID_ASC
   FORM_ID_DESC
   ID_ASC
@@ -4380,7 +4380,7 @@ enum FormFieldsOrderBy {
 
 """
 
-FormField input types. Each type will need a custom client-side component. 
+FormElement input types. Each type will need a custom client-side component. 
 This list will expand as the application supports new types. New types can be 
 added by using the command: 
 
@@ -5699,13 +5699,13 @@ type Mutation {
     input: CreateFormConditionalRenderingRuleInput!
   ): CreateFormConditionalRenderingRulePayload
 
-  """Creates a single `FormField`."""
-  createFormField(
+  """Creates a single `FormElement`."""
+  createFormElement(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: CreateFormFieldInput!
-  ): CreateFormFieldPayload
+    input: CreateFormElementInput!
+  ): CreateFormElementPayload
   createFormTemplateFromSketchClass(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -6007,21 +6007,21 @@ type Mutation {
     input: DeleteFormConditionalRenderingRuleByNodeIdInput!
   ): DeleteFormConditionalRenderingRulePayload
 
-  """Deletes a single `FormField` using a unique key."""
-  deleteFormField(
+  """Deletes a single `FormElement` using a unique key."""
+  deleteFormElement(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: DeleteFormFieldInput!
-  ): DeleteFormFieldPayload
+    input: DeleteFormElementInput!
+  ): DeleteFormElementPayload
 
-  """Deletes a single `FormField` using its globally unique id."""
-  deleteFormFieldByNodeId(
+  """Deletes a single `FormElement` using its globally unique id."""
+  deleteFormElementByNodeId(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: DeleteFormFieldByNodeIdInput!
-  ): DeleteFormFieldPayload
+    input: DeleteFormElementByNodeIdInput!
+  ): DeleteFormElementPayload
 
   """Deletes a single `Forum` using a unique key."""
   deleteForum(
@@ -6541,18 +6541,18 @@ type Mutation {
   ): Int
 
   """
-  Sets the positions of all fields in a form at once. Any missing field ids from
+  Sets the positions of all elements in a form at once. Any missing element ids from
   the input will be positioned at the end of the form.
   
-  Use this instead of trying to manage the position of form fields individually.
+  Use this instead of trying to manage the position of form elements individually.
   
   """
-  setFormFieldOrder(
+  setFormElementOrder(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: SetFormFieldOrderInput!
-  ): SetFormFieldOrderPayload
+    input: SetFormElementOrderInput!
+  ): SetFormElementOrderPayload
 
   """
   Set the order in which discussion forums will be displayed. Provide a list of
@@ -6785,21 +6785,23 @@ type Mutation {
     input: UpdateFormConditionalRenderingRuleByNodeIdInput!
   ): UpdateFormConditionalRenderingRulePayload
 
-  """Updates a single `FormField` using a unique key and a patch."""
-  updateFormField(
+  """Updates a single `FormElement` using a unique key and a patch."""
+  updateFormElement(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: UpdateFormFieldInput!
-  ): UpdateFormFieldPayload
+    input: UpdateFormElementInput!
+  ): UpdateFormElementPayload
 
-  """Updates a single `FormField` using its globally unique id and a patch."""
-  updateFormFieldByNodeId(
+  """
+  Updates a single `FormElement` using its globally unique id and a patch.
+  """
+  updateFormElementByNodeId(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: UpdateFormFieldByNodeIdInput!
-  ): UpdateFormFieldPayload
+    input: UpdateFormElementByNodeIdInput!
+  ): UpdateFormElementPayload
 
   """Updates a single `Forum` using a unique key and a patch."""
   updateForum(
@@ -8583,13 +8585,15 @@ type Query implements Node {
     """
     nodeId: ID!
   ): FormConditionalRenderingRule
-  formField(id: Int!): FormField
+  formElement(id: Int!): FormElement
 
-  """Reads a single `FormField` using its globally unique `ID`."""
-  formFieldByNodeId(
-    """The globally unique `ID` to be used in selecting a single `FormField`."""
+  """Reads a single `FormElement` using its globally unique `ID`."""
+  formElementByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `FormElement`.
+    """
     nodeId: ID!
-  ): FormField
+  ): FormElement
   forum(id: Int!): Forum
 
   """Reads a single `Forum` using its globally unique `ID`."""
@@ -9159,24 +9163,24 @@ type SendVerificationEmailResults {
   success: Boolean!
 }
 
-"""All input for the `setFormFieldOrder` mutation."""
-input SetFormFieldOrderInput {
+"""All input for the `setFormElementOrder` mutation."""
+input SetFormElementOrderInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-  fieldIds: [Int]
+  elementIds: [Int]
 }
 
-"""The output of our `setFormFieldOrder` mutation."""
-type SetFormFieldOrderPayload {
+"""The output of our `setFormElementOrder` mutation."""
+type SetFormElementOrderPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  formFields: [FormField!]
+  formElements: [FormElement!]
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -11556,9 +11560,9 @@ type UpdateFormConditionalRenderingRulePayload {
   clientMutationId: String
 
   """
-  Reads a single `FormField` that is related to this `FormConditionalRenderingRule`.
+  Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`.
   """
-  field: FormField
+  field: FormElement
 
   """The `FormConditionalRenderingRule` that was updated by this mutation."""
   formConditionalRenderingRule: FormConditionalRenderingRule
@@ -11577,8 +11581,8 @@ type UpdateFormConditionalRenderingRulePayload {
   query: Query
 }
 
-"""All input for the `updateFormFieldByNodeId` mutation."""
-input UpdateFormFieldByNodeIdInput {
+"""All input for the `updateFormElementByNodeId` mutation."""
+input UpdateFormElementByNodeIdInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
@@ -11586,18 +11590,18 @@ input UpdateFormFieldByNodeIdInput {
   clientMutationId: String
 
   """
-  The globally unique `ID` which will identify a single `FormField` to be updated.
+  The globally unique `ID` which will identify a single `FormElement` to be updated.
   """
   nodeId: ID!
 
   """
-  An object where the defined keys will be set on the `FormField` being updated.
+  An object where the defined keys will be set on the `FormElement` being updated.
   """
-  patch: FormFieldPatch!
+  patch: FormElementPatch!
 }
 
-"""All input for the `updateFormField` mutation."""
-input UpdateFormFieldInput {
+"""All input for the `updateFormElement` mutation."""
+input UpdateFormElementInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
@@ -11606,30 +11610,30 @@ input UpdateFormFieldInput {
   id: Int!
 
   """
-  An object where the defined keys will be set on the `FormField` being updated.
+  An object where the defined keys will be set on the `FormElement` being updated.
   """
-  patch: FormFieldPatch!
+  patch: FormElementPatch!
 }
 
-"""The output of our update `FormField` mutation."""
-type UpdateFormFieldPayload {
+"""The output of our update `FormElement` mutation."""
+type UpdateFormElementPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
 
-  """Reads a single `Form` that is related to this `FormField`."""
+  """Reads a single `Form` that is related to this `FormElement`."""
   form: Form
 
-  """The `FormField` that was updated by this mutation."""
-  formField: FormField
+  """The `FormElement` that was updated by this mutation."""
+  formElement: FormElement
 
-  """An edge for our `FormField`. May be used by Relay 1."""
-  formFieldEdge(
-    """The method to use when ordering `FormField`."""
-    orderBy: [FormFieldsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): FormFieldsEdge
+  """An edge for our `FormElement`. May be used by Relay 1."""
+  formElementEdge(
+    """The method to use when ordering `FormElement`."""
+    orderBy: [FormElementsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormElementsEdge
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
