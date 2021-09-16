@@ -46,7 +46,7 @@ export default {
       "initializeSketchClassFormFromTemplate",
       "initializeBlankSurveyForm",
       "initializeSurveyFormFromTemplate",
-      "setFormFieldOrder",
+      "setFormElementOrder",
 
       // Forums
       "setForumOrder",
@@ -254,19 +254,8 @@ If this happens SeaSketch will not be able to send any invitations to the user.
     "FormTemplateType.SURVEYS": `Template should only be listed for *Surveys*.`,
     "FormTemplateType.SKETCHES": `Template should only be listed for *SketchClasses*.`,
     "FormTemplateType.SURVEYS_AND_SKETCHES": `Template should be an option for both types.`,
-    "Form.formFields": `List of all FormFields in this form.`,
-    "FormField.conditionalRenderingRules": `Set of rules that determine the visibility of this field.`,
-    FormFieldType: `
-FormField input types. Each type will need a custom client-side component. 
-This list will expand as the application supports new types. New types can be 
-added by using the command: 
-
-\`alter type form_field_type add value 'NEW_TYPE';\`
-`,
-    "FormFieldType.TEXTINPUT": `The simplest input type, a plain html \`<input type="text" />\``,
-    "FormFieldType.TEXTAREA": `HTML textarea field`,
-    "FormFieldType.SELECT": `HTML select field. May support multiple choices`,
-    "FormFieldType.SECTION": `Non-input type field. Used to insert headers into a form`,
+    "Form.formElements": `List of all FormElements in this form.`,
+    "FormElement.conditionalRenderingRules": `Set of rules that determine the visibility of this field.`,
     "FieldRuleOperator.LESS_THAN": `Predicate field value is less than specified value`,
     "FieldRuleOperator.IS_BLANK": `Empty string input or no choice selection`,
     "FieldRuleOperator.CONTAINS": `String contains value`,
