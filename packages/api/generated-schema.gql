@@ -4235,9 +4235,12 @@ type FormElement implements Node {
   ): [FormConditionalRenderingRule!]!
 
   """
-  Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports
+  Column name used in csv export, property name in reporting tools. Keep stable
+  to avoid breaking reports. If null, this value will be dynamically generated
+  from the first several characters of the text in FormElement.body.
+  
   """
-  exportId: String!
+  exportId: String
 
   """Reads a single `Form` that is related to this `FormElement`."""
   form: Form
@@ -4295,9 +4298,12 @@ input FormElementInput {
   componentSettings: JSON
 
   """
-  Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports
+  Column name used in csv export, property name in reporting tools. Keep stable
+  to avoid breaking reports. If null, this value will be dynamically generated
+  from the first several characters of the text in FormElement.body.
+  
   """
-  exportId: String!
+  exportId: String
 
   """Form this field belongs to."""
   formId: Int!
@@ -4336,7 +4342,10 @@ input FormElementPatch {
   componentSettings: JSON
 
   """
-  Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports
+  Column name used in csv export, property name in reporting tools. Keep stable
+  to avoid breaking reports. If null, this value will be dynamically generated
+  from the first several characters of the text in FormElement.body.
+  
   """
   exportId: String
 

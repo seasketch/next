@@ -3661,7 +3661,7 @@ CREATE TABLE public.form_elements (
     id integer NOT NULL,
     form_id integer NOT NULL,
     is_required boolean DEFAULT false NOT NULL,
-    export_id text NOT NULL,
+    export_id text,
     "position" integer DEFAULT 1 NOT NULL,
     component_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     type_id text NOT NULL,
@@ -3705,7 +3705,9 @@ COMMENT ON COLUMN public.form_elements.is_required IS 'Users must provide input 
 -- Name: COLUMN form_elements.export_id; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.form_elements.export_id IS 'Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports';
+COMMENT ON COLUMN public.form_elements.export_id IS '
+Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body.
+';
 
 
 --

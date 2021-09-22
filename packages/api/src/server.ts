@@ -35,6 +35,7 @@ import bytes from "bytes";
 import { run } from "graphile-worker";
 import cors from "cors";
 import BuildPlugin from "./plugins/buildPlugin";
+import ExportIdPlugin from "./plugins/exportIdPlugin";
 
 const app = express();
 
@@ -189,6 +190,7 @@ app.use(
       SurveyInvitesPlugin,
       CanonicalEmailPlugin,
       DataSourcePlugin,
+      ExportIdPlugin,
       SanitizeInteractivityTemplatesPlugin,
       orderTopicsByDateAndStickyPlugin,
       ProjectInviteStateSubscriptionPlugin,

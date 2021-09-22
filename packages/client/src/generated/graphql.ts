@@ -3544,8 +3544,12 @@ export type FormElement = Node & {
   componentSettings: Scalars['JSON'];
   /** Set of rules that determine the visibility of this field. */
   conditionalRenderingRules: Array<FormConditionalRenderingRule>;
-  /** Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports */
-  exportId: Scalars['String'];
+  /**
+   * Column name used in csv export, property name in reporting tools. Keep stable
+   * to avoid breaking reports. If null, this value will be dynamically generated
+   * from the first several characters of the text in FormElement.body.
+   */
+  exportId?: Maybe<Scalars['String']>;
   /** Reads a single `Form` that is related to this `FormElement`. */
   form?: Maybe<Form>;
   /** Form this field belongs to. */
@@ -3605,8 +3609,12 @@ export type FormElementInput = {
   body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
-  /** Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports */
-  exportId: Scalars['String'];
+  /**
+   * Column name used in csv export, property name in reporting tools. Keep stable
+   * to avoid breaking reports. If null, this value will be dynamically generated
+   * from the first several characters of the text in FormElement.body.
+   */
+  exportId?: Maybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
   id?: Maybe<Scalars['Int']>;
@@ -3633,7 +3641,11 @@ export type FormElementPatch = {
   body?: Maybe<Scalars['JSON']>;
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
-  /** Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports */
+  /**
+   * Column name used in csv export, property name in reporting tools. Keep stable
+   * to avoid breaking reports. If null, this value will be dynamically generated
+   * from the first several characters of the text in FormElement.body.
+   */
   exportId?: Maybe<Scalars['String']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;

@@ -17,6 +17,7 @@ import {
   createBody,
   getBodyStr,
 } from "./helpers";
+import { createExportId } from "../src/plugins/exportIdPlugin";
 
 const pool = createPool("test");
 
@@ -500,8 +501,8 @@ describe("Form Fields", () => {
         );
         expect(
           conn.one(
-            sql`insert into form_elements (body, export_id, type_id) values ('field a', ${createBody(
-              "field_a"
+            sql`insert into form_elements (body, type_id) values (${createBody(
+              "field a"
             )}, ${FormElementType}) returning *`
           )
         ).rejects.toThrow();
@@ -767,4 +768,16 @@ describe("Conditional Field Rendering Rules", () => {
       }
     );
   });
+});
+
+test("export_id will be generated from body if blank", () => {
+  const body = createBody("This is my question, it is really long");
+  const exportId = createExportId(1, body.value!);
+  expect(exportId).toBe("this_is_my_question_it_is_really");
+  expect(createExportId(12, createBody("short"))).toBe("form_element_12");
+});
+
+test("export_id can be explicitly set", () => {
+  const body = createBody("This is my question, it is really long");
+  expect(createExportId(12, body, "my_export_id")).toBe("my_export_id");
 });
