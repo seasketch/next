@@ -632,3 +632,30 @@ export async function verifySessionCanAccessSurveyResources(
     ).length
   ).toBe(1);
 }
+
+/**
+ * Creates a prosemirror document containing a single header from the given string
+ * @param str
+ * @returns sql.json object
+ */
+export function createBody(str: string) {
+  return sql.json({
+    type: "doc",
+    content: [
+      {
+        type: "heading",
+        attrs: { level: 1 },
+        content: [{ text: str, type: "text" }],
+      },
+    ],
+  });
+}
+
+/**
+ * Assuming a document created by #createBody, will return the header string
+ * @param body
+ * @returns string
+ */
+export function getBodyStr(body: any) {
+  return body.content[0].content[0].text;
+}

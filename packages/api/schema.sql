@@ -2463,8 +2463,7 @@ CREATE FUNCTION public.create_form_template_from_sketch_class("sketchClassId" in
       insert into 
         form_elements (
           form_id, 
-          title, 
-          description, 
+          body, 
           type_id, 
           is_required, 
           export_id, 
@@ -2473,8 +2472,7 @@ CREATE FUNCTION public.create_form_template_from_sketch_class("sketchClassId" in
         ) 
       select 
         form.id, 
-        title, 
-        description, 
+        body, 
         type_id, 
         is_required, 
         export_id, 
@@ -2505,8 +2503,7 @@ CREATE FUNCTION public.create_form_template_from_survey("surveyId" integer, "tem
       insert into 
         form_elements (
           form_id, 
-          title, 
-          description, 
+          body,
           type_id, 
           is_required, 
           export_id, 
@@ -2515,8 +2512,7 @@ CREATE FUNCTION public.create_form_template_from_survey("surveyId" integer, "tem
         ) 
       select 
         form.id, 
-        title, 
-        description, 
+        body, 
         type_id, 
         is_required, 
         export_id, 
@@ -3664,15 +3660,13 @@ COMMENT ON COLUMN public.form_element_types.is_single_use_only IS 'These element
 CREATE TABLE public.form_elements (
     id integer NOT NULL,
     form_id integer NOT NULL,
-    title text NOT NULL,
-    description text,
     is_required boolean DEFAULT false NOT NULL,
     export_id text NOT NULL,
     "position" integer DEFAULT 1 NOT NULL,
     component_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     type_id text NOT NULL,
+    body jsonb NOT NULL,
     CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
-    CONSTRAINT form_fields_description_check CHECK ((char_length(description) < 500)),
     CONSTRAINT form_fields_position_check CHECK (("position" > 0))
 );
 
@@ -3684,7 +3678,7 @@ CREATE TABLE public.form_elements (
 COMMENT ON TABLE public.form_elements IS '
 @omit all
 *FormElements* represent input fields or read-only content in a form. Records contain fields to support
-generic functionality like name, description, position, and isRequired. They 
+generic functionality like body, position, and isRequired. They 
 also have a JSON `componentSettings` field that can have custom data to support
 a particular input type, indicated by the `type` field.
 
@@ -3698,20 +3692,6 @@ graphile-generated CRUD mutations.
 --
 
 COMMENT ON COLUMN public.form_elements.form_id IS 'Form this field belongs to.';
-
-
---
--- Name: COLUMN form_elements.title; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.title IS 'Question label';
-
-
---
--- Name: COLUMN form_elements.description; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.description IS 'Question description. Max length 500 characters';
 
 
 --
@@ -3744,6 +3724,15 @@ update.
 --
 
 COMMENT ON COLUMN public.form_elements.component_settings IS 'Type-specific configuration. For example, a Choice field might have a list of valid choices.';
+
+
+--
+-- Name: COLUMN form_elements.body; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.body IS '
+[prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms.
+';
 
 
 --
@@ -3984,8 +3973,7 @@ CREATE FUNCTION public.initialize_sketch_class_form_from_template(sketch_class_i
       insert into 
         form_elements (
           form_id, 
-          title, 
-          description, 
+          body, 
           type_id, 
           is_required, 
           export_id, 
@@ -3994,8 +3982,7 @@ CREATE FUNCTION public.initialize_sketch_class_form_from_template(sketch_class_i
         )
       select 
         form.id, 
-        title, 
-        description, 
+        body, 
         type_id, 
         is_required, 
         export_id, 
@@ -4037,8 +4024,7 @@ CREATE FUNCTION public.initialize_survey_form_from_template(survey_id integer, t
       insert into 
         form_elements (
           form_id, 
-          title, 
-          description, 
+          body, 
           type_id, 
           is_required, 
           export_id, 
@@ -4047,8 +4033,7 @@ CREATE FUNCTION public.initialize_survey_form_from_template(survey_id integer, t
         )
       select 
         form.id, 
-        title, 
-        description, 
+        body, 
         type_id, 
         is_required, 
         export_id, 
@@ -14421,20 +14406,6 @@ GRANT INSERT,DELETE ON TABLE public.form_elements TO seasketch_user;
 
 
 --
--- Name: COLUMN form_elements.title; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(title) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.description; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(description) ON TABLE public.form_elements TO seasketch_user;
-
-
---
 -- Name: COLUMN form_elements.is_required; Type: ACL; Schema: public; Owner: -
 --
 
@@ -14467,6 +14438,13 @@ GRANT UPDATE(component_settings) ON TABLE public.form_elements TO seasketch_user
 --
 
 GRANT UPDATE(type_id) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.body; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(body) ON TABLE public.form_elements TO seasketch_user;
 
 
 --

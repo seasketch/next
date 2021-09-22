@@ -3523,7 +3523,7 @@ export enum FormConditionalRenderingRulesOrderBy {
 
 /**
  * *FormElements* represent input fields or read-only content in a form. Records contain fields to support
- * generic functionality like name, description, position, and isRequired. They
+ * generic functionality like body, position, and isRequired. They
  * also have a JSON `componentSettings` field that can have custom data to support
  * a particular input type, indicated by the `type` field.
  *
@@ -3532,12 +3532,18 @@ export enum FormConditionalRenderingRulesOrderBy {
  */
 export type FormElement = Node & {
   __typename?: 'FormElement';
+  /**
+   * [prosemirror](https://prosemirror.net/) document representing a rich-text
+   * question or informational content. Level 1 headers can be assumed to be the
+   * question for input-type fields, though formatting is up to the project
+   * administrators. Clients should provide a template that encourages this
+   * convention when building forms.
+   */
+  body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings: Scalars['JSON'];
   /** Set of rules that determine the visibility of this field. */
   conditionalRenderingRules: Array<FormConditionalRenderingRule>;
-  /** Question description. Max length 500 characters */
-  description?: Maybe<Scalars['String']>;
   /** Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports */
   exportId: Scalars['String'];
   /** Reads a single `Form` that is related to this `FormElement`. */
@@ -3555,8 +3561,6 @@ export type FormElement = Node & {
    * update.
    */
   position: Scalars['Int'];
-  /** Question label */
-  title: Scalars['String'];
   type?: Maybe<FormElementType>;
   typeId: Scalars['String'];
 };
@@ -3564,7 +3568,7 @@ export type FormElement = Node & {
 
 /**
  * *FormElements* represent input fields or read-only content in a form. Records contain fields to support
- * generic functionality like name, description, position, and isRequired. They
+ * generic functionality like body, position, and isRequired. They
  * also have a JSON `componentSettings` field that can have custom data to support
  * a particular input type, indicated by the `type` field.
  *
@@ -3591,10 +3595,16 @@ export type FormElementCondition = {
 
 /** An input for mutations affecting `FormElement` */
 export type FormElementInput = {
+  /**
+   * [prosemirror](https://prosemirror.net/) document representing a rich-text
+   * question or informational content. Level 1 headers can be assumed to be the
+   * question for input-type fields, though formatting is up to the project
+   * administrators. Clients should provide a template that encourages this
+   * convention when building forms.
+   */
+  body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
-  /** Question description. Max length 500 characters */
-  description?: Maybe<Scalars['String']>;
   /** Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports */
   exportId: Scalars['String'];
   /** Form this field belongs to. */
@@ -3608,17 +3618,21 @@ export type FormElementInput = {
    * update.
    */
   position?: Maybe<Scalars['Int']>;
-  /** Question label */
-  title: Scalars['String'];
   typeId: Scalars['String'];
 };
 
 /** Represents an update to a `FormElement`. Fields that are set will be updated. */
 export type FormElementPatch = {
+  /**
+   * [prosemirror](https://prosemirror.net/) document representing a rich-text
+   * question or informational content. Level 1 headers can be assumed to be the
+   * question for input-type fields, though formatting is up to the project
+   * administrators. Clients should provide a template that encourages this
+   * convention when building forms.
+   */
+  body?: Maybe<Scalars['JSON']>;
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
-  /** Question description. Max length 500 characters */
-  description?: Maybe<Scalars['String']>;
   /** Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports */
   exportId?: Maybe<Scalars['String']>;
   /** Users must provide input for these fields before submission. */
@@ -3629,8 +3643,6 @@ export type FormElementPatch = {
    * update.
    */
   position?: Maybe<Scalars['Int']>;
-  /** Question label */
-  title?: Maybe<Scalars['String']>;
   typeId?: Maybe<Scalars['String']>;
 };
 

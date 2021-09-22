@@ -4193,7 +4193,7 @@ enum FormConditionalRenderingRulesOrderBy {
 
 """
 *FormElements* represent input fields or read-only content in a form. Records contain fields to support
-generic functionality like name, description, position, and isRequired. They 
+generic functionality like body, position, and isRequired. They 
 also have a JSON `componentSettings` field that can have custom data to support
 a particular input type, indicated by the `type` field.
 
@@ -4202,6 +4202,16 @@ graphile-generated CRUD mutations.
 
 """
 type FormElement implements Node {
+  """
+  [prosemirror](https://prosemirror.net/) document representing a rich-text
+  question or informational content. Level 1 headers can be assumed to be the
+  question for input-type fields, though formatting is up to the project
+  administrators. Clients should provide a template that encourages this
+  convention when building forms.
+  
+  """
+  body: JSON!
+
   """
   Type-specific configuration. For example, a Choice field might have a list of valid choices.
   """
@@ -4223,9 +4233,6 @@ type FormElement implements Node {
     """The method to use when ordering `FormConditionalRenderingRule`."""
     orderBy: [FormConditionalRenderingRulesOrderBy!]
   ): [FormConditionalRenderingRule!]!
-
-  """Question description. Max length 500 characters"""
-  description: String
 
   """
   Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports
@@ -4254,9 +4261,6 @@ type FormElement implements Node {
   
   """
   position: Int!
-
-  """Question label"""
-  title: String!
   type: FormElementType
   typeId: String!
 }
@@ -4276,12 +4280,19 @@ input FormElementCondition {
 """An input for mutations affecting `FormElement`"""
 input FormElementInput {
   """
+  [prosemirror](https://prosemirror.net/) document representing a rich-text
+  question or informational content. Level 1 headers can be assumed to be the
+  question for input-type fields, though formatting is up to the project
+  administrators. Clients should provide a template that encourages this
+  convention when building forms.
+  
+  """
+  body: JSON!
+
+  """
   Type-specific configuration. For example, a Choice field might have a list of valid choices.
   """
   componentSettings: JSON
-
-  """Question description. Max length 500 characters"""
-  description: String
 
   """
   Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports
@@ -4302,9 +4313,6 @@ input FormElementInput {
   
   """
   position: Int
-
-  """Question label"""
-  title: String!
   typeId: String!
 }
 
@@ -4313,12 +4321,19 @@ Represents an update to a `FormElement`. Fields that are set will be updated.
 """
 input FormElementPatch {
   """
+  [prosemirror](https://prosemirror.net/) document representing a rich-text
+  question or informational content. Level 1 headers can be assumed to be the
+  question for input-type fields, though formatting is up to the project
+  administrators. Clients should provide a template that encourages this
+  convention when building forms.
+  
+  """
+  body: JSON
+
+  """
   Type-specific configuration. For example, a Choice field might have a list of valid choices.
   """
   componentSettings: JSON
-
-  """Question description. Max length 500 characters"""
-  description: String
 
   """
   Column name in csv export, property name in reporting tools. Keep stable to avoid breaking reports
@@ -4335,9 +4350,6 @@ input FormElementPatch {
   
   """
   position: Int
-
-  """Question label"""
-  title: String
   typeId: String
 }
 

@@ -10,6 +10,8 @@ import {
   createGroup,
   projectTransaction,
   verifyCRUDOpsLimitedToAdmins,
+  createBody,
+  getBodyStr,
 } from "./helpers";
 
 const pool = createPool("test");
@@ -53,7 +55,11 @@ describe("Surveys", () => {
           sql`select * from initialize_blank_survey_form(${surveyId})`
         );
         const field = await conn.one(
-          sql`insert into form_elements (form_id, title, export_id, type_id) values (${source.id}, 'field a', 'field_a', ${FormElementType}) returning *`
+          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
+            source.id
+          }, ${createBody(
+            "field a"
+          )}, 'field_a', ${FormElementType}) returning *`
         );
         let template = await conn.one(
           sql`select * from create_form_template_from_survey(${surveyId}, 'Template A', 'SURVEYS')`
@@ -156,7 +162,9 @@ describe("Surveys", () => {
           await clearSession(conn);
           await createSession(conn, adminId, true, false, projectId);
           const fieldId = await conn.oneFirst(
-            sql`insert into form_elements (title, type_id, form_id, export_id) values ('field a', ${FormElementType}, ${formId}, 'field_a') returning id`
+            sql`insert into form_elements (body, type_id, form_id, export_id) values (${createBody(
+              "field a"
+            )}, ${FormElementType}, ${formId}, 'field_a') returning id`
           );
           await createSession(conn, userA, false, false, projectId);
           expect(
@@ -204,7 +212,9 @@ describe("Surveys", () => {
           await clearSession(conn);
           await createSession(conn, adminId, true, false, projectId);
           const fieldId = await conn.oneFirst(
-            sql`insert into form_elements (title, type_id, form_id, export_id) values ('field a', ${FormElementType}, ${formId}, 'field_a') returning id`
+            sql`insert into form_elements (body, type_id, form_id, export_id) values (${createBody(
+              "field a"
+            )}, ${FormElementType}, ${formId}, 'field_a') returning id`
           );
           expect(
             (await conn.any(sql`select * from surveys where id = ${surveyId}`))
@@ -251,7 +261,9 @@ describe("Surveys", () => {
           await clearSession(conn);
           await createSession(conn, adminId, true, false, projectId);
           const fieldId = await conn.oneFirst(
-            sql`insert into form_elements (title, type_id, form_id, export_id) values ('field a', ${FormElementType}, ${formId}, 'field_a') returning id`
+            sql`insert into form_elements (body, type_id, form_id, export_id) values (${createBody(
+              "field a"
+            )}, ${FormElementType}, ${formId}, 'field_a') returning id`
           );
           const groupId = await createGroup(conn, projectId, "Group A", [
             userA,
@@ -315,7 +327,9 @@ describe("Surveys", () => {
           );
           await createSession(conn, adminId, true, false, projectId);
           const fieldId = await conn.oneFirst(
-            sql`insert into form_elements (title, type_id, form_id, export_id) values ('field a', ${FormElementType}, ${formId}, 'field_a') returning id`
+            sql`insert into form_elements (body, type_id, form_id, export_id) values (${createBody(
+              "field a"
+            )}, ${FormElementType}, ${formId}, 'field_a') returning id`
           );
           const groupId = await createGroup(conn, projectId, "Group A", [
             userA,
