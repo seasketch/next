@@ -9947,8 +9947,6 @@ export type Survey = Node & {
   __typename?: 'Survey';
   /** PUBLIC or INVITE_ONLY */
   accessType: SurveyAccessType;
-  /** Shown to users after completing a survey. Expected to be something like Draft.js content state */
-  closingMessage: Scalars['JSON'];
   /** Reads a single `Form` that is related to this `Survey`. */
   form?: Maybe<Form>;
   /**
@@ -9959,8 +9957,6 @@ export type Survey = Node & {
   /** If set, responses that originate from an IP address outside this fence will be flagged. */
   geofence?: Maybe<GeographyPolygon>;
   id: Scalars['Int'];
-  /** Shown to users before starting a survey response. Expected to be something like Draft.js content state */
-  introMessage: Scalars['JSON'];
   /**
    * Listing of groups whose users should be invited to participate in the survey.
    *
@@ -9988,11 +9984,6 @@ export type Survey = Node & {
    * survey on social media to encourage responses.
    */
   showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
-  /**
-   * Usually the survey will show a button that says [Begin Survey]. This can be
-   * customized by admins.
-   */
-  startButtonText?: Maybe<Scalars['String']>;
   submittedResponseCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `SurveyInvitedGroup`. */
   surveyInvitedGroups: Array<SurveyInvitedGroup>;
@@ -10073,13 +10064,9 @@ export type SurveyCondition = {
 export type SurveyInput = {
   /** PUBLIC or INVITE_ONLY */
   accessType?: Maybe<SurveyAccessType>;
-  /** Shown to users after completing a survey. Expected to be something like Draft.js content state */
-  closingMessage?: Maybe<Scalars['JSON']>;
   /** If set, responses that originate from an IP address outside this fence will be flagged. */
   geofence?: Maybe<Scalars['GeoJSON']>;
   id?: Maybe<Scalars['Int']>;
-  /** Shown to users before starting a survey response. Expected to be something like Draft.js content state */
-  introMessage?: Maybe<Scalars['JSON']>;
   /**
    * Disabled surveys will not be accessible to non-admins. Invite email sending will
    * be paused.
@@ -10097,11 +10084,6 @@ export type SurveyInput = {
    * survey on social media to encourage responses.
    */
   showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
-  /**
-   * Usually the survey will show a button that says [Begin Survey]. This can be
-   * customized by admins.
-   */
-  startButtonText?: Maybe<Scalars['String']>;
 };
 
 export type SurveyInvite = Node & {
@@ -10233,13 +10215,9 @@ export type SurveyInviteTokenVerificationResults = {
 export type SurveyPatch = {
   /** PUBLIC or INVITE_ONLY */
   accessType?: Maybe<SurveyAccessType>;
-  /** Shown to users after completing a survey. Expected to be something like Draft.js content state */
-  closingMessage?: Maybe<Scalars['JSON']>;
   /** If set, responses that originate from an IP address outside this fence will be flagged. */
   geofence?: Maybe<Scalars['GeoJSON']>;
   id?: Maybe<Scalars['Int']>;
-  /** Shown to users before starting a survey response. Expected to be something like Draft.js content state */
-  introMessage?: Maybe<Scalars['JSON']>;
   /**
    * Disabled surveys will not be accessible to non-admins. Invite email sending will
    * be paused.
@@ -10257,11 +10235,6 @@ export type SurveyPatch = {
    * survey on social media to encourage responses.
    */
   showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
-  /**
-   * Usually the survey will show a button that says [Begin Survey]. This can be
-   * customized by admins.
-   */
-  startButtonText?: Maybe<Scalars['String']>;
 };
 
 export type SurveyResponse = Node & {

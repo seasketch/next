@@ -10125,11 +10125,6 @@ type Survey implements Node {
   """
   accessType: SurveyAccessType!
 
-  """
-  Shown to users after completing a survey. Expected to be something like Draft.js content state
-  """
-  closingMessage: JSON!
-
   """Reads a single `Form` that is related to this `Survey`."""
   form: Form
 
@@ -10167,11 +10162,6 @@ type Survey implements Node {
   """
   geofence: GeographyPolygon
   id: Int!
-
-  """
-  Shown to users before starting a survey response. Expected to be something like Draft.js content state
-  """
-  introMessage: JSON!
 
   """
   
@@ -10217,13 +10207,6 @@ type Survey implements Node {
   
   """
   showSocialMediaButtons: Boolean
-
-  """
-  Usually the survey will show a button that says [Begin Survey]. This can be 
-  customized by admins.
-  
-  """
-  startButtonText: String
   submittedResponseCount: Int
 
   """Reads and enables pagination through a set of `SurveyInvitedGroup`."""
@@ -10326,20 +10309,10 @@ input SurveyInput {
   accessType: SurveyAccessType
 
   """
-  Shown to users after completing a survey. Expected to be something like Draft.js content state
-  """
-  closingMessage: JSON
-
-  """
   If set, responses that originate from an IP address outside this fence will be flagged.
   """
   geofence: GeoJSON
   id: Int
-
-  """
-  Shown to users before starting a survey response. Expected to be something like Draft.js content state
-  """
-  introMessage: JSON
 
   """
   Disabled surveys will not be accessible to non-admins. Invite email sending will
@@ -10362,13 +10335,6 @@ input SurveyInput {
   
   """
   showSocialMediaButtons: Boolean
-
-  """
-  Usually the survey will show a button that says [Begin Survey]. This can be 
-  customized by admins.
-  
-  """
-  startButtonText: String
 }
 
 type SurveyInvite implements Node {
@@ -10521,20 +10487,10 @@ input SurveyPatch {
   accessType: SurveyAccessType
 
   """
-  Shown to users after completing a survey. Expected to be something like Draft.js content state
-  """
-  closingMessage: JSON
-
-  """
   If set, responses that originate from an IP address outside this fence will be flagged.
   """
   geofence: GeoJSON
   id: Int
-
-  """
-  Shown to users before starting a survey response. Expected to be something like Draft.js content state
-  """
-  introMessage: JSON
 
   """
   Disabled surveys will not be accessible to non-admins. Invite email sending will
@@ -10557,13 +10513,6 @@ input SurveyPatch {
   
   """
   showSocialMediaButtons: Boolean
-
-  """
-  Usually the survey will show a button that says [Begin Survey]. This can be 
-  customized by admins.
-  
-  """
-  startButtonText: String
 }
 
 type SurveyResponse implements Node {

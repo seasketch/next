@@ -7893,11 +7893,6 @@ CREATE TABLE public.surveys (
     limit_to_single_response boolean DEFAULT true NOT NULL,
     geofence public.geography(Polygon,4326) DEFAULT NULL::public.geography,
     show_social_media_buttons boolean DEFAULT true,
-    start_button_text character varying(22) DEFAULT 'Take the Survey'::character varying,
-    intro_message jsonb DEFAULT '{}'::jsonb NOT NULL,
-    closing_message jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT surveys_intro_message_check CHECK ((char_length((intro_message)::text) < 100000)),
-    CONSTRAINT surveys_intro_message_check1 CHECK ((char_length((intro_message)::text) < 100000)),
     CONSTRAINT surveys_name_check CHECK ((char_length(name) <= 255))
 );
 
@@ -7953,30 +7948,6 @@ COMMENT ON COLUMN public.surveys.show_social_media_buttons IS '
 Only applicable for public surveys. Show tools to respondants for sharing the 
 survey on social media to encourage responses.
 ';
-
-
---
--- Name: COLUMN surveys.start_button_text; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.surveys.start_button_text IS '
-Usually the survey will show a button that says [Begin Survey]. This can be 
-customized by admins.
-';
-
-
---
--- Name: COLUMN surveys.intro_message; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.surveys.intro_message IS 'Shown to users before starting a survey response. Expected to be something like Draft.js content state';
-
-
---
--- Name: COLUMN surveys.closing_message; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.surveys.closing_message IS 'Shown to users after completing a survey. Expected to be something like Draft.js content state';
 
 
 --
