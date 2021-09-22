@@ -4242,9 +4242,6 @@ type FormElement implements Node {
   """Users must provide input for these fields before submission."""
   isRequired: Boolean!
 
-  """Question label"""
-  name: String!
-
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
@@ -4257,6 +4254,9 @@ type FormElement implements Node {
   
   """
   position: Int!
+
+  """Question label"""
+  title: String!
   type: FormElementType
   typeId: String!
 }
@@ -4295,9 +4295,6 @@ input FormElementInput {
   """Users must provide input for these fields before submission."""
   isRequired: Boolean
 
-  """Question label"""
-  name: String!
-
   """
   Determines order of field display. Clients should display fields in ascending 
   order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
@@ -4305,6 +4302,9 @@ input FormElementInput {
   
   """
   position: Int
+
+  """Question label"""
+  title: String!
   typeId: String!
 }
 
@@ -4328,9 +4328,6 @@ input FormElementPatch {
   """Users must provide input for these fields before submission."""
   isRequired: Boolean
 
-  """Question label"""
-  name: String
-
   """
   Determines order of field display. Clients should display fields in ascending 
   order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
@@ -4338,6 +4335,9 @@ input FormElementPatch {
   
   """
   position: Int
+
+  """Question label"""
+  title: String
   typeId: String
 }
 

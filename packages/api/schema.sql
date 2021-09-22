@@ -2463,7 +2463,7 @@ CREATE FUNCTION public.create_form_template_from_sketch_class("sketchClassId" in
       insert into 
         form_elements (
           form_id, 
-          name, 
+          title, 
           description, 
           type_id, 
           is_required, 
@@ -2473,7 +2473,7 @@ CREATE FUNCTION public.create_form_template_from_sketch_class("sketchClassId" in
         ) 
       select 
         form.id, 
-        name, 
+        title, 
         description, 
         type_id, 
         is_required, 
@@ -2505,7 +2505,7 @@ CREATE FUNCTION public.create_form_template_from_survey("surveyId" integer, "tem
       insert into 
         form_elements (
           form_id, 
-          name, 
+          title, 
           description, 
           type_id, 
           is_required, 
@@ -2515,7 +2515,7 @@ CREATE FUNCTION public.create_form_template_from_survey("surveyId" integer, "tem
         ) 
       select 
         form.id, 
-        name, 
+        title, 
         description, 
         type_id, 
         is_required, 
@@ -3664,7 +3664,7 @@ COMMENT ON COLUMN public.form_element_types.is_single_use_only IS 'These element
 CREATE TABLE public.form_elements (
     id integer NOT NULL,
     form_id integer NOT NULL,
-    name text NOT NULL,
+    title text NOT NULL,
     description text,
     is_required boolean DEFAULT false NOT NULL,
     export_id text NOT NULL,
@@ -3701,10 +3701,10 @@ COMMENT ON COLUMN public.form_elements.form_id IS 'Form this field belongs to.';
 
 
 --
--- Name: COLUMN form_elements.name; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN form_elements.title; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.form_elements.name IS 'Question label';
+COMMENT ON COLUMN public.form_elements.title IS 'Question label';
 
 
 --
@@ -3984,7 +3984,7 @@ CREATE FUNCTION public.initialize_sketch_class_form_from_template(sketch_class_i
       insert into 
         form_elements (
           form_id, 
-          name, 
+          title, 
           description, 
           type_id, 
           is_required, 
@@ -3994,7 +3994,7 @@ CREATE FUNCTION public.initialize_sketch_class_form_from_template(sketch_class_i
         )
       select 
         form.id, 
-        name, 
+        title, 
         description, 
         type_id, 
         is_required, 
@@ -4037,7 +4037,7 @@ CREATE FUNCTION public.initialize_survey_form_from_template(survey_id integer, t
       insert into 
         form_elements (
           form_id, 
-          name, 
+          title, 
           description, 
           type_id, 
           is_required, 
@@ -4047,7 +4047,7 @@ CREATE FUNCTION public.initialize_survey_form_from_template(survey_id integer, t
         )
       select 
         form.id, 
-        name, 
+        title, 
         description, 
         type_id, 
         is_required, 
@@ -14421,10 +14421,10 @@ GRANT INSERT,DELETE ON TABLE public.form_elements TO seasketch_user;
 
 
 --
--- Name: COLUMN form_elements.name; Type: ACL; Schema: public; Owner: -
+-- Name: COLUMN form_elements.title; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(name) ON TABLE public.form_elements TO seasketch_user;
+GRANT UPDATE(title) ON TABLE public.form_elements TO seasketch_user;
 
 
 --

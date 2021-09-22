@@ -3547,8 +3547,6 @@ export type FormElement = Node & {
   id: Scalars['Int'];
   /** Users must provide input for these fields before submission. */
   isRequired: Scalars['Boolean'];
-  /** Question label */
-  name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -3557,6 +3555,8 @@ export type FormElement = Node & {
    * update.
    */
   position: Scalars['Int'];
+  /** Question label */
+  title: Scalars['String'];
   type?: Maybe<FormElementType>;
   typeId: Scalars['String'];
 };
@@ -3602,14 +3602,14 @@ export type FormElementInput = {
   id?: Maybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
-  /** Question label */
-  name: Scalars['String'];
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
    */
   position?: Maybe<Scalars['Int']>;
+  /** Question label */
+  title: Scalars['String'];
   typeId: Scalars['String'];
 };
 
@@ -3623,14 +3623,14 @@ export type FormElementPatch = {
   exportId?: Maybe<Scalars['String']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
-  /** Question label */
-  name?: Maybe<Scalars['String']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
    */
   position?: Maybe<Scalars['Int']>;
+  /** Question label */
+  title?: Maybe<Scalars['String']>;
   typeId?: Maybe<Scalars['String']>;
 };
 
