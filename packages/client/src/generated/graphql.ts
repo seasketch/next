@@ -13587,6 +13587,31 @@ export type SimpleProjectListQuery = (
   )> }
 );
 
+export type SurveyQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type SurveyQuery = (
+  { __typename?: 'Query' }
+  & { survey?: Maybe<(
+    { __typename?: 'Survey' }
+    & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled'>
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id'>
+      & { formElements: Array<(
+        { __typename?: 'FormElement' }
+        & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position'>
+        & { type?: Maybe<(
+          { __typename?: 'FormElementType' }
+          & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
 export type UpdateProjectNameMutationVariables = Exact<{
   name: Scalars['String'];
   slug: Scalars['String'];
@@ -17521,6 +17546,61 @@ export function useSimpleProjectListLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type SimpleProjectListQueryHookResult = ReturnType<typeof useSimpleProjectListQuery>;
 export type SimpleProjectListLazyQueryHookResult = ReturnType<typeof useSimpleProjectListLazyQuery>;
 export type SimpleProjectListQueryResult = Apollo.QueryResult<SimpleProjectListQuery, SimpleProjectListQueryVariables>;
+export const SurveyDocument = gql`
+    query Survey($id: Int!) {
+  survey(id: $id) {
+    id
+    name
+    accessType
+    isDisabled
+    form {
+      id
+      formElements {
+        id
+        componentSettings
+        body
+        isRequired
+        position
+        type {
+          componentName
+          isInput
+          isSingleUseOnly
+          isSurveysOnly
+          label
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useSurveyQuery__
+ *
+ * To run a query within a React component, call `useSurveyQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveyQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveyQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useSurveyQuery(baseOptions: Apollo.QueryHookOptions<SurveyQuery, SurveyQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveyQuery, SurveyQueryVariables>(SurveyDocument, options);
+      }
+export function useSurveyLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveyQuery, SurveyQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveyQuery, SurveyQueryVariables>(SurveyDocument, options);
+        }
+export type SurveyQueryHookResult = ReturnType<typeof useSurveyQuery>;
+export type SurveyLazyQueryHookResult = ReturnType<typeof useSurveyLazyQuery>;
+export type SurveyQueryResult = Apollo.QueryResult<SurveyQuery, SurveyQueryVariables>;
 export const UpdateProjectNameDocument = gql`
     mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
   updateProjectBySlug(

@@ -1,0 +1,25 @@
+query Survey($id: Int!) {
+  survey(id: $id) {
+    id
+    name
+    accessType
+    isDisabled
+    form {
+      id
+      formElements {
+        id
+        componentSettings
+        body
+        isRequired
+        position
+        type {
+          componentName
+          isInput
+          isSingleUseOnly
+          isSurveysOnly
+          label
+        }
+      }
+    }
+  }
+}

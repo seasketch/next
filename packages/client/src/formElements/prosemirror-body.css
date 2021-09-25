@@ -1,0 +1,8 @@
+.prosemirror-body h1 {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.prosemirror-body {
+  /* margin-bottom: 10px; */
+}

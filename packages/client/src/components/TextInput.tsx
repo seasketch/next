@@ -1,13 +1,5 @@
-import {
-  FieldMetaProps,
-  FieldProps,
-  FormikFormProps,
-  FormikProps,
-  useField,
-  useFormik,
-  useFormikContext,
-} from "formik";
-import React, { useState, useEffect, KeyboardEvent } from "react";
+import { FieldMetaProps, FormikProps } from "formik";
+import React, { useState, useEffect, KeyboardEvent, ReactElement } from "react";
 
 export interface TextInputOptions {
   /** Required id of input. Also referenced by labels. */
@@ -19,7 +11,7 @@ export interface TextInputOptions {
   /** Appears below the label */
   description?: string | React.ReactNode;
   /** Validation error */
-  error?: string;
+  error?: string | ReactElement;
   placeholder?: string;
   required?: boolean;
   state?: "SAVING" | "SAVED" | "NONE";
@@ -110,10 +102,10 @@ export default function TextInput(props: TextInputOptions) {
           name={name}
           onKeyDown={onKeyDown}
           // @ts-ignore
-          onChange={(e) => onChange && onChange(e)}
+          onChange={(e) => onChange && onChange(e.target.value)}
           disabled={disabled}
           required={required}
-          className={`block w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 ${
+          className={`block w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black ${
             error || state === "SAVING" || (state === "SAVED" && showSaved)
               ? `pr-10`
               : `pr-4`
