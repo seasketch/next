@@ -1941,7 +1941,7 @@ CREATE FUNCTION public.before_survey_delete() RETURNS trigger
     if num >= 5 then
       raise exception 'Preventing deletion. Survey has 5 or more responses from other users. Contact support@seasketch.org or simply disable survey.';
     end if;
-    return NEW;
+    return OLD;
   end;
 $$;
 
