@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
 import UpArrowIcon from "../components/UpArrowIcon";
 import DownArrowIcon from "../components/DownArrowIcon";
+import useLocalStorage from "../useLocalStorage";
 
 interface FormElementState {
   touched?: boolean;
@@ -38,9 +39,10 @@ function SurveyApp() {
     variables: { id: parseInt(surveyId) },
     onError,
   });
-  const [responseState, setResponseState] = useState<{
+  const [responseState, setResponseState] = useLocalStorage<{
     [id: number]: FormElementState;
-  }>({});
+    // eslint-disable-next-line i18next/no-literal-string
+  }>(`survey-${surveyId}`, {});
   if (loading) {
     return <div></div>;
   }
@@ -184,6 +186,9 @@ function SurveyApp() {
                           if (canAdvance()) {
                             history.push(`./${index + 1}`);
                           }
+                        } else {
+                          setResponseState({});
+                          history.push(`./0`);
                         }
                       }}
                     />

@@ -102,11 +102,11 @@ function App() {
                   <LazyProjectApp />
                 </Route>
                 <Route
-                  path="/:slug/surveys/:surveyId/"
+                  path="/:slug/surveys/:surveyId"
                   exact
                   render={(history) => {
-                    console.log("history", history);
-                    return <Redirect to={`${history.location.pathname}/0`} />;
+                    const { slug, surveyId } = history.match.params;
+                    return <Redirect to={`/${slug}/surveys/${surveyId}/0`} />;
                   }}
                 />
                 <Route path="/:slug/surveys/:surveyId/:position">
