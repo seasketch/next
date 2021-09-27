@@ -5,17 +5,26 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { FormElementProps } from "../formElements/FormElement";
 import ShortText, { ShortTextProps } from "../formElements/ShortText";
 import WelcomeMessage from "../formElements/WelcomeMessage";
-import {
-  FormElement,
-  FormElementType,
-  Maybe,
-  useSurveyQuery,
-} from "../generated/graphql";
+import { FormElementType, useSurveyQuery } from "../generated/graphql";
 import ProgressBar from "./ProgressBar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
+import UpArrowIcon from "../components/UpArrowIcon";
+import DownArrowIcon from "../components/DownArrowIcon";
 
+interface FormElementState {
+  touched?: boolean;
+  value: any;
+  errors: boolean;
+  submissionAttempted?: boolean;
+}
+
+/**
+ * Coordinates the rendering of FormElements, collection of user data, maintenance of response state,
+ * and navigation among states. Acts as a "controller" while delegating responsibility for data
+ * validation and input rendering to FormElements.
+ */
 function SurveyApp() {
   const { surveyId, position } = useParams<{
     surveyId: string;
@@ -29,25 +38,9 @@ function SurveyApp() {
     variables: { id: parseInt(surveyId) },
     onError,
   });
-  const [values, setValues] = useState<{
-    [id: number]: {
-      touched?: boolean;
-      value: any;
-      errors: boolean;
-      submissionAttempted?: boolean;
-    };
+  const [responseState, setResponseState] = useState<{
+    [id: number]: FormElementState;
   }>({});
-  function setValue(value: any, id: number, errors: boolean) {
-    setValues({
-      ...values,
-      [id]: {
-        ...values[id],
-        touched: true,
-        value,
-        errors,
-      },
-    });
-  }
   if (loading) {
     return <div></div>;
   }
@@ -60,7 +53,43 @@ function SurveyApp() {
       index = parseInt(position);
     }
     const formElement = form.formElements[index];
-    const state = values[formElement.id];
+    const state = responseState[formElement.id];
+    const firstPage = index === 0;
+    const lastPage = index === form.formElements.length - 1;
+
+    /**
+     * Update response state for just the given FormElement. Partial state can be supplied to be
+     * applied to previous state.
+     * @param formElement
+     * @param state
+     */
+    function updateState(
+      formElement: Pick<FormElementProps<any>, "id">,
+      state: Partial<FormElementState>
+    ) {
+      setResponseState((prev) => ({
+        ...prev,
+        [formElement.id]: {
+          ...prev[formElement.id],
+          ...state,
+        },
+      }));
+    }
+
+    /**
+     * Whether user should be allowed to proceed to the next page based on input
+     * and validation state
+     * @returns boolean
+     */
+    function canAdvance() {
+      const state = responseState[formElement.id];
+      if (!formElement.isRequired || (state?.value && !state?.errors)) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+
     return (
       <div
         className="w-full h-auto relative"
@@ -119,104 +148,87 @@ function SurveyApp() {
               animate="show"
               exit="exit"
             >
-              <ElementFactory
-                typeName={formElement.type!.componentName}
+              <FormElementFactory
                 {...formElement}
+                typeName={formElement.type!.componentName}
                 submissionAttempted={!!state?.submissionAttempted}
                 onChange={(value, errors) =>
-                  setValue(value, formElement.id, errors)
+                  updateState(formElement, {
+                    value,
+                    errors,
+                  })
                 }
                 editable={false}
                 value={state?.value}
               />
-              {/* <AnimatePresence> */}
-              {!!state?.value && (
-                <motion.div
-                  transition={{
-                    delay: 0.5,
-                  }}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <Button
-                    className="mt-5"
-                    buttonClassName="bg-yellow-400"
-                    label={t("Next")}
-                    onClick={() => {
-                      if (!state) {
-                        setValues({
-                          ...values,
-                          [formElement.id]: {
-                            ...values[formElement.id],
-                            submissionAttempted: true,
-                          },
-                        });
-                      } else if (state.errors) {
-                        setValues({
-                          ...values,
-                          [formElement.id]: {
-                            ...values[formElement.id],
-                            submissionAttempted: true,
-                          },
-                        });
-                      } else if (!state.errors) {
-                        history.push(`./${index + 1}`);
-                      }
+              {(!!state?.value || !formElement.isRequired) &&
+                formElement.type?.componentName !== "WelcomeMessage" && (
+                  <motion.div
+                    transition={{
+                      delay: 0.15,
                     }}
-                  />
-                </motion.div>
-              )}
-              {/* </AnimatePresence> */}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <Button
+                      className="mt-5"
+                      buttonClassName="bg-yellow-400"
+                      label={lastPage ? t("Complete Submission") : t("Next")}
+                      onClick={() => {
+                        if (!lastPage) {
+                          updateState(formElement, {
+                            submissionAttempted: true,
+                          });
+                          if (canAdvance()) {
+                            history.push(`./${index + 1}`);
+                          }
+                        }
+                      }}
+                    />
+                  </motion.div>
+                )}
             </motion.div>
           </AnimatePresence>
         </div>
         <div
           style={{ width: "fit-content", height: "fit-content" }}
           className={`fixed bottom-5 right-5 lg:left-5 lg:top-5 ${
-            index === 0 && "hidden"
+            firstPage && "hidden"
           }`}
         >
           <Link onClick={() => setBackwards(true)} to={`./${index - 1}`}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-10 w-10 text-yellow-400  inline-block"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <UpArrowIcon className="text-yellow-400  inline-block" />
           </Link>
-          <Link
-            onClick={() => setBackwards(false)}
-            className={index + 1 === form.formElements.length ? "hidden" : ""}
-            to={`./${index + 1}`}
-          >
-            <svg
-              className="h-10 w-10 text-yellow-400  inline-block"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              // href={`./${index - 1}`}
+          {!lastPage && (
+            <Link
+              onClick={(e) => {
+                updateState(formElement, {
+                  submissionAttempted: true,
+                });
+                if (!canAdvance()) {
+                  e.preventDefault();
+                }
+                setBackwards(false);
+              }}
+              className={index + 1 === form.formElements.length ? "hidden" : ""}
+              to={`./${index + 1}`}
             >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </Link>
+              <DownArrowIcon className="text-yellow-400  inline-block" />
+            </Link>
+          )}
         </div>
       </div>
     );
   }
 }
 
-function ElementFactory({
+/**
+ * Returns the appropriate component for a given FormElement config based on type.componentName
+ * @param param0
+ * @returns FormElement component
+ */
+function FormElementFactory({
   typeName,
   componentSettings,
   value,
