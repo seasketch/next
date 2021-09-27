@@ -6,6 +6,11 @@ export type ShortTextProps = {
   minLength?: number;
   maxLength?: number;
   placeholder?: string;
+  /**
+   * Enable admins to provide common values
+   * https://developers.google.com/web/updates/2015/06/checkout-faster-with-autofill
+   */
+  name?: string;
 };
 
 export default function ShortText(
@@ -19,14 +24,17 @@ export default function ShortText(
 
   return (
     <>
-      <FormElementBody body={JSON.parse(props.body.toString())} />
+      <FormElementBody body={props.body} />
       <div className="w-full md:w-96 max-w-full">
         <TextInput
           error={props.submissionAttempted ? errors : undefined}
           value={props.value || ""}
           label=""
           onChange={(v) => props.onChange(v, !!errors)}
-          name={`form-element-${props.id}-text-input`}
+          name={
+            props.componentSettings.name ||
+            `form-element-${props.id}-text-input`
+          }
           required={props.isRequired}
           autoFocus={true}
           placeholder={props.componentSettings.placeholder}

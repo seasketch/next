@@ -8,7 +8,7 @@ export default function WelcomeMessage(
   const history = useHistory();
   return (
     <>
-      <FormElementBody body={JSON.parse(props.body.toString())} />
+      <FormElementBody body={props.body} />
       <Button
         className="mt-6"
         href={"./1"}
