@@ -3379,8 +3379,10 @@ export enum FieldRuleOperator {
  */
 export type Form = Node & {
   __typename?: 'Form';
+  /** Reads and enables pagination through a set of `FormElement`. */
+  form_elements: Array<FormElement>;
   /** List of all FormElements in this form. */
-  formElements: Array<FormElement>;
+  formElements?: Maybe<Array<FormElement>>;
   id: Scalars['Int'];
   /**
    * SeaSetch superusers can create template forms than can be used when creating
@@ -3420,11 +3422,30 @@ export type Form = Node & {
  * Only superusers can create form templates, and clients should provide templates
  * as an option when creating new forms.
  */
-export type FormFormElementsArgs = {
+export type FormForm_ElementsArgs = {
   condition?: Maybe<FormElementCondition>;
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<FormElementsOrderBy>>;
+};
+
+
+/**
+ * Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
+ * Forms are used to add attributes to spatial features. In Surveys, Forms are used
+ * in support of gathering response data.
+ *
+ * Forms have any number of *FormElements* ordered by a `position` field, and form
+ * contents may be hidden depending on the evaluation of *FormConditionalRenderingRules*.
+ *
+ * Forms typically belong to either a *Survey* or *SketchClass* exclusively. Some
+ * Forms may be designated as a template, in which case they belong to neither.
+ * Only superusers can create form templates, and clients should provide templates
+ * as an option when creating new forms.
+ */
+export type FormFormElementsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 /** A condition to be used against `Form` object types. All fields are tested for equality and combined with a logical ‘and.’ */
@@ -13600,14 +13621,14 @@ export type SurveyQuery = (
     & { form?: Maybe<(
       { __typename?: 'Form' }
       & Pick<Form, 'id'>
-      & { formElements: Array<(
+      & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
         & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position'>
         & { type?: Maybe<(
           { __typename?: 'FormElementType' }
           & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
         )> }
-      )> }
+      )>> }
     )> }
   )> }
 );

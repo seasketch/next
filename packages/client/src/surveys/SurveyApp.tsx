@@ -52,10 +52,11 @@ function SurveyApp() {
     if (position) {
       index = parseInt(position);
     }
-    const formElement = form.formElements[index];
+    const elements = form.formElements || [];
+    const formElement = elements[index];
     const state = responseState[formElement.id];
     const firstPage = index === 0;
-    const lastPage = index === form.formElements.length - 1;
+    const lastPage = index === elements.length - 1;
 
     /**
      * Update response state for just the given FormElement. Partial state can be supplied to be
@@ -100,7 +101,7 @@ function SurveyApp() {
           minHeight: "100vh",
         }}
       >
-        <ProgressBar progress={index / form.formElements.length} />
+        <ProgressBar progress={index / elements.length} />
         <div
           className="w-full h-32 md:h-52 lg:h-64 overflow-hidden"
           style={{
@@ -211,7 +212,7 @@ function SurveyApp() {
                 }
                 setBackwards(false);
               }}
-              className={index + 1 === form.formElements.length ? "hidden" : ""}
+              className={index + 1 === elements.length ? "hidden" : ""}
               to={`./${index + 1}`}
             >
               <DownArrowIcon className="text-yellow-400  inline-block" />

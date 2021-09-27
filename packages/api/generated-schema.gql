@@ -4022,8 +4022,8 @@ as an option when creating new forms.
 
 """
 type Form implements Node {
-  """List of all FormElements in this form."""
-  formElements(
+  """Reads and enables pagination through a set of `FormElement`."""
+  form_elements(
     """
     A condition to be used in determining which values should be returned by the collection.
     """
@@ -4038,6 +4038,15 @@ type Form implements Node {
     """The method to use when ordering `FormElement`."""
     orderBy: [FormElementsOrderBy!]
   ): [FormElement!]!
+
+  """List of all FormElements in this form."""
+  formElements(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [FormElement!]
   id: Int!
 
   """

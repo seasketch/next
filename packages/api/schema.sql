@@ -3749,6 +3749,27 @@ $$;
 
 
 --
+-- Name: forms_form_elements(public.forms); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.forms_form_elements(f public.forms) RETURNS SETOF public.form_elements
+    LANGUAGE sql STABLE
+    AS $$
+    select * from form_elements where form_elements.form_id = f.id order by position asc;
+  $$;
+
+
+--
+-- Name: FUNCTION forms_form_elements(f public.forms); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.forms_form_elements(f public.forms) IS '
+@simpleCollections only
+Lists FormElements in order for rendering
+';
+
+
+--
 -- Name: get_or_create_user_by_sub(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11155,7 +11176,8 @@ ALTER TABLE ONLY public.form_elements
 -- Name: CONSTRAINT form_fields_form_id_fkey ON form_elements; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON CONSTRAINT form_fields_form_id_fkey ON public.form_elements IS '@simpleCollections only';
+COMMENT ON CONSTRAINT form_fields_form_id_fkey ON public.form_elements IS '@foreignSimpleFieldName form_elements
+@simpleCollections only';
 
 
 --
@@ -14455,6 +14477,14 @@ GRANT UPDATE(body) ON TABLE public.form_elements TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.form_elements_type(e public.form_elements) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.form_elements_type(e public.form_elements) TO anon;
+
+
+--
+-- Name: FUNCTION forms_form_elements(f public.forms); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.forms_form_elements(f public.forms) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.forms_form_elements(f public.forms) TO anon;
 
 
 --
