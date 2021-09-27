@@ -38,6 +38,11 @@ export default function ShortText(
           required={props.isRequired}
           autoFocus={true}
           placeholder={props.componentSettings.placeholder}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              props.onSubmit();
+            }
+          }}
         />
       </div>
     </>

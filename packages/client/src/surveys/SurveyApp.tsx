@@ -1,11 +1,11 @@
-import { ReactElement, useEffect, useState } from "react";
+import { useState } from "react";
 import { useHistory, useParams } from "react-router";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { FormElementProps } from "../formElements/FormElement";
 import ShortText, { ShortTextProps } from "../formElements/ShortText";
 import WelcomeMessage from "../formElements/WelcomeMessage";
-import { FormElementType, useSurveyQuery } from "../generated/graphql";
+import { useSurveyQuery } from "../generated/graphql";
 import ProgressBar from "./ProgressBar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -93,6 +93,20 @@ function SurveyApp() {
       }
     }
 
+    function handleAdvance() {
+      updateState(formElement, {
+        submissionAttempted: true,
+      });
+      if (canAdvance()) {
+        if (lastPage) {
+          setResponseState({});
+          history.push(`./0`);
+        } else {
+          history.push(`./${index + 1}`);
+        }
+      }
+    }
+
     return (
       <div
         className="w-full h-auto relative"
@@ -161,6 +175,7 @@ function SurveyApp() {
                     errors,
                   })
                 }
+                onSubmit={handleAdvance}
                 editable={false}
                 value={state?.value}
               />
@@ -178,19 +193,7 @@ function SurveyApp() {
                       className="mt-5"
                       buttonClassName="bg-yellow-400"
                       label={lastPage ? t("Complete Submission") : t("Next")}
-                      onClick={() => {
-                        if (!lastPage) {
-                          updateState(formElement, {
-                            submissionAttempted: true,
-                          });
-                          if (canAdvance()) {
-                            history.push(`./${index + 1}`);
-                          }
-                        } else {
-                          setResponseState({});
-                          history.push(`./0`);
-                        }
-                      }}
+                      onClick={handleAdvance}
                     />
                   </motion.div>
                 )}
@@ -248,6 +251,7 @@ function FormElementFactory({
   | "submissionAttempted"
   | "value"
   | "onChange"
+  | "onSubmit"
   | "editable"
 > & {
   typeName: string;

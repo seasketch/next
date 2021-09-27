@@ -10,6 +10,7 @@ export default function WelcomeMessage(
     <>
       <FormElementBody body={props.body} />
       <Button
+        autofocus
         className="mt-6"
         href={"./1"}
         label={props.componentSettings.beginButtonText || ""}
