@@ -3098,6 +3098,150 @@ $$;
 
 
 --
+-- Name: survey_responses; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.survey_responses (
+    id integer NOT NULL,
+    survey_id integer NOT NULL,
+    user_id integer,
+    data jsonb DEFAULT '{}'::jsonb NOT NULL,
+    is_draft boolean DEFAULT false NOT NULL,
+    is_duplicate_ip boolean DEFAULT false NOT NULL,
+    is_duplicate_entry boolean DEFAULT false NOT NULL,
+    is_unrecognized_user_agent boolean DEFAULT false NOT NULL,
+    bypassed_duplicate_submission_control boolean DEFAULT false NOT NULL,
+    outside_geofence boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp with time zone,
+    is_facilitated boolean DEFAULT false NOT NULL,
+    CONSTRAINT survey_responses_data_check CHECK ((char_length((data)::text) < 10000))
+);
+
+
+--
+-- Name: TABLE survey_responses; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.survey_responses IS '
+@omit all
+';
+
+
+--
+-- Name: COLUMN survey_responses.user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.user_id IS 'User account that submitted the survey. Note that if isFacilitated is set, the account may not be who is represented by the response content.';
+
+
+--
+-- Name: COLUMN survey_responses.data; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.data IS 'JSON representation of responses, keyed by the form field export_id';
+
+
+--
+-- Name: COLUMN survey_responses.is_draft; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.is_draft IS 'Users may save their responses for later editing before submission. After submission they can no longer edit them.';
+
+
+--
+-- Name: COLUMN survey_responses.is_duplicate_ip; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.is_duplicate_ip IS '
+@omit create
+Detected by comparing ip hashes from previous entries. IP hashes are not tied to particular responses, so only the second and subsequent entries are flagged.
+';
+
+
+--
+-- Name: COLUMN survey_responses.is_duplicate_entry; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.is_duplicate_entry IS '
+@omit create
+Duplicate entries are detected by matching contact-information field values.
+';
+
+
+--
+-- Name: COLUMN survey_responses.is_unrecognized_user_agent; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.is_unrecognized_user_agent IS '
+@omit create
+Unusual or missing user-agent headers on submissions are flagged. May indicate scripting but does not necessarily imply malicious intent.
+';
+
+
+--
+-- Name: COLUMN survey_responses.bypassed_duplicate_submission_control; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.bypassed_duplicate_submission_control IS '
+Should be set by the client on submission and tracked by cookies or localStorage. Surveys that permit only a single entry enable users to bypass the limit for legitimate purposes, like entering responses on a shared computer.
+';
+
+
+--
+-- Name: COLUMN survey_responses.outside_geofence; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.outside_geofence IS '
+@omit create
+Checked on SUBMISSION, so adding or changing a survey geofence after responses have been submitted will not update values. GPS coordinates and IP addresses are not stored for privacy purposes.
+';
+
+
+--
+-- Name: COLUMN survey_responses.is_facilitated; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.is_facilitated IS 'If true, a logged-in user entered information on behalf of another person, so userId is not as relevant.';
+
+
+--
+-- Name: create_survey_response(integer, json, boolean, boolean, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean) RETURNS public.survey_responses
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      access_type survey_access_type;
+      is_disabled boolean;
+      pid int;
+      response survey_responses;
+    begin
+      select 
+        surveys.project_id, 
+        surveys.access_type, 
+        surveys.is_disabled 
+      into 
+        pid, 
+        access_type, 
+        is_disabled 
+      from 
+        surveys 
+      where 
+        surveys.id = "surveyId";
+      -- TODO: improve access control to consider group membership
+      if session_is_admin(pid) or (is_disabled = false and (access_type = 'PUBLIC'::survey_access_type) or (access_type = 'INVITE_ONLY'::survey_access_type and session_member_of_group((select array_agg(group_id) from survey_invited_groups where survey_id = "surveyId")))) then
+        insert into survey_responses (survey_id, data, user_id, is_draft, is_facilitated, bypassed_duplicate_submission_control) values ("surveyId", response_data, nullif(current_setting('session.user_id', TRUE), '')::int, draft, facilitated, bypassed_submission_control) returning * into response;
+        return response;
+      else
+        raise exception 'Access denied to % survey. is_disabled = %', access_type, is_disabled;
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: create_table_of_contents_item_acl(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4206,99 +4350,6 @@ respected, and profile information should disappear from the admin users lists,
 forum posts, and any other shared content. In the forum a balance will need to 
 be made to hide their posts entirely since anonymous content could be malicious, 
 and maintain a historical record of discussions.
-';
-
-
---
--- Name: survey_responses; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.survey_responses (
-    id integer NOT NULL,
-    survey_id integer NOT NULL,
-    user_id integer,
-    data jsonb DEFAULT '{}'::jsonb NOT NULL,
-    is_draft boolean DEFAULT false NOT NULL,
-    is_duplicate_ip boolean DEFAULT false NOT NULL,
-    is_duplicate_entry boolean DEFAULT false NOT NULL,
-    is_unrecognized_user_agent boolean DEFAULT false NOT NULL,
-    bypassed_duplicate_submission_control boolean DEFAULT false NOT NULL,
-    outside_geofence boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp with time zone,
-    CONSTRAINT survey_responses_data_check CHECK ((char_length((data)::text) < 10000))
-);
-
-
---
--- Name: TABLE survey_responses; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.survey_responses IS '
-@omit all
-';
-
-
---
--- Name: COLUMN survey_responses.data; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.data IS 'JSON representation of responses, keyed by the form field export_id';
-
-
---
--- Name: COLUMN survey_responses.is_draft; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.is_draft IS 'Users may save their responses for later editing before submission. After submission they can no longer edit them.';
-
-
---
--- Name: COLUMN survey_responses.is_duplicate_ip; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.is_duplicate_ip IS '
-@omit create
-Detected by comparing ip hashes from previous entries. IP hashes are not tied to particular responses, so only the second and subsequent entries are flagged.
-';
-
-
---
--- Name: COLUMN survey_responses.is_duplicate_entry; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.is_duplicate_entry IS '
-@omit create
-Duplicate entries are detected by matching contact-information field values.
-';
-
-
---
--- Name: COLUMN survey_responses.is_unrecognized_user_agent; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.is_unrecognized_user_agent IS '
-@omit create
-Unusual or missing user-agent headers on submissions are flagged. May indicate scripting but does not necessarily imply malicious intent.
-';
-
-
---
--- Name: COLUMN survey_responses.bypassed_duplicate_submission_control; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.bypassed_duplicate_submission_control IS '
-Should be set by the client on submission and tracked by cookies or localStorage. Surveys that permit only a single entry enable users to bypass the limit for legitimate purposes, like entering responses on a shared computer.
-';
-
-
---
--- Name: COLUMN survey_responses.outside_geofence; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.outside_geofence IS '
-@omit create
-Checked on SUBMISSION, so adding or changing a survey geofence after responses have been submitted will not update values. GPS coordinates and IP addresses are not stored for privacy purposes.
 ';
 
 
@@ -7075,6 +7126,17 @@ $$;
 --
 
 COMMENT ON FUNCTION public.session_is_superuser() IS '@omit';
+
+
+--
+-- Name: session_member_of_group(integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.session_member_of_group(groups integer[]) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select (select count(group_id) from project_group_members where user_id = nullif(current_setting('session.user_id', TRUE), '')::integer and group_id = any(groups)) > 0;
+$$;
 
 
 --
@@ -12348,13 +12410,6 @@ CREATE POLICY survey_responses_delete ON public.survey_responses FOR DELETE TO s
 
 
 --
--- Name: survey_responses survey_responses_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY survey_responses_insert ON public.survey_responses FOR INSERT TO seasketch_user WITH CHECK (public.it_me(user_id));
-
-
---
 -- Name: survey_responses survey_responses_select; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -14134,6 +14189,35 @@ GRANT ALL ON FUNCTION public.create_survey_invites("surveyId" integer, "includeP
 
 
 --
+-- Name: TABLE survey_responses; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,DELETE ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: COLUMN survey_responses.data; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(data) ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: COLUMN survey_responses.is_draft; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_draft) ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean) TO anon;
+
+
+--
 -- Name: FUNCTION create_table_of_contents_item_acl(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15790,27 +15874,6 @@ REVOKE ALL ON FUNCTION public.ltxtq_rexec(public.ltxtquery, public.ltree) FROM P
 
 
 --
--- Name: TABLE survey_responses; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE ON TABLE public.survey_responses TO seasketch_user;
-
-
---
--- Name: COLUMN survey_responses.data; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(data) ON TABLE public.survey_responses TO seasketch_user;
-
-
---
--- Name: COLUMN survey_responses.is_draft; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(is_draft) ON TABLE public.survey_responses TO seasketch_user;
-
-
---
 -- Name: FUNCTION make_response_draft("responseId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17409,6 +17472,13 @@ GRANT ALL ON FUNCTION public.session_is_banned_from_posting(pid integer) TO anon
 
 REVOKE ALL ON FUNCTION public.session_is_superuser() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.session_is_superuser() TO seasketch_user;
+
+
+--
+-- Name: FUNCTION session_member_of_group(groups integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.session_member_of_group(groups integer[]) FROM PUBLIC;
 
 
 --

@@ -23,3 +23,26 @@ query Survey($id: Int!) {
     }
   }
 }
+
+mutation CreateResponse(
+  $surveyId: Int!
+  $isDraft: Boolean!
+  $bypassedDuplicateSubmissionControl: Boolean!
+  $responseData: JSON!
+  $facilitated: Boolean!
+) {
+  createSurveyResponse(
+    input: {
+      surveyId: $surveyId
+      draft: $isDraft
+      responseData: $responseData
+      bypassedSubmissionControl: $bypassedDuplicateSubmissionControl
+      facilitated: $facilitated
+    }
+  ) {
+    clientMutationId
+    surveyResponse {
+      id
+    }
+  }
+}

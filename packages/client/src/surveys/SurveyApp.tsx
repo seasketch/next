@@ -5,7 +5,10 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { FormElementProps } from "../formElements/FormElement";
 import ShortText, { ShortTextProps } from "../formElements/ShortText";
 import WelcomeMessage from "../formElements/WelcomeMessage";
-import { useSurveyQuery } from "../generated/graphql";
+import {
+  useCreateResponseMutation,
+  useSurveyQuery,
+} from "../generated/graphql";
 import ProgressBar from "./ProgressBar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -13,6 +16,7 @@ import { useTranslation, Trans } from "react-i18next";
 import UpArrowIcon from "../components/UpArrowIcon";
 import DownArrowIcon from "../components/DownArrowIcon";
 import useLocalStorage from "../useLocalStorage";
+import { useAuth0 } from "@auth0/auth0-react";
 
 interface FormElementState {
   touched?: boolean;
@@ -31,6 +35,7 @@ function SurveyApp() {
     surveyId: string;
     position: string;
   }>();
+  const auth = useAuth0();
   const { t } = useTranslation("surveys");
   const history = useHistory();
   const [backwards, setBackwards] = useState(false);
@@ -39,6 +44,10 @@ function SurveyApp() {
     variables: { id: parseInt(surveyId) },
     onError,
   });
+  const [createResponse, createResponseState] = useCreateResponseMutation({
+    onError,
+  });
+
   const [responseState, setResponseState] = useLocalStorage<{
     [id: number]: FormElementState;
     // eslint-disable-next-line i18next/no-literal-string
@@ -93,14 +102,30 @@ function SurveyApp() {
       }
     }
 
-    function handleAdvance() {
+    async function handleAdvance() {
       updateState(formElement, {
         submissionAttempted: true,
       });
       if (canAdvance()) {
         if (lastPage) {
-          setResponseState({});
-          history.push(`./0`);
+          const responseData: { [elementId: number]: any } = {};
+          for (const element of elements.filter((e) => e.type!.isInput)) {
+            responseData[element.id] = responseState[element.id].value;
+          }
+          const response = await createResponse({
+            variables: {
+              surveyId: data!.survey!.id,
+              isDraft: false,
+              bypassedDuplicateSubmissionControl: false,
+              facilitated: false,
+              responseData,
+            },
+          });
+          console.log("response", response);
+          if (response && !response.errors) {
+            setResponseState({});
+            history.push(`./0`);
+          }
         } else {
           history.push(`./${index + 1}`);
         }
@@ -194,6 +219,8 @@ function SurveyApp() {
                       buttonClassName="bg-yellow-400"
                       label={lastPage ? t("Complete Submission") : t("Next")}
                       onClick={handleAdvance}
+                      disabled={createResponseState.loading}
+                      loading={createResponseState.loading}
                     />
                   </motion.div>
                 )}

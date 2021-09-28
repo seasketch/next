@@ -1482,19 +1482,22 @@ type CreateSurveyPayload {
   survey: Survey
 }
 
-"""All input for the create `SurveyResponse` mutation."""
+"""All input for the `createSurveyResponse` mutation."""
 input CreateSurveyResponseInput {
+  bypassedSubmissionControl: Boolean
+
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-
-  """The `SurveyResponse` to be created by this mutation."""
-  surveyResponse: SurveyResponseInput!
+  draft: Boolean
+  facilitated: Boolean
+  responseData: JSON
+  surveyId: Int
 }
 
-"""The output of our create `SurveyResponse` mutation."""
+"""The output of our `createSurveyResponse` mutation."""
 type CreateSurveyResponsePayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
@@ -1509,8 +1512,6 @@ type CreateSurveyResponsePayload {
 
   """Reads a single `Survey` that is related to this `SurveyResponse`."""
   survey: Survey
-
-  """The `SurveyResponse` that was created by this mutation."""
   surveyResponse: SurveyResponse
 
   """An edge for our `SurveyResponse`. May be used by Relay 1."""
@@ -5931,8 +5932,6 @@ type Mutation {
     """
     input: CreateSurveyInvitesInput!
   ): CreateSurveyInvitesPayload
-
-  """Creates a single `SurveyResponse`."""
   createSurveyResponse(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10578,6 +10577,11 @@ type SurveyResponse implements Node {
   isDuplicateIp: Boolean!
 
   """
+  If true, a logged-in user entered information on behalf of another person, so userId is not as relevant.
+  """
+  isFacilitated: Boolean!
+
+  """
   Unusual or missing user-agent headers on submissions are flagged. May indicate
   scripting but does not necessarily imply malicious intent.
   
@@ -10601,6 +10605,11 @@ type SurveyResponse implements Node {
   survey: Survey
   surveyId: Int!
   updatedAt: Datetime
+
+  """
+  User account that submitted the survey. Note that if isFacilitated is set, the
+  account may not be who is represented by the response content.
+  """
   userId: Int
 }
 
@@ -10616,30 +10625,6 @@ input SurveyResponseCondition {
   surveyId: Int
 
   """Checks for equality with the object’s `userId` field."""
-  userId: Int
-}
-
-"""An input for mutations affecting `SurveyResponse`"""
-input SurveyResponseInput {
-  """
-  Should be set by the client on submission and tracked by cookies or
-  localStorage. Surveys that permit only a single entry enable users to bypass
-  the limit for legitimate purposes, like entering responses on a shared computer.
-  
-  """
-  bypassedDuplicateSubmissionControl: Boolean
-  createdAt: Datetime
-
-  """JSON representation of responses, keyed by the form field export_id"""
-  data: JSON
-  id: Int
-
-  """
-  Users may save their responses for later editing before submission. After submission they can no longer edit them.
-  """
-  isDraft: Boolean
-  surveyId: Int!
-  updatedAt: Datetime
   userId: Int
 }
 

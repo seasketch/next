@@ -1299,18 +1299,21 @@ export type CreateSurveyPayload = {
   survey?: Maybe<Survey>;
 };
 
-/** All input for the create `SurveyResponse` mutation. */
+/** All input for the `createSurveyResponse` mutation. */
 export type CreateSurveyResponseInput = {
+  bypassedSubmissionControl?: Maybe<Scalars['Boolean']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** The `SurveyResponse` to be created by this mutation. */
-  surveyResponse: SurveyResponseInput;
+  draft?: Maybe<Scalars['Boolean']>;
+  facilitated?: Maybe<Scalars['Boolean']>;
+  responseData?: Maybe<Scalars['JSON']>;
+  surveyId?: Maybe<Scalars['Int']>;
 };
 
-/** The output of our create `SurveyResponse` mutation. */
+/** The output of our `createSurveyResponse` mutation. */
 export type CreateSurveyResponsePayload = {
   __typename?: 'CreateSurveyResponsePayload';
   /**
@@ -1322,14 +1325,13 @@ export type CreateSurveyResponsePayload = {
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyResponse`. */
   survey?: Maybe<Survey>;
-  /** The `SurveyResponse` that was created by this mutation. */
   surveyResponse?: Maybe<SurveyResponse>;
   /** An edge for our `SurveyResponse`. May be used by Relay 1. */
   surveyResponseEdge?: Maybe<SurveyResponsesEdge>;
 };
 
 
-/** The output of our create `SurveyResponse` mutation. */
+/** The output of our `createSurveyResponse` mutation. */
 export type CreateSurveyResponsePayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
@@ -4889,7 +4891,6 @@ export type Mutation = {
   /** Creates a single `SurveyInvitedGroup`. */
   createSurveyInvitedGroup?: Maybe<CreateSurveyInvitedGroupPayload>;
   createSurveyInvites?: Maybe<CreateSurveyInvitesPayload>;
-  /** Creates a single `SurveyResponse`. */
   createSurveyResponse?: Maybe<CreateSurveyResponsePayload>;
   /** Creates a single `TableOfContentsItem`. */
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
@@ -10303,6 +10304,8 @@ export type SurveyResponse = Node & {
    * to particular responses, so only the second and subsequent entries are flagged.
    */
   isDuplicateIp: Scalars['Boolean'];
+  /** If true, a logged-in user entered information on behalf of another person, so userId is not as relevant. */
+  isFacilitated: Scalars['Boolean'];
   /**
    * Unusual or missing user-agent headers on submissions are flagged. May indicate
    * scripting but does not necessarily imply malicious intent.
@@ -10320,6 +10323,10 @@ export type SurveyResponse = Node & {
   survey?: Maybe<Survey>;
   surveyId: Scalars['Int'];
   updatedAt?: Maybe<Scalars['Datetime']>;
+  /**
+   * User account that submitted the survey. Note that if isFacilitated is set, the
+   * account may not be who is represented by the response content.
+   */
   userId?: Maybe<Scalars['Int']>;
 };
 
@@ -10333,25 +10340,6 @@ export type SurveyResponseCondition = {
   /** Checks for equality with the object’s `surveyId` field. */
   surveyId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `userId` field. */
-  userId?: Maybe<Scalars['Int']>;
-};
-
-/** An input for mutations affecting `SurveyResponse` */
-export type SurveyResponseInput = {
-  /**
-   * Should be set by the client on submission and tracked by cookies or
-   * localStorage. Surveys that permit only a single entry enable users to bypass
-   * the limit for legitimate purposes, like entering responses on a shared computer.
-   */
-  bypassedDuplicateSubmissionControl?: Maybe<Scalars['Boolean']>;
-  createdAt?: Maybe<Scalars['Datetime']>;
-  /** JSON representation of responses, keyed by the form field export_id */
-  data?: Maybe<Scalars['JSON']>;
-  id?: Maybe<Scalars['Int']>;
-  /** Users may save their responses for later editing before submission. After submission they can no longer edit them. */
-  isDraft?: Maybe<Scalars['Boolean']>;
-  surveyId: Scalars['Int'];
-  updatedAt?: Maybe<Scalars['Datetime']>;
   userId?: Maybe<Scalars['Int']>;
 };
 
@@ -13629,6 +13617,27 @@ export type SurveyQuery = (
           & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
         )> }
       )>> }
+    )> }
+  )> }
+);
+
+export type CreateResponseMutationVariables = Exact<{
+  surveyId: Scalars['Int'];
+  isDraft: Scalars['Boolean'];
+  bypassedDuplicateSubmissionControl: Scalars['Boolean'];
+  responseData: Scalars['JSON'];
+  facilitated: Scalars['Boolean'];
+}>;
+
+
+export type CreateResponseMutation = (
+  { __typename?: 'Mutation' }
+  & { createSurveyResponse?: Maybe<(
+    { __typename?: 'CreateSurveyResponsePayload' }
+    & Pick<CreateSurveyResponsePayload, 'clientMutationId'>
+    & { surveyResponse?: Maybe<(
+      { __typename?: 'SurveyResponse' }
+      & Pick<SurveyResponse, 'id'>
     )> }
   )> }
 );
@@ -17622,6 +17631,48 @@ export function useSurveyLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Sur
 export type SurveyQueryHookResult = ReturnType<typeof useSurveyQuery>;
 export type SurveyLazyQueryHookResult = ReturnType<typeof useSurveyLazyQuery>;
 export type SurveyQueryResult = Apollo.QueryResult<SurveyQuery, SurveyQueryVariables>;
+export const CreateResponseDocument = gql`
+    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!) {
+  createSurveyResponse(
+    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated}
+  ) {
+    clientMutationId
+    surveyResponse {
+      id
+    }
+  }
+}
+    `;
+export type CreateResponseMutationFn = Apollo.MutationFunction<CreateResponseMutation, CreateResponseMutationVariables>;
+
+/**
+ * __useCreateResponseMutation__
+ *
+ * To run a mutation, you first call `useCreateResponseMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateResponseMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createResponseMutation, { data, loading, error }] = useCreateResponseMutation({
+ *   variables: {
+ *      surveyId: // value for 'surveyId'
+ *      isDraft: // value for 'isDraft'
+ *      bypassedDuplicateSubmissionControl: // value for 'bypassedDuplicateSubmissionControl'
+ *      responseData: // value for 'responseData'
+ *      facilitated: // value for 'facilitated'
+ *   },
+ * });
+ */
+export function useCreateResponseMutation(baseOptions?: Apollo.MutationHookOptions<CreateResponseMutation, CreateResponseMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateResponseMutation, CreateResponseMutationVariables>(CreateResponseDocument, options);
+      }
+export type CreateResponseMutationHookResult = ReturnType<typeof useCreateResponseMutation>;
+export type CreateResponseMutationResult = Apollo.MutationResult<CreateResponseMutation>;
+export type CreateResponseMutationOptions = Apollo.BaseMutationOptions<CreateResponseMutation, CreateResponseMutationVariables>;
 export const UpdateProjectNameDocument = gql`
     mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
   updateProjectBySlug(

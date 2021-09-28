@@ -1730,7 +1730,7 @@ describe("response submission", () => {
         // respond to survey
         await createSession(conn, userA, true);
         await conn.any(
-          sql`insert into survey_responses (survey_id, user_id) values (${surveyId}, ${userA})`
+          sql`select create_survey_response(${surveyId}, ${userA}, false, false, false)`
         );
         await clearSession(conn);
         const invite = await conn.one(
