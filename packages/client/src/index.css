@@ -178,3 +178,7 @@ label.required:after {
   margin-left: 2px;
   opacity: 0.5;
 }
+
+.form-element-short-text label.required:after {
+  display: none;
+}

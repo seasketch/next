@@ -2,18 +2,25 @@ import { useHistory } from "react-router";
 import Button from "../components/Button";
 import { FormElementBody, FormElementProps } from "./FormElement";
 
+/**
+ * Displays rich text at the begining of a survey. Only one WelcomeMessage should be
+ * added to form
+ */
 export default function WelcomeMessage(
-  props: FormElementProps<{ beginButtonText: "" }>
+  props: FormElementProps<{ beginButtonText: string }>
 ) {
-  const history = useHistory();
   return (
     <>
-      <FormElementBody body={props.body} />
+      <FormElementBody isInput={false} body={props.body} />
       <Button
         autofocus
         className="mt-6"
-        href={"./1"}
-        label={props.componentSettings.beginButtonText || ""}
+        onClick={props.onSubmit}
+        label={
+          props.componentSettings.beginButtonText?.length
+            ? props.componentSettings.beginButtonText
+            : ""
+        }
         primary
       />
     </>

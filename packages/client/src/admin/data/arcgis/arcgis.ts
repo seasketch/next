@@ -1898,6 +1898,7 @@ export async function getDynamicArcGISStyle(
   skipCache = false
 ) {
   const layers: Layer[] = [];
+  // @ts-ignore
   if (dynamicArcGISStyles[sourceId] && !skipCache) {
     // already working
     return dynamicArcGISStyles[sourceId];

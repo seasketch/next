@@ -52,7 +52,7 @@ export default function ProfileAvatarUploader() {
       >
         <div className="w-16 h-16">
           <ProfilePhoto
-            canonicalEmail={auth0.user?.email}
+            canonicalEmail={auth0.user?.email || ""}
             fullname={data?.me?.profile?.fullname}
             picture={data?.me?.profile?.picture}
             email={

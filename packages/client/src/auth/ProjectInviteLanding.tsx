@@ -150,7 +150,7 @@ export default function ProjectInviteLanding() {
                       <div className="ml-3 inline-flex">
                         <Button
                           onClick={() => confirmWithCurrentAccount()}
-                          label={t(`Accept as ${auth0.user.email}`)}
+                          label={t(`Accept as ${auth0.user!.email}`)}
                         />
                       </div>
                     </>
@@ -161,7 +161,7 @@ export default function ProjectInviteLanding() {
                         <Button
                           primary
                           onClick={() => confirmWithCurrentAccount()}
-                          label={t(`Accept as ${auth0.user.email}`)}
+                          label={t(`Accept as ${auth0.user!.email}`)}
                         />
                       </div>
                       <div className="ml-3 inline-flex">

@@ -13,6 +13,9 @@ export type ShortTextProps = {
   name?: string;
 };
 
+/**
+ * Simplest of input FormElements, takes a single line of text. Wraps TextInput component
+ */
 export default function ShortText(
   props: FormElementProps<ShortTextProps, string>
 ) {
@@ -24,8 +27,12 @@ export default function ShortText(
 
   return (
     <>
-      <FormElementBody body={props.body} />
-      <div className="w-full md:w-96 max-w-full">
+      <FormElementBody
+        isInput={true}
+        body={props.body}
+        required={props.isRequired}
+      />
+      <div className="w-full md:w-96 max-w-full form-element-short-text pt-1">
         <TextInput
           error={props.submissionAttempted ? errors : undefined}
           value={props.value || ""}

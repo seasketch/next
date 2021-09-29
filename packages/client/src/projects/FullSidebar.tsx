@@ -30,7 +30,7 @@ export default function FullSidebar({
   const { data, loading, error, refetch } = useCurrentProjectMetadataQuery();
   const { user, logout } = useAuth0();
   let social: string | false = false;
-  if (user) {
+  if (user?.sub) {
     if (/twitter/.test(user.sub)) {
       social = "twitter";
     } else if (/google/.test(user.sub)) {

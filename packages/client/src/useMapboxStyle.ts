@@ -41,7 +41,7 @@ const fetchedStyles: { [url: string]: Promise<Style> } = {};
 
 async function fetchGlStyle(url: string) {
   const id = url;
-  if (fetchedStyles[id]) {
+  if (id in fetchedStyles) {
     return fetchedStyles[id];
   } else {
     const originalUrl = url;

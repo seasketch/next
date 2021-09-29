@@ -91,7 +91,6 @@ export default function TextInput(props: TextInputOptions) {
         }`}
       >
         {label}
-        {/* {required && " *"} */}
       </label>
 
       <div className="mt-1 relative rounded-md shadow-sm">

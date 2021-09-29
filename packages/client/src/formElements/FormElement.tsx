@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { schema as baseSchema } from "prosemirror-schema-basic";
 import { addListNodes } from "prosemirror-schema-list";
 require("./prosemirror-body.css");
+require("./unreset.css");
 
 /**
  * Common props that will be supplied to all FormElement React Component
@@ -11,7 +12,8 @@ require("./prosemirror-body.css");
  */
 export interface FormElementProps<ComponentSettings, ValueType = {}> {
   id: number;
-  body: Node;
+  /** ProseMirror document */
+  body: any;
   isRequired: boolean;
   componentSettings: ComponentSettings;
   value?: ValueType;
@@ -41,7 +43,15 @@ export const schema: Schema = new Schema({
  *
  * @param body ProseMirror Node/Document
  */
-export function FormElementBody({ body }: { body: Node }) {
+export function FormElementBody({
+  body,
+  required,
+  isInput,
+}: {
+  body: Node;
+  required?: boolean;
+  isInput: boolean;
+}) {
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
 
@@ -56,5 +66,12 @@ export function FormElementBody({ body }: { body: Node }) {
     }
   }, [target, body]);
 
-  return <div className="prosemirror-body" ref={target}></div>;
+  return (
+    <div
+      className={`prosemirror-body ${required && "required"} ${
+        isInput && "input"
+      }`}
+      ref={target}
+    ></div>
+  );
 }

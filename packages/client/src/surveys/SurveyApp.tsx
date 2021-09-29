@@ -121,7 +121,6 @@ function SurveyApp() {
               responseData,
             },
           });
-          console.log("response", response);
           if (response && !response.errors) {
             setResponseState({});
             history.push(`./0`);
@@ -133,100 +132,78 @@ function SurveyApp() {
     }
 
     return (
-      <div
-        className="w-full h-auto relative"
-        style={{
-          backgroundColor: "rgb(5, 94, 157)",
-          backgroundImage:
-            "linear-gradient(128deg, rgb(5, 94, 157), rgb(41, 69, 209))",
-          minHeight: "100vh",
-        }}
-      >
-        <ProgressBar progress={index / elements.length} />
-        <div
-          className="w-full h-32 md:h-52 lg:h-64 overflow-hidden"
-          style={{
-            WebkitMaskImage:
-              "linear-gradient(to top, transparent 0%, black 100%)",
-            backgroundImage:
-              "url(https://images.unsplash.com/photo-1527401850656-0f34108fdb30?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2200&q=80)",
-            backgroundPosition: "left bottom",
-            backgroundSize: "cover",
+      <SurveyAppLayout progress={index / elements.length}>
+        <AnimatePresence
+          initial={false}
+          exitBeforeEnter={true}
+          custom={backwards}
+          onExitComplete={() => {
+            setBackwards(false);
           }}
-        ></div>
-        <div className="px-5 -mt-2 max-w-xl mx-auto text-white survey-content">
-          <AnimatePresence
-            initial={false}
-            exitBeforeEnter={true}
+        >
+          <motion.div
             custom={backwards}
-            onExitComplete={() => {
-              setBackwards(false);
+            variants={{
+              exit: (direction: boolean) => ({
+                opacity: 0,
+                translateY: direction ? 100 : -100,
+                position: "relative",
+              }),
+              enter: (direction: boolean) => ({
+                opacity: 0,
+                translateY: direction ? -100 : 100,
+                position: "relative",
+              }),
+              show: () => ({
+                opacity: 1,
+                translateY: 0,
+                position: "relative",
+              }),
             }}
+            transition={{
+              duration: 0.36,
+            }}
+            key={formElement.id}
+            initial="enter"
+            animate="show"
+            exit="exit"
           >
-            <motion.div
-              custom={backwards}
-              variants={{
-                exit: (direction: boolean) => ({
-                  opacity: 0,
-                  translateY: direction ? 100 : -100,
-                  position: "relative",
-                }),
-                enter: (direction: boolean) => ({
-                  opacity: 0,
-                  translateY: direction ? -100 : 100,
-                  position: "relative",
-                }),
-                show: () => ({
-                  opacity: 1,
-                  translateY: 0,
-                  position: "relative",
-                }),
-              }}
-              transition={{
-                duration: 0.36,
-              }}
-              key={formElement.id}
-              initial="enter"
-              animate="show"
-              exit="exit"
-            >
-              <FormElementFactory
-                {...formElement}
-                typeName={formElement.type!.componentName}
-                submissionAttempted={!!state?.submissionAttempted}
-                onChange={(value, errors) =>
-                  updateState(formElement, {
-                    value,
-                    errors,
-                  })
-                }
-                onSubmit={handleAdvance}
-                editable={false}
-                value={state?.value}
-              />
-              {(!!state?.value || !formElement.isRequired) &&
-                formElement.type?.componentName !== "WelcomeMessage" && (
-                  <motion.div
-                    transition={{
-                      delay: 0.15,
-                    }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <Button
-                      className="mt-5"
-                      buttonClassName="bg-yellow-400"
-                      label={lastPage ? t("Complete Submission") : t("Next")}
-                      onClick={handleAdvance}
-                      disabled={createResponseState.loading}
-                      loading={createResponseState.loading}
-                    />
-                  </motion.div>
-                )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+            <FormElementFactory
+              {...formElement}
+              typeName={formElement.type!.componentName}
+              submissionAttempted={!!state?.submissionAttempted}
+              onChange={(value, errors) =>
+                updateState(formElement, {
+                  value,
+                  errors,
+                })
+              }
+              onSubmit={handleAdvance}
+              editable={false}
+              value={state?.value}
+            />
+            {(!!state?.value || !formElement.isRequired) &&
+              formElement.type?.componentName !== "WelcomeMessage" && (
+                <motion.div
+                  transition={{
+                    delay: 0.15,
+                  }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Button
+                    className="mt-5"
+                    buttonClassName="bg-yellow-400"
+                    label={lastPage ? t("Complete Submission") : t("Next")}
+                    onClick={handleAdvance}
+                    disabled={createResponseState.loading}
+                    loading={createResponseState.loading}
+                  />
+                </motion.div>
+              )}
+          </motion.div>
+        </AnimatePresence>
         <div
           style={{ width: "fit-content", height: "fit-content" }}
           className={`fixed bottom-5 right-5 lg:left-5 lg:top-5 ${
@@ -254,7 +231,7 @@ function SurveyApp() {
             </Link>
           )}
         </div>
-      </div>
+      </SurveyAppLayout>
     );
   }
 }
@@ -304,5 +281,38 @@ function FormElementFactory({
       break;
   }
 }
+
+export const SurveyAppLayout: React.FunctionComponent<{ progress: number }> = ({
+  progress,
+  children,
+}) => {
+  return (
+    <div
+      className="w-full h-auto relative"
+      style={{
+        backgroundColor: "rgb(5, 94, 157)",
+        backgroundImage:
+          "linear-gradient(128deg, rgb(5, 94, 157), rgb(41, 69, 209))",
+        minHeight: "100vh",
+      }}
+    >
+      <ProgressBar progress={progress} />
+      <div
+        className="w-full h-32 md:h-52 lg:h-64 overflow-hidden"
+        style={{
+          WebkitMaskImage:
+            "linear-gradient(to top, transparent 0%, black 100%)",
+          backgroundImage:
+            "url(https://images.unsplash.com/photo-1527401850656-0f34108fdb30?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2200&q=80)",
+          backgroundPosition: "left bottom",
+          backgroundSize: "cover",
+        }}
+      ></div>
+      <div className="px-5 -mt-2 max-w-xl mx-auto text-white survey-content">
+        {children}
+      </div>
+    </div>
+  );
+};
 
 export default SurveyApp;

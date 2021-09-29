@@ -323,7 +323,7 @@ export const ProjectAccessGate: React.FunctionComponent<{}> = (props) => {
   }
 
   const profileInitialFormValues: ProfileFormValues = {
-    fullname: data?.me?.profile?.fullname || auth0.user?.name,
+    fullname: data?.me?.profile?.fullname || auth0.user?.name || "",
     email: data?.me?.profile?.email || auth0.user?.email || "",
     nickname:
       data?.me?.profile?.nickname ||

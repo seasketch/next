@@ -15,6 +15,7 @@ import {
   Auth0ContextInterface,
   useAuth0,
 } from "@auth0/auth0-react";
+import { InMemoryCache } from "@apollo/client";
 
 export default {
   title: "ProjectInviteLandingPage",
