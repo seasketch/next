@@ -11238,8 +11238,7 @@ ALTER TABLE ONLY public.form_elements
 -- Name: CONSTRAINT form_fields_form_id_fkey ON form_elements; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON CONSTRAINT form_fields_form_id_fkey ON public.form_elements IS '@foreignSimpleFieldName form_elements
-@simpleCollections only';
+COMMENT ON CONSTRAINT form_fields_form_id_fkey ON public.form_elements IS '@omit';
 
 
 --

@@ -858,9 +858,6 @@ type CreateFormElementPayload {
   """
   clientMutationId: String
 
-  """Reads a single `Form` that is related to this `FormElement`."""
-  form: Form
-
   """The `FormElement` that was created by this mutation."""
   formElement: FormElement
 
@@ -2910,9 +2907,6 @@ type DeleteFormElementPayload {
   clientMutationId: String
   deletedFormElementNodeId: ID
 
-  """Reads a single `Form` that is related to this `FormElement`."""
-  form: Form
-
   """The `FormElement` that was deleted by this mutation."""
   formElement: FormElement
 
@@ -4023,23 +4017,6 @@ as an option when creating new forms.
 
 """
 type Form implements Node {
-  """Reads and enables pagination through a set of `FormElement`."""
-  form_elements(
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: FormElementCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-
-    """The method to use when ordering `FormElement`."""
-    orderBy: [FormElementsOrderBy!]
-  ): [FormElement!]!
-
   """List of all FormElements in this form."""
   formElements(
     """Only read the first `n` values of the set."""
@@ -4252,9 +4229,6 @@ type FormElement implements Node {
   """
   exportId: String
 
-  """Reads a single `Form` that is related to this `FormElement`."""
-  form: Form
-
   """Form this field belongs to."""
   formId: Int!
   id: Int!
@@ -4276,18 +4250,6 @@ type FormElement implements Node {
   position: Int!
   type: FormElementType
   typeId: String!
-}
-
-"""
-A condition to be used against `FormElement` object types. All fields are tested
-for equality and combined with a logical ‘and.’
-"""
-input FormElementCondition {
-  """Checks for equality with the object’s `formId` field."""
-  formId: Int
-
-  """Checks for equality with the object’s `id` field."""
-  id: Int
 }
 
 """An input for mutations affecting `FormElement`"""
@@ -11671,9 +11633,6 @@ type UpdateFormElementPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-
-  """Reads a single `Form` that is related to this `FormElement`."""
-  form: Form
 
   """The `FormElement` that was updated by this mutation."""
   formElement: FormElement

@@ -743,8 +743,6 @@ export type CreateFormElementPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Form` that is related to this `FormElement`. */
-  form?: Maybe<Form>;
   /** The `FormElement` that was created by this mutation. */
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
@@ -2418,8 +2416,6 @@ export type DeleteFormElementPayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   deletedFormElementNodeId?: Maybe<Scalars['ID']>;
-  /** Reads a single `Form` that is related to this `FormElement`. */
-  form?: Maybe<Form>;
   /** The `FormElement` that was deleted by this mutation. */
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
@@ -3381,8 +3377,6 @@ export enum FieldRuleOperator {
  */
 export type Form = Node & {
   __typename?: 'Form';
-  /** Reads and enables pagination through a set of `FormElement`. */
-  form_elements: Array<FormElement>;
   /** List of all FormElements in this form. */
   formElements?: Maybe<Array<FormElement>>;
   id: Scalars['Int'];
@@ -3408,27 +3402,6 @@ export type Form = Node & {
   templateName?: Maybe<Scalars['String']>;
   /** Indicates which features should use this form as a template */
   templateType?: Maybe<FormTemplateType>;
-};
-
-
-/**
- * Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
- * Forms are used to add attributes to spatial features. In Surveys, Forms are used
- * in support of gathering response data.
- *
- * Forms have any number of *FormElements* ordered by a `position` field, and form
- * contents may be hidden depending on the evaluation of *FormConditionalRenderingRules*.
- *
- * Forms typically belong to either a *Survey* or *SketchClass* exclusively. Some
- * Forms may be designated as a template, in which case they belong to neither.
- * Only superusers can create form templates, and clients should provide templates
- * as an option when creating new forms.
- */
-export type FormForm_ElementsArgs = {
-  condition?: Maybe<FormElementCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
 
@@ -3573,8 +3546,6 @@ export type FormElement = Node & {
    * from the first several characters of the text in FormElement.body.
    */
   exportId?: Maybe<Scalars['String']>;
-  /** Reads a single `Form` that is related to this `FormElement`. */
-  form?: Maybe<Form>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
   id: Scalars['Int'];
@@ -3607,17 +3578,6 @@ export type FormElementConditionalRenderingRulesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<FormConditionalRenderingRulesOrderBy>>;
-};
-
-/**
- * A condition to be used against `FormElement` object types. All fields are tested
- * for equality and combined with a logical ‘and.’
- */
-export type FormElementCondition = {
-  /** Checks for equality with the object’s `formId` field. */
-  formId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `FormElement` */
@@ -11139,8 +11099,6 @@ export type UpdateFormElementPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Form` that is related to this `FormElement`. */
-  form?: Maybe<Form>;
   /** The `FormElement` that was updated by this mutation. */
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
