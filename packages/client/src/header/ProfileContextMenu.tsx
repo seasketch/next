@@ -10,12 +10,14 @@ export default function ProfileContextMenu(props?: { itemClassName?: string }) {
     return null;
   }
   let social: string | false = false;
-  if (/twitter/.test(user.sub)) {
-    social = "twitter";
-  } else if (/google/.test(user.sub)) {
-    social = "google";
-  } else if (/github/.test(user.sub)) {
-    social = "github";
+  if (user?.sub) {
+    if (/twitter/.test(user.sub)) {
+      social = "twitter";
+    } else if (/google/.test(user.sub)) {
+      social = "google";
+    } else if (/github/.test(user.sub)) {
+      social = "github";
+    }
   }
   const id = `${user.email || user.name} ${social ? `(${social})` : ""}`;
   return (

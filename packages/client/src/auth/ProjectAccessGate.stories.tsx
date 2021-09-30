@@ -60,7 +60,7 @@ const Template: Story<{ metadata: any; delay?: number }> = (props) => {
         // @ts-ignore
         value={{
           isAuthenticated: false,
-          user: null,
+          user: undefined,
         }}
       >
         <MockedProvider

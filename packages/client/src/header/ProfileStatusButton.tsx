@@ -83,7 +83,7 @@ function ProfileStatusButton({
       );
     }
   }
-  if (!isAuthenticated) return <div>{children}</div>;
+  if (!isAuthenticated || !user) return <div>{children}</div>;
   return (
     <button
       className={`

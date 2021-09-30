@@ -323,7 +323,7 @@ function SidebarContents(props: {
   const { t } = useTranslation(["admin"]);
   const { user, logout } = useAuth0();
   let social: string | false = false;
-  if (user) {
+  if (user && user.sub) {
     if (/twitter/.test(user.sub)) {
       social = "twitter";
     } else if (/google/.test(user.sub)) {

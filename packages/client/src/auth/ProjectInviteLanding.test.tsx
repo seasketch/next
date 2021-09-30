@@ -32,6 +32,8 @@ beforeEach(() => {
     logout: jest.fn(),
     loginWithRedirect: jest.fn(),
   });
+  // Silence apollo inmemorycache console.error calls based on incomplete mocks
+  jest.spyOn(console, "error").mockImplementation(() => {});
 });
 
 it("renders without crashing", () => {

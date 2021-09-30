@@ -743,8 +743,6 @@ export type CreateFormElementPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Form` that is related to this `FormElement`. */
-  form?: Maybe<Form>;
   /** The `FormElement` that was created by this mutation. */
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
@@ -1299,18 +1297,21 @@ export type CreateSurveyPayload = {
   survey?: Maybe<Survey>;
 };
 
-/** All input for the create `SurveyResponse` mutation. */
+/** All input for the `createSurveyResponse` mutation. */
 export type CreateSurveyResponseInput = {
+  bypassedSubmissionControl?: Maybe<Scalars['Boolean']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** The `SurveyResponse` to be created by this mutation. */
-  surveyResponse: SurveyResponseInput;
+  draft?: Maybe<Scalars['Boolean']>;
+  facilitated?: Maybe<Scalars['Boolean']>;
+  responseData?: Maybe<Scalars['JSON']>;
+  surveyId?: Maybe<Scalars['Int']>;
 };
 
-/** The output of our create `SurveyResponse` mutation. */
+/** The output of our `createSurveyResponse` mutation. */
 export type CreateSurveyResponsePayload = {
   __typename?: 'CreateSurveyResponsePayload';
   /**
@@ -1322,14 +1323,13 @@ export type CreateSurveyResponsePayload = {
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyResponse`. */
   survey?: Maybe<Survey>;
-  /** The `SurveyResponse` that was created by this mutation. */
   surveyResponse?: Maybe<SurveyResponse>;
   /** An edge for our `SurveyResponse`. May be used by Relay 1. */
   surveyResponseEdge?: Maybe<SurveyResponsesEdge>;
 };
 
 
-/** The output of our create `SurveyResponse` mutation. */
+/** The output of our `createSurveyResponse` mutation. */
 export type CreateSurveyResponsePayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
@@ -2416,8 +2416,6 @@ export type DeleteFormElementPayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   deletedFormElementNodeId?: Maybe<Scalars['ID']>;
-  /** Reads a single `Form` that is related to this `FormElement`. */
-  form?: Maybe<Form>;
   /** The `FormElement` that was deleted by this mutation. */
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
@@ -3380,7 +3378,7 @@ export enum FieldRuleOperator {
 export type Form = Node & {
   __typename?: 'Form';
   /** List of all FormElements in this form. */
-  formElements: Array<FormElement>;
+  formElements?: Maybe<Array<FormElement>>;
   id: Scalars['Int'];
   /**
    * SeaSetch superusers can create template forms than can be used when creating
@@ -3421,10 +3419,8 @@ export type Form = Node & {
  * as an option when creating new forms.
  */
 export type FormFormElementsArgs = {
-  condition?: Maybe<FormElementCondition>;
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
 /** A condition to be used against `Form` object types. All fields are tested for equality and combined with a logical ‘and.’ */
@@ -3550,8 +3546,6 @@ export type FormElement = Node & {
    * from the first several characters of the text in FormElement.body.
    */
   exportId?: Maybe<Scalars['String']>;
-  /** Reads a single `Form` that is related to this `FormElement`. */
-  form?: Maybe<Form>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
   id: Scalars['Int'];
@@ -3584,17 +3578,6 @@ export type FormElementConditionalRenderingRulesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<FormConditionalRenderingRulesOrderBy>>;
-};
-
-/**
- * A condition to be used against `FormElement` object types. All fields are tested
- * for equality and combined with a logical ‘and.’
- */
-export type FormElementCondition = {
-  /** Checks for equality with the object’s `formId` field. */
-  formId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `FormElement` */
@@ -4868,7 +4851,6 @@ export type Mutation = {
   /** Creates a single `SurveyInvitedGroup`. */
   createSurveyInvitedGroup?: Maybe<CreateSurveyInvitedGroupPayload>;
   createSurveyInvites?: Maybe<CreateSurveyInvitesPayload>;
-  /** Creates a single `SurveyResponse`. */
   createSurveyResponse?: Maybe<CreateSurveyResponsePayload>;
   /** Creates a single `TableOfContentsItem`. */
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
@@ -10282,6 +10264,8 @@ export type SurveyResponse = Node & {
    * to particular responses, so only the second and subsequent entries are flagged.
    */
   isDuplicateIp: Scalars['Boolean'];
+  /** If true, a logged-in user entered information on behalf of another person, so userId is not as relevant. */
+  isFacilitated: Scalars['Boolean'];
   /**
    * Unusual or missing user-agent headers on submissions are flagged. May indicate
    * scripting but does not necessarily imply malicious intent.
@@ -10299,6 +10283,10 @@ export type SurveyResponse = Node & {
   survey?: Maybe<Survey>;
   surveyId: Scalars['Int'];
   updatedAt?: Maybe<Scalars['Datetime']>;
+  /**
+   * User account that submitted the survey. Note that if isFacilitated is set, the
+   * account may not be who is represented by the response content.
+   */
   userId?: Maybe<Scalars['Int']>;
 };
 
@@ -10312,25 +10300,6 @@ export type SurveyResponseCondition = {
   /** Checks for equality with the object’s `surveyId` field. */
   surveyId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `userId` field. */
-  userId?: Maybe<Scalars['Int']>;
-};
-
-/** An input for mutations affecting `SurveyResponse` */
-export type SurveyResponseInput = {
-  /**
-   * Should be set by the client on submission and tracked by cookies or
-   * localStorage. Surveys that permit only a single entry enable users to bypass
-   * the limit for legitimate purposes, like entering responses on a shared computer.
-   */
-  bypassedDuplicateSubmissionControl?: Maybe<Scalars['Boolean']>;
-  createdAt?: Maybe<Scalars['Datetime']>;
-  /** JSON representation of responses, keyed by the form field export_id */
-  data?: Maybe<Scalars['JSON']>;
-  id?: Maybe<Scalars['Int']>;
-  /** Users may save their responses for later editing before submission. After submission they can no longer edit them. */
-  isDraft?: Maybe<Scalars['Boolean']>;
-  surveyId: Scalars['Int'];
-  updatedAt?: Maybe<Scalars['Datetime']>;
   userId?: Maybe<Scalars['Int']>;
 };
 
@@ -11130,8 +11099,6 @@ export type UpdateFormElementPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Form` that is related to this `FormElement`. */
-  form?: Maybe<Form>;
   /** The `FormElement` that was updated by this mutation. */
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
@@ -13583,6 +13550,52 @@ export type SimpleProjectListQuery = (
     & { nodes: Array<(
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'name' | 'slug' | 'description' | 'url'>
+    )> }
+  )> }
+);
+
+export type SurveyQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type SurveyQuery = (
+  { __typename?: 'Query' }
+  & { survey?: Maybe<(
+    { __typename?: 'Survey' }
+    & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled'>
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id'>
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position'>
+        & { type?: Maybe<(
+          { __typename?: 'FormElementType' }
+          & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+        )> }
+      )>> }
+    )> }
+  )> }
+);
+
+export type CreateResponseMutationVariables = Exact<{
+  surveyId: Scalars['Int'];
+  isDraft: Scalars['Boolean'];
+  bypassedDuplicateSubmissionControl: Scalars['Boolean'];
+  responseData: Scalars['JSON'];
+  facilitated: Scalars['Boolean'];
+}>;
+
+
+export type CreateResponseMutation = (
+  { __typename?: 'Mutation' }
+  & { createSurveyResponse?: Maybe<(
+    { __typename?: 'CreateSurveyResponsePayload' }
+    & Pick<CreateSurveyResponsePayload, 'clientMutationId'>
+    & { surveyResponse?: Maybe<(
+      { __typename?: 'SurveyResponse' }
+      & Pick<SurveyResponse, 'id'>
     )> }
   )> }
 );
@@ -17521,6 +17534,103 @@ export function useSimpleProjectListLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type SimpleProjectListQueryHookResult = ReturnType<typeof useSimpleProjectListQuery>;
 export type SimpleProjectListLazyQueryHookResult = ReturnType<typeof useSimpleProjectListLazyQuery>;
 export type SimpleProjectListQueryResult = Apollo.QueryResult<SimpleProjectListQuery, SimpleProjectListQueryVariables>;
+export const SurveyDocument = gql`
+    query Survey($id: Int!) {
+  survey(id: $id) {
+    id
+    name
+    accessType
+    isDisabled
+    form {
+      id
+      formElements {
+        id
+        componentSettings
+        body
+        isRequired
+        position
+        type {
+          componentName
+          isInput
+          isSingleUseOnly
+          isSurveysOnly
+          label
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useSurveyQuery__
+ *
+ * To run a query within a React component, call `useSurveyQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveyQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveyQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useSurveyQuery(baseOptions: Apollo.QueryHookOptions<SurveyQuery, SurveyQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveyQuery, SurveyQueryVariables>(SurveyDocument, options);
+      }
+export function useSurveyLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveyQuery, SurveyQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveyQuery, SurveyQueryVariables>(SurveyDocument, options);
+        }
+export type SurveyQueryHookResult = ReturnType<typeof useSurveyQuery>;
+export type SurveyLazyQueryHookResult = ReturnType<typeof useSurveyLazyQuery>;
+export type SurveyQueryResult = Apollo.QueryResult<SurveyQuery, SurveyQueryVariables>;
+export const CreateResponseDocument = gql`
+    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!) {
+  createSurveyResponse(
+    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated}
+  ) {
+    clientMutationId
+    surveyResponse {
+      id
+    }
+  }
+}
+    `;
+export type CreateResponseMutationFn = Apollo.MutationFunction<CreateResponseMutation, CreateResponseMutationVariables>;
+
+/**
+ * __useCreateResponseMutation__
+ *
+ * To run a mutation, you first call `useCreateResponseMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateResponseMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createResponseMutation, { data, loading, error }] = useCreateResponseMutation({
+ *   variables: {
+ *      surveyId: // value for 'surveyId'
+ *      isDraft: // value for 'isDraft'
+ *      bypassedDuplicateSubmissionControl: // value for 'bypassedDuplicateSubmissionControl'
+ *      responseData: // value for 'responseData'
+ *      facilitated: // value for 'facilitated'
+ *   },
+ * });
+ */
+export function useCreateResponseMutation(baseOptions?: Apollo.MutationHookOptions<CreateResponseMutation, CreateResponseMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateResponseMutation, CreateResponseMutationVariables>(CreateResponseDocument, options);
+      }
+export type CreateResponseMutationHookResult = ReturnType<typeof useCreateResponseMutation>;
+export type CreateResponseMutationResult = Apollo.MutationResult<CreateResponseMutation>;
+export type CreateResponseMutationOptions = Apollo.BaseMutationOptions<CreateResponseMutation, CreateResponseMutationVariables>;
 export const UpdateProjectNameDocument = gql`
     mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
   updateProjectBySlug(

@@ -400,9 +400,9 @@ describe("Surveys", () => {
           while (count) {
             count--;
             await conn.one(
-              sql`insert into survey_responses (survey_id, data) values (${surveyId}, ${sql.json(
+              sql`select create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false, false)`
             );
           }
           await createSession(conn, adminId, true, false, projectId);
@@ -429,9 +429,9 @@ describe("Surveys", () => {
         ) => {
           await createSession(conn, invitedUser, true, false, projectId);
           const response = await conn.one(
-            sql`insert into survey_responses (user_id, survey_id, data, is_draft) values (${invitedUser}, ${surveyId}, ${sql.json(
+            sql`select * from create_survey_response(${surveyId}, ${sql.json(
               {}
-            )}, true) returning *`
+            )}, false, true, false)`
           );
           expect(response.updated_at).toBe(null);
           const r = await conn.one(
@@ -452,9 +452,9 @@ describe("Surveys", () => {
         async (conn, projectId, adminId, surveyId, userA, userB) => {
           await createSession(conn, userA, true, false, projectId);
           const responseA = await conn.one(
-            sql`insert into survey_responses (user_id, survey_id, data) values (${userA}, ${surveyId}, ${sql.json(
+            sql`select * from create_survey_response(${surveyId}, ${sql.json(
               {}
-            )}) returning *`
+            )}, false, false, false)`
           );
           await createSession(conn, userA, true, false, projectId);
           expect(
@@ -480,9 +480,9 @@ describe("Surveys", () => {
         ) => {
           await createSession(conn, invitedUser, true, false, projectId);
           const response = await conn.one(
-            sql`insert into survey_responses (user_id, survey_id, data, is_draft, outside_geofence) values (${invitedUser}, ${surveyId}, ${sql.json(
+            sql`select * from create_survey_response(${surveyId}, ${sql.json(
               {}
-            )}, true, false) returning *`
+            )}, false, true, false)`
           );
           expect(
             conn.one(
@@ -510,9 +510,32 @@ describe("Surveys", () => {
           ) => {
             await createSession(conn, invitedUser, true, false, projectId);
             const response = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${invitedUser}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
+            );
+            expect(response).toBeTruthy();
+          }
+        );
+      });
+
+      test("Anonymous users can create responses to public surveys", async () => {
+        await surveyTransaction(
+          pool,
+          "PUBLIC",
+          async (
+            conn,
+            projectId,
+            adminId,
+            surveyId,
+            invitedUser,
+            uninvitedUser
+          ) => {
+            await createSession(conn, undefined, false, false, projectId);
+            const response = await conn.query(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
+                {}
+              )}, false, false ,false)`
             );
             expect(response).toBeTruthy();
           }
@@ -533,17 +556,17 @@ describe("Surveys", () => {
           ) => {
             await createSession(conn, invitedUser, true, false, projectId);
             const response = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${invitedUser}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             expect(response).toBeTruthy();
             await createSession(conn, uninvitedUser, true, false, projectId);
             expect(
               conn.one(
-                sql`insert into survey_responses (user_id, survey_id, data) values (${invitedUser}, ${surveyId}, ${sql.json(
+                sql`select * from create_survey_response(${surveyId}, ${sql.json(
                   {}
-                )}) returning *`
+                )}, false, false ,false)`
               )
             ).rejects.toThrow();
           }
@@ -564,9 +587,9 @@ describe("Surveys", () => {
           ) => {
             await createSession(conn, invitedUser, true, false, projectId);
             const response = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${invitedUser}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             expect(response).toBeTruthy();
             expect(
@@ -594,9 +617,9 @@ describe("Surveys", () => {
           ) => {
             await createSession(conn, invitedUser, true, false, projectId);
             const response = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${invitedUser}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             expect(response).toBeTruthy();
             expect(
@@ -625,9 +648,9 @@ describe("Surveys", () => {
           ) => {
             await createSession(conn, invitedUser, true, false, projectId);
             const response = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${invitedUser}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             await createSession(conn, adminId, true, false, projectId);
             const deleted = await conn.oneFirst(
@@ -645,15 +668,15 @@ describe("Surveys", () => {
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${userA}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             await createSession(conn, userB, true, false, projectId);
             const responseB = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${userB}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             const responses = await conn.any(
               sql`select * from survey_responses where survey_id = ${surveyId}`
@@ -670,24 +693,24 @@ describe("Surveys", () => {
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${userA}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             await createSession(conn, userB, true, false, projectId);
             const responseB = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${userB}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             const responses = await conn.any(
               sql`select * from survey_responses where survey_id = ${surveyId}`
             );
             expect(responses.length).toBe(1);
             const responseC = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data, is_draft) values (${userB}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}, ${true}) returning *`
+              )}, false, true,false)`
             );
             await createSession(conn, adminId, true, false, projectId);
             const adminView = await conn.any(
@@ -705,9 +728,9 @@ describe("Surveys", () => {
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${userA}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             await createSession(conn, adminId, true, false, projectId);
             const draft = await conn.oneFirst(
@@ -727,9 +750,9 @@ describe("Surveys", () => {
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${userA}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             await clearSession(conn);
             const hash = await conn.one(
@@ -747,14 +770,14 @@ describe("Surveys", () => {
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${userA}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             const responseB = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${userA}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             await clearSession(conn);
             const hash = await conn.one(
@@ -774,14 +797,14 @@ describe("Surveys", () => {
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${userA}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             const responseB = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data) values (${userA}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}) returning *`
+              )}, false, false ,false)`
             );
             await createSession(conn, adminId, true, false, projectId);
             expect(responseB.is_duplicate_ip).toBe(true);
@@ -802,9 +825,9 @@ describe("Surveys", () => {
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
-              sql`insert into survey_responses (user_id, survey_id, data, bypassed_duplicate_submission_control) values (${userA}, ${surveyId}, ${sql.json(
+              sql`select * from create_survey_response(${surveyId}, ${sql.json(
                 {}
-              )}, ${true}) returning *`
+              )}, false, false, true)`
             );
             await createSession(conn, adminId, true, false, projectId);
             expect(responseA.bypassed_duplicate_submission_control).toBe(true);

@@ -1,0 +1,26 @@
+/* .prosemirror-body h1 {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.prosemirror-body h2 {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 4px 0px;
+} */
+
+.prosemirror-body.required h1:first-of-type:after {
+  content: "*";
+  margin-left: 2px;
+  opacity: 0.5;
+}
+
+/* .prosemirror-body a {
+  text-decoration: underline;
+}
+
+.prosemirror-body ul,
+.prosemirror-body ol {
+  margin: 5px 20px;
+  list-style: disc;
+} */

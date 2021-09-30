@@ -15,6 +15,7 @@ import GlobalErrorHandler, {
 const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
 const LazyProjectAdmin = React.lazy(() => import("./admin/AdminApp"));
 const LazyAuthLanding = React.lazy(() => import("./auth/ProjectInviteLanding"));
+const LazySurveyApp = React.lazy(() => import("./surveys/SurveyApp"));
 
 function App() {
   const { t } = useTranslation(["homepage"]);
@@ -99,6 +100,18 @@ function App() {
                 </Route>
                 <Route path="/:slug/app/:sidebar?">
                   <LazyProjectApp />
+                </Route>
+                <Route
+                  path="/:slug/surveys/:surveyId"
+                  exact
+                  render={(history) => {
+                    const { slug, surveyId } = history.match.params;
+                    return <Redirect to={`/${slug}/surveys/${surveyId}/0`} />;
+                  }}
+                />
+                <Route path="/:slug/surveys/:surveyId/:position">
+                  {/* eslint-disable-next-line i18next/no-literal-string */}
+                  <LazySurveyApp />
                 </Route>
               </ProjectAccessGate>
             </Route>

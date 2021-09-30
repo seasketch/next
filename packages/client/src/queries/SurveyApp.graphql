@@ -1,0 +1,48 @@
+query Survey($id: Int!) {
+  survey(id: $id) {
+    id
+    name
+    accessType
+    isDisabled
+    form {
+      id
+      formElements {
+        id
+        componentSettings
+        body
+        isRequired
+        position
+        type {
+          componentName
+          isInput
+          isSingleUseOnly
+          isSurveysOnly
+          label
+        }
+      }
+    }
+  }
+}
+
+mutation CreateResponse(
+  $surveyId: Int!
+  $isDraft: Boolean!
+  $bypassedDuplicateSubmissionControl: Boolean!
+  $responseData: JSON!
+  $facilitated: Boolean!
+) {
+  createSurveyResponse(
+    input: {
+      surveyId: $surveyId
+      draft: $isDraft
+      responseData: $responseData
+      bypassedSubmissionControl: $bypassedDuplicateSubmissionControl
+      facilitated: $facilitated
+    }
+  ) {
+    clientMutationId
+    surveyResponse {
+      id
+    }
+  }
+}
