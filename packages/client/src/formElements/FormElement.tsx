@@ -1,7 +1,12 @@
 import { Schema, Node, DOMSerializer } from "prosemirror-model";
-import { useEffect, useRef } from "react";
+import { Component, useEffect, useRef } from "react";
 import { schema as baseSchema } from "prosemirror-schema-basic";
 import { addListNodes } from "prosemirror-schema-list";
+import { createPortal } from "react-dom";
+import {
+  FormElement,
+  useUpdateFormElementMutation,
+} from "../generated/graphql";
 require("./prosemirror-body.css");
 require("./unreset.css");
 
@@ -28,6 +33,7 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
    * Used to request that the controller advance to the next question. For example, on Enter keydown
    */
   onSubmit: () => void;
+  editorContainer?: HTMLDivElement | null;
 }
 
 /**
@@ -74,4 +80,39 @@ export function FormElementBody({
       ref={target}
     ></div>
   );
+}
+
+export class FormElementEditorPortal extends Component<{
+  container?: HTMLDivElement | null;
+}> {
+  render() {
+    if (this.props.container) {
+      return createPortal(this.props.children, this.props.container);
+    } else {
+      return null;
+    }
+  }
+}
+
+export function useUpdateFormElement(id: number) {
+  const [
+    updateFormElement,
+    updateFormElementState,
+  ] = useUpdateFormElementMutation();
+  return (
+    variables: Partial<
+      Pick<
+        FormElement,
+        "body" | "componentSettings" | "isRequired" | "exportId"
+      >
+    >
+  ) => {
+    updateFormElement({
+      variables: {
+        ...variables,
+        id,
+      },
+    });
+    // TODO: implement optimistic response
+  };
 }

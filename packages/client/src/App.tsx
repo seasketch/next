@@ -16,6 +16,9 @@ const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
 const LazyProjectAdmin = React.lazy(() => import("./admin/AdminApp"));
 const LazyAuthLanding = React.lazy(() => import("./auth/ProjectInviteLanding"));
 const LazySurveyApp = React.lazy(() => import("./surveys/SurveyApp"));
+const LazySurveyFormEditor = React.lazy(
+  () => import("./admin/surveys/SurveyFormEditor")
+);
 
 function App() {
   const { t } = useTranslation(["homepage"]);
@@ -95,6 +98,18 @@ function App() {
             />
             <Route path="/:slug">
               <ProjectAccessGate>
+                <Route
+                  path="/:slug/survey-editor/:surveyId"
+                  render={(history) => {
+                    const { slug, surveyId } = history.match.params;
+                    return (
+                      <LazySurveyFormEditor
+                        slug={slug}
+                        surveyId={parseInt(surveyId)}
+                      />
+                    );
+                  }}
+                ></Route>
                 <Route path="/:slug/admin">
                   <LazyProjectAdmin />
                 </Route>

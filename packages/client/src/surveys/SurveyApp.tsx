@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { RefObject, useState } from "react";
 import { useHistory, useParams } from "react-router";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
@@ -132,7 +132,10 @@ function SurveyApp() {
     }
 
     return (
-      <SurveyAppLayout progress={index / elements.length}>
+      <SurveyAppLayout
+        showProgress={data.survey.showProgress}
+        progress={index / elements.length}
+      >
         <AnimatePresence
           initial={false}
           exitBeforeEnter={true}
@@ -193,7 +196,7 @@ function SurveyApp() {
                   exit={{ opacity: 0 }}
                 >
                   <Button
-                    className="mt-5"
+                    className="mt-5 mb-10"
                     buttonClassName="bg-yellow-400"
                     label={lastPage ? t("Complete Submission") : t("Next")}
                     onClick={handleAdvance}
@@ -241,7 +244,7 @@ function SurveyApp() {
  * @param param0
  * @returns FormElement component
  */
-function FormElementFactory({
+export function FormElementFactory({
   typeName,
   componentSettings,
   value,
@@ -259,6 +262,7 @@ function FormElementFactory({
   | "editable"
 > & {
   typeName: string;
+  editorContainer?: HTMLDivElement | null;
 }) {
   switch (typeName) {
     case "WelcomeMessage":
@@ -282,21 +286,24 @@ function FormElementFactory({
   }
 }
 
-export const SurveyAppLayout: React.FunctionComponent<{ progress: number }> = ({
-  progress,
-  children,
-}) => {
+export const SurveyAppLayout: React.FunctionComponent<{
+  progress: number;
+  skipScreenHeight?: boolean;
+  showProgress?: boolean;
+}> = ({ progress, children, skipScreenHeight, showProgress }) => {
   return (
     <div
-      className="w-full h-auto relative"
+      className={`w-full ${
+        skipScreenHeight ? "min-h-full" : "h-screen"
+      } relative`}
       style={{
         backgroundColor: "rgb(5, 94, 157)",
         backgroundImage:
           "linear-gradient(128deg, rgb(5, 94, 157), rgb(41, 69, 209))",
-        minHeight: "100vh",
+        // minHeight: "100vh",
       }}
     >
-      <ProgressBar progress={progress} />
+      {showProgress && <ProgressBar progress={progress} />}
       <div
         className="w-full h-32 md:h-52 lg:h-64 overflow-hidden"
         style={{

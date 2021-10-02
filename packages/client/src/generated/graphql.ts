@@ -32,10 +32,10 @@ export type Scalars = {
   GeoJSON: any;
   /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSON: any;
-  /** The `Upload` scalar type represents a file upload. */
-  Upload: any;
   /** A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122). */
   UUID: any;
+  /** The `Upload` scalar type represents a file upload. */
+  Upload: any;
 };
 
 export enum AccessControlListType {
@@ -373,6 +373,12 @@ export type BasemapPatch = {
   url?: Maybe<Scalars['String']>;
 };
 
+/** SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style. */
+export enum BasemapType {
+  Mapbox = 'MAPBOX',
+  RasterUrlTemplate = 'RASTER_URL_TEMPLATE'
+}
+
 /** A connection to a list of `Basemap` values. */
 export type BasemapsConnection = {
   __typename?: 'BasemapsConnection';
@@ -406,12 +412,6 @@ export enum BasemapsOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
-}
-
-/** SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style. */
-export enum BasemapType {
-  Mapbox = 'MAPBOX',
-  RasterUrlTemplate = 'RASTER_URL_TEMPLATE'
 }
 
 
@@ -1997,6 +1997,27 @@ export type DataSourcePatch = {
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
 };
 
+export enum DataSourceTypes {
+  /** Loads dynamic images for the entire viewport from arcgis server */
+  ArcgisDynamicMapserver = 'ARCGIS_DYNAMIC_MAPSERVER',
+  /** Loads vector data from arcgis server for rendering as a geojson source */
+  ArcgisVector = 'ARCGIS_VECTOR',
+  /** MapBox GL Style "geojson" source */
+  Geojson = 'GEOJSON',
+  /** MapBox GL Style "image" source */
+  Image = 'IMAGE',
+  /** MapBox GL Style "raster" source */
+  Raster = 'RASTER',
+  /** MapBox GL Style "raster" source */
+  RasterDem = 'RASTER_DEM',
+  /** Combination of geojson and possible vector sources hosted on SeaSketch CND */
+  SeasketchVector = 'SEASKETCH_VECTOR',
+  /** MapBox GL Style "vector" source */
+  Vector = 'VECTOR',
+  /** MapBox GL Style "video" source */
+  Video = 'VIDEO'
+}
+
 export type DataSourcesBucket = Node & {
   __typename?: 'DataSourcesBucket';
   bucket?: Maybe<Scalars['String']>;
@@ -2094,27 +2115,6 @@ export enum DataSourcesOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
-}
-
-export enum DataSourceTypes {
-  /** Loads dynamic images for the entire viewport from arcgis server */
-  ArcgisDynamicMapserver = 'ARCGIS_DYNAMIC_MAPSERVER',
-  /** Loads vector data from arcgis server for rendering as a geojson source */
-  ArcgisVector = 'ARCGIS_VECTOR',
-  /** MapBox GL Style "geojson" source */
-  Geojson = 'GEOJSON',
-  /** MapBox GL Style "image" source */
-  Image = 'IMAGE',
-  /** MapBox GL Style "raster" source */
-  Raster = 'RASTER',
-  /** MapBox GL Style "raster" source */
-  RasterDem = 'RASTER_DEM',
-  /** Combination of geojson and possible vector sources hosted on SeaSketch CND */
-  SeasketchVector = 'SEASKETCH_VECTOR',
-  /** MapBox GL Style "vector" source */
-  Vector = 'VECTOR',
-  /** MapBox GL Style "video" source */
-  Video = 'VIDEO'
 }
 
 
@@ -2989,34 +2989,6 @@ export type DeleteSurveyInviteByNodeIdInput = {
   nodeId: Scalars['ID'];
 };
 
-/** All input for the `deleteSurveyInvitedGroupBySurveyIdAndGroupId` mutation. */
-export type DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId: Scalars['Int'];
-  surveyId: Scalars['Int'];
-};
-
-/** The output of our delete `SurveyInvitedGroup` mutation. */
-export type DeleteSurveyInvitedGroupPayload = {
-  __typename?: 'DeleteSurveyInvitedGroupPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedSurveyInvitedGroupNodeId?: Maybe<Scalars['ID']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** Reads a single `Survey` that is related to this `SurveyInvitedGroup`. */
-  survey?: Maybe<Survey>;
-  /** The `SurveyInvitedGroup` that was deleted by this mutation. */
-  surveyInvitedGroup?: Maybe<SurveyInvitedGroup>;
-};
-
 /** All input for the `deleteSurveyInvite` mutation. */
 export type DeleteSurveyInviteInput = {
   /**
@@ -3050,6 +3022,34 @@ export type DeleteSurveyInvitePayload = {
 /** The output of our delete `SurveyInvite` mutation. */
 export type DeleteSurveyInvitePayloadSurveyInviteEdgeArgs = {
   orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
+};
+
+/** All input for the `deleteSurveyInvitedGroupBySurveyIdAndGroupId` mutation. */
+export type DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  groupId: Scalars['Int'];
+  surveyId: Scalars['Int'];
+};
+
+/** The output of our delete `SurveyInvitedGroup` mutation. */
+export type DeleteSurveyInvitedGroupPayload = {
+  __typename?: 'DeleteSurveyInvitedGroupPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedSurveyInvitedGroupNodeId?: Maybe<Scalars['ID']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `Survey` that is related to this `SurveyInvitedGroup`. */
+  survey?: Maybe<Survey>;
+  /** The `SurveyInvitedGroup` that was deleted by this mutation. */
+  surveyInvitedGroup?: Maybe<SurveyInvitedGroup>;
 };
 
 /** The output of our delete `Survey` mutation. */
@@ -3641,26 +3641,6 @@ export type FormElementPatch = {
   typeId?: Maybe<Scalars['String']>;
 };
 
-/** A `FormElement` edge in the connection. */
-export type FormElementsEdge = {
-  __typename?: 'FormElementsEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `FormElement` at the end of the edge. */
-  node: FormElement;
-};
-
-/** Methods to use when ordering `FormElement`. */
-export enum FormElementsOrderBy {
-  FormIdAsc = 'FORM_ID_ASC',
-  FormIdDesc = 'FORM_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
-}
-
 /** Identifies the type of element in a form, including metadata about that element type. */
 export type FormElementType = Node & {
   __typename?: 'FormElementType';
@@ -3697,28 +3677,6 @@ export type FormElementTypeCondition = {
   label?: Maybe<Scalars['String']>;
 };
 
-/** A connection to a list of `FormElementType` values. */
-export type FormElementTypesConnection = {
-  __typename?: 'FormElementTypesConnection';
-  /** A list of edges which contains the `FormElementType` and cursor to aid in pagination. */
-  edges: Array<FormElementTypesEdge>;
-  /** A list of `FormElementType` objects. */
-  nodes: Array<FormElementType>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-  /** The count of *all* `FormElementType` you could get from the connection. */
-  totalCount: Scalars['Int'];
-};
-
-/** A `FormElementType` edge in the connection. */
-export type FormElementTypesEdge = {
-  __typename?: 'FormElementTypesEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `FormElementType` at the end of the edge. */
-  node: FormElementType;
-};
-
 /** Methods to use when ordering `FormElementType`. */
 export enum FormElementTypesOrderBy {
   ComponentNameAsc = 'COMPONENT_NAME_ASC',
@@ -3728,6 +3686,36 @@ export enum FormElementTypesOrderBy {
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+/** A `FormElement` edge in the connection. */
+export type FormElementsEdge = {
+  __typename?: 'FormElementsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `FormElement` at the end of the edge. */
+  node: FormElement;
+};
+
+/** Methods to use when ordering `FormElement`. */
+export enum FormElementsOrderBy {
+  FormIdAsc = 'FORM_ID_ASC',
+  FormIdDesc = 'FORM_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+/** Indicates which features should use the form as a template */
+export enum FormTemplateType {
+  /** Template should only be listed for *SketchClasses*. */
+  Sketches = 'SKETCHES',
+  /** Template should only be listed for *Surveys*. */
+  Surveys = 'SURVEYS',
+  /** Template should be an option for both types. */
+  SurveysAndSketches = 'SURVEYS_AND_SKETCHES'
 }
 
 /** A connection to a list of `Form` values. */
@@ -3765,16 +3753,6 @@ export enum FormsOrderBy {
   SketchClassIdDesc = 'SKETCH_CLASS_ID_DESC',
   SurveyIdAsc = 'SURVEY_ID_ASC',
   SurveyIdDesc = 'SURVEY_ID_DESC'
-}
-
-/** Indicates which features should use the form as a template */
-export enum FormTemplateType {
-  /** Template should only be listed for *SketchClasses*. */
-  Sketches = 'SKETCHES',
-  /** Template should only be listed for *Surveys*. */
-  Surveys = 'SURVEYS',
-  /** Template should be an option for both types. */
-  SurveysAndSketches = 'SURVEYS_AND_SKETCHES'
 }
 
 /**
@@ -3890,6 +3868,7 @@ export enum ForumsOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
+
 /** All geography XY types implement this interface */
 export type GeographyGeometry = {
   /** Converts the object to GeoJSON */
@@ -3928,7 +3907,6 @@ export type GeographyPolygon = GeographyGeometry & GeographyInterface & {
   interiors?: Maybe<Array<Maybe<GeographyLineString>>>;
   srid: Scalars['Int'];
 };
-
 
 /** All geometry XY types implement this interface */
 export type GeometryGeometry = {
@@ -4645,6 +4623,7 @@ export enum InviteStatus {
   Unsubscribed = 'UNSUBSCRIBED'
 }
 
+
 /** All input for the `joinProject` mutation. */
 export type JoinProjectInput = {
   /**
@@ -4666,7 +4645,6 @@ export type JoinProjectPayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
-
 
 /** All input for the `leaveProject` mutation. */
 export type LeaveProjectInput = {
@@ -7150,28 +7128,6 @@ export type ProjectInviteOptionInput = {
   fullname?: Maybe<Scalars['String']>;
 };
 
-/** A connection to a list of `ProjectInvite` values. */
-export type ProjectInvitesConnection = {
-  __typename?: 'ProjectInvitesConnection';
-  /** A list of edges which contains the `ProjectInvite` and cursor to aid in pagination. */
-  edges: Array<ProjectInvitesEdge>;
-  /** A list of `ProjectInvite` objects. */
-  nodes: Array<ProjectInvite>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-  /** The count of *all* `ProjectInvite` you could get from the connection. */
-  totalCount: Scalars['Int'];
-};
-
-/** A `ProjectInvite` edge in the connection. */
-export type ProjectInvitesEdge = {
-  __typename?: 'ProjectInvitesEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `ProjectInvite` at the end of the edge. */
-  node: ProjectInvite;
-};
-
 export type ProjectInviteStateSubscriptionPayload = {
   __typename?: 'ProjectInviteStateSubscriptionPayload';
   invite?: Maybe<ProjectInvite>;
@@ -7195,6 +7151,28 @@ export type ProjectInviteTokenVerificationResults = {
   error?: Maybe<Scalars['String']>;
   /** Indicates whether there is an existing account that matches the email address on the invite */
   existingAccount?: Maybe<Scalars['Boolean']>;
+};
+
+/** A connection to a list of `ProjectInvite` values. */
+export type ProjectInvitesConnection = {
+  __typename?: 'ProjectInvitesConnection';
+  /** A list of edges which contains the `ProjectInvite` and cursor to aid in pagination. */
+  edges: Array<ProjectInvitesEdge>;
+  /** A list of `ProjectInvite` objects. */
+  nodes: Array<ProjectInvite>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `ProjectInvite` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `ProjectInvite` edge in the connection. */
+export type ProjectInvitesEdge = {
+  __typename?: 'ProjectInvitesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `ProjectInvite` at the end of the edge. */
+  node: ProjectInvite;
 };
 
 /** Represents an update to a `Project`. Fields that are set will be updated. */
@@ -7429,8 +7407,8 @@ export type Query = Node & {
   formElementTypeByLabel?: Maybe<FormElementType>;
   /** Reads a single `FormElementType` using its globally unique `ID`. */
   formElementTypeByNodeId?: Maybe<FormElementType>;
-  /** Reads and enables pagination through a set of `FormElementType`. */
-  formElementTypesConnection?: Maybe<FormElementTypesConnection>;
+  /** Reads a set of `FormElementType`. */
+  formElementTypes?: Maybe<Array<FormElementType>>;
   forum?: Maybe<Forum>;
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
@@ -8107,12 +8085,9 @@ export type QueryFormElementTypeByNodeIdArgs = {
  * for each database table. These are unlikely to be needed often but may possibly
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
-export type QueryFormElementTypesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
+export type QueryFormElementTypesArgs = {
   condition?: Maybe<FormElementTypeCondition>;
   first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<FormElementTypesOrderBy>>;
 };
@@ -9570,26 +9545,6 @@ export type SketchClassCondition = {
   projectId?: Maybe<Scalars['Int']>;
 };
 
-/** A `SketchClass` edge in the connection. */
-export type SketchClassesEdge = {
-  __typename?: 'SketchClassesEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `SketchClass` at the end of the edge. */
-  node: SketchClass;
-};
-
-/** Methods to use when ordering `SketchClass`. */
-export enum SketchClassesOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
-}
-
 /** An input for mutations affecting `SketchClass` */
 export type SketchClassInput = {
   /**
@@ -9673,6 +9628,26 @@ export type SketchClassPatch = {
   /** Label chosen by project admins that is shown to users. */
   name?: Maybe<Scalars['String']>;
 };
+
+/** A `SketchClass` edge in the connection. */
+export type SketchClassesEdge = {
+  __typename?: 'SketchClassesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `SketchClass` at the end of the edge. */
+  node: SketchClass;
+};
+
+/** Methods to use when ordering `SketchClass`. */
+export enum SketchClassesOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
 
 /**
  * SketchFolders can be used by users to organize their sketches. Collection-type
@@ -9896,6 +9871,12 @@ export enum SpriteImagesOrderBy {
   SpriteIdDesc = 'SPRITE_ID_DESC'
 }
 
+export enum SpriteType {
+  Fill = 'FILL',
+  Icon = 'ICON',
+  Line = 'LINE'
+}
+
 /** Methods to use when ordering `Sprite`. */
 export enum SpritesOrderBy {
   IdAsc = 'ID_ASC',
@@ -9907,12 +9888,6 @@ export enum SpritesOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
-}
-
-export enum SpriteType {
-  Fill = 'FILL',
-  Icon = 'ICON',
-  Line = 'LINE'
 }
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
@@ -9985,6 +9960,7 @@ export type Survey = Node & {
   /** Reads a single `Project` that is related to this `Survey`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  showProgress: Scalars['Boolean'];
   /**
    * Only applicable for public surveys. Show tools to respondants for sharing the
    * survey on social media to encourage responses.
@@ -10085,6 +10061,7 @@ export type SurveyInput = {
   limitToSingleResponse?: Maybe<Scalars['Boolean']>;
   name: Scalars['String'];
   projectId: Scalars['Int'];
+  showProgress?: Maybe<Scalars['Boolean']>;
   /**
    * Only applicable for public surveys. Show tools to respondants for sharing the
    * survey on social media to encourage responses.
@@ -10135,6 +10112,32 @@ export type SurveyInviteCondition = {
   surveyId?: Maybe<Scalars['Int']>;
 };
 
+export type SurveyInviteOptionsInput = {
+  email?: Maybe<Scalars['Email']>;
+  fullname?: Maybe<Scalars['String']>;
+};
+
+/** Represents an update to a `SurveyInvite`. Fields that are set will be updated. */
+export type SurveyInvitePatch = {
+  fullname?: Maybe<Scalars['String']>;
+};
+
+export type SurveyInviteTokenClaims = {
+  __typename?: 'SurveyInviteTokenClaims';
+  email?: Maybe<Scalars['String']>;
+  fullname?: Maybe<Scalars['String']>;
+  inviteId: Scalars['Int'];
+  projectId: Scalars['Int'];
+  surveyId: Scalars['Int'];
+  wasUsed: Scalars['Boolean'];
+};
+
+export type SurveyInviteTokenVerificationResults = {
+  __typename?: 'SurveyInviteTokenVerificationResults';
+  claims?: Maybe<SurveyInviteTokenClaims>;
+  error?: Maybe<Scalars['String']>;
+};
+
 export type SurveyInvitedGroup = {
   __typename?: 'SurveyInvitedGroup';
   groupId: Scalars['Int'];
@@ -10169,16 +10172,6 @@ export enum SurveyInvitedGroupsOrderBy {
   SurveyIdDesc = 'SURVEY_ID_DESC'
 }
 
-export type SurveyInviteOptionsInput = {
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
-};
-
-/** Represents an update to a `SurveyInvite`. Fields that are set will be updated. */
-export type SurveyInvitePatch = {
-  fullname?: Maybe<Scalars['String']>;
-};
-
 /** A `SurveyInvite` edge in the connection. */
 export type SurveyInvitesEdge = {
   __typename?: 'SurveyInvitesEdge';
@@ -10201,22 +10194,6 @@ export enum SurveyInvitesOrderBy {
   SurveyIdDesc = 'SURVEY_ID_DESC'
 }
 
-export type SurveyInviteTokenClaims = {
-  __typename?: 'SurveyInviteTokenClaims';
-  email?: Maybe<Scalars['String']>;
-  fullname?: Maybe<Scalars['String']>;
-  inviteId: Scalars['Int'];
-  projectId: Scalars['Int'];
-  surveyId: Scalars['Int'];
-  wasUsed: Scalars['Boolean'];
-};
-
-export type SurveyInviteTokenVerificationResults = {
-  __typename?: 'SurveyInviteTokenVerificationResults';
-  claims?: Maybe<SurveyInviteTokenClaims>;
-  error?: Maybe<Scalars['String']>;
-};
-
 /** Represents an update to a `Survey`. Fields that are set will be updated. */
 export type SurveyPatch = {
   /** PUBLIC or INVITE_ONLY */
@@ -10236,6 +10213,7 @@ export type SurveyPatch = {
   limitToSingleResponse?: Maybe<Scalars['Boolean']>;
   name?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
+  showProgress?: Maybe<Scalars['Boolean']>;
   /**
    * Only applicable for public surveys. Show tools to respondants for sharing the
    * survey on social media to encourage responses.
@@ -10346,6 +10324,16 @@ export enum SurveyResponsesOrderBy {
   UserIdDesc = 'USER_ID_DESC'
 }
 
+export type SurveyTokenInfo = {
+  __typename?: 'SurveyTokenInfo';
+  /** ID of related project */
+  projectId?: Maybe<Scalars['Int']>;
+  /** ID of related survey */
+  surveyId?: Maybe<Scalars['Int']>;
+  /** Signed token that can be used for accessing the survey */
+  token?: Maybe<Scalars['String']>;
+};
+
 /** Methods to use when ordering `Survey`. */
 export enum SurveysOrderBy {
   IdAsc = 'ID_ASC',
@@ -10356,16 +10344,6 @@ export enum SurveysOrderBy {
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
-
-export type SurveyTokenInfo = {
-  __typename?: 'SurveyTokenInfo';
-  /** ID of related project */
-  projectId?: Maybe<Scalars['Int']>;
-  /** ID of related survey */
-  surveyId?: Maybe<Scalars['Int']>;
-  /** Signed token that can be used for accessing the survey */
-  token?: Maybe<Scalars['String']>;
-};
 
 /**
  * TableOfContentsItems represent a tree-view of folders and operational layers
@@ -10696,6 +10674,7 @@ export enum TopicsOrderBy {
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
+
 
 /** All input for the `updateAclByBasemapId` mutation. */
 export type UpdateAclByBasemapIdInput = {
@@ -11738,30 +11717,6 @@ export type UpdateSurveyInviteByNodeIdInput = {
   patch: SurveyInvitePatch;
 };
 
-/** All input for the `updateSurveyInvitedGroups` mutation. */
-export type UpdateSurveyInvitedGroupsInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  surveyId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `updateSurveyInvitedGroups` mutation. */
-export type UpdateSurveyInvitedGroupsPayload = {
-  __typename?: 'UpdateSurveyInvitedGroupsPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groups?: Maybe<Array<Group>>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 /** All input for the `updateSurveyInvite` mutation. */
 export type UpdateSurveyInviteInput = {
   /**
@@ -11796,6 +11751,30 @@ export type UpdateSurveyInvitePayload = {
 /** The output of our update `SurveyInvite` mutation. */
 export type UpdateSurveyInvitePayloadSurveyInviteEdgeArgs = {
   orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
+};
+
+/** All input for the `updateSurveyInvitedGroups` mutation. */
+export type UpdateSurveyInvitedGroupsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  groupIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  surveyId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `updateSurveyInvitedGroups` mutation. */
+export type UpdateSurveyInvitedGroupsPayload = {
+  __typename?: 'UpdateSurveyInvitedGroupsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  groups?: Maybe<Array<Group>>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** The output of our update `Survey` mutation. */
@@ -12149,7 +12128,6 @@ export enum UsersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
-
 export type UpdateTerrainExaggerationFragment = (
   { __typename?: 'Basemap' }
   & Pick<Basemap, 'terrainExaggeration'>
@@ -12251,6 +12229,15 @@ export type NewRenderUnderFragment = (
 export type NewZIndexFragment = (
   { __typename?: 'DataLayer' }
   & Pick<DataLayer, 'zIndex'>
+);
+
+export type NewSurveyFragment = (
+  { __typename?: 'Survey' }
+  & Pick<Survey, 'id' | 'accessType' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId'>
+  & { invitedGroups?: Maybe<Array<(
+    { __typename?: 'Group' }
+    & Pick<Group, 'id' | 'name'>
+  )>> }
 );
 
 export type NewGroupFragment = (
@@ -13554,6 +13541,154 @@ export type SimpleProjectListQuery = (
   )> }
 );
 
+export type SurveyListDetailsFragment = (
+  { __typename?: 'Survey' }
+  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId'>
+  & { invitedGroups?: Maybe<Array<(
+    { __typename?: 'Group' }
+    & Pick<Group, 'id' | 'name'>
+  )>> }
+);
+
+export type SurveysQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type SurveysQuery = (
+  { __typename?: 'Query' }
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { surveys: Array<(
+      { __typename?: 'Survey' }
+      & SurveyListDetailsFragment
+    )> }
+  )> }
+);
+
+export type CreateSurveyMutationVariables = Exact<{
+  name: Scalars['String'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type CreateSurveyMutation = (
+  { __typename?: 'Mutation' }
+  & { createSurvey?: Maybe<(
+    { __typename?: 'CreateSurveyPayload' }
+    & { survey?: Maybe<(
+      { __typename?: 'Survey' }
+      & SurveyListDetailsFragment
+    )> }
+  )> }
+);
+
+export type InitializeSurveyMutationVariables = Exact<{
+  surveyId: Scalars['Int'];
+}>;
+
+
+export type InitializeSurveyMutation = (
+  { __typename?: 'Mutation' }
+  & { initializeBlankSurveyForm?: Maybe<(
+    { __typename?: 'InitializeBlankSurveyFormPayload' }
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id'>
+    )> }
+  )> }
+);
+
+export type SurveyByIdQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type SurveyByIdQuery = (
+  { __typename?: 'Query' }
+  & { survey?: Maybe<(
+    { __typename?: 'Survey' }
+    & SurveyListDetailsFragment
+  )> }
+);
+
+export type SurveyFormEditorDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+  slug: Scalars['String'];
+}>;
+
+
+export type SurveyFormEditorDetailsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'name'>
+  )>, formElementTypes?: Maybe<Array<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly'>
+  )>>, survey?: Maybe<(
+    { __typename?: 'Survey' }
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id' | 'isTemplate' | 'surveyId' | 'templateName' | 'templateType'>
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId'>
+        & { conditionalRenderingRules: Array<(
+          { __typename?: 'FormConditionalRenderingRule' }
+          & Pick<FormConditionalRenderingRule, 'id' | 'operator' | 'predicateFieldId' | 'value'>
+          & { field?: Maybe<(
+            { __typename?: 'FormElement' }
+            & Pick<FormElement, 'id' | 'exportId'>
+          )> }
+        )>, type?: Maybe<(
+          { __typename?: 'FormElementType' }
+          & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+        )> }
+      )>> }
+    )> }
+    & SurveyListDetailsFragment
+  )> }
+);
+
+export type UpdateSurveyBaseSettingsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  showProgress?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UpdateSurveyBaseSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSurvey?: Maybe<(
+    { __typename?: 'UpdateSurveyPayload' }
+    & { survey?: Maybe<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id' | 'showProgress'>
+    )> }
+  )> }
+);
+
+export type UpdateFormElementMutationVariables = Exact<{
+  id: Scalars['Int'];
+  isRequired?: Maybe<Scalars['Boolean']>;
+  body?: Maybe<Scalars['JSON']>;
+  exportId?: Maybe<Scalars['String']>;
+  componentSettings?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateFormElementMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'isRequired' | 'body' | 'exportId' | 'componentSettings'>
+    )> }
+  )> }
+);
+
 export type SurveyQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
@@ -13563,7 +13698,7 @@ export type SurveyQuery = (
   { __typename?: 'Query' }
   & { survey?: Maybe<(
     { __typename?: 'Survey' }
-    & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled'>
+    & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress'>
     & { form?: Maybe<(
       { __typename?: 'Form' }
       & Pick<Form, 'id'>
@@ -14174,6 +14309,21 @@ export const NewZIndexFragmentDoc = gql`
   zIndex
 }
     `;
+export const NewSurveyFragmentDoc = gql`
+    fragment NewSurvey on Survey {
+  id
+  accessType
+  invitedGroups {
+    id
+    name
+  }
+  isDisabled
+  limitToSingleResponse
+  name
+  submittedResponseCount
+  projectId
+}
+    `;
 export const NewGroupFragmentDoc = gql`
     fragment NewGroup on Group {
   id
@@ -14195,6 +14345,22 @@ export const NewInviteEmailFragmentDoc = gql`
 export const NewLayerOptionsFragmentDoc = gql`
     fragment NewLayerOptions on OptionalBasemapLayer {
   options
+}
+    `;
+export const SurveyListDetailsFragmentDoc = gql`
+    fragment SurveyListDetails on Survey {
+  id
+  accessType
+  showProgress
+  invitedGroups {
+    id
+    name
+  }
+  isDisabled
+  limitToSingleResponse
+  name
+  submittedResponseCount
+  projectId
 }
     `;
 export const ParticipantListDetailsFragmentDoc = gql`
@@ -17534,6 +17700,315 @@ export function useSimpleProjectListLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type SimpleProjectListQueryHookResult = ReturnType<typeof useSimpleProjectListQuery>;
 export type SimpleProjectListLazyQueryHookResult = ReturnType<typeof useSimpleProjectListLazyQuery>;
 export type SimpleProjectListQueryResult = Apollo.QueryResult<SimpleProjectListQuery, SimpleProjectListQueryVariables>;
+export const SurveysDocument = gql`
+    query Surveys($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    surveys {
+      ...SurveyListDetails
+    }
+  }
+}
+    ${SurveyListDetailsFragmentDoc}`;
+
+/**
+ * __useSurveysQuery__
+ *
+ * To run a query within a React component, call `useSurveysQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveysQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveysQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useSurveysQuery(baseOptions: Apollo.QueryHookOptions<SurveysQuery, SurveysQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveysQuery, SurveysQueryVariables>(SurveysDocument, options);
+      }
+export function useSurveysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveysQuery, SurveysQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveysQuery, SurveysQueryVariables>(SurveysDocument, options);
+        }
+export type SurveysQueryHookResult = ReturnType<typeof useSurveysQuery>;
+export type SurveysLazyQueryHookResult = ReturnType<typeof useSurveysLazyQuery>;
+export type SurveysQueryResult = Apollo.QueryResult<SurveysQuery, SurveysQueryVariables>;
+export const CreateSurveyDocument = gql`
+    mutation CreateSurvey($name: String!, $projectId: Int!) {
+  createSurvey(
+    input: {survey: {projectId: $projectId, name: $name, isDisabled: true}}
+  ) {
+    survey {
+      ...SurveyListDetails
+    }
+  }
+}
+    ${SurveyListDetailsFragmentDoc}`;
+export type CreateSurveyMutationFn = Apollo.MutationFunction<CreateSurveyMutation, CreateSurveyMutationVariables>;
+
+/**
+ * __useCreateSurveyMutation__
+ *
+ * To run a mutation, you first call `useCreateSurveyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateSurveyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createSurveyMutation, { data, loading, error }] = useCreateSurveyMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useCreateSurveyMutation(baseOptions?: Apollo.MutationHookOptions<CreateSurveyMutation, CreateSurveyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateSurveyMutation, CreateSurveyMutationVariables>(CreateSurveyDocument, options);
+      }
+export type CreateSurveyMutationHookResult = ReturnType<typeof useCreateSurveyMutation>;
+export type CreateSurveyMutationResult = Apollo.MutationResult<CreateSurveyMutation>;
+export type CreateSurveyMutationOptions = Apollo.BaseMutationOptions<CreateSurveyMutation, CreateSurveyMutationVariables>;
+export const InitializeSurveyDocument = gql`
+    mutation InitializeSurvey($surveyId: Int!) {
+  initializeBlankSurveyForm(input: {surveyId: $surveyId}) {
+    form {
+      id
+    }
+  }
+}
+    `;
+export type InitializeSurveyMutationFn = Apollo.MutationFunction<InitializeSurveyMutation, InitializeSurveyMutationVariables>;
+
+/**
+ * __useInitializeSurveyMutation__
+ *
+ * To run a mutation, you first call `useInitializeSurveyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useInitializeSurveyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [initializeSurveyMutation, { data, loading, error }] = useInitializeSurveyMutation({
+ *   variables: {
+ *      surveyId: // value for 'surveyId'
+ *   },
+ * });
+ */
+export function useInitializeSurveyMutation(baseOptions?: Apollo.MutationHookOptions<InitializeSurveyMutation, InitializeSurveyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<InitializeSurveyMutation, InitializeSurveyMutationVariables>(InitializeSurveyDocument, options);
+      }
+export type InitializeSurveyMutationHookResult = ReturnType<typeof useInitializeSurveyMutation>;
+export type InitializeSurveyMutationResult = Apollo.MutationResult<InitializeSurveyMutation>;
+export type InitializeSurveyMutationOptions = Apollo.BaseMutationOptions<InitializeSurveyMutation, InitializeSurveyMutationVariables>;
+export const SurveyByIdDocument = gql`
+    query SurveyById($id: Int!) {
+  survey(id: $id) {
+    ...SurveyListDetails
+  }
+}
+    ${SurveyListDetailsFragmentDoc}`;
+
+/**
+ * __useSurveyByIdQuery__
+ *
+ * To run a query within a React component, call `useSurveyByIdQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveyByIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveyByIdQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useSurveyByIdQuery(baseOptions: Apollo.QueryHookOptions<SurveyByIdQuery, SurveyByIdQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveyByIdQuery, SurveyByIdQueryVariables>(SurveyByIdDocument, options);
+      }
+export function useSurveyByIdLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveyByIdQuery, SurveyByIdQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveyByIdQuery, SurveyByIdQueryVariables>(SurveyByIdDocument, options);
+        }
+export type SurveyByIdQueryHookResult = ReturnType<typeof useSurveyByIdQuery>;
+export type SurveyByIdLazyQueryHookResult = ReturnType<typeof useSurveyByIdLazyQuery>;
+export type SurveyByIdQueryResult = Apollo.QueryResult<SurveyByIdQuery, SurveyByIdQueryVariables>;
+export const SurveyFormEditorDetailsDocument = gql`
+    query SurveyFormEditorDetails($id: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
+    name
+  }
+  formElementTypes {
+    componentName
+    isHidden
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+  }
+  survey(id: $id) {
+    ...SurveyListDetails
+    form {
+      id
+      isTemplate
+      surveyId
+      templateName
+      templateType
+      formElements {
+        body
+        componentSettings
+        conditionalRenderingRules {
+          id
+          field {
+            id
+            exportId
+          }
+          operator
+          predicateFieldId
+          value
+        }
+        exportId
+        formId
+        id
+        isRequired
+        position
+        type {
+          componentName
+          isHidden
+          isInput
+          isSingleUseOnly
+          isSurveysOnly
+          label
+        }
+        typeId
+      }
+    }
+  }
+}
+    ${SurveyListDetailsFragmentDoc}`;
+
+/**
+ * __useSurveyFormEditorDetailsQuery__
+ *
+ * To run a query within a React component, call `useSurveyFormEditorDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveyFormEditorDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveyFormEditorDetailsQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useSurveyFormEditorDetailsQuery(baseOptions: Apollo.QueryHookOptions<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>(SurveyFormEditorDetailsDocument, options);
+      }
+export function useSurveyFormEditorDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>(SurveyFormEditorDetailsDocument, options);
+        }
+export type SurveyFormEditorDetailsQueryHookResult = ReturnType<typeof useSurveyFormEditorDetailsQuery>;
+export type SurveyFormEditorDetailsLazyQueryHookResult = ReturnType<typeof useSurveyFormEditorDetailsLazyQuery>;
+export type SurveyFormEditorDetailsQueryResult = Apollo.QueryResult<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>;
+export const UpdateSurveyBaseSettingsDocument = gql`
+    mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean) {
+  updateSurvey(input: {id: $id, patch: {showProgress: $showProgress}}) {
+    survey {
+      id
+      showProgress
+    }
+  }
+}
+    `;
+export type UpdateSurveyBaseSettingsMutationFn = Apollo.MutationFunction<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>;
+
+/**
+ * __useUpdateSurveyBaseSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateSurveyBaseSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSurveyBaseSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSurveyBaseSettingsMutation, { data, loading, error }] = useUpdateSurveyBaseSettingsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      showProgress: // value for 'showProgress'
+ *   },
+ * });
+ */
+export function useUpdateSurveyBaseSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>(UpdateSurveyBaseSettingsDocument, options);
+      }
+export type UpdateSurveyBaseSettingsMutationHookResult = ReturnType<typeof useUpdateSurveyBaseSettingsMutation>;
+export type UpdateSurveyBaseSettingsMutationResult = Apollo.MutationResult<UpdateSurveyBaseSettingsMutation>;
+export type UpdateSurveyBaseSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>;
+export const UpdateFormElementDocument = gql`
+    mutation UpdateFormElement($id: Int!, $isRequired: Boolean, $body: JSON, $exportId: String, $componentSettings: JSON) {
+  updateFormElement(
+    input: {id: $id, patch: {isRequired: $isRequired, body: $body, exportId: $exportId, componentSettings: $componentSettings}}
+  ) {
+    formElement {
+      id
+      isRequired
+      body
+      exportId
+      componentSettings
+    }
+  }
+}
+    `;
+export type UpdateFormElementMutationFn = Apollo.MutationFunction<UpdateFormElementMutation, UpdateFormElementMutationVariables>;
+
+/**
+ * __useUpdateFormElementMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormElementMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormElementMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormElementMutation, { data, loading, error }] = useUpdateFormElementMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      isRequired: // value for 'isRequired'
+ *      body: // value for 'body'
+ *      exportId: // value for 'exportId'
+ *      componentSettings: // value for 'componentSettings'
+ *   },
+ * });
+ */
+export function useUpdateFormElementMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementMutation, UpdateFormElementMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormElementMutation, UpdateFormElementMutationVariables>(UpdateFormElementDocument, options);
+      }
+export type UpdateFormElementMutationHookResult = ReturnType<typeof useUpdateFormElementMutation>;
+export type UpdateFormElementMutationResult = Apollo.MutationResult<UpdateFormElementMutation>;
+export type UpdateFormElementMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementMutation, UpdateFormElementMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   survey(id: $id) {
@@ -17541,6 +18016,7 @@ export const SurveyDocument = gql`
     name
     accessType
     isDisabled
+    showProgress
     form {
       id
       formElements {

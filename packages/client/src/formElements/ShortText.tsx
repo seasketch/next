@@ -1,6 +1,14 @@
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
+import InputBlock from "../components/InputBlock";
+import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
-import { FormElementBody, FormElementProps } from "./FormElement";
+import { useUpdateFormElementMutation } from "../generated/graphql";
+import {
+  FormElementBody,
+  FormElementEditorPortal,
+  FormElementProps,
+  useUpdateFormElement,
+} from "./FormElement";
 
 export type ShortTextProps = {
   minLength?: number;
@@ -19,12 +27,13 @@ export type ShortTextProps = {
 export default function ShortText(
   props: FormElementProps<ShortTextProps, string>
 ) {
+  const { t } = useTranslation("surveys");
   const errors = validateShortTextInput(
     props.value,
     props.isRequired,
     props.componentSettings
   );
-
+  const updateSettings = useUpdateFormElement(props.id);
   return (
     <>
       <FormElementBody
@@ -52,6 +61,21 @@ export default function ShortText(
           }}
         />
       </div>
+      <FormElementEditorPortal container={props.editorContainer}>
+        <InputBlock
+          title={t("Required", { ns: "admin:surveys" })}
+          input={
+            <Switch
+              isToggled={props.isRequired}
+              onClick={(isRequired) =>
+                updateSettings({
+                  isRequired,
+                })
+              }
+            />
+          }
+        />
+      </FormElementEditorPortal>
     </>
   );
 }

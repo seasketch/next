@@ -1,0 +1,135 @@
+fragment SurveyListDetails on Survey {
+  id
+  accessType
+  showProgress
+  invitedGroups {
+    id
+    name
+  }
+  isDisabled
+  limitToSingleResponse
+  name
+  submittedResponseCount
+  projectId
+}
+
+query Surveys($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    surveys {
+      ...SurveyListDetails
+    }
+  }
+}
+
+mutation CreateSurvey($name: String!, $projectId: Int!) {
+  createSurvey(
+    input: { survey: { projectId: $projectId, name: $name, isDisabled: true } }
+  ) {
+    survey {
+      ...SurveyListDetails
+    }
+  }
+}
+
+mutation InitializeSurvey($surveyId: Int!) {
+  initializeBlankSurveyForm(input: { surveyId: $surveyId }) {
+    form {
+      id
+    }
+  }
+}
+
+query SurveyById($id: Int!) {
+  survey(id: $id) {
+    ...SurveyListDetails
+  }
+}
+
+query SurveyFormEditorDetails($id: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
+    name
+  }
+  formElementTypes {
+    componentName
+    isHidden
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+  }
+  survey(id: $id) {
+    ...SurveyListDetails
+    form {
+      id
+      isTemplate
+      surveyId
+      templateName
+      templateType
+      formElements {
+        body
+        componentSettings
+        conditionalRenderingRules {
+          id
+          field {
+            id
+            exportId
+          }
+          operator
+          predicateFieldId
+          value
+        }
+        exportId
+        formId
+        id
+        isRequired
+        position
+        type {
+          componentName
+          isHidden
+          isInput
+          isSingleUseOnly
+          isSurveysOnly
+          label
+        }
+        typeId
+      }
+    }
+  }
+}
+
+mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean) {
+  updateSurvey(input: { id: $id, patch: { showProgress: $showProgress } }) {
+    survey {
+      id
+      showProgress
+    }
+  }
+}
+
+mutation UpdateFormElement(
+  $id: Int!
+  $isRequired: Boolean
+  $body: JSON
+  $exportId: String
+  $componentSettings: JSON
+) {
+  updateFormElement(
+    input: {
+      id: $id
+      patch: {
+        isRequired: $isRequired
+        body: $body
+        exportId: $exportId
+        componentSettings: $componentSettings
+      }
+    }
+  ) {
+    formElement {
+      id
+      isRequired
+      body
+      exportId
+      componentSettings
+    }
+  }
+}

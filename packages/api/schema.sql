@@ -3766,7 +3766,10 @@ CREATE TABLE public.form_element_types (
 -- Name: TABLE form_element_types; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.form_element_types IS 'Identifies the type of element in a form, including metadata about that element type.';
+COMMENT ON TABLE public.form_element_types IS '
+@simpleCollections only
+Identifies the type of element in a form, including metadata about that element type.
+';
 
 
 --
@@ -7963,6 +7966,7 @@ CREATE TABLE public.surveys (
     limit_to_single_response boolean DEFAULT true NOT NULL,
     geofence public.geography(Polygon,4326) DEFAULT NULL::public.geography,
     show_social_media_buttons boolean DEFAULT true,
+    show_progress boolean DEFAULT true NOT NULL,
     CONSTRAINT surveys_name_check CHECK ((char_length(name) <= 255))
 );
 

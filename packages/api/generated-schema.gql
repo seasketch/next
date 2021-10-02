@@ -4356,6 +4356,7 @@ enum FormElementsOrderBy {
 
 """
 Identifies the type of element in a form, including metadata about that element type.
+
 """
 type FormElementType implements Node {
   componentName: String!
@@ -4399,34 +4400,6 @@ input FormElementTypeCondition {
 
   """Checks for equality with the object’s `label` field."""
   label: String
-}
-
-"""A connection to a list of `FormElementType` values."""
-type FormElementTypesConnection {
-  """
-  A list of edges which contains the `FormElementType` and cursor to aid in pagination.
-  """
-  edges: [FormElementTypesEdge!]!
-
-  """A list of `FormElementType` objects."""
-  nodes: [FormElementType!]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """
-  The count of *all* `FormElementType` you could get from the connection.
-  """
-  totalCount: Int!
-}
-
-"""A `FormElementType` edge in the connection."""
-type FormElementTypesEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `FormElementType` at the end of the edge."""
-  node: FormElementType!
 }
 
 """Methods to use when ordering `FormElementType`."""
@@ -8642,14 +8615,8 @@ type Query implements Node {
     nodeId: ID!
   ): FormElementType
 
-  """Reads and enables pagination through a set of `FormElementType`."""
-  formElementTypesConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
+  """Reads a set of `FormElementType`."""
+  formElementTypes(
     """
     A condition to be used in determining which values should be returned by the collection.
     """
@@ -8658,18 +8625,12 @@ type Query implements Node {
     """Only read the first `n` values of the set."""
     first: Int
 
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
+    """Skip the first `n` values."""
     offset: Int
 
     """The method to use when ordering `FormElementType`."""
-    orderBy: [FormElementTypesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): FormElementTypesConnection
+    orderBy: [FormElementTypesOrderBy!]
+  ): [FormElementType!]
   forum(id: Int!): Forum
 
   """Reads a single `Forum` using its globally unique `ID`."""
@@ -10191,6 +10152,7 @@ type Survey implements Node {
   """Reads a single `Project` that is related to this `Survey`."""
   project: Project
   projectId: Int!
+  showProgress: Boolean!
 
   """
   Only applicable for public surveys. Show tools to respondants for sharing the 
@@ -10319,6 +10281,7 @@ input SurveyInput {
   limitToSingleResponse: Boolean
   name: String!
   projectId: Int!
+  showProgress: Boolean
 
   """
   Only applicable for public surveys. Show tools to respondants for sharing the 
@@ -10497,6 +10460,7 @@ input SurveyPatch {
   limitToSingleResponse: Boolean
   name: String
   projectId: Int
+  showProgress: Boolean
 
   """
   Only applicable for public surveys. Show tools to respondants for sharing the 

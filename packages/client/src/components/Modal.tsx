@@ -120,7 +120,7 @@ const Modal: React.FunctionComponent<ModalProps> = ({
                   <div
                     className={`${
                       zeroPadding ? "p-0" : "p-4 sm:p-6"
-                    } flex-0 overflow-y-scroll`}
+                    } flex-0 overflow-y-auto`}
                   >
                     {children}
                   </div>

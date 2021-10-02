@@ -4,6 +4,7 @@ query Survey($id: Int!) {
     name
     accessType
     isDisabled
+    showProgress
     form {
       id
       formElements {
