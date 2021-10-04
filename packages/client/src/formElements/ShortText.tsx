@@ -1,5 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import InputBlock from "../components/InputBlock";
+import MutationStatusIndicator from "../components/MutationStatusIndicator";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
 import { useUpdateFormElementMutation } from "../generated/graphql";
@@ -16,9 +17,9 @@ export type ShortTextProps = {
   placeholder?: string;
   /**
    * Enable admins to provide common values
-   * https://developers.google.com/web/updates/2015/06/checkout-faster-with-autofill
+   * https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete#values
    */
-  name?: string;
+  autocomplete?: string;
 };
 
 /**
@@ -33,7 +34,7 @@ export default function ShortText(
     props.isRequired,
     props.componentSettings
   );
-  const updateSettings = useUpdateFormElement(props.id);
+  const [updateSettings, mutationState] = useUpdateFormElement(props);
   return (
     <>
       <FormElementBody
@@ -48,9 +49,10 @@ export default function ShortText(
           label=""
           onChange={(v) => props.onChange(v, !!errors)}
           name={
-            props.componentSettings.name ||
+            props.componentSettings.autocomplete ||
             `form-element-${props.id}-text-input`
           }
+          autocomplete={props.componentSettings.autocomplete}
           required={props.isRequired}
           autoFocus={true}
           placeholder={props.componentSettings.placeholder}
@@ -61,21 +63,55 @@ export default function ShortText(
           }}
         />
       </div>
-      <FormElementEditorPortal container={props.editorContainer}>
-        <InputBlock
-          title={t("Required", { ns: "admin:surveys" })}
-          input={
-            <Switch
-              isToggled={props.isRequired}
-              onClick={(isRequired) =>
-                updateSettings({
-                  isRequired,
-                })
-              }
-            />
-          }
-        />
-      </FormElementEditorPortal>
+      <FormElementEditorPortal
+        render={(updateSettings) => {
+          return (
+            <div className="text-sm">
+              <InputBlock
+                title={t("Required", { ns: "admin:surveys" })}
+                input={
+                  <Switch
+                    isToggled={props.isRequired}
+                    onClick={(isRequired) =>
+                      updateSettings({
+                        isRequired,
+                      })
+                    }
+                  />
+                }
+              />
+              <TextInput
+                label={t("Autocomplete ID")}
+                name="autocomplete"
+                placeholder={"name, fname, email, etc"}
+                value={props.componentSettings.autocomplete || ""}
+                onChange={(value) =>
+                  updateSettings({
+                    componentSettings: {
+                      ...props.componentSettings,
+                      autocomplete: value,
+                    },
+                  })
+                }
+                description={
+                  <Trans ns="admin:surveys">
+                    Giving this input a{" "}
+                    <a
+                      className="underline"
+                      target="_blank"
+                      rel="noreferrer"
+                      href="https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete#values"
+                    >
+                      standard autocomplete attribute
+                    </a>{" "}
+                    can simplify tedious entries
+                  </Trans>
+                }
+              />
+            </div>
+          );
+        }}
+      />
     </>
   );
 }

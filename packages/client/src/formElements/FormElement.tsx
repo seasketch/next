@@ -1,14 +1,29 @@
 import { Schema, Node, DOMSerializer } from "prosemirror-model";
-import { Component, useEffect, useRef } from "react";
+import {
+  Component,
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+} from "react";
 import { schema as baseSchema } from "prosemirror-schema-basic";
 import { addListNodes } from "prosemirror-schema-list";
 import { createPortal } from "react-dom";
 import {
   FormElement,
+  UpdateFormElementMutation,
   useUpdateFormElementMutation,
 } from "../generated/graphql";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import { MutationResult } from "@apollo/client";
 require("./prosemirror-body.css");
 require("./unreset.css");
+
+export const FormEditorPortalContext = createContext<{
+  container: HTMLDivElement | null;
+  formElementSettings: any;
+} | null>(null);
 
 /**
  * Common props that will be supplied to all FormElement React Component
@@ -33,7 +48,6 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
    * Used to request that the controller advance to the next question. For example, on Enter keydown
    */
   onSubmit: () => void;
-  editorContainer?: HTMLDivElement | null;
 }
 
 /**
@@ -83,23 +97,71 @@ export function FormElementBody({
 }
 
 export class FormElementEditorPortal extends Component<{
-  container?: HTMLDivElement | null;
+  render: (
+    updateSettings: (
+      variables: Partial<
+        Pick<
+          FormElement,
+          "body" | "componentSettings" | "isRequired" | "exportId"
+        >
+      >
+    ) => void
+  ) => ReactNode;
 }> {
+  static contextType = FormEditorPortalContext;
   render() {
-    if (this.props.container) {
-      return createPortal(this.props.children, this.props.container);
+    const container = this.context.container;
+    if (container) {
+      return createPortal(
+        <FormElementEditorContainer render={this.props.render} />,
+        container
+      );
     } else {
       return null;
     }
   }
 }
 
-export function useUpdateFormElement(id: number) {
+function FormElementEditorContainer({
+  render,
+}: {
+  render: (
+    updateSettings: (
+      variables: Partial<
+        Pick<
+          FormElement,
+          "body" | "componentSettings" | "isRequired" | "exportId"
+        >
+      >
+    ) => void
+  ) => ReactNode;
+}) {
+  const context = useContext(FormEditorPortalContext);
+  const [updateSettings, mutationState] = useUpdateFormElement(
+    context?.formElementSettings
+  );
+  return <>{render(updateSettings)}</>;
+}
+
+export function useUpdateFormElement(
+  data?: FormElementProps<any, any>
+): [
+  (
+    variables: Partial<
+      Pick<
+        FormElement,
+        "body" | "componentSettings" | "isRequired" | "exportId"
+      >
+    >
+  ) => void,
+  MutationResult<UpdateFormElementMutation>
+] {
+  const onError = useGlobalErrorHandler();
   const [
     updateFormElement,
     updateFormElementState,
   ] = useUpdateFormElementMutation();
-  return (
+  const updater = (
     variables: Partial<
       Pick<
         FormElement,
@@ -107,12 +169,24 @@ export function useUpdateFormElement(id: number) {
       >
     >
   ) => {
+    if (!data) {
+      throw new Error("FormElement settings context not set");
+    }
     updateFormElement({
       variables: {
         ...variables,
-        id,
+        id: data.id,
       },
-    });
-    // TODO: implement optimistic response
+      onError,
+      optimisticResponse: {
+        updateFormElement: {
+          formElement: {
+            ...data,
+            ...variables,
+          },
+        },
+      },
+    }).catch((e) => onError(e));
   };
+  return [updater, updateFormElementState];
 }

@@ -16,6 +16,7 @@ import {
 } from "../../generated/graphql";
 import { FormElementFactory, SurveyAppLayout } from "../../surveys/SurveyApp";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import { FormEditorPortalContext } from "../../formElements/FormElement";
 
 export default function SurveyFormEditor({
   surveyId,
@@ -181,15 +182,21 @@ export default function SurveyFormEditor({
             }
             showProgress={data?.survey?.showProgress}
           >
-            {!focusState.basicSettings && (
-              <FormElementFactory
-                {...selectedFormElement!}
-                onChange={() => null}
-                onSubmit={() => null}
-                typeName={selectedFormElement!.typeId}
-                editorContainer={formElementEditorContainerRef.current}
-              />
-            )}
+            <FormEditorPortalContext.Provider
+              value={{
+                container: formElementEditorContainerRef.current,
+                formElementSettings: selectedFormElement!,
+              }}
+            >
+              {!focusState.basicSettings && (
+                <FormElementFactory
+                  {...selectedFormElement!}
+                  onChange={() => null}
+                  onSubmit={() => null}
+                  typeName={selectedFormElement!.typeId}
+                />
+              )}
+            </FormEditorPortalContext.Provider>
           </SurveyAppLayout>
           {/* </div> */}
         </div>

@@ -262,7 +262,6 @@ export function FormElementFactory({
   | "editable"
 > & {
   typeName: string;
-  editorContainer?: HTMLDivElement | null;
 }) {
   switch (typeName) {
     case "WelcomeMessage":

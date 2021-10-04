@@ -25,6 +25,7 @@ export interface TextInputOptions {
   field?: any;
   form?: FormikProps<any>;
   meta?: FieldMetaProps<string>;
+  autocomplete?: string;
 }
 
 export default function TextInput(props: TextInputOptions) {
@@ -43,6 +44,7 @@ export default function TextInput(props: TextInputOptions) {
     field,
     form,
     meta,
+    autocomplete,
   } = props;
   const [showSaved, setShowSaved] = useState(true);
   let error = props.error;
@@ -116,6 +118,7 @@ export default function TextInput(props: TextInputOptions) {
           value={value}
           aria-invalid={error ? "true" : "false"}
           aria-describedby={error ? `${name}-error` : ""}
+          autoComplete={autocomplete}
           {...field}
         />
         {props.inputChildNode}
