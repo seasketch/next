@@ -17,6 +17,7 @@ import {
 import { FormElementFactory, SurveyAppLayout } from "../../surveys/SurveyApp";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { FormEditorPortalContext } from "../../formElements/FormElement";
+require("../../formElements/BodyEditor");
 
 export default function SurveyFormEditor({
   surveyId,
@@ -92,6 +93,7 @@ export default function SurveyFormEditor({
           </Link>
         </div>
         <Button
+          href={`/${slug}/surveys/${surveyId}/0?preview=true`}
           label={
             <>
               <EyeIcon className="h-4 mr-2" />
@@ -194,6 +196,7 @@ export default function SurveyFormEditor({
                   onChange={() => null}
                   onSubmit={() => null}
                   typeName={selectedFormElement!.typeId}
+                  editable={true}
                 />
               )}
             </FormEditorPortalContext.Provider>

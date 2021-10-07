@@ -12255,6 +12255,11 @@ export type NewLayerOptionsFragment = (
   & Pick<OptionalBasemapLayer, 'options'>
 );
 
+export type UpdateBodyFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'body'>
+);
+
 export type GetAclQueryVariables = Exact<{
   nodeId: Scalars['ID'];
 }>;
@@ -13689,6 +13694,23 @@ export type UpdateFormElementMutation = (
   )> }
 );
 
+export type UpdateFormElementBodyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  body: Scalars['JSON'];
+}>;
+
+
+export type UpdateFormElementBodyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'body'>
+    )> }
+  )> }
+);
+
 export type SurveyQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
@@ -14345,6 +14367,11 @@ export const NewInviteEmailFragmentDoc = gql`
 export const NewLayerOptionsFragmentDoc = gql`
     fragment NewLayerOptions on OptionalBasemapLayer {
   options
+}
+    `;
+export const UpdateBodyFragmentDoc = gql`
+    fragment UpdateBody on FormElement {
+  body
 }
     `;
 export const SurveyListDetailsFragmentDoc = gql`
@@ -18009,6 +18036,43 @@ export function useUpdateFormElementMutation(baseOptions?: Apollo.MutationHookOp
 export type UpdateFormElementMutationHookResult = ReturnType<typeof useUpdateFormElementMutation>;
 export type UpdateFormElementMutationResult = Apollo.MutationResult<UpdateFormElementMutation>;
 export type UpdateFormElementMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementMutation, UpdateFormElementMutationVariables>;
+export const UpdateFormElementBodyDocument = gql`
+    mutation UpdateFormElementBody($id: Int!, $body: JSON!) {
+  updateFormElement(input: {id: $id, patch: {body: $body}}) {
+    formElement {
+      id
+      body
+    }
+  }
+}
+    `;
+export type UpdateFormElementBodyMutationFn = Apollo.MutationFunction<UpdateFormElementBodyMutation, UpdateFormElementBodyMutationVariables>;
+
+/**
+ * __useUpdateFormElementBodyMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormElementBodyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormElementBodyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormElementBodyMutation, { data, loading, error }] = useUpdateFormElementBodyMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      body: // value for 'body'
+ *   },
+ * });
+ */
+export function useUpdateFormElementBodyMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementBodyMutation, UpdateFormElementBodyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormElementBodyMutation, UpdateFormElementBodyMutationVariables>(UpdateFormElementBodyDocument, options);
+      }
+export type UpdateFormElementBodyMutationHookResult = ReturnType<typeof useUpdateFormElementBodyMutation>;
+export type UpdateFormElementBodyMutationResult = Apollo.MutationResult<UpdateFormElementBodyMutation>;
+export type UpdateFormElementBodyMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementBodyMutation, UpdateFormElementBodyMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   survey(id: $id) {

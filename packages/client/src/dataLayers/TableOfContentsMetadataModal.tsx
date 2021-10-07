@@ -2,7 +2,6 @@ import { DOMSerializer, Node } from "prosemirror-model";
 import React, { useEffect, useRef } from "react";
 import Modal from "../components/Modal";
 import Spinner from "../components/Spinner";
-import { schema } from "../editor/config";
 import { useGetMetadataQuery } from "../generated/graphql";
 import MetadataModal from "./MetadataModal";
 

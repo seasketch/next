@@ -2,7 +2,9 @@ import { DOMSerializer, Node } from "prosemirror-model";
 import React, { useEffect, useRef } from "react";
 import Modal from "../components/Modal";
 import Spinner from "../components/Spinner";
-import { schema } from "../editor/config";
+import { metadata as editorConfig } from "../editor/config";
+
+const { schema } = editorConfig;
 
 export default function MetadataModal({
   document,
@@ -33,7 +35,7 @@ export default function MetadataModal({
   return (
     <Modal title={title} onRequestClose={onRequestClose} open={true}>
       <>
-        <div className="w-full h-full sm:h-auto md:w-160 lg:pb-4 relative">
+        <div className="w-full h-full sm:h-auto md:w-160 lg:pb-4 relative metadata">
           <button
             className="bg-gray-400 bg-opacity-25 z-10 absolute right-0 top-0 rounded-full p-1 cursor-pointer focus:ring-blue-300"
             onClick={onRequestClose}

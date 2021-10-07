@@ -2,7 +2,9 @@ import { Schema, Node, DOMSerializer } from "prosemirror-model";
 import {
   Component,
   createContext,
+  lazy,
   ReactNode,
+  Suspense,
   useContext,
   useEffect,
   useRef,
@@ -17,8 +19,11 @@ import {
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { MutationResult } from "@apollo/client";
+import { formElements as editorConfig } from "../editor/config";
+import Spinner from "../components/Spinner";
 require("./prosemirror-body.css");
 require("./unreset.css");
+const LazyBodyEditor = lazy(() => import("./BodyEditor"));
 
 export const FormEditorPortalContext = createContext<{
   container: HTMLDivElement | null;
@@ -53,10 +58,10 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
 /**
  * ProseMirror schema used for FormElement.body content
  */
-export const schema: Schema = new Schema({
-  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
-  marks: baseSchema.spec.marks,
-});
+// export const schema: Schema = new Schema({
+//   nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+//   marks: baseSchema.spec.marks,
+// });
 
 /**
  * Render the given document for presentation to the user
@@ -67,33 +72,60 @@ export function FormElementBody({
   body,
   required,
   isInput,
+  editable,
+  formElementId,
 }: {
-  body: Node;
+  formElementId: number;
+  body: any;
   required?: boolean;
   isInput: boolean;
+  editable?: boolean;
 }) {
+  const schema = isInput
+    ? editorConfig.questions.schema
+    : editorConfig.content.schema;
   const target = useRef<HTMLDivElement>(null);
-  const serializer = useRef(DOMSerializer.fromSchema(schema));
+  const serializer = useRef(
+    DOMSerializer.fromSchema(editorConfig.questions.schema)
+  );
 
   useEffect(() => {
     if (target.current && document) {
       target.current.innerHTML = "";
       target.current.appendChild(
         serializer.current.serializeFragment(
-          Node.fromJSON(schema, body).content
+          Node.fromJSON(editorConfig.questions.schema, body).content
         )
       );
     }
   }, [target, body]);
 
-  return (
-    <div
-      className={`prosemirror-body ${required && "required"} ${
-        isInput && "input"
-      }`}
-      ref={target}
-    ></div>
-  );
+  if (editable) {
+    return (
+      <div
+        className={`prosemirror-body ${required && "required"} ${
+          isInput && "input"
+        }`}
+      >
+        <Suspense fallback={<Spinner />}>
+          <LazyBodyEditor
+            formElementId={formElementId}
+            body={body}
+            isInput={isInput}
+          />
+        </Suspense>
+      </div>
+    );
+  } else {
+    return (
+      <div
+        className={`prosemirror-body ${required && "required"} ${
+          isInput && "input"
+        }`}
+        ref={target}
+      ></div>
+    );
+  }
 }
 
 export class FormElementEditorPortal extends Component<{
@@ -110,7 +142,7 @@ export class FormElementEditorPortal extends Component<{
 }> {
   static contextType = FormEditorPortalContext;
   render() {
-    const container = this.context.container;
+    const container = this.context?.container;
     if (container) {
       return createPortal(
         <FormElementEditorContainer render={this.props.render} />,

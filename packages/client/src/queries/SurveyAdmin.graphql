@@ -133,3 +133,12 @@ mutation UpdateFormElement(
     }
   }
 }
+
+mutation UpdateFormElementBody($id: Int!, $body: JSON!) {
+  updateFormElement(input: { id: $id, patch: { body: $body } }) {
+    formElement {
+      id
+      body
+    }
+  }
+}

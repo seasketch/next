@@ -38,9 +38,11 @@ export default function ShortText(
   return (
     <>
       <FormElementBody
+        formElementId={props.id}
         isInput={true}
         body={props.body}
         required={props.isRequired}
+        editable={props.editable}
       />
       <div className="w-full md:w-96 max-w-full form-element-short-text pt-1">
         <TextInput

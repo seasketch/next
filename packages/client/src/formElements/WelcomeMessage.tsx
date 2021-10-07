@@ -18,7 +18,12 @@ export default function WelcomeMessage(
   const { t } = useTranslation("admin:surveys");
   return (
     <>
-      <FormElementBody isInput={false} body={props.body} />
+      <FormElementBody
+        formElementId={props.id}
+        isInput={false}
+        body={props.body}
+        editable={props.editable}
+      />
       <Button
         autofocus
         className="mt-6"

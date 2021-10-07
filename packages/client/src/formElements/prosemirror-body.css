@@ -9,10 +9,19 @@
   margin: 4px 0px;
 } */
 
-.prosemirror-body.required h1:first-of-type:after {
+.prosemirror-body.required [data-question="yes"]:after {
   content: "*";
   margin-left: 2px;
   opacity: 0.5;
+}
+
+.prosemirror-body.required [data-question="yes"].empty-node:after {
+  content: none;
+}
+
+.prosemirror-body [contenteditable] {
+  border: none;
+  outline: none;
 }
 
 /* .prosemirror-body a {
@@ -24,3 +33,18 @@
   margin: 5px 20px;
   list-style: disc;
 } */
+
+.ProseMirror .empty-node::before {
+  position: absolute;
+  /* color: #aaa; */
+  opacity: 0.5;
+  cursor: text;
+}
+
+.ProseMirror .empty-node:hover::before {
+  opacity: 0.3;
+}
+
+.ProseMirror h1.empty-node::before {
+  content: "Type your question here...";
+}
