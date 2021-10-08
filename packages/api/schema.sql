@@ -1518,6 +1518,20 @@ CREATE FUNCTION public.before_basemap_insert_create_interactivity_settings_func(
 
 
 --
+-- Name: before_insert_form_elements_func(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_insert_form_elements_func() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      new.position = (select coalesce(max(position), 0) + 1 from form_elements where form_id = new.form_id);
+      return new;
+    end;
+  $$;
+
+
+--
 -- Name: before_insert_or_update_data_layers_trigger(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10860,6 +10874,13 @@ CREATE TRIGGER before_basemap_insert_create_interactivity_settings BEFORE INSERT
 
 
 --
+-- Name: form_elements before_insert_form_elements; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_form_elements BEFORE INSERT ON public.form_elements FOR EACH ROW EXECUTE FUNCTION public.before_insert_form_elements_func();
+
+
+--
 -- Name: data_layers before_insert_or_update_data_layers; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -13518,6 +13539,13 @@ REVOKE ALL ON FUNCTION public.auto_create_profile() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.before_basemap_insert_create_interactivity_settings_func() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION before_insert_form_elements_func(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_insert_form_elements_func() FROM PUBLIC;
 
 
 --

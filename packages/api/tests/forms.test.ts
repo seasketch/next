@@ -509,6 +509,54 @@ describe("Form Fields", () => {
       }
     );
   });
+
+  test("new form_elements have position greater than siblings", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId, userIds) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const sketchClassId = await conn.oneFirst(
+          sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+        );
+        const form = await conn.one(
+          sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
+        );
+        const fieldA = await conn.one<{ position: number }>(
+          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
+            form.id
+          }, ${createBody(
+            "field a"
+          )}, 'field_a', ${FormElementType}) returning *`
+        );
+        const fieldB = await conn.one<{ position: number }>(
+          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
+            form.id
+          }, ${createBody(
+            "field b"
+          )}, 'field_b', ${FormElementType}) returning *`
+        );
+        const fieldC = await conn.one<{ position: number }>(
+          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
+            form.id
+          }, ${createBody(
+            "field c"
+          )}, 'field_c', ${FormElementType}) returning *`
+        );
+        const fieldD = await conn.one<{ position: number }>(
+          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
+            form.id
+          }, ${createBody(
+            "field d"
+          )}, 'field_d', ${FormElementType}) returning *`
+        );
+        expect(fieldB.position).toBeGreaterThan(fieldA.position);
+        expect(fieldC.position).toBeGreaterThan(fieldB.position);
+        expect(fieldD.position).toBeGreaterThan(fieldC.position);
+      }
+    );
+  });
+
   describe("updatePositions()", () => {
     test("updates the position of all fields in a form (sketch_class form)", async () => {
       await projectTransaction(
