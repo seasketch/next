@@ -36,17 +36,16 @@ export default function WelcomeMessage(
         primary
       />
       <FormElementEditorPortal
-        render={(updateSettings) => {
+        render={(updateBaseSetting, updateComponentSetting) => {
           return (
             <TextInput
               name="beginButtonText"
               required
               value={props.componentSettings.beginButtonText}
-              onChange={(value) =>
-                updateSettings({
-                  componentSettings: { beginButtonText: value },
-                })
-              }
+              onChange={updateComponentSetting(
+                "beginButtonText",
+                props.componentSettings
+              )}
               label={t("Begin Button Text")}
             />
           );

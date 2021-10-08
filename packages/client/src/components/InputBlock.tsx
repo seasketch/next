@@ -23,18 +23,18 @@ const InputBlock: FunctionComponent<InputBlockProps> = ({
 }) => {
   labelType = labelType || "large";
   return (
-    <div className={`mt-1 ${className}`}>
+    <div className={`${className}`}>
       <div
-        className={`flex mb-2 `}
+        className={`flex items-center mb-2 `}
         style={{ flexDirection: flexDirection || "row" }}
       >
-        <div className="flex-1 font-medium flex-rows items-center pr-4 mt-0.5 ">
+        <div className="flex-1 flex-rows items-center pr-4">
           <div className="flex flex-row items-center">
             <span
               className={
                 labelType === "small"
                   ? "text-sm font-medium leading-5 text-gray-700 mb-1"
-                  : "mb-1"
+                  : "mb-0"
               }
             >
               {title}

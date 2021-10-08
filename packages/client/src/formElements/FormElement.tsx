@@ -85,16 +85,14 @@ export function FormElementBody({
     ? editorConfig.questions.schema
     : editorConfig.content.schema;
   const target = useRef<HTMLDivElement>(null);
-  const serializer = useRef(
-    DOMSerializer.fromSchema(editorConfig.questions.schema)
-  );
+  const serializer = useRef(DOMSerializer.fromSchema(schema));
 
   useEffect(() => {
     if (target.current && document) {
       target.current.innerHTML = "";
       target.current.appendChild(
         serializer.current.serializeFragment(
-          Node.fromJSON(editorConfig.questions.schema, body).content
+          Node.fromJSON(schema, body).content
         )
       );
     }
@@ -130,14 +128,13 @@ export function FormElementBody({
 
 export class FormElementEditorPortal extends Component<{
   render: (
-    updateSettings: (
-      variables: Partial<
-        Pick<
-          FormElement,
-          "body" | "componentSettings" | "isRequired" | "exportId"
-        >
-      >
-    ) => void
+    updateBaseSetting: (
+      setting: "body" | "isRequired" | "exportId"
+    ) => (value: any) => void,
+    updateComponentSetting: (
+      setting: string,
+      currentSettings: any
+    ) => (value: any) => void
   ) => ReactNode;
 }> {
   static contextType = FormEditorPortalContext;
@@ -158,34 +155,41 @@ function FormElementEditorContainer({
   render,
 }: {
   render: (
-    updateSettings: (
-      variables: Partial<
-        Pick<
-          FormElement,
-          "body" | "componentSettings" | "isRequired" | "exportId"
-        >
-      >
-    ) => void
+    updateBaseSetting: (
+      setting: "body" | "isRequired" | "exportId"
+    ) => (value: any) => void,
+    updateComponentSetting: (
+      setting: string,
+      currentSettings: any
+    ) => (value: any) => void
   ) => ReactNode;
 }) {
   const context = useContext(FormEditorPortalContext);
-  const [updateSettings, mutationState] = useUpdateFormElement(
-    context?.formElementSettings
+  const [
+    updateBaseSetting,
+    updateComponentSetting,
+    mutationState,
+  ] = useUpdateFormElement(context?.formElementSettings);
+  return (
+    <div className="space-y-4 text-sm">
+      {render(updateBaseSetting, updateComponentSetting)}
+    </div>
   );
-  return <>{render(updateSettings)}</>;
 }
 
 export function useUpdateFormElement(
   data?: FormElementProps<any, any>
 ): [
-  (
-    variables: Partial<
-      Pick<
-        FormElement,
-        "body" | "componentSettings" | "isRequired" | "exportId"
-      >
-    >
-  ) => void,
+  // (
+  //   variables: Partial<
+  //     Pick<
+  //       FormElement,
+  //       "body" | "componentSettings" | "isRequired" | "exportId"
+  //     >
+  //   >
+  // ) => void,
+  (setting: "body" | "isRequired" | "exportId") => (value: any) => void,
+  (setting: string, currentSettings: any) => (value: any) => void,
   MutationResult<UpdateFormElementMutation>
 ] {
   const onError = useGlobalErrorHandler();
@@ -220,5 +224,13 @@ export function useUpdateFormElement(
       },
     }).catch((e) => onError(e));
   };
-  return [updater, updateFormElementState];
+  const updateBaseSetting = (setting: "body" | "isRequired" | "exportId") => {
+    return (value: any) => updater({ [setting]: value });
+  };
+  const updateComponentSetting = (
+    setting: string,
+    currentSettings: FormElementProps<any>
+  ) => (value: any) =>
+    updater({ componentSettings: { ...currentSettings, [setting]: value } });
+  return [updateBaseSetting, updateComponentSetting, updateFormElementState];
 }
