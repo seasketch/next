@@ -1,5 +1,12 @@
+import { useRef } from "@storybook/addons";
 import { FieldMetaProps, FormikProps } from "formik";
-import React, { useState, useEffect, KeyboardEvent, ReactElement } from "react";
+import React, {
+  useState,
+  useEffect,
+  KeyboardEvent,
+  ReactElement,
+  TextareaHTMLAttributes,
+} from "react";
 
 export interface TextInputOptions {
   /** Required id of input. Also referenced by labels. */
@@ -46,6 +53,12 @@ export default function TextInput(props: TextInputOptions) {
     meta,
     autocomplete,
   } = props;
+  const [localValue, setLocalValue] = useState<string>(value);
+  useEffect(() => {
+    if (value !== localValue) {
+      setLocalValue(value);
+    }
+  }, [value]);
   const [showSaved, setShowSaved] = useState(true);
   let error = props.error;
   const name = props.field?.name ? props.field.name : props.name;
@@ -102,8 +115,12 @@ export default function TextInput(props: TextInputOptions) {
           type={props.type || "text"}
           name={name}
           onKeyDown={onKeyDown}
-          // @ts-ignore
-          onChange={(e) => onChange && onChange(e.target.value)}
+          onChange={(
+            e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+          ) => {
+            setLocalValue(e.target.value);
+            onChange && onChange(e.target.value);
+          }}
           disabled={disabled}
           required={required}
           className={`block w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black ${
@@ -115,7 +132,7 @@ export default function TextInput(props: TextInputOptions) {
             "border-red-300 text-red-900 placeholder-red-300 focus:border-red-300 focus:shadow-outline-red"
           } ${disabled && "text-gray-500 bg-gray-100"}`}
           placeholder={placeholder}
-          value={value}
+          value={localValue}
           aria-invalid={error ? "true" : "false"}
           aria-describedby={error ? `${name}-error` : ""}
           autoComplete={autocomplete}
