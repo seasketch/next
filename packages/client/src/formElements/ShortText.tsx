@@ -159,7 +159,7 @@ export function validateShortTextInput(
   }
   if (text && minLength && text.length < minLength) {
     return (
-      <Trans>Input must {minLength.toString()} characters or greater</Trans>
+      <Trans>Input must be {minLength.toString()} characters or greater</Trans>
     );
   }
   if (text && maxLength && text.length > maxLength) {

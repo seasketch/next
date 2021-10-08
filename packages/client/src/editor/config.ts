@@ -41,6 +41,11 @@ const metadataSchema = new Schema({
   marks: baseSchema.spec.marks,
 });
 
+const contentSchema = new Schema({
+  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+  marks: baseSchema.spec.marks,
+});
+
 export const metadata = {
   schema: metadataSchema,
   plugins: exampleSetup({ schema: metadataSchema, menuBar: false }),
@@ -55,7 +60,7 @@ export const formElements = {
   },
   content: {
     // TODO: customize for this type
-    schema: baseSchema,
-    plugins: exampleSetup({ schema: baseSchema, menuBar: false }),
+    schema: contentSchema,
+    plugins: exampleSetup({ schema: contentSchema, menuBar: false }),
   },
 };

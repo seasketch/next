@@ -3,7 +3,7 @@ import React from "react";
 import { Story, Meta } from "@storybook/react/types-6-0";
 import { SurveyAppLayout } from "../surveys/SurveyApp";
 import ShortText from "./ShortText";
-import fromMarkdown from "./fromMarkdown";
+import { questionBodyFromMarkdown } from "./fromMarkdown";
 
 export default {
   title: "FormElements/ShortText",
@@ -50,7 +50,7 @@ export default {
     isRequired: false,
     placeholder: "Enter name",
     name: "name",
-    body: fromMarkdown(`
+    body: questionBodyFromMarkdown(`
 # What is your name?
 `),
   },
@@ -76,7 +76,7 @@ BasicWithPlaceholder.args = {
 
 export const LongerIntroduction = Template.bind({});
 LongerIntroduction.args = {
-  body: fromMarkdown(`
+  body: questionBodyFromMarkdown(`
   # What is your name?
   
   Please enter your full name (first and last).
