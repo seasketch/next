@@ -13,10 +13,19 @@ import {
   FormElement,
   FormElementType,
   Maybe,
+  useUpdateFormElementOrderMutation,
 } from "../../generated/graphql";
 import { FormElementFactory, SurveyAppLayout } from "../../surveys/SurveyApp";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { FormEditorPortalContext } from "../../formElements/FormElement";
+import {
+  DragDropContext,
+  Draggable,
+  DraggableProvided,
+  DraggableStateSnapshot,
+  Droppable,
+} from "react-beautiful-dnd";
+
 require("../../formElements/BodyEditor");
 
 export default function SurveyFormEditor({
@@ -35,6 +44,7 @@ export default function SurveyFormEditor({
       id: surveyId,
     },
   });
+  const [updateOrder, updateOrderState] = useUpdateFormElementOrderMutation();
   const [focusState, setFocusState] = useState<{
     basicSettings: boolean;
     formElement: number | undefined;
@@ -67,8 +77,18 @@ export default function SurveyFormEditor({
     });
   }
 
-  const selectedFormElement = (data?.survey?.form?.formElements || []).find(
+  const formElements = [...(data?.survey?.form?.formElements || [])];
+  formElements.sort((a, b) => a.position - b.position);
+
+  const selectedFormElement = formElements.find(
     (e) => e.id === focusState.formElement
+  );
+
+  const WelcomeMessage = formElements.find(
+    (e) => e.typeId === "WelcomeMessage"
+  );
+  const sortableFormElements = formElements.filter(
+    (e) => e.typeId !== "WelcomeMessage"
   );
 
   return (
@@ -142,30 +162,103 @@ export default function SurveyFormEditor({
                 <span className="flex-1">{t("Form Elements")}</span>
                 <Button className="" small label={t("Add")} />
               </h3>
-              <div
-                className="mt-1 space-y-2 pb-4 pt-1"
-                role="group"
-                aria-labelledby="mobile-teams-headline"
-              >
-                {(data?.survey?.form?.formElements || []).map((element) => (
-                  <FormElementListItem
-                    key={element.id}
-                    selected={
-                      !!(
-                        focusState.formElement &&
-                        focusState.formElement === element.id
-                      )
+              <div className="pb-4 pt-1">
+                {WelcomeMessage && (
+                  <div className="mb-2">
+                    <FormElementListItem
+                      selected={
+                        !!(
+                          focusState.formElement &&
+                          focusState.formElement === WelcomeMessage.id
+                        )
+                      }
+                      element={WelcomeMessage}
+                      type={WelcomeMessage.type!}
+                      onClick={() =>
+                        setFocusState({
+                          basicSettings: false,
+                          formElement: WelcomeMessage.id,
+                        })
+                      }
+                      draggable={false}
+                    />
+                  </div>
+                )}
+                <DragDropContext
+                  onDragEnd={(result) => {
+                    if (!result.destination) {
+                      return;
+                    } else {
+                      let sorted = reorder(
+                        sortableFormElements,
+                        result.source.index,
+                        result.destination.index
+                      );
+                      if (WelcomeMessage) {
+                        sorted = [WelcomeMessage, ...sorted];
+                      }
+                      updateOrder({
+                        variables: {
+                          elementIds: sorted.map((e) => e.id),
+                        },
+                        optimisticResponse: {
+                          __typename: "Mutation",
+                          setFormElementOrder: {
+                            __typename: "SetFormElementOrderPayload",
+                            formElements: sorted.map((e, i) => ({
+                              __typename: "FormElement",
+                              id: e.id,
+                              position: i + 1,
+                            })),
+                          },
+                        },
+                      });
                     }
-                    element={element}
-                    type={element.type!}
-                    onClick={() =>
-                      setFocusState({
-                        basicSettings: false,
-                        formElement: element.id,
-                      })
-                    }
-                  />
-                ))}
+                  }}
+                >
+                  <Droppable droppableId="droppable">
+                    {(provided, snapshot) => (
+                      <div
+                        className="space-y-2"
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                      >
+                        {sortableFormElements.map((element, i) => (
+                          <Draggable
+                            index={i}
+                            draggableId={element.id.toString()}
+                            key={element.id}
+                            isDragDisabled={element.typeId === "WelcomeMessage"}
+                          >
+                            {(provided, snapshot) => (
+                              <FormElementListItem
+                                draggable={true}
+                                provided={provided}
+                                snapshot={snapshot}
+                                // key={element.id}
+                                selected={
+                                  !!(
+                                    focusState.formElement &&
+                                    focusState.formElement === element.id
+                                  )
+                                }
+                                element={element}
+                                type={element.type!}
+                                onClick={() =>
+                                  setFocusState({
+                                    basicSettings: false,
+                                    formElement: element.id,
+                                  })
+                                }
+                              />
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               </div>
             </nav>
           </div>
@@ -177,9 +270,8 @@ export default function SurveyFormEditor({
             skipScreenHeight={true}
             progress={
               selectedFormElement
-                ? (data?.survey?.form?.formElements || []).indexOf(
-                    selectedFormElement
-                  ) / (data?.survey?.form?.formElements || []).length
+                ? formElements.indexOf(selectedFormElement) /
+                  formElements.length
                 : 1 / 3
             }
             showProgress={data?.survey?.showProgress}
@@ -238,16 +330,31 @@ function FormElementListItem({
   type,
   onClick,
   selected,
+  provided,
+  draggable,
+  snapshot,
 }: {
   element: Pick<FormElement, "body" | "componentSettings" | "exportId">;
   type: Pick<FormElementType, "label">;
   onClick?: () => void;
   selected: boolean;
+  provided?: DraggableProvided;
+  draggable?: boolean;
+  snapshot?: DraggableStateSnapshot;
 }) {
   return (
     <div
+      ref={provided?.innerRef}
+      {...provided?.draggableProps}
+      {...provided?.dragHandleProps}
+      // style={provided?.draggableProps.style}
+      style={{ ...provided?.draggableProps.style, cursor: "pointer" }}
       onClick={onClick}
-      className={`cursor-pointer mx-2 px-4 py-2 shadow-md bg-white w-50 border border-black border-opacity-20 rounded ${
+      className={`select-none cursor-pointer ${
+        snapshot?.isDragging && "shadow-lg"
+      } mx-2 px-4 py-2 ${
+        draggable && "shadow-md"
+      } bg-white w-50 border border-black border-opacity-20 rounded ${
         selected && "ring-2 ring-blue-300"
       }`}
     >
@@ -279,4 +386,11 @@ function collectText(body: any, charLimit = 32) {
     }
   }
   return text;
+}
+
+function reorder<T>(list: T[], startIndex: number, endIndex: number): T[] {
+  const result = Array.from(list);
+  const [removed] = result.splice(startIndex, 1);
+  result.splice(endIndex, 0, removed);
+  return result;
 }

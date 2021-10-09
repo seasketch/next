@@ -13711,6 +13711,22 @@ export type UpdateFormElementBodyMutation = (
   )> }
 );
 
+export type UpdateFormElementOrderMutationVariables = Exact<{
+  elementIds?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+}>;
+
+
+export type UpdateFormElementOrderMutation = (
+  { __typename?: 'Mutation' }
+  & { setFormElementOrder?: Maybe<(
+    { __typename?: 'SetFormElementOrderPayload' }
+    & { formElements?: Maybe<Array<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'position'>
+    )>> }
+  )> }
+);
+
 export type SurveyQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
@@ -18073,6 +18089,42 @@ export function useUpdateFormElementBodyMutation(baseOptions?: Apollo.MutationHo
 export type UpdateFormElementBodyMutationHookResult = ReturnType<typeof useUpdateFormElementBodyMutation>;
 export type UpdateFormElementBodyMutationResult = Apollo.MutationResult<UpdateFormElementBodyMutation>;
 export type UpdateFormElementBodyMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementBodyMutation, UpdateFormElementBodyMutationVariables>;
+export const UpdateFormElementOrderDocument = gql`
+    mutation UpdateFormElementOrder($elementIds: [Int]) {
+  setFormElementOrder(input: {elementIds: $elementIds}) {
+    formElements {
+      id
+      position
+    }
+  }
+}
+    `;
+export type UpdateFormElementOrderMutationFn = Apollo.MutationFunction<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>;
+
+/**
+ * __useUpdateFormElementOrderMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormElementOrderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormElementOrderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormElementOrderMutation, { data, loading, error }] = useUpdateFormElementOrderMutation({
+ *   variables: {
+ *      elementIds: // value for 'elementIds'
+ *   },
+ * });
+ */
+export function useUpdateFormElementOrderMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>(UpdateFormElementOrderDocument, options);
+      }
+export type UpdateFormElementOrderMutationHookResult = ReturnType<typeof useUpdateFormElementOrderMutation>;
+export type UpdateFormElementOrderMutationResult = Apollo.MutationResult<UpdateFormElementOrderMutation>;
+export type UpdateFormElementOrderMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   survey(id: $id) {

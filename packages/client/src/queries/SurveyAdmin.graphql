@@ -142,3 +142,12 @@ mutation UpdateFormElementBody($id: Int!, $body: JSON!) {
     }
   }
 }
+
+mutation UpdateFormElementOrder($elementIds: [Int]) {
+  setFormElementOrder(input: { elementIds: $elementIds }) {
+    formElements {
+      id
+      position
+    }
+  }
+}
