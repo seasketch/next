@@ -1,16 +1,15 @@
+import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import InputBlock from "../components/InputBlock";
-import MutationStatusIndicator from "../components/MutationStatusIndicator";
 import NumberInput from "../components/NumberInput";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
-import { useUpdateFormElementMutation } from "../generated/graphql";
 import {
   FormElementBody,
+  FormElementComponent,
   FormElementEditorPortal,
-  FormElementProps,
-  useUpdateFormElement,
 } from "./FormElement";
+import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
 
 export type ShortTextProps = {
   minLength?: number;
@@ -26,15 +25,16 @@ export type ShortTextProps = {
 /**
  * Simplest of input FormElements, takes a single line of text. Wraps TextInput component
  */
-export default function ShortText(
-  props: FormElementProps<ShortTextProps, string>
-) {
+const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
   const { t } = useTranslation("surveys");
-  const errors = validateShortTextInput(
-    props.value,
-    props.isRequired,
-    props.componentSettings
+  const [val, setVal] = useState(props.value);
+  const [errors, setErrors] = useState(
+    validate(val, props.isRequired, props.componentSettings)
   );
+  useEffect(() => {
+    setErrors(validate(val, props.isRequired, props.componentSettings));
+  }, [props.componentSettings, props.isRequired, val]);
+
   return (
     <>
       <FormElementBody
@@ -46,10 +46,14 @@ export default function ShortText(
       />
       <div className="w-full md:w-96 max-w-full form-element-short-text pt-1">
         <TextInput
-          error={props.submissionAttempted ? errors : undefined}
+          error={props.submissionAttempted && errors ? errors : undefined}
           value={props.value || ""}
           label=""
-          onChange={(v) => props.onChange(v, !!errors)}
+          onChange={(v) => {
+            const e = validate(v, props.isRequired, props.componentSettings);
+            setVal(v);
+            props.onChange(v, e ? true : false);
+          }}
           name={
             props.componentSettings.autocomplete ||
             `form-element-${props.id}-text-input`
@@ -69,15 +73,6 @@ export default function ShortText(
         render={(updateBaseSetting, updateComponentSetting) => {
           return (
             <>
-              <InputBlock
-                title={t("Required", { ns: "admin:surveys" })}
-                input={
-                  <Switch
-                    isToggled={props.isRequired}
-                    onClick={updateBaseSetting("isRequired")}
-                  />
-                }
-              />
               <InputBlock
                 title={t("Min Length", { ns: "admin:surveys" })}
                 input={
@@ -147,9 +142,15 @@ export default function ShortText(
       />
     </>
   );
-}
+};
 
-export function validateShortTextInput(
+ShortText.label = <Trans>Short Text</Trans>;
+ShortText.description = <Trans>Single line of text for short answers</Trans>;
+ShortText.defaultBody = questionBodyFromMarkdown(`
+# 
+`);
+
+function validate(
   text: string | undefined,
   required: boolean,
   { minLength, maxLength }: ShortTextProps
@@ -168,3 +169,5 @@ export function validateShortTextInput(
     );
   }
 }
+
+export default ShortText;

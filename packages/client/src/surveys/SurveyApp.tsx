@@ -17,6 +17,7 @@ import UpArrowIcon from "../components/UpArrowIcon";
 import DownArrowIcon from "../components/DownArrowIcon";
 import useLocalStorage from "../useLocalStorage";
 import { useAuth0 } from "@auth0/auth0-react";
+import { components } from "../formElements";
 
 interface FormElementState {
   touched?: boolean;
@@ -263,25 +264,13 @@ export function FormElementFactory({
 > & {
   typeName: string;
 }) {
-  switch (typeName) {
-    case "WelcomeMessage":
-      return (
-        <WelcomeMessage
-          componentSettings={componentSettings}
-          {...formElementData}
-        />
-      );
-    case "ShortText":
-      return (
-        <ShortText
-          value={value as string}
-          {...formElementData}
-          componentSettings={componentSettings as ShortTextProps}
-        />
-      );
-    default:
-      return <Trans ns="errors">missing form element type {typeName}</Trans>;
-      break;
+  if (typeName in components) {
+    const Component = components[typeName];
+    return (
+      <Component componentSettings={componentSettings} {...formElementData} />
+    );
+  } else {
+    return <Trans ns="errors">missing form element type {typeName}</Trans>;
   }
 }
 

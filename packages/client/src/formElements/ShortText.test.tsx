@@ -134,22 +134,6 @@ test("maxLength", async () => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
   expect(screen.getByText(/must be/)).toBeInTheDocument();
-  rerender(
-    <ShortText
-      body={body}
-      id={1}
-      onChange={jest.fn()}
-      onSubmit={jest.fn()}
-      editable={false}
-      componentSettings={{ maxLength: 8 }}
-      submissionAttempted={true}
-      isRequired={true}
-      value="Hi"
-    />
-  );
-  await waitFor(() => {
-    expect(screen.queryByText(/must be/)).toBeNull();
-  });
 });
 
 test("Pressing return key advances to next field", async () => {

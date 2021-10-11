@@ -1,20 +1,20 @@
-import { useTranslation } from "react-i18next";
-import { useHistory } from "react-router";
+import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
 import TextInput from "../components/TextInput";
 import {
   FormElementBody,
+  FormElementComponent,
   FormElementEditorPortal,
-  FormElementProps,
 } from "./FormElement";
+import fromMarkdown from "./fromMarkdown";
 
 /**
  * Displays rich text at the begining of a survey. Only one WelcomeMessage should be
  * added to form
  */
-export default function WelcomeMessage(
-  props: FormElementProps<{ beginButtonText: string }>
-) {
+const WelcomeMessage: FormElementComponent<{ beginButtonText: string }> = (
+  props
+) => {
   const { t } = useTranslation("admin:surveys");
   return (
     <>
@@ -53,4 +53,16 @@ export default function WelcomeMessage(
       />
     </>
   );
-}
+};
+
+WelcomeMessage.label = <Trans ns="admin:surveys">Welcome Message</Trans>;
+WelcomeMessage.description = <Trans ns="admin:surveys">Rich text block.</Trans>;
+WelcomeMessage.templatesOnly = true;
+// eslint-disable-next-line i18next/no-literal-string
+WelcomeMessage.defaultBody = fromMarkdown(`
+# Welcome to the Survey!
+
+Thank you for participating.
+`);
+
+export default WelcomeMessage;

@@ -12240,6 +12240,22 @@ export type NewSurveyFragment = (
   )>> }
 );
 
+export type NewElementFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId'>
+  & { conditionalRenderingRules: Array<(
+    { __typename?: 'FormConditionalRenderingRule' }
+    & Pick<FormConditionalRenderingRule, 'id' | 'operator' | 'predicateFieldId' | 'value'>
+    & { field?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'exportId'>
+    )> }
+  )>, type?: Maybe<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+  )> }
+);
+
 export type NewGroupFragment = (
   { __typename?: 'Group' }
   & Pick<Group, 'id' | 'projectId' | 'name'>
@@ -13618,6 +13634,22 @@ export type SurveyByIdQuery = (
   )> }
 );
 
+export type FormElementFullDetailsFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId'>
+  & { conditionalRenderingRules: Array<(
+    { __typename?: 'FormConditionalRenderingRule' }
+    & Pick<FormConditionalRenderingRule, 'id' | 'operator' | 'predicateFieldId' | 'value'>
+    & { field?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'exportId'>
+    )> }
+  )>, type?: Maybe<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+  )> }
+);
+
 export type SurveyFormEditorDetailsQueryVariables = Exact<{
   id: Scalars['Int'];
   slug: Scalars['String'];
@@ -13631,7 +13663,7 @@ export type SurveyFormEditorDetailsQuery = (
     & Pick<Project, 'name'>
   )>, formElementTypes?: Maybe<Array<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly'>
+    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
   )>>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & { form?: Maybe<(
@@ -13639,18 +13671,7 @@ export type SurveyFormEditorDetailsQuery = (
       & Pick<Form, 'id' | 'isTemplate' | 'surveyId' | 'templateName' | 'templateType'>
       & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
-        & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId'>
-        & { conditionalRenderingRules: Array<(
-          { __typename?: 'FormConditionalRenderingRule' }
-          & Pick<FormConditionalRenderingRule, 'id' | 'operator' | 'predicateFieldId' | 'value'>
-          & { field?: Maybe<(
-            { __typename?: 'FormElement' }
-            & Pick<FormElement, 'id' | 'exportId'>
-          )> }
-        )>, type?: Maybe<(
-          { __typename?: 'FormElementType' }
-          & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
-        )> }
+        & FormElementFullDetailsFragment
       )>> }
     )> }
     & SurveyListDetailsFragment
@@ -13724,6 +13745,42 @@ export type UpdateFormElementOrderMutation = (
       { __typename?: 'FormElement' }
       & Pick<FormElement, 'id' | 'position'>
     )>> }
+  )> }
+);
+
+export type AddFormElementMutationVariables = Exact<{
+  body: Scalars['JSON'];
+  componentSettings: Scalars['JSON'];
+  formId: Scalars['Int'];
+  componentType: Scalars['String'];
+  position?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type AddFormElementMutation = (
+  { __typename?: 'Mutation' }
+  & { createFormElement?: Maybe<(
+    { __typename?: 'CreateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & FormElementFullDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteFormElementMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteFormElementMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteFormElement?: Maybe<(
+    { __typename?: 'DeleteFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id'>
+    )> }
   )> }
 );
 
@@ -14362,6 +14419,36 @@ export const NewSurveyFragmentDoc = gql`
   projectId
 }
     `;
+export const NewElementFragmentDoc = gql`
+    fragment NewElement on FormElement {
+  body
+  componentSettings
+  conditionalRenderingRules {
+    id
+    field {
+      id
+      exportId
+    }
+    operator
+    predicateFieldId
+    value
+  }
+  exportId
+  formId
+  id
+  isRequired
+  position
+  type {
+    componentName
+    isHidden
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+  }
+  typeId
+}
+    `;
 export const NewGroupFragmentDoc = gql`
     fragment NewGroup on Group {
   id
@@ -14404,6 +14491,36 @@ export const SurveyListDetailsFragmentDoc = gql`
   name
   submittedResponseCount
   projectId
+}
+    `;
+export const FormElementFullDetailsFragmentDoc = gql`
+    fragment FormElementFullDetails on FormElement {
+  body
+  componentSettings
+  conditionalRenderingRules {
+    id
+    field {
+      id
+      exportId
+    }
+    operator
+    predicateFieldId
+    value
+  }
+  exportId
+  formId
+  id
+  isRequired
+  position
+  type {
+    componentName
+    isHidden
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+  }
+  typeId
 }
     `;
 export const ParticipantListDetailsFragmentDoc = gql`
@@ -17901,6 +18018,7 @@ export const SurveyFormEditorDetailsDocument = gql`
     isInput
     isSingleUseOnly
     isSurveysOnly
+    label
   }
   survey(id: $id) {
     ...SurveyListDetails
@@ -17911,37 +18029,13 @@ export const SurveyFormEditorDetailsDocument = gql`
       templateName
       templateType
       formElements {
-        body
-        componentSettings
-        conditionalRenderingRules {
-          id
-          field {
-            id
-            exportId
-          }
-          operator
-          predicateFieldId
-          value
-        }
-        exportId
-        formId
-        id
-        isRequired
-        position
-        type {
-          componentName
-          isHidden
-          isInput
-          isSingleUseOnly
-          isSurveysOnly
-          label
-        }
-        typeId
+        ...FormElementFullDetails
       }
     }
   }
 }
-    ${SurveyListDetailsFragmentDoc}`;
+    ${SurveyListDetailsFragmentDoc}
+${FormElementFullDetailsFragmentDoc}`;
 
 /**
  * __useSurveyFormEditorDetailsQuery__
@@ -18126,6 +18220,82 @@ export function useUpdateFormElementOrderMutation(baseOptions?: Apollo.MutationH
 export type UpdateFormElementOrderMutationHookResult = ReturnType<typeof useUpdateFormElementOrderMutation>;
 export type UpdateFormElementOrderMutationResult = Apollo.MutationResult<UpdateFormElementOrderMutation>;
 export type UpdateFormElementOrderMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>;
+export const AddFormElementDocument = gql`
+    mutation AddFormElement($body: JSON!, $componentSettings: JSON!, $formId: Int!, $componentType: String!, $position: Int) {
+  createFormElement(
+    input: {formElement: {body: $body, componentSettings: $componentSettings, formId: $formId, isRequired: false, typeId: $componentType, position: $position}}
+  ) {
+    formElement {
+      ...FormElementFullDetails
+    }
+  }
+}
+    ${FormElementFullDetailsFragmentDoc}`;
+export type AddFormElementMutationFn = Apollo.MutationFunction<AddFormElementMutation, AddFormElementMutationVariables>;
+
+/**
+ * __useAddFormElementMutation__
+ *
+ * To run a mutation, you first call `useAddFormElementMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddFormElementMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addFormElementMutation, { data, loading, error }] = useAddFormElementMutation({
+ *   variables: {
+ *      body: // value for 'body'
+ *      componentSettings: // value for 'componentSettings'
+ *      formId: // value for 'formId'
+ *      componentType: // value for 'componentType'
+ *      position: // value for 'position'
+ *   },
+ * });
+ */
+export function useAddFormElementMutation(baseOptions?: Apollo.MutationHookOptions<AddFormElementMutation, AddFormElementMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddFormElementMutation, AddFormElementMutationVariables>(AddFormElementDocument, options);
+      }
+export type AddFormElementMutationHookResult = ReturnType<typeof useAddFormElementMutation>;
+export type AddFormElementMutationResult = Apollo.MutationResult<AddFormElementMutation>;
+export type AddFormElementMutationOptions = Apollo.BaseMutationOptions<AddFormElementMutation, AddFormElementMutationVariables>;
+export const DeleteFormElementDocument = gql`
+    mutation DeleteFormElement($id: Int!) {
+  deleteFormElement(input: {id: $id}) {
+    formElement {
+      id
+    }
+  }
+}
+    `;
+export type DeleteFormElementMutationFn = Apollo.MutationFunction<DeleteFormElementMutation, DeleteFormElementMutationVariables>;
+
+/**
+ * __useDeleteFormElementMutation__
+ *
+ * To run a mutation, you first call `useDeleteFormElementMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteFormElementMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteFormElementMutation, { data, loading, error }] = useDeleteFormElementMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteFormElementMutation(baseOptions?: Apollo.MutationHookOptions<DeleteFormElementMutation, DeleteFormElementMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteFormElementMutation, DeleteFormElementMutationVariables>(DeleteFormElementDocument, options);
+      }
+export type DeleteFormElementMutationHookResult = ReturnType<typeof useDeleteFormElementMutation>;
+export type DeleteFormElementMutationResult = Apollo.MutationResult<DeleteFormElementMutation>;
+export type DeleteFormElementMutationOptions = Apollo.BaseMutationOptions<DeleteFormElementMutation, DeleteFormElementMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   survey(id: $id) {

@@ -46,6 +46,35 @@ query SurveyById($id: Int!) {
   }
 }
 
+fragment FormElementFullDetails on FormElement {
+  body
+  componentSettings
+  conditionalRenderingRules {
+    id
+    field {
+      id
+      exportId
+    }
+    operator
+    predicateFieldId
+    value
+  }
+  exportId
+  formId
+  id
+  isRequired
+  position
+  type {
+    componentName
+    isHidden
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+  }
+  typeId
+}
+
 query SurveyFormEditorDetails($id: Int!, $slug: String!) {
   projectBySlug(slug: $slug) {
     name
@@ -56,6 +85,7 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
     isInput
     isSingleUseOnly
     isSurveysOnly
+    label
   }
   survey(id: $id) {
     ...SurveyListDetails
@@ -66,32 +96,7 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
       templateName
       templateType
       formElements {
-        body
-        componentSettings
-        conditionalRenderingRules {
-          id
-          field {
-            id
-            exportId
-          }
-          operator
-          predicateFieldId
-          value
-        }
-        exportId
-        formId
-        id
-        isRequired
-        position
-        type {
-          componentName
-          isHidden
-          isInput
-          isSingleUseOnly
-          isSurveysOnly
-          label
-        }
-        typeId
+        ...FormElementFullDetails
       }
     }
   }
@@ -148,6 +153,39 @@ mutation UpdateFormElementOrder($elementIds: [Int]) {
     formElements {
       id
       position
+    }
+  }
+}
+
+mutation AddFormElement(
+  $body: JSON!
+  $componentSettings: JSON!
+  $formId: Int!
+  $componentType: String!
+  $position: Int
+) {
+  createFormElement(
+    input: {
+      formElement: {
+        body: $body
+        componentSettings: $componentSettings
+        formId: $formId
+        isRequired: false
+        typeId: $componentType
+        position: $position
+      }
+    }
+  ) {
+    formElement {
+      ...FormElementFullDetails
+    }
+  }
+}
+
+mutation DeleteFormElement($id: Int!) {
+  deleteFormElement(input: { id: $id }) {
+    formElement {
+      id
     }
   }
 }

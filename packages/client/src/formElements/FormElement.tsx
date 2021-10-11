@@ -3,6 +3,7 @@ import {
   Component,
   createContext,
   lazy,
+  ReactElement,
   ReactNode,
   Suspense,
   useContext,
@@ -21,6 +22,7 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { MutationResult } from "@apollo/client";
 import { formElements as editorConfig } from "../editor/config";
 import Spinner from "../components/Spinner";
+import { Trans } from "react-i18next";
 require("./prosemirror-body.css");
 require("./unreset.css");
 const LazyBodyEditor = lazy(() => import("./BodyEditor"));
@@ -178,7 +180,10 @@ function FormElementEditorContainer({
 }
 
 export function useUpdateFormElement(
-  data?: FormElementProps<any, any>
+  data?: Pick<
+    FormElementProps<any, any>,
+    "body" | "componentSettings" | "id" | "isRequired"
+  >
 ): [
   // (
   //   variables: Partial<
@@ -233,4 +238,22 @@ export function useUpdateFormElement(
   ) => (value: any) =>
     updater({ componentSettings: { ...currentSettings, [setting]: value } });
   return [updateBaseSetting, updateComponentSetting, updateFormElementState];
+}
+
+export interface FormElementComponent<T, V = {}>
+  extends React.FunctionComponent<FormElementProps<T, V>> {
+  /** Used to describe component in admin editor. Must be a <Trans /> element type */
+  label: ReactElement;
+  /** Used to describe component in admin editor. Must be a <Trans /> element type */
+  description: ReactElement;
+  /** Use fromMarkdown function to create a ProseMirror Document */
+  defaultBody: any;
+  defaultComponentSettings?: T;
+  /** For components like WelcomeMessage that shouldn't be a user option */
+  templatesOnly?: boolean;
+  // validate?: (
+  //   value: any,
+  //   isRequired: boolean,
+  //   componentSettings: any
+  // ) => JSX.Element | string | undefined | false;
 }

@@ -12,12 +12,16 @@ import {
   useUpdateSurveyBaseSettingsMutation,
   FormElement,
   FormElementType,
-  Maybe,
   useUpdateFormElementOrderMutation,
+  useAddFormElementMutation,
+  useDeleteFormElementMutation,
 } from "../../generated/graphql";
 import { FormElementFactory, SurveyAppLayout } from "../../surveys/SurveyApp";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import { FormEditorPortalContext } from "../../formElements/FormElement";
+import {
+  FormEditorPortalContext,
+  useUpdateFormElement,
+} from "../../formElements/FormElement";
 import {
   DragDropContext,
   Draggable,
@@ -25,6 +29,11 @@ import {
   DraggableStateSnapshot,
   Droppable,
 } from "react-beautiful-dnd";
+import { components } from "../../formElements";
+import { AnimatePresence, motion } from "framer-motion";
+import gql from "graphql-tag";
+import Spinner from "../../components/Spinner";
+import TextInput from "../../components/TextInput";
 
 require("../../formElements/BodyEditor");
 
@@ -45,6 +54,7 @@ export default function SurveyFormEditor({
     },
   });
   const [updateOrder, updateOrderState] = useUpdateFormElementOrderMutation();
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [focusState, setFocusState] = useState<{
     basicSettings: boolean;
     formElement: number | undefined;
@@ -77,11 +87,25 @@ export default function SurveyFormEditor({
     });
   }
 
+  const [addFormElement, addFormElementState] = useAddFormElementMutation({
+    onError,
+  });
+  const [
+    deleteFormElement,
+    deleteFormElementState,
+  ] = useDeleteFormElementMutation({
+    onError,
+  });
+
   const formElements = [...(data?.survey?.form?.formElements || [])];
   formElements.sort((a, b) => a.position - b.position);
 
   const selectedFormElement = formElements.find(
     (e) => e.id === focusState.formElement
+  );
+
+  const [updateElementSetting, updateComponentSetting] = useUpdateFormElement(
+    selectedFormElement!
   );
 
   const WelcomeMessage = formElements.find(
@@ -90,6 +114,7 @@ export default function SurveyFormEditor({
   const sortableFormElements = formElements.filter(
     (e) => e.typeId !== "WelcomeMessage"
   );
+  const formId = data?.survey?.form?.id;
 
   return (
     <div className="w-screen h-screen flex flex-col">
@@ -160,7 +185,148 @@ export default function SurveyFormEditor({
             <nav className="mt-2 bg-cool-gray-100 flex-1">
               <h3 className="flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-blue-gray-200 border items-center">
                 <span className="flex-1">{t("Form Elements")}</span>
-                <Button className="" small label={t("Add")} />
+                <Button
+                  className=""
+                  small
+                  label={t("Add")}
+                  onClick={() => setAddMenuOpen(true)}
+                />
+                <AnimatePresence>
+                  {addMenuOpen && (
+                    <motion.div
+                      transition={{ duration: 0.1 }}
+                      initial={{ background: "rgba(0,0,0,0)" }}
+                      animate={{ background: "rgba(0,0,0,0.1)" }}
+                      exit={{ background: "rgba(0,0,0,0)" }}
+                      className={`absolute top-0 left-0 z-50 w-screen h-screen bg-opacity-5 bg-black`}
+                      onClick={() => setAddMenuOpen(false)}
+                    >
+                      <motion.div
+                        transition={{ duration: 0.1 }}
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        className="absolute left-56 ml-2 p-0 top-28 mt-2 max-h-128 overflow-y-auto bg-white rounded shadow "
+                      >
+                        {Object.entries(components)
+                          .filter(([id, C]) => !C.templatesOnly)
+                          .map(([id, C]) => (
+                            <div
+                              key={id}
+                              className="py-4 px-4 cursor-pointer my-2 hover:bg-cool-gray-100"
+                              onClick={async () => {
+                                const result = await addFormElement({
+                                  variables: {
+                                    body: C.defaultBody,
+                                    componentSettings:
+                                      C.defaultComponentSettings || {},
+                                    formId: data!.survey!.form!.id,
+                                    componentType: id,
+                                  },
+                                  optimisticResponse: {
+                                    __typename: "Mutation",
+                                    createFormElement: {
+                                      __typename: "CreateFormElementPayload",
+                                      formElement: {
+                                        __typename: "FormElement",
+                                        body: C.defaultBody,
+                                        componentSettings:
+                                          C.defaultComponentSettings || {},
+                                        formId: data!.survey!.form!.id,
+                                        typeId: id,
+                                        isRequired: false,
+                                        position: formElements.length + 1,
+                                        conditionalRenderingRules: [],
+                                        type: {
+                                          ...data!.formElementTypes!.find(
+                                            (e) => e.componentName === id
+                                          )!,
+                                        },
+                                        id: 9999999999,
+                                        exportId:
+                                          "loading-" + formElements.length + 1,
+                                      },
+                                    },
+                                  },
+                                  update: (cache, { data }) => {
+                                    if (data?.createFormElement?.formElement) {
+                                      const newElementData =
+                                        data.createFormElement.formElement;
+                                      cache.modify({
+                                        id: cache.identify({
+                                          __typename: "Form",
+                                          id: formId,
+                                        }),
+                                        fields: {
+                                          formElements(
+                                            existingRefs = [],
+                                            { readField }
+                                          ) {
+                                            const newRef = cache.writeFragment({
+                                              data: newElementData,
+                                              fragment: gql`
+                                                fragment NewElement on FormElement {
+                                                  body
+                                                  componentSettings
+                                                  conditionalRenderingRules {
+                                                    id
+                                                    field {
+                                                      id
+                                                      exportId
+                                                    }
+                                                    operator
+                                                    predicateFieldId
+                                                    value
+                                                  }
+                                                  exportId
+                                                  formId
+                                                  id
+                                                  isRequired
+                                                  position
+                                                  type {
+                                                    componentName
+                                                    isHidden
+                                                    isInput
+                                                    isSingleUseOnly
+                                                    isSurveysOnly
+                                                    label
+                                                  }
+                                                  typeId
+                                                }
+                                              `,
+                                            });
+
+                                            return [...existingRefs, newRef];
+                                          },
+                                        },
+                                      });
+                                    }
+                                  },
+                                });
+                                if (
+                                  result.data?.createFormElement?.formElement
+                                ) {
+                                  setFocusState({
+                                    basicSettings: false,
+                                    formElement:
+                                      result.data.createFormElement.formElement
+                                        .id,
+                                  });
+                                }
+                              }}
+                            >
+                              <div className="text-base font-medium text-gray-800">
+                                {C.label}
+                              </div>
+                              <div className="text-sm text-gray-800">
+                                {C.description}
+                              </div>
+                            </div>
+                          ))}
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </h3>
               <div className="pb-4 pt-1">
                 {WelcomeMessage && (
@@ -244,6 +410,7 @@ export default function SurveyFormEditor({
                                 }
                                 element={element}
                                 type={element.type!}
+                                creating={element.id === 9999999999}
                                 onClick={() =>
                                   setFocusState({
                                     basicSettings: false,
@@ -303,6 +470,21 @@ export default function SurveyFormEditor({
                 ? t("Base Settings")
                 : selectedFormElement?.type?.componentName}
             </h3>
+            {!focusState.basicSettings &&
+              selectedFormElement &&
+              selectedFormElement.typeId !== "WelcomeMessage" && (
+                <div className="px-3 text-sm pt-3">
+                  <InputBlock
+                    title={t("Required", { ns: "admin:surveys" })}
+                    input={
+                      <Switch
+                        isToggled={selectedFormElement?.isRequired}
+                        onClick={updateElementSetting("isRequired")}
+                      />
+                    }
+                  />
+                </div>
+              )}
             <div className="p-3" ref={formElementEditorContainerRef}>
               {focusState.basicSettings && (
                 <InputBlock
@@ -318,6 +500,73 @@ export default function SurveyFormEditor({
                 />
               )}
             </div>
+            {!focusState.basicSettings &&
+              selectedFormElement &&
+              selectedFormElement.typeId !== "WelcomeMessage" && (
+                <div className="px-3 text-base">
+                  <TextInput
+                    label={t("Export ID")}
+                    name="exportid"
+                    description={t(
+                      "Setting an export id will give a stable column name when exporting your results"
+                    )}
+                    value={selectedFormElement.exportId || ""}
+                    onChange={updateElementSetting("exportId")}
+                  />
+                  <Button
+                    className="mt-4"
+                    label={t("Delete Element")}
+                    small
+                    onClick={() => {
+                      if (window.confirm(t("Are you sure?"))) {
+                        const formElement = selectedFormElement!;
+                        setFocusState({
+                          formElement: undefined,
+                          basicSettings: true,
+                        });
+                        deleteFormElement({
+                          variables: { id: formElement.id },
+                          optimisticResponse: {
+                            __typename: "Mutation",
+                            deleteFormElement: {
+                              __typename: "DeleteFormElementPayload",
+                              formElement: {
+                                __typename: "FormElement",
+                                id: formElement.id,
+                              },
+                            },
+                          },
+                          update: (cache) => {
+                            const id = cache.identify(formElement!);
+
+                            cache.evict({
+                              id,
+                            });
+                            const formId = cache.identify(data!.survey!.form!);
+
+                            cache.modify({
+                              id: formId,
+                              fields: {
+                                formElements(existingRefs, { readField }) {
+                                  return existingRefs.filter(
+                                    // @ts-ignore
+                                    (elementRef) => {
+                                      return (
+                                        formElement.id !==
+                                        readField("id", elementRef)
+                                      );
+                                    }
+                                  );
+                                },
+                              },
+                            });
+                          },
+                        });
+                      }
+                    }}
+                  />
+                </div>
+              )}
           </>
         </div>
       </div>
@@ -333,6 +582,7 @@ function FormElementListItem({
   provided,
   draggable,
   snapshot,
+  creating,
 }: {
   element: Pick<FormElement, "body" | "componentSettings" | "exportId">;
   type: Pick<FormElementType, "label">;
@@ -341,6 +591,7 @@ function FormElementListItem({
   provided?: DraggableProvided;
   draggable?: boolean;
   snapshot?: DraggableStateSnapshot;
+  creating?: boolean;
 }) {
   return (
     <div
@@ -350,14 +601,15 @@ function FormElementListItem({
       // style={provided?.draggableProps.style}
       style={{ ...provided?.draggableProps.style, cursor: "pointer" }}
       onClick={onClick}
-      className={`select-none cursor-pointer ${
+      className={`relative select-none cursor-pointer ${
         snapshot?.isDragging && "shadow-lg"
       } mx-2 px-4 py-2 ${
         draggable && "shadow-md"
       } bg-white w-50 border border-black border-opacity-20 rounded ${
         selected && "ring-2 ring-blue-300"
-      }`}
+      } ${creating ? "opacity-50" : ""}`}
     >
+      {creating && <Spinner className="absolute right-1 top-1" />}
       <div className="">{type.label}</div>
       <div className="text-xs italic overflow-x-hidden truncate">
         {collectText(element.body)}
