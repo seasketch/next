@@ -38,7 +38,9 @@ interface ProfileFormValues {
   // picture: string;
 }
 
-export const ProjectAccessGate: React.FunctionComponent<{}> = (props) => {
+export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
+  props
+) => {
   const auth0 = useAuth0();
   const onError = useGlobalErrorHandler();
   const { data, loading, error, refetch } = useCurrentProjectMetadataQuery({
@@ -96,7 +98,55 @@ export const ProjectAccessGate: React.FunctionComponent<{}> = (props) => {
       </div>
     );
   } else if ((status as ProjectAccessStatus) === ProjectAccessStatus.Granted) {
-    return <div>{props.children}</div>;
+    if (!props.admin || data?.me?.isAdmin) {
+      return <div>{props.children}</div>;
+    } else {
+      icon = lockedIcon;
+      title = <Trans>Admins Only</Trans>;
+      body = (
+        <Trans>
+          Access to this area of{" "}
+          <b className="font-bold">{data!.currentProjectPublicDetails!.name}</b>{" "}
+          is limited to project administrators.
+        </Trans>
+      );
+      if (data?.me) {
+        buttons = (
+          <Button
+            mailTo={data!.currentProjectPublicDetails!.supportEmail!}
+            label={
+              <Trans>
+                Contact{" "}
+                {data!.currentProjectPublicDetails!.supportEmail ||
+                  "support@seasketch.org"}
+              </Trans>
+            }
+          />
+        );
+      } else {
+        buttons = (
+          <>
+            <Button
+              onClick={() =>
+                auth0.loginWithRedirect({
+                  prompt: "login",
+                  appState: {
+                    returnTo: window.location.pathname,
+                  },
+                })
+              }
+              primary
+              label={<Trans>Sign in</Trans>}
+              buttonClassName="md:w-full"
+              disabled={
+                resendVerificationState.loading ||
+                resendVerificationState.data?.resendVerificationEmail.success
+              }
+            />
+          </>
+        );
+      }
+    }
   } else if (error || !data) {
     title = <Trans>Error Loading Project</Trans>;
     body = error ? (

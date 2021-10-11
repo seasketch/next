@@ -97,7 +97,7 @@ function App() {
               )}
             />
             <Route path="/:slug">
-              <ProjectAccessGate>
+              <ProjectAccessGate admin={true}>
                 <Route
                   path="/:slug/survey-editor/:surveyId"
                   render={(history) => {
@@ -116,6 +116,8 @@ function App() {
                 <Route path="/:slug/app/:sidebar?">
                   <LazyProjectApp />
                 </Route>
+              </ProjectAccessGate>
+              <ProjectAccessGate>
                 <Route
                   path="/:slug/surveys/:surveyId"
                   exact

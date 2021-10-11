@@ -12960,7 +12960,7 @@ export type CurrentProjectMetadataQuery = (
     & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail'>
   )>, me?: Maybe<(
     { __typename?: 'User' }
-    & Pick<User, 'id'>
+    & Pick<User, 'id' | 'isAdmin'>
     & { profile?: Maybe<(
       { __typename?: 'Profile' }
       & Pick<Profile, 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
@@ -16252,6 +16252,7 @@ export const CurrentProjectMetadataDocument = gql`
       bio
       affiliations
     }
+    isAdmin
   }
 }
     `;
