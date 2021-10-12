@@ -14,7 +14,7 @@ export interface TextInputOptions {
   /** This is a _controlled_ input so a value is required. */
   value: string;
   /** Label displayed above the input */
-  label: string;
+  label: string | React.ReactNode;
   /** Appears below the label */
   description?: string | React.ReactNode;
   /** Validation error */
@@ -101,7 +101,7 @@ export default function TextInput(props: TextInputOptions) {
     <div>
       <label
         htmlFor={name}
-        className={`block text-sm font-medium leading-5 text-gray-700 ${
+        className={`block text-sm font-medium leading-5 text-gray-800 ${
           required && "required"
         }`}
       >

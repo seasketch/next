@@ -551,11 +551,22 @@ export async function createAndSendSurveyInvite(
     "public",
     async (conn, projectId, adminId, [userA, userB]) => {
       await createSession(conn, adminId, true, false);
-      const surveyId = (await conn.oneFirst(
-        sql`insert into surveys (project_id, name, access_type) values (${projectId}, 'Survey', ${accessType}) returning id`
-      )) as number;
+      const templateExists = await conn.oneFirst(
+        sql`select count(id) from forms where template_name = 'Basic Template'`
+      );
+      if (!templateExists) {
+        await pool.any(
+          sql`insert into forms (is_template, template_name, template_type) values (true, 'Basic Template', 'SURVEYS') returning id`
+        );
+      }
+      const surveyId = await conn.oneFirst<number>(
+        sql`select id from make_survey('Survey', ${projectId}, null)`
+      );
       const formId = await conn.oneFirst(
-        sql`select id from initialize_blank_survey_form(${surveyId})`
+        sql`select id from forms where survey_id = ${surveyId}`
+      );
+      await conn.any(
+        sql`update surveys set access_type = ${accessType} where id = ${surveyId}`
       );
       await conn.any(
         sql`update surveys set is_disabled = ${false} where id = ${surveyId}`

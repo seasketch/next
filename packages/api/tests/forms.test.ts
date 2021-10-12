@@ -1,4 +1,4 @@
-import { sql } from "slonik";
+import { sql, SqlTokenType } from "slonik";
 import { createPool } from "./pool";
 import {
   createUser,
@@ -25,6 +25,9 @@ const FormElementType = "TestTextFieldForm";
 beforeAll(async () => {
   await pool.oneFirst(
     sql`insert into form_element_types (component_name, label) values (${FormElementType}, 'Test Text Input Forms') returning component_name`
+  );
+  const formId = await pool.oneFirst(
+    sql`insert into forms (is_template, template_name, template_type) values (true, 'Basic Template', 'SURVEYS') returning id`
   );
 });
 
@@ -163,10 +166,13 @@ describe("Forms", () => {
         async (conn, projectId, adminId, [userA, userB]) => {
           await createSession(conn, adminId, true, false, projectId);
           const surveyId = await conn.oneFirst(
-            sql`insert into surveys (name, project_id, access_type) values ('Survey A', ${projectId}, 'INVITE_ONLY') returning id`
+            sql`select id from make_survey('Survey A', ${projectId}, null)`
           );
           const formId = await conn.oneFirst(
-            sql`select id from initialize_blank_survey_form(${surveyId})`
+            sql`select id from forms where survey_id = ${surveyId}`
+          );
+          await conn.any(
+            sql`update surveys set access_type = 'INVITE_ONLY' where id = ${surveyId}`
           );
           await conn.any(
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
@@ -449,11 +455,14 @@ describe("Form Fields", () => {
       let formId: number;
       await verifyCRUDOpsLimitedToAdmins(pool, {
         create: async (conn, projectId, adminId, userIds) => {
-          surveyId = (await conn.oneFirst(
-            sql`insert into surveys (name, project_id) values ('Survey A', ${projectId}) returning id`
-          )) as number;
           groupId = await createGroup(conn, projectId);
-          return sql`select id from initialize_blank_survey_form(${surveyId})`;
+          surveyId = await conn.oneFirst<number>(
+            sql`select id from make_survey('Survey A', ${projectId}, null)`
+          );
+          formId = await conn.oneFirst<number>(
+            sql`select id from forms where survey_id = ${surveyId}`
+          );
+          return sql`select * from surveys where id = ${surveyId}`;
         },
         update: false,
         delete: (recordId) => {
@@ -618,10 +627,10 @@ describe("Form Fields", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const surveyId = await conn.oneFirst(
-            sql`insert into surveys (name, project_id) values ('Survey A', ${projectId}) returning id`
+            sql`select id from make_survey('Survey A', ${projectId}, null)`
           );
           const form = await conn.one(
-            sql`select * from initialize_blank_survey_form(${surveyId})`
+            sql`select * from forms where survey_id = ${surveyId}`
           );
           const fieldA = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
@@ -745,10 +754,10 @@ describe("Conditional Field Rendering Rules", () => {
     await verifyCRUDOpsLimitedToAdmins(pool, {
       create: async (conn, projectId, adminId, userIds) => {
         const surveyId = await conn.oneFirst(
-          sql`insert into surveys (name, project_id) values ('Survey A', ${projectId}) returning id`
+          sql`select id from make_survey('Survey A', ${projectId}, null)`
         );
         const form = await conn.one(
-          sql`select * from initialize_blank_survey_form(${surveyId})`
+          sql`select * from forms where survey_id = ${surveyId}`
         );
         const fieldA = await conn.one(
           sql`insert into form_elements (form_id, body, export_id, type_id) values (${

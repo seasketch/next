@@ -21,20 +21,23 @@ beforeAll(async () => {
   await pool.oneFirst(
     sql`insert into form_element_types (component_name, label) values (${FormElementType}, 'Test Text Input Surveys') returning component_name`
   );
+  const formId = await pool.oneFirst(
+    sql`insert into forms (is_template, template_name, template_type) values (true, 'Basic Template', 'SURVEYS') returning id`
+  );
 });
 
 describe("Surveys", () => {
-  test("initializing a blank form", async () => {
+  test("creating a survey using the Basic Template", async () => {
     await projectTransaction(
       pool,
       "public",
       async (conn, projectId, adminId, userIds) => {
         await createSession(conn, adminId, true, false, projectId);
         const surveyId = await conn.oneFirst(
-          sql`insert into surveys (name, project_id) values ('Survey A', ${projectId}) returning id`
+          sql`select id from make_survey('Survey A', ${projectId}, null)`
         );
         const form = await conn.one(
-          sql`select * from initialize_blank_survey_form(${surveyId})`
+          sql`select * from forms where survey_id = ${surveyId}`
         );
         expect(form.id).toBeTruthy();
         expect(form.is_template).toBe(false);
@@ -42,17 +45,17 @@ describe("Surveys", () => {
       }
     );
   });
-  test("initializing a form from a template", async () => {
+  test("creating a survey from a specified template", async () => {
     await projectTransaction(
       pool,
       "public",
       async (conn, projectId, adminId, userIds) => {
         await createSession(conn, adminId, true, true, projectId);
         const surveyId = await conn.oneFirst(
-          sql`insert into surveys (name, project_id) values ('Survey A', ${projectId}) returning id`
+          sql`select id from make_survey('Survey A', ${projectId}, null)`
         );
         const source = await conn.one(
-          sql`select * from initialize_blank_survey_form(${surveyId})`
+          sql`select id from forms where survey_id = ${surveyId}`
         );
         const field = await conn.one(
           sql`insert into form_elements (form_id, body, export_id, type_id) values (${
@@ -62,7 +65,7 @@ describe("Surveys", () => {
           )}, 'field_a', ${FormElementType}) returning *`
         );
         let template = await conn.one(
-          sql`select * from create_form_template_from_survey(${surveyId}, 'Template A', 'SURVEYS')`
+          sql`update forms set template_name = 'Template A', template_type = 'SURVEYS', is_template = true where survey_id = ${surveyId} returning *`
         );
         expect(template.is_template).toBe(true);
         expect(
@@ -72,10 +75,10 @@ describe("Surveys", () => {
         ).toBe(1);
         await createSession(conn, adminId, true, false, projectId);
         const surveyBId = await conn.oneFirst(
-          sql`insert into surveys (name, project_id) values ('Survey B', ${projectId}) returning id`
+          sql`select id from make_survey('Survey B', ${projectId}, ${template.id})`
         );
         const form = await conn.one(
-          sql`select * from initialize_survey_form_from_template(${surveyBId}, ${template.id})`
+          sql`select * from forms where survey_id = ${surveyBId}`
         );
         await clearSession(conn);
         expect(form.survey_id).toBe(surveyBId);
@@ -115,7 +118,7 @@ describe("Surveys", () => {
       async (conn, projectId, adminId, userIds) => {
         await createSession(conn, adminId, true, false, projectId);
         const surveyId = await conn.oneFirst(
-          sql`insert into surveys (name, project_id) values ('Survey A', ${projectId}) returning id`
+          sql`select id from make_survey('Survey A', ${projectId}, null)`
         );
         const groupId = await createGroup(conn, projectId, "Group A", [
           userIds[0],
@@ -134,7 +137,7 @@ describe("Surveys", () => {
     test("CRUD operations are limited to project admins", async () => {
       await verifyCRUDOpsLimitedToAdmins(pool, {
         create: async (conn, projectId, adminId, userIds) => {
-          return sql`insert into surveys (name, project_id) values ('Survey A', ${projectId}) returning *`;
+          return sql`select * from make_survey('Survey A', ${projectId}, null)`;
         },
         update: (recordId) =>
           sql`update surveys set name = 'Survey A (updated)' where id = ${recordId} returning *`,
@@ -151,10 +154,13 @@ describe("Surveys", () => {
         async (conn, projectId, adminId, [userA, userB]) => {
           await createSession(conn, adminId, true, false, projectId);
           const surveyId = await conn.oneFirst(
-            sql`insert into surveys (name, project_id, access_type) values ('Survey A', ${projectId}, 'PUBLIC') returning id`
+            sql`select id from make_survey('Survey A', ${projectId}, null)`
           );
           const formId = await conn.oneFirst(
-            sql`select id from initialize_blank_survey_form(${surveyId})`
+            sql`select id from forms where survey_id = ${surveyId}`
+          );
+          await conn.any(
+            sql`update surveys set access_type = 'PUBLIC' where id = ${surveyId}`
           );
           await conn.any(
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
@@ -201,10 +207,13 @@ describe("Surveys", () => {
         async (conn, projectId, adminId, [userA, userB]) => {
           await createSession(conn, adminId, true, false, projectId);
           const surveyId = await conn.oneFirst(
-            sql`insert into surveys (name, project_id, access_type) values ('Survey A', ${projectId}, 'INVITE_ONLY') returning id`
+            sql`select id from make_survey('Survey A', ${projectId}, null)`
           );
           const formId = await conn.oneFirst(
-            sql`select id from initialize_blank_survey_form(${surveyId})`
+            sql`select id from forms where survey_id = ${surveyId}`
+          );
+          await conn.any(
+            sql`update surveys set access_type = 'INVITE_ONLY' where id = ${surveyId}`
           );
           await conn.any(
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
@@ -250,10 +259,13 @@ describe("Surveys", () => {
         async (conn, projectId, adminId, [userA, userB]) => {
           await createSession(conn, adminId, true, false, projectId);
           const surveyId = await conn.oneFirst(
-            sql`insert into surveys (name, project_id, access_type) values ('Survey A', ${projectId}, 'INVITE_ONLY') returning id`
+            sql`select id from make_survey('Survey A', ${projectId}, null)`
           );
           const formId = await conn.oneFirst(
-            sql`select id from initialize_blank_survey_form(${surveyId})`
+            sql`select id from forms where survey_id = ${surveyId}`
+          );
+          await conn.any(
+            sql`update surveys set access_type = 'INVITE_ONLY' where id = ${surveyId}`
           );
           await conn.any(
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
@@ -320,10 +332,13 @@ describe("Surveys", () => {
         async (conn, projectId, adminId, [userA, userB]) => {
           await createSession(conn, adminId, true, false, projectId);
           const surveyId = await conn.oneFirst(
-            sql`insert into surveys (name, project_id, access_type) values ('Survey A', ${projectId}, 'INVITE_ONLY') returning id`
+            sql`select id from make_survey('Survey A', ${projectId}, null)`
           );
           const formId = await conn.oneFirst(
-            sql`select id from initialize_blank_survey_form(${surveyId})`
+            sql`select id from forms where survey_id = ${surveyId}`
+          );
+          await conn.any(
+            sql`update surveys set access_type = 'INVITE_ONLY' where id = ${surveyId}`
           );
           await createSession(conn, adminId, true, false, projectId);
           const fieldId = await conn.oneFirst(
@@ -867,10 +882,13 @@ async function surveyTransaction(
     async (conn, projectId, adminId, [userA, userB]) => {
       await createSession(conn, adminId, true, false, projectId);
       const surveyId = await conn.oneFirst(
-        sql`insert into surveys (name, project_id, access_type) values ('Survey A', ${projectId}, ${accessType}) returning id`
+        sql`select id from make_survey('Survey A', ${projectId}, null)`
       );
       const formId = await conn.oneFirst(
-        sql`select id from initialize_blank_survey_form(${surveyId})`
+        sql`select id from forms where survey_id = ${surveyId}`
+      );
+      await conn.any(
+        sql`update surveys set access_type = ${accessType} where id = ${surveyId}`
       );
       await conn.any(
         sql`update surveys set is_disabled = ${false} where id = ${surveyId}`

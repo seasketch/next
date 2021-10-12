@@ -74,6 +74,7 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
           return (
             <>
               <InputBlock
+                labelType="small"
                 title={t("Min Length", { ns: "admin:surveys" })}
                 input={
                   <NumberInput
@@ -89,6 +90,7 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
                 }
               />
               <InputBlock
+                labelType="small"
                 title={t("Max Length", { ns: "admin:surveys" })}
                 input={
                   <NumberInput

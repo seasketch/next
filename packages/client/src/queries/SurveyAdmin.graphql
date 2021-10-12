@@ -11,6 +11,7 @@ fragment SurveyListDetails on Survey {
   name
   submittedResponseCount
   projectId
+  isTemplate
 }
 
 query Surveys($projectId: Int!) {
@@ -22,20 +23,12 @@ query Surveys($projectId: Int!) {
   }
 }
 
-mutation CreateSurvey($name: String!, $projectId: Int!) {
-  createSurvey(
-    input: { survey: { projectId: $projectId, name: $name, isDisabled: true } }
+mutation CreateSurvey($name: String!, $projectId: Int!, $templateId: Int) {
+  makeSurvey(
+    input: { projectId: $projectId, name: $name, templateId: $templateId }
   ) {
     survey {
       ...SurveyListDetails
-    }
-  }
-}
-
-mutation InitializeSurvey($surveyId: Int!) {
-  initializeBlankSurveyForm(input: { surveyId: $surveyId }) {
-    form {
-      id
     }
   }
 }
@@ -186,6 +179,21 @@ mutation DeleteFormElement($id: Int!) {
   deleteFormElement(input: { id: $id }) {
     formElement {
       id
+    }
+  }
+}
+
+mutation UpdateForm($id: Int!, $isTemplate: Boolean, $templateName: String) {
+  updateForm(
+    input: {
+      id: $id
+      patch: { isTemplate: $isTemplate, templateName: $templateName }
+    }
+  ) {
+    form {
+      id
+      isTemplate
+      templateName
     }
   }
 }

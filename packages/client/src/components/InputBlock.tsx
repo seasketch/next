@@ -33,7 +33,7 @@ const InputBlock: FunctionComponent<InputBlockProps> = ({
             <span
               className={
                 labelType === "small"
-                  ? "text-sm font-medium leading-5 text-gray-700 mb-1"
+                  ? "text-sm font-medium leading-5 text-gray-800"
                   : "mb-0"
               }
             >

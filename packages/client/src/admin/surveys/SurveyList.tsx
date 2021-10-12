@@ -6,7 +6,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import Badge from "../../components/Badge";
-import Button from "../../components/Button";
 import {
   useSurveysQuery,
   useCreateSurveyMutation,
@@ -26,7 +25,7 @@ export default function SurveyList() {
 
   return (
     <div className="bg-white shadow overflow-hidden sm:rounded-md">
-      <ul role="list" className="divide-y divide-gray-200">
+      <ul className="divide-y divide-gray-200">
         {[...(data?.project!.surveys || [])]
           .sort((a, b) => a.name.localeCompare(b.name))
           .map((survey) => (
@@ -39,11 +38,9 @@ export default function SurveyList() {
                       {survey.name}
                     </p>
                     <div className="ml-2 flex-shrink-0 flex">
-                      {!survey.isDisabled && (
-                        <Badge>{t("Enabled")}</Badge>
-                        // <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-primary-500">
-                        //   {survey.isDisabled ? "Disabled" : "Enabled"}
-                        // </p>
+                      {!survey.isDisabled && <Badge>{t("Enabled")}</Badge>}
+                      {survey.isTemplate && (
+                        <Badge variant="warning">{t("Template")}</Badge>
                       )}
                     </div>
                   </div>
@@ -62,18 +59,6 @@ export default function SurveyList() {
                         ))}
                       </p>
                     </div>
-                    {/* <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                      <CalendarIcon
-                        className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400"
-                        aria-hidden="true"
-                      />
-                      <p>
-                        Closing on{" "}
-                      <time dateTime={position.closeDate}>
-                        {position.closeDateFull}
-                      </time>
-                      </p>
-                    </div> */}
                   </div>
                 </div>
                 {/* </a> */}

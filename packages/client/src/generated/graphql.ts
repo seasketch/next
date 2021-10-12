@@ -3708,6 +3708,27 @@ export enum FormElementsOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+/** Represents an update to a `Form`. Fields that are set will be updated. */
+export type FormPatch = {
+  id?: Maybe<Scalars['Int']>;
+  /**
+   * SeaSetch superusers can create template forms than can be used when creating
+   * SketchClasses or Surveys. These templates can be created using the
+   * `createFormTemplateFromSketchClass` and `createFormTemplateFromSurvey`
+   * mutations. Template forms can be listed with the root-level `templateForms`
+   * query.
+   */
+  isTemplate?: Maybe<Scalars['Boolean']>;
+  /** Related *SketchClass* */
+  sketchClassId?: Maybe<Scalars['Int']>;
+  /** Related *Survey* */
+  surveyId?: Maybe<Scalars['Int']>;
+  /** Chosen by superusers upon template creation */
+  templateName?: Maybe<Scalars['String']>;
+  /** Indicates which features should use this form as a template */
+  templateType?: Maybe<FormTemplateType>;
+};
+
 /** Indicates which features should use the form as a template */
 export enum FormTemplateType {
   /** Template should only be listed for *SketchClasses*. */
@@ -4297,41 +4318,6 @@ export type InitializeBlankSketchClassFormPayloadFormEdgeArgs = {
   orderBy?: Maybe<Array<FormsOrderBy>>;
 };
 
-/** All input for the `initializeBlankSurveyForm` mutation. */
-export type InitializeBlankSurveyFormInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  surveyId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `initializeBlankSurveyForm` mutation. */
-export type InitializeBlankSurveyFormPayload = {
-  __typename?: 'InitializeBlankSurveyFormPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  form?: Maybe<Form>;
-  /** An edge for our `Form`. May be used by Relay 1. */
-  formEdge?: Maybe<FormsEdge>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** Reads a single `SketchClass` that is related to this `Form`. */
-  sketchClass?: Maybe<SketchClass>;
-  /** Reads a single `Survey` that is related to this `Form`. */
-  survey?: Maybe<Survey>;
-};
-
-
-/** The output of our `initializeBlankSurveyForm` mutation. */
-export type InitializeBlankSurveyFormPayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
-};
-
 /** All input for the `initializeSketchClassFormFromTemplate` mutation. */
 export type InitializeSketchClassFormFromTemplateInput = {
   /**
@@ -4365,42 +4351,6 @@ export type InitializeSketchClassFormFromTemplatePayload = {
 
 /** The output of our `initializeSketchClassFormFromTemplate` mutation. */
 export type InitializeSketchClassFormFromTemplatePayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
-};
-
-/** All input for the `initializeSurveyFormFromTemplate` mutation. */
-export type InitializeSurveyFormFromTemplateInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  surveyId?: Maybe<Scalars['Int']>;
-  templateId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `initializeSurveyFormFromTemplate` mutation. */
-export type InitializeSurveyFormFromTemplatePayload = {
-  __typename?: 'InitializeSurveyFormFromTemplatePayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  form?: Maybe<Form>;
-  /** An edge for our `Form`. May be used by Relay 1. */
-  formEdge?: Maybe<FormsEdge>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** Reads a single `SketchClass` that is related to this `Form`. */
-  sketchClass?: Maybe<SketchClass>;
-  /** Reads a single `Survey` that is related to this `Form`. */
-  survey?: Maybe<Survey>;
-};
-
-
-/** The output of our `initializeSurveyFormFromTemplate` mutation. */
-export type InitializeSurveyFormFromTemplatePayloadFormEdgeArgs = {
   orderBy?: Maybe<Array<FormsOrderBy>>;
 };
 
@@ -4701,6 +4651,33 @@ export type MakeResponseDraftPayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
 
+/** All input for the `makeSurvey` mutation. */
+export type MakeSurveyInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  name?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  templateId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `makeSurvey` mutation. */
+export type MakeSurveyPayload = {
+  __typename?: 'MakeSurveyPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Project` that is related to this `Survey`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  survey?: Maybe<Survey>;
+};
+
 /** All input for the `markTopicAsRead` mutation. */
 export type MarkTopicAsReadInput = {
   /**
@@ -4963,21 +4940,10 @@ export type Mutation = {
    */
   initializeBlankSketchClassForm?: Maybe<InitializeBlankSketchClassFormPayload>;
   /**
-   * When creating a new Survey, admins can either choose from a set of
-   * templates or start with a blank form. This mutation will initialize with a blank
-   * form with no fields configured.
-   */
-  initializeBlankSurveyForm?: Maybe<InitializeBlankSurveyFormPayload>;
-  /**
    * Admins can choose to start a new SketchClass with a form derived from the list
    * of Form templates.
    */
   initializeSketchClassFormFromTemplate?: Maybe<InitializeSketchClassFormFromTemplatePayload>;
-  /**
-   * Admins can choose to start a new Survey with a form derived from the list
-   * of Form templates.
-   */
-  initializeSurveyFormFromTemplate?: Maybe<InitializeSurveyFormFromTemplatePayload>;
   /**
    * Adds current user to the list of participants for a project, sharing their
    * profile with administrators in user listings. Their profile will also be shared
@@ -5003,6 +4969,7 @@ export type Mutation = {
    * resubmitted by the respondant.
    */
   makeResponseDraft?: Maybe<MakeResponseDraftPayload>;
+  makeSurvey?: Maybe<MakeSurveyPayload>;
   /**
    * Mark the topic as read by the current session user. Used to avoid sending email
    * notifications to users who have already read a topic. Call when loading a topic,
@@ -5105,6 +5072,14 @@ export type Mutation = {
   updateDataSourceByNodeId?: Maybe<UpdateDataSourcePayload>;
   /** Updates a single `EmailNotificationPreference` using a unique key and a patch. */
   updateEmailNotificationPreferenceByUserId?: Maybe<UpdateEmailNotificationPreferencePayload>;
+  /** Updates a single `Form` using a unique key and a patch. */
+  updateForm?: Maybe<UpdateFormPayload>;
+  /** Updates a single `Form` using its globally unique id and a patch. */
+  updateFormByNodeId?: Maybe<UpdateFormPayload>;
+  /** Updates a single `Form` using a unique key and a patch. */
+  updateFormBySketchClassId?: Maybe<UpdateFormPayload>;
+  /** Updates a single `Form` using a unique key and a patch. */
+  updateFormBySurveyId?: Maybe<UpdateFormPayload>;
   /** Updates a single `FormConditionalRenderingRule` using a unique key and a patch. */
   updateFormConditionalRenderingRule?: Maybe<UpdateFormConditionalRenderingRulePayload>;
   /** Updates a single `FormConditionalRenderingRule` using its globally unique id and a patch. */
@@ -5755,20 +5730,8 @@ export type MutationInitializeBlankSketchClassFormArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationInitializeBlankSurveyFormArgs = {
-  input: InitializeBlankSurveyFormInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationInitializeSketchClassFormFromTemplateArgs = {
   input: InitializeSketchClassFormFromTemplateInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationInitializeSurveyFormFromTemplateArgs = {
-  input: InitializeSurveyFormFromTemplateInput;
 };
 
 
@@ -5787,6 +5750,12 @@ export type MutationLeaveProjectArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMakeResponseDraftArgs = {
   input: MakeResponseDraftInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationMakeSurveyArgs = {
+  input: MakeSurveyInput;
 };
 
 
@@ -5985,6 +5954,30 @@ export type MutationUpdateDataSourceByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateEmailNotificationPreferenceByUserIdArgs = {
   input: UpdateEmailNotificationPreferenceByUserIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormArgs = {
+  input: UpdateFormInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormByNodeIdArgs = {
+  input: UpdateFormByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormBySketchClassIdArgs = {
+  input: UpdateFormBySketchClassIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormBySurveyIdArgs = {
+  input: UpdateFormBySurveyIdInput;
 };
 
 
@@ -9949,6 +9942,7 @@ export type Survey = Node & {
    * be paused.
    */
   isDisabled: Scalars['Boolean'];
+  isTemplate?: Maybe<Scalars['Boolean']>;
   /**
    * If set, there can only be one response with matching contact information. The
    * app will also discourage multiple submissions from the same browser session.
@@ -10996,6 +10990,45 @@ export type UpdateEmailNotificationPreferencePayloadEmailNotificationPreferenceE
   orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
 };
 
+/** All input for the `updateFormByNodeId` mutation. */
+export type UpdateFormByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `Form` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `Form` being updated. */
+  patch: FormPatch;
+};
+
+/** All input for the `updateFormBySketchClassId` mutation. */
+export type UpdateFormBySketchClassIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** An object where the defined keys will be set on the `Form` being updated. */
+  patch: FormPatch;
+  /** Related *SketchClass* */
+  sketchClassId: Scalars['Int'];
+};
+
+/** All input for the `updateFormBySurveyId` mutation. */
+export type UpdateFormBySurveyIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** An object where the defined keys will be set on the `Form` being updated. */
+  patch: FormPatch;
+  /** Related *Survey* */
+  surveyId: Scalars['Int'];
+};
+
 /** All input for the `updateFormConditionalRenderingRuleByNodeId` mutation. */
 export type UpdateFormConditionalRenderingRuleByNodeIdInput = {
   /**
@@ -11090,6 +11123,44 @@ export type UpdateFormElementPayload = {
 /** The output of our update `FormElement` mutation. */
 export type UpdateFormElementPayloadFormElementEdgeArgs = {
   orderBy?: Maybe<Array<FormElementsOrderBy>>;
+};
+
+/** All input for the `updateForm` mutation. */
+export type UpdateFormInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `Form` being updated. */
+  patch: FormPatch;
+};
+
+/** The output of our update `Form` mutation. */
+export type UpdateFormPayload = {
+  __typename?: 'UpdateFormPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `Form` that was updated by this mutation. */
+  form?: Maybe<Form>;
+  /** An edge for our `Form`. May be used by Relay 1. */
+  formEdge?: Maybe<FormsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `SketchClass` that is related to this `Form`. */
+  sketchClass?: Maybe<SketchClass>;
+  /** Reads a single `Survey` that is related to this `Form`. */
+  survey?: Maybe<Survey>;
+};
+
+
+/** The output of our update `Form` mutation. */
+export type UpdateFormPayloadFormEdgeArgs = {
+  orderBy?: Maybe<Array<FormsOrderBy>>;
 };
 
 /** All input for the `updateForumByNodeId` mutation. */
@@ -13564,7 +13635,7 @@ export type SimpleProjectListQuery = (
 
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId'>
+  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId' | 'isTemplate'>
   & { invitedGroups?: Maybe<Array<(
     { __typename?: 'Group' }
     & Pick<Group, 'id' | 'name'>
@@ -13591,32 +13662,17 @@ export type SurveysQuery = (
 export type CreateSurveyMutationVariables = Exact<{
   name: Scalars['String'];
   projectId: Scalars['Int'];
+  templateId?: Maybe<Scalars['Int']>;
 }>;
 
 
 export type CreateSurveyMutation = (
   { __typename?: 'Mutation' }
-  & { createSurvey?: Maybe<(
-    { __typename?: 'CreateSurveyPayload' }
+  & { makeSurvey?: Maybe<(
+    { __typename?: 'MakeSurveyPayload' }
     & { survey?: Maybe<(
       { __typename?: 'Survey' }
       & SurveyListDetailsFragment
-    )> }
-  )> }
-);
-
-export type InitializeSurveyMutationVariables = Exact<{
-  surveyId: Scalars['Int'];
-}>;
-
-
-export type InitializeSurveyMutation = (
-  { __typename?: 'Mutation' }
-  & { initializeBlankSurveyForm?: Maybe<(
-    { __typename?: 'InitializeBlankSurveyFormPayload' }
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id'>
     )> }
   )> }
 );
@@ -13780,6 +13836,24 @@ export type DeleteFormElementMutation = (
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
       & Pick<FormElement, 'id'>
+    )> }
+  )> }
+);
+
+export type UpdateFormMutationVariables = Exact<{
+  id: Scalars['Int'];
+  isTemplate?: Maybe<Scalars['Boolean']>;
+  templateName?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateFormMutation = (
+  { __typename?: 'Mutation' }
+  & { updateForm?: Maybe<(
+    { __typename?: 'UpdateFormPayload' }
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id' | 'isTemplate' | 'templateName'>
     )> }
   )> }
 );
@@ -14491,6 +14565,7 @@ export const SurveyListDetailsFragmentDoc = gql`
   name
   submittedResponseCount
   projectId
+  isTemplate
 }
     `;
 export const FormElementFullDetailsFragmentDoc = gql`
@@ -17900,10 +17975,8 @@ export type SurveysQueryHookResult = ReturnType<typeof useSurveysQuery>;
 export type SurveysLazyQueryHookResult = ReturnType<typeof useSurveysLazyQuery>;
 export type SurveysQueryResult = Apollo.QueryResult<SurveysQuery, SurveysQueryVariables>;
 export const CreateSurveyDocument = gql`
-    mutation CreateSurvey($name: String!, $projectId: Int!) {
-  createSurvey(
-    input: {survey: {projectId: $projectId, name: $name, isDisabled: true}}
-  ) {
+    mutation CreateSurvey($name: String!, $projectId: Int!, $templateId: Int) {
+  makeSurvey(input: {projectId: $projectId, name: $name, templateId: $templateId}) {
     survey {
       ...SurveyListDetails
     }
@@ -17927,6 +18000,7 @@ export type CreateSurveyMutationFn = Apollo.MutationFunction<CreateSurveyMutatio
  *   variables: {
  *      name: // value for 'name'
  *      projectId: // value for 'projectId'
+ *      templateId: // value for 'templateId'
  *   },
  * });
  */
@@ -17937,41 +18011,6 @@ export function useCreateSurveyMutation(baseOptions?: Apollo.MutationHookOptions
 export type CreateSurveyMutationHookResult = ReturnType<typeof useCreateSurveyMutation>;
 export type CreateSurveyMutationResult = Apollo.MutationResult<CreateSurveyMutation>;
 export type CreateSurveyMutationOptions = Apollo.BaseMutationOptions<CreateSurveyMutation, CreateSurveyMutationVariables>;
-export const InitializeSurveyDocument = gql`
-    mutation InitializeSurvey($surveyId: Int!) {
-  initializeBlankSurveyForm(input: {surveyId: $surveyId}) {
-    form {
-      id
-    }
-  }
-}
-    `;
-export type InitializeSurveyMutationFn = Apollo.MutationFunction<InitializeSurveyMutation, InitializeSurveyMutationVariables>;
-
-/**
- * __useInitializeSurveyMutation__
- *
- * To run a mutation, you first call `useInitializeSurveyMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useInitializeSurveyMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [initializeSurveyMutation, { data, loading, error }] = useInitializeSurveyMutation({
- *   variables: {
- *      surveyId: // value for 'surveyId'
- *   },
- * });
- */
-export function useInitializeSurveyMutation(baseOptions?: Apollo.MutationHookOptions<InitializeSurveyMutation, InitializeSurveyMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<InitializeSurveyMutation, InitializeSurveyMutationVariables>(InitializeSurveyDocument, options);
-      }
-export type InitializeSurveyMutationHookResult = ReturnType<typeof useInitializeSurveyMutation>;
-export type InitializeSurveyMutationResult = Apollo.MutationResult<InitializeSurveyMutation>;
-export type InitializeSurveyMutationOptions = Apollo.BaseMutationOptions<InitializeSurveyMutation, InitializeSurveyMutationVariables>;
 export const SurveyByIdDocument = gql`
     query SurveyById($id: Int!) {
   survey(id: $id) {
@@ -18296,6 +18335,47 @@ export function useDeleteFormElementMutation(baseOptions?: Apollo.MutationHookOp
 export type DeleteFormElementMutationHookResult = ReturnType<typeof useDeleteFormElementMutation>;
 export type DeleteFormElementMutationResult = Apollo.MutationResult<DeleteFormElementMutation>;
 export type DeleteFormElementMutationOptions = Apollo.BaseMutationOptions<DeleteFormElementMutation, DeleteFormElementMutationVariables>;
+export const UpdateFormDocument = gql`
+    mutation UpdateForm($id: Int!, $isTemplate: Boolean, $templateName: String) {
+  updateForm(
+    input: {id: $id, patch: {isTemplate: $isTemplate, templateName: $templateName}}
+  ) {
+    form {
+      id
+      isTemplate
+      templateName
+    }
+  }
+}
+    `;
+export type UpdateFormMutationFn = Apollo.MutationFunction<UpdateFormMutation, UpdateFormMutationVariables>;
+
+/**
+ * __useUpdateFormMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormMutation, { data, loading, error }] = useUpdateFormMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      isTemplate: // value for 'isTemplate'
+ *      templateName: // value for 'templateName'
+ *   },
+ * });
+ */
+export function useUpdateFormMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormMutation, UpdateFormMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormMutation, UpdateFormMutationVariables>(UpdateFormDocument, options);
+      }
+export type UpdateFormMutationHookResult = ReturnType<typeof useUpdateFormMutation>;
+export type UpdateFormMutationResult = Apollo.MutationResult<UpdateFormMutation>;
+export type UpdateFormMutationOptions = Apollo.BaseMutationOptions<UpdateFormMutation, UpdateFormMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   survey(id: $id) {

@@ -1,7 +1,7 @@
 import { AdjustmentsIcon, ChevronLeftIcon } from "@heroicons/react/outline";
 import { EyeIcon } from "@heroicons/react/solid";
-import { useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useEffect, useRef, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
@@ -15,6 +15,7 @@ import {
   useUpdateFormElementOrderMutation,
   useAddFormElementMutation,
   useDeleteFormElementMutation,
+  useUpdateFormMutation,
 } from "../../generated/graphql";
 import { FormElementFactory, SurveyAppLayout } from "../../surveys/SurveyApp";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -34,6 +35,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import gql from "graphql-tag";
 import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
+import { useAuth0 } from "@auth0/auth0-react";
 
 require("../../formElements/BodyEditor");
 
@@ -47,6 +49,7 @@ export default function SurveyFormEditor({
   const { t } = useTranslation();
   const formElementEditorContainerRef = useRef<HTMLDivElement>(null);
   const onError = useGlobalErrorHandler();
+  const auth0 = useAuth0();
   const { data, loading, error } = useSurveyFormEditorDetailsQuery({
     variables: {
       slug,
@@ -59,9 +62,23 @@ export default function SurveyFormEditor({
     basicSettings: boolean;
     formElement: number | undefined;
   }>({
-    basicSettings: true,
+    basicSettings: false,
     formElement: undefined,
   });
+
+  useEffect(() => {
+    if (
+      focusState.formElement === undefined &&
+      focusState.basicSettings === false &&
+      data?.survey?.form?.formElements?.length
+    ) {
+      setFocusState({
+        formElement: data.survey.form.formElements[0].id,
+        basicSettings: false,
+      });
+    }
+  }, [data, focusState]);
+
   const [
     updateBaseSettingsMutation,
     updateBaseSettingsState,
@@ -90,6 +107,22 @@ export default function SurveyFormEditor({
   const [addFormElement, addFormElementState] = useAddFormElementMutation({
     onError,
   });
+  const [updateForm, updateFormMutationState] = useUpdateFormMutation({
+    onError,
+    optimisticResponse: (d) => ({
+      __typename: "Mutation",
+      updateForm: {
+        __typename: "UpdateFormPayload",
+        form: {
+          __typename: "Form",
+          id: data!.survey!.form!.id,
+          isTemplate: d.isTemplate || data!.survey!.form!.isTemplate,
+          templateName: d.templateName || data!.survey!.form!.templateName,
+        },
+      },
+    }),
+  });
+
   const [
     deleteFormElement,
     deleteFormElementState,
@@ -449,7 +482,7 @@ export default function SurveyFormEditor({
                 formElementSettings: selectedFormElement!,
               }}
             >
-              {!focusState.basicSettings && (
+              {selectedFormElement && (
                 <FormElementFactory
                   {...selectedFormElement!}
                   onChange={() => null}
@@ -475,6 +508,7 @@ export default function SurveyFormEditor({
               selectedFormElement.typeId !== "WelcomeMessage" && (
                 <div className="px-3 text-sm pt-3">
                   <InputBlock
+                    labelType="small"
                     title={t("Required", { ns: "admin:surveys" })}
                     input={
                       <Switch
@@ -485,9 +519,10 @@ export default function SurveyFormEditor({
                   />
                 </div>
               )}
-            <div className="p-3" ref={formElementEditorContainerRef}>
+            <div className="p-3 text-sm" ref={formElementEditorContainerRef}>
               {focusState.basicSettings && (
                 <InputBlock
+                  labelType="small"
                   title={t("Show Progress")}
                   input={
                     <Switch
@@ -568,6 +603,72 @@ export default function SurveyFormEditor({
                 </div>
               )}
           </>
+          {focusState.basicSettings &&
+            auth0.user &&
+            auth0.user["https://seasketch.org/superuser"] && (
+              <div>
+                <h3 className="flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-b border-t border-blue-gray-200  items-center">
+                  <Trans ns="superuser">Superuser Settings</Trans>
+                </h3>
+                <div className="p-3 space-y-4">
+                  <InputBlock
+                    labelType="small"
+                    className="text-sm"
+                    title={<Trans ns="superuser">Publish as template</Trans>}
+                    input={
+                      <Switch
+                        isToggled={data?.survey?.form?.isTemplate}
+                        onClick={(val) => {
+                          const templateName =
+                            data!.survey!.form!.templateName ||
+                            `Template ${data!.survey!.form!.id}`;
+                          updateForm({
+                            variables: {
+                              id: data!.survey!.form!.id,
+                              isTemplate: val,
+                              templateName,
+                            },
+                          });
+                        }}
+                      />
+                    }
+                  />
+                  <TextInput
+                    disabled={!data?.survey?.form?.isTemplate}
+                    label={<Trans ns="superuser">Template name</Trans>}
+                    name="templateName"
+                    description={
+                      <Trans ns="superuser">
+                        This is the label SeaSketch admins will see when
+                        choosing among templates. For ease of maintenance, it's
+                        best to publish templates from a single project like
+                        <a
+                          href={`${process.env.REACT_APP_PUBLIC_URL}/superuser`}
+                          className="underline"
+                        >
+                          {` ${(
+                            process.env.REACT_APP_PUBLIC_URL || "seasketch.org"
+                          ).replace(/http[s]*:\/\//, "")}/superuser`}
+                        </a>
+                        . Sharing a template won't disable it in the project
+                        so... don't let things get weird!
+                      </Trans>
+                    }
+                    value={data?.survey?.form?.templateName || ""}
+                    onChange={(val) => {
+                      const templateName =
+                        val || `Template ${data!.survey!.form!.id}`;
+                      updateForm({
+                        variables: {
+                          id: data!.survey!.form!.id,
+                          templateName,
+                        },
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+            )}
         </div>
       </div>
     </div>

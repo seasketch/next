@@ -4413,6 +4413,33 @@ enum FormElementTypesOrderBy {
   PRIMARY_KEY_DESC
 }
 
+"""Represents an update to a `Form`. Fields that are set will be updated."""
+input FormPatch {
+  id: Int
+
+  """
+  SeaSetch superusers can create template forms than can be used when creating 
+  SketchClasses or Surveys. These templates can be created using the 
+  `createFormTemplateFromSketchClass` and `createFormTemplateFromSurvey` 
+  mutations. Template forms can be listed with the root-level `templateForms` 
+  query.
+  
+  """
+  isTemplate: Boolean
+
+  """Related *SketchClass*"""
+  sketchClassId: Int
+
+  """Related *Survey*"""
+  surveyId: Int
+
+  """Chosen by superusers upon template creation"""
+  templateName: String
+
+  """Indicates which features should use this form as a template"""
+  templateType: FormTemplateType
+}
+
 """A connection to a list of `Form` values."""
 type FormsConnection {
   """
@@ -5032,43 +5059,6 @@ type InitializeBlankSketchClassFormPayload {
   survey: Survey
 }
 
-"""All input for the `initializeBlankSurveyForm` mutation."""
-input InitializeBlankSurveyFormInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  surveyId: Int
-}
-
-"""The output of our `initializeBlankSurveyForm` mutation."""
-type InitializeBlankSurveyFormPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  form: Form
-
-  """An edge for our `Form`. May be used by Relay 1."""
-  formEdge(
-    """The method to use when ordering `Form`."""
-    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): FormsEdge
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """Reads a single `SketchClass` that is related to this `Form`."""
-  sketchClass: SketchClass
-
-  """Reads a single `Survey` that is related to this `Form`."""
-  survey: Survey
-}
-
 """All input for the `initializeSketchClassFormFromTemplate` mutation."""
 input InitializeSketchClassFormFromTemplateInput {
   """
@@ -5082,44 +5072,6 @@ input InitializeSketchClassFormFromTemplateInput {
 
 """The output of our `initializeSketchClassFormFromTemplate` mutation."""
 type InitializeSketchClassFormFromTemplatePayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  form: Form
-
-  """An edge for our `Form`. May be used by Relay 1."""
-  formEdge(
-    """The method to use when ordering `Form`."""
-    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): FormsEdge
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """Reads a single `SketchClass` that is related to this `Form`."""
-  sketchClass: SketchClass
-
-  """Reads a single `Survey` that is related to this `Form`."""
-  survey: Survey
-}
-
-"""All input for the `initializeSurveyFormFromTemplate` mutation."""
-input InitializeSurveyFormFromTemplateInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  surveyId: Int
-  templateId: Int
-}
-
-"""The output of our `initializeSurveyFormFromTemplate` mutation."""
-type InitializeSurveyFormFromTemplatePayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
@@ -5533,6 +5485,36 @@ type MakeResponseDraftPayload {
     """The method to use when ordering `SurveyResponse`."""
     orderBy: [SurveyResponsesOrderBy!] = [PRIMARY_KEY_ASC]
   ): SurveyResponsesEdge
+}
+
+"""All input for the `makeSurvey` mutation."""
+input MakeSurveyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  name: String
+  projectId: Int
+  templateId: Int
+}
+
+"""The output of our `makeSurvey` mutation."""
+type MakeSurveyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Project` that is related to this `Survey`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  survey: Survey
 }
 
 """All input for the `markTopicAsRead` mutation."""
@@ -6365,19 +6347,6 @@ type Mutation {
   ): InitializeBlankSketchClassFormPayload
 
   """
-  When creating a new Survey, admins can either choose from a set of 
-  templates or start with a blank form. This mutation will initialize with a blank
-  form with no fields configured.
-  
-  """
-  initializeBlankSurveyForm(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: InitializeBlankSurveyFormInput!
-  ): InitializeBlankSurveyFormPayload
-
-  """
   Admins can choose to start a new SketchClass with a form derived from the list
   of Form templates.
   
@@ -6388,18 +6357,6 @@ type Mutation {
     """
     input: InitializeSketchClassFormFromTemplateInput!
   ): InitializeSketchClassFormFromTemplatePayload
-
-  """
-  Admins can choose to start a new Survey with a form derived from the list
-  of Form templates.
-  
-  """
-  initializeSurveyFormFromTemplate(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: InitializeSurveyFormFromTemplateInput!
-  ): InitializeSurveyFormFromTemplatePayload
 
   """
   Adds current user to the list of participants for a project, sharing their 
@@ -6446,6 +6403,12 @@ type Mutation {
     """
     input: MakeResponseDraftInput!
   ): MakeResponseDraftPayload
+  makeSurvey(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: MakeSurveyInput!
+  ): MakeSurveyPayload
 
   """
   Mark the topic as read by the current session user. Used to avoid sending email
@@ -6774,6 +6737,38 @@ type Mutation {
     """
     input: UpdateEmailNotificationPreferenceByUserIdInput!
   ): UpdateEmailNotificationPreferencePayload
+
+  """Updates a single `Form` using a unique key and a patch."""
+  updateForm(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormInput!
+  ): UpdateFormPayload
+
+  """Updates a single `Form` using its globally unique id and a patch."""
+  updateFormByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormByNodeIdInput!
+  ): UpdateFormPayload
+
+  """Updates a single `Form` using a unique key and a patch."""
+  updateFormBySketchClassId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormBySketchClassIdInput!
+  ): UpdateFormPayload
+
+  """Updates a single `Form` using a unique key and a patch."""
+  updateFormBySurveyId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormBySurveyIdInput!
+  ): UpdateFormPayload
 
   """
   Updates a single `FormConditionalRenderingRule` using a unique key and a patch.
@@ -10136,6 +10131,7 @@ type Survey implements Node {
   
   """
   isDisabled: Boolean!
+  isTemplate: Boolean
 
   """
   If set, there can only be one response with matching contact information. The
@@ -11490,6 +11486,59 @@ type UpdateEmailNotificationPreferencePayload {
   user: User
 }
 
+"""All input for the `updateFormByNodeId` mutation."""
+input UpdateFormByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Form` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `Form` being updated.
+  """
+  patch: FormPatch!
+}
+
+"""All input for the `updateFormBySketchClassId` mutation."""
+input UpdateFormBySketchClassIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `Form` being updated.
+  """
+  patch: FormPatch!
+
+  """Related *SketchClass*"""
+  sketchClassId: Int!
+}
+
+"""All input for the `updateFormBySurveyId` mutation."""
+input UpdateFormBySurveyIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `Form` being updated.
+  """
+  patch: FormPatch!
+
+  """Related *Survey*"""
+  surveyId: Int!
+}
+
 """
 All input for the `updateFormConditionalRenderingRuleByNodeId` mutation.
 """
@@ -11611,6 +11660,50 @@ type UpdateFormElementPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+"""All input for the `updateForm` mutation."""
+input UpdateFormInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `Form` being updated.
+  """
+  patch: FormPatch!
+}
+
+"""The output of our update `Form` mutation."""
+type UpdateFormPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `Form` that was updated by this mutation."""
+  form: Form
+
+  """An edge for our `Form`. May be used by Relay 1."""
+  formEdge(
+    """The method to use when ordering `Form`."""
+    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `SketchClass` that is related to this `Form`."""
+  sketchClass: SketchClass
+
+  """Reads a single `Survey` that is related to this `Form`."""
+  survey: Survey
 }
 
 """All input for the `updateForumByNodeId` mutation."""

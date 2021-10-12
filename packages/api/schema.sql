@@ -965,6 +965,109 @@ $$;
 
 
 --
+-- Name: surveys; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.surveys (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    name text NOT NULL,
+    is_disabled boolean DEFAULT true NOT NULL,
+    access_type public.survey_access_type DEFAULT 'PUBLIC'::public.survey_access_type NOT NULL,
+    limit_to_single_response boolean DEFAULT true NOT NULL,
+    geofence public.geography(Polygon,4326) DEFAULT NULL::public.geography,
+    show_social_media_buttons boolean DEFAULT true,
+    show_progress boolean DEFAULT true NOT NULL,
+    CONSTRAINT surveys_name_check CHECK ((char_length(name) <= 255))
+);
+
+
+--
+-- Name: TABLE surveys; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.surveys IS '
+@simpleCollections only
+@omit all
+';
+
+
+--
+-- Name: COLUMN surveys.is_disabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.surveys.is_disabled IS '
+Disabled surveys will not be accessible to non-admins. Invite email sending will
+be paused.
+';
+
+
+--
+-- Name: COLUMN surveys.access_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.surveys.access_type IS '
+PUBLIC or INVITE_ONLY
+';
+
+
+--
+-- Name: COLUMN surveys.limit_to_single_response; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.surveys.limit_to_single_response IS 'If set, there can only be one response with matching contact information. The app will also discourage multiple submissions from the same browser session.';
+
+
+--
+-- Name: COLUMN surveys.geofence; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.surveys.geofence IS 'If set, responses that originate from an IP address outside this fence will be flagged.';
+
+
+--
+-- Name: COLUMN surveys.show_social_media_buttons; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.surveys.show_social_media_buttons IS '
+Only applicable for public surveys. Show tools to respondants for sharing the 
+survey on social media to encourage responses.
+';
+
+
+--
+-- Name: _create_survey(text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._create_survey(name text, project_id integer, template_id integer DEFAULT NULL::integer) RETURNS public.surveys
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      surveyid int;
+      templateid int;
+      survey surveys;
+    begin
+      if template_id is null then
+        select id into templateid from forms where template_name = 'Basic Template';
+        if templateid is null then
+          raise exception 'Form template with name "Basic Template" has not been created!';
+        end if;
+      else
+        templateid = template_id;
+      end if;
+      if session_is_admin(project_id) then
+        insert into surveys (name, project_id) values (name, project_id) returning id into surveyid;
+        perform initialize_survey_form_from_template(surveyid, templateid);
+        select * into survey from surveys where id = surveyid;
+        return survey;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: _delete_table_of_contents_item(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3038,6 +3141,17 @@ COMMENT ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type p
 
 
 --
+-- Name: create_survey(text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_survey(name text, project_id integer, template_id integer) RETURNS public.surveys
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select _create_survey(name, project_id, template_id);
+$$;
+
+
+--
 -- Name: survey_invites; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4192,6 +4306,28 @@ of Form templates.
 
 
 --
+-- Name: initialize_survey(text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.initialize_survey(name text, project_id integer) RETURNS public.surveys
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select _create_survey(name, project_id);
+$$;
+
+
+--
+-- Name: initialize_survey(text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.initialize_survey(name text, project_id integer, template_id integer) RETURNS public.surveys
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select _create_survey(name, project_id, template_id);
+$$;
+
+
+--
 -- Name: initialize_survey_form_from_template(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4400,6 +4536,17 @@ cannot edit responses after they have been submitted. Admins can use this
 mutation to put a response into draft mode so that they can be updated and 
 resubmitted by the respondant.
 ';
+
+
+--
+-- Name: make_survey(text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.make_survey(name text, project_id integer, template_id integer) RETURNS public.surveys
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select _create_survey(name, project_id, template_id);
+$$;
 
 
 --
@@ -7968,77 +8115,6 @@ COMMENT ON FUNCTION public.survey_validation_info(survey_id integer) IS '@omit';
 
 
 --
--- Name: surveys; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.surveys (
-    id integer NOT NULL,
-    project_id integer NOT NULL,
-    name text NOT NULL,
-    is_disabled boolean DEFAULT true NOT NULL,
-    access_type public.survey_access_type DEFAULT 'PUBLIC'::public.survey_access_type NOT NULL,
-    limit_to_single_response boolean DEFAULT true NOT NULL,
-    geofence public.geography(Polygon,4326) DEFAULT NULL::public.geography,
-    show_social_media_buttons boolean DEFAULT true,
-    show_progress boolean DEFAULT true NOT NULL,
-    CONSTRAINT surveys_name_check CHECK ((char_length(name) <= 255))
-);
-
-
---
--- Name: TABLE surveys; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.surveys IS '
-@simpleCollections only
-@omit all
-';
-
-
---
--- Name: COLUMN surveys.is_disabled; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.surveys.is_disabled IS '
-Disabled surveys will not be accessible to non-admins. Invite email sending will
-be paused.
-';
-
-
---
--- Name: COLUMN surveys.access_type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.surveys.access_type IS '
-PUBLIC or INVITE_ONLY
-';
-
-
---
--- Name: COLUMN surveys.limit_to_single_response; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.surveys.limit_to_single_response IS 'If set, there can only be one response with matching contact information. The app will also discourage multiple submissions from the same browser session.';
-
-
---
--- Name: COLUMN surveys.geofence; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.surveys.geofence IS 'If set, responses that originate from an IP address outside this fence will be flagged.';
-
-
---
--- Name: COLUMN surveys.show_social_media_buttons; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.surveys.show_social_media_buttons IS '
-Only applicable for public surveys. Show tools to respondants for sharing the 
-survey on social media to encourage responses.
-';
-
-
---
 -- Name: surveys_invited_groups(public.surveys); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8066,6 +8142,17 @@ CREATE FUNCTION public.surveys_invited_groups(survey public.surveys) RETURNS SET
 COMMENT ON FUNCTION public.surveys_invited_groups(survey public.surveys) IS '
 @simpleCollections only
 ';
+
+
+--
+-- Name: surveys_is_template(public.surveys); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.surveys_is_template(survey public.surveys) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select is_template from forms where survey_id = survey.id;
+  $$;
 
 
 --
@@ -12876,6 +12963,28 @@ GRANT ALL ON FUNCTION pg_catalog.texticregexeq(text, text) TO anon;
 
 
 --
+-- Name: FUNCTION geography(public.geography, integer, boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography(public.geography, integer, boolean) FROM PUBLIC;
+
+
+--
+-- Name: TABLE surveys; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.surveys TO anon;
+GRANT ALL ON TABLE public.surveys TO seasketch_user;
+
+
+--
+-- Name: FUNCTION _create_survey(name text, project_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._create_survey(name text, project_id integer, template_id integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION _delete_table_of_contents_item(tid integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -13967,6 +14076,7 @@ GRANT ALL ON FUNCTION public.create_bbox(geom public.geometry) TO anon;
 
 GRANT SELECT ON TABLE public.forms TO anon;
 GRANT DELETE ON TABLE public.forms TO seasketch_user;
+GRANT UPDATE ON TABLE public.forms TO seasketch_superuser;
 
 
 --
@@ -14195,6 +14305,14 @@ REVOKE ALL ON FUNCTION public.create_sketch_class_acl() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_survey(name text, project_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_survey(name text, project_id integer, template_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_survey(name text, project_id integer, template_id integer) TO seasketch_user;
 
 
 --
@@ -14642,13 +14760,6 @@ REVOKE ALL ON FUNCTION public.geography(bytea) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.geography(public.geometry) FROM PUBLIC;
-
-
---
--- Name: FUNCTION geography(public.geography, integer, boolean); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geography(public.geography, integer, boolean) FROM PUBLIC;
 
 
 --
@@ -15508,7 +15619,6 @@ GRANT ALL ON FUNCTION public.initialize_blank_sketch_class_form(sketch_class_id 
 --
 
 REVOKE ALL ON FUNCTION public.initialize_blank_survey_form(survey_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.initialize_blank_survey_form(survey_id integer) TO seasketch_user;
 
 
 --
@@ -15520,11 +15630,26 @@ GRANT ALL ON FUNCTION public.initialize_sketch_class_form_from_template(sketch_c
 
 
 --
+-- Name: FUNCTION initialize_survey(name text, project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.initialize_survey(name text, project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.initialize_survey(name text, project_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION initialize_survey(name text, project_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.initialize_survey(name text, project_id integer, template_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.initialize_survey(name text, project_id integer, template_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION initialize_survey_form_from_template(survey_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.initialize_survey_form_from_template(survey_id integer, template_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.initialize_survey_form_from_template(survey_id integer, template_id integer) TO seasketch_user;
 
 
 --
@@ -15910,6 +16035,14 @@ REVOKE ALL ON FUNCTION public.ltxtq_rexec(public.ltxtquery, public.ltree) FROM P
 
 REVOKE ALL ON FUNCTION public.make_response_draft("responseId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.make_response_draft("responseId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION make_survey(name text, project_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.make_survey(name text, project_id integer, template_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.make_survey(name text, project_id integer, template_id integer) TO seasketch_user;
 
 
 --
@@ -20595,19 +20728,19 @@ GRANT ALL ON FUNCTION public.survey_validation_info(survey_id integer) TO anon;
 
 
 --
--- Name: TABLE surveys; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.surveys TO anon;
-GRANT ALL ON TABLE public.surveys TO seasketch_user;
-
-
---
 -- Name: FUNCTION surveys_invited_groups(survey public.surveys); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.surveys_invited_groups(survey public.surveys) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.surveys_invited_groups(survey public.surveys) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION surveys_is_template(survey public.surveys); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.surveys_is_template(survey public.surveys) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.surveys_is_template(survey public.surveys) TO anon;
 
 
 --

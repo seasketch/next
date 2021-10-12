@@ -6,7 +6,6 @@ import SurveyList from "./SurveyList";
 import {
   SurveyListDetailsFragmentDoc,
   useCreateSurveyMutation,
-  useInitializeSurveyMutation,
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { gql } from "@apollo/client";
@@ -19,9 +18,6 @@ export default function SurveyAdmin() {
   const { slug, surveyId } = useParams<{ slug: string; surveyId?: string }>();
   const onError = useGlobalErrorHandler();
   const [createSurvey, createSurveyState] = useCreateSurveyMutation({
-    onError,
-  });
-  const [initializeForm, initializeFormState] = useInitializeSurveyMutation({
     onError,
   });
 
@@ -54,8 +50,8 @@ export default function SurveyAdmin() {
                         name,
                       },
                       update: (cache, { data }) => {
-                        if (data?.createSurvey?.survey) {
-                          const newSurveyData = data.createSurvey.survey;
+                        if (data?.makeSurvey?.survey) {
+                          const newSurveyData = data.makeSurvey.survey;
                           cache.modify({
                             id: cache.identify({
                               __typename: "Project",
@@ -86,11 +82,6 @@ export default function SurveyAdmin() {
                             },
                           });
                         }
-                      },
-                    });
-                    await initializeForm({
-                      variables: {
-                        surveyId: result.data!.createSurvey!.survey!.id,
                       },
                     });
                   }
