@@ -103,49 +103,48 @@ jobs:
           working-directory: ./packages/client
           check-name: React Client Test Output
           run-name: Test React Client
-  # build-client:
-  #   name: Build React Client
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: actions/setup-node@v2
-  #       with:
-  #         node-version: "16"
-  #     - name: Cache node modules
-  #       uses: actions/cache@v2
-  #       env:
-  #         cache-name: cache-client-node-modules
-  #       with:
-  #         # npm cache files are stored in `~/.npm` on Linux/macOS
-  #         path: |
-  #           node_modules
-  #           */*/node_modules
-  #           ~/.npm
-  #         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-build-${{ env.cache-name }}-
-  #           ${{ runner.os }}-build-
-  #           ${{ runner.os }}-
-  #     - name: Install lerna
-  #       run: |
-  #         npm install
-  #     - name: Install dependencies
-  #       run: |
-  #         lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
-  #     - name: Build client
-  #       working-directory: ./packages/client
-  #       env:
-  #         SKIP_PREFLIGHT_CHECK: true
-  #         REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
-  #         REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
-  #         REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
-  #         REACT_APP_GRAPHQL_ENDPOINT: ${{ secrets.REACT_APP_GRAPHQL_ENDPOINT }}
-  #         REACT_APP_PUBLIC_URL: ${{ secrets.REACT_APP_PUBLIC_URL }}
-  #         REACT_APP_GIT_SHA: ${{ github.sha }}
-  #       run: |
-  #         npm run build
-  #     - name: Store build artifact
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: client-build
-  #         path: ./packages/client/build
+  build-client:
+    name: Build React Client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - id: short_sha
+        run: |
+          echo `git rev-parse HEAD`
+          echo "::set-output name=sha::`git rev-parse --short HEAD`"
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-client-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install lerna
+        run: |
+          npm install
+      - name: Install dependencies
+        run: |
+          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
+      - name: Build client
+        working-directory: ./packages/client
+        env:
+          SKIP_PREFLIGHT_CHECK: true
+          REACT_APP_AUTH0_CLIENT_ID: abc123
+          REACT_APP_AUTH0_DOMAIN: seasketch
+          REACT_APP_MAPBOX_ACCESS_TOKEN: abc123
+          REACT_APP_GRAPHQL_ENDPOINT: https://example.com/graphql
+          REACT_APP_PUBLIC_URL: https://example.com
+          REACT_APP_BUILD: ${{ steps.short_sha.outputs.sha }}
+        run: |
+          CI=false npm run build
