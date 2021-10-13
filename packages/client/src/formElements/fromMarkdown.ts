@@ -1,5 +1,4 @@
 import { defaultMarkdownParser } from "prosemirror-markdown";
-import { Node } from "prosemirror-model";
 export default function fromMarkdown(md: string) {
   return defaultMarkdownParser.parse(md).toJSON();
 }
