@@ -18,6 +18,7 @@ import DownArrowIcon from "../components/DownArrowIcon";
 import useLocalStorage from "../useLocalStorage";
 import { useAuth0 } from "@auth0/auth0-react";
 import { components } from "../formElements";
+import useBodyBackground from "../useBodyBackground";
 
 interface FormElementState {
   touched?: boolean;
@@ -279,17 +280,19 @@ export const SurveyAppLayout: React.FunctionComponent<{
   skipScreenHeight?: boolean;
   showProgress?: boolean;
 }> = ({ progress, children, skipScreenHeight, showProgress }) => {
+  const setBackground = useBodyBackground(
+    "rgb(5, 94, 157) linear-gradient(128deg, rgb(5, 94, 157), rgb(41, 69, 209)) no-repeat fixed"
+  );
+
   return (
     <div
-      className={`w-full ${
-        skipScreenHeight ? "min-h-full" : "h-screen"
-      } relative`}
-      style={{
-        backgroundColor: "rgb(5, 94, 157)",
-        backgroundImage:
-          "linear-gradient(128deg, rgb(5, 94, 157), rgb(41, 69, 209))",
-        // minHeight: "100vh",
-      }}
+      className={`w-full relative`}
+      // style={{
+      //   backgroundColor: "rgb(5, 94, 157)",
+      //   backgroundImage:
+      //     "linear-gradient(128deg, rgb(5, 94, 157), rgb(41, 69, 209))",
+      //   // minHeight: "100vh",
+      // }}
     >
       {showProgress && <ProgressBar progress={progress} />}
       <div
