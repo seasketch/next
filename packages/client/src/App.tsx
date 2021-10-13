@@ -116,6 +116,8 @@ function App() {
                 <Route path="/:slug/app/:sidebar?">
                   <LazyProjectApp />
                 </Route>
+              </ProjectAccessGate>
+              <ProjectAccessGate>
                 <Route
                   path="/:slug/surveys/:surveyId"
                   exact
