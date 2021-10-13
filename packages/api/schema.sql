@@ -2200,6 +2200,30 @@ COMMENT ON FUNCTION public.can_digitize(scid integer) IS '@omit';
 
 
 --
+-- Name: check_element_type(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.check_element_type() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  DECLARE
+    is_required boolean;
+  BEGIN
+    if (select count(id) from forms where id = OLD.form_id) > 0 then
+      select is_required_for_surveys into is_required from form_element_types where component_name = OLD.type_id;
+      if is_required then
+        raise exception 'Cannot delete elements of type %', OLD.type_id;
+      else
+        return OLD;
+      end if;
+    else
+      return OLD;
+    end if;
+  END;
+$$;
+
+
+--
 -- Name: check_optional_basemap_layers_columns(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3886,7 +3910,8 @@ CREATE TABLE public.form_element_types (
     is_input boolean DEFAULT false NOT NULL,
     is_surveys_only boolean DEFAULT false NOT NULL,
     is_hidden boolean DEFAULT false NOT NULL,
-    is_single_use_only boolean DEFAULT false NOT NULL
+    is_single_use_only boolean DEFAULT false NOT NULL,
+    is_required_for_surveys boolean DEFAULT false NOT NULL
 );
 
 
@@ -7402,7 +7427,7 @@ CREATE FUNCTION public.set_form_element_order("elementIds" integer[]) RETURNS SE
         pos = pos + 1;
       end loop;
       -- return all the fields in this form
-      return query select * from form_elements where form_elements.form_id = form_id order by position asc;
+      return query select * from form_elements where form_elements.form_id = formid order by position asc;
     end
   $$;
 
@@ -10961,6 +10986,13 @@ CREATE TRIGGER before_basemap_insert_create_interactivity_settings BEFORE INSERT
 
 
 --
+-- Name: form_elements before_delete_on_form_elements_001; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_delete_on_form_elements_001 BEFORE DELETE ON public.form_elements FOR EACH ROW EXECUTE FUNCTION public.check_element_type();
+
+
+--
 -- Name: form_elements before_insert_form_elements; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -13824,6 +13856,13 @@ REVOKE ALL ON FUNCTION public.bytea(public.geometry) FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.can_digitize(scid integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.can_digitize(scid integer) TO anon;
+
+
+--
+-- Name: FUNCTION check_element_type(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.check_element_type() FROM PUBLIC;
 
 
 --

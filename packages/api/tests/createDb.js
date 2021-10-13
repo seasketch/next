@@ -40,6 +40,27 @@ module.exports = async () => {
   `,
     ["geojson-1.seasketch-data.org", "Oregon, USA", "us-west-2"]
   );
+  const formId = await client2.query(
+    `insert into forms (is_template, template_name, template_type) values (true, 'Basic Template', 'SURVEYS') returning id`
+  );
+  console.log("formID", formId);
+  await client2.query(
+    `insert into form_elements (form_id, body, export_id, type_id) values ($1, $2, 'field_1', 'WelcomeMessage') returning *`,
+    [
+      formId.rows[0].id,
+      {
+        type: "doc",
+        content: [
+          {
+            type: "heading",
+            attrs: { level: 1 },
+            content: [{ text: "Welcome", type: "text" }],
+          },
+        ],
+      },
+    ]
+  );
+
   await client2.end();
   await watch(settings, true);
   console.log = log;

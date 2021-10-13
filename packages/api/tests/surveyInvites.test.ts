@@ -56,16 +56,8 @@ jest.mock("aws-sdk/clients/ses", () => {
 
 const pool = createPool("test");
 
-const FormElementType = "TestTextFieldSurveyInvites";
-
 beforeAll(async () => {
   await rotateKeys(asPg(pool));
-  await pool.oneFirst(
-    sql`insert into form_element_types (component_name, label) values (${FormElementType}, 'Test Text Input Survey Invites') returning component_name`
-  );
-  const formId = await pool.oneFirst(
-    sql`insert into forms (is_template, template_name, template_type) values (true, 'Basic Template', 'SURVEYS') returning id`
-  );
 });
 
 describe("Schema", () => {
@@ -1533,12 +1525,12 @@ describe("content access", () => {
         const fieldId = await conn.oneFirst(
           sql`insert into form_elements (form_id, body, type_id, export_id) values (${formId}, ${createBody(
             "field 1"
-          )}, ${FormElementType}, 'field1') returning id`
+          )}, 'ShortText', 'field1') returning id`
         );
         const field2Id = await conn.oneFirst(
           sql`insert into form_elements (form_id, body, type_id, export_id) values (${formId}, ${createBody(
             "yep nope"
-          )}, ${FormElementType}, 'field2') returning id`
+          )}, 'ShortText', 'field2') returning id`
         );
         const ruleId = await conn.oneFirst(
           sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${fieldId}, ${field2Id}, 'nope', '=') returning id`
@@ -1584,12 +1576,12 @@ describe("content access", () => {
         const fieldId = await conn.oneFirst(
           sql`insert into form_elements (form_id, body, type_id, export_id) values (${formId}, ${createBody(
             "field 1"
-          )}, ${FormElementType}, 'field1') returning id`
+          )}, 'ShortText', 'field1') returning id`
         );
         const field2Id = await conn.oneFirst(
           sql`insert into form_elements (form_id, body, type_id, export_id) values (${formId}, ${createBody(
             "yep nope"
-          )}, ${FormElementType}, 'field2') returning id`
+          )}, 'ShortText', 'field2') returning id`
         );
         const ruleId = await conn.oneFirst(
           sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${fieldId}, ${field2Id}, 'nope', '=') returning id`
@@ -1655,12 +1647,12 @@ describe("content access", () => {
         const fieldId = await conn.oneFirst(
           sql`insert into form_elements (form_id, body, type_id, export_id) values (${formId}, ${createBody(
             "field 1"
-          )}, ${FormElementType}, 'field1') returning id`
+          )}, 'ShortText', 'field1') returning id`
         );
         const field2Id = await conn.oneFirst(
           sql`insert into form_elements (form_id, body, type_id, export_id) values (${formId}, ${createBody(
             "yep nope"
-          )}, ${FormElementType}, 'field2') returning id`
+          )}, 'ShortText', 'field2') returning id`
         );
         const ruleId = await conn.oneFirst(
           sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${fieldId}, ${field2Id}, 'nope', '=') returning id`

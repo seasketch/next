@@ -3651,6 +3651,7 @@ export type FormElementType = Node & {
    * contains presentational content like a Welcome Message component.
    */
   isInput: Scalars['Boolean'];
+  isRequiredForSurveys: Scalars['Boolean'];
   /** These elements can only be added to a form once. */
   isSingleUseOnly: Scalars['Boolean'];
   /** If true, the element type should only be added to forms related to a survey. */

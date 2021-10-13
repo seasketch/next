@@ -4367,6 +4367,7 @@ type FormElementType implements Node {
   contains presentational content like a Welcome Message component.
   """
   isInput: Boolean!
+  isRequiredForSurveys: Boolean!
 
   """These elements can only be added to a form once."""
   isSingleUseOnly: Boolean!
