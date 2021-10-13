@@ -131,20 +131,6 @@ function App() {
                   <LazySurveyApp />
                 </Route>
               </ProjectAccessGate>
-              <ProjectAccessGate>
-                <Route
-                  path="/:slug/surveys/:surveyId"
-                  exact
-                  render={(history) => {
-                    const { slug, surveyId } = history.match.params;
-                    return <Redirect to={`/${slug}/surveys/${surveyId}/0`} />;
-                  }}
-                />
-                <Route path="/:slug/surveys/:surveyId/:position">
-                  {/* eslint-disable-next-line i18next/no-literal-string */}
-                  <LazySurveyApp />
-                </Route>
-              </ProjectAccessGate>
             </Route>
           </Switch>
           <GlobalErrorHandler />
