@@ -107,7 +107,7 @@ function UserSettings() {
           a.name.localeCompare(b.name)
         ),
         users: [
-          ...data.currentProject.participants.sort((a, b) => {
+          ...[...data.currentProject.participants].sort((a, b) => {
             return (a.profile?.fullname || a.canonicalEmail)!.localeCompare(
               (b.profile?.fullname || b.canonicalEmail)!
             );

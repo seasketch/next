@@ -210,7 +210,7 @@ export default function UserSettingsSidebar({
 
   return (
     <>
-      <div className="bg-white h-full max-h-full overflow-y-scroll hidden lg:block shadow z-10">
+      <div className="bg-white h-full max-h-full overflow-y-auto hidden lg:block shadow z-10">
         <NavSidebar
           animate={true}
           items={navItems}

@@ -1,5 +1,12 @@
+import { useRef } from "@storybook/addons";
 import { FieldMetaProps, FormikProps } from "formik";
-import React, { useState, useEffect, KeyboardEvent, ReactElement } from "react";
+import React, {
+  useState,
+  useEffect,
+  KeyboardEvent,
+  ReactElement,
+  TextareaHTMLAttributes,
+} from "react";
 
 export interface TextInputOptions {
   /** Required id of input. Also referenced by labels. */
@@ -7,7 +14,7 @@ export interface TextInputOptions {
   /** This is a _controlled_ input so a value is required. */
   value: string;
   /** Label displayed above the input */
-  label: string;
+  label: string | React.ReactNode;
   /** Appears below the label */
   description?: string | React.ReactNode;
   /** Validation error */
@@ -25,6 +32,7 @@ export interface TextInputOptions {
   field?: any;
   form?: FormikProps<any>;
   meta?: FieldMetaProps<string>;
+  autocomplete?: string;
 }
 
 export default function TextInput(props: TextInputOptions) {
@@ -43,7 +51,14 @@ export default function TextInput(props: TextInputOptions) {
     field,
     form,
     meta,
+    autocomplete,
   } = props;
+  const [localValue, setLocalValue] = useState<string>(value);
+  useEffect(() => {
+    if (value !== localValue) {
+      setLocalValue(value);
+    }
+  }, [value]);
   const [showSaved, setShowSaved] = useState(true);
   let error = props.error;
   const name = props.field?.name ? props.field.name : props.name;
@@ -86,7 +101,7 @@ export default function TextInput(props: TextInputOptions) {
     <div>
       <label
         htmlFor={name}
-        className={`block text-sm font-medium leading-5 text-gray-700 ${
+        className={`block text-sm font-medium leading-5 text-gray-800 ${
           required && "required"
         }`}
       >
@@ -100,8 +115,12 @@ export default function TextInput(props: TextInputOptions) {
           type={props.type || "text"}
           name={name}
           onKeyDown={onKeyDown}
-          // @ts-ignore
-          onChange={(e) => onChange && onChange(e.target.value)}
+          onChange={(
+            e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+          ) => {
+            setLocalValue(e.target.value);
+            onChange && onChange(e.target.value);
+          }}
           disabled={disabled}
           required={required}
           className={`block w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black ${
@@ -113,9 +132,10 @@ export default function TextInput(props: TextInputOptions) {
             "border-red-300 text-red-900 placeholder-red-300 focus:border-red-300 focus:shadow-outline-red"
           } ${disabled && "text-gray-500 bg-gray-100"}`}
           placeholder={placeholder}
-          value={value}
+          value={localValue}
           aria-invalid={error ? "true" : "false"}
           aria-describedby={error ? `${name}-error` : ""}
+          autoComplete={autocomplete}
           {...field}
         />
         {props.inputChildNode}

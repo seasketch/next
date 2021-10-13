@@ -1,8 +1,8 @@
 import { EditorView } from "prosemirror-view";
 import React, { useEffect, useState } from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
-import { MarkType, NodeType } from "prosemirror-model";
-import { schema } from "./config";
+import { MarkType, NodeType, Schema } from "prosemirror-model";
+// import { schema } from "./config";
 import { EditorState } from "prosemirror-state";
 import { cursorTo } from "readline";
 import { markActive, marks } from "./utils";
@@ -17,10 +17,12 @@ interface EditorMenuBarProps {
   view?: EditorView;
   className?: string;
   style?: any;
+  schema: Schema;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
   const [menuState, setMenuState] = useState<any>({});
+  const schema = props.schema;
   const { t } = useTranslation("admin");
   const [linkModalState, setLinkModalState] = useState<{
     href: string;
@@ -270,7 +272,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   );
 }
 
-function getActiveMarks(state: EditorState, markTypes: MarkType[]) {
+export function getActiveMarks(state: EditorState, markTypes: MarkType[]) {
   const marks: { [markType: string]: boolean } = {};
   for (const mark of markTypes) {
     marks[mark.name] = markActive(state, mark);

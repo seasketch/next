@@ -49,6 +49,7 @@ const mockedProjectMetadata = {
         bio: "",
         affiliations: "UCSB",
       },
+      isAdmin: false,
     },
   },
 };

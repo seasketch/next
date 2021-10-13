@@ -1,4 +1,4 @@
-import { sql } from "slonik";
+import { sql, SqlTokenType } from "slonik";
 import { createPool } from "./pool";
 import {
   createUser,
@@ -22,11 +22,7 @@ import { createExportId } from "../src/plugins/exportIdPlugin";
 const pool = createPool("test");
 
 const FormElementType = "TestTextFieldForm";
-beforeAll(async () => {
-  await pool.oneFirst(
-    sql`insert into form_element_types (component_name, label) values (${FormElementType}, 'Test Text Input Forms') returning component_name`
-  );
-});
+beforeAll(async () => {});
 
 describe("Forms", () => {
   describe("access control", () => {
@@ -163,10 +159,13 @@ describe("Forms", () => {
         async (conn, projectId, adminId, [userA, userB]) => {
           await createSession(conn, adminId, true, false, projectId);
           const surveyId = await conn.oneFirst(
-            sql`insert into surveys (name, project_id, access_type) values ('Survey A', ${projectId}, 'INVITE_ONLY') returning id`
+            sql`select id from make_survey('Survey A', ${projectId}, null)`
           );
           const formId = await conn.oneFirst(
-            sql`select id from initialize_blank_survey_form(${surveyId})`
+            sql`select id from forms where survey_id = ${surveyId}`
+          );
+          await conn.any(
+            sql`update surveys set access_type = 'INVITE_ONLY' where id = ${surveyId}`
           );
           await conn.any(
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
@@ -176,7 +175,7 @@ describe("Forms", () => {
           const fieldId = await conn.oneFirst(
             sql`insert into form_elements (body, type_id, form_id, export_id) values (${createBody(
               "field a"
-            )}, ${FormElementType}, ${formId}, 'field_a') returning id`
+            )}, 'ShortText', ${formId}, 'field_a') returning id`
           );
           const groupId = await createGroup(conn, projectId, "Group A", [
             userA,
@@ -202,7 +201,7 @@ describe("Forms", () => {
                 sql`select * from form_elements where form_id = ${formId}`
               )
             ).length
-          ).toBe(1);
+          ).toBeGreaterThan(0);
           await createSession(conn, userB, true, false, projectId);
           expect(
             (await conn.any(sql`select * from surveys where id = ${surveyId}`))
@@ -314,9 +313,7 @@ describe("Forms", () => {
           const field = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               source.id
-            }, ${createBody(
-              "field a"
-            )}, 'field_a', ${FormElementType}) returning *`
+            }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
           );
           let template = await conn.one(
             sql`select * from create_form_template_from_sketch_class(${sketchClassId}, 'Template A', 'SKETCHES')`
@@ -367,16 +364,14 @@ describe("Form Fields", () => {
           const field = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field a"
-            )}, 'field_a', ${FormElementType}) returning *`
+            }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
           );
           // @ts-ignore
           expect(field.body.content[0].content[0].text).toBe("field a");
           await createSession(conn, userIds[0], true, false, projectId);
           expect(
             conn.one(
-              sql`insert into form_elements (form_id, body, export_id, type_id) values (${form.id}, 'field b', 'field_b', ${FormElementType}) returning *`
+              sql`insert into form_elements (form_id, body, export_id, type_id) values (${form.id}, 'field b', 'field_b', 'ShortText') returning *`
             )
           ).rejects.toThrow();
         }
@@ -398,17 +393,13 @@ describe("Form Fields", () => {
           const fieldA = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field a"
-            )}, 'field_a', ${FormElementType}) returning *`
+            }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
           );
           expect(getBodyStr(fieldA.body)).toBe("field a");
           const fieldB = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field b"
-            )}, 'field_b', ${FormElementType}) returning *`
+            }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
           );
           const updatedFieldA = await conn.one(
             sql`update form_elements set body = ${createBody(
@@ -449,11 +440,14 @@ describe("Form Fields", () => {
       let formId: number;
       await verifyCRUDOpsLimitedToAdmins(pool, {
         create: async (conn, projectId, adminId, userIds) => {
-          surveyId = (await conn.oneFirst(
-            sql`insert into surveys (name, project_id) values ('Survey A', ${projectId}) returning id`
-          )) as number;
           groupId = await createGroup(conn, projectId);
-          return sql`select id from initialize_blank_survey_form(${surveyId})`;
+          surveyId = await conn.oneFirst<number>(
+            sql`select id from make_survey('Survey A', ${projectId}, null)`
+          );
+          formId = await conn.oneFirst<number>(
+            sql`select id from forms where survey_id = ${surveyId}`
+          );
+          return sql`select * from surveys where id = ${surveyId}`;
         },
         update: false,
         delete: (recordId) => {
@@ -478,9 +472,7 @@ describe("Form Fields", () => {
           let field = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field 1"
-            )}, 'field_1', ${FormElementType}) returning *`
+            }, ${createBody("field 1")}, 'field_1', 'ShortText') returning *`
           );
           return field.id as number;
         }
@@ -503,12 +495,52 @@ describe("Form Fields", () => {
           conn.one(
             sql`insert into form_elements (body, type_id) values (${createBody(
               "field a"
-            )}, ${FormElementType}) returning *`
+            )}, 'ShortText') returning *`
           )
         ).rejects.toThrow();
       }
     );
   });
+
+  test("new form_elements have position greater than siblings", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId, userIds) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const sketchClassId = await conn.oneFirst(
+          sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+        );
+        const form = await conn.one(
+          sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
+        );
+        const fieldA = await conn.one<{ position: number }>(
+          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
+            form.id
+          }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
+        );
+        const fieldB = await conn.one<{ position: number }>(
+          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
+            form.id
+          }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
+        );
+        const fieldC = await conn.one<{ position: number }>(
+          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
+            form.id
+          }, ${createBody("field c")}, 'field_c', 'ShortText') returning *`
+        );
+        const fieldD = await conn.one<{ position: number }>(
+          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
+            form.id
+          }, ${createBody("field d")}, 'field_d', 'ShortText') returning *`
+        );
+        expect(fieldB.position).toBeGreaterThan(fieldA.position);
+        expect(fieldC.position).toBeGreaterThan(fieldB.position);
+        expect(fieldD.position).toBeGreaterThan(fieldC.position);
+      }
+    );
+  });
+
   describe("updatePositions()", () => {
     test("updates the position of all fields in a form (sketch_class form)", async () => {
       await projectTransaction(
@@ -525,30 +557,22 @@ describe("Form Fields", () => {
           const fieldA = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field a"
-            )}, 'field_a', ${FormElementType}) returning *`
+            }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
           );
           const fieldB = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field b"
-            )}, 'field_b', ${FormElementType}) returning *`
+            }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
           );
           const fieldC = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field c"
-            )}, 'field_c', ${FormElementType}) returning *`
+            }, ${createBody("field c")}, 'field_c', 'ShortText') returning *`
           );
           const fieldD = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field d"
-            )}, 'field_d', ${FormElementType}) returning *`
+            }, ${createBody("field d")}, 'field_d', 'ShortText') returning *`
           );
           const fields = await conn.manyFirst(
             sql`select id from set_form_element_order(${sql.array(
@@ -570,38 +594,30 @@ describe("Form Fields", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const surveyId = await conn.oneFirst(
-            sql`insert into surveys (name, project_id) values ('Survey A', ${projectId}) returning id`
+            sql`select id from make_survey('Survey A', ${projectId}, null)`
           );
           const form = await conn.one(
-            sql`select * from initialize_blank_survey_form(${surveyId})`
+            sql`select * from forms where survey_id = ${surveyId}`
           );
           const fieldA = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field a"
-            )}, 'field_a', ${FormElementType}) returning *`
+            }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
           );
           const fieldB = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field b"
-            )}, 'field_b', ${FormElementType}) returning *`
+            }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
           );
           const fieldC = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field c"
-            )}, 'field_c', ${FormElementType}) returning *`
+            }, ${createBody("field c")}, 'field_c', 'ShortText') returning *`
           );
           const fieldD = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field d"
-            )}, 'field_d', ${FormElementType}) returning *`
+            }, ${createBody("field d")}, 'field_d', 'ShortText') returning *`
           );
           const fields = await conn.manyFirst(
             sql`select id from set_form_element_order(${sql.array(
@@ -609,8 +625,11 @@ describe("Form Fields", () => {
               "int4"
             )})`
           );
-          expect(fields.join(",")).toBe(
-            [fieldB.id, fieldD.id, fieldC.id, fieldA.id].join(",")
+          expect(fields.indexOf(fieldB.id)).toBeLessThan(
+            fields.indexOf(fieldD.id)
+          );
+          expect(fields.indexOf(fieldA.id)).toBeGreaterThan(
+            fields.indexOf(fieldC.id)
           );
         }
       );
@@ -631,16 +650,12 @@ describe("Form Fields", () => {
           const fieldA = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field a"
-            )}, 'field_a', ${FormElementType}) returning *`
+            }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
           );
           const fieldB = await conn.one(
             sql`insert into form_elements (form_id, body, export_id, type_id) values (${
               form.id
-            }, ${createBody(
-              "field b"
-            )}, 'field_b', ${FormElementType}) returning *`
+            }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
           );
           await createSession(conn, userIds[0], true, false, projectId);
           expect(
@@ -670,16 +685,12 @@ describe("Conditional Field Rendering Rules", () => {
         const fieldA = await conn.one(
           sql`insert into form_elements (form_id, body, export_id, type_id) values (${
             form.id
-          }, ${createBody(
-            "field a"
-          )}, 'field_a', ${FormElementType}) returning *`
+          }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
         );
         const fieldB = await conn.one(
           sql`insert into form_elements (form_id, body, export_id, type_id) values (${
             form.id
-          }, ${createBody(
-            "field b"
-          )}, 'field_b', ${FormElementType}) returning *`
+          }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
         );
         return sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${
           fieldB.id
@@ -697,24 +708,20 @@ describe("Conditional Field Rendering Rules", () => {
     await verifyCRUDOpsLimitedToAdmins(pool, {
       create: async (conn, projectId, adminId, userIds) => {
         const surveyId = await conn.oneFirst(
-          sql`insert into surveys (name, project_id) values ('Survey A', ${projectId}) returning id`
+          sql`select id from make_survey('Survey A', ${projectId}, null)`
         );
         const form = await conn.one(
-          sql`select * from initialize_blank_survey_form(${surveyId})`
+          sql`select * from forms where survey_id = ${surveyId}`
         );
         const fieldA = await conn.one(
           sql`insert into form_elements (form_id, body, export_id, type_id) values (${
             form.id
-          }, ${createBody(
-            "field a"
-          )}, 'field_a', ${FormElementType}) returning *`
+          }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
         );
         const fieldB = await conn.one(
           sql`insert into form_elements (form_id, body, export_id, type_id) values (${
             form.id
-          }, ${createBody(
-            "field b"
-          )}, 'field_b', ${FormElementType}) returning *`
+          }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
         );
         return sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${
           fieldB.id
@@ -743,16 +750,12 @@ describe("Conditional Field Rendering Rules", () => {
         const fieldA = await conn.one(
           sql`insert into form_elements (form_id, body, export_id, type_id) values (${
             form.id
-          }, ${createBody(
-            "field a"
-          )}, 'field_a', ${FormElementType}) returning *`
+          }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
         );
         const fieldB = await conn.one(
           sql`insert into form_elements (form_id, body, export_id, type_id) values (${
             form.id
-          }, ${createBody(
-            "field b"
-          )}, 'field_b', ${FormElementType}) returning *`
+          }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
         );
         const rule = await conn.one(
           sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${

@@ -1,0 +1,199 @@
+fragment SurveyListDetails on Survey {
+  id
+  accessType
+  showProgress
+  invitedGroups {
+    id
+    name
+  }
+  isDisabled
+  limitToSingleResponse
+  name
+  submittedResponseCount
+  projectId
+  isTemplate
+}
+
+query Surveys($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    surveys {
+      ...SurveyListDetails
+    }
+  }
+}
+
+mutation CreateSurvey($name: String!, $projectId: Int!, $templateId: Int) {
+  makeSurvey(
+    input: { projectId: $projectId, name: $name, templateId: $templateId }
+  ) {
+    survey {
+      ...SurveyListDetails
+    }
+  }
+}
+
+query SurveyById($id: Int!) {
+  survey(id: $id) {
+    ...SurveyListDetails
+  }
+}
+
+fragment FormElementFullDetails on FormElement {
+  body
+  componentSettings
+  conditionalRenderingRules {
+    id
+    field {
+      id
+      exportId
+    }
+    operator
+    predicateFieldId
+    value
+  }
+  exportId
+  formId
+  id
+  isRequired
+  position
+  type {
+    componentName
+    isHidden
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+  }
+  typeId
+}
+
+query SurveyFormEditorDetails($id: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
+    name
+  }
+  formElementTypes {
+    componentName
+    isHidden
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+  }
+  survey(id: $id) {
+    ...SurveyListDetails
+    form {
+      id
+      isTemplate
+      surveyId
+      templateName
+      templateType
+      formElements {
+        ...FormElementFullDetails
+      }
+    }
+  }
+}
+
+mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean) {
+  updateSurvey(input: { id: $id, patch: { showProgress: $showProgress } }) {
+    survey {
+      id
+      showProgress
+    }
+  }
+}
+
+mutation UpdateFormElement(
+  $id: Int!
+  $isRequired: Boolean
+  $body: JSON
+  $exportId: String
+  $componentSettings: JSON
+) {
+  updateFormElement(
+    input: {
+      id: $id
+      patch: {
+        isRequired: $isRequired
+        body: $body
+        exportId: $exportId
+        componentSettings: $componentSettings
+      }
+    }
+  ) {
+    formElement {
+      id
+      isRequired
+      body
+      exportId
+      componentSettings
+    }
+  }
+}
+
+mutation UpdateFormElementBody($id: Int!, $body: JSON!) {
+  updateFormElement(input: { id: $id, patch: { body: $body } }) {
+    formElement {
+      id
+      body
+    }
+  }
+}
+
+mutation UpdateFormElementOrder($elementIds: [Int]) {
+  setFormElementOrder(input: { elementIds: $elementIds }) {
+    formElements {
+      id
+      position
+    }
+  }
+}
+
+mutation AddFormElement(
+  $body: JSON!
+  $componentSettings: JSON!
+  $formId: Int!
+  $componentType: String!
+  $position: Int
+) {
+  createFormElement(
+    input: {
+      formElement: {
+        body: $body
+        componentSettings: $componentSettings
+        formId: $formId
+        isRequired: false
+        typeId: $componentType
+        position: $position
+      }
+    }
+  ) {
+    formElement {
+      ...FormElementFullDetails
+    }
+  }
+}
+
+mutation DeleteFormElement($id: Int!) {
+  deleteFormElement(input: { id: $id }) {
+    formElement {
+      id
+    }
+  }
+}
+
+mutation UpdateForm($id: Int!, $isTemplate: Boolean, $templateName: String) {
+  updateForm(
+    input: {
+      id: $id
+      patch: { isTemplate: $isTemplate, templateName: $templateName }
+    }
+  ) {
+    form {
+      id
+      isTemplate
+      templateName
+    }
+  }
+}

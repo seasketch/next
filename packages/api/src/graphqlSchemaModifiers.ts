@@ -42,10 +42,6 @@ export default {
       "removeValidChildSketchClass",
 
       // Form mutations
-      "initializeBlankSketchClassForm",
-      "initializeSketchClassFormFromTemplate",
-      "initializeBlankSurveyForm",
-      "initializeSurveyFormFromTemplate",
       "setFormElementOrder",
 
       // Forums

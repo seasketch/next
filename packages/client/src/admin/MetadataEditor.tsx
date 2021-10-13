@@ -7,12 +7,13 @@ import Spinner from "../components/Spinner";
 import "prosemirror-view/style/prosemirror.css";
 import Button from "../components/Button";
 import { useProseMirror, ProseMirror } from "use-prosemirror";
-import { schema, plugins } from "../editor/config";
+import { metadata as editorConfig } from "../editor/config";
 import EditorMenuBar from "../editor/EditorMenuBar";
 import { EditorView } from "prosemirror-view";
 import { MutationResult } from "@apollo/client";
 import { Trans, useTranslation } from "react-i18next";
 
+const { schema, plugins } = editorConfig;
 interface MetadataEditorProps {
   onRequestClose?: () => void;
   /* state of the mutation */
@@ -115,6 +116,7 @@ export default function MetadataEditor({
           className="-mt-6 -ml-6 mb-2"
           style={{ width: "calc(100% + 3rem)" }}
           state={state}
+          schema={schema}
         />
         {error &&
           // eslint-disable-next-line
@@ -123,6 +125,7 @@ export default function MetadataEditor({
         {/* {data && <div ref={viewHost} />} */}
         {!loading && !error && (
           <ProseMirror
+            className="metadata"
             // @ts-ignore
             ref={viewRef}
             state={state}

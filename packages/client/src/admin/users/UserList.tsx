@@ -137,7 +137,7 @@ export default function UserList(props: UserListProps) {
         )}
       </div>
 
-      <div className="flex-grow overflow-y-scroll">
+      <div className="flex-grow overflow-y-auto">
         <AutoSizer>
           {({ width, height }) => (
             <>

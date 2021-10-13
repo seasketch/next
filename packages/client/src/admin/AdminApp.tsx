@@ -10,7 +10,6 @@ import {
 import { useTranslation } from "react-i18next";
 import { useCurrentProjectMetadataQuery } from "../generated/graphql";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
-import ProfileContextMenu from "../header/ProfileContextMenu";
 import useBreadcrumbs from "use-react-router-breadcrumbs";
 import { Trans } from "react-i18next";
 import UserSettingsSidebarSkeleton from "./users/UserSettingsSidebarSkeleton";
@@ -20,10 +19,12 @@ import AdminMobileHeader, {
 } from "./AdminMobileHeaderContext";
 import PhoneAccessGate from "./PhoneAccessGate";
 import { useAuth0 } from "@auth0/auth0-react";
+import Spinner from "../components/Spinner";
 
 const LazyBasicSettings = React.lazy(() => import("./Settings"));
 const LazyDataSettings = React.lazy(() => import("./data/DataSettings"));
 const LazyUserSettings = React.lazy(() => import("./users/UserSettings"));
+const LazySurveyAdmin = React.lazy(() => import("./surveys/SurveyAdmin"));
 
 interface Section {
   breadcrumb: string;
@@ -260,7 +261,7 @@ export default function AdminApp() {
         <div className="flex w-0 flex-1 max-h-screen">
           {/* Header (mobile-only) */}
           <main
-            className="flex-1 relative overflow-x-hidden focus:outline-none max-h-full overflow-y-scroll"
+            className="flex-1 relative overflow-x-hidden focus:outline-none max-h-full overflow-y-auto"
             tabIndex={0}
           >
             <Switch>
@@ -304,7 +305,11 @@ export default function AdminApp() {
               </Route>
               <Route exact path={`${path}/sketching`}></Route>
               <Route exact path={`${path}/forums`}></Route>
-              <Route exact path={`${path}/surveys`}></Route>
+              <Route path={`${path}/surveys/:surveyId?`}>
+                <React.Suspense fallback={<Spinner />}>
+                  <LazySurveyAdmin />
+                </React.Suspense>
+              </Route>
             </Switch>
             {/* <!-- Replace with your content --> */}
             {/* <!-- /End replace --> */}
@@ -384,28 +389,6 @@ function SidebarContents(props: {
                   </p>
                 </div>
               </div>
-              {/* <NavLink
-                exact
-                to={`/${props.slug}/account-settings`}
-                activeClassName="bg-indigo-900 text-white"
-                className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-300 rounded-md hover:text-white hover:bg-indigo-700 focus:outline-none focus:text-white focus:bg-indigo-700 transition ease-in-out duration-75"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  className={iconClassName}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-                <Trans ns="admin">Account Settings</Trans>
-              </NavLink> */}
               <button
                 onClick={() => logout()}
                 className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-300 rounded-md hover:text-white hover:bg-indigo-700 focus:outline-none focus:text-white focus:bg-indigo-700 transition ease-in-out duration-75 w-full"
@@ -424,7 +407,6 @@ function SidebarContents(props: {
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                   />
                 </svg>
-                {/* {section.icon} */}
                 <Trans ns="admin">Sign Out</Trans>
               </button>
             </>
