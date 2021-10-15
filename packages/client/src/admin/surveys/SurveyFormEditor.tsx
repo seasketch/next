@@ -16,8 +16,16 @@ import {
   useAddFormElementMutation,
   useDeleteFormElementMutation,
   useUpdateFormMutation,
+  FormElementBackgroundEdgeType,
+  FormElementBackgroundImagePlacement,
+  FormElementTextVariant,
+  useUpdateFormElementBackgroundMutation,
 } from "../../generated/graphql";
-import { FormElementFactory, SurveyAppLayout } from "../../surveys/SurveyApp";
+import {
+  FormElementFactory,
+  getCurrentStyle,
+  SurveyAppLayout,
+} from "../../surveys/SurveyApp";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   FormEditorPortalContext,
@@ -36,6 +44,7 @@ import gql from "graphql-tag";
 import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
 import { useAuth0 } from "@auth0/auth0-react";
+import UnsplashImageChooser from "./UnsplashImageChooser";
 
 require("../../formElements/BodyEditor");
 
@@ -56,6 +65,7 @@ export default function SurveyFormEditor({
       id: surveyId,
     },
   });
+  const [imageChooserOpen, setImageChooserOpen] = useState(false);
   const [updateOrder, updateOrderState] = useUpdateFormElementOrderMutation();
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [focusState, setFocusState] = useState<{
@@ -65,6 +75,11 @@ export default function SurveyFormEditor({
     basicSettings: false,
     formElement: undefined,
   });
+
+  // const [imageUrl, setImageUrl] = useState(
+  //   "https://images.unsplash.com/photo-1527401850656-0f34108fdb30?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2200&q=80"
+  // );
+  // const [backgroundColor, setBackgroundColor] = useState("rgb(41, 69, 209)");
 
   useEffect(() => {
     if (
@@ -78,6 +93,46 @@ export default function SurveyFormEditor({
       });
     }
   }, [data, focusState]);
+
+  const [
+    updateBackground,
+    updateBackgroundState,
+  ] = useUpdateFormElementBackgroundMutation({
+    onError,
+    // @ts-ignore
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateFormElement: {
+          __typename: "UpdateFormElementPayload",
+          formElement: {
+            __typename: "FormElement",
+            id: data.id,
+            backgroundColor:
+              data.backgroundColor || selectedFormElement?.backgroundColor,
+            backgroundImage:
+              data.backgroundImage || selectedFormElement?.backgroundImage,
+            backgroundImagePlacement:
+              data.backgroundImagePlacement ||
+              selectedFormElement?.backgroundImagePlacement ||
+              FormElementBackgroundImagePlacement.Top,
+            backgroundPalette:
+              data.backgroundPalette ||
+              selectedFormElement?.backgroundPalette ||
+              [],
+            textVariant:
+              data.textVariant ||
+              selectedFormElement?.textVariant ||
+              FormElementTextVariant.Dynamic,
+            backgroundEdgeType:
+              data.backgroundEdgeType ||
+              selectedFormElement?.backgroundEdgeType ||
+              FormElementBackgroundEdgeType.Blur,
+          },
+        },
+      };
+    },
+  });
 
   const [
     updateBaseSettingsMutation,
@@ -135,6 +190,11 @@ export default function SurveyFormEditor({
 
   const selectedFormElement = formElements.find(
     (e) => e.id === focusState.formElement
+  );
+
+  const style = getCurrentStyle(
+    data?.survey?.form?.formElements,
+    selectedFormElement
   );
 
   const [updateElementSetting, updateComponentSetting] = useUpdateFormElement(
@@ -278,6 +338,15 @@ export default function SurveyFormEditor({
                                         id: 9999999999,
                                         exportId:
                                           "loading-" + formElements.length + 1,
+                                        backgroundColor: null,
+                                        backgroundImage: null,
+                                        backgroundEdgeType:
+                                          FormElementBackgroundEdgeType.Blur,
+                                        backgroundImagePlacement:
+                                          FormElementBackgroundImagePlacement.Top,
+                                        textVariant:
+                                          FormElementTextVariant.Dynamic,
+                                        backgroundPalette: null,
                                       },
                                     },
                                   },
@@ -467,7 +536,8 @@ export default function SurveyFormEditor({
         <div className="flex-1">
           {/* <div className={`w-96 h-160 ml-auto mr-auto`}> */}
           <SurveyAppLayout
-            skipScreenHeight={true}
+            embeddedInAdmin={true}
+            style={style}
             progress={
               selectedFormElement
                 ? formElements.indexOf(selectedFormElement) /
@@ -538,71 +608,282 @@ export default function SurveyFormEditor({
             {!focusState.basicSettings &&
               selectedFormElement &&
               selectedFormElement.typeId !== "WelcomeMessage" && (
-                <div className="px-3 text-base">
-                  <TextInput
-                    label={t("Export ID")}
-                    name="exportid"
-                    description={t(
-                      "Setting an export id will give a stable column name when exporting your results"
-                    )}
-                    value={selectedFormElement.exportId || ""}
-                    onChange={updateElementSetting("exportId")}
-                  />
-                  <Button
-                    className="mt-4"
-                    label={t("Delete Element")}
-                    small
-                    onClick={() => {
-                      if (window.confirm(t("Are you sure?"))) {
-                        const formElement = selectedFormElement!;
-                        setFocusState({
-                          formElement: undefined,
-                          basicSettings: true,
-                        });
-                        deleteFormElement({
-                          variables: { id: formElement.id },
-                          optimisticResponse: {
-                            __typename: "Mutation",
-                            deleteFormElement: {
-                              __typename: "DeleteFormElementPayload",
-                              formElement: {
-                                __typename: "FormElement",
-                                id: formElement.id,
-                              },
-                            },
-                          },
-                          update: (cache) => {
-                            const id = cache.identify(formElement!);
-
-                            cache.evict({
-                              id,
-                            });
-                            const formId = cache.identify(data!.survey!.form!);
-
-                            cache.modify({
-                              id: formId,
-                              fields: {
-                                formElements(existingRefs, { readField }) {
-                                  return existingRefs.filter(
-                                    // @ts-ignore
-                                    (elementRef) => {
-                                      return (
-                                        formElement.id !==
-                                        readField("id", elementRef)
-                                      );
-                                    }
-                                  );
+                <>
+                  <div className="px-3 text-base">
+                    <TextInput
+                      label={t("Export ID")}
+                      name="exportid"
+                      description={t(
+                        "Setting an export id will give a stable column name when exporting your results"
+                      )}
+                      value={selectedFormElement.exportId || ""}
+                      onChange={updateElementSetting("exportId")}
+                    />
+                    <Button
+                      className="mt-4"
+                      label={t("Delete Element")}
+                      small
+                      onClick={() => {
+                        if (window.confirm(t("Are you sure?"))) {
+                          const formElement = selectedFormElement!;
+                          setFocusState({
+                            formElement: undefined,
+                            basicSettings: true,
+                          });
+                          deleteFormElement({
+                            variables: { id: formElement.id },
+                            optimisticResponse: {
+                              __typename: "Mutation",
+                              deleteFormElement: {
+                                __typename: "DeleteFormElementPayload",
+                                formElement: {
+                                  __typename: "FormElement",
+                                  id: formElement.id,
                                 },
                               },
-                            });
-                          },
-                        });
-                      }
-                    }}
-                  />
-                </div>
+                            },
+                            update: (cache) => {
+                              const id = cache.identify(formElement!);
+
+                              cache.evict({
+                                id,
+                              });
+                              const formId = cache.identify(
+                                data!.survey!.form!
+                              );
+
+                              cache.modify({
+                                id: formId,
+                                fields: {
+                                  formElements(existingRefs, { readField }) {
+                                    return existingRefs.filter(
+                                      // @ts-ignore
+                                      (elementRef) => {
+                                        return (
+                                          formElement.id !==
+                                          readField("id", elementRef)
+                                        );
+                                      }
+                                    );
+                                  },
+                                },
+                              });
+                            },
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                </>
               )}
           </>
+          {selectedFormElement && (
+            <>
+              <h3 className="mt-4 flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-b border-t border-blue-gray-200  items-center">
+                {t("Appearance")}
+              </h3>
+              <div className="px-3 py-2 space-y-4 text-base">
+                <p className="text-sm">
+                  <Trans ns="admin:surveys">
+                    Changing appearance settings will impact all following pages
+                    until another customized page appears.
+                  </Trans>
+                </p>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-800">
+                    {t("Background image")}
+                  </h4>
+                  <div className="flex-rows flex space-x-4 py-2 items-center justify-center">
+                    <img
+                      role="button"
+                      src={style.backgroundImage!}
+                      alt="survey background"
+                      className="w-12 cursor-pointer"
+                      onClick={() => setImageChooserOpen(true)}
+                    />
+                    <Button
+                      small
+                      label={t("Choose image...")}
+                      onClick={() => setImageChooserOpen(true)}
+                    />
+                    <UnsplashImageChooser
+                      onRequestClose={() => setImageChooserOpen(false)}
+                      open={imageChooserOpen}
+                      onChange={(photo, colors) => {
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement.id,
+                            backgroundImage: photo.urls.full,
+                            backgroundColor: colors[0],
+                            backgroundPalette: colors,
+                          },
+                        });
+                        // setBackgroundColor(colors[0]);
+                        // setImageUrl(photo.urls.regular);
+                        setImageChooserOpen(false);
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-800 mb-2">
+                    {t("Background color")}
+                  </h4>
+                  <div className="space-x-2 w-36 pl-2">
+                    {(selectedFormElement.backgroundPalette || []).map((c) => (
+                      <button
+                        key={c!.toString()}
+                        onClick={() => {
+                          updateBackground({
+                            variables: {
+                              id: selectedFormElement.id,
+                              backgroundColor: c,
+                            },
+                          });
+                        }}
+                        className={`w-4 h-4 rounded-full shadow ${
+                          selectedFormElement.backgroundColor === c
+                            ? "ring"
+                            : ""
+                        }`}
+                        style={{ backgroundColor: c! }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-800 mb-2">
+                    {t("Background layout")}
+                  </h4>
+                  <div className="flex space-x-2">
+                    <div
+                      title="Full Screen Image"
+                      onClick={() => {
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement.id,
+                            backgroundImagePlacement:
+                              FormElementBackgroundImagePlacement.Cover,
+                          },
+                        });
+                      }}
+                      className={`w-12 h-8 border rounded bg-cool-gray-600 flex flex-col justify-center space-y-1 shadow cursor-pointer ${
+                        selectedFormElement.backgroundImagePlacement ===
+                          FormElementBackgroundImagePlacement.Cover && "ring"
+                      }`}
+                    >
+                      <div className="w-8 mx-auto bg-white rounded h-0.5"></div>
+                      <div className="w-6 mx-auto bg-white rounded h-0.5"></div>
+                      <div className="w-8 mx-auto bg-white rounded h-0.5"></div>
+                    </div>
+                    <div
+                      title="Top Header Image"
+                      onClick={() => {
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement.id,
+                            backgroundImagePlacement:
+                              FormElementBackgroundImagePlacement.Top,
+                          },
+                        });
+                      }}
+                      className={`w-12 h-8 border overflow-hidden rounded flex flex-col justify-center space-y-1 shadow cursor-pointer ${
+                        selectedFormElement.backgroundImagePlacement ===
+                          FormElementBackgroundImagePlacement.Top && "ring"
+                      }`}
+                    >
+                      <div className="w-full -mt-1 bg-gray-400 h-2"></div>
+                      <div className="w-8 ml-1 bg-gray-500 rounded h-0.5"></div>
+                      <div className="w-6 ml-1 bg-gray-500 rounded h-0.5"></div>
+                      <div className="w-8 ml-1 bg-gray-500 rounded h-0.5"></div>
+                    </div>
+                    <div
+                      title="Left Side Image"
+                      onClick={() => {
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement.id,
+                            backgroundImagePlacement:
+                              FormElementBackgroundImagePlacement.Left,
+                          },
+                        });
+                      }}
+                      className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
+                        selectedFormElement.backgroundImagePlacement ===
+                          FormElementBackgroundImagePlacement.Left && "ring"
+                      }`}
+                    >
+                      <div className="w-1/3 h-full bg-gray-400"></div>
+                      <div className="w-2/3 space-y-1">
+                        <div className="w-3/4 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
+                        <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
+                        <div className="w-3/4 ml-1 bg-gray-500 rounded h-0.5"></div>
+                      </div>
+                    </div>
+                    <div
+                      title="Right Side Image"
+                      onClick={() => {
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement.id,
+                            backgroundImagePlacement:
+                              FormElementBackgroundImagePlacement.Right,
+                          },
+                        });
+                      }}
+                      className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
+                        selectedFormElement.backgroundImagePlacement ===
+                          FormElementBackgroundImagePlacement.Right && "ring"
+                      }`}
+                    >
+                      <div className="w-2/3 space-y-1">
+                        <div className="w-3/4 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
+                        <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
+                        <div className="w-3/4 ml-1 bg-gray-500 rounded h-0.5"></div>
+                      </div>
+                      <div className="w-1/3 h-full bg-gray-400"></div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-800 mt-2.5">
+                    <Trans ns="admin:surveys">
+                      Note that on mobile phones and other small devices, the
+                      top-image layout will be used if left or right image
+                      layout is selected.
+                    </Trans>
+                  </p>
+                </div>
+                {/* <InputBlock
+                  labelType="small"
+                  title={t("Text Color")}
+                  input={
+                    <select
+                      className="w-32"
+                      value={selectedFormElement.textVariant || ""}
+                      onChange={(e) => {
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement.id,
+                            textVariant: e.target
+                              .value as FormElementTextVariant,
+                          },
+                        });
+                      }}
+                    >
+                      <option value={FormElementTextVariant.Dynamic}>
+                        {t("Dynamic")}
+                      </option>
+                      <option value={FormElementTextVariant.Dark}>
+                        {t("Dark")}
+                      </option>
+                      <option value={FormElementTextVariant.Light}>
+                        {t("Light")}
+                      </option>
+                    </select>
+                  }
+                /> */}
+              </div>
+            </>
+          )}
           {focusState.basicSettings &&
             auth0.user &&
             auth0.user["https://seasketch.org/superuser"] && (

@@ -11,6 +11,7 @@ export default function useBodyBackground(
     return () => document.body.style.setProperty("background", prevBackground);
   }, []);
   useEffect(() => {
+    console.log("set background", backgroundStyle);
     document.body.style.setProperty("background", backgroundStyle);
   }, [backgroundStyle]);
 }

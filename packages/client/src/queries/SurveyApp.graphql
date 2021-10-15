@@ -20,6 +20,12 @@ query Survey($id: Int!) {
           isSurveysOnly
           label
         }
+        backgroundColor
+        backgroundEdgeType
+        backgroundImage
+        backgroundImagePlacement
+        backgroundPalette
+        textVariant
       }
     }
   }

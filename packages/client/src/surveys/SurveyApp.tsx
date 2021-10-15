@@ -8,6 +8,10 @@ import WelcomeMessage from "../formElements/WelcomeMessage";
 import {
   useCreateResponseMutation,
   useSurveyQuery,
+  FormElement,
+  FormElementTextVariant,
+  FormElementBackgroundEdgeType,
+  FormElementBackgroundImagePlacement,
 } from "../generated/graphql";
 import ProgressBar from "./ProgressBar";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +23,9 @@ import useLocalStorage from "../useLocalStorage";
 import { useAuth0 } from "@auth0/auth0-react";
 import { components } from "../formElements";
 import useBodyBackground from "../useBodyBackground";
+import Color from "color";
+import { useMediaQuery } from "beautiful-react-hooks";
+require("./surveys.css");
 
 interface FormElementState {
   touched?: boolean;
@@ -137,6 +144,7 @@ function SurveyApp() {
       <SurveyAppLayout
         showProgress={data.survey.showProgress}
         progress={index / elements.length}
+        style={getCurrentStyle(data.survey.form?.formElements, formElement)}
       >
         <AnimatePresence
           initial={false}
@@ -277,40 +285,166 @@ export function FormElementFactory({
 
 export const SurveyAppLayout: React.FunctionComponent<{
   progress: number;
-  skipScreenHeight?: boolean;
+  embeddedInAdmin?: boolean;
   showProgress?: boolean;
-}> = ({ progress, children, skipScreenHeight, showProgress }) => {
-  const setBackground = useBodyBackground(
-    "rgb(5, 94, 157) linear-gradient(128deg, rgb(5, 94, 157), rgb(41, 69, 209)) no-repeat fixed"
+  style?: ComputedFormElementStyle;
+}> = ({ progress, children, embeddedInAdmin, showProgress, style }) => {
+  style = style || getCurrentStyle(undefined, undefined);
+  const isSmall = useMediaQuery("(max-width: 767px)");
+  useBodyBackground(
+    bgStyle(
+      style.backgroundImagePlacement,
+      style.backgroundImage,
+      style.backgroundColor
+    )
   );
 
+  const right =
+    style.backgroundImagePlacement ===
+    FormElementBackgroundImagePlacement.Right;
+  const left =
+    style.backgroundImagePlacement === FormElementBackgroundImagePlacement.Left;
+  const top =
+    style.backgroundImagePlacement === FormElementBackgroundImagePlacement.Top;
+  const cover =
+    style.backgroundImagePlacement ===
+    FormElementBackgroundImagePlacement.Cover;
+
   return (
-    <div
-      className={`w-full relative`}
-      // style={{
-      //   backgroundColor: "rgb(5, 94, 157)",
-      //   backgroundImage:
-      //     "linear-gradient(128deg, rgb(5, 94, 157), rgb(41, 69, 209))",
-      //   // minHeight: "100vh",
-      // }}
-    >
+    <div className={`w-full relative`}>
       {showProgress && <ProgressBar progress={progress} />}
       <div
-        className="w-full h-32 md:h-52 lg:h-64 overflow-hidden"
+        className={`${top ? "" : "flex h-full"} ${left ? "flex-row" : ""} ${
+          right ? "flex-row-reverse" : ""
+        } ${cover ? "justify-center" : ""}`}
         style={{
-          WebkitMaskImage:
-            "linear-gradient(to top, transparent 0%, black 100%)",
-          backgroundImage:
-            "url(https://images.unsplash.com/photo-1527401850656-0f34108fdb30?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2200&q=80)",
-          backgroundPosition: "left bottom",
-          backgroundSize: "cover",
+          height: top
+            ? "auto"
+            : embeddedInAdmin
+            ? "calc(100vh - 56px)"
+            : "100vh",
         }}
-      ></div>
-      <div className="px-5 -mt-2 max-w-xl mx-auto text-white survey-content">
-        {children}
+      >
+        {!cover && (
+          <div
+            className={`flex-1 w-full ${
+              top ? "h-32 md:h-52 lg:h-64" : "h-full"
+            } overflow-hidden`}
+            style={{
+              ...(top
+                ? {
+                    WebkitMaskImage:
+                      "linear-gradient(to top, transparent 0%, black 100%)",
+                    maskImage:
+                      "linear-gradient(to top, transparent 0%, black 100%)",
+                  }
+                : {}),
+              backgroundImage: `url(${style.backgroundImage || ""})`,
+              backgroundPosition: "center bottom",
+              backgroundSize: "cover",
+            }}
+          ></div>
+        )}
+        <div
+          className={`px-5 max-w-xl mx-auto text-white survey-content ${
+            top
+              ? ""
+              : "flex-0 flex flex-col center-ish max-h-full overflow-y-auto md:w-128 lg:w-160 xl:w-full 2xl:mx-12"
+          }`}
+        >
+          <div className="max-h-full pt-5">{children}</div>
+        </div>
       </div>
     </div>
   );
+};
+
+type FormElementStyle = Pick<
+  FormElement,
+  | "backgroundColor"
+  | "backgroundImage"
+  | "backgroundEdgeType"
+  | "backgroundImagePlacement"
+  | "textVariant"
+>;
+type ComputedFormElementStyle = {
+  backgroundColor: string;
+  backgroundImage: string;
+  backgroundEdgeType: FormElementBackgroundEdgeType;
+  backgroundImagePlacement: FormElementBackgroundImagePlacement;
+  textVariant: FormElementTextVariant;
+};
+export function getCurrentStyle(
+  formElements: FormElementStyle[] | undefined | null,
+  current: FormElementStyle | undefined
+): ComputedFormElementStyle {
+  if (!formElements || !current || formElements.length === 0) {
+    return {
+      backgroundColor: "#efefef",
+      textVariant: FormElementTextVariant.Dynamic,
+      backgroundEdgeType: FormElementBackgroundEdgeType.Blur,
+      backgroundImagePlacement: FormElementBackgroundImagePlacement.Top,
+      backgroundImage: "",
+    };
+  }
+  const index = formElements.indexOf(current) || 0;
+  let style: FormElementStyle = formElements[0];
+  for (var i = 0; i <= index; i++) {
+    if (style) {
+      style = {
+        ...style,
+        ...formElements[i],
+      };
+    } else {
+      style = { ...formElements[i] };
+    }
+  }
+  return style as ComputedFormElementStyle;
+}
+
+const bgStyle = (
+  layout: FormElementBackgroundImagePlacement,
+  image: string,
+  color: string
+) => {
+  let position = "";
+  // eslint-disable-next-line i18next/no-literal-string
+  image = `url(${image})`;
+  switch (layout) {
+    case FormElementBackgroundImagePlacement.Cover:
+      position = "center / cover no-repeat";
+      break;
+    case FormElementBackgroundImagePlacement.Top:
+      position = "fixed no-repeat";
+      const c = Color(color);
+      const secondaryColor = c.darken(0.3).saturate(0.5).toString();
+      // eslint-disable-next-line i18next/no-literal-string
+      image = `linear-gradient(128deg, ${color}, ${secondaryColor})`;
+      break;
+    // case FormElementBackgroundImagePlacement.Left:
+    //   position = "left top / 50% 100% no-repeat";
+    //   break;
+    // case FormElementBackgroundImagePlacement.Right:
+    //   position = "right top / 50% 100% no-repeat";
+    //   break;
+    default:
+      image = "";
+      break;
+  }
+  // eslint-disable-next-line i18next/no-literal-string
+  return `${position} ${image} ${color}`;
+
+  // // eslint-disable-next-line i18next/no-literal-string
+  // const imgCoverStyle = `center / cover no-repeat url(${style.backgroundImage}) ${backgroundColor}`;
+  // // eslint-disable-next-line i18next/no-literal-string
+  // const stdBgStyle = `${backgroundColor} linear-gradient(128deg, ${backgroundColor}, ${secondaryColor}) no-repeat fixed`;
+  // // eslint-disable-next-line i18next/no-literal-string
+  // const rightBgStyle = `center / 50% no-repeat url(${style.backgroundImage}) 10% ${backgroundColor}`;
+  // console.log(
+  //   style.backgroundImagePlacement === FormElementBackgroundImagePlacement.Cover
+  //     ? rightBgStyle
+  //     : stdBgStyle
+  // );
 };
 
 export default SurveyApp;

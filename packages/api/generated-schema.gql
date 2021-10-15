@@ -4190,6 +4190,26 @@ graphile-generated CRUD mutations.
 """
 type FormElement implements Node {
   """
+  Optional background color to transition the form to when this element is displayed.
+  
+  """
+  backgroundColor: String
+  backgroundEdgeType: FormElementBackgroundEdgeType!
+
+  """
+  Optional background image to display when this form_element appears.
+  
+  """
+  backgroundImage: String
+
+  """
+  Whether the blur the image -> background transition. Only for desktop.
+  
+  """
+  backgroundImagePlacement: FormElementBackgroundImagePlacement!
+  backgroundPalette: [String]
+
+  """
   [prosemirror](https://prosemirror.net/) document representing a rich-text
   question or informational content. Level 1 headers can be assumed to be the
   question for input-type fields, though formatting is up to the project
@@ -4248,12 +4268,52 @@ type FormElement implements Node {
   
   """
   position: Int!
+
+  """
+  Indicates whether the form element should be displayed with dark or light text
+  variants to match the background color. Admin interface should automatically
+  set this value based on `background_color`, though admins may wish to manually override.
+  
+  """
+  textVariant: FormElementTextVariant!
   type: FormElementType
   typeId: String!
 }
 
+enum FormElementBackgroundEdgeType {
+  BLUR
+  CRISP
+}
+
+enum FormElementBackgroundImagePlacement {
+  COVER
+  LEFT
+  RIGHT
+  TOP
+}
+
 """An input for mutations affecting `FormElement`"""
 input FormElementInput {
+  """
+  Optional background color to transition the form to when this element is displayed.
+  
+  """
+  backgroundColor: String
+  backgroundEdgeType: FormElementBackgroundEdgeType
+
+  """
+  Optional background image to display when this form_element appears.
+  
+  """
+  backgroundImage: String
+
+  """
+  Whether the blur the image -> background transition. Only for desktop.
+  
+  """
+  backgroundImagePlacement: FormElementBackgroundImagePlacement
+  backgroundPalette: [String]
+
   """
   [prosemirror](https://prosemirror.net/) document representing a rich-text
   question or informational content. Level 1 headers can be assumed to be the
@@ -4291,6 +4351,14 @@ input FormElementInput {
   
   """
   position: Int
+
+  """
+  Indicates whether the form element should be displayed with dark or light text
+  variants to match the background color. Admin interface should automatically
+  set this value based on `background_color`, though admins may wish to manually override.
+  
+  """
+  textVariant: FormElementTextVariant
   typeId: String!
 }
 
@@ -4298,6 +4366,26 @@ input FormElementInput {
 Represents an update to a `FormElement`. Fields that are set will be updated.
 """
 input FormElementPatch {
+  """
+  Optional background color to transition the form to when this element is displayed.
+  
+  """
+  backgroundColor: String
+  backgroundEdgeType: FormElementBackgroundEdgeType
+
+  """
+  Optional background image to display when this form_element appears.
+  
+  """
+  backgroundImage: String
+
+  """
+  Whether the blur the image -> background transition. Only for desktop.
+  
+  """
+  backgroundImagePlacement: FormElementBackgroundImagePlacement
+  backgroundPalette: [String]
+
   """
   [prosemirror](https://prosemirror.net/) document representing a rich-text
   question or informational content. Level 1 headers can be assumed to be the
@@ -4331,6 +4419,14 @@ input FormElementPatch {
   
   """
   position: Int
+
+  """
+  Indicates whether the form element should be displayed with dark or light text
+  variants to match the background color. Admin interface should automatically
+  set this value based on `background_color`, though admins may wish to manually override.
+  
+  """
+  textVariant: FormElementTextVariant
   typeId: String
 }
 
@@ -4352,6 +4448,12 @@ enum FormElementsOrderBy {
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
+}
+
+enum FormElementTextVariant {
+  DARK
+  DYNAMIC
+  LIGHT
 }
 
 """
@@ -8635,6 +8737,7 @@ type Query implements Node {
     nodeId: ID!
   ): Forum
   getDefaultDataSourcesBucket: String
+  getUnsplashPhotos(query: String!): UnsplashSearchResult!
   group(id: Int!): Group
 
   """Reads a single `Group` using its globally unique `ID`."""
@@ -11076,6 +11179,47 @@ enum TopicsOrderBy {
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
+}
+
+type UnsplashLinks {
+  html: String!
+}
+
+type UnsplashPhoto {
+  blur_hash: String
+  color: String!
+  description: String
+  height: Int!
+  id: String!
+  links: UnsplashPhotoLinks!
+  urls: UnsplashUrls!
+  user: UnsplashUser!
+  width: Int!
+}
+
+type UnsplashPhotoLinks {
+  download_location: String!
+}
+
+type UnsplashSearchResult {
+  results: [UnsplashPhoto!]!
+  total: Int!
+  total_pages: Int!
+}
+
+type UnsplashUrls {
+  full: String!
+  raw: String!
+  regular: String!
+  small: String!
+  thumb: String!
+}
+
+type UnsplashUser {
+  id: String!
+  links: UnsplashLinks!
+  name: String!
+  username: String!
 }
 
 """All input for the `updateAclByBasemapId` mutation."""

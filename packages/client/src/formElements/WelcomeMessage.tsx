@@ -26,7 +26,7 @@ const WelcomeMessage: FormElementComponent<{ beginButtonText: string }> = (
       />
       <Button
         autofocus
-        className="mt-6"
+        className="mt-6 mb-10"
         onClick={props.onSubmit}
         label={
           props.componentSettings.beginButtonText?.length

@@ -36,6 +36,7 @@ import { run } from "graphile-worker";
 import cors from "cors";
 import BuildPlugin from "./plugins/buildPlugin";
 import ExportIdPlugin from "./plugins/exportIdPlugin";
+import UnsplashPlugin from "./plugins/unsplashPlugin";
 
 const app = express();
 
@@ -198,6 +199,7 @@ app.use(
       reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
       SpritesPlugin,
+      UnsplashPlugin,
     ],
     graphileBuildOptions: {
       pgOmitListSuffix: true,
