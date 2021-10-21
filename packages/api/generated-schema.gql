@@ -483,6 +483,37 @@ strings and not numbers.
 """
 scalar BigInt
 
+"""All input for the `clearFormElementStyle` mutation."""
+input ClearFormElementStyleInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int
+}
+
+"""The output of our `clearFormElementStyle` mutation."""
+type ClearFormElementStylePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  formElement: FormElement
+
+  """An edge for our `FormElement`. May be used by Relay 1."""
+  formElementEdge(
+    """The method to use when ordering `FormElement`."""
+    orderBy: [FormElementsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormElementsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """
 Community guidelines can be set by project admins with standards for using the 
 discussion forums. Users will be shown this content before making their first
@@ -4194,7 +4225,7 @@ type FormElement implements Node {
   
   """
   backgroundColor: String
-  backgroundEdgeType: FormElementBackgroundEdgeType!
+  backgroundHeight: Int
 
   """
   Optional background image to display when this form_element appears.
@@ -4203,11 +4234,12 @@ type FormElement implements Node {
   backgroundImage: String
 
   """
-  Whether the blur the image -> background transition. Only for desktop.
+  Layout of image in relation to form_element content.
   
   """
   backgroundImagePlacement: FormElementBackgroundImagePlacement!
   backgroundPalette: [String]
+  backgroundWidth: Int
 
   """
   [prosemirror](https://prosemirror.net/) document representing a rich-text
@@ -4270,6 +4302,12 @@ type FormElement implements Node {
   position: Int!
 
   """
+  Color used to style navigation controls
+  
+  """
+  secondaryColor: String
+
+  """
   Indicates whether the form element should be displayed with dark or light text
   variants to match the background color. Admin interface should automatically
   set this value based on `background_color`, though admins may wish to manually override.
@@ -4278,11 +4316,8 @@ type FormElement implements Node {
   textVariant: FormElementTextVariant!
   type: FormElementType
   typeId: String!
-}
-
-enum FormElementBackgroundEdgeType {
-  BLUR
-  CRISP
+  unsplashAuthorName: String
+  unsplashAuthorUrl: String
 }
 
 enum FormElementBackgroundImagePlacement {
@@ -4299,20 +4334,15 @@ input FormElementInput {
   
   """
   backgroundColor: String
-  backgroundEdgeType: FormElementBackgroundEdgeType
+  backgroundHeight: Int
 
   """
-  Optional background image to display when this form_element appears.
-  
-  """
-  backgroundImage: String
-
-  """
-  Whether the blur the image -> background transition. Only for desktop.
+  Layout of image in relation to form_element content.
   
   """
   backgroundImagePlacement: FormElementBackgroundImagePlacement
   backgroundPalette: [String]
+  backgroundWidth: Int
 
   """
   [prosemirror](https://prosemirror.net/) document representing a rich-text
@@ -4353,6 +4383,12 @@ input FormElementInput {
   position: Int
 
   """
+  Color used to style navigation controls
+  
+  """
+  secondaryColor: String
+
+  """
   Indicates whether the form element should be displayed with dark or light text
   variants to match the background color. Admin interface should automatically
   set this value based on `background_color`, though admins may wish to manually override.
@@ -4371,20 +4407,15 @@ input FormElementPatch {
   
   """
   backgroundColor: String
-  backgroundEdgeType: FormElementBackgroundEdgeType
+  backgroundHeight: Int
 
   """
-  Optional background image to display when this form_element appears.
-  
-  """
-  backgroundImage: String
-
-  """
-  Whether the blur the image -> background transition. Only for desktop.
+  Layout of image in relation to form_element content.
   
   """
   backgroundImagePlacement: FormElementBackgroundImagePlacement
   backgroundPalette: [String]
+  backgroundWidth: Int
 
   """
   [prosemirror](https://prosemirror.net/) document representing a rich-text
@@ -4419,6 +4450,12 @@ input FormElementPatch {
   
   """
   position: Int
+
+  """
+  Color used to style navigation controls
+  
+  """
+  secondaryColor: String
 
   """
   Indicates whether the form element should be displayed with dark or light text
@@ -5689,6 +5726,12 @@ type Mutation {
     """
     input: ApproveParticipantInput!
   ): ApproveParticipantPayload
+  clearFormElementStyle(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ClearFormElementStyleInput!
+  ): ClearFormElementStylePayload
 
   """
   Confirm that a new user has seen any onboarding materials. Updates User.onboarded date.
@@ -6615,6 +6658,7 @@ type Mutation {
     """ID of survey invite"""
     inviteId: Int!
   ): Int
+  setFormElementBackground(backgroundColor: String!, backgroundHeight: Int!, backgroundPalette: [String]!, backgroundUrl: String!, backgroundWidth: Int!, downloadUrl: String!, id: Int!, secondaryColor: String!, unsplashAuthorName: String!, unsplashAuthorUrl: String!): FormElement!
 
   """
   Sets the positions of all elements in a form at once. Any missing element ids from

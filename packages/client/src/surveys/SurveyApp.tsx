@@ -1,30 +1,26 @@
-import { RefObject, useState } from "react";
+import { MouseEventHandler, useEffect, useState } from "react";
 import { useHistory, useParams } from "react-router";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { FormElementProps } from "../formElements/FormElement";
-import ShortText, { ShortTextProps } from "../formElements/ShortText";
-import WelcomeMessage from "../formElements/WelcomeMessage";
 import {
+  FormElement,
   useCreateResponseMutation,
   useSurveyQuery,
-  FormElement,
-  FormElementTextVariant,
-  FormElementBackgroundEdgeType,
-  FormElementBackgroundImagePlacement,
 } from "../generated/graphql";
-import ProgressBar from "./ProgressBar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
 import UpArrowIcon from "../components/UpArrowIcon";
 import DownArrowIcon from "../components/DownArrowIcon";
 import useLocalStorage from "../useLocalStorage";
-import { useAuth0 } from "@auth0/auth0-react";
 import { components } from "../formElements";
-import useBodyBackground from "../useBodyBackground";
-import Color from "color";
 import { useMediaQuery } from "beautiful-react-hooks";
+import SurveyAppLayout, {
+  FormElementStyleProps,
+  getCurrentStyle,
+} from "./SurveyAppLayout";
+import ImagePreloader from "./ImagePreloader";
 require("./surveys.css");
 
 interface FormElementState {
@@ -44,7 +40,7 @@ function SurveyApp() {
     surveyId: string;
     position: string;
   }>();
-  const auth = useAuth0();
+  const isSmall = useMediaQuery("(max-width: 767px)");
   const { t } = useTranslation("surveys");
   const history = useHistory();
   const [backwards, setBackwards] = useState(false);
@@ -56,26 +52,64 @@ function SurveyApp() {
   const [createResponse, createResponseState] = useCreateResponseMutation({
     onError,
   });
+  const [formElement, setFormElement] = useState<{
+    current?: Pick<
+      FormElement,
+      | "typeId"
+      | "id"
+      | "isRequired"
+      | "position"
+      | "unsplashAuthorName"
+      | "unsplashAuthorUrl"
+      | "body"
+      | "componentSettings"
+    > &
+      FormElementStyleProps;
+    exiting?: Pick<
+      FormElement,
+      | "typeId"
+      | "id"
+      | "isRequired"
+      | "position"
+      | "unsplashAuthorName"
+      | "unsplashAuthorUrl"
+      | "body"
+      | "componentSettings"
+    > &
+      FormElementStyleProps;
+  }>({});
+
+  useEffect(() => {
+    if (surveyId && data?.survey?.form?.formElements) {
+      const el = data.survey.form.formElements[parseInt(position)];
+      if (!formElement.current) {
+        setFormElement({ current: el });
+      } else if (el.id === formElement.current.id) {
+        setFormElement({ current: el });
+      } else {
+        setFormElement({ exiting: formElement.current, current: el });
+      }
+    }
+  }, [data?.survey?.form?.formElements, position, surveyId]);
 
   const [responseState, setResponseState] = useLocalStorage<{
     [id: number]: FormElementState;
     // eslint-disable-next-line i18next/no-literal-string
   }>(`survey-${surveyId}`, {});
-  if (loading) {
+  if (!data?.survey?.form?.formElements || loading) {
     return <div></div>;
-  }
-  if (!data?.survey) {
+  } else if (!data?.survey) {
     return <div>{t("Survey not found")}</div>;
+  } else if (!formElement.current) {
+    return null;
   } else {
-    const form = data.survey.form!;
+    const form = data.survey.form;
     let index = 0;
     if (position) {
       index = parseInt(position);
     }
     const elements = form.formElements || [];
-    const formElement = elements[index];
-    const state = responseState[formElement.id];
-    const firstPage = index === 0;
+    const state = responseState[formElement.current.id];
     const lastPage = index === elements.length - 1;
 
     /**
@@ -85,7 +119,7 @@ function SurveyApp() {
      * @param state
      */
     function updateState(
-      formElement: Pick<FormElementProps<any>, "id">,
+      formElement: { id: number },
       state: Partial<FormElementState>
     ) {
       setResponseState((prev) => ({
@@ -103,8 +137,11 @@ function SurveyApp() {
      * @returns boolean
      */
     function canAdvance() {
-      const state = responseState[formElement.id];
-      if (!formElement.isRequired || (state?.value && !state?.errors)) {
+      if (!formElement.current) {
+        return false;
+      }
+      const state = responseState[formElement.current.id];
+      if (!formElement.current.isRequired || (state?.value && !state?.errors)) {
         return true;
       } else {
         return false;
@@ -112,14 +149,15 @@ function SurveyApp() {
     }
 
     async function handleAdvance() {
-      updateState(formElement, {
+      updateState(formElement.current!, {
         submissionAttempted: true,
       });
+      setFormElement((prev) => ({ ...prev, exiting: prev.current }));
       if (canAdvance()) {
         if (lastPage) {
           const responseData: { [elementId: number]: any } = {};
           for (const element of elements.filter((e) => e.type!.isInput)) {
-            responseData[element.id] = responseState[element.id].value;
+            responseData[element.id] = responseState[element.id]?.value;
           }
           const response = await createResponse({
             variables: {
@@ -140,111 +178,126 @@ function SurveyApp() {
       }
     }
 
+    const style = getCurrentStyle(
+      data.survey.form.formElements,
+      formElement.exiting || formElement.current,
+      isSmall
+    );
+
     return (
-      <SurveyAppLayout
-        showProgress={data.survey.showProgress}
-        progress={index / elements.length}
-        style={getCurrentStyle(data.survey.form?.formElements, formElement)}
-      >
-        <AnimatePresence
-          initial={false}
-          exitBeforeEnter={true}
-          custom={backwards}
-          onExitComplete={() => {
-            setBackwards(false);
-          }}
+      <>
+        <SurveyAppLayout
+          showProgress={data.survey.showProgress}
+          progress={index / elements.length}
+          style={style}
+          unsplashUserName={formElement.current.unsplashAuthorName || undefined}
+          unsplashUserUrl={formElement.current.unsplashAuthorUrl || undefined}
         >
-          <motion.div
+          <AnimatePresence
+            initial={false}
+            exitBeforeEnter={true}
             custom={backwards}
-            variants={{
-              exit: (direction: boolean) => ({
-                opacity: 0,
-                translateY: direction ? 100 : -100,
-                position: "relative",
-              }),
-              enter: (direction: boolean) => ({
-                opacity: 0,
-                translateY: direction ? -100 : 100,
-                position: "relative",
-              }),
-              show: () => ({
-                opacity: 1,
-                translateY: 0,
-                position: "relative",
-              }),
+            presenceAffectsLayout={false}
+            onExitComplete={() => {
+              setBackwards(false);
+              setFormElement((prev) => ({
+                ...prev,
+                exiting: undefined,
+              }));
             }}
-            transition={{
-              duration: 0.36,
-            }}
-            key={formElement.id}
-            initial="enter"
-            animate="show"
-            exit="exit"
           >
-            <FormElementFactory
-              {...formElement}
-              typeName={formElement.type!.componentName}
-              submissionAttempted={!!state?.submissionAttempted}
-              onChange={(value, errors) =>
-                updateState(formElement, {
-                  value,
-                  errors,
-                })
-              }
-              onSubmit={handleAdvance}
-              editable={false}
-              value={state?.value}
-            />
-            {(!!state?.value || !formElement.isRequired) &&
-              formElement.type?.componentName !== "WelcomeMessage" && (
-                <motion.div
-                  transition={{
-                    delay: 0.15,
-                  }}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <Button
-                    className="mt-5 mb-10"
-                    buttonClassName="bg-yellow-400"
-                    label={lastPage ? t("Complete Submission") : t("Next")}
-                    onClick={handleAdvance}
-                    disabled={createResponseState.loading}
-                    loading={createResponseState.loading}
-                  />
-                </motion.div>
-              )}
-          </motion.div>
-        </AnimatePresence>
-        <div
-          style={{ width: "fit-content", height: "fit-content" }}
-          className={`fixed bottom-5 right-5 lg:left-5 lg:top-5 ${
-            firstPage && "hidden"
-          }`}
-        >
-          <Link onClick={() => setBackwards(true)} to={`./${index - 1}`}>
-            <UpArrowIcon className="text-yellow-400  inline-block" />
-          </Link>
-          {!lastPage && (
-            <Link
-              onClick={(e) => {
-                updateState(formElement, {
-                  submissionAttempted: true,
-                });
-                if (!canAdvance()) {
-                  e.preventDefault();
-                }
-                setBackwards(false);
+            <motion.div
+              custom={backwards}
+              className="relative pb-12"
+              variants={{
+                exit: (direction: boolean) => ({
+                  opacity: 0,
+                  translateY: direction ? 100 : -100,
+                  position: "relative",
+                }),
+                enter: (direction: boolean) => ({
+                  opacity: 0,
+                  translateY: direction ? -100 : 100,
+                  position: "relative",
+                  // transitionDelay: "100ms",
+                }),
+                show: () => ({
+                  opacity: 1,
+                  translateY: 0,
+                  position: "relative",
+                }),
               }}
-              className={index + 1 === elements.length ? "hidden" : ""}
-              to={`./${index + 1}`}
+              transition={{
+                duration: 0.3,
+                // when: "afterChildren",
+                // staggerChildren: 0.5,
+              }}
+              key={formElement.current.id}
+              initial="enter"
+              animate="show"
+              exit="exit"
             >
-              <DownArrowIcon className="text-yellow-400  inline-block" />
-            </Link>
-          )}
-        </div>
-      </SurveyAppLayout>
+              <FormElementFactory
+                {...formElement.current}
+                typeName={formElement.current.typeId}
+                submissionAttempted={!!state?.submissionAttempted}
+                onChange={(value, errors) =>
+                  updateState(formElement.current!, {
+                    value,
+                    errors,
+                  })
+                }
+                onSubmit={handleAdvance}
+                editable={false}
+                value={state?.value}
+              />
+              {!formElement.exiting &&
+                (!!state?.value || !formElement.current.isRequired) &&
+                formElement.current.typeId !== "WelcomeMessage" &&
+                !state?.errors && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{
+                      duration: 0.3,
+                      when: "beforeChildren",
+                    }}
+                  >
+                    <Button
+                      className="mt-10 mb-10 absolute -bottom-3"
+                      label={
+                        lastPage && !!!formElement.exiting
+                          ? t("Complete Submission")
+                          : t("Next")
+                      }
+                      onClick={handleAdvance}
+                      disabled={
+                        createResponseState.loading || !!formElement.exiting
+                      }
+                      loading={createResponseState.loading}
+                      backgroundColor={style.secondaryColor}
+                    />
+                  </motion.div>
+                )}
+            </motion.div>
+          </AnimatePresence>
+          <SurveyNav
+            canAdvance={canAdvance()}
+            buttonColor={style.secondaryColor}
+            lastPage={parseInt(position) + 1 === elements.length}
+            index={parseInt(position)}
+            onPrev={() => setBackwards(true)}
+            onNext={(e) => {
+              handleAdvance();
+              if (!canAdvance()) {
+                e.preventDefault();
+              }
+            }}
+          />
+        </SurveyAppLayout>
+        <ImagePreloader formElements={elements} />
+      </>
     );
   }
 }
@@ -276,175 +329,60 @@ export function FormElementFactory({
   if (typeName in components) {
     const Component = components[typeName];
     return (
-      <Component componentSettings={componentSettings} {...formElementData} />
+      <Component
+        value={value}
+        componentSettings={componentSettings}
+        {...formElementData}
+      />
     );
   } else {
     return <Trans ns="errors">missing form element type {typeName}</Trans>;
   }
 }
 
-export const SurveyAppLayout: React.FunctionComponent<{
-  progress: number;
-  embeddedInAdmin?: boolean;
-  showProgress?: boolean;
-  style?: ComputedFormElementStyle;
-}> = ({ progress, children, embeddedInAdmin, showProgress, style }) => {
-  style = style || getCurrentStyle(undefined, undefined);
-  const isSmall = useMediaQuery("(max-width: 767px)");
-  useBodyBackground(
-    bgStyle(
-      style.backgroundImagePlacement,
-      style.backgroundImage,
-      style.backgroundColor
-    )
-  );
-
-  const right =
-    style.backgroundImagePlacement ===
-    FormElementBackgroundImagePlacement.Right;
-  const left =
-    style.backgroundImagePlacement === FormElementBackgroundImagePlacement.Left;
-  const top =
-    style.backgroundImagePlacement === FormElementBackgroundImagePlacement.Top;
-  const cover =
-    style.backgroundImagePlacement ===
-    FormElementBackgroundImagePlacement.Cover;
-
+function SurveyNav({
+  canAdvance,
+  lastPage,
+  buttonColor,
+  onNext,
+  onPrev,
+  index,
+}: {
+  canAdvance: boolean;
+  lastPage: boolean;
+  buttonColor: string;
+  onNext: MouseEventHandler<HTMLAnchorElement>;
+  onPrev: MouseEventHandler<HTMLAnchorElement>;
+  index: number;
+}) {
   return (
-    <div className={`w-full relative`}>
-      {showProgress && <ProgressBar progress={progress} />}
-      <div
-        className={`${top ? "" : "flex h-full"} ${left ? "flex-row" : ""} ${
-          right ? "flex-row-reverse" : ""
-        } ${cover ? "justify-center" : ""}`}
-        style={{
-          height: top
-            ? "auto"
-            : embeddedInAdmin
-            ? "calc(100vh - 56px)"
-            : "100vh",
-        }}
+    <div
+      style={{ width: "fit-content", height: "fit-content" }}
+      className={`fixed bottom-5 right-5 lg:left-5 lg:top-5 ${
+        index === 0 && "hidden"
+      }`}
+    >
+      <Link
+        onClick={onPrev}
+        to={`./${index - 1}`}
+        className="inline-block transition-colors duration-500"
       >
-        {!cover && (
-          <div
-            className={`flex-1 w-full ${
-              top ? "h-32 md:h-52 lg:h-64" : "h-full"
-            } overflow-hidden`}
-            style={{
-              ...(top
-                ? {
-                    WebkitMaskImage:
-                      "linear-gradient(to top, transparent 0%, black 100%)",
-                    maskImage:
-                      "linear-gradient(to top, transparent 0%, black 100%)",
-                  }
-                : {}),
-              backgroundImage: `url(${style.backgroundImage || ""})`,
-              backgroundPosition: "center bottom",
-              backgroundSize: "cover",
-            }}
-          ></div>
-        )}
-        <div
-          className={`px-5 max-w-xl mx-auto text-white survey-content ${
-            top
-              ? ""
-              : "flex-0 flex flex-col center-ish max-h-full overflow-y-auto md:w-128 lg:w-160 xl:w-full 2xl:mx-12"
-          }`}
+        <UpArrowIcon className="inline-block" style={{ color: buttonColor }} />
+      </Link>
+      {!lastPage && (
+        <Link
+          onClick={onNext}
+          className={"inline-block transition-colors duration-500"}
+          to={`./${index + 1}`}
         >
-          <div className="max-h-full pt-5">{children}</div>
-        </div>
-      </div>
+          <DownArrowIcon
+            className="inline-block"
+            style={{ color: buttonColor }}
+          />
+        </Link>
+      )}
     </div>
   );
-};
-
-type FormElementStyle = Pick<
-  FormElement,
-  | "backgroundColor"
-  | "backgroundImage"
-  | "backgroundEdgeType"
-  | "backgroundImagePlacement"
-  | "textVariant"
->;
-type ComputedFormElementStyle = {
-  backgroundColor: string;
-  backgroundImage: string;
-  backgroundEdgeType: FormElementBackgroundEdgeType;
-  backgroundImagePlacement: FormElementBackgroundImagePlacement;
-  textVariant: FormElementTextVariant;
-};
-export function getCurrentStyle(
-  formElements: FormElementStyle[] | undefined | null,
-  current: FormElementStyle | undefined
-): ComputedFormElementStyle {
-  if (!formElements || !current || formElements.length === 0) {
-    return {
-      backgroundColor: "#efefef",
-      textVariant: FormElementTextVariant.Dynamic,
-      backgroundEdgeType: FormElementBackgroundEdgeType.Blur,
-      backgroundImagePlacement: FormElementBackgroundImagePlacement.Top,
-      backgroundImage: "",
-    };
-  }
-  const index = formElements.indexOf(current) || 0;
-  let style: FormElementStyle = formElements[0];
-  for (var i = 0; i <= index; i++) {
-    if (style) {
-      style = {
-        ...style,
-        ...formElements[i],
-      };
-    } else {
-      style = { ...formElements[i] };
-    }
-  }
-  return style as ComputedFormElementStyle;
 }
-
-const bgStyle = (
-  layout: FormElementBackgroundImagePlacement,
-  image: string,
-  color: string
-) => {
-  let position = "";
-  // eslint-disable-next-line i18next/no-literal-string
-  image = `url(${image})`;
-  switch (layout) {
-    case FormElementBackgroundImagePlacement.Cover:
-      position = "center / cover no-repeat";
-      break;
-    case FormElementBackgroundImagePlacement.Top:
-      position = "fixed no-repeat";
-      const c = Color(color);
-      const secondaryColor = c.darken(0.3).saturate(0.5).toString();
-      // eslint-disable-next-line i18next/no-literal-string
-      image = `linear-gradient(128deg, ${color}, ${secondaryColor})`;
-      break;
-    // case FormElementBackgroundImagePlacement.Left:
-    //   position = "left top / 50% 100% no-repeat";
-    //   break;
-    // case FormElementBackgroundImagePlacement.Right:
-    //   position = "right top / 50% 100% no-repeat";
-    //   break;
-    default:
-      image = "";
-      break;
-  }
-  // eslint-disable-next-line i18next/no-literal-string
-  return `${position} ${image} ${color}`;
-
-  // // eslint-disable-next-line i18next/no-literal-string
-  // const imgCoverStyle = `center / cover no-repeat url(${style.backgroundImage}) ${backgroundColor}`;
-  // // eslint-disable-next-line i18next/no-literal-string
-  // const stdBgStyle = `${backgroundColor} linear-gradient(128deg, ${backgroundColor}, ${secondaryColor}) no-repeat fixed`;
-  // // eslint-disable-next-line i18next/no-literal-string
-  // const rightBgStyle = `center / 50% no-repeat url(${style.backgroundImage}) 10% ${backgroundColor}`;
-  // console.log(
-  //   style.backgroundImagePlacement === FormElementBackgroundImagePlacement.Cover
-  //     ? rightBgStyle
-  //     : stdBgStyle
-  // );
-};
 
 export default SurveyApp;

@@ -1,6 +1,7 @@
-import React from "react";
+// import Color from "color";
+import React, { CSSProperties } from "react";
 import { useHistory } from "react-router-dom";
-
+import { colord, extend } from "colord";
 export interface ButtonProps {
   /* Disables user interaction */
   disabled?: boolean;
@@ -26,6 +27,9 @@ export interface ButtonProps {
   title?: string;
   innerRef?: React.MutableRefObject<any>;
   type?: "submit" | "button" | "reset";
+  /* hex or rgb */
+  backgroundColor?: string;
+  shadowSize?: "shadow-sm" | "shadow" | "shadow-md" | "shadow-lg" | "shadow-xl";
 }
 
 export default function Button(props: ButtonProps) {
@@ -94,10 +98,30 @@ export default function Button(props: ButtonProps) {
       </svg>
     </div>
   );
+
+  let style: CSSProperties = {};
+  if (props.backgroundColor) {
+    const bg = colord(props.backgroundColor);
+    // eslint-disable-next-line i18next/no-literal-string
+    style.background = `linear-gradient(180deg, ${
+      props.backgroundColor
+    } 50%, ${bg.darken(0.1).saturate(0.1).toHex()} 100%)`;
+    // style.backgroundColor = props.backgroundColor;
+    if (bg.isDark()) {
+      style.color = "white";
+    } else {
+      style.color = "black";
+    }
+
+    style.border = "none";
+  }
+
   return (
     <span
       title={props.title}
-      className={`inline-flex shadow-sm ${props.className}`}
+      className={`inline-flex ${props.shadowSize || "shadow-sm"} ${
+        props.className
+      }`}
       onClick={props.disabled ? undefined : onClick}
     >
       {props.labelFor ? (
@@ -114,6 +138,7 @@ export default function Button(props: ButtonProps) {
           ref={props.innerRef}
           autoFocus={props.autofocus}
           className={`${buttonClassName} ${props.buttonClassName}`}
+          style={style}
         >
           {label}
           {props.loading && spinner}

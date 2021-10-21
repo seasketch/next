@@ -1,6 +1,8 @@
+import { useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
 import TextInput from "../components/TextInput";
+import { SurveyStyleContext } from "../surveys/SurveyAppLayout";
 import {
   FormElementBody,
   FormElementComponent,
@@ -16,6 +18,7 @@ const WelcomeMessage: FormElementComponent<{ beginButtonText: string }> = (
   props
 ) => {
   const { t } = useTranslation("admin:surveys");
+  const style = useContext(SurveyStyleContext);
   return (
     <>
       <FormElementBody
@@ -34,6 +37,8 @@ const WelcomeMessage: FormElementComponent<{ beginButtonText: string }> = (
             : ""
         }
         primary
+        backgroundColor={style.secondaryColor}
+        shadowSize="shadow-lg"
       />
       <FormElementEditorPortal
         render={(updateBaseSetting, updateComponentSetting) => {

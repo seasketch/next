@@ -416,6 +416,37 @@ export enum BasemapsOrderBy {
 
 
 
+/** All input for the `clearFormElementStyle` mutation. */
+export type ClearFormElementStyleInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `clearFormElementStyle` mutation. */
+export type ClearFormElementStylePayload = {
+  __typename?: 'ClearFormElementStylePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formElement?: Maybe<FormElement>;
+  /** An edge for our `FormElement`. May be used by Relay 1. */
+  formElementEdge?: Maybe<FormElementsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `clearFormElementStyle` mutation. */
+export type ClearFormElementStylePayloadFormElementEdgeArgs = {
+  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+};
+
 /**
  * Community guidelines can be set by project admins with standards for using the
  * discussion forums. Users will be shown this content before making their first
@@ -3530,12 +3561,13 @@ export type FormElement = Node & {
   __typename?: 'FormElement';
   /** Optional background color to transition the form to when this element is displayed. */
   backgroundColor?: Maybe<Scalars['String']>;
-  backgroundEdgeType: FormElementBackgroundEdgeType;
+  backgroundHeight?: Maybe<Scalars['Int']>;
   /** Optional background image to display when this form_element appears. */
   backgroundImage?: Maybe<Scalars['String']>;
-  /** Whether the blur the image -> background transition. Only for desktop. */
+  /** Layout of image in relation to form_element content. */
   backgroundImagePlacement: FormElementBackgroundImagePlacement;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
+  backgroundWidth?: Maybe<Scalars['Int']>;
   /**
    * [prosemirror](https://prosemirror.net/) document representing a rich-text
    * question or informational content. Level 1 headers can be assumed to be the
@@ -3567,6 +3599,8 @@ export type FormElement = Node & {
    * update.
    */
   position: Scalars['Int'];
+  /** Color used to style navigation controls */
+  secondaryColor?: Maybe<Scalars['String']>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -3575,6 +3609,8 @@ export type FormElement = Node & {
   textVariant: FormElementTextVariant;
   type?: Maybe<FormElementType>;
   typeId: Scalars['String'];
+  unsplashAuthorName?: Maybe<Scalars['String']>;
+  unsplashAuthorUrl?: Maybe<Scalars['String']>;
 };
 
 
@@ -3594,11 +3630,6 @@ export type FormElementConditionalRenderingRulesArgs = {
   orderBy?: Maybe<Array<FormConditionalRenderingRulesOrderBy>>;
 };
 
-export enum FormElementBackgroundEdgeType {
-  Blur = 'BLUR',
-  Crisp = 'CRISP'
-}
-
 export enum FormElementBackgroundImagePlacement {
   Cover = 'COVER',
   Left = 'LEFT',
@@ -3610,12 +3641,11 @@ export enum FormElementBackgroundImagePlacement {
 export type FormElementInput = {
   /** Optional background color to transition the form to when this element is displayed. */
   backgroundColor?: Maybe<Scalars['String']>;
-  backgroundEdgeType?: Maybe<FormElementBackgroundEdgeType>;
-  /** Optional background image to display when this form_element appears. */
-  backgroundImage?: Maybe<Scalars['String']>;
-  /** Whether the blur the image -> background transition. Only for desktop. */
+  backgroundHeight?: Maybe<Scalars['Int']>;
+  /** Layout of image in relation to form_element content. */
   backgroundImagePlacement?: Maybe<FormElementBackgroundImagePlacement>;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
+  backgroundWidth?: Maybe<Scalars['Int']>;
   /**
    * [prosemirror](https://prosemirror.net/) document representing a rich-text
    * question or informational content. Level 1 headers can be assumed to be the
@@ -3643,6 +3673,8 @@ export type FormElementInput = {
    * update.
    */
   position?: Maybe<Scalars['Int']>;
+  /** Color used to style navigation controls */
+  secondaryColor?: Maybe<Scalars['String']>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -3656,12 +3688,11 @@ export type FormElementInput = {
 export type FormElementPatch = {
   /** Optional background color to transition the form to when this element is displayed. */
   backgroundColor?: Maybe<Scalars['String']>;
-  backgroundEdgeType?: Maybe<FormElementBackgroundEdgeType>;
-  /** Optional background image to display when this form_element appears. */
-  backgroundImage?: Maybe<Scalars['String']>;
-  /** Whether the blur the image -> background transition. Only for desktop. */
+  backgroundHeight?: Maybe<Scalars['Int']>;
+  /** Layout of image in relation to form_element content. */
   backgroundImagePlacement?: Maybe<FormElementBackgroundImagePlacement>;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
+  backgroundWidth?: Maybe<Scalars['Int']>;
   /**
    * [prosemirror](https://prosemirror.net/) document representing a rich-text
    * question or informational content. Level 1 headers can be assumed to be the
@@ -3686,6 +3717,8 @@ export type FormElementPatch = {
    * update.
    */
   position?: Maybe<Scalars['Int']>;
+  /** Color used to style navigation controls */
+  secondaryColor?: Maybe<Scalars['String']>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -4774,6 +4807,7 @@ export type Mutation = {
   addValidChildSketchClass?: Maybe<AddValidChildSketchClassPayload>;
   /** For invite_only projects. Approve access request by a user. Must be an administrator of the project. */
   approveParticipant?: Maybe<ApproveParticipantPayload>;
+  clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
   confirmOnboarded?: Maybe<ConfirmOnboardedPayload>;
   /**
@@ -5064,6 +5098,7 @@ export type Mutation = {
    * Returns the same inviteId if successful.
    */
   sendSurveyInviteReminder?: Maybe<Scalars['Int']>;
+  setFormElementBackground: FormElement;
   /**
    * Sets the positions of all elements in a form at once. Any missing element ids from
    * the input will be positioned at the end of the form.
@@ -5266,6 +5301,12 @@ export type MutationAddValidChildSketchClassArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationApproveParticipantArgs = {
   input: ApproveParticipantInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationClearFormElementStyleArgs = {
+  input: ClearFormElementStyleInput;
 };
 
 
@@ -5871,6 +5912,21 @@ export type MutationSendProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSendSurveyInviteReminderArgs = {
   inviteId: Scalars['Int'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetFormElementBackgroundArgs = {
+  backgroundColor: Scalars['String'];
+  backgroundHeight: Scalars['Int'];
+  backgroundPalette: Array<Maybe<Scalars['String']>>;
+  backgroundUrl: Scalars['String'];
+  backgroundWidth: Scalars['Int'];
+  downloadUrl: Scalars['String'];
+  id: Scalars['Int'];
+  secondaryColor: Scalars['String'];
+  unsplashAuthorName: Scalars['String'];
+  unsplashAuthorUrl: Scalars['String'];
 };
 
 
@@ -13817,7 +13873,7 @@ export type SurveyByIdQuery = (
 
 export type FormElementFullDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'backgroundImage' | 'backgroundEdgeType' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
   & { conditionalRenderingRules: Array<(
     { __typename?: 'FormConditionalRenderingRule' }
     & Pick<FormConditionalRenderingRule, 'id' | 'operator' | 'predicateFieldId' | 'value'>
@@ -14015,9 +14071,8 @@ export type GetPhotosQuery = (
 
 export type UpdateFormElementBackgroundMutationVariables = Exact<{
   id: Scalars['Int'];
-  backgroundImage?: Maybe<Scalars['String']>;
   backgroundColor?: Maybe<Scalars['String']>;
-  backgroundEdgeType?: Maybe<FormElementBackgroundEdgeType>;
+  secondaryColor?: Maybe<Scalars['String']>;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
   textVariant?: Maybe<FormElementTextVariant>;
   backgroundImagePlacement?: Maybe<FormElementBackgroundImagePlacement>;
@@ -14030,7 +14085,45 @@ export type UpdateFormElementBackgroundMutation = (
     { __typename?: 'UpdateFormElementPayload' }
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'backgroundColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'backgroundEdgeType'>
+      & Pick<FormElement, 'id' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl'>
+    )> }
+  )> }
+);
+
+export type SetFormElementBackgroundMutationVariables = Exact<{
+  id: Scalars['Int'];
+  backgroundColor: Scalars['String'];
+  secondaryColor: Scalars['String'];
+  backgroundUrl: Scalars['String'];
+  downloadUrl: Scalars['String'];
+  backgroundPalette: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
+  unsplashAuthorUrl: Scalars['String'];
+  unsplashAuthorName: Scalars['String'];
+  backgroundWidth: Scalars['Int'];
+  backgroundHeight: Scalars['Int'];
+}>;
+
+
+export type SetFormElementBackgroundMutation = (
+  { __typename?: 'Mutation' }
+  & { setFormElementBackground: (
+    { __typename?: 'FormElement' }
+    & Pick<FormElement, 'id' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight'>
+  ) }
+);
+
+export type ClearFormElementStyleMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type ClearFormElementStyleMutation = (
+  { __typename?: 'Mutation' }
+  & { clearFormElementStyle?: Maybe<(
+    { __typename?: 'ClearFormElementStylePayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'backgroundColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'textVariant' | 'secondaryColor'>
     )> }
   )> }
 );
@@ -14050,7 +14143,7 @@ export type SurveyQuery = (
       & Pick<Form, 'id'>
       & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
-        & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position' | 'backgroundColor' | 'backgroundEdgeType' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant'>
+        & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight'>
         & { type?: Maybe<(
           { __typename?: 'FormElementType' }
           & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
@@ -14774,11 +14867,15 @@ export const FormElementFullDetailsFragmentDoc = gql`
   }
   typeId
   backgroundColor
+  secondaryColor
   backgroundImage
-  backgroundEdgeType
   backgroundImagePlacement
   backgroundPalette
   textVariant
+  unsplashAuthorUrl
+  unsplashAuthorName
+  backgroundWidth
+  backgroundHeight
 }
     `;
 export const ParticipantListDetailsFragmentDoc = gql`
@@ -18620,18 +18717,20 @@ export type GetPhotosQueryHookResult = ReturnType<typeof useGetPhotosQuery>;
 export type GetPhotosLazyQueryHookResult = ReturnType<typeof useGetPhotosLazyQuery>;
 export type GetPhotosQueryResult = Apollo.QueryResult<GetPhotosQuery, GetPhotosQueryVariables>;
 export const UpdateFormElementBackgroundDocument = gql`
-    mutation UpdateFormElementBackground($id: Int!, $backgroundImage: String, $backgroundColor: String, $backgroundEdgeType: FormElementBackgroundEdgeType, $backgroundPalette: [String], $textVariant: FormElementTextVariant, $backgroundImagePlacement: FormElementBackgroundImagePlacement) {
+    mutation UpdateFormElementBackground($id: Int!, $backgroundColor: String, $secondaryColor: String, $backgroundPalette: [String], $textVariant: FormElementTextVariant, $backgroundImagePlacement: FormElementBackgroundImagePlacement) {
   updateFormElement(
-    input: {id: $id, patch: {backgroundImage: $backgroundImage, backgroundColor: $backgroundColor, backgroundPalette: $backgroundPalette, backgroundEdgeType: $backgroundEdgeType, textVariant: $textVariant, backgroundImagePlacement: $backgroundImagePlacement}}
+    input: {id: $id, patch: {backgroundColor: $backgroundColor, secondaryColor: $secondaryColor, backgroundPalette: $backgroundPalette, textVariant: $textVariant, backgroundImagePlacement: $backgroundImagePlacement}}
   ) {
     formElement {
       id
       backgroundColor
+      secondaryColor
       backgroundImage
       backgroundImagePlacement
       backgroundPalette
       textVariant
-      backgroundEdgeType
+      unsplashAuthorName
+      unsplashAuthorUrl
     }
   }
 }
@@ -18652,9 +18751,8 @@ export type UpdateFormElementBackgroundMutationFn = Apollo.MutationFunction<Upda
  * const [updateFormElementBackgroundMutation, { data, loading, error }] = useUpdateFormElementBackgroundMutation({
  *   variables: {
  *      id: // value for 'id'
- *      backgroundImage: // value for 'backgroundImage'
  *      backgroundColor: // value for 'backgroundColor'
- *      backgroundEdgeType: // value for 'backgroundEdgeType'
+ *      secondaryColor: // value for 'secondaryColor'
  *      backgroundPalette: // value for 'backgroundPalette'
  *      textVariant: // value for 'textVariant'
  *      backgroundImagePlacement: // value for 'backgroundImagePlacement'
@@ -18668,6 +18766,109 @@ export function useUpdateFormElementBackgroundMutation(baseOptions?: Apollo.Muta
 export type UpdateFormElementBackgroundMutationHookResult = ReturnType<typeof useUpdateFormElementBackgroundMutation>;
 export type UpdateFormElementBackgroundMutationResult = Apollo.MutationResult<UpdateFormElementBackgroundMutation>;
 export type UpdateFormElementBackgroundMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementBackgroundMutation, UpdateFormElementBackgroundMutationVariables>;
+export const SetFormElementBackgroundDocument = gql`
+    mutation SetFormElementBackground($id: Int!, $backgroundColor: String!, $secondaryColor: String!, $backgroundUrl: String!, $downloadUrl: String!, $backgroundPalette: [String]!, $unsplashAuthorUrl: String!, $unsplashAuthorName: String!, $backgroundWidth: Int!, $backgroundHeight: Int!) {
+  setFormElementBackground(
+    backgroundColor: $backgroundColor
+    secondaryColor: $secondaryColor
+    backgroundPalette: $backgroundPalette
+    backgroundUrl: $backgroundUrl
+    downloadUrl: $downloadUrl
+    id: $id
+    unsplashAuthorName: $unsplashAuthorName
+    unsplashAuthorUrl: $unsplashAuthorUrl
+    backgroundHeight: $backgroundHeight
+    backgroundWidth: $backgroundWidth
+  ) {
+    id
+    backgroundColor
+    secondaryColor
+    backgroundImage
+    backgroundPalette
+    unsplashAuthorName
+    unsplashAuthorUrl
+    backgroundWidth
+    backgroundHeight
+  }
+}
+    `;
+export type SetFormElementBackgroundMutationFn = Apollo.MutationFunction<SetFormElementBackgroundMutation, SetFormElementBackgroundMutationVariables>;
+
+/**
+ * __useSetFormElementBackgroundMutation__
+ *
+ * To run a mutation, you first call `useSetFormElementBackgroundMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetFormElementBackgroundMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setFormElementBackgroundMutation, { data, loading, error }] = useSetFormElementBackgroundMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      backgroundColor: // value for 'backgroundColor'
+ *      secondaryColor: // value for 'secondaryColor'
+ *      backgroundUrl: // value for 'backgroundUrl'
+ *      downloadUrl: // value for 'downloadUrl'
+ *      backgroundPalette: // value for 'backgroundPalette'
+ *      unsplashAuthorUrl: // value for 'unsplashAuthorUrl'
+ *      unsplashAuthorName: // value for 'unsplashAuthorName'
+ *      backgroundWidth: // value for 'backgroundWidth'
+ *      backgroundHeight: // value for 'backgroundHeight'
+ *   },
+ * });
+ */
+export function useSetFormElementBackgroundMutation(baseOptions?: Apollo.MutationHookOptions<SetFormElementBackgroundMutation, SetFormElementBackgroundMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetFormElementBackgroundMutation, SetFormElementBackgroundMutationVariables>(SetFormElementBackgroundDocument, options);
+      }
+export type SetFormElementBackgroundMutationHookResult = ReturnType<typeof useSetFormElementBackgroundMutation>;
+export type SetFormElementBackgroundMutationResult = Apollo.MutationResult<SetFormElementBackgroundMutation>;
+export type SetFormElementBackgroundMutationOptions = Apollo.BaseMutationOptions<SetFormElementBackgroundMutation, SetFormElementBackgroundMutationVariables>;
+export const ClearFormElementStyleDocument = gql`
+    mutation clearFormElementStyle($id: Int!) {
+  clearFormElementStyle(input: {id: $id}) {
+    formElement {
+      id
+      backgroundColor
+      backgroundImage
+      backgroundPalette
+      unsplashAuthorName
+      unsplashAuthorUrl
+      textVariant
+      secondaryColor
+    }
+  }
+}
+    `;
+export type ClearFormElementStyleMutationFn = Apollo.MutationFunction<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>;
+
+/**
+ * __useClearFormElementStyleMutation__
+ *
+ * To run a mutation, you first call `useClearFormElementStyleMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useClearFormElementStyleMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [clearFormElementStyleMutation, { data, loading, error }] = useClearFormElementStyleMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useClearFormElementStyleMutation(baseOptions?: Apollo.MutationHookOptions<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>(ClearFormElementStyleDocument, options);
+      }
+export type ClearFormElementStyleMutationHookResult = ReturnType<typeof useClearFormElementStyleMutation>;
+export type ClearFormElementStyleMutationResult = Apollo.MutationResult<ClearFormElementStyleMutation>;
+export type ClearFormElementStyleMutationOptions = Apollo.BaseMutationOptions<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   survey(id: $id) {
@@ -18684,6 +18885,7 @@ export const SurveyDocument = gql`
         body
         isRequired
         position
+        typeId
         type {
           componentName
           isInput
@@ -18692,11 +18894,14 @@ export const SurveyDocument = gql`
           label
         }
         backgroundColor
-        backgroundEdgeType
+        secondaryColor
         backgroundImage
         backgroundImagePlacement
-        backgroundPalette
         textVariant
+        unsplashAuthorName
+        unsplashAuthorUrl
+        backgroundWidth
+        backgroundHeight
       }
     }
   }

@@ -67,6 +67,7 @@
     "codemirror": "^5.58.1",
     "codemirror-colorpicker": "^1.9.72",
     "color": "^2.0.1",
+    "colord": "^2.9.0",
     "colorthief": "^2.3.2",
     "comlink-loader": "^2.0.0",
     "formik": "^2.2.9",

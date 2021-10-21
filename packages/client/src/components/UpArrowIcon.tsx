@@ -1,9 +1,18 @@
-export default function UpArrowIcon({ className }: { className?: string }) {
+import { CSSProperties } from "react";
+
+export default function UpArrowIcon({
+  className,
+  style,
+}: {
+  className?: string;
+  style: CSSProperties;
+}) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className={`${className} h-10 w-10 text-white`}
+      className={`${className} h-10 w-10 `}
       viewBox="0 0 20 20"
+      style={style}
       fill="currentColor"
     >
       <path

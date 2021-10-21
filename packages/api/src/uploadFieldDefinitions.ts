@@ -12,20 +12,6 @@ const s3 = new S3.default({
 });
 
 export default [
-  // {
-  //   match: ({
-  //     schema,
-  //     table,
-  //     column,
-  //     tags,
-  //   }: {
-  //     schema: string;
-  //     table: string;
-  //     column: string;
-  //     tags: string[];
-  //   }) => table === "user_profiles" && column === "picture",
-  //   resolve: resolveAvatarUrlUpload,
-  // },
   {
     match: ({
       schema,
@@ -37,12 +23,23 @@ export default [
       table: string;
       column: string;
       tags: string[];
-    }) =>
-      (schema === "public" &&
-        ((table === "projects" && column === "logo_url") ||
-          (table === "sprites" && column === "url"))) ||
-      (table === "basemaps" && column === "thumbnail") ||
-      (table === "user_profiles" && column === "picture"),
+    }) => {
+      if (schema === "public") {
+        if (table === "projects" && column === "logo_url") {
+          return true;
+        }
+        if (table === "sprites" && column === "url") {
+          return true;
+        }
+        if (table === "basemaps" && column === "thumbnail") {
+          return true;
+        }
+        if (table === "user_profiles" && column === "picture") {
+          return true;
+        }
+      }
+      return false;
+    },
     resolve: resolveLogoUrlUpload,
   },
 ];
@@ -120,7 +117,6 @@ const uploadStream = (key: string, ContentType: string) => {
 };
 
 async function resolveAvatarUrlUpload(upload: FileUpload) {
-  console.log("resolve avatar");
   const { filename, createReadStream, mimetype, encoding } = upload;
   const stream = createReadStream();
   // stream.pipe(avatarResizer);

@@ -4,6 +4,11 @@ comment on column form_elements.background_color is '
 Optional background color to transition the form to when this element is displayed.
 ';
 
+alter table form_elements add column if not exists secondary_color text;
+comment on column form_elements.secondary_color is '
+Color used to style navigation controls
+';
+
 alter table form_elements drop column text_variant;
 drop type if exists form_element_text_variant;
 create type form_element_text_variant as enum ('LIGHT', 'DARK', 'DYNAMIC');
@@ -14,6 +19,7 @@ Indicates whether the form element should be displayed with dark or light text v
 
 alter table form_elements add column if not exists background_image text;
 comment on column form_elements.background_image is '
+@omit create,update
 Optional background image to display when this form_element appears.
 ';
 
@@ -28,12 +34,27 @@ Layout of image in relation to form_element content.
 
 alter table form_elements drop column if exists background_edge_type;
 drop type if exists form_element_background_edge_type;
-create type form_element_background_edge_type as enum ('BLUR', 'CRISP');
-alter table form_elements add column if not exists background_edge_type form_element_background_edge_type not null default 'BLUR'; 
-comment on column form_elements.background_image_placement is '
-Whether the blur the image -> background transition. Only for desktop.
-';
+
 
 alter table form_elements add column if not exists background_palette text[];
+alter table form_elements add column if not exists unsplash_author_name text;
+alter table form_elements add column if not exists unsplash_author_url text;
 
-grant update(background_color, background_image, background_image_placement, background_palette, text_variant, background_edge_type) on table form_elements to seasketch_user;
+comment on column form_elements.unsplash_author_name is '@omit create,update';
+comment on column form_elements.unsplash_author_url is '@omit create,update';
+
+alter table form_elements add column if not exists background_width int;
+alter table form_elements add column if not exists background_height int;
+
+grant update(background_color, background_image, background_image_placement, background_palette, text_variant, secondary_color, unsplash_author_name, unsplash_author_url, background_width, background_height) on table form_elements to seasketch_user;
+
+
+create or replace function clear_form_element_style(id int)
+  returns form_elements
+  language sql
+  as $$
+    update form_elements set background_image = null, background_color = null, background_image_placement = 'TOP', background_palette = null, secondary_color = null, text_variant = 'DYNAMIC', unsplash_author_url = null, unsplash_author_name = null, background_width = null, background_height = null where form_elements.id = "id" returning *;
+  $$;
+
+grant execute on function clear_form_element_style to seasketch_user;
+

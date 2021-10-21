@@ -27,6 +27,7 @@ export default function UnsplashImageChooser({
     variables: {
       query: debouncedQuery,
     },
+    skip: !debouncedQuery.length,
   });
 
   const [processing, setProcessing] = useState<string | null>(null);
@@ -95,7 +96,7 @@ export default function UnsplashImageChooser({
               </button>
             ))}
           </Masonry>
-          {query.length &&
+          {debouncedQuery.length &&
           data?.getUnsplashPhotos.results &&
           data?.getUnsplashPhotos.results.length === 0 ? (
             <p className="text-center text-gray-400 font-bold text-lg">

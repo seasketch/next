@@ -46,11 +46,13 @@ const allowedCorsDomains = [
   "https://seasketch.org",
   "https://www.seasketch.org",
 ];
+
 const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploads", {
   env,
   maintenanceRole: maintenance.taskRole,
   allowedCorsDomains,
 });
+
 const dataHostDbUpdater = new DataHostDbUpdaterStack(
   app,
   "SeaSketchDataHostDbUpdater",
