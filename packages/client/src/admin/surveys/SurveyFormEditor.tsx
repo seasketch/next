@@ -116,11 +116,15 @@ export default function SurveyFormEditor({
 
   const [clearStyle, clearStyleState] = useClearFormElementStyleMutation({
     onError,
-    // @ts-ignore
     optimisticResponse: (data) => {
       return {
+        __typename: "Mutation",
         clearFormElementStyle: {
+          __typename: "ClearFormElementStylePayload",
           formElement: {
+            __typename: "FormElement",
+            secondaryColor: null,
+            textVariant: FormElementTextVariant.Dynamic,
             id: data.id,
             backgroundColor: null,
             backgroundImage: null,

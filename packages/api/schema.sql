@@ -2421,10 +2421,10 @@ Layout of image in relation to form_element content.
 -- Name: clear_form_element_style(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.clear_form_element_style(id integer) RETURNS public.form_elements
+CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS public.form_elements
     LANGUAGE sql
     AS $$
-    update form_elements set background_image = null, background_color = null, background_image_placement = 'TOP', background_palette = null, secondary_color = null, text_variant = 'DYNAMIC', unsplash_author_url = null, unsplash_author_name = null, background_width = null, background_height = null where form_elements.id = "id" returning *;
+    update form_elements set background_image = null, background_color = null, background_image_placement = 'TOP', background_palette = null, secondary_color = null, text_variant = 'DYNAMIC', unsplash_author_url = null, unsplash_author_name = null, background_width = null, background_height = null where form_elements.id = form_element_id returning *;
   $$;
 
 
@@ -14275,11 +14275,11 @@ GRANT UPDATE(background_image_placement) ON TABLE public.form_elements TO seaske
 
 
 --
--- Name: FUNCTION clear_form_element_style(id integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION clear_form_element_style(form_element_id integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.clear_form_element_style(id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.clear_form_element_style(id integer) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) TO seasketch_user;
 
 
 --

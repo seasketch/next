@@ -423,7 +423,7 @@ export type ClearFormElementStyleInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  id?: Maybe<Scalars['Int']>;
+  formElementId?: Maybe<Scalars['Int']>;
 };
 
 /** The output of our `clearFormElementStyle` mutation. */
@@ -18829,7 +18829,7 @@ export type SetFormElementBackgroundMutationResult = Apollo.MutationResult<SetFo
 export type SetFormElementBackgroundMutationOptions = Apollo.BaseMutationOptions<SetFormElementBackgroundMutation, SetFormElementBackgroundMutationVariables>;
 export const ClearFormElementStyleDocument = gql`
     mutation clearFormElementStyle($id: Int!) {
-  clearFormElementStyle(input: {id: $id}) {
+  clearFormElementStyle(input: {formElementId: $id}) {
     formElement {
       id
       backgroundColor

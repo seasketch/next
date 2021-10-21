@@ -310,7 +310,7 @@ mutation SetFormElementBackground(
 }
 
 mutation clearFormElementStyle($id: Int!) {
-  clearFormElementStyle(input: { id: $id }) {
+  clearFormElementStyle(input: { formElementId: $id }) {
     formElement {
       id
       backgroundColor

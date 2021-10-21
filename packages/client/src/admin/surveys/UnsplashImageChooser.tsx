@@ -78,6 +78,7 @@ export default function UnsplashImageChooser({
                         result,
                         colors.filter((v, i, a) => a.indexOf(v) === i)
                       );
+                      setProcessing(null);
                     });
                     img.crossOrigin = "Anonymous";
                     img.src = result.urls.regular;

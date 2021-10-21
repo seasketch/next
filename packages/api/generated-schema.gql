@@ -490,7 +490,7 @@ input ClearFormElementStyleInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-  id: Int
+  formElementId: Int
 }
 
 """The output of our `clearFormElementStyle` mutation."""
