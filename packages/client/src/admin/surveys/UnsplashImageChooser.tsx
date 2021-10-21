@@ -21,7 +21,7 @@ export default function UnsplashImageChooser({
 }) {
   const { t } = useTranslation("admin:surveys");
   const [query, setQuery] = useState("");
-  const debouncedQuery = useDebounce(query, 800);
+  const debouncedQuery = useDebounce(query, 500);
 
   const { data, loading, error } = useGetPhotosQuery({
     variables: {
@@ -107,6 +107,11 @@ export default function UnsplashImageChooser({
             </p>
           ) : (
             ""
+          )}
+          {error && (
+            <p className="text-center text-gray-400 font-bold text-lg">
+              {error.message}
+            </p>
           )}
         </div>
       </div>
