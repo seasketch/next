@@ -44,7 +44,10 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
         required={props.isRequired}
         editable={props.editable}
       />
-      <div className="w-full md:w-96 max-w-full form-element-short-text pt-1">
+      <div
+        className="w-full md:w-96 max-w-full form-element-short-text pt-1"
+        style={{ height: 68 }}
+      >
         <TextInput
           error={props.submissionAttempted && errors ? errors : undefined}
           value={props.value || ""}

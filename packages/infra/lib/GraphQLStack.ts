@@ -32,11 +32,14 @@ export class GraphQLStack extends cdk.Stack {
     }
   ) {
     super(scope, id, props);
-    const { AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID } = process.env;
+    const { AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID, UNSPLASH_KEY } = process.env;
     if (!AUTH0_CLIENT_ID || !AUTH0_CLIENT_SECRET) {
       throw new Error(
         `AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID environment variables must be set`
       );
+    }
+    if (!UNSPLASH_KEY) {
+      throw new Error(`UNSPLASH_KEY environment variable must be set`);
     }
     if (!process.env.COMMIT) {
       throw new Error(
@@ -83,6 +86,7 @@ export class GraphQLStack extends cdk.Stack {
             SES_EMAIL_SOURCE: props.emailSource,
             GRAPHILE_WORKER_CONCURRENCY: "5",
             BUILD: process.env.BUILD || "dev",
+            UNSPLASH_KEY,
           },
           containerPort: 3857,
         },

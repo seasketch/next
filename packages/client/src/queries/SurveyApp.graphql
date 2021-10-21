@@ -13,6 +13,7 @@ query Survey($id: Int!) {
         body
         isRequired
         position
+        typeId
         type {
           componentName
           isInput
@@ -20,6 +21,15 @@ query Survey($id: Int!) {
           isSurveysOnly
           label
         }
+        backgroundColor
+        secondaryColor
+        backgroundImage
+        backgroundImagePlacement
+        textVariant
+        unsplashAuthorName
+        unsplashAuthorUrl
+        backgroundWidth
+        backgroundHeight
       }
     }
   }

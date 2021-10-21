@@ -66,6 +66,16 @@ fragment FormElementFullDetails on FormElement {
     label
   }
   typeId
+  backgroundColor
+  secondaryColor
+  backgroundImage
+  backgroundImagePlacement
+  backgroundPalette
+  textVariant
+  unsplashAuthorUrl
+  unsplashAuthorName
+  backgroundWidth
+  backgroundHeight
 }
 
 query SurveyFormEditorDetails($id: Int!, $slug: String!) {
@@ -194,6 +204,122 @@ mutation UpdateForm($id: Int!, $isTemplate: Boolean, $templateName: String) {
       id
       isTemplate
       templateName
+    }
+  }
+}
+
+query GetPhotos($query: String!) {
+  getUnsplashPhotos(query: $query) {
+    results {
+      blur_hash
+      color
+      description
+      height
+      width
+      id
+      links {
+        download_location
+      }
+      urls {
+        full
+        raw
+        regular
+        small
+        thumb
+      }
+      user {
+        id
+        name
+        username
+        links {
+          html
+        }
+      }
+    }
+  }
+}
+
+mutation UpdateFormElementBackground(
+  $id: Int!
+  $backgroundColor: String
+  $secondaryColor: String
+  $backgroundPalette: [String]
+  $textVariant: FormElementTextVariant
+  $backgroundImagePlacement: FormElementBackgroundImagePlacement
+) {
+  updateFormElement(
+    input: {
+      id: $id
+      patch: {
+        backgroundColor: $backgroundColor
+        secondaryColor: $secondaryColor
+        backgroundPalette: $backgroundPalette
+        textVariant: $textVariant
+        backgroundImagePlacement: $backgroundImagePlacement
+      }
+    }
+  ) {
+    formElement {
+      id
+      backgroundColor
+      secondaryColor
+      backgroundImage
+      backgroundImagePlacement
+      backgroundPalette
+      textVariant
+      unsplashAuthorName
+      unsplashAuthorUrl
+    }
+  }
+}
+
+mutation SetFormElementBackground(
+  $id: Int!
+  $backgroundColor: String!
+  $secondaryColor: String!
+  $backgroundUrl: String!
+  $downloadUrl: String!
+  $backgroundPalette: [String]!
+  $unsplashAuthorUrl: String!
+  $unsplashAuthorName: String!
+  $backgroundWidth: Int!
+  $backgroundHeight: Int!
+) {
+  setFormElementBackground(
+    backgroundColor: $backgroundColor
+    secondaryColor: $secondaryColor
+    backgroundPalette: $backgroundPalette
+    backgroundUrl: $backgroundUrl
+    downloadUrl: $downloadUrl
+    id: $id
+    unsplashAuthorName: $unsplashAuthorName
+    unsplashAuthorUrl: $unsplashAuthorUrl
+    backgroundHeight: $backgroundHeight
+    backgroundWidth: $backgroundWidth
+  ) {
+    id
+    backgroundColor
+    secondaryColor
+    backgroundImage
+    backgroundPalette
+    unsplashAuthorName
+    unsplashAuthorUrl
+    backgroundWidth
+    backgroundHeight
+  }
+}
+
+mutation clearFormElementStyle($id: Int!) {
+  clearFormElementStyle(input: { formElementId: $id }) {
+    formElement {
+      id
+      backgroundColor
+      backgroundImage
+      backgroundPalette
+      unsplashAuthorName
+      unsplashAuthorUrl
+      textVariant
+      secondaryColor
     }
   }
 }

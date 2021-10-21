@@ -203,6 +203,29 @@ CREATE TYPE public.field_rule_operator AS ENUM (
 
 
 --
+-- Name: form_element_background_image_placement; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.form_element_background_image_placement AS ENUM (
+    'LEFT',
+    'RIGHT',
+    'TOP',
+    'COVER'
+);
+
+
+--
+-- Name: form_element_text_variant; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.form_element_text_variant AS ENUM (
+    'LIGHT',
+    'DARK',
+    'DYNAMIC'
+);
+
+
+--
 -- Name: form_field_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1050,7 +1073,7 @@ CREATE FUNCTION public._create_survey(name text, project_id integer, template_id
       if template_id is null then
         select id into templateid from forms where template_name = 'Basic Template';
         if templateid is null then
-          raise exception 'Form template with name "Basic Template" has not been created!';
+          raise exception 'Form template with name "Basic Template" has not been created! See https://github.com/seasketch/next/wiki/Bootstrapping-Survey-Templates';
         end if;
       else
         templateid = template_id;
@@ -2209,6 +2232,7 @@ CREATE FUNCTION public.check_element_type() RETURNS trigger
   DECLARE
     is_required boolean;
   BEGIN
+    -- skip if the deletion is caused by a cascade from the form being deleted
     if (select count(id) from forms where id = OLD.form_id) > 0 then
       select is_required_for_surveys into is_required from form_element_types where component_name = OLD.type_id;
       if is_required then
@@ -2237,6 +2261,171 @@ CREATE FUNCTION public.check_optional_basemap_layers_columns() RETURNS trigger
     return new;
   end;
 $$;
+
+
+--
+-- Name: form_elements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.form_elements (
+    id integer NOT NULL,
+    form_id integer NOT NULL,
+    is_required boolean DEFAULT false NOT NULL,
+    export_id text,
+    "position" integer DEFAULT 1 NOT NULL,
+    component_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    type_id text NOT NULL,
+    body jsonb NOT NULL,
+    background_color text,
+    background_image text,
+    background_palette text[],
+    secondary_color text,
+    unsplash_author_name text,
+    unsplash_author_url text,
+    background_width integer,
+    background_height integer,
+    text_variant public.form_element_text_variant DEFAULT 'DYNAMIC'::public.form_element_text_variant NOT NULL,
+    background_image_placement public.form_element_background_image_placement DEFAULT 'TOP'::public.form_element_background_image_placement NOT NULL,
+    CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
+    CONSTRAINT form_fields_position_check CHECK (("position" > 0))
+);
+
+
+--
+-- Name: TABLE form_elements; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.form_elements IS '
+@omit all
+*FormElements* represent input fields or read-only content in a form. Records contain fields to support
+generic functionality like body, position, and isRequired. They 
+also have a JSON `componentSettings` field that can have custom data to support
+a particular input type, indicated by the `type` field.
+
+Project administrators have full control over managing form elements through
+graphile-generated CRUD mutations.
+';
+
+
+--
+-- Name: COLUMN form_elements.form_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.form_id IS 'Form this field belongs to.';
+
+
+--
+-- Name: COLUMN form_elements.is_required; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.is_required IS 'Users must provide input for these fields before submission.';
+
+
+--
+-- Name: COLUMN form_elements.export_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.export_id IS '
+Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body.
+';
+
+
+--
+-- Name: COLUMN form_elements."position"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements."position" IS '
+Determines order of field display. Clients should display fields in ascending 
+order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
+update.
+';
+
+
+--
+-- Name: COLUMN form_elements.component_settings; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.component_settings IS 'Type-specific configuration. For example, a Choice field might have a list of valid choices.';
+
+
+--
+-- Name: COLUMN form_elements.body; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.body IS '
+[prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms.
+';
+
+
+--
+-- Name: COLUMN form_elements.background_color; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.background_color IS '
+Optional background color to transition the form to when this element is displayed.
+';
+
+
+--
+-- Name: COLUMN form_elements.background_image; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.background_image IS '
+@omit create,update
+Optional background image to display when this form_element appears.
+';
+
+
+--
+-- Name: COLUMN form_elements.secondary_color; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.secondary_color IS '
+Color used to style navigation controls
+';
+
+
+--
+-- Name: COLUMN form_elements.unsplash_author_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.unsplash_author_name IS '@omit create,update';
+
+
+--
+-- Name: COLUMN form_elements.unsplash_author_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.unsplash_author_url IS '@omit create,update';
+
+
+--
+-- Name: COLUMN form_elements.text_variant; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.text_variant IS '
+Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override.
+';
+
+
+--
+-- Name: COLUMN form_elements.background_image_placement; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.background_image_placement IS '
+Layout of image in relation to form_element content.
+';
+
+
+--
+-- Name: clear_form_element_style(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS public.form_elements
+    LANGUAGE sql
+    AS $$
+    update form_elements set background_image = null, background_color = null, background_image_placement = 'TOP', background_palette = null, secondary_color = null, text_variant = 'DYNAMIC', unsplash_author_url = null, unsplash_author_name = null, background_width = null, background_height = null where form_elements.id = form_element_id returning *;
+  $$;
 
 
 --
@@ -3954,90 +4143,6 @@ COMMENT ON COLUMN public.form_element_types.is_single_use_only IS 'These element
 
 
 --
--- Name: form_elements; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.form_elements (
-    id integer NOT NULL,
-    form_id integer NOT NULL,
-    is_required boolean DEFAULT false NOT NULL,
-    export_id text,
-    "position" integer DEFAULT 1 NOT NULL,
-    component_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
-    type_id text NOT NULL,
-    body jsonb NOT NULL,
-    CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
-    CONSTRAINT form_fields_position_check CHECK (("position" > 0))
-);
-
-
---
--- Name: TABLE form_elements; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.form_elements IS '
-@omit all
-*FormElements* represent input fields or read-only content in a form. Records contain fields to support
-generic functionality like body, position, and isRequired. They 
-also have a JSON `componentSettings` field that can have custom data to support
-a particular input type, indicated by the `type` field.
-
-Project administrators have full control over managing form elements through
-graphile-generated CRUD mutations.
-';
-
-
---
--- Name: COLUMN form_elements.form_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.form_id IS 'Form this field belongs to.';
-
-
---
--- Name: COLUMN form_elements.is_required; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.is_required IS 'Users must provide input for these fields before submission.';
-
-
---
--- Name: COLUMN form_elements.export_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.export_id IS '
-Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body.
-';
-
-
---
--- Name: COLUMN form_elements."position"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements."position" IS '
-Determines order of field display. Clients should display fields in ascending 
-order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
-update.
-';
-
-
---
--- Name: COLUMN form_elements.component_settings; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.component_settings IS 'Type-specific configuration. For example, a Choice field might have a list of valid choices.';
-
-
---
--- Name: COLUMN form_elements.body; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.body IS '
-[prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms.
-';
-
-
---
 -- Name: form_elements_type(public.form_elements); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4374,7 +4479,17 @@ CREATE FUNCTION public.initialize_survey_form_from_template(survey_id integer, t
           is_required, 
           export_id, 
           position, 
-          component_settings
+          component_settings,
+          background_color,   
+          background_image,     
+          background_palette,   
+          secondary_color,      
+          unsplash_author_name, 
+          unsplash_author_url,  
+          background_width,     
+          background_height,    
+          text_variant,
+          background_image_placement
         )
       select 
         form.id, 
@@ -4383,11 +4498,23 @@ CREATE FUNCTION public.initialize_survey_form_from_template(survey_id integer, t
         is_required, 
         export_id, 
         position, 
-        component_settings
+        component_settings,
+        background_color,     
+        background_image,     
+        background_palette,   
+        secondary_color,      
+        unsplash_author_name, 
+        unsplash_author_url,  
+        background_width,     
+        background_height,    
+        text_variant,
+        background_image_placement
       from
         form_elements
       where
-        form_elements.form_id = template_id;
+        form_elements.form_id = template_id
+      order by position asc;
+      
       return form;
     end
   $$;
@@ -14028,6 +14155,134 @@ REVOKE ALL ON FUNCTION public.citext_smaller(public.citext, public.citext) FROM 
 
 
 --
+-- Name: TABLE form_elements; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.form_elements TO anon;
+GRANT INSERT,DELETE ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.is_required; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_required) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.export_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(export_id) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements."position"; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE("position") ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.component_settings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(component_settings) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.type_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(type_id) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.body; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(body) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_color; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_color) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_image; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_image) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_palette; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_palette) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.secondary_color; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(secondary_color) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.unsplash_author_name; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(unsplash_author_name) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.unsplash_author_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(unsplash_author_url) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_width; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_width) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_height; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_height) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.text_variant; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(text_variant) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_image_placement; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_image_placement) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: FUNCTION clear_form_element_style(form_element_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) TO seasketch_user;
+
+
+--
 -- Name: TABLE users; Type: ACL; Schema: public; Owner: -
 --
 
@@ -14691,56 +14946,6 @@ REVOKE ALL ON FUNCTION public.find_srid(character varying, character varying, ch
 --
 
 GRANT SELECT ON TABLE public.form_element_types TO anon;
-
-
---
--- Name: TABLE form_elements; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.form_elements TO anon;
-GRANT INSERT,DELETE ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.is_required; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(is_required) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.export_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(export_id) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements."position"; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE("position") ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.component_settings; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(component_settings) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.type_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(type_id) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.body; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(body) ON TABLE public.form_elements TO seasketch_user;
 
 
 --

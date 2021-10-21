@@ -1,24 +1,23 @@
-import { RefObject, useState } from "react";
+import { MouseEventHandler, useEffect, useState } from "react";
 import { useHistory, useParams } from "react-router";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import { FormElementProps } from "../formElements/FormElement";
-import ShortText, { ShortTextProps } from "../formElements/ShortText";
-import WelcomeMessage from "../formElements/WelcomeMessage";
 import {
+  FormElement,
   useCreateResponseMutation,
   useSurveyQuery,
 } from "../generated/graphql";
-import ProgressBar from "./ProgressBar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
 import UpArrowIcon from "../components/UpArrowIcon";
 import DownArrowIcon from "../components/DownArrowIcon";
 import useLocalStorage from "../useLocalStorage";
-import { useAuth0 } from "@auth0/auth0-react";
-import { components } from "../formElements";
-import useBodyBackground from "../useBodyBackground";
+import { FormElementStyleProps, useCurrentStyle } from "./appearance";
+import ImagePreloader from "./ImagePreloader";
+import SurveyAppLayout from "./SurveyAppLayout";
+import FormElementFactory from "./FormElementFactory";
+require("./surveys.css");
 
 interface FormElementState {
   touched?: boolean;
@@ -26,6 +25,19 @@ interface FormElementState {
   errors: boolean;
   submissionAttempted?: boolean;
 }
+
+type FE = Pick<
+  FormElement,
+  | "typeId"
+  | "id"
+  | "isRequired"
+  | "position"
+  | "unsplashAuthorName"
+  | "unsplashAuthorUrl"
+  | "body"
+  | "componentSettings"
+> &
+  FormElementStyleProps;
 
 /**
  * Coordinates the rendering of FormElements, collection of user data, maintenance of response state,
@@ -37,7 +49,6 @@ function SurveyApp() {
     surveyId: string;
     position: string;
   }>();
-  const auth = useAuth0();
   const { t } = useTranslation("surveys");
   const history = useHistory();
   const [backwards, setBackwards] = useState(false);
@@ -46,29 +57,51 @@ function SurveyApp() {
     variables: { id: parseInt(surveyId) },
     onError,
   });
+
   const [createResponse, createResponseState] = useCreateResponseMutation({
     onError,
   });
+  const [formElement, setFormElement] = useState<{
+    current?: FE;
+    exiting?: FE;
+  }>({});
+
+  const style = useCurrentStyle(
+    data?.survey?.form?.formElements,
+    formElement.exiting || formElement.current
+  );
+
+  useEffect(() => {
+    if (surveyId && data?.survey?.form?.formElements) {
+      const el = data.survey.form.formElements[parseInt(position)];
+      if (!formElement.current) {
+        setFormElement({ current: el });
+      } else if (el.id === formElement.current.id) {
+        setFormElement({ current: el });
+      } else {
+        setFormElement({ exiting: formElement.current, current: el });
+      }
+    }
+  }, [data?.survey?.form?.formElements, position, surveyId]);
 
   const [responseState, setResponseState] = useLocalStorage<{
     [id: number]: FormElementState;
     // eslint-disable-next-line i18next/no-literal-string
   }>(`survey-${surveyId}`, {});
-  if (loading) {
+  if (!data?.survey?.form?.formElements || loading) {
     return <div></div>;
-  }
-  if (!data?.survey) {
+  } else if (!data?.survey) {
     return <div>{t("Survey not found")}</div>;
+  } else if (!formElement.current) {
+    return null;
   } else {
-    const form = data.survey.form!;
+    const form = data.survey.form;
     let index = 0;
     if (position) {
       index = parseInt(position);
     }
     const elements = form.formElements || [];
-    const formElement = elements[index];
-    const state = responseState[formElement.id];
-    const firstPage = index === 0;
+    const state = responseState[formElement.current.id];
     const lastPage = index === elements.length - 1;
 
     /**
@@ -78,7 +111,7 @@ function SurveyApp() {
      * @param state
      */
     function updateState(
-      formElement: Pick<FormElementProps<any>, "id">,
+      formElement: { id: number },
       state: Partial<FormElementState>
     ) {
       setResponseState((prev) => ({
@@ -96,8 +129,11 @@ function SurveyApp() {
      * @returns boolean
      */
     function canAdvance() {
-      const state = responseState[formElement.id];
-      if (!formElement.isRequired || (state?.value && !state?.errors)) {
+      if (!formElement.current) {
+        return false;
+      }
+      const state = responseState[formElement.current.id];
+      if (!formElement.current.isRequired || (state?.value && !state?.errors)) {
         return true;
       } else {
         return false;
@@ -105,14 +141,15 @@ function SurveyApp() {
     }
 
     async function handleAdvance() {
-      updateState(formElement, {
+      updateState(formElement.current!, {
         submissionAttempted: true,
       });
+      setFormElement((prev) => ({ ...prev, exiting: prev.current }));
       if (canAdvance()) {
         if (lastPage) {
           const responseData: { [elementId: number]: any } = {};
           for (const element of elements.filter((e) => e.type!.isInput)) {
-            responseData[element.id] = responseState[element.id].value;
+            responseData[element.id] = responseState[element.id]?.value;
           }
           const response = await createResponse({
             variables: {
@@ -132,185 +169,160 @@ function SurveyApp() {
         }
       }
     }
-
     return (
-      <SurveyAppLayout
-        showProgress={data.survey.showProgress}
-        progress={index / elements.length}
-      >
-        <AnimatePresence
-          initial={false}
-          exitBeforeEnter={true}
-          custom={backwards}
-          onExitComplete={() => {
-            setBackwards(false);
-          }}
+      <>
+        <SurveyAppLayout
+          showProgress={data.survey.showProgress}
+          progress={index / elements.length}
+          style={style}
+          unsplashUserName={formElement.current.unsplashAuthorName || undefined}
+          unsplashUserUrl={formElement.current.unsplashAuthorUrl || undefined}
         >
-          <motion.div
+          <AnimatePresence
+            initial={false}
+            exitBeforeEnter={true}
             custom={backwards}
-            variants={{
-              exit: (direction: boolean) => ({
-                opacity: 0,
-                translateY: direction ? 100 : -100,
-                position: "relative",
-              }),
-              enter: (direction: boolean) => ({
-                opacity: 0,
-                translateY: direction ? -100 : 100,
-                position: "relative",
-              }),
-              show: () => ({
-                opacity: 1,
-                translateY: 0,
-                position: "relative",
-              }),
+            presenceAffectsLayout={false}
+            onExitComplete={() => {
+              setBackwards(false);
+              setFormElement((prev) => ({
+                ...prev,
+                exiting: undefined,
+              }));
             }}
-            transition={{
-              duration: 0.36,
-            }}
-            key={formElement.id}
-            initial="enter"
-            animate="show"
-            exit="exit"
           >
-            <FormElementFactory
-              {...formElement}
-              typeName={formElement.type!.componentName}
-              submissionAttempted={!!state?.submissionAttempted}
-              onChange={(value, errors) =>
-                updateState(formElement, {
-                  value,
-                  errors,
-                })
-              }
-              onSubmit={handleAdvance}
-              editable={false}
-              value={state?.value}
-            />
-            {(!!state?.value || !formElement.isRequired) &&
-              formElement.type?.componentName !== "WelcomeMessage" && (
-                <motion.div
-                  transition={{
-                    delay: 0.15,
-                  }}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <Button
-                    className="mt-5 mb-10"
-                    buttonClassName="bg-yellow-400"
-                    label={lastPage ? t("Complete Submission") : t("Next")}
-                    onClick={handleAdvance}
-                    disabled={createResponseState.loading}
-                    loading={createResponseState.loading}
-                  />
-                </motion.div>
-              )}
-          </motion.div>
-        </AnimatePresence>
-        <div
-          style={{ width: "fit-content", height: "fit-content" }}
-          className={`fixed bottom-5 right-5 lg:left-5 lg:top-5 ${
-            firstPage && "hidden"
-          }`}
-        >
-          <Link onClick={() => setBackwards(true)} to={`./${index - 1}`}>
-            <UpArrowIcon className="text-yellow-400  inline-block" />
-          </Link>
-          {!lastPage && (
-            <Link
-              onClick={(e) => {
-                updateState(formElement, {
-                  submissionAttempted: true,
-                });
-                if (!canAdvance()) {
-                  e.preventDefault();
-                }
-                setBackwards(false);
+            <motion.div
+              custom={backwards}
+              className="relative"
+              variants={{
+                exit: (direction: boolean) => ({
+                  opacity: 0,
+                  translateY: direction ? 100 : -100,
+                  position: "relative",
+                }),
+                enter: (direction: boolean) => ({
+                  opacity: 0,
+                  translateY: direction ? -100 : 100,
+                  position: "relative",
+                }),
+                show: () => ({
+                  opacity: 1,
+                  translateY: 0,
+                  position: "relative",
+                }),
               }}
-              className={index + 1 === elements.length ? "hidden" : ""}
-              to={`./${index + 1}`}
+              transition={{
+                duration: 0.3,
+              }}
+              key={formElement.current.id}
+              initial="enter"
+              animate="show"
+              exit="exit"
             >
-              <DownArrowIcon className="text-yellow-400  inline-block" />
-            </Link>
-          )}
-        </div>
-      </SurveyAppLayout>
+              <FormElementFactory
+                {...formElement.current}
+                typeName={formElement.current.typeId}
+                submissionAttempted={!!state?.submissionAttempted}
+                onChange={(value, errors) =>
+                  updateState(formElement.current!, {
+                    value,
+                    errors,
+                  })
+                }
+                onSubmit={handleAdvance}
+                editable={false}
+                value={state?.value}
+              />
+
+              <div
+                className={`${
+                  !formElement.exiting &&
+                  (!!state?.value || !formElement.current.isRequired) &&
+                  formElement.current.typeId !== "WelcomeMessage" &&
+                  !state?.errors
+                    ? "opacity-100 transition-opacity duration-300"
+                    : "opacity-0"
+                }`}
+              >
+                <Button
+                  className="mb-10"
+                  label={
+                    lastPage && !!!formElement.exiting
+                      ? t("Complete Submission")
+                      : t("Next")
+                  }
+                  onClick={handleAdvance}
+                  disabled={
+                    createResponseState.loading || !!formElement.exiting
+                  }
+                  loading={createResponseState.loading}
+                  backgroundColor={style.secondaryColor}
+                />
+              </div>
+            </motion.div>
+          </AnimatePresence>
+          <SurveyNav
+            canAdvance={canAdvance()}
+            buttonColor={style.secondaryColor}
+            lastPage={parseInt(position) + 1 === elements.length}
+            index={parseInt(position)}
+            onPrev={() => setBackwards(true)}
+            onNext={(e) => {
+              handleAdvance();
+              if (!canAdvance()) {
+                e.preventDefault();
+              }
+            }}
+          />
+        </SurveyAppLayout>
+        <ImagePreloader formElements={elements} />
+      </>
     );
   }
 }
 
-/**
- * Returns the appropriate component for a given FormElement config based on type.componentName
- * @param param0
- * @returns FormElement component
- */
-export function FormElementFactory({
-  typeName,
-  componentSettings,
-  value,
-  ...formElementData
-}: Pick<
-  FormElementProps<any>,
-  | "body"
-  | "id"
-  | "componentSettings"
-  | "isRequired"
-  | "submissionAttempted"
-  | "value"
-  | "onChange"
-  | "onSubmit"
-  | "editable"
-> & {
-  typeName: string;
+function SurveyNav({
+  lastPage,
+  buttonColor,
+  onNext,
+  onPrev,
+  index,
+}: {
+  canAdvance: boolean;
+  lastPage: boolean;
+  buttonColor: string;
+  onNext: MouseEventHandler<HTMLAnchorElement>;
+  onPrev: MouseEventHandler<HTMLAnchorElement>;
+  index: number;
 }) {
-  if (typeName in components) {
-    const Component = components[typeName];
-    return (
-      <Component componentSettings={componentSettings} {...formElementData} />
-    );
-  } else {
-    return <Trans ns="errors">missing form element type {typeName}</Trans>;
-  }
-}
-
-export const SurveyAppLayout: React.FunctionComponent<{
-  progress: number;
-  skipScreenHeight?: boolean;
-  showProgress?: boolean;
-}> = ({ progress, children, skipScreenHeight, showProgress }) => {
-  const setBackground = useBodyBackground(
-    "rgb(5, 94, 157) linear-gradient(128deg, rgb(5, 94, 157), rgb(41, 69, 209)) no-repeat fixed"
-  );
-
   return (
     <div
-      className={`w-full relative`}
-      // style={{
-      //   backgroundColor: "rgb(5, 94, 157)",
-      //   backgroundImage:
-      //     "linear-gradient(128deg, rgb(5, 94, 157), rgb(41, 69, 209))",
-      //   // minHeight: "100vh",
-      // }}
+      style={{ width: "fit-content", height: "fit-content" }}
+      className={`z-20 fixed bottom-5 right-5 lg:left-5 lg:top-5 ${
+        index === 0 && "hidden"
+      }`}
     >
-      {showProgress && <ProgressBar progress={progress} />}
-      <div
-        className="w-full h-32 md:h-52 lg:h-64 overflow-hidden"
-        style={{
-          WebkitMaskImage:
-            "linear-gradient(to top, transparent 0%, black 100%)",
-          backgroundImage:
-            "url(https://images.unsplash.com/photo-1527401850656-0f34108fdb30?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2200&q=80)",
-          backgroundPosition: "left bottom",
-          backgroundSize: "cover",
-        }}
-      ></div>
-      <div className="px-5 -mt-2 max-w-xl mx-auto text-white survey-content">
-        {children}
-      </div>
+      <Link
+        onClick={onPrev}
+        to={`./${index - 1}`}
+        className="inline-block transition-colors duration-500"
+      >
+        <UpArrowIcon className="inline-block" style={{ color: buttonColor }} />
+      </Link>
+      {!lastPage && (
+        <Link
+          onClick={onNext}
+          className={"inline-block transition-colors duration-500"}
+          to={`./${index + 1}`}
+        >
+          <DownArrowIcon
+            className="inline-block"
+            style={{ color: buttonColor }}
+          />
+        </Link>
+      )}
     </div>
   );
-};
+}
 
 export default SurveyApp;

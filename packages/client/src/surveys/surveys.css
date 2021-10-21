@@ -1,0 +1,8 @@
+.center-ish::before {
+  content: "";
+  flex: 1;
+}
+.center-ish::after {
+  content: "";
+  flex: 3;
+}

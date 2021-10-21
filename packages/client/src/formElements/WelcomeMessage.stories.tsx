@@ -2,7 +2,7 @@ import React from "react";
 // also exported from '@storybook/react' if you can deal with breaking changes in 6.1
 import { Story, Meta } from "@storybook/react/types-6-0";
 import WelcomeMessage from "./WelcomeMessage";
-import { SurveyAppLayout } from "../surveys/SurveyApp";
+import { SurveyAppLayout } from "../surveys/SurveyAppLayout";
 import { NodeType } from "prosemirror-model";
 import fromMarkdown from "./fromMarkdown";
 

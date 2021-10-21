@@ -1,10 +1,19 @@
-export default function DownArrowIcon({ className }: { className?: string }) {
+import { CSSProperties } from "react";
+
+export default function DownArrowIcon({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       className={`${className} h-10 w-10 text-white`}
       viewBox="0 0 20 20"
       fill="currentColor"
+      style={style}
     >
       <path
         fillRule="evenodd"
