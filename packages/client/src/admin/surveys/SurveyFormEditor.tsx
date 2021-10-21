@@ -346,7 +346,7 @@ export default function SurveyFormEditor({
                     />
                     {selectedFormElement.typeId !== "WelcomeMessage" && (
                       <Button
-                        className="mt-5 mb-10"
+                        className="mb-10"
                         label={t("Next")}
                         backgroundColor={style.secondaryColor}
                       />
