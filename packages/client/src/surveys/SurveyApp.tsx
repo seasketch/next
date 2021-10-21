@@ -2,7 +2,6 @@ import { MouseEventHandler, useEffect, useState } from "react";
 import { useHistory, useParams } from "react-router";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import { FormElementProps } from "../formElements/FormElement";
 import {
   FormElement,
   useCreateResponseMutation,
@@ -14,13 +13,10 @@ import { useTranslation, Trans } from "react-i18next";
 import UpArrowIcon from "../components/UpArrowIcon";
 import DownArrowIcon from "../components/DownArrowIcon";
 import useLocalStorage from "../useLocalStorage";
-import { components } from "../formElements";
-import { useMediaQuery } from "beautiful-react-hooks";
-import SurveyAppLayout, {
-  FormElementStyleProps,
-  getCurrentStyle,
-} from "./SurveyAppLayout";
+import { FormElementStyleProps, useCurrentStyle } from "./appearance";
 import ImagePreloader from "./ImagePreloader";
+import SurveyAppLayout from "./SurveyAppLayout";
+import FormElementFactory from "./FormElementFactory";
 require("./surveys.css");
 
 interface FormElementState {
@@ -29,6 +25,19 @@ interface FormElementState {
   errors: boolean;
   submissionAttempted?: boolean;
 }
+
+type FE = Pick<
+  FormElement,
+  | "typeId"
+  | "id"
+  | "isRequired"
+  | "position"
+  | "unsplashAuthorName"
+  | "unsplashAuthorUrl"
+  | "body"
+  | "componentSettings"
+> &
+  FormElementStyleProps;
 
 /**
  * Coordinates the rendering of FormElements, collection of user data, maintenance of response state,
@@ -40,7 +49,6 @@ function SurveyApp() {
     surveyId: string;
     position: string;
   }>();
-  const isSmall = useMediaQuery("(max-width: 767px)");
   const { t } = useTranslation("surveys");
   const history = useHistory();
   const [backwards, setBackwards] = useState(false);
@@ -49,35 +57,19 @@ function SurveyApp() {
     variables: { id: parseInt(surveyId) },
     onError,
   });
+
   const [createResponse, createResponseState] = useCreateResponseMutation({
     onError,
   });
   const [formElement, setFormElement] = useState<{
-    current?: Pick<
-      FormElement,
-      | "typeId"
-      | "id"
-      | "isRequired"
-      | "position"
-      | "unsplashAuthorName"
-      | "unsplashAuthorUrl"
-      | "body"
-      | "componentSettings"
-    > &
-      FormElementStyleProps;
-    exiting?: Pick<
-      FormElement,
-      | "typeId"
-      | "id"
-      | "isRequired"
-      | "position"
-      | "unsplashAuthorName"
-      | "unsplashAuthorUrl"
-      | "body"
-      | "componentSettings"
-    > &
-      FormElementStyleProps;
+    current?: FE;
+    exiting?: FE;
   }>({});
+
+  const style = useCurrentStyle(
+    data?.survey?.form?.formElements,
+    formElement.exiting || formElement.current
+  );
 
   useEffect(() => {
     if (surveyId && data?.survey?.form?.formElements) {
@@ -177,13 +169,6 @@ function SurveyApp() {
         }
       }
     }
-
-    const style = getCurrentStyle(
-      data.survey.form.formElements,
-      formElement.exiting || formElement.current,
-      isSmall
-    );
-
     return (
       <>
         <SurveyAppLayout
@@ -208,7 +193,7 @@ function SurveyApp() {
           >
             <motion.div
               custom={backwards}
-              className="relative pb-12"
+              className="relative"
               variants={{
                 exit: (direction: boolean) => ({
                   opacity: 0,
@@ -219,7 +204,6 @@ function SurveyApp() {
                   opacity: 0,
                   translateY: direction ? -100 : 100,
                   position: "relative",
-                  // transitionDelay: "100ms",
                 }),
                 show: () => ({
                   opacity: 1,
@@ -229,8 +213,6 @@ function SurveyApp() {
               }}
               transition={{
                 duration: 0.3,
-                // when: "afterChildren",
-                // staggerChildren: 0.5,
               }}
               key={formElement.current.id}
               initial="enter"
@@ -265,7 +247,7 @@ function SurveyApp() {
                     }}
                   >
                     <Button
-                      className="mt-10 mb-10 absolute -bottom-3"
+                      className="mb-10"
                       label={
                         lastPage && !!!formElement.exiting
                           ? t("Complete Submission")
@@ -302,46 +284,7 @@ function SurveyApp() {
   }
 }
 
-/**
- * Returns the appropriate component for a given FormElement config based on type.componentName
- * @param param0
- * @returns FormElement component
- */
-export function FormElementFactory({
-  typeName,
-  componentSettings,
-  value,
-  ...formElementData
-}: Pick<
-  FormElementProps<any>,
-  | "body"
-  | "id"
-  | "componentSettings"
-  | "isRequired"
-  | "submissionAttempted"
-  | "value"
-  | "onChange"
-  | "onSubmit"
-  | "editable"
-> & {
-  typeName: string;
-}) {
-  if (typeName in components) {
-    const Component = components[typeName];
-    return (
-      <Component
-        value={value}
-        componentSettings={componentSettings}
-        {...formElementData}
-      />
-    );
-  } else {
-    return <Trans ns="errors">missing form element type {typeName}</Trans>;
-  }
-}
-
 function SurveyNav({
-  canAdvance,
   lastPage,
   buttonColor,
   onNext,
@@ -358,7 +301,7 @@ function SurveyNav({
   return (
     <div
       style={{ width: "fit-content", height: "fit-content" }}
-      className={`fixed bottom-5 right-5 lg:left-5 lg:top-5 ${
+      className={`z-20 fixed bottom-5 right-5 lg:left-5 lg:top-5 ${
         index === 0 && "hidden"
       }`}
     >

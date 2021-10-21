@@ -12483,15 +12483,6 @@ export type NewZIndexFragment = (
   & Pick<DataLayer, 'zIndex'>
 );
 
-export type NewSurveyFragment = (
-  { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId'>
-  & { invitedGroups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
-);
-
 export type NewElementFragment = (
   { __typename?: 'FormElement' }
   & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId'>
@@ -12506,6 +12497,15 @@ export type NewElementFragment = (
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
   )> }
+);
+
+export type NewSurveyFragment = (
+  { __typename?: 'Survey' }
+  & Pick<Survey, 'id' | 'accessType' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId'>
+  & { invitedGroups?: Maybe<Array<(
+    { __typename?: 'Group' }
+    & Pick<Group, 'id' | 'name'>
+  )>> }
 );
 
 export type NewGroupFragment = (
@@ -14748,21 +14748,6 @@ export const NewZIndexFragmentDoc = gql`
   zIndex
 }
     `;
-export const NewSurveyFragmentDoc = gql`
-    fragment NewSurvey on Survey {
-  id
-  accessType
-  invitedGroups {
-    id
-    name
-  }
-  isDisabled
-  limitToSingleResponse
-  name
-  submittedResponseCount
-  projectId
-}
-    `;
 export const NewElementFragmentDoc = gql`
     fragment NewElement on FormElement {
   body
@@ -14791,6 +14776,21 @@ export const NewElementFragmentDoc = gql`
     label
   }
   typeId
+}
+    `;
+export const NewSurveyFragmentDoc = gql`
+    fragment NewSurvey on Survey {
+  id
+  accessType
+  invitedGroups {
+    id
+    name
+  }
+  isDisabled
+  limitToSingleResponse
+  name
+  submittedResponseCount
+  projectId
 }
     `;
 export const NewGroupFragmentDoc = gql`

@@ -74,7 +74,10 @@ export default function UnsplashImageChooser({
                       const colors = [dominant, ...palette].map(
                         (rgb) => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
                       );
-                      onChange(result, colors);
+                      onChange(
+                        result,
+                        colors.filter((v, i, a) => a.indexOf(v) === i)
+                      );
                     });
                     img.crossOrigin = "Anonymous";
                     img.src = result.urls.regular;

@@ -1,20 +1,18 @@
-import { createContext, RefObject, useState } from "react";
 import {
-  FormElement,
   FormElementTextVariant,
   FormElementBackgroundImagePlacement,
 } from "../generated/graphql";
 import ProgressBar from "./ProgressBar";
 import useBodyBackground from "../useBodyBackground";
-import { useMediaQuery } from "beautiful-react-hooks";
-import { colord, extend } from "colord";
-import a11yPlugin from "colord/plugins/a11y";
-import { CameraIcon } from "@heroicons/react/solid";
-import { Trans } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { sizes, srcSet } from "./ImagePreloader";
-
-extend([a11yPlugin]);
+import UnsplashCredit from "./UnsplashCredit";
+import {
+  surveyBackground,
+  ComputedFormElementStyle,
+  defaultStyle,
+  SurveyStyleContext,
+} from "./appearance";
 
 require("./surveys.css");
 
@@ -34,11 +32,9 @@ export const SurveyAppLayout: React.FunctionComponent<{
   unsplashUserName,
   unsplashUserUrl,
 }) => {
-  const isSmall = useMediaQuery("(max-width: 767px)");
-
-  style = style || getCurrentStyle(undefined, undefined, isSmall);
+  style = style || defaultStyle;
   useBodyBackground(
-    bgStyle(
+    surveyBackground(
       style.backgroundImagePlacement,
       style.backgroundImage,
       style.backgroundColor
@@ -56,16 +52,6 @@ export const SurveyAppLayout: React.FunctionComponent<{
   const cover =
     style.backgroundImagePlacement ===
     FormElementBackgroundImagePlacement.Cover;
-
-  let isDark = colord(style.backgroundColor || "#efefef").isDark();
-  let textClass = "text-white";
-  if (style.textVariant === FormElementTextVariant.Dynamic) {
-    textClass = isDark ? "text-white" : "text-grey-800";
-  } else if (style.textVariant === FormElementTextVariant.Light) {
-    textClass = "text-white";
-  } else {
-    textClass = "text-grey-800";
-  }
 
   return (
     <SurveyStyleContext.Provider value={style}>
@@ -88,7 +74,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
           {!cover && (
             <div
               className={`flex-1 w-full relative ${
-                top ? "h-32 md:h-52 lg:h-64" : "h-full"
+                top ? "h-32 md:h-52 lg:h-64" : "h-full max-w-4xl"
               } overflow-hidden`}
             >
               <AnimatePresence initial={false} presenceAffectsLayout={false}>
@@ -117,7 +103,6 @@ export const SurveyAppLayout: React.FunctionComponent<{
                             "linear-gradient(to top, transparent 0%, black 100%)",
                         }
                       : {}),
-                    // transition: embeddedInAdmin ? "none" : "all 500ms",
                     willChange: "opacity",
                   }}
                   srcSet={srcSet(style!.backgroundImage)}
@@ -129,7 +114,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
                 url={unsplashUserUrl}
                 isDark={
                   style.textVariant === FormElementTextVariant.Dynamic
-                    ? isDark
+                    ? style.isDark
                     : style.textVariant === FormElementTextVariant.Dark
                 }
                 layout={style.backgroundImagePlacement}
@@ -137,10 +122,12 @@ export const SurveyAppLayout: React.FunctionComponent<{
             </div>
           )}
           <div
-            className={`px-5 max-w-xl mx-auto ${textClass} survey-content ${
+            className={`px-5 lg:px-10 max-w-xl mx-auto ${
+              style.textClass
+            } survey-content ${
               top
                 ? "w-full"
-                : "flex-0 flex flex-col center-ish max-h-full overflow-y-auto w-full md:w-128 lg:w-160 xl:w-full 2xl:mx-12"
+                : "flex-0 flex flex-col center-ish max-h-full overflow-y-auto w-full md:w-128 lg:w-160 xl:w-full 2xl:mx-auto"
             }`}
           >
             <div className="max-h-full pt-5">{children}</div>
@@ -151,7 +138,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
               url={unsplashUserUrl}
               isDark={
                 style.textVariant === FormElementTextVariant.Dynamic
-                  ? isDark
+                  ? style.isDark
                   : style.textVariant === FormElementTextVariant.Dark
               }
               layout={style.backgroundImagePlacement}
@@ -163,163 +150,4 @@ export const SurveyAppLayout: React.FunctionComponent<{
   );
 };
 
-export type FormElementStyleProps = Pick<
-  FormElement,
-  | "backgroundColor"
-  | "backgroundImage"
-  | "backgroundImagePlacement"
-  | "textVariant"
-  | "secondaryColor"
->;
-export type ComputedFormElementStyle = {
-  backgroundColor: string;
-  backgroundImage: string;
-  backgroundImagePlacement: FormElementBackgroundImagePlacement;
-  textVariant: FormElementTextVariant;
-  secondaryColor: string;
-};
-
-const defaultStyle = {
-  backgroundColor: "white",
-  secondaryColor: "rgb(46, 115, 182)",
-  textVariant: FormElementTextVariant.Dynamic,
-  backgroundImagePlacement: FormElementBackgroundImagePlacement.Top,
-  backgroundImage: "",
-};
-
-export function getCurrentStyle(
-  formElements: FormElementStyleProps[] | undefined | null,
-  current: FormElementStyleProps | undefined,
-  isSmall: boolean
-): ComputedFormElementStyle {
-  if (!formElements || !current || formElements.length === 0) {
-    return defaultStyle;
-  }
-  const index = formElements.indexOf(current) || 0;
-  let style: FormElementStyleProps = formElements[0];
-  for (var i = 1; i <= index; i++) {
-    if (formElements[i]) {
-      style = {
-        backgroundColor:
-          formElements[i].backgroundColor ||
-          style.backgroundColor ||
-          defaultStyle.backgroundColor,
-        secondaryColor:
-          formElements[i].secondaryColor ||
-          style.secondaryColor ||
-          defaultStyle.secondaryColor,
-        textVariant:
-          formElements[i].textVariant ||
-          style.textVariant ||
-          defaultStyle.textVariant,
-        backgroundImagePlacement:
-          formElements[i].backgroundImagePlacement ||
-          style.backgroundImagePlacement ||
-          defaultStyle.backgroundImagePlacement,
-        backgroundImage:
-          formElements[i].backgroundImage ||
-          style.backgroundImage ||
-          defaultStyle.backgroundImage,
-      };
-    }
-  }
-  if (isSmall) {
-    if (
-      style.backgroundImagePlacement !==
-      FormElementBackgroundImagePlacement.Cover
-    ) {
-      style = {
-        ...style,
-        backgroundImagePlacement: FormElementBackgroundImagePlacement.Top,
-      };
-    }
-  }
-  return style as ComputedFormElementStyle;
-}
-
-const bgStyle = (
-  layout: FormElementBackgroundImagePlacement,
-  image: string,
-  color: string
-) => {
-  let position = "";
-  // eslint-disable-next-line i18next/no-literal-string
-  image = `url(${image}&auto=compress,format&w=1280)`;
-  switch (layout) {
-    case FormElementBackgroundImagePlacement.Cover:
-      position = "center / cover no-repeat";
-      break;
-    case FormElementBackgroundImagePlacement.Top:
-      position = "fixed no-repeat";
-      const c = colord(color);
-      const secondaryColor = c.darken(0.1).saturate(0.2).toHex();
-      // eslint-disable-next-line i18next/no-literal-string
-      // image = `linear-gradient(128deg, ${color}, ${secondaryColor})`;
-      image = "";
-      // color = color
-      break;
-    default:
-      image = "";
-      break;
-  }
-  // eslint-disable-next-line i18next/no-literal-string
-  return `${position} ${image} ${color}`;
-};
-
 export default SurveyAppLayout;
-
-function UnsplashCredit({
-  name,
-  url,
-  layout,
-  isDark,
-}: {
-  name?: string;
-  url?: string;
-  layout: FormElementBackgroundImagePlacement;
-  isDark: boolean;
-}) {
-  if (name && url) {
-    return (
-      <p
-        className={`z-10 ${
-          isDark ? "text-white" : "text-gray-800"
-        } p-2 font-medium text-sm hidden sm:block opacity-50 ${
-          layout === FormElementBackgroundImagePlacement.Cover
-            ? "absolute bottom-0 left-0"
-            : layout === FormElementBackgroundImagePlacement.Left
-            ? "absolute bottom-0"
-            : layout === FormElementBackgroundImagePlacement.Top
-            ? "hidden"
-            : "absolute bottom-0 right-0"
-        }`}
-      >
-        <CameraIcon className="w-5 h-5 inline -mt-0.5 mr-1" />
-        <span>
-          <Trans ns="surveys">
-            Photo by{" "}
-            <a
-              rel="no-referrer"
-              href={url + "?utm_source=SeaSketch&utm_medium=referral"}
-              className="underline"
-            >
-              {name}
-            </a>{" "}
-            on{" "}
-            <a
-              className="underline"
-              href="https://unsplash.com?utm_source=SeaSketch&utm_medium=referral"
-            >
-              Unsplash
-            </a>
-            .
-          </Trans>
-        </span>
-      </p>
-    );
-  } else {
-    return null;
-  }
-}
-
-export const SurveyStyleContext = createContext(defaultStyle);

@@ -2,7 +2,7 @@ import { useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
 import TextInput from "../components/TextInput";
-import { SurveyStyleContext } from "../surveys/SurveyAppLayout";
+import { SurveyStyleContext } from "../surveys/appearance";
 import {
   FormElementBody,
   FormElementComponent,

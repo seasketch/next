@@ -5,15 +5,11 @@ import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
-import SettingsIcon from "../../components/SettingsIcon";
 import Switch from "../../components/Switch";
 import {
   useSurveyFormEditorDetailsQuery,
   useUpdateSurveyBaseSettingsMutation,
-  FormElement,
-  FormElementType,
   useUpdateFormElementOrderMutation,
-  useAddFormElementMutation,
   useDeleteFormElementMutation,
   useUpdateFormMutation,
   FormElementBackgroundImagePlacement,
@@ -22,35 +18,24 @@ import {
   useSetFormElementBackgroundMutation,
   useClearFormElementStyleMutation,
 } from "../../generated/graphql";
-import { FormElementFactory } from "../../surveys/SurveyApp";
-import {
-  getCurrentStyle,
-  SurveyAppLayout,
-} from "../../surveys/SurveyAppLayout";
+import FormElementFactory from "../../surveys/FormElementFactory";
+import { SurveyAppLayout } from "../../surveys/SurveyAppLayout";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   FormEditorPortalContext,
   useUpdateFormElement,
 } from "../../formElements/FormElement";
-import {
-  DragDropContext,
-  Draggable,
-  DraggableProvided,
-  DraggableStateSnapshot,
-  Droppable,
-} from "react-beautiful-dnd";
-import { components } from "../../formElements";
-import { AnimatePresence, motion } from "framer-motion";
-import gql from "graphql-tag";
-import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
 import { useAuth0 } from "@auth0/auth0-react";
 import UnsplashImageChooser from "./UnsplashImageChooser";
 import { colord, extend } from "colord";
 import harmoniesPlugin from "colord/plugins/harmonies";
 import a11yPlugin from "colord/plugins/a11y";
-import { useMediaQuery } from "beautiful-react-hooks";
 import ImagePreloader from "../../surveys/ImagePreloader";
+import { Auth0User } from "../../auth/Auth0User";
+import SortableFormElementList from "./SortableFormElementList";
+import AddFormElementButton from "./AddFormElementButton";
+import { useCurrentStyle } from "../../surveys/appearance";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -67,7 +52,7 @@ export default function SurveyFormEditor({
   const { t } = useTranslation();
   const formElementEditorContainerRef = useRef<HTMLDivElement>(null);
   const onError = useGlobalErrorHandler();
-  const auth0 = useAuth0();
+  const auth0 = useAuth0<Auth0User>();
   const { data, loading, error } = useSurveyFormEditorDetailsQuery({
     variables: {
       slug,
@@ -76,7 +61,6 @@ export default function SurveyFormEditor({
   });
   const [imageChooserOpen, setImageChooserOpen] = useState(false);
   const [updateOrder, updateOrderState] = useUpdateFormElementOrderMutation();
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [focusState, setFocusState] = useState<{
     basicSettings: boolean;
     formElement: number | undefined;
@@ -104,37 +88,14 @@ export default function SurveyFormEditor({
   ] = useUpdateFormElementBackgroundMutation({
     onError,
     // @ts-ignore
-    optimisticResponse: (data) => {
-      return {
-        __typename: "Mutation",
-        updateFormElement: {
-          __typename: "UpdateFormElementPayload",
-          formElement: {
-            __typename: "FormElement",
-            id: data.id,
-            backgroundColor:
-              data.backgroundColor || selectedFormElement?.backgroundColor,
-            secondaryColor:
-              data.secondaryColor || selectedFormElement?.secondaryColor,
-            backgroundImagePlacement:
-              data.backgroundImagePlacement ||
-              selectedFormElement?.backgroundImagePlacement ||
-              FormElementBackgroundImagePlacement.Top,
-            backgroundPalette:
-              data.backgroundPalette ||
-              selectedFormElement?.backgroundPalette ||
-              [],
-            textVariant:
-              data.textVariant ||
-              selectedFormElement?.textVariant ||
-              FormElementTextVariant.Dynamic,
-            unsplashAuthorName: selectedFormElement?.unsplashAuthorName,
-            unsplashAuthorUrl: selectedFormElement?.unsplashAuthorUrl,
-            backgroundImage: selectedFormElement?.backgroundImage,
-          },
+    optimisticResponse: (data) => ({
+      updateFormElement: {
+        formElement: {
+          ...selectedFormElement,
+          ...data,
         },
-      };
-    },
+      },
+    }),
   });
 
   const [
@@ -145,9 +106,7 @@ export default function SurveyFormEditor({
     // @ts-ignore
     optimisticResponse: (data) => {
       return {
-        __typename: "Mutation",
         setFormElementBackground: {
-          __typename: "FormElement",
           ...data,
           backgroundImage: data.backgroundUrl,
         },
@@ -160,7 +119,6 @@ export default function SurveyFormEditor({
     // @ts-ignore
     optimisticResponse: (data) => {
       return {
-        __typename: "Mutation",
         clearFormElementStyle: {
           formElement: {
             id: data.id,
@@ -200,9 +158,6 @@ export default function SurveyFormEditor({
     });
   }
 
-  const [addFormElement, addFormElementState] = useAddFormElementMutation({
-    onError,
-  });
   const [updateForm, updateFormMutationState] = useUpdateFormMutation({
     onError,
     optimisticResponse: (d) => ({
@@ -232,23 +187,18 @@ export default function SurveyFormEditor({
   const selectedFormElement = formElements.find(
     (e) => e.id === focusState.formElement
   );
-  const isSmall = useMediaQuery("(max-width: 767px)");
 
-  const style = getCurrentStyle(
+  const style = useCurrentStyle(
     data?.survey?.form?.formElements,
-    selectedFormElement,
-    isSmall
+    selectedFormElement
   );
+
+  let isDark = colord(style.backgroundColor || "#efefef").isDark();
+  let dynamicTextClass = "text-white";
+  dynamicTextClass = isDark ? "text-white" : "text-grey-800";
 
   const [updateElementSetting, updateComponentSetting] = useUpdateFormElement(
     selectedFormElement!
-  );
-
-  const WelcomeMessage = formElements.find(
-    (e) => e.typeId === "WelcomeMessage"
-  );
-  const sortableFormElements = formElements.filter(
-    (e) => e.typeId !== "WelcomeMessage"
   );
   const formId = data?.survey?.form?.id;
 
@@ -322,261 +272,45 @@ export default function SurveyFormEditor({
             <nav className="mt-2 bg-cool-gray-100 flex-1">
               <h3 className="flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-blue-gray-200 border items-center">
                 <span className="flex-1">{t("Form Elements")}</span>
-                <Button
-                  className=""
-                  small
-                  label={t("Add")}
-                  onClick={() => setAddMenuOpen(true)}
+                <AddFormElementButton
+                  nextPosition={formElements.length + 1}
+                  types={data?.formElementTypes || []}
+                  formId={formId!}
+                  onAdd={(formElement) =>
+                    setFocusState({ basicSettings: false, formElement })
+                  }
                 />
-                <AnimatePresence>
-                  {addMenuOpen && (
-                    <motion.div
-                      transition={{ duration: 0.1 }}
-                      initial={{ background: "rgba(0,0,0,0)" }}
-                      animate={{ background: "rgba(0,0,0,0.1)" }}
-                      exit={{ background: "rgba(0,0,0,0)" }}
-                      className={`absolute top-0 left-0 z-50 w-screen h-screen bg-opacity-5 bg-black`}
-                      onClick={() => setAddMenuOpen(false)}
-                    >
-                      <motion.div
-                        transition={{ duration: 0.1 }}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        className="absolute left-56 ml-2 p-0 top-28 mt-2 max-h-128 overflow-y-auto bg-white rounded shadow "
-                      >
-                        {Object.entries(components)
-                          .filter(([id, C]) => !C.templatesOnly)
-                          .map(([id, C]) => (
-                            <div
-                              key={id}
-                              className="py-4 px-4 cursor-pointer my-2 hover:bg-cool-gray-100"
-                              onClick={async () => {
-                                const result = await addFormElement({
-                                  variables: {
-                                    body: C.defaultBody,
-                                    componentSettings:
-                                      C.defaultComponentSettings || {},
-                                    formId: data!.survey!.form!.id,
-                                    componentType: id,
-                                  },
-                                  optimisticResponse: {
-                                    __typename: "Mutation",
-                                    createFormElement: {
-                                      __typename: "CreateFormElementPayload",
-                                      formElement: {
-                                        __typename: "FormElement",
-                                        body: C.defaultBody,
-                                        componentSettings:
-                                          C.defaultComponentSettings || {},
-                                        formId: data!.survey!.form!.id,
-                                        typeId: id,
-                                        isRequired: false,
-                                        position: formElements.length + 1,
-                                        conditionalRenderingRules: [],
-                                        type: {
-                                          ...data!.formElementTypes!.find(
-                                            (e) => e.componentName === id
-                                          )!,
-                                        },
-                                        id: 9999999999,
-                                        exportId:
-                                          "loading-" + formElements.length + 1,
-                                        backgroundColor: null,
-                                        backgroundImage: null,
-                                        backgroundImagePlacement:
-                                          FormElementBackgroundImagePlacement.Top,
-                                        textVariant:
-                                          FormElementTextVariant.Dynamic,
-                                        backgroundPalette: null,
-                                      },
-                                    },
-                                  },
-                                  update: (cache, { data }) => {
-                                    if (data?.createFormElement?.formElement) {
-                                      const newElementData =
-                                        data.createFormElement.formElement;
-                                      cache.modify({
-                                        id: cache.identify({
-                                          __typename: "Form",
-                                          id: formId,
-                                        }),
-                                        fields: {
-                                          formElements(
-                                            existingRefs = [],
-                                            { readField }
-                                          ) {
-                                            const newRef = cache.writeFragment({
-                                              data: newElementData,
-                                              fragment: gql`
-                                                fragment NewElement on FormElement {
-                                                  body
-                                                  componentSettings
-                                                  conditionalRenderingRules {
-                                                    id
-                                                    field {
-                                                      id
-                                                      exportId
-                                                    }
-                                                    operator
-                                                    predicateFieldId
-                                                    value
-                                                  }
-                                                  exportId
-                                                  formId
-                                                  id
-                                                  isRequired
-                                                  position
-                                                  type {
-                                                    componentName
-                                                    isHidden
-                                                    isInput
-                                                    isSingleUseOnly
-                                                    isSurveysOnly
-                                                    label
-                                                  }
-                                                  typeId
-                                                }
-                                              `,
-                                            });
-
-                                            return [...existingRefs, newRef];
-                                          },
-                                        },
-                                      });
-                                    }
-                                  },
-                                });
-                                if (
-                                  result.data?.createFormElement?.formElement
-                                ) {
-                                  setFocusState({
-                                    basicSettings: false,
-                                    formElement:
-                                      result.data.createFormElement.formElement
-                                        .id,
-                                  });
-                                }
-                              }}
-                            >
-                              <div className="text-base font-medium text-gray-800">
-                                {C.label}
-                              </div>
-                              <div className="text-sm text-gray-800">
-                                {C.description}
-                              </div>
-                            </div>
-                          ))}
-                      </motion.div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </h3>
-              <div className="pb-4 pt-1">
-                {WelcomeMessage && (
-                  <div className="mb-2">
-                    <FormElementListItem
-                      selected={
-                        !!(
-                          focusState.formElement &&
-                          focusState.formElement === WelcomeMessage.id
-                        )
-                      }
-                      element={WelcomeMessage}
-                      type={WelcomeMessage.type!}
-                      onClick={() =>
-                        setFocusState({
-                          basicSettings: false,
-                          formElement: WelcomeMessage.id,
-                        })
-                      }
-                      draggable={false}
-                    />
-                  </div>
-                )}
-                <DragDropContext
-                  onDragEnd={(result) => {
-                    if (!result.destination) {
-                      return;
-                    } else {
-                      let sorted = reorder(
-                        sortableFormElements,
-                        result.source.index,
-                        result.destination.index
-                      );
-                      if (WelcomeMessage) {
-                        sorted = [WelcomeMessage, ...sorted];
-                      }
-                      updateOrder({
-                        variables: {
-                          elementIds: sorted.map((e) => e.id),
-                        },
-                        optimisticResponse: {
-                          __typename: "Mutation",
-                          setFormElementOrder: {
-                            __typename: "SetFormElementOrderPayload",
-                            formElements: sorted.map((e, i) => ({
-                              __typename: "FormElement",
-                              id: e.id,
-                              position: i + 1,
-                            })),
-                          },
-                        },
-                      });
-                    }
-                  }}
-                >
-                  <Droppable droppableId="droppable">
-                    {(provided, snapshot) => (
-                      <div
-                        className="space-y-2"
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                      >
-                        {sortableFormElements.map((element, i) => (
-                          <Draggable
-                            index={i}
-                            draggableId={element.id.toString()}
-                            key={element.id}
-                            isDragDisabled={element.typeId === "WelcomeMessage"}
-                          >
-                            {(provided, snapshot) => (
-                              <FormElementListItem
-                                draggable={true}
-                                provided={provided}
-                                snapshot={snapshot}
-                                // key={element.id}
-                                selected={
-                                  !!(
-                                    focusState.formElement &&
-                                    focusState.formElement === element.id
-                                  )
-                                }
-                                element={element}
-                                type={element.type!}
-                                creating={element.id === 9999999999}
-                                onClick={() =>
-                                  setFocusState({
-                                    basicSettings: false,
-                                    formElement: element.id,
-                                  })
-                                }
-                              />
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </DragDropContext>
-              </div>
+              <SortableFormElementList
+                selection={focusState.formElement}
+                items={formElements}
+                onClick={(formElement) =>
+                  setFocusState({ basicSettings: false, formElement })
+                }
+                onReorder={(elementIds) => {
+                  updateOrder({
+                    variables: {
+                      elementIds,
+                    },
+                    optimisticResponse: {
+                      __typename: "Mutation",
+                      setFormElementOrder: {
+                        __typename: "SetFormElementOrderPayload",
+                        formElements: elementIds.map((id, i) => ({
+                          __typename: "FormElement",
+                          id,
+                          position: i + 1,
+                        })),
+                      },
+                    },
+                  });
+                }}
+              />
             </nav>
           </div>
         </div>
         {/* Content */}
         <div className="flex-1">
-          {/* <div className={`w-96 h-160 ml-auto mr-auto`}> */}
           {data?.survey && selectedFormElement && (
             <SurveyAppLayout
               embeddedInAdmin={true}
@@ -622,7 +356,6 @@ export default function SurveyFormEditor({
               </FormEditorPortalContext.Provider>
             </SurveyAppLayout>
           )}
-          {/* </div> */}
         </div>
         {/* Right Sidebar */}
         <div className="bg-white w-64 shadow overflow-y-auto">
@@ -796,13 +529,13 @@ export default function SurveyFormEditor({
                       {t("Background image")}
                     </h4>
                     <div className="flex-rows flex space-x-4 py-2 items-center justify-center">
-                      <img
-                        role="button"
-                        src={`${selectedFormElement.backgroundImage}&w=200`}
-                        alt="survey background"
-                        className="w-12 cursor-pointer"
-                        onClick={() => setImageChooserOpen(true)}
-                      />
+                      <div
+                        className="flex-1 h-12"
+                        style={{
+                          background: `url(${selectedFormElement.backgroundImage}&w=200) no-repeat center`,
+                          backgroundSize: "cover",
+                        }}
+                      ></div>
                       <Button
                         small
                         label={t("Choose image...")}
@@ -836,13 +569,6 @@ export default function SurveyFormEditor({
                           />
                         )
                       )}
-                      {/* <input
-                        className="w-4 h-4 rounded-full shadow"
-                        type="color"
-                        value={Color(
-                          selectedFormElement.backgroundColor || ""
-                        ).hex()}
-                      /> */}
                     </div>
                   </div>
                   <div>
@@ -855,7 +581,6 @@ export default function SurveyFormEditor({
                         (selectedFormElement.backgroundPalette ||
                           []) as string[]
                       ).map((c, i) => {
-                        // c = Color(c!).rotate(180).rgb();
                         return (
                           <button
                             key={c!.toString()}
@@ -876,13 +601,6 @@ export default function SurveyFormEditor({
                           />
                         );
                       })}
-                      {/* <input
-                        className="w-4 h-4 rounded-full shadow"
-                        type="color"
-                        value={Color(
-                          selectedFormElement.backgroundColor || ""
-                        ).hex()}
-                      /> */}
                     </div>
                   </div>
                   <div>
@@ -1005,35 +723,78 @@ export default function SurveyFormEditor({
                       </p>
                     </div>
                   )}
-                  {/* <InputBlock
-                  labelType="small"
-                  title={t("Text Color")}
-                  input={
-                    <select
-                      className="w-32"
-                      value={selectedFormElement.textVariant || ""}
-                      onChange={(e) => {
+                  <h4 className="text-sm font-medium text-gray-800 mb-2">
+                    {t("Text color")}
+                  </h4>
+                  <div className="flex space-x-2">
+                    <div
+                      className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
+                        style.textVariant === FormElementTextVariant.Dynamic &&
+                        "ring"
+                      }`}
+                      style={{ backgroundColor: style.backgroundColor }}
+                      onClick={() =>
                         updateBackground({
                           variables: {
                             id: selectedFormElement.id,
-                            textVariant: e.target
-                              .value as FormElementTextVariant,
+                            textVariant: FormElementTextVariant.Dynamic,
                           },
-                        });
-                      }}
+                        })
+                      }
                     >
-                      <option value={FormElementTextVariant.Dynamic}>
-                        {t("Dynamic")}
-                      </option>
-                      <option value={FormElementTextVariant.Dark}>
-                        {t("Dark")}
-                      </option>
-                      <option value={FormElementTextVariant.Light}>
-                        {t("Light")}
-                      </option>
-                    </select>
-                  }
-                /> */}
+                      {/* eslint-disable-next-line i18next/no-literal-string */}
+                      <span className={`font-bold text-lg ${dynamicTextClass}`}>
+                        T
+                      </span>
+                      <span className="absolute -bottom-5 text-xs">
+                        {t("auto")}
+                      </span>
+                    </div>
+                    <div
+                      className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
+                        style.textVariant === FormElementTextVariant.Light &&
+                        "ring"
+                      }`}
+                      style={{ backgroundColor: style.backgroundColor }}
+                      onClick={() =>
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement.id,
+                            textVariant: FormElementTextVariant.Light,
+                          },
+                        })
+                      }
+                    >
+                      {/* eslint-disable-next-line i18next/no-literal-string */}
+                      <span className={`font-bold text-lg text-white`}>T</span>
+                      <span className="absolute -bottom-5 text-xs">
+                        {t("light")}
+                      </span>
+                    </div>
+                    <div
+                      className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
+                        style.textVariant === FormElementTextVariant.Dark &&
+                        "ring"
+                      }`}
+                      style={{ backgroundColor: style.backgroundColor }}
+                      onClick={() =>
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement.id,
+                            textVariant: FormElementTextVariant.Dark,
+                          },
+                        })
+                      }
+                    >
+                      {/* eslint-disable-next-line i18next/no-literal-string */}
+                      <span className={`font-bold text-lg text-grey-800`}>
+                        T
+                      </span>
+                      <span className="absolute -bottom-5 text-xs">
+                        {t("dark")}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
             </>
@@ -1108,79 +869,6 @@ export default function SurveyFormEditor({
       </div>
     </div>
   );
-}
-
-function FormElementListItem({
-  element,
-  type,
-  onClick,
-  selected,
-  provided,
-  draggable,
-  snapshot,
-  creating,
-}: {
-  element: Pick<FormElement, "body" | "componentSettings" | "exportId">;
-  type: Pick<FormElementType, "label">;
-  onClick?: () => void;
-  selected: boolean;
-  provided?: DraggableProvided;
-  draggable?: boolean;
-  snapshot?: DraggableStateSnapshot;
-  creating?: boolean;
-}) {
-  return (
-    <div
-      ref={provided?.innerRef}
-      {...provided?.draggableProps}
-      {...provided?.dragHandleProps}
-      // style={provided?.draggableProps.style}
-      style={{ ...provided?.draggableProps.style, cursor: "pointer" }}
-      onClick={onClick}
-      className={`relative select-none cursor-pointer ${
-        snapshot?.isDragging && "shadow-lg"
-      } mx-2 px-4 py-2 ${
-        draggable && "shadow-md"
-      } bg-white w-50 border border-black border-opacity-20 rounded ${
-        selected && "ring-2 ring-blue-300"
-      } ${creating ? "opacity-50" : ""}`}
-    >
-      {creating && <Spinner className="absolute right-1 top-1" />}
-      <div className="">{type.label}</div>
-      <div className="text-xs italic overflow-x-hidden truncate">
-        {collectText(element.body)}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Extracts text from the given ProseMirror document up to the character limit
- * @param body ProseMirror document json
- * @param charLimit Character limit
- * @returns string
- */
-function collectText(body: any, charLimit = 32) {
-  let text = "";
-  if (body.text) {
-    text += body.text + " ";
-  }
-  if (body.content && body.content.length) {
-    for (const node of body.content) {
-      if (text.length > charLimit) {
-        return text;
-      }
-      text += collectText(node);
-    }
-  }
-  return text;
-}
-
-function reorder<T>(list: T[], startIndex: number, endIndex: number): T[] {
-  const result = Array.from(list);
-  const [removed] = result.splice(startIndex, 1);
-  result.splice(endIndex, 0, removed);
-  return result;
 }
 
 function secondaryPalette(
