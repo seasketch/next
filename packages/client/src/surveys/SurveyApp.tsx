@@ -233,35 +233,32 @@ function SurveyApp() {
                 editable={false}
                 value={state?.value}
               />
-              {!formElement.exiting &&
-                (!!state?.value || !formElement.current.isRequired) &&
-                formElement.current.typeId !== "WelcomeMessage" &&
-                !state?.errors && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{
-                      duration: 0.3,
-                      when: "beforeChildren",
-                    }}
-                  >
-                    <Button
-                      className="mb-10"
-                      label={
-                        lastPage && !!!formElement.exiting
-                          ? t("Complete Submission")
-                          : t("Next")
-                      }
-                      onClick={handleAdvance}
-                      disabled={
-                        createResponseState.loading || !!formElement.exiting
-                      }
-                      loading={createResponseState.loading}
-                      backgroundColor={style.secondaryColor}
-                    />
-                  </motion.div>
-                )}
+
+              <div
+                className={`${
+                  !formElement.exiting &&
+                  (!!state?.value || !formElement.current.isRequired) &&
+                  formElement.current.typeId !== "WelcomeMessage" &&
+                  !state?.errors
+                    ? "opacity-100 transition-opacity duration-300"
+                    : "opacity-0"
+                }`}
+              >
+                <Button
+                  className="mb-10"
+                  label={
+                    lastPage && !!!formElement.exiting
+                      ? t("Complete Submission")
+                      : t("Next")
+                  }
+                  onClick={handleAdvance}
+                  disabled={
+                    createResponseState.loading || !!formElement.exiting
+                  }
+                  loading={createResponseState.loading}
+                  backgroundColor={style.secondaryColor}
+                />
+              </div>
             </motion.div>
           </AnimatePresence>
           <SurveyNav
