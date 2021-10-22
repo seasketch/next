@@ -1,7 +1,9 @@
 // import Color from "color";
-import React, { CSSProperties } from "react";
+import React, { CSSProperties, useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import { colord, extend } from "colord";
+import { ChevronDownIcon } from "@heroicons/react/outline";
+
 export interface ButtonProps {
   /* Disables user interaction */
   disabled?: boolean;
@@ -30,9 +32,23 @@ export interface ButtonProps {
   /* hex or rgb */
   backgroundColor?: string;
   shadowSize?: "shadow-sm" | "shadow" | "shadow-md" | "shadow-lg" | "shadow-xl";
+  segmentItems?: string[];
+  onSegmentClick?: (index: number) => void;
 }
 
 export default function Button(props: ButtonProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    const fn = () => {
+      setDropdownOpen(false);
+    };
+    if (dropdownOpen) {
+      document.body.addEventListener("click", fn);
+    }
+    return () => document.body.removeEventListener("click", fn);
+  }, [dropdownOpen]);
+
   const history = useHistory();
   let onClick = props.onClick;
   if (props.href) {
@@ -69,7 +85,9 @@ export default function Button(props: ButtonProps) {
         `text-gray-700 ${
           props.disabled ? "bg-gray-100" : "bg-white"
         } hover:text-gray-500 focus:border-blue-300 focus:shadow-outline-blue active:text-gray-800 active:bg-gray-50`
-  } focus:outline-none  transition ease-in-out duration-150`;
+  } focus:outline-none  transition ease-in-out duration-150 ${
+    props.segmentItems && "pr-10"
+  }`;
   const spinner = (
     <div
       className={`ml-3 inline-block inset-y-0 items-center pointer-events-none transition-opacity duration-500 opacity-50`}
@@ -119,7 +137,7 @@ export default function Button(props: ButtonProps) {
   return (
     <span
       title={props.title}
-      className={`inline-flex ${props.shadowSize || "shadow-sm"} ${
+      className={`inline-flex relative ${props.shadowSize || "shadow-sm"} ${
         props.className
       }`}
       onClick={props.disabled ? undefined : onClick}
@@ -142,6 +160,35 @@ export default function Button(props: ButtonProps) {
         >
           {label}
           {props.loading && spinner}
+          {props.segmentItems && (
+            <div
+              className="border-l border-black border-opacity-10 pr-2 absolute right-0 top-0 pl-2 h-9 hover:bg-black hover:bg-opacity-5 flex items-center rounded-r"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDropdownOpen(!dropdownOpen);
+              }}
+            >
+              <ChevronDownIcon className="w-4 h-4" />
+              {dropdownOpen && (
+                <nav className="bg-white rounded shadow absolute right-0 top-full mt-2 z-10 w-content overflow-hidden">
+                  {props.segmentItems.map((i, n) => (
+                    <div
+                      className="px-4 py-3 text-sm font-light hover:bg-gray-100 whitespace-nowrap text-left"
+                      key={i}
+                      onClick={() => {
+                        if (props.onSegmentClick) {
+                          props.onSegmentClick(n);
+                        }
+                      }}
+                    >
+                      {i}
+                    </div>
+                  ))}
+                </nav>
+              )}
+            </div>
+          )}
         </button>
       )}
     </span>

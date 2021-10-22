@@ -55,6 +55,8 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
    * Used to request that the controller advance to the next question. For example, on Enter keydown
    */
   onSubmit: () => void;
+  /** Whether the current user session is a project admin */
+  isAdmin: boolean;
 }
 
 /**

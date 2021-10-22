@@ -1521,6 +1521,7 @@ input CreateSurveyResponseInput {
   clientMutationId: String
   draft: Boolean
   facilitated: Boolean
+  practice: Boolean
   responseData: JSON
   surveyId: Int
 }
@@ -10292,6 +10293,7 @@ type Survey implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  practiceResponseCount: Int
 
   """Reads a single `Project` that is related to this `Survey`."""
   project: Project
@@ -10650,6 +10652,7 @@ type SurveyResponse implements Node {
   If true, a logged-in user entered information on behalf of another person, so userId is not as relevant.
   """
   isFacilitated: Boolean!
+  isPractice: Boolean!
 
   """
   Unusual or missing user-agent headers on submissions are flagged. May indicate

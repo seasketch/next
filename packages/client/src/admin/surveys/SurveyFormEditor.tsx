@@ -229,7 +229,7 @@ export default function SurveyFormEditor({
           </Link>
         </div>
         <Button
-          href={`/${slug}/surveys/${surveyId}/0?preview=true`}
+          href={`/${slug}/surveys/${surveyId}/0/practice`}
           label={
             <>
               <EyeIcon className="h-4 mr-2" />
@@ -342,6 +342,7 @@ export default function SurveyFormEditor({
                 {selectedFormElement && (
                   <>
                     <FormElementFactory
+                      isAdmin={true}
                       {...selectedFormElement!}
                       onChange={() => null}
                       onSubmit={() => null}

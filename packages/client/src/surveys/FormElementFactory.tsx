@@ -23,6 +23,7 @@ export default function FormElementFactory({
   | "onChange"
   | "onSubmit"
   | "editable"
+  | "isAdmin"
 > & {
   typeName: string;
 }) {

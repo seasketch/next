@@ -103,13 +103,13 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
             },
             {
               name: "For Review",
-              count: 3,
+              count: 0,
               href: "#",
               current: false,
             },
             {
               name: "Practice",
-              count: 2,
+              count: survey?.practiceResponseCount || 0,
               href: "#",
               current: false,
             },
