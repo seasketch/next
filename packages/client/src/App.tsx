@@ -125,7 +125,7 @@ function App() {
                   return <Redirect to={`/${slug}/surveys/${surveyId}/0`} />;
                 }}
               />
-              <Route path="/:slug/surveys/:surveyId/:position">
+              <Route path="/:slug/surveys/:surveyId/:position/:practice?">
                 {/* eslint-disable-next-line i18next/no-literal-string */}
                 <ProjectAccessGate>
                   <LazySurveyApp />

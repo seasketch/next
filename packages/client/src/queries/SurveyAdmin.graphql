@@ -10,6 +10,7 @@ fragment SurveyListDetails on Survey {
   limitToSingleResponse
   name
   submittedResponseCount
+  practiceResponseCount
   projectId
   isTemplate
 }

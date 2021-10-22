@@ -17,6 +17,9 @@ import { FormElementStyleProps, useCurrentStyle } from "./appearance";
 import ImagePreloader from "./ImagePreloader";
 import SurveyAppLayout from "./SurveyAppLayout";
 import FormElementFactory from "./FormElementFactory";
+import Modal from "../components/Modal";
+import { useAuth0 } from "@auth0/auth0-react";
+import { Auth0User } from "../auth/Auth0User";
 require("./surveys.css");
 
 interface FormElementState {
@@ -45,18 +48,23 @@ type FE = Pick<
  * validation and input rendering to FormElements.
  */
 function SurveyApp() {
-  const { surveyId, position } = useParams<{
+  const { surveyId, position, practice, slug } = useParams<{
     surveyId: string;
     position: string;
+    practice?: string;
+    slug: string;
   }>();
   const { t } = useTranslation("surveys");
   const history = useHistory();
+  const auth0 = useAuth0<Auth0User>();
+
   const [backwards, setBackwards] = useState(false);
   const onError = useGlobalErrorHandler();
   const { data, loading } = useSurveyQuery({
     variables: { id: parseInt(surveyId) },
     onError,
   });
+  const [practiceModalOpen, setPracticeModalOpen] = useState(false);
 
   const [createResponse, createResponseState] = useCreateResponseMutation({
     onError,
@@ -87,7 +95,12 @@ function SurveyApp() {
   const [responseState, setResponseState] = useLocalStorage<{
     [id: number]: FormElementState;
     // eslint-disable-next-line i18next/no-literal-string
-  }>(`survey-${surveyId}`, {});
+  }>(
+    // eslint-disable-next-line i18next/no-literal-string
+    `survey-${surveyId}`,
+    {}
+  );
+
   if (!data?.survey?.form?.formElements || loading) {
     return <div></div>;
   } else if (!data?.survey) {
@@ -158,14 +171,23 @@ function SurveyApp() {
               bypassedDuplicateSubmissionControl: false,
               facilitated: false,
               responseData,
+              practice: !!practice,
             },
           });
           if (response && !response.errors) {
             setResponseState({});
-            history.push(`./0`);
+            history.push(
+              // eslint-disable-next-line i18next/no-literal-string
+              `/${slug}/surveys/${surveyId}/0/${practice ? "practice" : ""}`
+            );
           }
         } else {
-          history.push(`./${index + 1}`);
+          history.push(
+            // eslint-disable-next-line i18next/no-literal-string
+            `/${slug}/surveys/${surveyId}/${index + 1}/${
+              practice ? "practice" : ""
+            }`
+          );
         }
       }
     }
@@ -177,6 +199,10 @@ function SurveyApp() {
           style={style}
           unsplashUserName={formElement.current.unsplashAuthorName || undefined}
           unsplashUserUrl={formElement.current.unsplashAuthorUrl || undefined}
+          practice={!!practice}
+          onPracticeClick={() => {
+            setPracticeModalOpen(true);
+          }}
         >
           <AnimatePresence
             initial={false}
@@ -220,15 +246,40 @@ function SurveyApp() {
               exit="exit"
             >
               <FormElementFactory
+                isAdmin={
+                  !!(
+                    data.me?.isAdmin ||
+                    auth0.user?.["https://seasketch.org/superuser"]
+                  )
+                }
                 {...formElement.current}
                 typeName={formElement.current.typeId}
                 submissionAttempted={!!state?.submissionAttempted}
-                onChange={(value, errors) =>
-                  updateState(formElement.current!, {
-                    value,
-                    errors,
-                  })
-                }
+                onChange={(value, errors) => {
+                  if (formElement.current?.typeId === "WelcomeMessage") {
+                    switch (
+                      (value as { dropdownSelection?: string })
+                        .dropdownSelection
+                    ) {
+                      case "BEGIN":
+                        history.push(`/${slug}/surveys/${surveyId}/1`);
+                        break;
+                      case "PRACTICE":
+                        history.push(`/${slug}/surveys/${surveyId}/1/practice`);
+                        break;
+                      case "EDIT":
+                        history.push(`/${slug}/survey-editor/${surveyId}`);
+                        break;
+                      case "RESPONSES":
+                        history.push(`/${slug}/admin/surveys/${surveyId}`);
+                    }
+                  } else {
+                    updateState(formElement.current!, {
+                      value,
+                      errors,
+                    });
+                  }
+                }}
                 onSubmit={handleAdvance}
                 editable={false}
                 value={state?.value}
@@ -267,6 +318,9 @@ function SurveyApp() {
             lastPage={parseInt(position) + 1 === elements.length}
             index={parseInt(position)}
             onPrev={() => setBackwards(true)}
+            slug={slug}
+            surveyId={surveyId}
+            practice={practice}
             onNext={(e) => {
               handleAdvance();
               if (!canAdvance()) {
@@ -275,6 +329,41 @@ function SurveyApp() {
             }}
           />
         </SurveyAppLayout>
+        <Modal
+          open={practiceModalOpen}
+          onRequestClose={() => setPracticeModalOpen(false)}
+          title={t("Practice Mode")}
+          footer={
+            <div className="space-x-1 text-center md:text-right space-y-2 md:space-y-0">
+              <Button
+                label={
+                  practice
+                    ? t("Continue Practice Mode")
+                    : t("Enable Practice Mode")
+                }
+                onClick={() => {
+                  setPracticeModalOpen(false);
+                  history.replace(
+                    `/${slug}/surveys/${surveyId}/${index}/practice`
+                  );
+                }}
+              />
+              <Button
+                primary
+                label={t("Count My Response")}
+                onClick={() => {
+                  setPracticeModalOpen(false);
+                  history.replace(`/${slug}/surveys/${surveyId}/${index}/`);
+                }}
+              />
+            </div>
+          }
+        >
+          <Trans ns="surveys">
+            Practice mode saves your responses seperately so that they are not
+            counted in the survey results.
+          </Trans>
+        </Modal>
         <ImagePreloader formElements={elements} />
       </>
     );
@@ -287,6 +376,9 @@ function SurveyNav({
   onNext,
   onPrev,
   index,
+  slug,
+  surveyId,
+  practice,
 }: {
   canAdvance: boolean;
   lastPage: boolean;
@@ -294,30 +386,40 @@ function SurveyNav({
   onNext: MouseEventHandler<HTMLAnchorElement>;
   onPrev: MouseEventHandler<HTMLAnchorElement>;
   index: number;
+  slug: string;
+  surveyId: string;
+  practice?: string;
 }) {
   return (
     <div
       style={{ width: "fit-content", height: "fit-content" }}
-      className={`z-20 fixed bottom-5 right-5 lg:left-5 lg:top-5 ${
-        index === 0 && "hidden"
-      }`}
+      className={`z-20 fixed bottom-3 right-3 lg:left-2 ${
+        practice ? "lg:top-8" : "lg:top-5"
+      } ${index === 0 && "hidden"}`}
     >
       <Link
         onClick={onPrev}
-        to={`./${index - 1}`}
-        className="inline-block transition-colors duration-500"
+        to={`/${slug}/surveys/${surveyId}/${index - 1}/${
+          practice ? "practice" : ""
+        }`}
+        className="inline-block "
       >
-        <UpArrowIcon className="inline-block" style={{ color: buttonColor }} />
+        <UpArrowIcon
+          className="inline-block transition-colors duration-300"
+          style={{ color: buttonColor, width: 48, height: 48 }}
+        />
       </Link>
       {!lastPage && (
         <Link
           onClick={onNext}
-          className={"inline-block transition-colors duration-500"}
-          to={`./${index + 1}`}
+          className={"inline-block"}
+          to={`/${slug}/surveys/${surveyId}/${index + 1}/${
+            practice ? "practice" : ""
+          }`}
         >
           <DownArrowIcon
-            className="inline-block"
-            style={{ color: buttonColor }}
+            className="inline-block transition-colors duration-300"
+            style={{ color: buttonColor, width: 48, height: 48 }}
           />
         </Link>
       )}

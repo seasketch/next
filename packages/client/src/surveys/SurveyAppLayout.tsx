@@ -13,6 +13,7 @@ import {
   defaultStyle,
   SurveyStyleContext,
 } from "./appearance";
+import { Trans } from "react-i18next";
 
 require("./surveys.css");
 
@@ -23,7 +24,10 @@ export const SurveyAppLayout: React.FunctionComponent<{
   style?: ComputedFormElementStyle;
   unsplashUserName?: string;
   unsplashUserUrl?: string;
+  practice?: boolean;
+  onPracticeClick?: () => void;
 }> = ({
+  practice,
   progress,
   children,
   embeddedInAdmin,
@@ -31,6 +35,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
   style,
   unsplashUserName,
   unsplashUserUrl,
+  onPracticeClick,
 }) => {
   style = style || defaultStyle;
   useBodyBackground(
@@ -56,8 +61,22 @@ export const SurveyAppLayout: React.FunctionComponent<{
   return (
     <SurveyStyleContext.Provider value={style}>
       <div className={`w-full relative`}>
+        {practice && (
+          <div
+            onClick={onPracticeClick}
+            className={`absolute z-10 w-full bg-yellow-300 text-yellow-700 text-xs lg:text-sm bg-opacity-50 text-center font-medium border-b border-black border-opacity-20 ${
+              onPracticeClick ? "cursor-pointer" : ""
+            }`}
+          >
+            <Trans ns="surveys">Practice mode</Trans>
+          </div>
+        )}
         {showProgress && (
-          <ProgressBar progress={progress} skipAnimation={embeddedInAdmin} />
+          <ProgressBar
+            className={practice ? "top-4 lg:top-5" : ""}
+            progress={progress}
+            skipAnimation={embeddedInAdmin}
+          />
         )}
         <div
           className={`${top ? "" : "flex h-full"} ${

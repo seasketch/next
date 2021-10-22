@@ -1338,6 +1338,7 @@ export type CreateSurveyResponseInput = {
   clientMutationId?: Maybe<Scalars['String']>;
   draft?: Maybe<Scalars['Boolean']>;
   facilitated?: Maybe<Scalars['Boolean']>;
+  practice?: Maybe<Scalars['Boolean']>;
   responseData?: Maybe<Scalars['JSON']>;
   surveyId?: Maybe<Scalars['Int']>;
 };
@@ -10085,6 +10086,7 @@ export type Survey = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  practiceResponseCount?: Maybe<Scalars['Int']>;
   /** Reads a single `Project` that is related to this `Survey`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
@@ -10372,6 +10374,7 @@ export type SurveyResponse = Node & {
   isDuplicateIp: Scalars['Boolean'];
   /** If true, a logged-in user entered information on behalf of another person, so userId is not as relevant. */
   isFacilitated: Scalars['Boolean'];
+  isPractice: Scalars['Boolean'];
   /**
    * Unusual or missing user-agent headers on submissions are flagged. May indicate
    * scripting but does not necessarily imply malicious intent.
@@ -13816,7 +13819,7 @@ export type SimpleProjectListQuery = (
 
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId' | 'isTemplate'>
+  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate'>
   & { invitedGroups?: Maybe<Array<(
     { __typename?: 'Group' }
     & Pick<Group, 'id' | 'name'>
@@ -14135,7 +14138,10 @@ export type SurveyQueryVariables = Exact<{
 
 export type SurveyQuery = (
   { __typename?: 'Query' }
-  & { survey?: Maybe<(
+  & { me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'isAdmin'>
+  )>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress'>
     & { form?: Maybe<(
@@ -14159,6 +14165,7 @@ export type CreateResponseMutationVariables = Exact<{
   bypassedDuplicateSubmissionControl: Scalars['Boolean'];
   responseData: Scalars['JSON'];
   facilitated: Scalars['Boolean'];
+  practice: Scalars['Boolean'];
 }>;
 
 
@@ -14834,6 +14841,7 @@ export const SurveyListDetailsFragmentDoc = gql`
   limitToSingleResponse
   name
   submittedResponseCount
+  practiceResponseCount
   projectId
   isTemplate
 }
@@ -18871,6 +18879,9 @@ export type ClearFormElementStyleMutationResult = Apollo.MutationResult<ClearFor
 export type ClearFormElementStyleMutationOptions = Apollo.BaseMutationOptions<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
+  me {
+    isAdmin
+  }
   survey(id: $id) {
     id
     name
@@ -18936,9 +18947,9 @@ export type SurveyQueryHookResult = ReturnType<typeof useSurveyQuery>;
 export type SurveyLazyQueryHookResult = ReturnType<typeof useSurveyLazyQuery>;
 export type SurveyQueryResult = Apollo.QueryResult<SurveyQuery, SurveyQueryVariables>;
 export const CreateResponseDocument = gql`
-    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!) {
+    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!) {
   createSurveyResponse(
-    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated}
+    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice}
   ) {
     clientMutationId
     surveyResponse {
@@ -18967,6 +18978,7 @@ export type CreateResponseMutationFn = Apollo.MutationFunction<CreateResponseMut
  *      bypassedDuplicateSubmissionControl: // value for 'bypassedDuplicateSubmissionControl'
  *      responseData: // value for 'responseData'
  *      facilitated: // value for 'facilitated'
+ *      practice: // value for 'practice'
  *   },
  * });
  */

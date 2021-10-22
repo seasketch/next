@@ -1,4 +1,7 @@
 query Survey($id: Int!) {
+  me {
+    isAdmin
+  }
   survey(id: $id) {
     id
     name
@@ -41,6 +44,7 @@ mutation CreateResponse(
   $bypassedDuplicateSubmissionControl: Boolean!
   $responseData: JSON!
   $facilitated: Boolean!
+  $practice: Boolean!
 ) {
   createSurveyResponse(
     input: {
@@ -49,6 +53,7 @@ mutation CreateResponse(
       responseData: $responseData
       bypassedSubmissionControl: $bypassedDuplicateSubmissionControl
       facilitated: $facilitated
+      practice: $practice
     }
   ) {
     clientMutationId
