@@ -6,7 +6,6 @@ import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
-import { useCurrentProjectMetadataQuery } from "../generated/graphql";
 import { SurveyStyleContext } from "../surveys/appearance";
 import {
   FormElementBody,
