@@ -11,9 +11,9 @@ module.exports = {
   theme: {
     extend: {
       spacing: {
-        "144": "36rem",
-        "128": "32rem",
-        "160": "40rem",
+        144: "36rem",
+        128: "32rem",
+        160: "40rem",
       },
       fontFamily: {
         sans: ["Inter var", ...defaultTheme.fontFamily.sans],
@@ -44,7 +44,11 @@ module.exports = {
       },
     },
   },
-  variants: {},
+  variants: {
+    extend: {
+      scale: ["active"],
+    },
+  },
   plugins: [
     require("@tailwindcss/forms"),
     require("@tailwindcss/typography"),

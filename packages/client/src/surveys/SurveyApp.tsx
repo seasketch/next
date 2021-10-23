@@ -127,13 +127,15 @@ function SurveyApp() {
       formElement: { id: number },
       state: Partial<FormElementState>
     ) {
-      setResponseState((prev) => ({
-        ...prev,
-        [formElement.id]: {
-          ...prev[formElement.id],
-          ...state,
-        },
-      }));
+      setResponseState((prev) => {
+        return {
+          ...prev,
+          [formElement.id]: {
+            ...prev[formElement.id],
+            ...state,
+          },
+        };
+      });
     }
 
     /**
@@ -153,12 +155,12 @@ function SurveyApp() {
       }
     }
 
-    async function handleAdvance() {
+    async function handleAdvance(e?: any) {
       updateState(formElement.current!, {
         submissionAttempted: true,
       });
-      setFormElement((prev) => ({ ...prev, exiting: prev.current }));
-      if (canAdvance()) {
+      if (canAdvance() || e?.advanceAutomatically) {
+        setFormElement((prev) => ({ ...prev, exiting: prev.current }));
         if (lastPage) {
           const responseData: { [elementId: number]: any } = {};
           for (const element of elements.filter((e) => e.type!.isInput)) {
@@ -191,6 +193,9 @@ function SurveyApp() {
         }
       }
     }
+
+    const currentValue = responseState[formElement.current.id]?.value;
+
     return (
       <>
         <SurveyAppLayout
@@ -278,6 +283,12 @@ function SurveyApp() {
                       value,
                       errors,
                     });
+                    // TODO: add something into the form_element_types schema and integrate w/client
+                    // if (advanceAutomatically) {
+                    //   setTimeout(() => {
+                    //     handleAdvance({ advanceAutomatically: true });
+                    //   }, 500);
+                    // }
                   }
                 }}
                 onSubmit={handleAdvance}
@@ -300,6 +311,8 @@ function SurveyApp() {
                   label={
                     lastPage && !!!formElement.exiting
                       ? t("Complete Submission")
+                      : !currentValue
+                      ? t("Skip Question")
                       : t("Next")
                   }
                   onClick={handleAdvance}

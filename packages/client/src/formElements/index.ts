@@ -1,4 +1,5 @@
 import { FormElementComponent } from "./FormElement";
+import Rating from "./Rating";
 import ShortText from "./ShortText";
 import WelcomeMessage from "./WelcomeMessage";
 
@@ -9,3 +10,4 @@ export const components: {
 
 components["WelcomeMessage"] = WelcomeMessage;
 components["ShortText"] = ShortText;
+components["Rating"] = Rating;

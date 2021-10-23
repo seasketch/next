@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function useLocalStorage<T>(
   key: string,
@@ -19,22 +19,13 @@ export default function useLocalStorage<T>(
     }
   });
 
-  // Return a wrapped version of useState's setter function that ...
-  // ... persists the new value to localStorage.
-  const setValue = (value: T | ((prev: T) => T)) => {
+  useEffect(() => {
     try {
-      // Allow value to be a function so we have same API as useState
-      const valueToStore =
-        value instanceof Function ? value(storedValue) : value;
-      // Save state
-      setStoredValue(valueToStore);
-      // Save to local storage
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
-    } catch (error) {
-      // A more advanced implementation would handle the error case
-      console.error(error);
+      window.localStorage.setItem(key, JSON.stringify(storedValue));
+    } catch (e) {
+      console.error(e);
     }
-  };
+  }, [storedValue]);
 
-  return [storedValue, setValue];
+  return [storedValue, setStoredValue];
 }
