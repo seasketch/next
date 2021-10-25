@@ -70,6 +70,7 @@ export default function AddFormElementButton({
                           componentSettings: C.defaultComponentSettings || {},
                           formId: formId,
                           componentType: id,
+                          exportId: C.defaultExportId,
                         },
                         optimisticResponse: {
                           __typename: "Mutation",
@@ -89,7 +90,8 @@ export default function AddFormElementButton({
                                 ...types.find((t) => t.componentName === id)!,
                               },
                               id: 9999999999,
-                              exportId: "loading-" + nextPosition,
+                              exportId:
+                                C.defaultExportId || "loading-" + nextPosition,
                               backgroundColor: null,
                               backgroundImage: null,
                               backgroundImagePlacement:

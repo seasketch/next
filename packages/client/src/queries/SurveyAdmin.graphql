@@ -167,6 +167,7 @@ mutation AddFormElement(
   $formId: Int!
   $componentType: String!
   $position: Int
+  $exportId: String
 ) {
   createFormElement(
     input: {
@@ -177,6 +178,7 @@ mutation AddFormElement(
         isRequired: false
         typeId: $componentType
         position: $position
+        exportId: $exportId
       }
     }
   ) {

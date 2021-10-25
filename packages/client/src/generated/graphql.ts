@@ -13994,6 +13994,7 @@ export type AddFormElementMutationVariables = Exact<{
   formId: Scalars['Int'];
   componentType: Scalars['String'];
   position?: Maybe<Scalars['Int']>;
+  exportId?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -18548,9 +18549,9 @@ export type UpdateFormElementOrderMutationHookResult = ReturnType<typeof useUpda
 export type UpdateFormElementOrderMutationResult = Apollo.MutationResult<UpdateFormElementOrderMutation>;
 export type UpdateFormElementOrderMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>;
 export const AddFormElementDocument = gql`
-    mutation AddFormElement($body: JSON!, $componentSettings: JSON!, $formId: Int!, $componentType: String!, $position: Int) {
+    mutation AddFormElement($body: JSON!, $componentSettings: JSON!, $formId: Int!, $componentType: String!, $position: Int, $exportId: String) {
   createFormElement(
-    input: {formElement: {body: $body, componentSettings: $componentSettings, formId: $formId, isRequired: false, typeId: $componentType, position: $position}}
+    input: {formElement: {body: $body, componentSettings: $componentSettings, formId: $formId, isRequired: false, typeId: $componentType, position: $position, exportId: $exportId}}
   ) {
     formElement {
       ...FormElementFullDetails
@@ -18578,6 +18579,7 @@ export type AddFormElementMutationFn = Apollo.MutationFunction<AddFormElementMut
  *      formId: // value for 'formId'
  *      componentType: // value for 'componentType'
  *      position: // value for 'position'
+ *      exportId: // value for 'exportId'
  *   },
  * });
  */

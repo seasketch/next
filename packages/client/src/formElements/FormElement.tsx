@@ -250,6 +250,8 @@ export interface FormElementComponent<T, V = {}>
   description: ReactElement;
   /** Use fromMarkdown function to create a ProseMirror Document */
   defaultBody: any;
+  /* Can be useful for certain fields like `email` */
+  defaultExportId?: string;
   defaultComponentSettings?: T;
   /** For components like WelcomeMessage that shouldn't be a user option */
   templatesOnly?: boolean;
