@@ -391,6 +391,7 @@ function SurveyNav({
   index,
   slug,
   surveyId,
+  canAdvance,
   practice,
 }: {
   canAdvance: boolean;
@@ -425,7 +426,9 @@ function SurveyNav({
       {!lastPage && (
         <Link
           onClick={onNext}
-          className={"inline-block"}
+          className={`inline-block ${
+            !canAdvance && "opacity-50 cursor-default"
+          }`}
           to={`/${slug}/surveys/${surveyId}/${index + 1}/${
             practice ? "practice" : ""
           }`}

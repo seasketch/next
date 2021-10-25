@@ -20,7 +20,10 @@ test("Component renders with custom body and button text", async () => {
       onSubmit={() => null}
       editable={false}
       isRequired={false}
-      componentSettings={{ beginButtonText: "Proceed" }}
+      componentSettings={{
+        beginButtonText: "Proceed",
+        disablePracticeMode: false,
+      }}
     />
   );
   await waitFor(() => {
@@ -41,7 +44,10 @@ test("Clicking button proceeds to next page of survey", async () => {
       onSubmit={onSubmit}
       editable={false}
       isRequired={false}
-      componentSettings={{ beginButtonText: "Proceed" }}
+      componentSettings={{
+        beginButtonText: "Proceed",
+        disablePracticeMode: false,
+      }}
     />
   );
   await waitFor(() => {

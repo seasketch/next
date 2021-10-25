@@ -56,6 +56,9 @@ export default function ImagePreloader({
  * @returns String
  */
 export function srcSet(imageUrl: string) {
+  if (/data:/.test(imageUrl)) {
+    return imageUrl;
+  }
   return [960, 1280, 1920, 2560]
     .map((rez) => `${imageUrl}&auto=compress,format&w=${rez} ${rez}w`)
     .join(", ");

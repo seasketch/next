@@ -32,7 +32,8 @@ export const defaultStyle = {
   secondaryColor: "rgb(46, 115, 182)",
   textVariant: FormElementTextVariant.Dynamic,
   backgroundImagePlacement: FormElementBackgroundImagePlacement.Top,
-  backgroundImage: "",
+  backgroundImage:
+    "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
   textClass: "text-white",
   isDark: true,
 };
@@ -113,8 +114,11 @@ export function surveyBackground(
   color: string
 ) {
   let position = "";
-  // eslint-disable-next-line i18next/no-literal-string
-  image = `url(${image}&auto=compress,format&w=1280)`;
+  image = /data\:/.test(image)
+    ? // eslint-disable-next-line i18next/no-literal-string
+      `url(${image})`
+    : // eslint-disable-next-line i18next/no-literal-string
+      `url(${image}&auto=compress,format&w=1280)`;
   switch (layout) {
     case FormElementBackgroundImagePlacement.Cover:
       position = "center / cover no-repeat";

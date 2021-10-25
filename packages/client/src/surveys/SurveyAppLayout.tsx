@@ -112,7 +112,11 @@ export const SurveyAppLayout: React.FunctionComponent<{
                   exit="exit"
                   alt={"Survey page background"}
                   className="w-full h-full object-cover absolute top-0"
-                  src={`${style.backgroundImage}?&auto=format&w=1280`}
+                  src={
+                    /data:/.test(style.backgroundImage)
+                      ? `${style.backgroundImage}`
+                      : `${style.backgroundImage}?&auto=format&w=1280`
+                  }
                   style={{
                     ...(top
                       ? {

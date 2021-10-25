@@ -54,6 +54,7 @@ export default {
     id: 1,
     isRequired: false,
     beginButtonText: "Start Survey",
+    disablePracticeMode: false,
     body: fromMarkdown(`
     # Welcome to the Ocean Uses Survey!
     
@@ -68,6 +69,7 @@ const Template: Story = (args: any) => (
       {...args}
       componentSettings={{
         beginButtonText: args.beginButtonText,
+        disablePracticeMode: args.disablePracticeMode,
       }}
     />
   </SurveyAppLayout>
@@ -96,5 +98,17 @@ Recording where and how you use ocean resources will help us better protect futu
   * **[our privacy policy](http://example.com)**
   * Our [homepage (seasketch.org)](https://www.seasketch.org)
   * ![Tux, the Linux mascot](https://www.seasketch.org/images/logo.png)
+  `),
+};
+
+export const DisablePracticeMode = Template.bind({});
+
+DisablePracticeMode.args = {
+  disablePracticeMode: true,
+
+  body: fromMarkdown(`
+  # Welcome to the Ocean Uses Survey!
+
+  Recording where and how you use ocean resources will help us better protect future use.
   `),
 };

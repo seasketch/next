@@ -56,7 +56,7 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
    */
   onSubmit: () => void;
   /** Whether the current user session is a project admin */
-  isAdmin: boolean;
+  isAdmin?: boolean;
 }
 
 /**
