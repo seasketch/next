@@ -311,7 +311,7 @@ function SurveyApp() {
                   label={
                     lastPage && !!!formElement.exiting
                       ? t("Complete Submission")
-                      : !currentValue
+                      : currentValue === undefined
                       ? t("Skip Question")
                       : t("Next")
                   }

@@ -23,6 +23,8 @@ export type ComputedFormElementStyle = {
   backgroundImagePlacement: FormElementBackgroundImagePlacement;
   textVariant: FormElementTextVariant;
   secondaryColor: string;
+  secondaryColor2: string;
+  secondaryTextClass: string;
   textClass: string;
   isDark: boolean;
 };
@@ -30,6 +32,13 @@ export type ComputedFormElementStyle = {
 export const defaultStyle = {
   backgroundColor: "rgb(23, 74, 85)",
   secondaryColor: "rgb(46, 115, 182)",
+  secondaryColor2: colord("rgb(46, 115, 182)")
+    .darken(0.1)
+    .saturate(0.1)
+    .toRgbString(),
+  secondaryTextClass: colord("rgb(46, 115, 182)").isDark()
+    ? "text-white"
+    : "text-gray-900",
   textVariant: FormElementTextVariant.Dynamic,
   backgroundImagePlacement: FormElementBackgroundImagePlacement.Top,
   backgroundImage:
@@ -105,7 +114,18 @@ export function useCurrentStyle(
     textClass = "text-grey-800";
   }
 
-  return { ...style, textClass, isDark } as ComputedFormElementStyle;
+  return {
+    ...style,
+    textClass,
+    isDark,
+    secondaryColor2: colord(style.secondaryColor!)
+      .darken(0.1)
+      .saturate(0.1)
+      .toRgbString(),
+    secondaryTextClass: colord(style.secondaryColor!).isDark()
+      ? "text-white"
+      : "text-gray-900",
+  } as ComputedFormElementStyle;
 }
 
 export function surveyBackground(

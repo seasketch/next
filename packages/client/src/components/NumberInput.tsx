@@ -1,3 +1,5 @@
+import { KeyboardEventHandler } from "react";
+
 export interface NumberInputOptions {
   /** Required id of input. Also referenced by labels. */
   name: string;
@@ -10,6 +12,7 @@ export interface NumberInputOptions {
   min?: number;
   max?: number;
   placeholder?: string;
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 }
 
 export default function NumberInput(props: NumberInputOptions) {
@@ -41,6 +44,7 @@ export default function NumberInput(props: NumberInputOptions) {
               : null
           )
         }
+        onKeyDown={props.onKeyDown}
         disabled={disabled}
         required={required}
         className={` w-24 block border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black  ${
