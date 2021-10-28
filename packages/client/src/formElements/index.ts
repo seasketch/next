@@ -5,6 +5,7 @@ import Rating from "./Rating";
 import ShortText from "./ShortText";
 import WelcomeMessage from "./WelcomeMessage";
 import Statement from "./Statement";
+import YesNo from "./YesNo";
 
 export const components: {
   /** componentName must match form_elements db table */
@@ -17,3 +18,4 @@ components["ShortText"] = ShortText;
 components["Number"] = Number;
 components["Rating"] = Rating;
 components["Statement"] = Statement;
+components["YesNo"] = YesNo;

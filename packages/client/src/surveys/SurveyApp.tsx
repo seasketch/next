@@ -4,6 +4,8 @@ import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import {
   FormElement,
+  FormElementType,
+  Maybe,
   useCreateResponseMutation,
   useSurveyQuery,
 } from "../generated/graphql";
@@ -40,7 +42,9 @@ type FE = Pick<
   | "body"
   | "componentSettings"
 > &
-  FormElementStyleProps;
+  FormElementStyleProps & {
+    type?: Maybe<Pick<FormElementType, "advancesAutomatically">>;
+  };
 
 /**
  * Coordinates the rendering of FormElements, collection of user data, maintenance of response state,
@@ -148,7 +152,10 @@ function SurveyApp() {
         return false;
       }
       const state = responseState[formElement.current.id];
-      if (!formElement.current.isRequired || (state?.value && !state?.errors)) {
+      if (
+        !formElement.current.isRequired ||
+        (state?.value !== undefined && !state?.errors)
+      ) {
         return true;
       } else {
         return false;
@@ -283,12 +290,11 @@ function SurveyApp() {
                       value,
                       errors,
                     });
-                    // TODO: add something into the form_element_types schema and integrate w/client
-                    // if (advanceAutomatically) {
-                    //   setTimeout(() => {
-                    //     handleAdvance({ advanceAutomatically: true });
-                    //   }, 500);
-                    // }
+                    if (formElement.current?.type?.advancesAutomatically) {
+                      setTimeout(() => {
+                        handleAdvance({ advanceAutomatically: true });
+                      }, 500);
+                    }
                   }
                 }}
                 onSubmit={handleAdvance}
@@ -296,33 +302,36 @@ function SurveyApp() {
                 value={state?.value}
               />
 
-              <div
-                className={`${
-                  !formElement.exiting &&
-                  (!!state?.value || !formElement.current.isRequired) &&
-                  formElement.current.typeId !== "WelcomeMessage" &&
-                  !state?.errors
-                    ? "opacity-100 transition-opacity duration-300"
-                    : "opacity-0"
-                }`}
-              >
-                <Button
-                  className="mb-10"
-                  label={
-                    lastPage && !!!formElement.exiting
-                      ? t("Complete Submission")
-                      : currentValue === undefined
-                      ? t("Skip Question")
-                      : t("Next")
-                  }
-                  onClick={handleAdvance}
-                  disabled={
-                    createResponseState.loading || !!formElement.exiting
-                  }
-                  loading={createResponseState.loading}
-                  backgroundColor={style.secondaryColor}
-                />
-              </div>
+              {(!formElement.current.type?.advancesAutomatically ||
+                !formElement.current.isRequired) && (
+                <div
+                  className={`${
+                    !formElement.exiting &&
+                    (!!state?.value || !formElement.current.isRequired) &&
+                    formElement.current.typeId !== "WelcomeMessage" &&
+                    !state?.errors
+                      ? "opacity-100 transition-opacity duration-300"
+                      : "opacity-0"
+                  }`}
+                >
+                  <Button
+                    className="mb-10"
+                    label={
+                      lastPage && !!!formElement.exiting
+                        ? t("Complete Submission")
+                        : currentValue === undefined
+                        ? t("Skip Question")
+                        : t("Next")
+                    }
+                    onClick={handleAdvance}
+                    disabled={
+                      createResponseState.loading || !!formElement.exiting
+                    }
+                    loading={createResponseState.loading}
+                    backgroundColor={style.secondaryColor}
+                  />
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
           <SurveyNav

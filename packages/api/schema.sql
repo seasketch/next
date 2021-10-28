@@ -4101,7 +4101,8 @@ CREATE TABLE public.form_element_types (
     is_surveys_only boolean DEFAULT false NOT NULL,
     is_hidden boolean DEFAULT false NOT NULL,
     is_single_use_only boolean DEFAULT false NOT NULL,
-    is_required_for_surveys boolean DEFAULT false NOT NULL
+    is_required_for_surveys boolean DEFAULT false NOT NULL,
+    advances_automatically boolean DEFAULT false NOT NULL
 );
 
 
@@ -14958,6 +14959,13 @@ REVOKE ALL ON FUNCTION public.find_srid(character varying, character varying, ch
 --
 
 GRANT SELECT ON TABLE public.form_element_types TO anon;
+
+
+--
+-- Name: COLUMN form_element_types.advances_automatically; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(advances_automatically) ON TABLE public.form_element_types TO anon;
 
 
 --

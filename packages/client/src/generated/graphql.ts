@@ -3738,6 +3738,7 @@ export enum FormElementTextVariant {
 /** Identifies the type of element in a form, including metadata about that element type. */
 export type FormElementType = Node & {
   __typename?: 'FormElementType';
+  advancesAutomatically: Scalars['Boolean'];
   componentName: Scalars['String'];
   isHidden: Scalars['Boolean'];
   /**
@@ -13886,7 +13887,7 @@ export type FormElementFullDetailsFragment = (
     )> }
   )>, type?: Maybe<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'advancesAutomatically'>
   )> }
 );
 
@@ -13903,7 +13904,7 @@ export type SurveyFormEditorDetailsQuery = (
     & Pick<Project, 'name'>
   )>, formElementTypes?: Maybe<Array<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'advancesAutomatically'>
   )>>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & { form?: Maybe<(
@@ -14153,7 +14154,7 @@ export type SurveyQuery = (
         & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight'>
         & { type?: Maybe<(
           { __typename?: 'FormElementType' }
-          & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+          & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'advancesAutomatically'>
         )> }
       )>> }
     )> }
@@ -14873,6 +14874,7 @@ export const FormElementFullDetailsFragmentDoc = gql`
     isSingleUseOnly
     isSurveysOnly
     label
+    advancesAutomatically
   }
   typeId
   backgroundColor
@@ -18347,6 +18349,7 @@ export const SurveyFormEditorDetailsDocument = gql`
     isSingleUseOnly
     isSurveysOnly
     label
+    advancesAutomatically
   }
   survey(id: $id) {
     ...SurveyListDetails
@@ -18905,6 +18908,7 @@ export const SurveyDocument = gql`
           isSingleUseOnly
           isSurveysOnly
           label
+          advancesAutomatically
         }
         backgroundColor
         secondaryColor

@@ -349,13 +349,14 @@ export default function SurveyFormEditor({
                       typeName={selectedFormElement!.typeId}
                       editable={true}
                     />
-                    {selectedFormElement.typeId !== "WelcomeMessage" && (
-                      <Button
-                        className="mb-10"
-                        label={t("Next")}
-                        backgroundColor={style.secondaryColor}
-                      />
-                    )}
+                    {selectedFormElement.typeId !== "WelcomeMessage" &&
+                      !selectedFormElement.type?.advancesAutomatically && (
+                        <Button
+                          className="mb-10"
+                          label={t("Next")}
+                          backgroundColor={style.secondaryColor}
+                        />
+                      )}
                   </>
                 )}
               </FormEditorPortalContext.Provider>

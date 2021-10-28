@@ -65,6 +65,7 @@ fragment FormElementFullDetails on FormElement {
     isSingleUseOnly
     isSurveysOnly
     label
+    advancesAutomatically
   }
   typeId
   backgroundColor
@@ -90,6 +91,7 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
     isSingleUseOnly
     isSurveysOnly
     label
+    advancesAutomatically
   }
   survey(id: $id) {
     ...SurveyListDetails
