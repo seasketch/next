@@ -175,7 +175,7 @@ function FormElementEditorContainer({
     mutationState,
   ] = useUpdateFormElement(context?.formElementSettings);
   return (
-    <div className="space-y-4 text-sm">
+    <div className="space-y-4 text-sm p-3">
       {render(updateBaseSetting, updateComponentSetting)}
     </div>
   );

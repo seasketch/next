@@ -89,11 +89,11 @@ const Rating: FormElementComponent<RatingProps, number> = (props) => {
           </button>
         ))}
       </div>
-      <FormElementEditorPortal
+      {/* <FormElementEditorPortal
         render={(updateBaseSetting, updateComponentSetting) => {
           return <></>;
         }}
-      />
+      /> */}
     </>
   );
 };

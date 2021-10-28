@@ -4,6 +4,7 @@ import Number from "./Number";
 import Rating from "./Rating";
 import ShortText from "./ShortText";
 import WelcomeMessage from "./WelcomeMessage";
+import Statement from "./Statement";
 
 export const components: {
   /** componentName must match form_elements db table */
@@ -15,3 +16,4 @@ components["Email"] = Email;
 components["ShortText"] = ShortText;
 components["Number"] = Number;
 components["Rating"] = Rating;
+components["Statement"] = Statement;

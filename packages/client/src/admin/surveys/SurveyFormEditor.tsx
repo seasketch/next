@@ -372,7 +372,7 @@ export default function SurveyFormEditor({
             </h3>
             {!focusState.basicSettings &&
               selectedFormElement &&
-              selectedFormElement.typeId !== "WelcomeMessage" && (
+              selectedFormElement.type?.isInput && (
                 <div className="px-3 text-sm pt-3">
                   <InputBlock
                     labelType="small"
@@ -386,7 +386,7 @@ export default function SurveyFormEditor({
                   />
                 </div>
               )}
-            <div className="p-3 text-sm" ref={formElementEditorContainerRef}>
+            <div className="text-sm" ref={formElementEditorContainerRef}>
               {focusState.basicSettings && (
                 <InputBlock
                   labelType="small"
@@ -407,15 +407,19 @@ export default function SurveyFormEditor({
               selectedFormElement.typeId !== "WelcomeMessage" && (
                 <>
                   <div className="px-3 text-base">
-                    <TextInput
-                      label={t("Export ID")}
-                      name="exportid"
-                      description={t(
-                        "Setting an export id will give a stable column name when exporting your results"
-                      )}
-                      value={selectedFormElement.exportId || ""}
-                      onChange={updateElementSetting("exportId")}
-                    />
+                    {selectedFormElement.type?.isInput && (
+                      <div className="pt-2">
+                        <TextInput
+                          label={t("Export ID")}
+                          name="exportid"
+                          description={t(
+                            "Setting an export id will give a stable column name when exporting your results"
+                          )}
+                          value={selectedFormElement.exportId || ""}
+                          onChange={updateElementSetting("exportId")}
+                        />
+                      </div>
+                    )}
                     <Button
                       className="mt-4"
                       label={t("Delete Element")}
