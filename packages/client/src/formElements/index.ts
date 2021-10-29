@@ -6,6 +6,7 @@ import ShortText from "./ShortText";
 import WelcomeMessage from "./WelcomeMessage";
 import Statement from "./Statement";
 import YesNo from "./YesNo";
+import TextArea from "./TextArea";
 
 export const components: {
   /** componentName must match form_elements db table */
@@ -15,6 +16,7 @@ export const components: {
 components["WelcomeMessage"] = WelcomeMessage;
 components["Email"] = Email;
 components["ShortText"] = ShortText;
+components["TextArea"] = TextArea;
 components["Number"] = Number;
 components["Rating"] = Rating;
 components["Statement"] = Statement;
