@@ -24,6 +24,9 @@ test("Component renders with custom body and button text", async () => {
         beginButtonText: "Proceed",
         disablePracticeMode: false,
       }}
+      projectName="Project A"
+      projectUrl="https://example.com/a"
+      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {
@@ -48,6 +51,9 @@ test("Clicking button proceeds to next page of survey", async () => {
         beginButtonText: "Proceed",
         disablePracticeMode: false,
       }}
+      projectName="Project A"
+      projectUrl="https://example.com/a"
+      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {

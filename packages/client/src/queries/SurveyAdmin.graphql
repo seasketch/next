@@ -106,6 +106,10 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
       }
     }
   }
+  currentProject {
+    name
+    url
+  }
 }
 
 mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean) {

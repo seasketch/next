@@ -17,6 +17,7 @@ import {
   useUpdateFormElementBackgroundMutation,
   useSetFormElementBackgroundMutation,
   useClearFormElementStyleMutation,
+  useCurrentProjectMetadataQuery,
 } from "../../generated/graphql";
 import FormElementFactory from "../../surveys/FormElementFactory";
 import { SurveyAppLayout } from "../../surveys/SurveyAppLayout";
@@ -348,8 +349,14 @@ export default function SurveyFormEditor({
                       onSubmit={() => null}
                       typeName={selectedFormElement!.typeId}
                       editable={true}
+                      projectName={data.currentProject!.name}
+                      projectUrl={data.currentProject!.url!}
+                      surveyUrl={`${data.currentProject!.url!}/surveys/${
+                        data.survey.id
+                      }`}
                     />
                     {selectedFormElement.typeId !== "WelcomeMessage" &&
+                      selectedFormElement.typeId !== "ThankYou" &&
                       !selectedFormElement.type?.advancesAutomatically && (
                         <Button
                           className="mb-10"
@@ -405,7 +412,8 @@ export default function SurveyFormEditor({
             </div>
             {!focusState.basicSettings &&
               selectedFormElement &&
-              selectedFormElement.typeId !== "WelcomeMessage" && (
+              selectedFormElement.typeId !== "WelcomeMessage" &&
+              selectedFormElement.typeId !== "ThankYou" && (
                 <>
                   <div className="px-3 text-base">
                     {selectedFormElement.type?.isInput && (

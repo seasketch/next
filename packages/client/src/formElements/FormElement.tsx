@@ -57,6 +57,9 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
   onSubmit: () => void;
   /** Whether the current user session is a project admin */
   isAdmin?: boolean;
+  projectName: string;
+  projectUrl: string;
+  surveyUrl: string;
 }
 
 /**
@@ -260,4 +263,26 @@ export interface FormElementComponent<T, V = {}>
   //   isRequired: boolean,
   //   componentSettings: any
   // ) => JSX.Element | string | undefined | false;
+}
+
+export function sortFormElements<
+  T extends {
+    position: number;
+    typeId: string;
+  }
+>(elements: T[]) {
+  [...elements].sort((a, b) => {
+    if (a.typeId === "WelcomeMessage") {
+      return 1;
+    } else if (b.typeId === "WelcomeMessage") {
+      return -1;
+    }
+    if (a.typeId === "ThankYou") {
+      return -1;
+    } else if (b.typeId === "ThankYou") {
+      return 1;
+    }
+    return a.position - b.position;
+  });
+  return elements;
 }

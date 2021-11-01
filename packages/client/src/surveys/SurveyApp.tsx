@@ -22,6 +22,7 @@ import FormElementFactory from "./FormElementFactory";
 import Modal from "../components/Modal";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Auth0User } from "../auth/Auth0User";
+import { sortFormElements } from "../formElements/FormElement";
 require("./surveys.css");
 
 interface FormElementState {
@@ -83,9 +84,11 @@ function SurveyApp() {
     formElement.exiting || formElement.current
   );
 
+  const elements = sortFormElements(data?.survey?.form?.formElements || []);
+
   useEffect(() => {
-    if (surveyId && data?.survey?.form?.formElements) {
-      const el = data.survey.form.formElements[parseInt(position)];
+    if (surveyId && elements.length) {
+      const el = elements[parseInt(position)];
       if (!formElement.current) {
         setFormElement({ current: el });
       } else if (el.id === formElement.current.id) {
@@ -117,9 +120,9 @@ function SurveyApp() {
     if (position) {
       index = parseInt(position);
     }
-    const elements = form.formElements || [];
     const state = responseState[formElement.current.id];
-    const lastPage = index === elements.length - 1;
+    /* Last (question) page. True last page is ThankYou */
+    const lastPage = index === elements.length - 2;
 
     /**
      * Update response state for just the given FormElement. Partial state can be supplied to be
@@ -187,7 +190,9 @@ function SurveyApp() {
             setResponseState({});
             history.push(
               // eslint-disable-next-line i18next/no-literal-string
-              `/${slug}/surveys/${surveyId}/0/${practice ? "practice" : ""}`
+              `/${slug}/surveys/${surveyId}/${index + 1}/${
+                practice ? "practice" : ""
+              }`
             );
           }
         } else {
@@ -300,56 +305,65 @@ function SurveyApp() {
                 onSubmit={handleAdvance}
                 editable={false}
                 value={state?.value}
+                projectName={data.currentProject!.name}
+                projectUrl={data.currentProject!.url!}
+                surveyUrl={`${data.currentProject!.url!}/surveys/${
+                  data.survey.id
+                }`}
               />
 
-              {(!formElement.current.type?.advancesAutomatically ||
-                !formElement.current.isRequired) && (
-                <div
-                  className={`${
-                    !formElement.exiting &&
-                    (!!state?.value || !formElement.current.isRequired) &&
-                    formElement.current.typeId !== "WelcomeMessage" &&
-                    !state?.errors
-                      ? "opacity-100 transition-opacity duration-300"
-                      : "opacity-0"
-                  }`}
-                >
-                  <Button
-                    className="mb-10"
-                    label={
-                      lastPage && !!!formElement.exiting
-                        ? t("Complete Submission")
-                        : currentValue === undefined
-                        ? t("Skip Question")
-                        : t("Next")
-                    }
-                    onClick={handleAdvance}
-                    disabled={
-                      createResponseState.loading || !!formElement.exiting
-                    }
-                    loading={createResponseState.loading}
-                    backgroundColor={style.secondaryColor}
-                  />
-                </div>
-              )}
+              {formElement.current?.typeId !== "ThankYou" &&
+                formElement.current?.typeId !== "WelcomeMessage" &&
+                (!formElement.current.type?.advancesAutomatically ||
+                  !formElement.current.isRequired) && (
+                  <div
+                    className={`${
+                      !formElement.exiting &&
+                      (!!state?.value || !formElement.current.isRequired) &&
+                      formElement.current.typeId !== "WelcomeMessage" &&
+                      !state?.errors
+                        ? "opacity-100 transition-opacity duration-300"
+                        : "opacity-0"
+                    }`}
+                  >
+                    <Button
+                      className="mb-10"
+                      label={
+                        lastPage && !!!formElement.exiting
+                          ? t("Complete Submission")
+                          : currentValue === undefined
+                          ? t("Skip Question")
+                          : t("Next")
+                      }
+                      onClick={handleAdvance}
+                      disabled={
+                        createResponseState.loading || !!formElement.exiting
+                      }
+                      loading={createResponseState.loading}
+                      backgroundColor={style.secondaryColor}
+                    />
+                  </div>
+                )}
             </motion.div>
           </AnimatePresence>
-          <SurveyNav
-            canAdvance={canAdvance()}
-            buttonColor={style.secondaryColor}
-            lastPage={parseInt(position) + 1 === elements.length}
-            index={parseInt(position)}
-            onPrev={() => setBackwards(true)}
-            slug={slug}
-            surveyId={surveyId}
-            practice={practice}
-            onNext={(e) => {
-              handleAdvance();
-              if (!canAdvance()) {
-                e.preventDefault();
-              }
-            }}
-          />
+          {formElement.current?.typeId !== "ThankYou" && (
+            <SurveyNav
+              canAdvance={canAdvance()}
+              buttonColor={style.secondaryColor}
+              lastPage={lastPage}
+              index={parseInt(position)}
+              onPrev={() => setBackwards(true)}
+              slug={slug}
+              surveyId={surveyId}
+              practice={practice}
+              onNext={(e) => {
+                handleAdvance();
+                if (!canAdvance()) {
+                  e.preventDefault();
+                }
+              }}
+            />
+          )}
         </SurveyAppLayout>
         <Modal
           open={practiceModalOpen}

@@ -31,8 +31,9 @@ interface Props {
  */
 export default function SortableFormElementList(props: Props) {
   const welcome = props.items.find((i) => i.typeId === "WelcomeMessage");
+  const thankYou = props.items.find((i) => i.typeId === "ThankYou");
   const sortableFormElements = props.items.filter(
-    (i) => i.typeId !== "WelcomeMessage"
+    (i) => i.typeId !== "WelcomeMessage" && i.typeId !== "ThankYou"
   );
 
   return (
@@ -109,6 +110,21 @@ export default function SortableFormElementList(props: Props) {
           )}
         </Droppable>
       </DragDropContext>
+      {thankYou && (
+        <div className="mt-2">
+          <FormElementListItem
+            selected={props.selection === thankYou.id}
+            element={thankYou}
+            typeName={thankYou.type?.label || thankYou.typeId}
+            onClick={() => {
+              if (props.onClick) {
+                props.onClick(thankYou.id);
+              }
+            }}
+            draggable={false}
+          />
+        </div>
+      )}
     </div>
   );
 }

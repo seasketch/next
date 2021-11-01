@@ -24,6 +24,9 @@ export default function FormElementFactory({
   | "onSubmit"
   | "editable"
   | "isAdmin"
+  | "projectName"
+  | "projectUrl"
+  | "surveyUrl"
 > & {
   typeName: string;
 }) {

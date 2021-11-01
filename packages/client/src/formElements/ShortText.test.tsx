@@ -16,6 +16,9 @@ test("Component renders with custom body", async () => {
       editable={false}
       isRequired={false}
       componentSettings={{}}
+      projectName="Project A"
+      projectUrl="https://example.com/a"
+      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {
@@ -36,6 +39,9 @@ test("Entering text updates the value", async () => {
       editable={false}
       isRequired={false}
       componentSettings={{}}
+      projectName="Project A"
+      projectUrl="https://example.com/a"
+      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {
@@ -56,6 +62,9 @@ test("Required fields validate input after submission attempt", async () => {
       editable={false}
       isRequired={true}
       componentSettings={{}}
+      projectName="Project A"
+      projectUrl="https://example.com/a"
+      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {
@@ -73,6 +82,9 @@ test("Required fields validate input after submission attempt", async () => {
       componentSettings={{}}
       submissionAttempted={true}
       value=""
+      projectName="Project A"
+      projectUrl="https://example.com/a"
+      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {
@@ -92,6 +104,9 @@ test("minLength", async () => {
       submissionAttempted={true}
       isRequired={true}
       value="Hi"
+      projectName="Project A"
+      projectUrl="https://example.com/a"
+      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {
@@ -109,6 +124,9 @@ test("minLength", async () => {
       submissionAttempted={true}
       isRequired={true}
       value="Hi"
+      projectName="Project A"
+      projectUrl="https://example.com/a"
+      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {
@@ -128,6 +146,9 @@ test("maxLength", async () => {
       submissionAttempted={true}
       isRequired={true}
       value="Bababhbabhabhabababbdab"
+      projectName="Project A"
+      projectUrl="https://example.com/a"
+      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {
@@ -148,6 +169,9 @@ test("Pressing return key advances to next field", async () => {
       isRequired={false}
       componentSettings={{}}
       value="foo"
+      projectName="Project A"
+      projectUrl="https://example.com/a"
+      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {

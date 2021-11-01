@@ -13916,6 +13916,9 @@ export type SurveyFormEditorDetailsQuery = (
       )>> }
     )> }
     & SurveyListDetailsFragment
+  )>, currentProject?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'name' | 'url'>
   )> }
 );
 
@@ -14143,6 +14146,9 @@ export type SurveyQuery = (
   & { me?: Maybe<(
     { __typename?: 'User' }
     & Pick<User, 'isAdmin'>
+  )>, currentProject?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'name' | 'url'>
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress'>
@@ -18364,6 +18370,10 @@ export const SurveyFormEditorDetailsDocument = gql`
       }
     }
   }
+  currentProject {
+    name
+    url
+  }
 }
     ${SurveyListDetailsFragmentDoc}
 ${FormElementFullDetailsFragmentDoc}`;
@@ -18886,6 +18896,10 @@ export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
     isAdmin
+  }
+  currentProject {
+    name
+    url
   }
   survey(id: $id) {
     id

@@ -13,6 +13,9 @@ const makeArgs = (componentSettings: RatingProps) => ({
   editable: false,
   isRequired: false,
   componentSettings: { ...componentSettings },
+  projectName: "Project A",
+  projectUrl: "https://example.com/a",
+  surveyUrl: "https://example.com/a/surveys/1",
 });
 
 test("Component renders with custom body", async () => {

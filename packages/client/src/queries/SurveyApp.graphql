@@ -2,6 +2,10 @@ query Survey($id: Int!) {
   me {
     isAdmin
   }
+  currentProject {
+    name
+    url
+  }
   survey(id: $id) {
     id
     name
