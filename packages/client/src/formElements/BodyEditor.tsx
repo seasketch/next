@@ -3,7 +3,11 @@ import { Node } from "prosemirror-model";
 import { formElements as editorConfig } from "../editor/config";
 import { EditorView } from "prosemirror-view";
 import { useEffect, useRef, useState } from "react";
-import { useUpdateFormElementBodyMutation } from "../generated/graphql";
+import {
+  useUpdateComponentSettingsMutation,
+  useUpdateFormElementBodyMutation,
+  useUpdateFormElementMutation,
+} from "../generated/graphql";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { useApolloClient } from "@apollo/client";
 import gql from "graphql-tag";
@@ -15,16 +19,39 @@ export default function BodyEditor({
   formElementId,
   body,
   isInput,
+  componentSettings,
+  componentSettingName,
 }: {
   formElementId: number;
   body: Node;
   isInput: boolean;
+  componentSettingName?: string;
+  componentSettings?: any;
 }) {
   const { schema, plugins } = isInput
     ? editorConfig.questions
     : editorConfig.content;
 
+  if (componentSettings || componentSettingName) {
+    if (!componentSettingName) {
+      throw new Error(
+        // eslint-disable-next-line i18next/no-literal-string
+        `If using BodyEditor on componentSettings, a componentSettingName must be specified`
+      );
+    }
+    if (!componentSettings) {
+      throw new Error(
+        // eslint-disable-next-line i18next/no-literal-string
+        `If using BodyEditor on componentSettings, a componentSetting prop must be provided`
+      );
+    }
+  }
+
   const [update, updateState] = useUpdateFormElementBodyMutation();
+  const [
+    updateComponentSettings,
+    updateComponentSettingsState,
+  ] = useUpdateComponentSettingsMutation();
   const client = useApolloClient();
   const viewRef = useRef<EditorView>();
   const root = useRef<HTMLDivElement>(null);
@@ -45,17 +72,34 @@ export default function BodyEditor({
         setState(newState);
 
         if (transaction.docChanged) {
-          client.writeFragment({
-            id: `FormElement:${formElementId}`,
-            fragment: gql`
-              fragment UpdateBody on FormElement {
-                body
-              }
-            `,
-            data: {
-              body: newState.doc.toJSON(),
-            },
-          });
+          if (componentSettingName) {
+            client.writeFragment({
+              id: `FormElement:${formElementId}`,
+              fragment: gql`
+                fragment UpdateComponentSettings on FormElement {
+                  componentSettings
+                }
+              `,
+              data: {
+                componentSettings: {
+                  ...componentSettings,
+                  [componentSettingName]: newState.doc.toJSON(),
+                },
+              },
+            });
+          } else {
+            client.writeFragment({
+              id: `FormElement:${formElementId}`,
+              fragment: gql`
+                fragment UpdateBody on FormElement {
+                  body
+                }
+              `,
+              data: {
+                body: newState.doc.toJSON(),
+              },
+            });
+          }
           save(newState.doc);
         }
       },
@@ -68,20 +112,46 @@ export default function BodyEditor({
 
   const save = useDebouncedFn(
     (doc: any) => {
-      update({
-        variables: {
-          id: formElementId,
-          body: doc.toJSON(),
-        },
-        optimisticResponse: {
-          updateFormElement: {
-            formElement: {
-              id: formElementId,
-              body: doc,
+      if (componentSettingName) {
+        updateComponentSettings({
+          variables: {
+            id: formElementId,
+            componentSettings: {
+              ...componentSettings,
+              [componentSettingName]: doc.toJSON(),
             },
           },
-        },
-      });
+          optimisticResponse: {
+            __typename: "Mutation",
+            updateFormElement: {
+              __typename: "UpdateFormElementPayload",
+              formElement: {
+                __typename: "FormElement",
+                componentSettings: {
+                  ...componentSettings,
+                  [componentSettingName]: doc.toJSON(),
+                },
+                id: formElementId,
+              },
+            },
+          },
+        });
+      } else {
+        update({
+          variables: {
+            id: formElementId,
+            body: doc.toJSON(),
+          },
+          optimisticResponse: {
+            updateFormElement: {
+              formElement: {
+                id: formElementId,
+                body: doc,
+              },
+            },
+          },
+        });
+      }
     },
     250,
     { leading: true, trailing: true },

@@ -1001,6 +1001,7 @@ CREATE TABLE public.surveys (
     geofence public.geography(Polygon,4326) DEFAULT NULL::public.geography,
     show_social_media_buttons boolean DEFAULT true,
     show_progress boolean DEFAULT true NOT NULL,
+    show_facilitation_option boolean DEFAULT true NOT NULL,
     CONSTRAINT surveys_name_check CHECK ((char_length(name) <= 255))
 );
 

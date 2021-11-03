@@ -17,6 +17,7 @@ import {
   FormElement,
   UpdateFormElementMutation,
   useUpdateFormElementMutation,
+  useUpdateSurveyBaseSettingsMutation,
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { MutationResult } from "@apollo/client";
@@ -30,7 +31,12 @@ const LazyBodyEditor = lazy(() => import("./BodyEditor"));
 export const FormEditorPortalContext = createContext<{
   container: HTMLDivElement | null;
   formElementSettings: any;
+  surveyId: number;
 } | null>(null);
+
+export const SurveyButtonFooterPortalContext = createContext<HTMLDivElement | null>(
+  null
+);
 
 /**
  * Common props that will be supplied to all FormElement React Component
@@ -55,11 +61,6 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
    * Used to request that the controller advance to the next question. For example, on Enter keydown
    */
   onSubmit: () => void;
-  /** Whether the current user session is a project admin */
-  isAdmin?: boolean;
-  projectName: string;
-  projectUrl: string;
-  surveyUrl: string;
 }
 
 /**
@@ -81,12 +82,16 @@ export function FormElementBody({
   isInput,
   editable,
   formElementId,
+  componentSettings,
+  componentSettingName,
 }: {
   formElementId: number;
   body: any;
   required?: boolean;
   isInput: boolean;
   editable?: boolean;
+  componentSettings?: any;
+  componentSettingName?: string;
 }) {
   const schema = isInput
     ? editorConfig.questions.schema
@@ -117,6 +122,8 @@ export function FormElementBody({
             formElementId={formElementId}
             body={body}
             isInput={isInput}
+            componentSettingName={componentSettingName}
+            componentSettings={componentSettings}
           />
         </Suspense>
       </div>
@@ -141,7 +148,11 @@ export class FormElementEditorPortal extends Component<{
     updateComponentSetting: (
       setting: string,
       currentSettings: any
-    ) => (value: any) => void
+    ) => (value: any) => void,
+    updateSurveySettings: (settings: {
+      showFacilitationOption?: boolean;
+      showProgress?: boolean;
+    }) => void
   ) => ReactNode;
 }> {
   static contextType = FormEditorPortalContext;
@@ -149,7 +160,10 @@ export class FormElementEditorPortal extends Component<{
     const container = this.context?.container;
     if (container) {
       return createPortal(
-        <FormElementEditorContainer render={this.props.render} />,
+        <FormElementEditorContainer
+          surveyId={this.context?.surveyId}
+          render={this.props.render}
+        />,
         container
       );
     } else {
@@ -160,7 +174,9 @@ export class FormElementEditorPortal extends Component<{
 
 function FormElementEditorContainer({
   render,
+  surveyId,
 }: {
+  surveyId: number;
   render: (
     updateBaseSetting: (
       setting: "body" | "isRequired" | "exportId"
@@ -168,7 +184,11 @@ function FormElementEditorContainer({
     updateComponentSetting: (
       setting: string,
       currentSettings: any
-    ) => (value: any) => void
+    ) => (value: any) => void,
+    updateSurveySettings: (settings: {
+      showFacilitationOption?: boolean;
+      showProgress?: boolean;
+    }) => void
   ) => ReactNode;
 }) {
   const context = useContext(FormEditorPortalContext);
@@ -177,9 +197,20 @@ function FormElementEditorContainer({
     updateComponentSetting,
     mutationState,
   ] = useUpdateFormElement(context?.formElementSettings);
+  const [
+    updateSurvey,
+    updateSurveyState,
+  ] = useUpdateSurveyBaseSettingsMutation();
   return (
     <div className="space-y-4 text-sm p-3">
-      {render(updateBaseSetting, updateComponentSetting)}
+      {render(updateBaseSetting, updateComponentSetting, (settings) =>
+        updateSurvey({
+          variables: {
+            id: surveyId,
+            ...settings,
+          },
+        })
+      )}
     </div>
   );
 }
@@ -190,14 +221,6 @@ export function useUpdateFormElement(
     "body" | "componentSettings" | "id" | "isRequired"
   >
 ): [
-  // (
-  //   variables: Partial<
-  //     Pick<
-  //       FormElement,
-  //       "body" | "componentSettings" | "isRequired" | "exportId"
-  //     >
-  //   >
-  // ) => void,
   (setting: "body" | "isRequired" | "exportId") => (value: any) => void,
   (setting: string, currentSettings: any) => (value: any) => void,
   MutationResult<UpdateFormElementMutation>
@@ -286,3 +309,14 @@ export function sortFormElements<
   });
   return elements;
 }
+
+export const SurveyContext = createContext<{
+  isAdmin: boolean;
+  projectName: string;
+  projectUrl: string;
+  surveyUrl: string;
+  surveySupportsFacilitation: boolean;
+  isFacilitatedResponse: boolean;
+  bestName?: string;
+  bestEmail?: string;
+} | null>(null);

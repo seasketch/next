@@ -15,12 +15,16 @@ export default function Switch(props: SwitchProps) {
       <span
         aria-checked={props.isToggled}
         onClick={() => {
-          if (props.onClick) {
+          if (props.onClick && !props.disabled) {
             props.onClick(!props.isToggled);
           }
         }}
         onKeyDown={(e) => {
-          if (props.onClick && (e.key === "Enter" || e.key === " ")) {
+          if (
+            !props.disabled &&
+            props.onClick &&
+            (e.key === "Enter" || e.key === " ")
+          ) {
             props.onClick(!props.isToggled);
             e.preventDefault();
           }

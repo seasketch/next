@@ -14,6 +14,8 @@ import {
 } from "../generated/graphql";
 import { MemoryRouter, Router, useHistory } from "react-router";
 import { createMemoryHistory } from "history";
+import { SurveyContext } from "./FormElement";
+import { TestSurveyContextValue } from "./testContext";
 
 export default {
   title: "FormElements/ThankYou",
@@ -74,20 +76,19 @@ const Template: Story = (args: any) => {
   const history = createMemoryHistory();
   return (
     <Router history={history}>
-      <SurveyAppLayout progress={0.4}>
-        <ThankYou
-          {...args}
-          componentSettings={{
-            respondAgainMessage: args.respondAgainMessage,
-            promptToRespondAgain: args.promptToRespondAgain,
-            shareButtons: args.shareButtons,
-            linkToProject: args.linkToProject,
-          }}
-          projectName={"Project A"}
-          projectUrl={"https://next.seasket.ch/project_a"}
-          surveyUrl={"https://next.seasket.ch/project_a/surveys/1"}
-        />
-      </SurveyAppLayout>
+      <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
+        <SurveyAppLayout progress={0.4}>
+          <ThankYou
+            {...args}
+            componentSettings={{
+              respondAgainMessage: args.respondAgainMessage,
+              promptToRespondAgain: args.promptToRespondAgain,
+              shareButtons: args.shareButtons,
+              linkToProject: args.linkToProject,
+            }}
+          />
+        </SurveyAppLayout>
+      </SurveyContext.Provider>
     </Router>
   );
 };

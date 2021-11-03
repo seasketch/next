@@ -21,9 +21,6 @@ test("Component renders with custom body", async () => {
       editable={false}
       isRequired={false}
       componentSettings={{}}
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
     />
   );
   await waitFor(() => {

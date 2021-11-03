@@ -3,6 +3,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  SurveyContext,
 } from "./FormElement";
 import fromMarkdown from "./fromMarkdown";
 import {
@@ -39,8 +40,9 @@ export interface ThankYouProps {
 const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
   const { t } = useTranslation("admin:surveys");
   const style = useContext(SurveyStyleContext);
+  const context = useContext(SurveyContext);
   // eslint-disable-next-line i18next/no-literal-string
-  const shareUrl = new URL(props.surveyUrl).pathname;
+  const shareUrl = new URL(context!.surveyUrl).pathname;
   const shareClassName = "w-8 h-8 rounded shadow cursor-pointer";
   return (
     <>
@@ -78,11 +80,11 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
             </>
           )}
         </div>
-
         <div className="mt-10 space-x-5">
-          {props.componentSettings.promptToRespondAgain && (
+          {(props.componentSettings.promptToRespondAgain ||
+            context?.isAdmin) && (
             <Button
-              href={props.surveyUrl}
+              href={new URL(context!.surveyUrl).pathname}
               label={
                 props.componentSettings.respondAgainMessage ||
                 "Submit Another Response"
@@ -95,8 +97,11 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
             </Button>
           )}
           {props.componentSettings.linkToProject && (
-            <Link className="underline" to={new URL(props.projectUrl).pathname}>
-              <Trans>Return to {props.projectName}</Trans>
+            <Link
+              className="underline"
+              to={new URL(context!.projectUrl).pathname}
+            >
+              <Trans>Return to {context!.projectName}</Trans>
             </Link>
           )}
         </div>

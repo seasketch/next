@@ -1,6 +1,11 @@
 query Survey($id: Int!) {
   me {
     isAdmin
+    profile {
+      email
+      fullname
+    }
+    canonicalEmail
   }
   currentProject {
     name
@@ -12,6 +17,7 @@ query Survey($id: Int!) {
     accessType
     isDisabled
     showProgress
+    showFacilitationOption
     form {
       id
       formElements {

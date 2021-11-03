@@ -1,7 +1,10 @@
 import { Story } from "@storybook/react/types-6-0";
+import { useState } from "react";
 import { SurveyAppLayout } from "../surveys/SurveyAppLayout";
 import Email from "./Email";
+import { SurveyContext } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
+import { TestSurveyContextValue } from "./testContext";
 
 export default {
   title: "FormElements/Email",
@@ -46,16 +49,25 @@ export default {
   },
 };
 
-const Template: Story = (args: any) => (
-  <SurveyAppLayout progress={0.4}>
-    <Email
-      {...args}
-      componentSettings={{
-        placeholder: args.placeholder,
-      }}
-    />
-  </SurveyAppLayout>
-);
+const Template: Story = (args: any) => {
+  const [value, setValue] = useState<string | undefined>(undefined);
+  return (
+    <SurveyContext.Provider
+      value={{ ...TestSurveyContextValue, bestEmail: args.bestEmail }}
+    >
+      <SurveyAppLayout progress={0.4}>
+        <Email
+          {...args}
+          onChange={(v, e) => setValue(v)}
+          value={value}
+          componentSettings={{
+            placeholder: args.placeholder,
+          }}
+        />
+      </SurveyAppLayout>
+    </SurveyContext.Provider>
+  );
+};
 
 export const EmailElement = Template.bind({});
 EmailElement.args = {
@@ -66,4 +78,9 @@ export const ValidationError = Template.bind({});
 ValidationError.args = {
   value: "me_at_example.com",
   submissionAttempted: true,
+};
+
+export const EmailFromContext = Template.bind({});
+EmailFromContext.args = {
+  bestEmail: "chad@example.com",
 };

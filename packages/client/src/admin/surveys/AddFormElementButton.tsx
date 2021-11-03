@@ -16,6 +16,7 @@ interface Props {
   onAdd: (id: number) => void;
   formId: number;
   types: Omit<FormElementType, "nodeId" | "isRequiredForSurveys">[];
+  existingTypes: string[];
   /** Specify the highest position in the current form + 1 to add items to the end of the form */
   nextPosition: number;
 }
@@ -25,6 +26,7 @@ export default function AddFormElementButton({
   formId,
   types,
   nextPosition,
+  existingTypes,
 }: Props) {
   const { t } = useTranslation("admin:surveys");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -59,6 +61,15 @@ export default function AddFormElementButton({
             >
               {Object.entries(components)
                 .filter(([id, C]) => !C.templatesOnly)
+                .filter(([id, C]) => {
+                  const type = types.find((t) => t.componentName === id);
+                  if (type && type.isSingleUseOnly) {
+                    if (existingTypes.indexOf(id) !== -1) {
+                      return false;
+                    }
+                  }
+                  return true;
+                })
                 .map(([id, C]) => (
                   <div
                     key={id}

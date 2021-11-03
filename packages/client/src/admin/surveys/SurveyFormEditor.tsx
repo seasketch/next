@@ -24,6 +24,8 @@ import { SurveyAppLayout } from "../../surveys/SurveyAppLayout";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   FormEditorPortalContext,
+  SurveyButtonFooterPortalContext,
+  SurveyContext,
   useUpdateFormElement,
 } from "../../formElements/FormElement";
 import TextInput from "../../components/TextInput";
@@ -69,6 +71,7 @@ export default function SurveyFormEditor({
     basicSettings: false,
     formElement: undefined,
   });
+  const surveyButtonFooter = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (
@@ -144,7 +147,10 @@ export default function SurveyFormEditor({
   ] = useUpdateSurveyBaseSettingsMutation({
     onError,
   });
-  function updateBaseSetting(settings: { showProgress?: boolean }) {
+  function updateBaseSetting(settings: {
+    showProgress?: boolean;
+    showFacilitationOption?: boolean;
+  }) {
     updateBaseSettingsMutation({
       variables: { ...settings, id: data!.survey!.id },
       optimisticResponse: {
@@ -156,6 +162,10 @@ export default function SurveyFormEditor({
               "showProgress" in settings
                 ? settings.showProgress!
                 : data!.survey!.showProgress,
+            showFacilitationOption:
+              "showFacilitationOption" in settings
+                ? settings.showFacilitationOption!
+                : data!.survey!.showFacilitationOption,
           },
           __typename: "UpdateSurveyPayload",
         },
@@ -284,6 +294,7 @@ export default function SurveyFormEditor({
                   onAdd={(formElement) =>
                     setFocusState({ basicSettings: false, formElement })
                   }
+                  existingTypes={formElements.map((el) => el.typeId)}
                 />
               </h3>
               <SortableFormElementList
@@ -317,57 +328,72 @@ export default function SurveyFormEditor({
         {/* Content */}
         <div className="flex-1">
           {data?.survey && selectedFormElement && (
-            <SurveyAppLayout
-              embeddedInAdmin={true}
-              style={style}
-              progress={
-                selectedFormElement
-                  ? formElements.indexOf(selectedFormElement) /
-                    formElements.length
-                  : 1 / 3
-              }
-              showProgress={data?.survey?.showProgress}
-              unsplashUserName={
-                selectedFormElement?.unsplashAuthorName || undefined
-              }
-              unsplashUserUrl={
-                selectedFormElement?.unsplashAuthorUrl || undefined
-              }
+            <SurveyContext.Provider
+              value={{
+                isAdmin: true,
+                isFacilitatedResponse: true,
+                surveySupportsFacilitation: data.survey.showFacilitationOption,
+                projectName: data.currentProject!.name,
+                projectUrl: data.currentProject!.url!,
+                surveyUrl: `${data.currentProject!.url!}/surveys/${
+                  data.survey.id
+                }`,
+              }}
             >
-              <FormEditorPortalContext.Provider
-                value={{
-                  container: formElementEditorContainerRef.current,
-                  formElementSettings: selectedFormElement!,
-                }}
+              <SurveyAppLayout
+                embeddedInAdmin={true}
+                style={style}
+                progress={
+                  selectedFormElement
+                    ? formElements.indexOf(selectedFormElement) /
+                      formElements.length
+                    : 1 / 3
+                }
+                showProgress={data?.survey?.showProgress}
+                unsplashUserName={
+                  selectedFormElement?.unsplashAuthorName || undefined
+                }
+                unsplashUserUrl={
+                  selectedFormElement?.unsplashAuthorUrl || undefined
+                }
               >
-                {selectedFormElement && (
-                  <>
-                    <FormElementFactory
-                      isAdmin={true}
-                      {...selectedFormElement!}
-                      onChange={() => null}
-                      onSubmit={() => null}
-                      typeName={selectedFormElement!.typeId}
-                      editable={true}
-                      projectName={data.currentProject!.name}
-                      projectUrl={data.currentProject!.url!}
-                      surveyUrl={`${data.currentProject!.url!}/surveys/${
-                        data.survey.id
-                      }`}
-                    />
-                    {selectedFormElement.typeId !== "WelcomeMessage" &&
-                      selectedFormElement.typeId !== "ThankYou" &&
-                      !selectedFormElement.type?.advancesAutomatically && (
-                        <Button
-                          className="mb-10"
-                          label={t("Next")}
-                          backgroundColor={style.secondaryColor}
+                <SurveyButtonFooterPortalContext.Provider
+                  value={surveyButtonFooter.current}
+                >
+                  <FormEditorPortalContext.Provider
+                    value={{
+                      container: formElementEditorContainerRef.current,
+                      formElementSettings: selectedFormElement!,
+                      surveyId: data.survey.id,
+                    }}
+                  >
+                    {selectedFormElement && (
+                      <>
+                        <FormElementFactory
+                          {...selectedFormElement!}
+                          onChange={() => null}
+                          onSubmit={() => null}
+                          typeName={selectedFormElement!.typeId}
+                          editable={true}
                         />
-                      )}
-                  </>
-                )}
-              </FormEditorPortalContext.Provider>
-            </SurveyAppLayout>
+                        <div className="flex items-center mb-10 space-x-4">
+                          {selectedFormElement.typeId !== "WelcomeMessage" &&
+                            selectedFormElement.typeId !== "ThankYou" &&
+                            !selectedFormElement.type
+                              ?.advancesAutomatically && (
+                              <Button
+                                label={t("Next")}
+                                backgroundColor={style.secondaryColor}
+                              />
+                            )}
+                          <div ref={surveyButtonFooter}></div>
+                        </div>
+                      </>
+                    )}
+                  </FormEditorPortalContext.Provider>
+                </SurveyButtonFooterPortalContext.Provider>
+              </SurveyAppLayout>
+            </SurveyContext.Provider>
           )}
         </div>
         {/* Right Sidebar */}
@@ -396,18 +422,20 @@ export default function SurveyFormEditor({
               )}
             <div className="text-sm" ref={formElementEditorContainerRef}>
               {focusState.basicSettings && (
-                <InputBlock
-                  labelType="small"
-                  title={t("Show Progress")}
-                  input={
-                    <Switch
-                      isToggled={data?.survey?.showProgress}
-                      onClick={(val) =>
-                        updateBaseSetting({ showProgress: val })
-                      }
-                    />
-                  }
-                />
+                <div className="p-3">
+                  <InputBlock
+                    labelType="small"
+                    title={t("Show Progress")}
+                    input={
+                      <Switch
+                        isToggled={data?.survey?.showProgress}
+                        onClick={(val) =>
+                          updateBaseSetting({ showProgress: val })
+                        }
+                      />
+                    }
+                  />
+                </div>
               )}
             </div>
             {!focusState.basicSettings &&

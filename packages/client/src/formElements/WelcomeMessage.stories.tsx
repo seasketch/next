@@ -5,6 +5,8 @@ import WelcomeMessage from "./WelcomeMessage";
 import { SurveyAppLayout } from "../surveys/SurveyAppLayout";
 import { NodeType } from "prosemirror-model";
 import fromMarkdown from "./fromMarkdown";
+import { SurveyContext } from "./FormElement";
+import { TestSurveyContextValue } from "./testContext";
 
 export default {
   title: "FormElements/WelcomeMessage",
@@ -64,15 +66,17 @@ export default {
 };
 
 const Template: Story = (args: any) => (
-  <SurveyAppLayout progress={0.4}>
-    <WelcomeMessage
-      {...args}
-      componentSettings={{
-        beginButtonText: args.beginButtonText,
-        disablePracticeMode: args.disablePracticeMode,
-      }}
-    />
-  </SurveyAppLayout>
+  <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
+    <SurveyAppLayout progress={0.4}>
+      <WelcomeMessage
+        {...args}
+        componentSettings={{
+          beginButtonText: args.beginButtonText,
+          disablePracticeMode: args.disablePracticeMode,
+        }}
+      />
+    </SurveyAppLayout>
+  </SurveyContext.Provider>
 );
 
 export const Basic = Template.bind({});

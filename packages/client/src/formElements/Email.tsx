@@ -1,11 +1,11 @@
-import { useAuth0 } from "@auth0/auth0-react";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import TextInput from "../components/TextInput";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  SurveyContext,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 
@@ -21,16 +21,16 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
   const { t } = useTranslation("surveys");
   const [val, setVal] = useState(props.value);
   const [errors, setErrors] = useState(validate(val, props.isRequired));
+  const context = useContext(SurveyContext);
   useEffect(() => {
     setErrors(validate(val, props.isRequired));
   }, [props.componentSettings, props.isRequired, val]);
 
-  const auth0 = useAuth0();
   useEffect(() => {
-    if ((val === null || val === undefined) && auth0?.user?.email) {
-      props.onChange(auth0.user.email, false);
+    if ((val === null || val === undefined) && context?.bestEmail) {
+      props.onChange(context.bestEmail, false);
     }
-  }, [auth0?.user?.email]);
+  }, [context?.bestEmail]);
 
   return (
     <>

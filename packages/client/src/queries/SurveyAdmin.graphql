@@ -13,6 +13,7 @@ fragment SurveyListDetails on Survey {
   practiceResponseCount
   projectId
   isTemplate
+  showFacilitationOption
 }
 
 query Surveys($projectId: Int!) {
@@ -112,11 +113,24 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
   }
 }
 
-mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean) {
-  updateSurvey(input: { id: $id, patch: { showProgress: $showProgress } }) {
+mutation UpdateSurveyBaseSettings(
+  $id: Int!
+  $showProgress: Boolean
+  $showFacilitationOption: Boolean
+) {
+  updateSurvey(
+    input: {
+      id: $id
+      patch: {
+        showProgress: $showProgress
+        showFacilitationOption: $showFacilitationOption
+      }
+    }
+  ) {
     survey {
       id
       showProgress
+      showFacilitationOption
     }
   }
 }
@@ -144,6 +158,17 @@ mutation UpdateFormElement(
       isRequired
       body
       exportId
+      componentSettings
+    }
+  }
+}
+
+mutation UpdateComponentSettings($id: Int!, $componentSettings: JSON) {
+  updateFormElement(
+    input: { id: $id, patch: { componentSettings: $componentSettings } }
+  ) {
+    formElement {
+      id
       componentSettings
     }
   }

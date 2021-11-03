@@ -29,6 +29,8 @@ module.exports = {
           "client.writeFragment",
           "gql",
           "cache.writeFragment",
+          "questionBodyFromMarkdown",
+          "console.log",
         ],
         onlyAttribute: ["label", "title", "description", "footer"],
         ignoreProperty: ["href", "className"],

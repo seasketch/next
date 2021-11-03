@@ -10299,6 +10299,7 @@ type Survey implements Node {
   """Reads a single `Project` that is related to this `Survey`."""
   project: Project
   projectId: Int!
+  showFacilitationOption: Boolean!
   showProgress: Boolean!
 
   """
@@ -10428,6 +10429,7 @@ input SurveyInput {
   limitToSingleResponse: Boolean
   name: String!
   projectId: Int!
+  showFacilitationOption: Boolean
   showProgress: Boolean
 
   """
@@ -10607,6 +10609,7 @@ input SurveyPatch {
   limitToSingleResponse: Boolean
   name: String
   projectId: Int
+  showFacilitationOption: Boolean
   showProgress: Boolean
 
   """

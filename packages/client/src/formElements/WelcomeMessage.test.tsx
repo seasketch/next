@@ -3,6 +3,8 @@ import React from "react";
 import fromMarkdown from "./fromMarkdown";
 import WelcomeMessage from "./WelcomeMessage";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { SurveyContext } from "./FormElement";
+import { TestSurveyContextValue } from "./testContext";
 
 const body = fromMarkdown(`
 # Welcome to the Survey
@@ -13,21 +15,20 @@ Enjoy your stay!
 
 test("Component renders with custom body and button text", async () => {
   render(
-    <WelcomeMessage
-      body={body}
-      id={1}
-      onChange={() => null}
-      onSubmit={() => null}
-      editable={false}
-      isRequired={false}
-      componentSettings={{
-        beginButtonText: "Proceed",
-        disablePracticeMode: false,
-      }}
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
-    />
+    <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
+      <WelcomeMessage
+        body={body}
+        id={1}
+        onChange={() => null}
+        onSubmit={() => null}
+        editable={false}
+        isRequired={false}
+        componentSettings={{
+          beginButtonText: "Proceed",
+          disablePracticeMode: false,
+        }}
+      />
+    </SurveyContext.Provider>
   );
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
@@ -40,21 +41,20 @@ test("Component renders with custom body and button text", async () => {
 test("Clicking button proceeds to next page of survey", async () => {
   const onSubmit = jest.fn();
   render(
-    <WelcomeMessage
-      body={body}
-      id={1}
-      onChange={() => null}
-      onSubmit={onSubmit}
-      editable={false}
-      isRequired={false}
-      componentSettings={{
-        beginButtonText: "Proceed",
-        disablePracticeMode: false,
-      }}
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
-    />
+    <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
+      <WelcomeMessage
+        body={body}
+        id={1}
+        onChange={() => null}
+        onSubmit={onSubmit}
+        editable={false}
+        isRequired={false}
+        componentSettings={{
+          beginButtonText: "Proceed",
+          disablePracticeMode: false,
+        }}
+      />
+    </SurveyContext.Provider>
   );
   await waitFor(() => {
     expect(screen.getByRole("button")).toHaveTextContent("Proceed");

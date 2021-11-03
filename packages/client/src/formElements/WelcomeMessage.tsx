@@ -11,6 +11,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  SurveyContext,
 } from "./FormElement";
 import fromMarkdown from "./fromMarkdown";
 
@@ -24,6 +25,10 @@ const WelcomeMessage: FormElementComponent<
 > = (props) => {
   const { t } = useTranslation("admin:surveys");
   const style = useContext(SurveyStyleContext);
+  const context = useContext(SurveyContext);
+  if (!context) {
+    throw new Error("SurveyContext not set");
+  }
   const auth0 = useAuth0<Auth0User>();
   return (
     <>
@@ -47,11 +52,14 @@ const WelcomeMessage: FormElementComponent<
         shadowSize="shadow-lg"
         segmentItems={
           !props.editable &&
-          (props.isAdmin || !props.componentSettings.disablePracticeMode)
+          (context.isAdmin || !props.componentSettings.disablePracticeMode)
             ? [
                 t("Take Survey", { ns: "surveys" }),
                 t("Practice", { ns: "surveys" }),
-                ...(props.isAdmin
+                ...(context.surveySupportsFacilitation
+                  ? [t("Facilitated Response", { ns: "surveys" })]
+                  : []),
+                ...(context.isAdmin
                   ? [t("Edit Survey"), t("View Responses")]
                   : []),
               ]
@@ -66,9 +74,20 @@ const WelcomeMessage: FormElementComponent<
               props.onChange({ dropdownSelection: "PRACTICE" }, false);
               break;
             case 2:
-              props.onChange({ dropdownSelection: "EDIT" }, false);
+              if (context.surveySupportsFacilitation) {
+                props.onChange({ dropdownSelection: "FACILITATED" }, false);
+              } else {
+                props.onChange({ dropdownSelection: "EDIT" }, false);
+              }
               break;
             case 3:
+              if (context.surveySupportsFacilitation) {
+                props.onChange({ dropdownSelection: "EDIT" }, false);
+              } else {
+                props.onChange({ dropdownSelection: "RESPONSES" }, false);
+              }
+              break;
+            case 4:
               props.onChange({ dropdownSelection: "RESPONSES" }, false);
               break;
           }

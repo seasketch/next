@@ -1,4 +1,4 @@
-import { MouseEventHandler, useEffect, useState } from "react";
+import { MouseEventHandler, useEffect, useRef, useState } from "react";
 import { useHistory, useParams } from "react-router";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
@@ -22,7 +22,11 @@ import FormElementFactory from "./FormElementFactory";
 import Modal from "../components/Modal";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Auth0User } from "../auth/Auth0User";
-import { sortFormElements } from "../formElements/FormElement";
+import {
+  sortFormElements,
+  SurveyButtonFooterPortalContext,
+  SurveyContext,
+} from "../formElements/FormElement";
 require("./surveys.css");
 
 interface FormElementState {
@@ -78,6 +82,7 @@ function SurveyApp() {
     current?: FE;
     exiting?: FE;
   }>({});
+  const surveyButtonFooter = useRef<HTMLDivElement>(null);
 
   const style = useCurrentStyle(
     data?.survey?.form?.formElements,
@@ -101,11 +106,12 @@ function SurveyApp() {
 
   const [responseState, setResponseState] = useLocalStorage<{
     [id: number]: FormElementState;
+    facilitated: boolean;
     // eslint-disable-next-line i18next/no-literal-string
   }>(
     // eslint-disable-next-line i18next/no-literal-string
     `survey-${surveyId}`,
-    {}
+    { facilitated: false }
   );
 
   if (!data?.survey?.form?.formElements || loading) {
@@ -181,13 +187,13 @@ function SurveyApp() {
               surveyId: data!.survey!.id,
               isDraft: false,
               bypassedDuplicateSubmissionControl: false,
-              facilitated: false,
+              facilitated: !!responseState.facilitated,
               responseData,
               practice: !!practice,
             },
           });
           if (response && !response.errors) {
-            setResponseState({});
+            setResponseState({ facilitated: false });
             history.push(
               // eslint-disable-next-line i18next/no-literal-string
               `/${slug}/surveys/${surveyId}/${index + 1}/${
@@ -207,200 +213,224 @@ function SurveyApp() {
     }
 
     const currentValue = responseState[formElement.current.id]?.value;
-
     return (
       <>
-        <SurveyAppLayout
-          showProgress={data.survey.showProgress}
-          progress={index / elements.length}
-          style={style}
-          unsplashUserName={formElement.current.unsplashAuthorName || undefined}
-          unsplashUserUrl={formElement.current.unsplashAuthorUrl || undefined}
-          practice={!!practice}
-          onPracticeClick={() => {
-            setPracticeModalOpen(true);
+        <SurveyContext.Provider
+          value={{
+            isAdmin: !!data.me?.isAdmin,
+            isFacilitatedResponse: responseState.facilitated,
+            surveySupportsFacilitation: !!data.survey.showFacilitationOption,
+            projectName: data.currentProject!.name,
+            projectUrl: data.currentProject!.url!,
+            surveyUrl: `${data.currentProject!.url!}surveys/${surveyId}`,
+            bestEmail: data.me?.profile?.email || data.me?.canonicalEmail,
+            bestName: data.me?.profile?.fullname || auth0.user?.name,
           }}
         >
-          <AnimatePresence
-            initial={false}
-            exitBeforeEnter={true}
-            custom={backwards}
-            presenceAffectsLayout={false}
-            onExitComplete={() => {
-              setBackwards(false);
-              setFormElement((prev) => ({
-                ...prev,
-                exiting: undefined,
-              }));
+          <SurveyAppLayout
+            showProgress={data.survey.showProgress}
+            progress={index / elements.length}
+            style={style}
+            unsplashUserName={
+              formElement.current.unsplashAuthorName || undefined
+            }
+            unsplashUserUrl={formElement.current.unsplashAuthorUrl || undefined}
+            practice={!!practice}
+            onPracticeClick={() => {
+              setPracticeModalOpen(true);
             }}
           >
-            <motion.div
+            <AnimatePresence
+              initial={false}
+              exitBeforeEnter={true}
               custom={backwards}
-              className="relative"
-              variants={{
-                exit: (direction: boolean) => ({
-                  opacity: 0,
-                  translateY: direction ? 100 : -100,
-                  position: "relative",
-                }),
-                enter: (direction: boolean) => ({
-                  opacity: 0,
-                  translateY: direction ? -100 : 100,
-                  position: "relative",
-                }),
-                show: () => ({
-                  opacity: 1,
-                  translateY: 0,
-                  position: "relative",
-                }),
+              presenceAffectsLayout={false}
+              onExitComplete={() => {
+                setBackwards(false);
+                setFormElement((prev) => ({
+                  ...prev,
+                  exiting: undefined,
+                }));
               }}
-              transition={{
-                duration: 0.3,
-              }}
-              key={formElement.current.id}
-              initial="enter"
-              animate="show"
-              exit="exit"
             >
-              <FormElementFactory
-                isAdmin={
-                  !!(
-                    data.me?.isAdmin ||
-                    auth0.user?.["https://seasketch.org/superuser"]
-                  )
-                }
-                {...formElement.current}
-                typeName={formElement.current.typeId}
-                submissionAttempted={!!state?.submissionAttempted}
-                onChange={(value, errors) => {
-                  if (formElement.current?.typeId === "WelcomeMessage") {
-                    switch (
-                      (value as { dropdownSelection?: string })
-                        .dropdownSelection
-                    ) {
-                      case "BEGIN":
-                        history.push(`/${slug}/surveys/${surveyId}/1`);
-                        break;
-                      case "PRACTICE":
-                        history.push(`/${slug}/surveys/${surveyId}/1/practice`);
-                        break;
-                      case "EDIT":
-                        history.push(`/${slug}/survey-editor/${surveyId}`);
-                        break;
-                      case "RESPONSES":
-                        history.push(`/${slug}/admin/surveys/${surveyId}`);
-                    }
-                  } else {
-                    updateState(formElement.current!, {
-                      value,
-                      errors,
-                    });
-                    if (formElement.current?.type?.advancesAutomatically) {
-                      setTimeout(() => {
-                        handleAdvance({ advanceAutomatically: true });
-                      }, 500);
-                    }
+              <motion.div
+                custom={backwards}
+                className="relative"
+                variants={{
+                  exit: (direction: boolean) => ({
+                    opacity: 0,
+                    translateY: direction ? 100 : -100,
+                    position: "relative",
+                  }),
+                  enter: (direction: boolean) => ({
+                    opacity: 0,
+                    translateY: direction ? -100 : 100,
+                    position: "relative",
+                  }),
+                  show: () => ({
+                    opacity: 1,
+                    translateY: 0,
+                    position: "relative",
+                  }),
+                }}
+                transition={{
+                  duration: 0.3,
+                }}
+                key={formElement.current.id}
+                initial="enter"
+                animate="show"
+                exit="exit"
+              >
+                <SurveyButtonFooterPortalContext.Provider
+                  value={surveyButtonFooter.current}
+                >
+                  <FormElementFactory
+                    {...formElement.current}
+                    typeName={formElement.current.typeId}
+                    submissionAttempted={!!state?.submissionAttempted}
+                    onChange={(value, errors) => {
+                      if (formElement.current?.typeId === "WelcomeMessage") {
+                        switch (
+                          (value as { dropdownSelection?: string })
+                            .dropdownSelection
+                        ) {
+                          case "BEGIN":
+                            setResponseState((prev) => ({
+                              ...prev,
+                              facilitated: false,
+                            }));
+                            history.push(`/${slug}/surveys/${surveyId}/1`);
+                            break;
+                          case "FACILITATED":
+                            setResponseState((prev) => ({
+                              ...prev,
+                              facilitated: true,
+                            }));
+                            history.push(`/${slug}/surveys/${surveyId}/1`);
+                            break;
+                          case "PRACTICE":
+                            history.push(
+                              `/${slug}/surveys/${surveyId}/1/practice`
+                            );
+                            setResponseState((prev) => ({
+                              ...prev,
+                              facilitated: false,
+                            }));
+                            break;
+                          case "EDIT":
+                            history.push(`/${slug}/survey-editor/${surveyId}`);
+                            break;
+                          case "RESPONSES":
+                            history.push(`/${slug}/admin/surveys/${surveyId}`);
+                        }
+                      } else {
+                        updateState(formElement.current!, {
+                          value,
+                          errors,
+                        });
+                        if (formElement.current?.type?.advancesAutomatically) {
+                          setTimeout(() => {
+                            handleAdvance({ advanceAutomatically: true });
+                          }, 500);
+                        }
+                      }
+                    }}
+                    onSubmit={handleAdvance}
+                    editable={false}
+                    value={state?.value}
+                  />
+                </SurveyButtonFooterPortalContext.Provider>
+                {formElement.current?.typeId !== "ThankYou" &&
+                  formElement.current?.typeId !== "WelcomeMessage" &&
+                  (!formElement.current.type?.advancesAutomatically ||
+                    !formElement.current.isRequired) && (
+                    <div
+                      className={`${
+                        !formElement.exiting &&
+                        (!!state?.value || !formElement.current.isRequired) &&
+                        formElement.current.typeId !== "WelcomeMessage" &&
+                        !state?.errors
+                          ? "opacity-100 transition-opacity duration-300"
+                          : "opacity-0"
+                      }`}
+                    >
+                      <Button
+                        className="mb-10"
+                        label={
+                          lastPage && !!!formElement.exiting
+                            ? t("Complete Submission")
+                            : currentValue === undefined
+                            ? t("Skip Question")
+                            : t("Next")
+                        }
+                        onClick={handleAdvance}
+                        disabled={
+                          createResponseState.loading || !!formElement.exiting
+                        }
+                        loading={createResponseState.loading}
+                        backgroundColor={style.secondaryColor}
+                      />
+                      <span ref={surveyButtonFooter} className="ml-2"></span>
+                    </div>
+                  )}
+              </motion.div>
+            </AnimatePresence>
+            {formElement.current?.typeId !== "ThankYou" && (
+              <SurveyNav
+                canAdvance={canAdvance()}
+                buttonColor={style.secondaryColor}
+                lastPage={lastPage}
+                index={parseInt(position)}
+                onPrev={() => setBackwards(true)}
+                slug={slug}
+                surveyId={surveyId}
+                practice={practice}
+                onNext={(e) => {
+                  handleAdvance();
+                  if (!canAdvance()) {
+                    e.preventDefault();
                   }
                 }}
-                onSubmit={handleAdvance}
-                editable={false}
-                value={state?.value}
-                projectName={data.currentProject!.name}
-                projectUrl={data.currentProject!.url!}
-                surveyUrl={`${data.currentProject!.url!}/surveys/${
-                  data.survey.id
-                }`}
               />
-
-              {formElement.current?.typeId !== "ThankYou" &&
-                formElement.current?.typeId !== "WelcomeMessage" &&
-                (!formElement.current.type?.advancesAutomatically ||
-                  !formElement.current.isRequired) && (
-                  <div
-                    className={`${
-                      !formElement.exiting &&
-                      (!!state?.value || !formElement.current.isRequired) &&
-                      formElement.current.typeId !== "WelcomeMessage" &&
-                      !state?.errors
-                        ? "opacity-100 transition-opacity duration-300"
-                        : "opacity-0"
-                    }`}
-                  >
-                    <Button
-                      className="mb-10"
-                      label={
-                        lastPage && !!!formElement.exiting
-                          ? t("Complete Submission")
-                          : currentValue === undefined
-                          ? t("Skip Question")
-                          : t("Next")
-                      }
-                      onClick={handleAdvance}
-                      disabled={
-                        createResponseState.loading || !!formElement.exiting
-                      }
-                      loading={createResponseState.loading}
-                      backgroundColor={style.secondaryColor}
-                    />
-                  </div>
-                )}
-            </motion.div>
-          </AnimatePresence>
-          {formElement.current?.typeId !== "ThankYou" && (
-            <SurveyNav
-              canAdvance={canAdvance()}
-              buttonColor={style.secondaryColor}
-              lastPage={lastPage}
-              index={parseInt(position)}
-              onPrev={() => setBackwards(true)}
-              slug={slug}
-              surveyId={surveyId}
-              practice={practice}
-              onNext={(e) => {
-                handleAdvance();
-                if (!canAdvance()) {
-                  e.preventDefault();
-                }
-              }}
-            />
-          )}
-        </SurveyAppLayout>
-        <Modal
-          open={practiceModalOpen}
-          onRequestClose={() => setPracticeModalOpen(false)}
-          title={t("Practice Mode")}
-          footer={
-            <div className="space-x-1 text-center md:text-right space-y-2 md:space-y-0">
-              <Button
-                label={
-                  practice
-                    ? t("Continue Practice Mode")
-                    : t("Enable Practice Mode")
-                }
-                onClick={() => {
-                  setPracticeModalOpen(false);
-                  history.replace(
-                    `/${slug}/surveys/${surveyId}/${index}/practice`
-                  );
-                }}
-              />
-              <Button
-                primary
-                label={t("Count My Response")}
-                onClick={() => {
-                  setPracticeModalOpen(false);
-                  history.replace(`/${slug}/surveys/${surveyId}/${index}/`);
-                }}
-              />
-            </div>
-          }
-        >
-          <Trans ns="surveys">
-            Practice mode saves your responses seperately so that they are not
-            counted in the survey results.
-          </Trans>
-        </Modal>
-        <ImagePreloader formElements={elements} />
+            )}
+          </SurveyAppLayout>
+          <Modal
+            open={practiceModalOpen}
+            onRequestClose={() => setPracticeModalOpen(false)}
+            title={t("Practice Mode")}
+            footer={
+              <div className="space-x-1 text-center md:text-right space-y-2 md:space-y-0">
+                <Button
+                  label={
+                    practice
+                      ? t("Continue Practice Mode")
+                      : t("Enable Practice Mode")
+                  }
+                  onClick={() => {
+                    setPracticeModalOpen(false);
+                    history.replace(
+                      `/${slug}/surveys/${surveyId}/${index}/practice`
+                    );
+                  }}
+                />
+                <Button
+                  primary
+                  label={t("Count My Response")}
+                  onClick={() => {
+                    setPracticeModalOpen(false);
+                    history.replace(`/${slug}/surveys/${surveyId}/${index}/`);
+                  }}
+                />
+              </div>
+            }
+          >
+            <Trans ns="surveys">
+              Practice mode saves your responses seperately so that they are not
+              counted in the survey results.
+            </Trans>
+          </Modal>
+          <ImagePreloader formElements={elements} />
+        </SurveyContext.Provider>
       </>
     );
   }

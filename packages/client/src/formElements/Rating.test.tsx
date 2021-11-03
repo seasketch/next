@@ -16,6 +16,8 @@ const makeArgs = (componentSettings: RatingProps) => ({
   projectName: "Project A",
   projectUrl: "https://example.com/a",
   surveyUrl: "https://example.com/a/surveys/1",
+  surveySupportsFacilitation: true,
+  isFacilitatedResponse: false,
 });
 
 test("Component renders with custom body", async () => {

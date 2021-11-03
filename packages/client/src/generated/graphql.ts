@@ -10091,6 +10091,7 @@ export type Survey = Node & {
   /** Reads a single `Project` that is related to this `Survey`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  showFacilitationOption: Scalars['Boolean'];
   showProgress: Scalars['Boolean'];
   /**
    * Only applicable for public surveys. Show tools to respondants for sharing the
@@ -10192,6 +10193,7 @@ export type SurveyInput = {
   limitToSingleResponse?: Maybe<Scalars['Boolean']>;
   name: Scalars['String'];
   projectId: Scalars['Int'];
+  showFacilitationOption?: Maybe<Scalars['Boolean']>;
   showProgress?: Maybe<Scalars['Boolean']>;
   /**
    * Only applicable for public surveys. Show tools to respondants for sharing the
@@ -10344,6 +10346,7 @@ export type SurveyPatch = {
   limitToSingleResponse?: Maybe<Scalars['Boolean']>;
   name?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
+  showFacilitationOption?: Maybe<Scalars['Boolean']>;
   showProgress?: Maybe<Scalars['Boolean']>;
   /**
    * Only applicable for public surveys. Show tools to respondants for sharing the
@@ -12527,6 +12530,11 @@ export type NewLayerOptionsFragment = (
   & Pick<OptionalBasemapLayer, 'options'>
 );
 
+export type UpdateComponentSettingsFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'componentSettings'>
+);
+
 export type UpdateBodyFragment = (
   { __typename?: 'FormElement' }
   & Pick<FormElement, 'body'>
@@ -13820,7 +13828,7 @@ export type SimpleProjectListQuery = (
 
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate'>
+  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption'>
   & { invitedGroups?: Maybe<Array<(
     { __typename?: 'Group' }
     & Pick<Group, 'id' | 'name'>
@@ -13925,6 +13933,7 @@ export type SurveyFormEditorDetailsQuery = (
 export type UpdateSurveyBaseSettingsMutationVariables = Exact<{
   id: Scalars['Int'];
   showProgress?: Maybe<Scalars['Boolean']>;
+  showFacilitationOption?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -13934,7 +13943,7 @@ export type UpdateSurveyBaseSettingsMutation = (
     { __typename?: 'UpdateSurveyPayload' }
     & { survey?: Maybe<(
       { __typename?: 'Survey' }
-      & Pick<Survey, 'id' | 'showProgress'>
+      & Pick<Survey, 'id' | 'showProgress' | 'showFacilitationOption'>
     )> }
   )> }
 );
@@ -13955,6 +13964,23 @@ export type UpdateFormElementMutation = (
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
       & Pick<FormElement, 'id' | 'isRequired' | 'body' | 'exportId' | 'componentSettings'>
+    )> }
+  )> }
+);
+
+export type UpdateComponentSettingsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  componentSettings?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateComponentSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'componentSettings'>
     )> }
   )> }
 );
@@ -14145,13 +14171,17 @@ export type SurveyQuery = (
   { __typename?: 'Query' }
   & { me?: Maybe<(
     { __typename?: 'User' }
-    & Pick<User, 'isAdmin'>
+    & Pick<User, 'isAdmin' | 'canonicalEmail'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & Pick<Profile, 'email' | 'fullname'>
+    )> }
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'name' | 'url'>
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
-    & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress'>
+    & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption'>
     & { form?: Maybe<(
       { __typename?: 'Form' }
       & Pick<Form, 'id'>
@@ -14831,6 +14861,11 @@ export const NewLayerOptionsFragmentDoc = gql`
   options
 }
     `;
+export const UpdateComponentSettingsFragmentDoc = gql`
+    fragment UpdateComponentSettings on FormElement {
+  componentSettings
+}
+    `;
 export const UpdateBodyFragmentDoc = gql`
     fragment UpdateBody on FormElement {
   body
@@ -14852,6 +14887,7 @@ export const SurveyListDetailsFragmentDoc = gql`
   practiceResponseCount
   projectId
   isTemplate
+  showFacilitationOption
 }
     `;
 export const FormElementFullDetailsFragmentDoc = gql`
@@ -18407,11 +18443,14 @@ export type SurveyFormEditorDetailsQueryHookResult = ReturnType<typeof useSurvey
 export type SurveyFormEditorDetailsLazyQueryHookResult = ReturnType<typeof useSurveyFormEditorDetailsLazyQuery>;
 export type SurveyFormEditorDetailsQueryResult = Apollo.QueryResult<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>;
 export const UpdateSurveyBaseSettingsDocument = gql`
-    mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean) {
-  updateSurvey(input: {id: $id, patch: {showProgress: $showProgress}}) {
+    mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean, $showFacilitationOption: Boolean) {
+  updateSurvey(
+    input: {id: $id, patch: {showProgress: $showProgress, showFacilitationOption: $showFacilitationOption}}
+  ) {
     survey {
       id
       showProgress
+      showFacilitationOption
     }
   }
 }
@@ -18433,6 +18472,7 @@ export type UpdateSurveyBaseSettingsMutationFn = Apollo.MutationFunction<UpdateS
  *   variables: {
  *      id: // value for 'id'
  *      showProgress: // value for 'showProgress'
+ *      showFacilitationOption: // value for 'showFacilitationOption'
  *   },
  * });
  */
@@ -18488,6 +18528,45 @@ export function useUpdateFormElementMutation(baseOptions?: Apollo.MutationHookOp
 export type UpdateFormElementMutationHookResult = ReturnType<typeof useUpdateFormElementMutation>;
 export type UpdateFormElementMutationResult = Apollo.MutationResult<UpdateFormElementMutation>;
 export type UpdateFormElementMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementMutation, UpdateFormElementMutationVariables>;
+export const UpdateComponentSettingsDocument = gql`
+    mutation UpdateComponentSettings($id: Int!, $componentSettings: JSON) {
+  updateFormElement(
+    input: {id: $id, patch: {componentSettings: $componentSettings}}
+  ) {
+    formElement {
+      id
+      componentSettings
+    }
+  }
+}
+    `;
+export type UpdateComponentSettingsMutationFn = Apollo.MutationFunction<UpdateComponentSettingsMutation, UpdateComponentSettingsMutationVariables>;
+
+/**
+ * __useUpdateComponentSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateComponentSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateComponentSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateComponentSettingsMutation, { data, loading, error }] = useUpdateComponentSettingsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      componentSettings: // value for 'componentSettings'
+ *   },
+ * });
+ */
+export function useUpdateComponentSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateComponentSettingsMutation, UpdateComponentSettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateComponentSettingsMutation, UpdateComponentSettingsMutationVariables>(UpdateComponentSettingsDocument, options);
+      }
+export type UpdateComponentSettingsMutationHookResult = ReturnType<typeof useUpdateComponentSettingsMutation>;
+export type UpdateComponentSettingsMutationResult = Apollo.MutationResult<UpdateComponentSettingsMutation>;
+export type UpdateComponentSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateComponentSettingsMutation, UpdateComponentSettingsMutationVariables>;
 export const UpdateFormElementBodyDocument = gql`
     mutation UpdateFormElementBody($id: Int!, $body: JSON!) {
   updateFormElement(input: {id: $id, patch: {body: $body}}) {
@@ -18896,6 +18975,11 @@ export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
     isAdmin
+    profile {
+      email
+      fullname
+    }
+    canonicalEmail
   }
   currentProject {
     name
@@ -18907,6 +18991,7 @@ export const SurveyDocument = gql`
     accessType
     isDisabled
     showProgress
+    showFacilitationOption
     form {
       id
       formElements {

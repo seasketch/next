@@ -5,6 +5,8 @@ import ThankYou, { ThankYouProps } from "./ThankYou";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Router, useHistory } from "react-router";
 import { createMemoryHistory } from "history";
+import { SurveyContext } from "./FormElement";
+import { TestSurveyContextValue } from "./testContext";
 
 const body = ThankYou.defaultBody;
 const makeArgs = (componentSettings: ThankYouProps) => ({
@@ -21,12 +23,16 @@ const makeArgs = (componentSettings: ThankYouProps) => ({
   projectName: "Project A",
   projectUrl: "https://example.com/a",
   surveyUrl: "https://example.com/a/surveys/1",
+  surveySupportsFacilitation: true,
+  isFacilitatedResponse: false,
 });
 
 test("Component renders with custom body", async () => {
   render(
     <Router history={createMemoryHistory()}>
-      <ThankYou {...makeArgs({})} />
+      <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
+        <ThankYou {...makeArgs({})} />
+      </SurveyContext.Provider>
     </Router>
   );
   await waitFor(() => {
@@ -39,7 +45,9 @@ test("Component renders with custom body", async () => {
 test("Has a button linking to the project url if linkToProject=true", async () => {
   render(
     <Router history={createMemoryHistory()}>
-      <ThankYou {...makeArgs({ linkToProject: true })} />
+      <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
+        <ThankYou {...makeArgs({ linkToProject: true })} />
+      </SurveyContext.Provider>
     </Router>
   );
   await waitFor(() => {
@@ -50,7 +58,9 @@ test("Has a button linking to the project url if linkToProject=true", async () =
 test("Has a button to take survey again if promptToRespondAgain=true", async () => {
   render(
     <Router history={createMemoryHistory()}>
-      <ThankYou {...makeArgs({ promptToRespondAgain: true })} />
+      <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
+        <ThankYou {...makeArgs({ promptToRespondAgain: true })} />
+      </SurveyContext.Provider>
     </Router>
   );
   await waitFor(() => {
@@ -61,12 +71,14 @@ test("Has a button to take survey again if promptToRespondAgain=true", async () 
 test("Respond Again link text can be customized", async () => {
   render(
     <Router history={createMemoryHistory()}>
-      <ThankYou
-        {...makeArgs({
-          promptToRespondAgain: true,
-          respondAgainMessage: "Do it again",
-        })}
-      />
+      <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
+        <ThankYou
+          {...makeArgs({
+            promptToRespondAgain: true,
+            respondAgainMessage: "Do it again",
+          })}
+        />
+      </SurveyContext.Provider>
     </Router>
   );
   await waitFor(() => {
@@ -77,11 +89,13 @@ test("Respond Again link text can be customized", async () => {
 test("Optional social sharing buttons", async () => {
   render(
     <Router history={createMemoryHistory()}>
-      <ThankYou
-        {...makeArgs({
-          shareButtons: true,
-        })}
-      />
+      <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
+        <ThankYou
+          {...makeArgs({
+            shareButtons: true,
+          })}
+        />
+      </SurveyContext.Provider>
     </Router>
   );
   await waitFor(() => {

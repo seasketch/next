@@ -1,26 +1,24 @@
 /* eslint-disable i18next/no-literal-string */
 import React from "react";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
-import ShortText from "./ShortText";
+import ShortText, { ShortTextProps } from "./ShortText";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
 const body = questionBodyFromMarkdown(`# What is your name?`);
+const makeArgs = (componentSettings: ShortTextProps) => {
+  return {
+    body,
+    id: 1,
+    onChange: jest.fn(),
+    onSubmit: jest.fn(),
+    editable: false,
+    componentSettings,
+    isRequired: false,
+  };
+};
 
 test("Component renders with custom body", async () => {
-  render(
-    <ShortText
-      body={body}
-      id={1}
-      onChange={() => null}
-      onSubmit={() => null}
-      editable={false}
-      isRequired={false}
-      componentSettings={{}}
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
-    />
-  );
+  render(<ShortText {...makeArgs({})} />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
@@ -28,22 +26,9 @@ test("Component renders with custom body", async () => {
 });
 
 test("Entering text updates the value", async () => {
-  const onChange = jest.fn();
-  const onSubmit = jest.fn();
-  render(
-    <ShortText
-      body={body}
-      id={1}
-      onChange={onChange}
-      onSubmit={onSubmit}
-      editable={false}
-      isRequired={false}
-      componentSettings={{}}
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
-    />
-  );
+  const args = makeArgs({});
+  const { onSubmit, onChange } = args;
+  render(<ShortText {...args} />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
@@ -53,38 +38,19 @@ test("Entering text updates the value", async () => {
 });
 
 test("Required fields validate input after submission attempt", async () => {
-  const { rerender } = render(
-    <ShortText
-      body={body}
-      id={1}
-      onChange={jest.fn()}
-      onSubmit={jest.fn()}
-      editable={false}
-      isRequired={true}
-      componentSettings={{}}
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
-    />
-  );
+  const args = makeArgs({});
+  const { onSubmit, onChange } = args;
+  const { rerender } = render(<ShortText {...args} isRequired={false} />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
   expect(screen.queryByText("Required field")).not.toBeInTheDocument();
   rerender(
     <ShortText
-      body={body}
-      id={1}
-      onChange={jest.fn()}
-      onSubmit={jest.fn()}
-      editable={false}
-      isRequired={true}
-      componentSettings={{}}
-      submissionAttempted={true}
+      {...args}
       value=""
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
+      isRequired={true}
+      submissionAttempted={true}
     />
   );
   await waitFor(() => {
@@ -93,20 +59,13 @@ test("Required fields validate input after submission attempt", async () => {
 });
 
 test("minLength", async () => {
+  const args = makeArgs({ minLength: 8 });
   const { rerender } = render(
     <ShortText
-      body={body}
-      id={1}
-      onChange={jest.fn()}
-      onSubmit={jest.fn()}
-      editable={false}
-      componentSettings={{ minLength: 8 }}
-      submissionAttempted={true}
+      {...args}
       isRequired={true}
       value="Hi"
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
+      submissionAttempted={true}
     />
   );
   await waitFor(() => {
@@ -114,20 +73,7 @@ test("minLength", async () => {
   });
   expect(screen.getByText(/must be/)).toBeInTheDocument();
   rerender(
-    <ShortText
-      body={body}
-      id={1}
-      onChange={jest.fn()}
-      onSubmit={jest.fn()}
-      editable={false}
-      componentSettings={{ minLength: 1 }}
-      submissionAttempted={true}
-      isRequired={true}
-      value="Hi"
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
-    />
+    <ShortText {...makeArgs({ minLength: 1 })} isRequired={true} value="Hi" />
   );
   await waitFor(() => {
     expect(screen.queryByText(/must be/)).toBeNull();
@@ -135,20 +81,12 @@ test("minLength", async () => {
 });
 
 test("maxLength", async () => {
+  const args = makeArgs({ maxLength: 2 });
   const { rerender } = render(
     <ShortText
-      body={body}
-      id={1}
-      onChange={jest.fn()}
-      onSubmit={jest.fn()}
-      editable={false}
-      componentSettings={{ maxLength: 8 }}
-      submissionAttempted={true}
-      isRequired={true}
+      {...args}
       value="Bababhbabhabhabababbdab"
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
+      submissionAttempted={true}
     />
   );
   await waitFor(() => {
@@ -158,22 +96,9 @@ test("maxLength", async () => {
 });
 
 test("Pressing return key advances to next field", async () => {
-  const onSubmit = jest.fn();
-  render(
-    <ShortText
-      body={body}
-      id={1}
-      onChange={() => null}
-      onSubmit={onSubmit}
-      editable={false}
-      isRequired={false}
-      componentSettings={{}}
-      value="foo"
-      projectName="Project A"
-      projectUrl="https://example.com/a"
-      surveyUrl="https://example.com/a/surveys/1"
-    />
-  );
+  const args = makeArgs({});
+  const { onSubmit } = args;
+  render(<ShortText {...args} isRequired={false} value="foo" />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
