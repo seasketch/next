@@ -71,6 +71,9 @@ export default function SurveyFormEditor({
     basicSettings: false,
     formElement: undefined,
   });
+
+  const [values, setValues] = useState<{ [id: number]: any | undefined }>({});
+
   const surveyButtonFooter = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -371,10 +374,16 @@ export default function SurveyFormEditor({
                       <>
                         <FormElementFactory
                           {...selectedFormElement!}
-                          onChange={() => null}
+                          onChange={(value) =>
+                            setValues((prev) => ({
+                              ...prev,
+                              [selectedFormElement.id]: value,
+                            }))
+                          }
                           onSubmit={() => null}
                           typeName={selectedFormElement!.typeId}
                           editable={true}
+                          value={values[selectedFormElement.id]}
                         />
                         <div className="flex items-center mb-10 space-x-4">
                           {selectedFormElement.typeId !== "WelcomeMessage" &&

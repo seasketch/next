@@ -70,6 +70,7 @@
     "colord": "^2.9.0",
     "colorthief": "^2.3.2",
     "comlink-loader": "^2.0.0",
+    "downshift": "^6.1.7",
     "formik": "^2.2.9",
     "formik-persist": "^1.1.0",
     "framer-motion": "^2.9.4",

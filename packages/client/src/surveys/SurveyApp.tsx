@@ -223,7 +223,7 @@ function SurveyApp() {
             projectName: data.currentProject!.name,
             projectUrl: data.currentProject!.url!,
             surveyUrl: `${data.currentProject!.url!}surveys/${surveyId}`,
-            bestEmail: data.me?.profile?.email || data.me?.canonicalEmail,
+            bestEmail: data.me?.profile?.email || auth0.user?.email,
             bestName: data.me?.profile?.fullname || auth0.user?.name,
           }}
         >
@@ -359,7 +359,8 @@ function SurveyApp() {
                         label={
                           lastPage && !!!formElement.exiting
                             ? t("Complete Submission")
-                            : currentValue === undefined
+                            : currentValue === undefined ||
+                              currentValue === null
                             ? t("Skip Question")
                             : t("Next")
                         }

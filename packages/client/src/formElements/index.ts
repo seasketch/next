@@ -9,6 +9,7 @@ import YesNo from "./YesNo";
 import TextArea from "./TextArea";
 import ThankYou from "./ThankYou";
 import Name from "./Name";
+import ComboBox from "./ComboBox";
 
 export const components: {
   /** componentName must match form_elements db table */
@@ -25,3 +26,4 @@ components["Rating"] = Rating;
 components["Statement"] = Statement;
 components["YesNo"] = YesNo;
 components["ThankYou"] = ThankYou;
+components["ComboBox"] = ComboBox;

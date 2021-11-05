@@ -27,6 +27,7 @@ export type ComputedFormElementStyle = {
   secondaryTextClass: string;
   textClass: string;
   isDark: boolean;
+  isSmall: boolean;
 };
 
 export const defaultStyle = {
@@ -45,6 +46,7 @@ export const defaultStyle = {
     "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
   textClass: "text-white",
   isDark: true,
+  isSmall: false,
 };
 
 /**
@@ -116,6 +118,7 @@ export function useCurrentStyle(
 
   return {
     ...style,
+    isSmall,
     textClass,
     isDark,
     secondaryColor2: colord(style.secondaryColor!)

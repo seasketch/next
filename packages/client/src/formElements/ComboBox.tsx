@@ -1,0 +1,269 @@
+import { useContext, useEffect, useState, useRef } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import {
+  FormElementBody,
+  FormElementComponent,
+  FormElementEditorPortal,
+} from "./FormElement";
+import { questionBodyFromMarkdown } from "./fromMarkdown";
+import { useCombobox } from "downshift";
+import { SelectorIcon } from "@heroicons/react/outline";
+import { SurveyStyleContext } from "../surveys/appearance";
+import FormElementOptionsInput, {
+  FormElementOption,
+} from "./FormElementOptionsInput";
+import InputBlock from "../components/InputBlock";
+import Switch from "../components/Switch";
+import { XIcon } from "@heroicons/react/outline";
+
+export type ComboBoxProps = {
+  options?: FormElementOption[];
+  placeholder?: string;
+  autoSelectFirstOptionInList?: boolean;
+};
+
+const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
+  props
+) => {
+  const { t } = useTranslation("surveys");
+  const items = props.componentSettings.options || [];
+  const [choices, setChoices] = useState<string[]>(items.map((i) => i.label));
+  const [selectedOption, setSelectedOption] = useState<
+    FormElementOption | undefined | null
+  >();
+  const [inputValue, setInputValue] = useState<string>("");
+  useEffect(() => {
+    if (props.value) {
+      const item = items.find((i) => (i.value || i.label) === props.value);
+      setSelectedOption(item);
+      setInputValue(item?.label || "");
+    } else {
+      setSelectedOption(null);
+    }
+  }, [props.value]);
+
+  useEffect(() => {
+    if (
+      (props.value === undefined || (props.value === null && props.editable)) &&
+      props.componentSettings.autoSelectFirstOptionInList
+    ) {
+      props.onChange(items[0].value || items[0].label, false);
+    }
+    if (
+      props.editable &&
+      !props.componentSettings.autoSelectFirstOptionInList &&
+      props.value === (items[0].value || items[0].label)
+    ) {
+      props.onChange(null, false);
+      setInputValue("");
+    }
+  }, [props.componentSettings.autoSelectFirstOptionInList]);
+
+  const style = useContext(SurveyStyleContext);
+  const {
+    isOpen,
+    getToggleButtonProps,
+    getMenuProps,
+    openMenu,
+    closeMenu,
+    getInputProps,
+    getComboboxProps,
+    highlightedIndex,
+    getItemProps,
+  } = useCombobox({
+    inputValue,
+    selectedItem: selectedOption?.label || null,
+    items: choices,
+    onInputValueChange: (e) => {
+      if (e.type === "__input_change__") {
+        const inputValue = e.inputValue;
+        if (inputValue) {
+          setChoices(
+            items
+              .filter((item) =>
+                item.label.toLowerCase().startsWith(inputValue.toLowerCase())
+              )
+              .map((i) => i.label)
+          );
+        } else {
+          setChoices(items.map((i) => i.label));
+        }
+        if (selectedOption && selectedOption.label !== inputValue) {
+          setSelectedOption(null);
+          setChoices(items.map((i) => i.label));
+          props.onChange(null, false);
+        }
+        setInputValue(e.inputValue || "");
+      }
+    },
+    onSelectedItemChange: ({ selectedItem }) => {
+      const item = items.find((i) => i.label === selectedItem);
+      props.onChange(item?.value || item?.label || null, false);
+    },
+  });
+
+  const input = (
+    <div
+      className={`sm:w-96 mb-4 mt-4 relative w-full ${
+        style.isSmall && "hidden"
+      }`}
+    >
+      <div
+        onClick={() => (isOpen ? closeMenu() : openMenu())}
+        className={`bg-white rounded w-full text-black relative flex justify-center ${
+          getComboboxProps()["aria-expanded"]
+            ? "ring ring-blue-200 ring-opacity-50"
+            : ""
+        }`}
+        {...getComboboxProps()}
+        style={{
+          background: `linear-gradient(white 50%, rgba(255, 255, 255, 0.85) 100%)`,
+        }}
+      >
+        <input
+          spellCheck={false}
+          className={`flex-1 p-2 px-3 ring-0 outline-none rounded-l bg-transparent ${
+            selectedOption?.label === inputValue
+              ? "text-black"
+              : "text-gray-500"
+          }`}
+          {...getInputProps({})}
+          placeholder={
+            props.isRequired && props.submissionAttempted
+              ? t("Selection required", { ns: "surveys" })
+              : props.componentSettings.placeholder ||
+                t("Select an option...", { ns: "surveys" })
+          }
+        />
+        {(selectedOption || inputValue.length > 0) && (
+          <button
+            onClick={(e) => {
+              props.onChange(null, false);
+              setInputValue("");
+              setChoices(items.map((i) => i.label));
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            type="button"
+            aria-label="clear value"
+            className=""
+          >
+            <XIcon className="w-5 h-5 text-gray-500" />
+          </button>
+        )}
+        <button
+          type="button"
+          {...getToggleButtonProps()}
+          aria-label="toggle menu"
+          className="p-2"
+        >
+          <SelectorIcon className="w-5 h-5 text-gray-500" />
+        </button>
+      </div>
+      <ul
+        {...getMenuProps()}
+        className={`max-h-72 overflow-y-scroll max-w-full absolute bg-white text-gray-800 w-96 shadow-xl mt-2 z-10 rounded`}
+      >
+        {isOpen &&
+          choices.map((item, index) => (
+            <li
+              className={`px-3 py-2 ${
+                highlightedIndex === index
+                  ? "bg-primary-500 text-white"
+                  : "text-black"
+              }`}
+              key={`${item}${index}`}
+              {...getItemProps({ item, index })}
+            >
+              {item}
+            </li>
+          ))}
+      </ul>
+    </div>
+  );
+
+  const selectInput = (
+    <div>
+      <select
+        className="text-gray-800 rounded w-full mt-2 mb-4 focus:ring-2 focus:ring-blue-300 outline-none "
+        value={
+          items.find((i) => (i.value || i.label) === props.value)?.label || ""
+        }
+        onChange={(e) => {
+          const item = items.find((i) => i.label === e.target.value);
+          props.onChange(item?.value || item?.label || null, false);
+        }}
+      >
+        {!props.isRequired && <option value="__NULL__">&nbsp;</option>}
+        {items.map((i) => (
+          <option key={i.label} value={i.label}>
+            {i.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+
+  return (
+    <>
+      <FormElementBody
+        formElementId={props.id}
+        isInput={true}
+        body={props.body}
+        required={props.isRequired}
+        editable={props.editable}
+      />
+      {input}
+      {style.isSmall && selectInput}
+      <FormElementEditorPortal
+        render={(updateBaseSetting, updateComponentSetting) => {
+          return (
+            <>
+              <InputBlock
+                labelType="small"
+                title={t("Auto-select first option", { ns: "admin:surveys" })}
+                input={
+                  <Switch
+                    isToggled={
+                      !!props.componentSettings.autoSelectFirstOptionInList
+                    }
+                    onClick={updateComponentSetting(
+                      "autoSelectFirstOptionInList",
+                      props.componentSettings
+                    )}
+                  />
+                }
+              />
+              <FormElementOptionsInput
+                initialValue={props.componentSettings.options || []}
+                onChange={updateComponentSetting(
+                  "options",
+                  props.componentSettings
+                )}
+              />
+            </>
+          );
+        }}
+      />
+    </>
+  );
+};
+
+ComboBox.label = <Trans ns="admin:surveys">Combo Box</Trans>;
+ComboBox.description = <Trans>For large lists of options</Trans>;
+ComboBox.defaultBody = questionBodyFromMarkdown(`
+# Choices, choices
+
+Use a combo box when you have a long list of choices and it's necessary to be able to search using the keyboard. Note that in most cases a Choice field is a better solution. Dropdowns have many issues problems, [especially on mobile](https://www.lukew.com/ff/entry.asp?1950).
+
+On small mobile devices, the native *select* input of the operating system will be shown.
+`);
+ComboBox.defaultComponentSettings = {
+  options: ["a", "b", "c", "d"].map((str) => ({
+    // eslint-disable-next-line i18next/no-literal-string
+    label: `Option ${str.toUpperCase()}`,
+    value: str,
+  })),
+};
+
+export default ComboBox;

@@ -5,7 +5,6 @@ query Survey($id: Int!) {
       email
       fullname
     }
-    canonicalEmail
   }
   currentProject {
     name

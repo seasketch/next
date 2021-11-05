@@ -14171,7 +14171,7 @@ export type SurveyQuery = (
   { __typename?: 'Query' }
   & { me?: Maybe<(
     { __typename?: 'User' }
-    & Pick<User, 'isAdmin' | 'canonicalEmail'>
+    & Pick<User, 'isAdmin'>
     & { profile?: Maybe<(
       { __typename?: 'Profile' }
       & Pick<Profile, 'email' | 'fullname'>
@@ -18979,7 +18979,6 @@ export const SurveyDocument = gql`
       email
       fullname
     }
-    canonicalEmail
   }
   currentProject {
     name

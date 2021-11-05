@@ -24,6 +24,8 @@ export default function useBodyBackground(
       "transition",
       "background-image 0ms, background-color 0ms"
     );
+    // Doesn't seem to help safari 15
+    // document.body.style.setProperty("min-height", "--webkit-fill-available");
     if (!skipAnimation) {
       setTimeout(() => {
         document.body.style.setProperty(
