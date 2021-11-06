@@ -41,7 +41,10 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
   }
 
   useEffect(() => {
-    if ((val === null || val === undefined) && context.bestName) {
+    if (
+      (props.value === null || props.value === undefined) &&
+      context.bestName
+    ) {
       const newVal = { ...val!, name: context.bestName || "" };
       setVal(newVal);
       props.onChange(newVal, !validate(newVal, context.isFacilitatedResponse));

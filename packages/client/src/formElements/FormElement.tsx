@@ -51,7 +51,7 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
   componentSettings: ComponentSettings;
   value?: ValueType;
   editable?: boolean;
-  onChange: (value: ValueType, validationErrors: boolean) => void;
+  onChange: (value: ValueType | undefined, validationErrors: boolean) => void;
   /**
    * Set to true by SurveyApp if user attempts to proceed. Useful for showing validation messages only
    * after the user has finished their input
@@ -116,6 +116,7 @@ export function FormElementBody({
         className={`prosemirror-body ${required && "required"} ${
           isInput && "input"
         }`}
+        style={{ minWidth: 300 }}
       >
         <Suspense fallback={<Spinner />}>
           <LazyBodyEditor
@@ -281,6 +282,7 @@ export interface FormElementComponent<T, V = {}>
   defaultComponentSettings?: T;
   /** For components like WelcomeMessage that shouldn't be a user option */
   templatesOnly?: boolean;
+  advanceAutomatically?: boolean | ((componentSettings: T) => boolean);
   // validate?: (
   //   value: any,
   //   isRequired: boolean,

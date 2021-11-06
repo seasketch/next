@@ -145,15 +145,15 @@ export const SurveyAppLayout: React.FunctionComponent<{
             </div>
           )}
           <div
-            className={`px-5 lg:px-10 max-w-xl mx-auto ${
+            className={`items-center p-5 flex-1 ${
               style.textClass
             } survey-content ${
               top
                 ? "w-full"
-                : "flex-0 flex flex-col center-ish max-h-full overflow-y-auto w-full md:w-128 lg:w-160 xl:w-full 2xl:mx-auto"
+                : "flex flex-col center-ish max-h-full overflow-y-auto w-full"
             }`}
           >
-            <div className="max-h-full pt-5">{children}</div>
+            <div className="max-h-full max-w-xl mx-auto">{children}</div>
           </div>
           {cover && (
             <UnsplashCredit

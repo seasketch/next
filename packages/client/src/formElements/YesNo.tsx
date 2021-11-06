@@ -52,5 +52,6 @@ YesNo.description = <Trans>Boolean input</Trans>;
 YesNo.defaultBody = questionBodyFromMarkdown(`
 # 
 `);
+YesNo.advanceAutomatically = true;
 
 export default YesNo;

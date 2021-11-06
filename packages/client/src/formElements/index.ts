@@ -10,6 +10,7 @@ import TextArea from "./TextArea";
 import ThankYou from "./ThankYou";
 import Name from "./Name";
 import ComboBox from "./ComboBox";
+import MultipleChoice from "./MultipleChoice";
 
 export const components: {
   /** componentName must match form_elements db table */
@@ -25,5 +26,6 @@ components["Number"] = Number;
 components["Rating"] = Rating;
 components["Statement"] = Statement;
 components["YesNo"] = YesNo;
-components["ThankYou"] = ThankYou;
+components["MultipleChoice"] = MultipleChoice;
 components["ComboBox"] = ComboBox;
+components["ThankYou"] = ThankYou;

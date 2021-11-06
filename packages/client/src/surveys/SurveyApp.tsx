@@ -27,6 +27,7 @@ import {
   SurveyButtonFooterPortalContext,
   SurveyContext,
 } from "../formElements/FormElement";
+import { components } from "../formElements";
 require("./surveys.css");
 
 interface FormElementState {
@@ -328,7 +329,10 @@ function SurveyApp() {
                           value,
                           errors,
                         });
-                        if (formElement.current?.type?.advancesAutomatically) {
+                        if (
+                          advancesAutomatically(formElement.current) &&
+                          (value || !formElement.current?.isRequired)
+                        ) {
                           setTimeout(() => {
                             handleAdvance({ advanceAutomatically: true });
                           }, 500);
@@ -342,7 +346,7 @@ function SurveyApp() {
                 </SurveyButtonFooterPortalContext.Provider>
                 {formElement.current?.typeId !== "ThankYou" &&
                   formElement.current?.typeId !== "WelcomeMessage" &&
-                  (!formElement.current.type?.advancesAutomatically ||
+                  (!advancesAutomatically(formElement.current) ||
                     !formElement.current.isRequired) && (
                     <div
                       className={`${
@@ -495,6 +499,22 @@ function SurveyNav({
       )}
     </div>
   );
+}
+
+function advancesAutomatically(formElement: FE | undefined): boolean {
+  let advanceAutomatically = false;
+  if (
+    formElement &&
+    components[formElement.typeId].advanceAutomatically !== undefined
+  ) {
+    const aa = components[formElement.typeId].advanceAutomatically;
+    if (typeof aa === "function") {
+      advanceAutomatically = aa(formElement.componentSettings);
+    } else {
+      advanceAutomatically = aa || false;
+    }
+  }
+  return advanceAutomatically;
 }
 
 export default SurveyApp;

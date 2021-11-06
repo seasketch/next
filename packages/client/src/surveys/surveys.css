@@ -1,8 +1,10 @@
 .center-ish::before {
   content: "";
   flex: 1;
+  min-height: 80px;
 }
 .center-ish::after {
   content: "";
   flex: 3;
+  min-height: 50px;
 }
