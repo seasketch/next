@@ -48,9 +48,7 @@ type FE = Pick<
   | "body"
   | "componentSettings"
 > &
-  FormElementStyleProps & {
-    type?: Maybe<Pick<FormElementType, "advancesAutomatically">>;
-  };
+  FormElementStyleProps;
 
 /**
  * Coordinates the rendering of FormElements, collection of user data, maintenance of response state,
@@ -501,7 +499,9 @@ function SurveyNav({
   );
 }
 
-function advancesAutomatically(formElement: FE | undefined): boolean {
+export function advancesAutomatically(
+  formElement: Pick<FE, "typeId" | "componentSettings"> | undefined
+): boolean {
   let advanceAutomatically = false;
   if (
     formElement &&

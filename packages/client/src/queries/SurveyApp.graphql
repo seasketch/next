@@ -32,7 +32,6 @@ query Survey($id: Int!) {
           isSingleUseOnly
           isSurveysOnly
           label
-          advancesAutomatically
         }
         backgroundColor
         secondaryColor

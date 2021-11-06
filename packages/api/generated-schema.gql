@@ -4499,7 +4499,6 @@ Identifies the type of element in a form, including metadata about that element 
 
 """
 type FormElementType implements Node {
-  advancesAutomatically: Boolean!
   componentName: String!
   isHidden: Boolean!
 

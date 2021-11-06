@@ -39,6 +39,7 @@ import { Auth0User } from "../../auth/Auth0User";
 import SortableFormElementList from "./SortableFormElementList";
 import AddFormElementButton from "./AddFormElementButton";
 import { useCurrentStyle } from "../../surveys/appearance";
+import { advancesAutomatically } from "../../surveys/SurveyApp";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -388,8 +389,7 @@ export default function SurveyFormEditor({
                         <div className="flex items-center mb-10 space-x-4">
                           {selectedFormElement.typeId !== "WelcomeMessage" &&
                             selectedFormElement.typeId !== "ThankYou" &&
-                            !selectedFormElement.type
-                              ?.advancesAutomatically && (
+                            !advancesAutomatically(selectedFormElement) && (
                               <Button
                                 label={t("Next")}
                                 backgroundColor={style.secondaryColor}
