@@ -788,6 +788,72 @@ export type CreateFormElementPayloadFormElementEdgeArgs = {
   orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
+/** All input for the create `FormLogicCondition` mutation. */
+export type CreateFormLogicConditionInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicCondition` to be created by this mutation. */
+  formLogicCondition: FormLogicConditionInput;
+};
+
+/** The output of our create `FormLogicCondition` mutation. */
+export type CreateFormLogicConditionPayload = {
+  __typename?: 'CreateFormLogicConditionPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicCondition` that was created by this mutation. */
+  formLogicCondition?: Maybe<FormLogicCondition>;
+  /** An edge for our `FormLogicCondition`. May be used by Relay 1. */
+  formLogicConditionEdge?: Maybe<FormLogicConditionsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `FormLogicCondition` mutation. */
+export type CreateFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+};
+
+/** All input for the create `FormLogicRule` mutation. */
+export type CreateFormLogicRuleInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicRule` to be created by this mutation. */
+  formLogicRule: FormLogicRuleInput;
+};
+
+/** The output of our create `FormLogicRule` mutation. */
+export type CreateFormLogicRulePayload = {
+  __typename?: 'CreateFormLogicRulePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicRule` that was created by this mutation. */
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** An edge for our `FormLogicRule`. May be used by Relay 1. */
+  formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `FormLogicRule` mutation. */
+export type CreateFormLogicRulePayloadFormLogicRuleEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+};
+
 /** All input for the `createFormTemplateFromSketchClass` mutation. */
 export type CreateFormTemplateFromSketchClassInput = {
   /**
@@ -2472,6 +2538,94 @@ export type DeleteFormInput = {
   id: Scalars['Int'];
 };
 
+/** All input for the `deleteFormLogicConditionByNodeId` mutation. */
+export type DeleteFormLogicConditionByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `FormLogicCondition` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteFormLogicCondition` mutation. */
+export type DeleteFormLogicConditionInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `FormLogicCondition` mutation. */
+export type DeleteFormLogicConditionPayload = {
+  __typename?: 'DeleteFormLogicConditionPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedFormLogicConditionNodeId?: Maybe<Scalars['ID']>;
+  /** The `FormLogicCondition` that was deleted by this mutation. */
+  formLogicCondition?: Maybe<FormLogicCondition>;
+  /** An edge for our `FormLogicCondition`. May be used by Relay 1. */
+  formLogicConditionEdge?: Maybe<FormLogicConditionsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our delete `FormLogicCondition` mutation. */
+export type DeleteFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+};
+
+/** All input for the `deleteFormLogicRuleByNodeId` mutation. */
+export type DeleteFormLogicRuleByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `FormLogicRule` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteFormLogicRule` mutation. */
+export type DeleteFormLogicRuleInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `FormLogicRule` mutation. */
+export type DeleteFormLogicRulePayload = {
+  __typename?: 'DeleteFormLogicRulePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedFormLogicRuleNodeId?: Maybe<Scalars['ID']>;
+  /** The `FormLogicRule` that was deleted by this mutation. */
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** An edge for our `FormLogicRule`. May be used by Relay 1. */
+  formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our delete `FormLogicRule` mutation. */
+export type DeleteFormLogicRulePayloadFormLogicRuleEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+};
+
 /** The output of our delete `Form` mutation. */
 export type DeleteFormPayload = {
   __typename?: 'DeleteFormPayload';
@@ -3420,6 +3574,8 @@ export type Form = Node & {
    * query.
    */
   isTemplate: Scalars['Boolean'];
+  /** Reads and enables pagination through a set of `FormLogicRule`. */
+  logicRules?: Maybe<Array<FormLogicRule>>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /** Reads a single `SketchClass` that is related to this `Form`. */
@@ -3451,6 +3607,25 @@ export type Form = Node & {
  * as an option when creating new forms.
  */
 export type FormFormElementsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
+ * Forms are used to add attributes to spatial features. In Surveys, Forms are used
+ * in support of gathering response data.
+ *
+ * Forms have any number of *FormElements* ordered by a `position` field, and form
+ * contents may be hidden depending on the evaluation of *FormConditionalRenderingRules*.
+ *
+ * Forms typically belong to either a *Survey* or *SketchClass* exclusively. Some
+ * Forms may be designated as a template, in which case they belong to neither.
+ * Only superusers can create form templates, and clients should provide templates
+ * as an option when creating new forms.
+ */
+export type FormLogicRulesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -3759,6 +3934,7 @@ export type FormElementType = Node & {
   label: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  supportedOperators: Array<Maybe<FieldRuleOperator>>;
 };
 
 /**
@@ -3796,6 +3972,135 @@ export type FormElementsEdge = {
 export enum FormElementsOrderBy {
   FormIdAsc = 'FORM_ID_ASC',
   FormIdDesc = 'FORM_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export enum FormLogicCommand {
+  Hide = 'HIDE',
+  Jump = 'JUMP',
+  Show = 'SHOW'
+}
+
+/**
+ * Conditions are nested within FormLogicRules. In many cases there may be
+ * only a single condition, but in others the FormLogicRule.booleanOperator
+ * property defines how they are applied.
+ */
+export type FormLogicCondition = Node & {
+  __typename?: 'FormLogicCondition';
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  operator: FieldRuleOperator;
+  ruleId: Scalars['Int'];
+  subjectId: Scalars['Int'];
+  value: Scalars['JSON'];
+};
+
+/** An input for mutations affecting `FormLogicCondition` */
+export type FormLogicConditionInput = {
+  id?: Maybe<Scalars['Int']>;
+  operator?: Maybe<FieldRuleOperator>;
+  ruleId: Scalars['Int'];
+  subjectId: Scalars['Int'];
+  value: Scalars['JSON'];
+};
+
+/** Represents an update to a `FormLogicCondition`. Fields that are set will be updated. */
+export type FormLogicConditionPatch = {
+  id?: Maybe<Scalars['Int']>;
+  operator?: Maybe<FieldRuleOperator>;
+  ruleId?: Maybe<Scalars['Int']>;
+  subjectId?: Maybe<Scalars['Int']>;
+  value?: Maybe<Scalars['JSON']>;
+};
+
+/** A `FormLogicCondition` edge in the connection. */
+export type FormLogicConditionsEdge = {
+  __typename?: 'FormLogicConditionsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `FormLogicCondition` at the end of the edge. */
+  node: FormLogicCondition;
+};
+
+/** Methods to use when ordering `FormLogicCondition`. */
+export enum FormLogicConditionsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export enum FormLogicOperator {
+  And = 'AND',
+  Or = 'OR'
+}
+
+/**
+ * Form logic rules can be used to hide or show FormElements based on the values of
+ * preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
+ */
+export type FormLogicRule = Node & {
+  __typename?: 'FormLogicRule';
+  booleanOperator: FormLogicOperator;
+  command: FormLogicCommand;
+  /** Reads and enables pagination through a set of `FormLogicCondition`. */
+  conditions?: Maybe<Array<FormLogicCondition>>;
+  formElementId: Scalars['Int'];
+  id: Scalars['Int'];
+  jumpToId?: Maybe<Scalars['Int']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  position: Scalars['Int'];
+};
+
+
+/**
+ * Form logic rules can be used to hide or show FormElements based on the values of
+ * preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
+ */
+export type FormLogicRuleConditionsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `FormLogicRule` */
+export type FormLogicRuleInput = {
+  booleanOperator?: Maybe<FormLogicOperator>;
+  command: FormLogicCommand;
+  formElementId: Scalars['Int'];
+  id?: Maybe<Scalars['Int']>;
+  jumpToId?: Maybe<Scalars['Int']>;
+  position: Scalars['Int'];
+};
+
+/** Represents an update to a `FormLogicRule`. Fields that are set will be updated. */
+export type FormLogicRulePatch = {
+  booleanOperator?: Maybe<FormLogicOperator>;
+  command?: Maybe<FormLogicCommand>;
+  formElementId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
+  jumpToId?: Maybe<Scalars['Int']>;
+  position?: Maybe<Scalars['Int']>;
+};
+
+/** A `FormLogicRule` edge in the connection. */
+export type FormLogicRulesEdge = {
+  __typename?: 'FormLogicRulesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `FormLogicRule` at the end of the edge. */
+  node: FormLogicRule;
+};
+
+/** Methods to use when ordering `FormLogicRule`. */
+export enum FormLogicRulesOrderBy {
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   Natural = 'NATURAL',
@@ -4854,6 +5159,10 @@ export type Mutation = {
   createFormConditionalRenderingRule?: Maybe<CreateFormConditionalRenderingRulePayload>;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
+  /** Creates a single `FormLogicCondition`. */
+  createFormLogicCondition?: Maybe<CreateFormLogicConditionPayload>;
+  /** Creates a single `FormLogicRule`. */
+  createFormLogicRule?: Maybe<CreateFormLogicRulePayload>;
   createFormTemplateFromSketchClass?: Maybe<CreateFormTemplateFromSketchClassPayload>;
   createFormTemplateFromSurvey?: Maybe<CreateFormTemplateFromSurveyPayload>;
   /** Creates a single `Forum`. */
@@ -4945,6 +5254,14 @@ export type Mutation = {
   deleteFormElement?: Maybe<DeleteFormElementPayload>;
   /** Deletes a single `FormElement` using its globally unique id. */
   deleteFormElementByNodeId?: Maybe<DeleteFormElementPayload>;
+  /** Deletes a single `FormLogicCondition` using a unique key. */
+  deleteFormLogicCondition?: Maybe<DeleteFormLogicConditionPayload>;
+  /** Deletes a single `FormLogicCondition` using its globally unique id. */
+  deleteFormLogicConditionByNodeId?: Maybe<DeleteFormLogicConditionPayload>;
+  /** Deletes a single `FormLogicRule` using a unique key. */
+  deleteFormLogicRule?: Maybe<DeleteFormLogicRulePayload>;
+  /** Deletes a single `FormLogicRule` using its globally unique id. */
+  deleteFormLogicRuleByNodeId?: Maybe<DeleteFormLogicRulePayload>;
   /** Deletes a single `Forum` using a unique key. */
   deleteForum?: Maybe<DeleteForumPayload>;
   /** Deletes a single `Forum` using its globally unique id. */
@@ -5107,6 +5424,7 @@ export type Mutation = {
    * Use this instead of trying to manage the position of form elements individually.
    */
   setFormElementOrder?: Maybe<SetFormElementOrderPayload>;
+  setFormLogicRuleOrder?: Maybe<SetFormLogicRuleOrderPayload>;
   /**
    * Set the order in which discussion forums will be displayed. Provide a list of
    * forum IDs in the correct order. Missing ids will be added to the end of the list.
@@ -5185,6 +5503,14 @@ export type Mutation = {
   updateFormElement?: Maybe<UpdateFormElementPayload>;
   /** Updates a single `FormElement` using its globally unique id and a patch. */
   updateFormElementByNodeId?: Maybe<UpdateFormElementPayload>;
+  /** Updates a single `FormLogicCondition` using a unique key and a patch. */
+  updateFormLogicCondition?: Maybe<UpdateFormLogicConditionPayload>;
+  /** Updates a single `FormLogicCondition` using its globally unique id and a patch. */
+  updateFormLogicConditionByNodeId?: Maybe<UpdateFormLogicConditionPayload>;
+  /** Updates a single `FormLogicRule` using a unique key and a patch. */
+  updateFormLogicRule?: Maybe<UpdateFormLogicRulePayload>;
+  /** Updates a single `FormLogicRule` using its globally unique id and a patch. */
+  updateFormLogicRuleByNodeId?: Maybe<UpdateFormLogicRulePayload>;
   /** Updates a single `Forum` using a unique key and a patch. */
   updateForum?: Maybe<UpdateForumPayload>;
   /** Updates a single `Forum` using its globally unique id and a patch. */
@@ -5374,6 +5700,18 @@ export type MutationCreateFormConditionalRenderingRuleArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateFormElementArgs = {
   input: CreateFormElementInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateFormLogicConditionArgs = {
+  input: CreateFormLogicConditionInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateFormLogicRuleArgs = {
+  input: CreateFormLogicRuleInput;
 };
 
 
@@ -5596,6 +5934,30 @@ export type MutationDeleteFormElementArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormElementByNodeIdArgs = {
   input: DeleteFormElementByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteFormLogicConditionArgs = {
+  input: DeleteFormLogicConditionInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteFormLogicConditionByNodeIdArgs = {
+  input: DeleteFormLogicConditionByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteFormLogicRuleArgs = {
+  input: DeleteFormLogicRuleInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteFormLogicRuleByNodeIdArgs = {
+  input: DeleteFormLogicRuleByNodeIdInput;
 };
 
 
@@ -5938,6 +6300,12 @@ export type MutationSetFormElementOrderArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetFormLogicRuleOrderArgs = {
+  input: SetFormLogicRuleOrderInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetForumOrderArgs = {
   input: SetForumOrderInput;
 };
@@ -6120,6 +6488,30 @@ export type MutationUpdateFormElementArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormElementByNodeIdArgs = {
   input: UpdateFormElementByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormLogicConditionArgs = {
+  input: UpdateFormLogicConditionInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormLogicConditionByNodeIdArgs = {
+  input: UpdateFormLogicConditionByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormLogicRuleArgs = {
+  input: UpdateFormLogicRuleInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormLogicRuleByNodeIdArgs = {
+  input: UpdateFormLogicRuleByNodeIdInput;
 };
 
 
@@ -7520,6 +7912,12 @@ export type Query = Node & {
   formElementTypeByNodeId?: Maybe<FormElementType>;
   /** Reads a set of `FormElementType`. */
   formElementTypes?: Maybe<Array<FormElementType>>;
+  formLogicCondition?: Maybe<FormLogicCondition>;
+  /** Reads a single `FormLogicCondition` using its globally unique `ID`. */
+  formLogicConditionByNodeId?: Maybe<FormLogicCondition>;
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** Reads a single `FormLogicRule` using its globally unique `ID`. */
+  formLogicRuleByNodeId?: Maybe<FormLogicRule>;
   forum?: Maybe<Forum>;
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
@@ -8202,6 +8600,70 @@ export type QueryFormElementTypesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<FormElementTypesOrderBy>>;
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormLogicConditionArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormLogicConditionByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormLogicRuleArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormLogicRuleByNodeIdArgs = {
+  nodeId: Scalars['ID'];
 };
 
 
@@ -9368,6 +9830,29 @@ export type SetFormElementOrderPayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   formElements?: Maybe<Array<FormElement>>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `setFormLogicRuleOrder` mutation. */
+export type SetFormLogicRuleOrderInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  ruleIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `setFormLogicRuleOrder` mutation. */
+export type SetFormLogicRuleOrderPayload = {
+  __typename?: 'SetFormLogicRuleOrderPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formLogicRules?: Maybe<Array<FormLogicRule>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -11322,6 +11807,100 @@ export type UpdateFormInput = {
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Form` being updated. */
   patch: FormPatch;
+};
+
+/** All input for the `updateFormLogicConditionByNodeId` mutation. */
+export type UpdateFormLogicConditionByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `FormLogicCondition` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `FormLogicCondition` being updated. */
+  patch: FormLogicConditionPatch;
+};
+
+/** All input for the `updateFormLogicCondition` mutation. */
+export type UpdateFormLogicConditionInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `FormLogicCondition` being updated. */
+  patch: FormLogicConditionPatch;
+};
+
+/** The output of our update `FormLogicCondition` mutation. */
+export type UpdateFormLogicConditionPayload = {
+  __typename?: 'UpdateFormLogicConditionPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicCondition` that was updated by this mutation. */
+  formLogicCondition?: Maybe<FormLogicCondition>;
+  /** An edge for our `FormLogicCondition`. May be used by Relay 1. */
+  formLogicConditionEdge?: Maybe<FormLogicConditionsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our update `FormLogicCondition` mutation. */
+export type UpdateFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+};
+
+/** All input for the `updateFormLogicRuleByNodeId` mutation. */
+export type UpdateFormLogicRuleByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `FormLogicRule` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `FormLogicRule` being updated. */
+  patch: FormLogicRulePatch;
+};
+
+/** All input for the `updateFormLogicRule` mutation. */
+export type UpdateFormLogicRuleInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `FormLogicRule` being updated. */
+  patch: FormLogicRulePatch;
+};
+
+/** The output of our update `FormLogicRule` mutation. */
+export type UpdateFormLogicRulePayload = {
+  __typename?: 'UpdateFormLogicRulePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicRule` that was updated by this mutation. */
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** An edge for our `FormLogicRule`. May be used by Relay 1. */
+  formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our update `FormLogicRule` mutation. */
+export type UpdateFormLogicRulePayloadFormLogicRuleEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** The output of our update `Form` mutation. */

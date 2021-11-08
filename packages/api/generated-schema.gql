@@ -904,6 +904,76 @@ type CreateFormElementPayload {
   query: Query
 }
 
+"""All input for the create `FormLogicCondition` mutation."""
+input CreateFormLogicConditionInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `FormLogicCondition` to be created by this mutation."""
+  formLogicCondition: FormLogicConditionInput!
+}
+
+"""The output of our create `FormLogicCondition` mutation."""
+type CreateFormLogicConditionPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `FormLogicCondition` that was created by this mutation."""
+  formLogicCondition: FormLogicCondition
+
+  """An edge for our `FormLogicCondition`. May be used by Relay 1."""
+  formLogicConditionEdge(
+    """The method to use when ordering `FormLogicCondition`."""
+    orderBy: [FormLogicConditionsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormLogicConditionsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the create `FormLogicRule` mutation."""
+input CreateFormLogicRuleInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `FormLogicRule` to be created by this mutation."""
+  formLogicRule: FormLogicRuleInput!
+}
+
+"""The output of our create `FormLogicRule` mutation."""
+type CreateFormLogicRulePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `FormLogicRule` that was created by this mutation."""
+  formLogicRule: FormLogicRule
+
+  """An edge for our `FormLogicRule`. May be used by Relay 1."""
+  formLogicRuleEdge(
+    """The method to use when ordering `FormLogicRule`."""
+    orderBy: [FormLogicRulesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormLogicRulesEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `createFormTemplateFromSketchClass` mutation."""
 input CreateFormTemplateFromSketchClassInput {
   """
@@ -2964,6 +3034,102 @@ input DeleteFormInput {
   id: Int!
 }
 
+"""All input for the `deleteFormLogicConditionByNodeId` mutation."""
+input DeleteFormLogicConditionByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `FormLogicCondition` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteFormLogicCondition` mutation."""
+input DeleteFormLogicConditionInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `FormLogicCondition` mutation."""
+type DeleteFormLogicConditionPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedFormLogicConditionNodeId: ID
+
+  """The `FormLogicCondition` that was deleted by this mutation."""
+  formLogicCondition: FormLogicCondition
+
+  """An edge for our `FormLogicCondition`. May be used by Relay 1."""
+  formLogicConditionEdge(
+    """The method to use when ordering `FormLogicCondition`."""
+    orderBy: [FormLogicConditionsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormLogicConditionsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `deleteFormLogicRuleByNodeId` mutation."""
+input DeleteFormLogicRuleByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `FormLogicRule` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteFormLogicRule` mutation."""
+input DeleteFormLogicRuleInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `FormLogicRule` mutation."""
+type DeleteFormLogicRulePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedFormLogicRuleNodeId: ID
+
+  """The `FormLogicRule` that was deleted by this mutation."""
+  formLogicRule: FormLogicRule
+
+  """An edge for our `FormLogicRule`. May be used by Relay 1."""
+  formLogicRuleEdge(
+    """The method to use when ordering `FormLogicRule`."""
+    orderBy: [FormLogicRulesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormLogicRulesEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """The output of our delete `Form` mutation."""
 type DeleteFormPayload {
   """
@@ -4069,6 +4235,15 @@ type Form implements Node {
   """
   isTemplate: Boolean!
 
+  """Reads and enables pagination through a set of `FormLogicRule`."""
+  logicRules(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [FormLogicRule!]
+
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
@@ -4529,6 +4704,7 @@ type FormElementType implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  supportedOperators: [FieldRuleOperator]!
 }
 
 """
@@ -4549,6 +4725,142 @@ enum FormElementTypesOrderBy {
   COMPONENT_NAME_DESC
   LABEL_ASC
   LABEL_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+enum FormLogicCommand {
+  HIDE
+  JUMP
+  SHOW
+}
+
+"""
+Conditions are nested within FormLogicRules. In many cases there may be
+only a single condition, but in others the FormLogicRule.booleanOperator
+property defines how they are applied.
+
+"""
+type FormLogicCondition implements Node {
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  operator: FieldRuleOperator!
+  ruleId: Int!
+  subjectId: Int!
+  value: JSON!
+}
+
+"""An input for mutations affecting `FormLogicCondition`"""
+input FormLogicConditionInput {
+  id: Int
+  operator: FieldRuleOperator
+  ruleId: Int!
+  subjectId: Int!
+  value: JSON!
+}
+
+"""
+Represents an update to a `FormLogicCondition`. Fields that are set will be updated.
+"""
+input FormLogicConditionPatch {
+  id: Int
+  operator: FieldRuleOperator
+  ruleId: Int
+  subjectId: Int
+  value: JSON
+}
+
+"""A `FormLogicCondition` edge in the connection."""
+type FormLogicConditionsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `FormLogicCondition` at the end of the edge."""
+  node: FormLogicCondition!
+}
+
+"""Methods to use when ordering `FormLogicCondition`."""
+enum FormLogicConditionsOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+enum FormLogicOperator {
+  AND
+  OR
+}
+
+"""
+Form logic rules can be used to hide or show FormElements based on the values of 
+preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
+
+"""
+type FormLogicRule implements Node {
+  booleanOperator: FormLogicOperator!
+  command: FormLogicCommand!
+
+  """Reads and enables pagination through a set of `FormLogicCondition`."""
+  conditions(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [FormLogicCondition!]
+  formElementId: Int!
+  id: Int!
+  jumpToId: Int
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  position: Int!
+}
+
+"""An input for mutations affecting `FormLogicRule`"""
+input FormLogicRuleInput {
+  booleanOperator: FormLogicOperator
+  command: FormLogicCommand!
+  formElementId: Int!
+  id: Int
+  jumpToId: Int
+  position: Int!
+}
+
+"""
+Represents an update to a `FormLogicRule`. Fields that are set will be updated.
+"""
+input FormLogicRulePatch {
+  booleanOperator: FormLogicOperator
+  command: FormLogicCommand
+  formElementId: Int
+  id: Int
+  jumpToId: Int
+  position: Int
+}
+
+"""A `FormLogicRule` edge in the connection."""
+type FormLogicRulesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `FormLogicRule` at the end of the edge."""
+  node: FormLogicRule!
+}
+
+"""Methods to use when ordering `FormLogicRule`."""
+enum FormLogicRulesOrderBy {
+  ID_ASC
+  ID_DESC
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
@@ -5847,6 +6159,22 @@ type Mutation {
     """
     input: CreateFormElementInput!
   ): CreateFormElementPayload
+
+  """Creates a single `FormLogicCondition`."""
+  createFormLogicCondition(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateFormLogicConditionInput!
+  ): CreateFormLogicConditionPayload
+
+  """Creates a single `FormLogicRule`."""
+  createFormLogicRule(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateFormLogicRuleInput!
+  ): CreateFormLogicRulePayload
   createFormTemplateFromSketchClass(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -6161,6 +6489,38 @@ type Mutation {
     """
     input: DeleteFormElementByNodeIdInput!
   ): DeleteFormElementPayload
+
+  """Deletes a single `FormLogicCondition` using a unique key."""
+  deleteFormLogicCondition(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormLogicConditionInput!
+  ): DeleteFormLogicConditionPayload
+
+  """Deletes a single `FormLogicCondition` using its globally unique id."""
+  deleteFormLogicConditionByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormLogicConditionByNodeIdInput!
+  ): DeleteFormLogicConditionPayload
+
+  """Deletes a single `FormLogicRule` using a unique key."""
+  deleteFormLogicRule(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormLogicRuleInput!
+  ): DeleteFormLogicRulePayload
+
+  """Deletes a single `FormLogicRule` using its globally unique id."""
+  deleteFormLogicRuleByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteFormLogicRuleByNodeIdInput!
+  ): DeleteFormLogicRulePayload
 
   """Deletes a single `Forum` using a unique key."""
   deleteForum(
@@ -6674,6 +7034,12 @@ type Mutation {
     """
     input: SetFormElementOrderInput!
   ): SetFormElementOrderPayload
+  setFormLogicRuleOrder(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SetFormLogicRuleOrderInput!
+  ): SetFormLogicRuleOrderPayload
 
   """
   Set the order in which discussion forums will be displayed. Provide a list of
@@ -6955,6 +7321,42 @@ type Mutation {
     """
     input: UpdateFormElementByNodeIdInput!
   ): UpdateFormElementPayload
+
+  """Updates a single `FormLogicCondition` using a unique key and a patch."""
+  updateFormLogicCondition(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormLogicConditionInput!
+  ): UpdateFormLogicConditionPayload
+
+  """
+  Updates a single `FormLogicCondition` using its globally unique id and a patch.
+  """
+  updateFormLogicConditionByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormLogicConditionByNodeIdInput!
+  ): UpdateFormLogicConditionPayload
+
+  """Updates a single `FormLogicRule` using a unique key and a patch."""
+  updateFormLogicRule(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormLogicRuleInput!
+  ): UpdateFormLogicRulePayload
+
+  """
+  Updates a single `FormLogicRule` using its globally unique id and a patch.
+  """
+  updateFormLogicRuleByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateFormLogicRuleByNodeIdInput!
+  ): UpdateFormLogicRulePayload
 
   """Updates a single `Forum` using a unique key and a patch."""
   updateForum(
@@ -8774,6 +9176,24 @@ type Query implements Node {
     """The method to use when ordering `FormElementType`."""
     orderBy: [FormElementTypesOrderBy!]
   ): [FormElementType!]
+  formLogicCondition(id: Int!): FormLogicCondition
+
+  """Reads a single `FormLogicCondition` using its globally unique `ID`."""
+  formLogicConditionByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `FormLogicCondition`.
+    """
+    nodeId: ID!
+  ): FormLogicCondition
+  formLogicRule(id: Int!): FormLogicRule
+
+  """Reads a single `FormLogicRule` using its globally unique `ID`."""
+  formLogicRuleByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `FormLogicRule`.
+    """
+    nodeId: ID!
+  ): FormLogicRule
   forum(id: Int!): Forum
 
   """Reads a single `Forum` using its globally unique `ID`."""
@@ -9362,6 +9782,31 @@ type SetFormElementOrderPayload {
   """
   clientMutationId: String
   formElements: [FormElement!]
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `setFormLogicRuleOrder` mutation."""
+input SetFormLogicRuleOrderInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  ruleIds: [Int]
+}
+
+"""The output of our `setFormLogicRuleOrder` mutation."""
+type SetFormLogicRuleOrderPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  formLogicRules: [FormLogicRule!]
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -11870,6 +12315,120 @@ input UpdateFormInput {
   An object where the defined keys will be set on the `Form` being updated.
   """
   patch: FormPatch!
+}
+
+"""All input for the `updateFormLogicConditionByNodeId` mutation."""
+input UpdateFormLogicConditionByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `FormLogicCondition` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `FormLogicCondition` being updated.
+  """
+  patch: FormLogicConditionPatch!
+}
+
+"""All input for the `updateFormLogicCondition` mutation."""
+input UpdateFormLogicConditionInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `FormLogicCondition` being updated.
+  """
+  patch: FormLogicConditionPatch!
+}
+
+"""The output of our update `FormLogicCondition` mutation."""
+type UpdateFormLogicConditionPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `FormLogicCondition` that was updated by this mutation."""
+  formLogicCondition: FormLogicCondition
+
+  """An edge for our `FormLogicCondition`. May be used by Relay 1."""
+  formLogicConditionEdge(
+    """The method to use when ordering `FormLogicCondition`."""
+    orderBy: [FormLogicConditionsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormLogicConditionsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateFormLogicRuleByNodeId` mutation."""
+input UpdateFormLogicRuleByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `FormLogicRule` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `FormLogicRule` being updated.
+  """
+  patch: FormLogicRulePatch!
+}
+
+"""All input for the `updateFormLogicRule` mutation."""
+input UpdateFormLogicRuleInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `FormLogicRule` being updated.
+  """
+  patch: FormLogicRulePatch!
+}
+
+"""The output of our update `FormLogicRule` mutation."""
+type UpdateFormLogicRulePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `FormLogicRule` that was updated by this mutation."""
+  formLogicRule: FormLogicRule
+
+  """An edge for our `FormLogicRule`. May be used by Relay 1."""
+  formLogicRuleEdge(
+    """The method to use when ordering `FormLogicRule`."""
+    orderBy: [FormLogicRulesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormLogicRulesEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """The output of our update `Form` mutation."""
