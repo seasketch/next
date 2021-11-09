@@ -1532,9 +1532,6 @@ describe("content access", () => {
             "yep nope"
           )}, 'ShortText', 'field2') returning id`
         );
-        const ruleId = await conn.oneFirst(
-          sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${fieldId}, ${field2Id}, 'nope', '=') returning id`
-        );
         // add user to survey_invites
         await clearSession(conn);
         await conn.any(
@@ -1546,8 +1543,7 @@ describe("content access", () => {
           projectId,
           surveyId as number,
           formId as number,
-          fieldId as number,
-          ruleId as number
+          fieldId as number
         );
       }
     );
@@ -1583,9 +1579,6 @@ describe("content access", () => {
             "yep nope"
           )}, 'ShortText', 'field2') returning id`
         );
-        const ruleId = await conn.oneFirst(
-          sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${fieldId}, ${field2Id}, 'nope', '=') returning id`
-        );
         // add user to survey_invites
         const invite = await conn.one(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
@@ -1617,8 +1610,7 @@ describe("content access", () => {
           projectId,
           surveyId as number,
           formId as number,
-          fieldId as number,
-          ruleId as number
+          fieldId as number
         );
       }
     );
@@ -1654,9 +1646,6 @@ describe("content access", () => {
             "yep nope"
           )}, 'ShortText', 'field2') returning id`
         );
-        const ruleId = await conn.oneFirst(
-          sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${fieldId}, ${field2Id}, 'nope', '=') returning id`
-        );
         // add user to survey_invites
         const invite = await conn.one(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
@@ -1691,8 +1680,7 @@ describe("content access", () => {
           projectId,
           surveyId as number,
           formId as number,
-          fieldId as number,
-          ruleId as number
+          fieldId as number
         );
       }
     );

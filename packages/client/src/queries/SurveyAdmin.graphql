@@ -44,16 +44,6 @@ query SurveyById($id: Int!) {
 fragment FormElementFullDetails on FormElement {
   body
   componentSettings
-  conditionalRenderingRules {
-    id
-    field {
-      id
-      exportId
-    }
-    operator
-    predicateFieldId
-    value
-  }
   exportId
   formId
   id
@@ -66,6 +56,7 @@ fragment FormElementFullDetails on FormElement {
     isSingleUseOnly
     isSurveysOnly
     label
+    supportedOperators
   }
   typeId
   backgroundColor
@@ -91,6 +82,7 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
     isSingleUseOnly
     isSurveysOnly
     label
+    supportedOperators
   }
   survey(id: $id) {
     ...SurveyListDetails
@@ -102,6 +94,20 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
       templateType
       formElements {
         ...FormElementFullDetails
+      }
+      logicRules {
+        booleanOperator
+        command
+        id
+        jumpToId
+        position
+        conditions {
+          id
+          operator
+          value
+          subjectId
+          ruleId
+        }
       }
     }
   }

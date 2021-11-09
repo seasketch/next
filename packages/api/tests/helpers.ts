@@ -609,8 +609,7 @@ export async function verifySessionCanAccessSurveyResources(
   projectId: number,
   surveyId: number,
   formId: number,
-  fieldId: number,
-  ruleId: number
+  fieldId: number
 ) {
   // verify user can
   //   * access the project
@@ -634,13 +633,6 @@ export async function verifySessionCanAccessSurveyResources(
   expect(
     (await conn.any(sql`select 1 from form_elements where id = ${fieldId}`))
       .length
-  ).toBe(1);
-  expect(
-    (
-      await conn.any(
-        sql`select 1 from form_conditional_rendering_rules where id = ${ruleId}`
-      )
-    ).length
   ).toBe(1);
 }
 

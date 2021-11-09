@@ -96,7 +96,6 @@ export default function AddFormElementButton({
                               typeId: id,
                               isRequired: false,
                               position: nextPosition,
-                              conditionalRenderingRules: [],
                               type: {
                                 ...types.find((t) => t.componentName === id)!,
                               },
@@ -129,16 +128,6 @@ export default function AddFormElementButton({
                                       fragment NewElement on FormElement {
                                         body
                                         componentSettings
-                                        conditionalRenderingRules {
-                                          id
-                                          field {
-                                            id
-                                            exportId
-                                          }
-                                          operator
-                                          predicateFieldId
-                                          value
-                                        }
                                         exportId
                                         formId
                                         id
