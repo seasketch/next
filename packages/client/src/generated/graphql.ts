@@ -720,41 +720,6 @@ export type CreateDataSourcesBucketPayloadDataSourcesBucketEdgeArgs = {
   orderBy?: Maybe<Array<DataSourcesBucketsOrderBy>>;
 };
 
-/** All input for the create `FormConditionalRenderingRule` mutation. */
-export type CreateFormConditionalRenderingRuleInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `FormConditionalRenderingRule` to be created by this mutation. */
-  formConditionalRenderingRule: FormConditionalRenderingRuleInput;
-};
-
-/** The output of our create `FormConditionalRenderingRule` mutation. */
-export type CreateFormConditionalRenderingRulePayload = {
-  __typename?: 'CreateFormConditionalRenderingRulePayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`. */
-  field?: Maybe<FormElement>;
-  /** The `FormConditionalRenderingRule` that was created by this mutation. */
-  formConditionalRenderingRule?: Maybe<FormConditionalRenderingRule>;
-  /** An edge for our `FormConditionalRenderingRule`. May be used by Relay 1. */
-  formConditionalRenderingRuleEdge?: Maybe<FormConditionalRenderingRulesEdge>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
-
-/** The output of our create `FormConditionalRenderingRule` mutation. */
-export type CreateFormConditionalRenderingRulePayloadFormConditionalRenderingRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormConditionalRenderingRulesOrderBy>>;
-};
-
 /** All input for the create `FormElement` mutation. */
 export type CreateFormElementInput = {
   /**
@@ -786,6 +751,72 @@ export type CreateFormElementPayload = {
 /** The output of our create `FormElement` mutation. */
 export type CreateFormElementPayloadFormElementEdgeArgs = {
   orderBy?: Maybe<Array<FormElementsOrderBy>>;
+};
+
+/** All input for the create `FormLogicCondition` mutation. */
+export type CreateFormLogicConditionInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicCondition` to be created by this mutation. */
+  formLogicCondition: FormLogicConditionInput;
+};
+
+/** The output of our create `FormLogicCondition` mutation. */
+export type CreateFormLogicConditionPayload = {
+  __typename?: 'CreateFormLogicConditionPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicCondition` that was created by this mutation. */
+  formLogicCondition?: Maybe<FormLogicCondition>;
+  /** An edge for our `FormLogicCondition`. May be used by Relay 1. */
+  formLogicConditionEdge?: Maybe<FormLogicConditionsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `FormLogicCondition` mutation. */
+export type CreateFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+};
+
+/** All input for the create `FormLogicRule` mutation. */
+export type CreateFormLogicRuleInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicRule` to be created by this mutation. */
+  formLogicRule: FormLogicRuleInput;
+};
+
+/** The output of our create `FormLogicRule` mutation. */
+export type CreateFormLogicRulePayload = {
+  __typename?: 'CreateFormLogicRulePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicRule` that was created by this mutation. */
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** An edge for our `FormLogicRule`. May be used by Relay 1. */
+  formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `FormLogicRule` mutation. */
+export type CreateFormLogicRulePayloadFormLogicRuleEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** All input for the `createFormTemplateFromSketchClass` mutation. */
@@ -1310,6 +1341,40 @@ export type CreateSurveyInvitesPayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   surveyInvites?: Maybe<Array<SurveyInvite>>;
+};
+
+/** All input for the `createSurveyJumpRule` mutation. */
+export type CreateSurveyJumpRuleInput = {
+  booleanOperator?: Maybe<FormLogicOperator>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formElementId?: Maybe<Scalars['Int']>;
+  jumpToId?: Maybe<Scalars['Int']>;
+  operator?: Maybe<FieldRuleOperator>;
+};
+
+/** The output of our `createSurveyJumpRule` mutation. */
+export type CreateSurveyJumpRulePayload = {
+  __typename?: 'CreateSurveyJumpRulePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** An edge for our `FormLogicRule`. May be used by Relay 1. */
+  formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createSurveyJumpRule` mutation. */
+export type CreateSurveyJumpRulePayloadFormLogicRuleEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** The output of our create `Survey` mutation. */
@@ -2372,52 +2437,6 @@ export type DeleteFormBySurveyIdInput = {
   surveyId: Scalars['Int'];
 };
 
-/** All input for the `deleteFormConditionalRenderingRuleByNodeId` mutation. */
-export type DeleteFormConditionalRenderingRuleByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `FormConditionalRenderingRule` to be deleted. */
-  nodeId: Scalars['ID'];
-};
-
-/** All input for the `deleteFormConditionalRenderingRule` mutation. */
-export type DeleteFormConditionalRenderingRuleInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-};
-
-/** The output of our delete `FormConditionalRenderingRule` mutation. */
-export type DeleteFormConditionalRenderingRulePayload = {
-  __typename?: 'DeleteFormConditionalRenderingRulePayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedFormConditionalRenderingRuleNodeId?: Maybe<Scalars['ID']>;
-  /** Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`. */
-  field?: Maybe<FormElement>;
-  /** The `FormConditionalRenderingRule` that was deleted by this mutation. */
-  formConditionalRenderingRule?: Maybe<FormConditionalRenderingRule>;
-  /** An edge for our `FormConditionalRenderingRule`. May be used by Relay 1. */
-  formConditionalRenderingRuleEdge?: Maybe<FormConditionalRenderingRulesEdge>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
-
-/** The output of our delete `FormConditionalRenderingRule` mutation. */
-export type DeleteFormConditionalRenderingRulePayloadFormConditionalRenderingRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormConditionalRenderingRulesOrderBy>>;
-};
-
 /** All input for the `deleteFormElementByNodeId` mutation. */
 export type DeleteFormElementByNodeIdInput = {
   /**
@@ -2470,6 +2489,94 @@ export type DeleteFormInput = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
+};
+
+/** All input for the `deleteFormLogicConditionByNodeId` mutation. */
+export type DeleteFormLogicConditionByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `FormLogicCondition` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteFormLogicCondition` mutation. */
+export type DeleteFormLogicConditionInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `FormLogicCondition` mutation. */
+export type DeleteFormLogicConditionPayload = {
+  __typename?: 'DeleteFormLogicConditionPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedFormLogicConditionNodeId?: Maybe<Scalars['ID']>;
+  /** The `FormLogicCondition` that was deleted by this mutation. */
+  formLogicCondition?: Maybe<FormLogicCondition>;
+  /** An edge for our `FormLogicCondition`. May be used by Relay 1. */
+  formLogicConditionEdge?: Maybe<FormLogicConditionsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our delete `FormLogicCondition` mutation. */
+export type DeleteFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+};
+
+/** All input for the `deleteFormLogicRuleByNodeId` mutation. */
+export type DeleteFormLogicRuleByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `FormLogicRule` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteFormLogicRule` mutation. */
+export type DeleteFormLogicRuleInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `FormLogicRule` mutation. */
+export type DeleteFormLogicRulePayload = {
+  __typename?: 'DeleteFormLogicRulePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedFormLogicRuleNodeId?: Maybe<Scalars['ID']>;
+  /** The `FormLogicRule` that was deleted by this mutation. */
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** An edge for our `FormLogicRule`. May be used by Relay 1. */
+  formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our delete `FormLogicRule` mutation. */
+export type DeleteFormLogicRulePayloadFormLogicRuleEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** The output of our delete `Form` mutation. */
@@ -3420,6 +3527,8 @@ export type Form = Node & {
    * query.
    */
   isTemplate: Scalars['Boolean'];
+  /** Reads and enables pagination through a set of `FormLogicRule`. */
+  logicRules?: Maybe<Array<FormLogicRule>>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /** Reads a single `SketchClass` that is related to this `Form`. */
@@ -3455,6 +3564,25 @@ export type FormFormElementsArgs = {
   offset?: Maybe<Scalars['Int']>;
 };
 
+
+/**
+ * Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
+ * Forms are used to add attributes to spatial features. In Surveys, Forms are used
+ * in support of gathering response data.
+ *
+ * Forms have any number of *FormElements* ordered by a `position` field, and form
+ * contents may be hidden depending on the evaluation of *FormConditionalRenderingRules*.
+ *
+ * Forms typically belong to either a *Survey* or *SketchClass* exclusively. Some
+ * Forms may be designated as a template, in which case they belong to neither.
+ * Only superusers can create form templates, and clients should provide templates
+ * as an option when creating new forms.
+ */
+export type FormLogicRulesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
 /** A condition to be used against `Form` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type FormCondition = {
   /** Checks for equality with the object’s `id` field. */
@@ -3466,88 +3594,6 @@ export type FormCondition = {
   /** Checks for equality with the object’s `surveyId` field. */
   surveyId?: Maybe<Scalars['Int']>;
 };
-
-/**
- * If any rendering rules are set, at least one rule must evaluate true for the
- * field to be displayed to users. isRequired rules on *FormFields* should not be
- * enforced for fields that are hidden by a rule.
- *
- * An example of a rule would be:
- *
- * SHOW fieldB if fieldA GREATER_THAN 5
- */
-export type FormConditionalRenderingRule = Node & {
-  __typename?: 'FormConditionalRenderingRule';
-  /** Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`. */
-  field?: Maybe<FormElement>;
-  /** Field that will be hidden unless the rule evaluates true */
-  fieldId: Scalars['Int'];
-  id: Scalars['Int'];
-  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  /** Comparison operation */
-  operator: FieldRuleOperator;
-  /** Field that is evaluated */
-  predicateFieldId: Scalars['Int'];
-  /** Value that predicate_field.value is compared to */
-  value?: Maybe<Scalars['String']>;
-};
-
-/**
- * A condition to be used against `FormConditionalRenderingRule` object types. All
- * fields are tested for equality and combined with a logical ‘and.’
- */
-export type FormConditionalRenderingRuleCondition = {
-  /** Checks for equality with the object’s `fieldId` field. */
-  fieldId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
-};
-
-/** An input for mutations affecting `FormConditionalRenderingRule` */
-export type FormConditionalRenderingRuleInput = {
-  /** Field that will be hidden unless the rule evaluates true */
-  fieldId: Scalars['Int'];
-  id?: Maybe<Scalars['Int']>;
-  /** Comparison operation */
-  operator?: Maybe<FieldRuleOperator>;
-  /** Field that is evaluated */
-  predicateFieldId: Scalars['Int'];
-  /** Value that predicate_field.value is compared to */
-  value?: Maybe<Scalars['String']>;
-};
-
-/** Represents an update to a `FormConditionalRenderingRule`. Fields that are set will be updated. */
-export type FormConditionalRenderingRulePatch = {
-  /** Field that will be hidden unless the rule evaluates true */
-  fieldId?: Maybe<Scalars['Int']>;
-  /** Comparison operation */
-  operator?: Maybe<FieldRuleOperator>;
-  /** Field that is evaluated */
-  predicateFieldId?: Maybe<Scalars['Int']>;
-  /** Value that predicate_field.value is compared to */
-  value?: Maybe<Scalars['String']>;
-};
-
-/** A `FormConditionalRenderingRule` edge in the connection. */
-export type FormConditionalRenderingRulesEdge = {
-  __typename?: 'FormConditionalRenderingRulesEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `FormConditionalRenderingRule` at the end of the edge. */
-  node: FormConditionalRenderingRule;
-};
-
-/** Methods to use when ordering `FormConditionalRenderingRule`. */
-export enum FormConditionalRenderingRulesOrderBy {
-  FieldIdAsc = 'FIELD_ID_ASC',
-  FieldIdDesc = 'FIELD_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
-}
 
 /**
  * *FormElements* represent input fields or read-only content in a form. Records contain fields to support
@@ -3579,8 +3625,6 @@ export type FormElement = Node & {
   body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings: Scalars['JSON'];
-  /** Set of rules that determine the visibility of this field. */
-  conditionalRenderingRules: Array<FormConditionalRenderingRule>;
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
@@ -3592,6 +3636,12 @@ export type FormElement = Node & {
   id: Scalars['Int'];
   /** Users must provide input for these fields before submission. */
   isRequired: Scalars['Boolean'];
+  /**
+   * Used only in surveys. If set, the survey will advance to the page of the
+   * specified form element. If null, the survey will simply advance to the next
+   * question in the list by `position`.
+   */
+  jumpToId?: Maybe<Scalars['Int']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -3612,23 +3662,6 @@ export type FormElement = Node & {
   typeId: Scalars['String'];
   unsplashAuthorName?: Maybe<Scalars['String']>;
   unsplashAuthorUrl?: Maybe<Scalars['String']>;
-};
-
-
-/**
- * *FormElements* represent input fields or read-only content in a form. Records contain fields to support
- * generic functionality like body, position, and isRequired. They
- * also have a JSON `componentSettings` field that can have custom data to support
- * a particular input type, indicated by the `type` field.
- *
- * Project administrators have full control over managing form elements through
- * graphile-generated CRUD mutations.
- */
-export type FormElementConditionalRenderingRulesArgs = {
-  condition?: Maybe<FormConditionalRenderingRuleCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<FormConditionalRenderingRulesOrderBy>>;
 };
 
 export enum FormElementBackgroundImagePlacement {
@@ -3668,6 +3701,12 @@ export type FormElementInput = {
   id?: Maybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
+  /**
+   * Used only in surveys. If set, the survey will advance to the page of the
+   * specified form element. If null, the survey will simply advance to the next
+   * question in the list by `position`.
+   */
+  jumpToId?: Maybe<Scalars['Int']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
@@ -3710,8 +3749,17 @@ export type FormElementPatch = {
    * from the first several characters of the text in FormElement.body.
    */
   exportId?: Maybe<Scalars['String']>;
+  /** Form this field belongs to. */
+  formId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
+  /**
+   * Used only in surveys. If set, the survey will advance to the page of the
+   * specified form element. If null, the survey will simply advance to the next
+   * question in the list by `position`.
+   */
+  jumpToId?: Maybe<Scalars['Int']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
@@ -3759,6 +3807,7 @@ export type FormElementType = Node & {
   label: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  supportedOperators: Array<Maybe<FieldRuleOperator>>;
 };
 
 /**
@@ -3796,6 +3845,135 @@ export type FormElementsEdge = {
 export enum FormElementsOrderBy {
   FormIdAsc = 'FORM_ID_ASC',
   FormIdDesc = 'FORM_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export enum FormLogicCommand {
+  Hide = 'HIDE',
+  Jump = 'JUMP',
+  Show = 'SHOW'
+}
+
+/**
+ * Conditions are nested within FormLogicRules. In many cases there may be
+ * only a single condition, but in others the FormLogicRule.booleanOperator
+ * property defines how they are applied.
+ */
+export type FormLogicCondition = Node & {
+  __typename?: 'FormLogicCondition';
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  operator: FieldRuleOperator;
+  ruleId: Scalars['Int'];
+  subjectId: Scalars['Int'];
+  value?: Maybe<Scalars['JSON']>;
+};
+
+/** An input for mutations affecting `FormLogicCondition` */
+export type FormLogicConditionInput = {
+  id?: Maybe<Scalars['Int']>;
+  operator?: Maybe<FieldRuleOperator>;
+  ruleId: Scalars['Int'];
+  subjectId: Scalars['Int'];
+  value?: Maybe<Scalars['JSON']>;
+};
+
+/** Represents an update to a `FormLogicCondition`. Fields that are set will be updated. */
+export type FormLogicConditionPatch = {
+  id?: Maybe<Scalars['Int']>;
+  operator?: Maybe<FieldRuleOperator>;
+  ruleId?: Maybe<Scalars['Int']>;
+  subjectId?: Maybe<Scalars['Int']>;
+  value?: Maybe<Scalars['JSON']>;
+};
+
+/** A `FormLogicCondition` edge in the connection. */
+export type FormLogicConditionsEdge = {
+  __typename?: 'FormLogicConditionsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `FormLogicCondition` at the end of the edge. */
+  node: FormLogicCondition;
+};
+
+/** Methods to use when ordering `FormLogicCondition`. */
+export enum FormLogicConditionsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export enum FormLogicOperator {
+  And = 'AND',
+  Or = 'OR'
+}
+
+/**
+ * Form logic rules can be used to hide or show FormElements based on the values of
+ * preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
+ */
+export type FormLogicRule = Node & {
+  __typename?: 'FormLogicRule';
+  booleanOperator: FormLogicOperator;
+  command: FormLogicCommand;
+  /** Reads and enables pagination through a set of `FormLogicCondition`. */
+  conditions?: Maybe<Array<FormLogicCondition>>;
+  formElementId: Scalars['Int'];
+  id: Scalars['Int'];
+  jumpToId?: Maybe<Scalars['Int']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  position: Scalars['Int'];
+};
+
+
+/**
+ * Form logic rules can be used to hide or show FormElements based on the values of
+ * preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
+ */
+export type FormLogicRuleConditionsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `FormLogicRule` */
+export type FormLogicRuleInput = {
+  booleanOperator?: Maybe<FormLogicOperator>;
+  command: FormLogicCommand;
+  formElementId: Scalars['Int'];
+  id?: Maybe<Scalars['Int']>;
+  jumpToId?: Maybe<Scalars['Int']>;
+  position: Scalars['Int'];
+};
+
+/** Represents an update to a `FormLogicRule`. Fields that are set will be updated. */
+export type FormLogicRulePatch = {
+  booleanOperator?: Maybe<FormLogicOperator>;
+  command?: Maybe<FormLogicCommand>;
+  formElementId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
+  jumpToId?: Maybe<Scalars['Int']>;
+  position?: Maybe<Scalars['Int']>;
+};
+
+/** A `FormLogicRule` edge in the connection. */
+export type FormLogicRulesEdge = {
+  __typename?: 'FormLogicRulesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `FormLogicRule` at the end of the edge. */
+  node: FormLogicRule;
+};
+
+/** Methods to use when ordering `FormLogicRule`. */
+export enum FormLogicRulesOrderBy {
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   Natural = 'NATURAL',
@@ -4850,10 +5028,12 @@ export type Mutation = {
   createDataSource?: Maybe<CreateDataSourcePayload>;
   /** Creates a single `DataSourcesBucket`. */
   createDataSourcesBucket?: Maybe<CreateDataSourcesBucketPayload>;
-  /** Creates a single `FormConditionalRenderingRule`. */
-  createFormConditionalRenderingRule?: Maybe<CreateFormConditionalRenderingRulePayload>;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
+  /** Creates a single `FormLogicCondition`. */
+  createFormLogicCondition?: Maybe<CreateFormLogicConditionPayload>;
+  /** Creates a single `FormLogicRule`. */
+  createFormLogicRule?: Maybe<CreateFormLogicRulePayload>;
   createFormTemplateFromSketchClass?: Maybe<CreateFormTemplateFromSketchClassPayload>;
   createFormTemplateFromSurvey?: Maybe<CreateFormTemplateFromSurveyPayload>;
   /** Creates a single `Forum`. */
@@ -4902,6 +5082,8 @@ export type Mutation = {
   /** Creates a single `SurveyInvitedGroup`. */
   createSurveyInvitedGroup?: Maybe<CreateSurveyInvitedGroupPayload>;
   createSurveyInvites?: Maybe<CreateSurveyInvitesPayload>;
+  /** Initializes a new FormLogicRule with a single condition and command=JUMP. */
+  createSurveyJumpRule?: Maybe<CreateSurveyJumpRulePayload>;
   createSurveyResponse?: Maybe<CreateSurveyResponsePayload>;
   /** Creates a single `TableOfContentsItem`. */
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
@@ -4937,14 +5119,18 @@ export type Mutation = {
   deleteFormBySketchClassId?: Maybe<DeleteFormPayload>;
   /** Deletes a single `Form` using a unique key. */
   deleteFormBySurveyId?: Maybe<DeleteFormPayload>;
-  /** Deletes a single `FormConditionalRenderingRule` using a unique key. */
-  deleteFormConditionalRenderingRule?: Maybe<DeleteFormConditionalRenderingRulePayload>;
-  /** Deletes a single `FormConditionalRenderingRule` using its globally unique id. */
-  deleteFormConditionalRenderingRuleByNodeId?: Maybe<DeleteFormConditionalRenderingRulePayload>;
   /** Deletes a single `FormElement` using a unique key. */
   deleteFormElement?: Maybe<DeleteFormElementPayload>;
   /** Deletes a single `FormElement` using its globally unique id. */
   deleteFormElementByNodeId?: Maybe<DeleteFormElementPayload>;
+  /** Deletes a single `FormLogicCondition` using a unique key. */
+  deleteFormLogicCondition?: Maybe<DeleteFormLogicConditionPayload>;
+  /** Deletes a single `FormLogicCondition` using its globally unique id. */
+  deleteFormLogicConditionByNodeId?: Maybe<DeleteFormLogicConditionPayload>;
+  /** Deletes a single `FormLogicRule` using a unique key. */
+  deleteFormLogicRule?: Maybe<DeleteFormLogicRulePayload>;
+  /** Deletes a single `FormLogicRule` using its globally unique id. */
+  deleteFormLogicRuleByNodeId?: Maybe<DeleteFormLogicRulePayload>;
   /** Deletes a single `Forum` using a unique key. */
   deleteForum?: Maybe<DeleteForumPayload>;
   /** Deletes a single `Forum` using its globally unique id. */
@@ -5107,6 +5293,7 @@ export type Mutation = {
    * Use this instead of trying to manage the position of form elements individually.
    */
   setFormElementOrder?: Maybe<SetFormElementOrderPayload>;
+  setFormLogicRuleOrder?: Maybe<SetFormLogicRuleOrderPayload>;
   /**
    * Set the order in which discussion forums will be displayed. Provide a list of
    * forum IDs in the correct order. Missing ids will be added to the end of the list.
@@ -5177,14 +5364,18 @@ export type Mutation = {
   updateFormBySketchClassId?: Maybe<UpdateFormPayload>;
   /** Updates a single `Form` using a unique key and a patch. */
   updateFormBySurveyId?: Maybe<UpdateFormPayload>;
-  /** Updates a single `FormConditionalRenderingRule` using a unique key and a patch. */
-  updateFormConditionalRenderingRule?: Maybe<UpdateFormConditionalRenderingRulePayload>;
-  /** Updates a single `FormConditionalRenderingRule` using its globally unique id and a patch. */
-  updateFormConditionalRenderingRuleByNodeId?: Maybe<UpdateFormConditionalRenderingRulePayload>;
   /** Updates a single `FormElement` using a unique key and a patch. */
   updateFormElement?: Maybe<UpdateFormElementPayload>;
   /** Updates a single `FormElement` using its globally unique id and a patch. */
   updateFormElementByNodeId?: Maybe<UpdateFormElementPayload>;
+  /** Updates a single `FormLogicCondition` using a unique key and a patch. */
+  updateFormLogicCondition?: Maybe<UpdateFormLogicConditionPayload>;
+  /** Updates a single `FormLogicCondition` using its globally unique id and a patch. */
+  updateFormLogicConditionByNodeId?: Maybe<UpdateFormLogicConditionPayload>;
+  /** Updates a single `FormLogicRule` using a unique key and a patch. */
+  updateFormLogicRule?: Maybe<UpdateFormLogicRulePayload>;
+  /** Updates a single `FormLogicRule` using its globally unique id and a patch. */
+  updateFormLogicRuleByNodeId?: Maybe<UpdateFormLogicRulePayload>;
   /** Updates a single `Forum` using a unique key and a patch. */
   updateForum?: Maybe<UpdateForumPayload>;
   /** Updates a single `Forum` using its globally unique id and a patch. */
@@ -5366,14 +5557,20 @@ export type MutationCreateDataSourcesBucketArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateFormConditionalRenderingRuleArgs = {
-  input: CreateFormConditionalRenderingRuleInput;
+export type MutationCreateFormElementArgs = {
+  input: CreateFormElementInput;
 };
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateFormElementArgs = {
-  input: CreateFormElementInput;
+export type MutationCreateFormLogicConditionArgs = {
+  input: CreateFormLogicConditionInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateFormLogicRuleArgs = {
+  input: CreateFormLogicRuleInput;
 };
 
 
@@ -5480,6 +5677,12 @@ export type MutationCreateSurveyInvitesArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateSurveyJumpRuleArgs = {
+  input: CreateSurveyJumpRuleInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSurveyResponseArgs = {
   input: CreateSurveyResponseInput;
 };
@@ -5576,18 +5779,6 @@ export type MutationDeleteFormBySurveyIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteFormConditionalRenderingRuleArgs = {
-  input: DeleteFormConditionalRenderingRuleInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteFormConditionalRenderingRuleByNodeIdArgs = {
-  input: DeleteFormConditionalRenderingRuleByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormElementArgs = {
   input: DeleteFormElementInput;
 };
@@ -5596,6 +5787,30 @@ export type MutationDeleteFormElementArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormElementByNodeIdArgs = {
   input: DeleteFormElementByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteFormLogicConditionArgs = {
+  input: DeleteFormLogicConditionInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteFormLogicConditionByNodeIdArgs = {
+  input: DeleteFormLogicConditionByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteFormLogicRuleArgs = {
+  input: DeleteFormLogicRuleInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteFormLogicRuleByNodeIdArgs = {
+  input: DeleteFormLogicRuleByNodeIdInput;
 };
 
 
@@ -5938,6 +6153,12 @@ export type MutationSetFormElementOrderArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetFormLogicRuleOrderArgs = {
+  input: SetFormLogicRuleOrderInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetForumOrderArgs = {
   input: SetForumOrderInput;
 };
@@ -6100,18 +6321,6 @@ export type MutationUpdateFormBySurveyIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateFormConditionalRenderingRuleArgs = {
-  input: UpdateFormConditionalRenderingRuleInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateFormConditionalRenderingRuleByNodeIdArgs = {
-  input: UpdateFormConditionalRenderingRuleByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormElementArgs = {
   input: UpdateFormElementInput;
 };
@@ -6120,6 +6329,30 @@ export type MutationUpdateFormElementArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormElementByNodeIdArgs = {
   input: UpdateFormElementByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormLogicConditionArgs = {
+  input: UpdateFormLogicConditionInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormLogicConditionByNodeIdArgs = {
+  input: UpdateFormLogicConditionByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormLogicRuleArgs = {
+  input: UpdateFormLogicRuleInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFormLogicRuleByNodeIdArgs = {
+  input: UpdateFormLogicRuleByNodeIdInput;
 };
 
 
@@ -7508,9 +7741,6 @@ export type Query = Node & {
   formByNodeId?: Maybe<Form>;
   formBySketchClassId?: Maybe<Form>;
   formBySurveyId?: Maybe<Form>;
-  formConditionalRenderingRule?: Maybe<FormConditionalRenderingRule>;
-  /** Reads a single `FormConditionalRenderingRule` using its globally unique `ID`. */
-  formConditionalRenderingRuleByNodeId?: Maybe<FormConditionalRenderingRule>;
   formElement?: Maybe<FormElement>;
   /** Reads a single `FormElement` using its globally unique `ID`. */
   formElementByNodeId?: Maybe<FormElement>;
@@ -7520,6 +7750,12 @@ export type Query = Node & {
   formElementTypeByNodeId?: Maybe<FormElementType>;
   /** Reads a set of `FormElementType`. */
   formElementTypes?: Maybe<Array<FormElementType>>;
+  formLogicCondition?: Maybe<FormLogicCondition>;
+  /** Reads a single `FormLogicCondition` using its globally unique `ID`. */
+  formLogicConditionByNodeId?: Maybe<FormLogicCondition>;
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** Reads a single `FormLogicRule` using its globally unique `ID`. */
+  formLogicRuleByNodeId?: Maybe<FormLogicRule>;
   forum?: Maybe<Forum>;
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
@@ -8085,38 +8321,6 @@ export type QueryFormBySurveyIdArgs = {
  * for each database table. These are unlikely to be needed often but may possibly
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
-export type QueryFormConditionalRenderingRuleArgs = {
-  id: Scalars['Int'];
-};
-
-
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
-export type QueryFormConditionalRenderingRuleByNodeIdArgs = {
-  nodeId: Scalars['ID'];
-};
-
-
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
 export type QueryFormElementArgs = {
   id: Scalars['Int'];
 };
@@ -8202,6 +8406,70 @@ export type QueryFormElementTypesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<FormElementTypesOrderBy>>;
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormLogicConditionArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormLogicConditionByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormLogicRuleArgs = {
+  id: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QueryFormLogicRuleByNodeIdArgs = {
+  nodeId: Scalars['ID'];
 };
 
 
@@ -9368,6 +9636,29 @@ export type SetFormElementOrderPayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   formElements?: Maybe<Array<FormElement>>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `setFormLogicRuleOrder` mutation. */
+export type SetFormLogicRuleOrderInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  ruleIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `setFormLogicRuleOrder` mutation. */
+export type SetFormLogicRuleOrderPayload = {
+  __typename?: 'SetFormLogicRuleOrderPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formLogicRules?: Maybe<Array<FormLogicRule>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -11216,55 +11507,6 @@ export type UpdateFormBySurveyIdInput = {
   surveyId: Scalars['Int'];
 };
 
-/** All input for the `updateFormConditionalRenderingRuleByNodeId` mutation. */
-export type UpdateFormConditionalRenderingRuleByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `FormConditionalRenderingRule` to be updated. */
-  nodeId: Scalars['ID'];
-  /** An object where the defined keys will be set on the `FormConditionalRenderingRule` being updated. */
-  patch: FormConditionalRenderingRulePatch;
-};
-
-/** All input for the `updateFormConditionalRenderingRule` mutation. */
-export type UpdateFormConditionalRenderingRuleInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-  /** An object where the defined keys will be set on the `FormConditionalRenderingRule` being updated. */
-  patch: FormConditionalRenderingRulePatch;
-};
-
-/** The output of our update `FormConditionalRenderingRule` mutation. */
-export type UpdateFormConditionalRenderingRulePayload = {
-  __typename?: 'UpdateFormConditionalRenderingRulePayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `FormElement` that is related to this `FormConditionalRenderingRule`. */
-  field?: Maybe<FormElement>;
-  /** The `FormConditionalRenderingRule` that was updated by this mutation. */
-  formConditionalRenderingRule?: Maybe<FormConditionalRenderingRule>;
-  /** An edge for our `FormConditionalRenderingRule`. May be used by Relay 1. */
-  formConditionalRenderingRuleEdge?: Maybe<FormConditionalRenderingRulesEdge>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
-
-/** The output of our update `FormConditionalRenderingRule` mutation. */
-export type UpdateFormConditionalRenderingRulePayloadFormConditionalRenderingRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormConditionalRenderingRulesOrderBy>>;
-};
-
 /** All input for the `updateFormElementByNodeId` mutation. */
 export type UpdateFormElementByNodeIdInput = {
   /**
@@ -11322,6 +11564,100 @@ export type UpdateFormInput = {
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Form` being updated. */
   patch: FormPatch;
+};
+
+/** All input for the `updateFormLogicConditionByNodeId` mutation. */
+export type UpdateFormLogicConditionByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `FormLogicCondition` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `FormLogicCondition` being updated. */
+  patch: FormLogicConditionPatch;
+};
+
+/** All input for the `updateFormLogicCondition` mutation. */
+export type UpdateFormLogicConditionInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `FormLogicCondition` being updated. */
+  patch: FormLogicConditionPatch;
+};
+
+/** The output of our update `FormLogicCondition` mutation. */
+export type UpdateFormLogicConditionPayload = {
+  __typename?: 'UpdateFormLogicConditionPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicCondition` that was updated by this mutation. */
+  formLogicCondition?: Maybe<FormLogicCondition>;
+  /** An edge for our `FormLogicCondition`. May be used by Relay 1. */
+  formLogicConditionEdge?: Maybe<FormLogicConditionsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our update `FormLogicCondition` mutation. */
+export type UpdateFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+};
+
+/** All input for the `updateFormLogicRuleByNodeId` mutation. */
+export type UpdateFormLogicRuleByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `FormLogicRule` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `FormLogicRule` being updated. */
+  patch: FormLogicRulePatch;
+};
+
+/** All input for the `updateFormLogicRule` mutation. */
+export type UpdateFormLogicRuleInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `FormLogicRule` being updated. */
+  patch: FormLogicRulePatch;
+};
+
+/** The output of our update `FormLogicRule` mutation. */
+export type UpdateFormLogicRulePayload = {
+  __typename?: 'UpdateFormLogicRulePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `FormLogicRule` that was updated by this mutation. */
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** An edge for our `FormLogicRule`. May be used by Relay 1. */
+  formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our update `FormLogicRule` mutation. */
+export type UpdateFormLogicRulePayloadFormLogicRuleEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** The output of our update `Form` mutation. */
@@ -12491,18 +12827,38 @@ export type NewZIndexFragment = (
 
 export type NewElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId'>
-  & { conditionalRenderingRules: Array<(
-    { __typename?: 'FormConditionalRenderingRule' }
-    & Pick<FormConditionalRenderingRule, 'id' | 'operator' | 'predicateFieldId' | 'value'>
-    & { field?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'exportId'>
-    )> }
-  )>, type?: Maybe<(
+  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
+  & { type?: Maybe<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators'>
   )> }
+);
+
+export type LogicRuleEditorFormElementFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'id' | 'body' | 'typeId' | 'jumpToId' | 'componentSettings' | 'exportId' | 'isRequired'>
+  & { type?: Maybe<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'supportedOperators' | 'isInput'>
+  )> }
+);
+
+export type LogicRuleEditorRuleFragment = (
+  { __typename?: 'FormLogicRule' }
+  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
+  & { conditions?: Maybe<Array<(
+    { __typename?: 'FormLogicCondition' }
+    & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
+  )>> }
+);
+
+export type NewRuleFragment = (
+  { __typename?: 'FormLogicRule' }
+  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
+  & { conditions?: Maybe<Array<(
+    { __typename?: 'FormLogicCondition' }
+    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
+  )>> }
 );
 
 export type NewSurveyFragment = (
@@ -13884,17 +14240,10 @@ export type SurveyByIdQuery = (
 
 export type FormElementFullDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
-  & { conditionalRenderingRules: Array<(
-    { __typename?: 'FormConditionalRenderingRule' }
-    & Pick<FormConditionalRenderingRule, 'id' | 'operator' | 'predicateFieldId' | 'value'>
-    & { field?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'exportId'>
-    )> }
-  )>, type?: Maybe<(
+  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
+  & { type?: Maybe<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators'>
   )> }
 );
 
@@ -13911,7 +14260,7 @@ export type SurveyFormEditorDetailsQuery = (
     & Pick<Project, 'name'>
   )>, formElementTypes?: Maybe<Array<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators'>
   )>>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & { form?: Maybe<(
@@ -13920,6 +14269,13 @@ export type SurveyFormEditorDetailsQuery = (
       & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
         & FormElementFullDetailsFragment
+      )>>, logicRules?: Maybe<Array<(
+        { __typename?: 'FormLogicRule' }
+        & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
+        & { conditions?: Maybe<Array<(
+          { __typename?: 'FormLogicCondition' }
+          & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
+        )>> }
       )>> }
     )> }
     & SurveyListDetailsFragment
@@ -13953,6 +14309,8 @@ export type UpdateFormElementMutationVariables = Exact<{
   body?: Maybe<Scalars['JSON']>;
   exportId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
+  jumpToId?: Maybe<Scalars['Int']>;
+  typeId?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -13962,7 +14320,7 @@ export type UpdateFormElementMutation = (
     { __typename?: 'UpdateFormElementPayload' }
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'isRequired' | 'body' | 'exportId' | 'componentSettings'>
+      & Pick<FormElement, 'id' | 'isRequired' | 'body' | 'exportId' | 'componentSettings' | 'jumpToId' | 'typeId'>
     )> }
   )> }
 );
@@ -14161,6 +14519,150 @@ export type ClearFormElementStyleMutation = (
   )> }
 );
 
+export type CreateLogicRuleForSurveyMutationVariables = Exact<{
+  formElementId: Scalars['Int'];
+  operator: FieldRuleOperator;
+  jumpToId: Scalars['Int'];
+}>;
+
+
+export type CreateLogicRuleForSurveyMutation = (
+  { __typename?: 'Mutation' }
+  & { createSurveyJumpRule?: Maybe<(
+    { __typename?: 'CreateSurveyJumpRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id' | 'position' | 'booleanOperator' | 'command' | 'formElementId' | 'jumpToId'>
+      & { conditions?: Maybe<Array<(
+        { __typename?: 'FormLogicCondition' }
+        & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
+      )>> }
+    )> }
+  )> }
+);
+
+export type UpdateFormLogicRuleMutationVariables = Exact<{
+  id: Scalars['Int'];
+  jumpToId?: Maybe<Scalars['Int']>;
+  booleanOperator?: Maybe<FormLogicOperator>;
+  formElementId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type UpdateFormLogicRuleMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormLogicRule?: Maybe<(
+    { __typename?: 'UpdateFormLogicRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id' | 'booleanOperator' | 'command' | 'jumpToId' | 'position'>
+    )> }
+  )> }
+);
+
+export type UpdateLogicConditionMutationVariables = Exact<{
+  id: Scalars['Int'];
+  operator?: Maybe<FieldRuleOperator>;
+  value?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateLogicConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormLogicCondition?: Maybe<(
+    { __typename?: 'UpdateFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id' | 'ruleId' | 'operator' | 'subjectId' | 'value'>
+    )> }
+  )> }
+);
+
+export type DeleteLogicConditionMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteLogicConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteFormLogicCondition?: Maybe<(
+    { __typename?: 'DeleteFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id' | 'ruleId'>
+    )> }
+  )> }
+);
+
+export type DeleteLogicRuleMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteLogicRuleMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteFormLogicRule?: Maybe<(
+    { __typename?: 'DeleteFormLogicRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id' | 'formElementId'>
+    )> }
+  )> }
+);
+
+export type AddConditionMutationVariables = Exact<{
+  operator: FieldRuleOperator;
+  ruleId: Scalars['Int'];
+  subjectId: Scalars['Int'];
+  value?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type AddConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { createFormLogicCondition?: Maybe<(
+    { __typename?: 'CreateFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
+    )> }
+  )> }
+);
+
+export type SurveyAppRuleFragment = (
+  { __typename?: 'FormLogicRule' }
+  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
+  & { conditions?: Maybe<Array<(
+    { __typename?: 'FormLogicCondition' }
+    & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
+  )>> }
+);
+
+export type SurveyAppFormElementFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId'>
+  & { type?: Maybe<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+  )> }
+);
+
+export type SurveyAppSurveyFragment = (
+  { __typename?: 'Survey' }
+  & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption'>
+  & { form?: Maybe<(
+    { __typename?: 'Form' }
+    & Pick<Form, 'id'>
+    & { logicRules?: Maybe<Array<(
+      { __typename?: 'FormLogicRule' }
+      & SurveyAppRuleFragment
+    )>>, formElements?: Maybe<Array<(
+      { __typename?: 'FormElement' }
+      & SurveyAppFormElementFragment
+    )>> }
+  )> }
+);
+
 export type SurveyQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
@@ -14180,19 +14682,7 @@ export type SurveyQuery = (
     & Pick<Project, 'name' | 'url'>
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
-    & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption'>
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id'>
-      & { formElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight'>
-        & { type?: Maybe<(
-          { __typename?: 'FormElementType' }
-          & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
-        )> }
-      )>> }
-    )> }
+    & SurveyAppSurveyFragment
   )> }
 );
 
@@ -14796,21 +15286,12 @@ export const NewElementFragmentDoc = gql`
     fragment NewElement on FormElement {
   body
   componentSettings
-  conditionalRenderingRules {
-    id
-    field {
-      id
-      exportId
-    }
-    operator
-    predicateFieldId
-    value
-  }
   exportId
   formId
   id
   isRequired
   position
+  jumpToId
   type {
     componentName
     isHidden
@@ -14818,8 +15299,68 @@ export const NewElementFragmentDoc = gql`
     isSingleUseOnly
     isSurveysOnly
     label
+    supportedOperators
   }
   typeId
+  backgroundColor
+  secondaryColor
+  backgroundImage
+  backgroundImagePlacement
+  backgroundPalette
+  textVariant
+  unsplashAuthorUrl
+  unsplashAuthorName
+  backgroundWidth
+  backgroundHeight
+}
+    `;
+export const LogicRuleEditorFormElementFragmentDoc = gql`
+    fragment LogicRuleEditorFormElement on FormElement {
+  id
+  body
+  typeId
+  jumpToId
+  componentSettings
+  exportId
+  isRequired
+  type {
+    supportedOperators
+    isInput
+  }
+}
+    `;
+export const LogicRuleEditorRuleFragmentDoc = gql`
+    fragment LogicRuleEditorRule on FormLogicRule {
+  booleanOperator
+  command
+  formElementId
+  id
+  jumpToId
+  position
+  conditions {
+    id
+    operator
+    ruleId
+    subjectId
+    value
+  }
+}
+    `;
+export const NewRuleFragmentDoc = gql`
+    fragment NewRule on FormLogicRule {
+  booleanOperator
+  command
+  id
+  jumpToId
+  position
+  formElementId
+  conditions {
+    id
+    operator
+    value
+    subjectId
+    ruleId
+  }
 }
     `;
 export const NewSurveyFragmentDoc = gql`
@@ -14893,21 +15434,12 @@ export const FormElementFullDetailsFragmentDoc = gql`
     fragment FormElementFullDetails on FormElement {
   body
   componentSettings
-  conditionalRenderingRules {
-    id
-    field {
-      id
-      exportId
-    }
-    operator
-    predicateFieldId
-    value
-  }
   exportId
   formId
   id
   isRequired
   position
+  jumpToId
   type {
     componentName
     isHidden
@@ -14915,6 +15447,7 @@ export const FormElementFullDetailsFragmentDoc = gql`
     isSingleUseOnly
     isSurveysOnly
     label
+    supportedOperators
   }
   typeId
   backgroundColor
@@ -14929,6 +15462,70 @@ export const FormElementFullDetailsFragmentDoc = gql`
   backgroundHeight
 }
     `;
+export const SurveyAppRuleFragmentDoc = gql`
+    fragment SurveyAppRule on FormLogicRule {
+  booleanOperator
+  command
+  conditions {
+    id
+    operator
+    ruleId
+    subjectId
+    value
+  }
+  formElementId
+  id
+  jumpToId
+  position
+}
+    `;
+export const SurveyAppFormElementFragmentDoc = gql`
+    fragment SurveyAppFormElement on FormElement {
+  id
+  componentSettings
+  body
+  isRequired
+  position
+  typeId
+  type {
+    componentName
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+  }
+  backgroundColor
+  secondaryColor
+  backgroundImage
+  backgroundImagePlacement
+  textVariant
+  unsplashAuthorName
+  unsplashAuthorUrl
+  backgroundWidth
+  backgroundHeight
+  jumpToId
+}
+    `;
+export const SurveyAppSurveyFragmentDoc = gql`
+    fragment SurveyAppSurvey on Survey {
+  id
+  name
+  accessType
+  isDisabled
+  showProgress
+  showFacilitationOption
+  form {
+    id
+    logicRules {
+      ...SurveyAppRule
+    }
+    formElements {
+      ...SurveyAppFormElement
+    }
+  }
+}
+    ${SurveyAppRuleFragmentDoc}
+${SurveyAppFormElementFragmentDoc}`;
 export const ParticipantListDetailsFragmentDoc = gql`
     fragment ParticipantListDetails on User {
   id
@@ -18389,6 +18986,7 @@ export const SurveyFormEditorDetailsDocument = gql`
     isSingleUseOnly
     isSurveysOnly
     label
+    supportedOperators
   }
   survey(id: $id) {
     ...SurveyListDetails
@@ -18400,6 +18998,21 @@ export const SurveyFormEditorDetailsDocument = gql`
       templateType
       formElements {
         ...FormElementFullDetails
+      }
+      logicRules {
+        booleanOperator
+        command
+        id
+        jumpToId
+        position
+        formElementId
+        conditions {
+          id
+          operator
+          value
+          subjectId
+          ruleId
+        }
       }
     }
   }
@@ -18481,9 +19094,9 @@ export type UpdateSurveyBaseSettingsMutationHookResult = ReturnType<typeof useUp
 export type UpdateSurveyBaseSettingsMutationResult = Apollo.MutationResult<UpdateSurveyBaseSettingsMutation>;
 export type UpdateSurveyBaseSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>;
 export const UpdateFormElementDocument = gql`
-    mutation UpdateFormElement($id: Int!, $isRequired: Boolean, $body: JSON, $exportId: String, $componentSettings: JSON) {
+    mutation UpdateFormElement($id: Int!, $isRequired: Boolean, $body: JSON, $exportId: String, $componentSettings: JSON, $jumpToId: Int, $typeId: String) {
   updateFormElement(
-    input: {id: $id, patch: {isRequired: $isRequired, body: $body, exportId: $exportId, componentSettings: $componentSettings}}
+    input: {id: $id, patch: {isRequired: $isRequired, body: $body, exportId: $exportId, componentSettings: $componentSettings, jumpToId: $jumpToId, typeId: $typeId}}
   ) {
     formElement {
       id
@@ -18491,6 +19104,8 @@ export const UpdateFormElementDocument = gql`
       body
       exportId
       componentSettings
+      jumpToId
+      typeId
     }
   }
 }
@@ -18515,6 +19130,8 @@ export type UpdateFormElementMutationFn = Apollo.MutationFunction<UpdateFormElem
  *      body: // value for 'body'
  *      exportId: // value for 'exportId'
  *      componentSettings: // value for 'componentSettings'
+ *      jumpToId: // value for 'jumpToId'
+ *      typeId: // value for 'typeId'
  *   },
  * });
  */
@@ -18968,6 +19585,260 @@ export function useClearFormElementStyleMutation(baseOptions?: Apollo.MutationHo
 export type ClearFormElementStyleMutationHookResult = ReturnType<typeof useClearFormElementStyleMutation>;
 export type ClearFormElementStyleMutationResult = Apollo.MutationResult<ClearFormElementStyleMutation>;
 export type ClearFormElementStyleMutationOptions = Apollo.BaseMutationOptions<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>;
+export const CreateLogicRuleForSurveyDocument = gql`
+    mutation createLogicRuleForSurvey($formElementId: Int!, $operator: FieldRuleOperator!, $jumpToId: Int!) {
+  createSurveyJumpRule(
+    input: {formElementId: $formElementId, booleanOperator: OR, jumpToId: $jumpToId, operator: $operator}
+  ) {
+    formLogicRule {
+      id
+      position
+      booleanOperator
+      command
+      formElementId
+      jumpToId
+      conditions {
+        id
+        operator
+        ruleId
+        subjectId
+        value
+      }
+    }
+  }
+}
+    `;
+export type CreateLogicRuleForSurveyMutationFn = Apollo.MutationFunction<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>;
+
+/**
+ * __useCreateLogicRuleForSurveyMutation__
+ *
+ * To run a mutation, you first call `useCreateLogicRuleForSurveyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateLogicRuleForSurveyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createLogicRuleForSurveyMutation, { data, loading, error }] = useCreateLogicRuleForSurveyMutation({
+ *   variables: {
+ *      formElementId: // value for 'formElementId'
+ *      operator: // value for 'operator'
+ *      jumpToId: // value for 'jumpToId'
+ *   },
+ * });
+ */
+export function useCreateLogicRuleForSurveyMutation(baseOptions?: Apollo.MutationHookOptions<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>(CreateLogicRuleForSurveyDocument, options);
+      }
+export type CreateLogicRuleForSurveyMutationHookResult = ReturnType<typeof useCreateLogicRuleForSurveyMutation>;
+export type CreateLogicRuleForSurveyMutationResult = Apollo.MutationResult<CreateLogicRuleForSurveyMutation>;
+export type CreateLogicRuleForSurveyMutationOptions = Apollo.BaseMutationOptions<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>;
+export const UpdateFormLogicRuleDocument = gql`
+    mutation UpdateFormLogicRule($id: Int!, $jumpToId: Int, $booleanOperator: FormLogicOperator, $formElementId: Int) {
+  updateFormLogicRule(
+    input: {id: $id, patch: {jumpToId: $jumpToId, booleanOperator: $booleanOperator, formElementId: $formElementId}}
+  ) {
+    formLogicRule {
+      id
+      booleanOperator
+      command
+      jumpToId
+      position
+    }
+  }
+}
+    `;
+export type UpdateFormLogicRuleMutationFn = Apollo.MutationFunction<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>;
+
+/**
+ * __useUpdateFormLogicRuleMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormLogicRuleMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormLogicRuleMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormLogicRuleMutation, { data, loading, error }] = useUpdateFormLogicRuleMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      jumpToId: // value for 'jumpToId'
+ *      booleanOperator: // value for 'booleanOperator'
+ *      formElementId: // value for 'formElementId'
+ *   },
+ * });
+ */
+export function useUpdateFormLogicRuleMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>(UpdateFormLogicRuleDocument, options);
+      }
+export type UpdateFormLogicRuleMutationHookResult = ReturnType<typeof useUpdateFormLogicRuleMutation>;
+export type UpdateFormLogicRuleMutationResult = Apollo.MutationResult<UpdateFormLogicRuleMutation>;
+export type UpdateFormLogicRuleMutationOptions = Apollo.BaseMutationOptions<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>;
+export const UpdateLogicConditionDocument = gql`
+    mutation UpdateLogicCondition($id: Int!, $operator: FieldRuleOperator, $value: JSON) {
+  updateFormLogicCondition(
+    input: {id: $id, patch: {operator: $operator, value: $value}}
+  ) {
+    formLogicCondition {
+      id
+      ruleId
+      operator
+      subjectId
+      value
+    }
+  }
+}
+    `;
+export type UpdateLogicConditionMutationFn = Apollo.MutationFunction<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>;
+
+/**
+ * __useUpdateLogicConditionMutation__
+ *
+ * To run a mutation, you first call `useUpdateLogicConditionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateLogicConditionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateLogicConditionMutation, { data, loading, error }] = useUpdateLogicConditionMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      operator: // value for 'operator'
+ *      value: // value for 'value'
+ *   },
+ * });
+ */
+export function useUpdateLogicConditionMutation(baseOptions?: Apollo.MutationHookOptions<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>(UpdateLogicConditionDocument, options);
+      }
+export type UpdateLogicConditionMutationHookResult = ReturnType<typeof useUpdateLogicConditionMutation>;
+export type UpdateLogicConditionMutationResult = Apollo.MutationResult<UpdateLogicConditionMutation>;
+export type UpdateLogicConditionMutationOptions = Apollo.BaseMutationOptions<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>;
+export const DeleteLogicConditionDocument = gql`
+    mutation DeleteLogicCondition($id: Int!) {
+  deleteFormLogicCondition(input: {id: $id}) {
+    formLogicCondition {
+      id
+      ruleId
+    }
+  }
+}
+    `;
+export type DeleteLogicConditionMutationFn = Apollo.MutationFunction<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>;
+
+/**
+ * __useDeleteLogicConditionMutation__
+ *
+ * To run a mutation, you first call `useDeleteLogicConditionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteLogicConditionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteLogicConditionMutation, { data, loading, error }] = useDeleteLogicConditionMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteLogicConditionMutation(baseOptions?: Apollo.MutationHookOptions<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>(DeleteLogicConditionDocument, options);
+      }
+export type DeleteLogicConditionMutationHookResult = ReturnType<typeof useDeleteLogicConditionMutation>;
+export type DeleteLogicConditionMutationResult = Apollo.MutationResult<DeleteLogicConditionMutation>;
+export type DeleteLogicConditionMutationOptions = Apollo.BaseMutationOptions<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>;
+export const DeleteLogicRuleDocument = gql`
+    mutation DeleteLogicRule($id: Int!) {
+  deleteFormLogicRule(input: {id: $id}) {
+    formLogicRule {
+      id
+      formElementId
+    }
+  }
+}
+    `;
+export type DeleteLogicRuleMutationFn = Apollo.MutationFunction<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>;
+
+/**
+ * __useDeleteLogicRuleMutation__
+ *
+ * To run a mutation, you first call `useDeleteLogicRuleMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteLogicRuleMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteLogicRuleMutation, { data, loading, error }] = useDeleteLogicRuleMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteLogicRuleMutation(baseOptions?: Apollo.MutationHookOptions<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>(DeleteLogicRuleDocument, options);
+      }
+export type DeleteLogicRuleMutationHookResult = ReturnType<typeof useDeleteLogicRuleMutation>;
+export type DeleteLogicRuleMutationResult = Apollo.MutationResult<DeleteLogicRuleMutation>;
+export type DeleteLogicRuleMutationOptions = Apollo.BaseMutationOptions<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>;
+export const AddConditionDocument = gql`
+    mutation AddCondition($operator: FieldRuleOperator!, $ruleId: Int!, $subjectId: Int!, $value: JSON) {
+  createFormLogicCondition(
+    input: {formLogicCondition: {operator: $operator, ruleId: $ruleId, subjectId: $subjectId, value: $value}}
+  ) {
+    formLogicCondition {
+      id
+      operator
+      ruleId
+      subjectId
+      value
+    }
+  }
+}
+    `;
+export type AddConditionMutationFn = Apollo.MutationFunction<AddConditionMutation, AddConditionMutationVariables>;
+
+/**
+ * __useAddConditionMutation__
+ *
+ * To run a mutation, you first call `useAddConditionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddConditionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addConditionMutation, { data, loading, error }] = useAddConditionMutation({
+ *   variables: {
+ *      operator: // value for 'operator'
+ *      ruleId: // value for 'ruleId'
+ *      subjectId: // value for 'subjectId'
+ *      value: // value for 'value'
+ *   },
+ * });
+ */
+export function useAddConditionMutation(baseOptions?: Apollo.MutationHookOptions<AddConditionMutation, AddConditionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddConditionMutation, AddConditionMutationVariables>(AddConditionDocument, options);
+      }
+export type AddConditionMutationHookResult = ReturnType<typeof useAddConditionMutation>;
+export type AddConditionMutationResult = Apollo.MutationResult<AddConditionMutation>;
+export type AddConditionMutationOptions = Apollo.BaseMutationOptions<AddConditionMutation, AddConditionMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -18982,42 +19853,10 @@ export const SurveyDocument = gql`
     url
   }
   survey(id: $id) {
-    id
-    name
-    accessType
-    isDisabled
-    showProgress
-    showFacilitationOption
-    form {
-      id
-      formElements {
-        id
-        componentSettings
-        body
-        isRequired
-        position
-        typeId
-        type {
-          componentName
-          isInput
-          isSingleUseOnly
-          isSurveysOnly
-          label
-        }
-        backgroundColor
-        secondaryColor
-        backgroundImage
-        backgroundImagePlacement
-        textVariant
-        unsplashAuthorName
-        unsplashAuthorUrl
-        backgroundWidth
-        backgroundHeight
-      }
-    }
+    ...SurveyAppSurvey
   }
 }
-    `;
+    ${SurveyAppSurveyFragmentDoc}`;
 
 /**
  * __useSurveyQuery__
@@ -20065,3 +20904,162 @@ export function useUpdateProfileMutation(baseOptions?: Apollo.MutationHookOption
 export type UpdateProfileMutationHookResult = ReturnType<typeof useUpdateProfileMutation>;
 export type UpdateProfileMutationResult = Apollo.MutationResult<UpdateProfileMutation>;
 export type UpdateProfileMutationOptions = Apollo.BaseMutationOptions<UpdateProfileMutation, UpdateProfileMutationVariables>;
+export const namedOperations = {
+  Query: {
+    ProjectBucketSetting: 'ProjectBucketSetting',
+    GetAcl: 'GetAcl',
+    Groups: 'Groups',
+    VerifyProjectInvite: 'VerifyProjectInvite',
+    GetBasemaps: 'GetBasemaps',
+    GetBasemap: 'GetBasemap',
+    OptionalLayer: 'OptionalLayer',
+    GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
+    GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
+    CurrentProjectMetadata: 'CurrentProjectMetadata',
+    DraftTableOfContents: 'DraftTableOfContents',
+    layersAndSourcesForItems: 'layersAndSourcesForItems',
+    GetFolder: 'GetFolder',
+    GetLayerItem: 'GetLayerItem',
+    InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',
+    DataSourceUrlProperties: 'DataSourceUrlProperties',
+    GetMetadata: 'GetMetadata',
+    ProjectHostingQuota: 'ProjectHostingQuota',
+    InteractivitySettingsById: 'InteractivitySettingsById',
+    ProjectAccessControlSettings: 'ProjectAccessControlSettings',
+    ProjectRegion: 'ProjectRegion',
+    GetProjectBySlug: 'GetProjectBySlug',
+    ProjectSlugExists: 'ProjectSlugExists',
+    PublishedTableOfContents: 'PublishedTableOfContents',
+    SimpleProjectList: 'SimpleProjectList',
+    Surveys: 'Surveys',
+    SurveyById: 'SurveyById',
+    SurveyFormEditorDetails: 'SurveyFormEditorDetails',
+    GetPhotos: 'GetPhotos',
+    Survey: 'Survey',
+    UserAdminCounts: 'UserAdminCounts',
+    Participants: 'Participants',
+    Admins: 'Admins',
+    GroupMembers: 'GroupMembers',
+    UserSettingsLists: 'UserSettingsLists',
+    UserInfo: 'UserInfo',
+    ProjectInvites: 'ProjectInvites',
+    InviteEditorModalQuery: 'InviteEditorModalQuery'
+  },
+  Mutation: {
+    UpdateProjectStorageBucket: 'UpdateProjectStorageBucket',
+    UpdateAclType: 'UpdateAclType',
+    AddGroupToAcl: 'AddGroupToAcl',
+    RemoveGroupFromAcl: 'RemoveGroupFromAcl',
+    CreateTableOfContentsItem: 'CreateTableOfContentsItem',
+    CreateArcGISDynamicDataSource: 'CreateArcGISDynamicDataSource',
+    CreateArcGISImageSource: 'CreateArcGISImageSource',
+    CreateSeaSketchVectorSource: 'CreateSeaSketchVectorSource',
+    CreateDataLayer: 'CreateDataLayer',
+    GetOrCreateSprite: 'GetOrCreateSprite',
+    AddImageToSprite: 'AddImageToSprite',
+    ConfirmProjectInvite: 'ConfirmProjectInvite',
+    ResendEmailVerification: 'ResendEmailVerification',
+    RequestInviteOnlyProjectAccess: 'RequestInviteOnlyProjectAccess',
+    CreateBasemap: 'CreateBasemap',
+    UpdateBasemap: 'UpdateBasemap',
+    UpdateBasemapUrl: 'UpdateBasemapUrl',
+    UpdateBasemapLabelsLayer: 'UpdateBasemapLabelsLayer',
+    Toggle3dTerrain: 'Toggle3dTerrain',
+    Set3dTerrain: 'Set3dTerrain',
+    UpdateTerrainExaggeration: 'UpdateTerrainExaggeration',
+    DeleteBasemap: 'DeleteBasemap',
+    UpdateOptionalLayerName: 'UpdateOptionalLayerName',
+    CreateOptionalLayer: 'CreateOptionalLayer',
+    UpdateOptionalLayer: 'UpdateOptionalLayer',
+    DeleteOptionalLayer: 'DeleteOptionalLayer',
+    UpdateOptionalBasemapLayerLayerList: 'UpdateOptionalBasemapLayerLayerList',
+    UpdateOptionalBasemapLayerOptions: 'UpdateOptionalBasemapLayerOptions',
+    UpdateOptionalBasemapLayerMetadata: 'UpdateOptionalBasemapLayerMetadata',
+    UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
+    CreateProject: 'CreateProject',
+    CreateFolder: 'CreateFolder',
+    DeleteBranch: 'DeleteBranch',
+    UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
+    UpdateFolder: 'UpdateFolder',
+    UpdateTableOfContentsItem: 'UpdateTableOfContentsItem',
+    UpdateEnableDownload: 'UpdateEnableDownload',
+    UpdateLayer: 'UpdateLayer',
+    UpdateDataSource: 'UpdateDataSource',
+    UpdateInteractivitySettings: 'UpdateInteractivitySettings',
+    UpdateZIndexes: 'UpdateZIndexes',
+    UpdateRenderUnderType: 'UpdateRenderUnderType',
+    UpdateQueryParameters: 'UpdateQueryParameters',
+    UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
+    UpdateMetadata: 'UpdateMetadata',
+    PublishTableOfContents: 'PublishTableOfContents',
+    updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
+    UpdateProjectRegion: 'UpdateProjectRegion',
+    CreateSurvey: 'CreateSurvey',
+    UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
+    UpdateFormElement: 'UpdateFormElement',
+    UpdateComponentSettings: 'UpdateComponentSettings',
+    UpdateFormElementBody: 'UpdateFormElementBody',
+    UpdateFormElementOrder: 'UpdateFormElementOrder',
+    AddFormElement: 'AddFormElement',
+    DeleteFormElement: 'DeleteFormElement',
+    UpdateForm: 'UpdateForm',
+    UpdateFormElementBackground: 'UpdateFormElementBackground',
+    SetFormElementBackground: 'SetFormElementBackground',
+    clearFormElementStyle: 'clearFormElementStyle',
+    createLogicRuleForSurvey: 'createLogicRuleForSurvey',
+    UpdateFormLogicRule: 'UpdateFormLogicRule',
+    UpdateLogicCondition: 'UpdateLogicCondition',
+    DeleteLogicCondition: 'DeleteLogicCondition',
+    DeleteLogicRule: 'DeleteLogicRule',
+    AddCondition: 'AddCondition',
+    CreateResponse: 'CreateResponse',
+    UpdateProjectName: 'UpdateProjectName',
+    UpdateProjectSettings: 'UpdateProjectSettings',
+    CreateGroup: 'CreateGroup',
+    toggleAdminAccess: 'toggleAdminAccess',
+    setUserGroups: 'setUserGroups',
+    toggleForumPostingBan: 'toggleForumPostingBan',
+    deleteGroup: 'deleteGroup',
+    createProjectInvites: 'createProjectInvites',
+    UpdateProjectInvite: 'UpdateProjectInvite',
+    DeleteProjectInvite: 'DeleteProjectInvite',
+    SendInvite: 'SendInvite',
+    RenameGroup: 'RenameGroup',
+    SendInvites: 'SendInvites',
+    UpdateProfile: 'UpdateProfile'
+  },
+  Subscription: {
+    ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
+  },
+  Fragment: {
+    UpdateTerrainExaggeration: 'UpdateTerrainExaggeration',
+    NewLabelsLayer: 'NewLabelsLayer',
+    NewTerrain: 'NewTerrain',
+    NewBasemap: 'NewBasemap',
+    NewQueryParameters: 'NewQueryParameters',
+    UpdateHighDPI: 'UpdateHighDPI',
+    UpdateFormat: 'UpdateFormat',
+    NewGLStyle: 'NewGLStyle',
+    NewRenderUnder: 'NewRenderUnder',
+    NewZIndex: 'NewZIndex',
+    NewElement: 'NewElement',
+    LogicRuleEditorFormElement: 'LogicRuleEditorFormElement',
+    LogicRuleEditorRule: 'LogicRuleEditorRule',
+    NewRule: 'NewRule',
+    NewSurvey: 'NewSurvey',
+    NewGroup: 'NewGroup',
+    NewInviteEmail: 'NewInviteEmail',
+    NewLayerOptions: 'NewLayerOptions',
+    UpdateComponentSettings: 'UpdateComponentSettings',
+    UpdateBody: 'UpdateBody',
+    SurveyListDetails: 'SurveyListDetails',
+    FormElementFullDetails: 'FormElementFullDetails',
+    SurveyAppRule: 'SurveyAppRule',
+    SurveyAppFormElement: 'SurveyAppFormElement',
+    SurveyAppSurvey: 'SurveyAppSurvey',
+    ParticipantListDetails: 'ParticipantListDetails',
+    UserListDetails: 'UserListDetails',
+    InviteDetails: 'InviteDetails',
+    InviteEmailDetails: 'InviteEmailDetails'
+  }
+}

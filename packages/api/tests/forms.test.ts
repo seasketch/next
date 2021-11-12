@@ -343,6 +343,7 @@ describe("Forms", () => {
         }
       );
     });
+    test.todo("Copying templates copies all logic rules and conditions");
   });
 });
 
@@ -669,107 +670,6 @@ describe("Form Fields", () => {
         }
       );
     });
-  });
-});
-
-describe("Conditional Field Rendering Rules", () => {
-  test("CRUD operations limited to admins (sketch_classes)", async () => {
-    await verifyCRUDOpsLimitedToAdmins(pool, {
-      create: async (conn, projectId, adminId, userIds) => {
-        const sketchClassId = await conn.oneFirst(
-          sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
-        );
-        const form = await conn.one(
-          sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
-        );
-        const fieldA = await conn.one(
-          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
-            form.id
-          }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
-        );
-        const fieldB = await conn.one(
-          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
-            form.id
-          }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
-        );
-        return sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${
-          fieldB.id
-        }, ${fieldA.id}, ${3}, '=') returning *`;
-      },
-      update: (recordId) =>
-        sql`update form_conditional_rendering_rules set operator = '<' where id = ${recordId} returning *`,
-      delete: (recordId) => {
-        return sql`delete from form_conditional_rendering_rules where id = ${recordId} returning *`;
-      },
-    });
-  });
-
-  test("CRUD operations limited to admins (surveys)", async () => {
-    await verifyCRUDOpsLimitedToAdmins(pool, {
-      create: async (conn, projectId, adminId, userIds) => {
-        const surveyId = await conn.oneFirst(
-          sql`select id from make_survey('Survey A', ${projectId}, null)`
-        );
-        const form = await conn.one(
-          sql`select * from forms where survey_id = ${surveyId}`
-        );
-        const fieldA = await conn.one(
-          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
-            form.id
-          }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
-        );
-        const fieldB = await conn.one(
-          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
-            form.id
-          }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
-        );
-        return sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${
-          fieldB.id
-        }, ${fieldA.id}, ${3}, '=') returning *`;
-      },
-      update: (recordId) =>
-        sql`update form_conditional_rendering_rules set operator = '<' where id = ${recordId} returning *`,
-      delete: (recordId) => {
-        return sql`delete from form_conditional_rendering_rules where id = ${recordId} returning *`;
-      },
-    });
-  });
-
-  test("Can be viewed by anyone", async () => {
-    await projectTransaction(
-      pool,
-      "public",
-      async (conn, projectId, adminId, userIds) => {
-        await createSession(conn, adminId, true, false, projectId);
-        const sketchClassId = await conn.oneFirst(
-          sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
-        );
-        const form = await conn.one(
-          sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
-        );
-        const fieldA = await conn.one(
-          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
-            form.id
-          }, ${createBody("field a")}, 'field_a', 'ShortText') returning *`
-        );
-        const fieldB = await conn.one(
-          sql`insert into form_elements (form_id, body, export_id, type_id) values (${
-            form.id
-          }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
-        );
-        const rule = await conn.one(
-          sql`insert into form_conditional_rendering_rules (field_id, predicate_field_id, value, operator) values (${
-            fieldB.id
-          }, ${fieldA.id}, ${3}, '=') returning *`
-        );
-        expect(rule.field_id).toBe(fieldB.id);
-        await createSession(conn, userIds[0], true, false, projectId);
-        const rules = await conn.many(
-          sql`select * from form_conditional_rendering_rules`
-        );
-        expect(rules.length).toBe(1);
-      }
-    );
   });
 });
 

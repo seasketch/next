@@ -251,7 +251,6 @@ If this happens SeaSketch will not be able to send any invitations to the user.
     "FormTemplateType.SKETCHES": `Template should only be listed for *SketchClasses*.`,
     "FormTemplateType.SURVEYS_AND_SKETCHES": `Template should be an option for both types.`,
     "Form.formElements": `List of all FormElements in this form.`,
-    "FormElement.conditionalRenderingRules": `Set of rules that determine the visibility of this field.`,
     "FieldRuleOperator.LESS_THAN": `Predicate field value is less than specified value`,
     "FieldRuleOperator.IS_BLANK": `Empty string input or no choice selection`,
     "FieldRuleOperator.CONTAINS": `String contains value`,

@@ -175,4 +175,11 @@ function validate(
   }
 }
 
+ShortText.icon = (
+  <div className="bg-blue-900 w-full h-full font-bold text-center flex justify-center items-center text-white">
+    {/*eslint-disable-next-line i18next/no-literal-string*/}
+    <span className="text-2xl">T</span>
+  </div>
+);
+
 export default ShortText;

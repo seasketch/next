@@ -9,6 +9,7 @@
     "bradymholt.pgformatter",
     "apollographql.vscode-apollo",
     "ms-azuretools.vscode-docker",
-    "bradlc.vscode-tailwindcss"
+    "bradlc.vscode-tailwindcss",
+    "forbeslindesay.vscode-sql-template-literal"
   ]
 }

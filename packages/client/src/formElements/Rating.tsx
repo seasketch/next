@@ -1,6 +1,8 @@
+import { StarIcon } from "@heroicons/react/solid";
 import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
+  adminValueInputCommonClassNames,
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
@@ -103,5 +105,39 @@ Rating.description = <Trans>Numeric rating</Trans>;
 Rating.defaultBody = questionBodyFromMarkdown(`
 # 
 `);
+
+Rating.icon = (
+  <div className="bg-yellow-200 w-full h-full font-bold text-center flex justify-center items-center  italic text-white">
+    <StarIcon className="w-2/3 text-yellow-600" />
+  </div>
+);
+
+Rating.adminValueInput = function ({
+  value,
+  onChange,
+  componentSettings,
+}: {
+  value: any;
+  onChange: (value: any) => void;
+  componentSettings: RatingProps;
+}) {
+  const stars = Array.from(Array(componentSettings.max || 5).keys()).map(
+    (i) => i + 1
+  );
+  return (
+    <select
+      className={`bg-transparent border-none text-center w-full ${adminValueInputCommonClassNames}`}
+      value={value || "NULL"}
+      onChange={(e) => onChange(parseInt(e.target.value))}
+    >
+      {value === null && <option value="NULL"> </option>}
+      {stars.map((star) => (
+        <option key={star} value={star}>
+          {star}
+        </option>
+      ))}
+    </select>
+  );
+};
 
 export default Rating;

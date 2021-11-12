@@ -1,0 +1,29 @@
+fragment LogicRuleEditorFormElement on FormElement {
+  id
+  body
+  typeId
+  jumpToId
+  componentSettings
+  exportId
+  isRequired
+  type {
+    supportedOperators
+    isInput
+  }
+}
+
+fragment LogicRuleEditorRule on FormLogicRule {
+  booleanOperator
+  command
+  formElementId
+  id
+  jumpToId
+  position
+  conditions {
+    id
+    operator
+    ruleId
+    subjectId
+    value
+  }
+}

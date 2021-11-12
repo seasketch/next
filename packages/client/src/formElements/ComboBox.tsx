@@ -1,13 +1,14 @@
 import { useContext, useEffect, useState, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
+  adminValueInputCommonClassNames,
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import { useCombobox } from "downshift";
-import { SelectorIcon } from "@heroicons/react/outline";
+import { SearchIcon, SelectorIcon } from "@heroicons/react/outline";
 import { SurveyStyleContext } from "../surveys/appearance";
 import FormElementOptionsInput, {
   FormElementOption,
@@ -15,6 +16,7 @@ import FormElementOptionsInput, {
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import { XIcon } from "@heroicons/react/outline";
+import Button from "../components/Button";
 
 export type ComboBoxProps = {
   options?: FormElementOption[];
@@ -234,6 +236,22 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
                   />
                 }
               />
+
+              <Button
+                small
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      t(
+                        "Are you sure? You can change the element type back to ComboBox later if you like."
+                      )
+                    )
+                  ) {
+                    updateBaseSetting("typeId")("MultipleChoice");
+                  }
+                }}
+                label={t("Change to Multiple Choice")}
+              />
               <FormElementOptionsInput
                 initialValue={props.componentSettings.options || []}
                 onChange={updateComponentSetting(
@@ -265,5 +283,43 @@ ComboBox.defaultComponentSettings = {
     value: str,
   })),
 };
+
+ComboBox.icon = (
+  <div className="bg-blue-500 w-full h-full font-bold text-center flex justify-center items-center text-white">
+    {/*eslint-disable-next-line i18next/no-literal-string*/}
+    <SearchIcon className="w-2/3 h-2/3" />
+    {/* <span className="text-2xl">T</span> */}
+  </div>
+);
+
+export function ChoiceAdminValueInput({
+  value,
+  onChange,
+  componentSettings,
+}: {
+  value: any;
+  onChange: (value: any) => void;
+  componentSettings: { options?: FormElementOption[] };
+}) {
+  const { t } = useTranslation("admin:surveys");
+  return (
+    <select
+      className={`bg-transparent border-none text-center w-full ${adminValueInputCommonClassNames}`}
+      value={value || "NULL"}
+      onChange={(e) => {
+        onChange(e.target.value === "NULL" ? null : e.target.value);
+      }}
+    >
+      {value === null && <option value="NULL"> </option>}
+      {componentSettings.options?.map((option) => (
+        <option key={option.label} value={option.value || option.label}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+ComboBox.adminValueInput = ChoiceAdminValueInput;
 
 export default ComboBox;

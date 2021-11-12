@@ -33,4 +33,11 @@ Use this page to explain **something**, provide [links](https://seasketch.org), 
 
 `);
 
+Statement.icon = (
+  <div className="bg-gray-800 w-full h-full font-bold text-center flex justify-center items-center  italic text-white">
+    {/*eslint-disable-next-line i18next/no-literal-string*/}
+    <span className="text-4xl font-serif -mb-4 -ml-1">”</span>
+  </div>
+);
+
 export default Statement;

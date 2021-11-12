@@ -98,14 +98,27 @@ function App() {
             />
             <Route path="/:slug">
               <Route
-                path="/:slug/survey-editor/:surveyId"
+                path="/:slug/survey-editor/:surveyId/:subpath?"
                 render={(history) => {
-                  const { slug, surveyId } = history.match.params;
+                  const { slug, surveyId, subpath } = history.match.params;
+                  let formElementId: number | null = null;
+                  let route: "formElement" | "basic" | "logic" = "formElement";
+                  if (subpath) {
+                    if (subpath === "basic") {
+                      route = "basic";
+                    } else if (subpath === "logic") {
+                      route = "logic";
+                    } else {
+                      formElementId = parseInt(subpath);
+                    }
+                  }
                   return (
                     <ProjectAccessGate admin={true}>
                       <LazySurveyFormEditor
                         slug={slug}
                         surveyId={parseInt(surveyId)}
+                        formElementId={formElementId}
+                        route={route}
                       />
                     </ProjectAccessGate>
                   );

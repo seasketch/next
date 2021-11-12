@@ -245,6 +245,27 @@ COMMENT ON TYPE public.form_field_type IS 'In the future new field types can be 
 
 
 --
+-- Name: form_logic_command; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.form_logic_command AS ENUM (
+    'JUMP',
+    'SHOW',
+    'HIDE'
+);
+
+
+--
+-- Name: form_logic_operator; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.form_logic_operator AS ENUM (
+    'AND',
+    'OR'
+);
+
+
+--
 -- Name: form_template_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1790,6 +1811,53 @@ $$;
 
 
 --
+-- Name: before_insert_or_update_form_logic_conditions_100(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_insert_or_update_form_logic_conditions_100() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    form_element_type_id text;
+    is_supported boolean;
+  begin
+    select type_id into form_element_type_id from form_elements where id = NEW.subject_id;
+    select ARRAY[NEW.operator] && supported_operators into is_supported from form_element_types where component_name = form_element_type_id limit 1;
+    if is_supported = false then
+      raise exception 'Unsupported operator "%" for type %', NEW.operator, form_element_type_id;
+    end if;
+    return NEW;
+  end;
+$$;
+
+
+--
+-- Name: before_insert_or_update_form_logic_rules_100(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_insert_or_update_form_logic_rules_100() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  begin
+    IF NEW.command = 'JUMP' THEN
+      IF NEW.jump_to_id is null THEN
+        raise exception 'jump_to_id must be set if command=JUMP';
+      END IF;
+    ELSE
+      IF NEW.jump_to_id is not null then
+        raise exception 'jump_to_id must be null if command != JUMP';
+      end if;
+    END IF;
+    IF NEW.position is null then
+      NEW.position = (select coalesce(max(position), 0) + 1 from form_logic_rules where form_element_id in (select id from form_elements where form_id = (select form_id from form_elements where id = NEW.form_element_id)));
+      -- raise exception 'position is null %', NEW.position;
+    end if;
+    return NEW;
+  end;
+$$;
+
+
+--
 -- Name: before_insert_or_update_table_of_contents_items_trigger(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2287,6 +2355,7 @@ CREATE TABLE public.form_elements (
     background_height integer,
     text_variant public.form_element_text_variant DEFAULT 'DYNAMIC'::public.form_element_text_variant NOT NULL,
     background_image_placement public.form_element_background_image_placement DEFAULT 'TOP'::public.form_element_background_image_placement NOT NULL,
+    jump_to_id integer,
     CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
     CONSTRAINT form_fields_position_check CHECK (("position" > 0))
 );
@@ -2415,6 +2484,15 @@ Indicates whether the form element should be displayed with dark or light text v
 
 COMMENT ON COLUMN public.form_elements.background_image_placement IS '
 Layout of image in relation to form_element content.
+';
+
+
+--
+-- Name: COLUMN form_elements.jump_to_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.jump_to_id IS '
+Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`.
 ';
 
 
@@ -3440,6 +3518,57 @@ $$;
 
 
 --
+-- Name: form_logic_rules; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.form_logic_rules (
+    id integer NOT NULL,
+    form_element_id integer NOT NULL,
+    boolean_operator public.form_logic_operator DEFAULT 'OR'::public.form_logic_operator NOT NULL,
+    command public.form_logic_command NOT NULL,
+    jump_to_id integer,
+    "position" integer NOT NULL
+);
+
+
+--
+-- Name: TABLE form_logic_rules; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.form_logic_rules IS '
+@omit all
+Form logic rules can be used to hide or show FormElements based on the values of 
+preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
+';
+
+
+--
+-- Name: create_survey_jump_rule(integer, integer, public.form_logic_operator, public.field_rule_operator); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator) RETURNS public.form_logic_rules
+    LANGUAGE plpgsql
+    AS $$
+    declare
+      logic_rule form_logic_rules;
+    begin
+      insert into form_logic_rules (form_element_id, boolean_operator, command, jump_to_id) values ("formElementId", 'OR', 'JUMP', "jumpToId") returning * into logic_rule;
+      insert into form_logic_conditions (rule_id, subject_id, operator) values (logic_rule.id, "formElementId", "operator");
+      return logic_rule;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator) IS '
+Initializes a new FormLogicRule with a single condition and command=JUMP.
+';
+
+
+--
 -- Name: survey_responses; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4102,7 +4231,8 @@ CREATE TABLE public.form_element_types (
     is_surveys_only boolean DEFAULT false NOT NULL,
     is_hidden boolean DEFAULT false NOT NULL,
     is_single_use_only boolean DEFAULT false NOT NULL,
-    is_required_for_surveys boolean DEFAULT false NOT NULL
+    is_required_for_surveys boolean DEFAULT false NOT NULL,
+    supported_operators public.field_rule_operator[] DEFAULT '{}'::public.field_rule_operator[] NOT NULL
 );
 
 
@@ -4156,6 +4286,51 @@ $$;
 
 
 --
+-- Name: form_logic_conditions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.form_logic_conditions (
+    id integer NOT NULL,
+    rule_id integer NOT NULL,
+    subject_id integer NOT NULL,
+    operator public.field_rule_operator DEFAULT '='::public.field_rule_operator NOT NULL,
+    value jsonb
+);
+
+
+--
+-- Name: TABLE form_logic_conditions; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.form_logic_conditions IS '
+@omit all
+Conditions are nested within FormLogicRules. In many cases there may be
+only a single condition, but in others the FormLogicRule.booleanOperator
+property defines how they are applied.
+';
+
+
+--
+-- Name: form_logic_rules_conditions(public.form_logic_rules); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.form_logic_rules_conditions(rule public.form_logic_rules) RETURNS SETOF public.form_logic_conditions
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from form_logic_conditions where rule_id = rule.id;
+  $$;
+
+
+--
+-- Name: FUNCTION form_logic_rules_conditions(rule public.form_logic_rules); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.form_logic_rules_conditions(rule public.form_logic_rules) IS '
+@simpleCollections only
+';
+
+
+--
 -- Name: forms_form_elements(public.forms); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4173,6 +4348,28 @@ CREATE FUNCTION public.forms_form_elements(f public.forms) RETURNS SETOF public.
 COMMENT ON FUNCTION public.forms_form_elements(f public.forms) IS '
 @simpleCollections only
 Lists FormElements in order for rendering
+';
+
+
+--
+-- Name: forms_logic_rules(public.forms); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.forms_logic_rules(form public.forms) RETURNS SETOF public.form_logic_rules
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from form_logic_rules where form_element_id in (
+      select id from form_elements where form_id = form.id
+    ) order by position asc;
+  $$;
+
+
+--
+-- Name: FUNCTION forms_logic_rules(form public.forms); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.forms_logic_rules(form public.forms) IS '
+@simpleCollections only
 ';
 
 
@@ -7574,6 +7771,44 @@ Use this instead of trying to manage the position of form elements individually.
 
 
 --
+-- Name: set_form_logic_rule_order(integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_form_logic_rule_order("ruleIds" integer[]) RETURNS SETOF public.form_logic_rules
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    form_ids int[];
+    form_elementid int;
+    pos int;
+    rule record;
+  begin
+    select array_agg(form_id) into form_ids from form_elements where id in (
+      select form_element_id from form_logic_rules where id = any("ruleIds")
+    );
+    if array_length(form_ids, 1) > 1 then
+      raise exception 'Can only change rule order for a single form at one time';
+    end if;
+    select form_element_id into form_elementid from form_logic_rules where id = any("ruleIds") limit 1;
+    
+    if session_is_admin(project_id_from_field_id(form_elementid)) then
+      pos = 1;
+      -- select rules in order of ruleIds
+      -- loop through each, setting a position
+      for rule in select * from form_logic_rules where form_element_id in (select id from form_elements where form_id = any(form_ids)) order by array_position("ruleIds", id) loop
+        update form_logic_rules set position = pos where id = rule.id;
+        pos = pos + 1;
+      end loop;
+      -- return all the fields in this form
+      return query select * from form_logic_rules where form_logic_rules.form_element_id in (select id from form_elements where form_id = any(form_ids)) order by position asc;
+    else
+      raise exception 'Permission denied';
+    end if;
+  end
+$$;
+
+
+--
 -- Name: forums; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -9280,70 +9515,11 @@ forum threads for which they are a participant.
 
 
 --
--- Name: form_conditional_rendering_rules; Type: TABLE; Schema: public; Owner: -
+-- Name: form_fields_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.form_conditional_rendering_rules (
-    id integer NOT NULL,
-    field_id integer NOT NULL,
-    predicate_field_id integer NOT NULL,
-    value text,
-    operator public.field_rule_operator DEFAULT '='::public.field_rule_operator NOT NULL,
-    CONSTRAINT form_conditional_rendering_rules_check CHECK ((field_id <> predicate_field_id)),
-    CONSTRAINT form_conditional_rendering_rules_check1 CHECK ((field_id <> predicate_field_id))
-);
-
-
---
--- Name: TABLE form_conditional_rendering_rules; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.form_conditional_rendering_rules IS '
-@omit all
-If any rendering rules are set, at least one rule must evaluate true for the 
-field to be displayed to users. isRequired rules on *FormFields* should not be
-enforced for fields that are hidden by a rule.
-
-An example of a rule would be:
-
-SHOW fieldB if fieldA GREATER_THAN 5
-';
-
-
---
--- Name: COLUMN form_conditional_rendering_rules.field_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_conditional_rendering_rules.field_id IS 'Field that will be hidden unless the rule evaluates true';
-
-
---
--- Name: COLUMN form_conditional_rendering_rules.predicate_field_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_conditional_rendering_rules.predicate_field_id IS 'Field that is evaluated';
-
-
---
--- Name: COLUMN form_conditional_rendering_rules.value; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_conditional_rendering_rules.value IS 'Value that predicate_field.value is compared to';
-
-
---
--- Name: COLUMN form_conditional_rendering_rules.operator; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_conditional_rendering_rules.operator IS 'Comparison operation';
-
-
---
--- Name: form_conditional_rendering_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.form_conditional_rendering_rules ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.form_conditional_rendering_rules_id_seq
+ALTER TABLE public.form_elements ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.form_fields_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -9353,11 +9529,25 @@ ALTER TABLE public.form_conditional_rendering_rules ALTER COLUMN id ADD GENERATE
 
 
 --
--- Name: form_fields_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: form_logic_conditions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-ALTER TABLE public.form_elements ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.form_fields_id_seq
+ALTER TABLE public.form_logic_conditions ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.form_logic_conditions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: form_logic_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.form_logic_rules ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.form_logic_rules_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -10140,14 +10330,6 @@ ALTER TABLE ONLY public.survey_invites
 
 
 --
--- Name: form_conditional_rendering_rules form_conditional_rendering_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.form_conditional_rendering_rules
-    ADD CONSTRAINT form_conditional_rendering_rules_pkey PRIMARY KEY (id);
-
-
---
 -- Name: form_element_types form_element_types_label_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10169,6 +10351,22 @@ ALTER TABLE ONLY public.form_element_types
 
 ALTER TABLE ONLY public.form_elements
     ADD CONSTRAINT form_fields_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: form_logic_conditions form_logic_conditions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_logic_conditions
+    ADD CONSTRAINT form_logic_conditions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: form_logic_rules form_logic_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_logic_rules
+    ADD CONSTRAINT form_logic_rules_pkey PRIMARY KEY (id);
 
 
 --
@@ -10640,13 +10838,6 @@ CREATE INDEX data_sources_project_id_idx ON public.data_sources USING btree (pro
 --
 
 CREATE INDEX email_notification_preferences_user_id_idx ON public.email_notification_preferences USING btree (user_id);
-
-
---
--- Name: form_conditional_rendering_rules_field_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX form_conditional_rendering_rules_field_id_idx ON public.form_conditional_rendering_rules USING btree (field_id);
 
 
 --
@@ -11154,6 +11345,20 @@ CREATE TRIGGER before_insert_or_update_data_sources BEFORE INSERT OR UPDATE ON p
 
 
 --
+-- Name: form_logic_conditions before_insert_or_update_form_logic_conditions_100_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_or_update_form_logic_conditions_100_trigger BEFORE INSERT OR UPDATE ON public.form_logic_conditions FOR EACH ROW EXECUTE FUNCTION public.before_insert_or_update_form_logic_conditions_100();
+
+
+--
+-- Name: form_logic_rules before_insert_or_update_form_logic_rules_100_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_or_update_form_logic_rules_100_trigger BEFORE INSERT OR UPDATE ON public.form_logic_rules FOR EACH ROW EXECUTE FUNCTION public.before_insert_or_update_form_logic_rules_100();
+
+
+--
 -- Name: table_of_contents_items before_insert_or_update_table_of_contents_items; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -11477,29 +11682,11 @@ ALTER TABLE ONLY public.email_notification_preferences
 
 
 --
--- Name: form_conditional_rendering_rules form_conditional_rendering_rules_field_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: form_elements form_elements_jump_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.form_conditional_rendering_rules
-    ADD CONSTRAINT form_conditional_rendering_rules_field_id_fkey FOREIGN KEY (field_id) REFERENCES public.form_elements(id);
-
-
---
--- Name: CONSTRAINT form_conditional_rendering_rules_field_id_fkey ON form_conditional_rendering_rules; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON CONSTRAINT form_conditional_rendering_rules_field_id_fkey ON public.form_conditional_rendering_rules IS '
-@foreignFieldName conditionalRenderingRules
-@simpleCollections only
-';
-
-
---
--- Name: form_conditional_rendering_rules form_conditional_rendering_rules_predicate_field_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.form_conditional_rendering_rules
-    ADD CONSTRAINT form_conditional_rendering_rules_predicate_field_id_fkey FOREIGN KEY (predicate_field_id) REFERENCES public.form_elements(id);
+ALTER TABLE ONLY public.form_elements
+    ADD CONSTRAINT form_elements_jump_to_id_fkey FOREIGN KEY (jump_to_id) REFERENCES public.form_elements(id) ON DELETE SET NULL;
 
 
 --
@@ -11523,6 +11710,30 @@ ALTER TABLE ONLY public.form_elements
 --
 
 COMMENT ON CONSTRAINT form_fields_form_id_fkey ON public.form_elements IS '@omit';
+
+
+--
+-- Name: form_logic_conditions form_logic_conditions_subject_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_logic_conditions
+    ADD CONSTRAINT form_logic_conditions_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.form_elements(id) ON DELETE CASCADE;
+
+
+--
+-- Name: form_logic_rules form_logic_rules_form_element_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_logic_rules
+    ADD CONSTRAINT form_logic_rules_form_element_id_fkey FOREIGN KEY (form_element_id) REFERENCES public.form_elements(id) ON DELETE CASCADE;
+
+
+--
+-- Name: form_logic_rules form_logic_rules_jump_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_logic_rules
+    ADD CONSTRAINT form_logic_rules_jump_to_id_fkey FOREIGN KEY (jump_to_id) REFERENCES public.form_elements(id) ON DELETE CASCADE;
 
 
 --
@@ -12259,26 +12470,6 @@ CREATE POLICY email_notification_preferences_owner ON public.email_notification_
 
 
 --
--- Name: form_conditional_rendering_rules; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.form_conditional_rendering_rules ENABLE ROW LEVEL SECURITY;
-
---
--- Name: form_conditional_rendering_rules form_conditional_rendering_rules_admin; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY form_conditional_rendering_rules_admin ON public.form_conditional_rendering_rules TO seasketch_user USING (public.session_is_admin(public.project_id_from_field_id(field_id))) WITH CHECK (public.session_is_admin(public.project_id_from_field_id(field_id)));
-
-
---
--- Name: form_conditional_rendering_rules form_conditional_rendering_rules_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY form_conditional_rendering_rules_select ON public.form_conditional_rendering_rules FOR SELECT TO anon USING (true);
-
-
---
 -- Name: form_elements; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12289,6 +12480,50 @@ ALTER TABLE public.form_elements ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY form_fields_admin ON public.form_elements TO seasketch_user USING (public.session_is_admin(public.project_id_for_form_id(form_id))) WITH CHECK (public.session_is_admin(public.project_id_for_form_id(form_id)));
+
+
+--
+-- Name: form_logic_conditions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.form_logic_conditions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: form_logic_conditions form_logic_conditions_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY form_logic_conditions_admin ON public.form_logic_conditions TO seasketch_user USING (public.session_is_admin(public.project_id_from_field_id(( SELECT form_logic_rules.form_element_id
+   FROM public.form_logic_rules
+  WHERE (form_logic_rules.id = form_logic_conditions.rule_id))))) WITH CHECK (public.session_is_admin(public.project_id_from_field_id(( SELECT form_logic_rules.form_element_id
+   FROM public.form_logic_rules
+  WHERE (form_logic_rules.id = form_logic_conditions.rule_id)))));
+
+
+--
+-- Name: form_logic_conditions form_logic_conditions_unprivileged; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY form_logic_conditions_unprivileged ON public.form_logic_conditions FOR SELECT USING (true);
+
+
+--
+-- Name: form_logic_rules; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.form_logic_rules ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: form_logic_rules form_logic_rules_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY form_logic_rules_admin ON public.form_logic_rules TO seasketch_user USING (public.session_is_admin(public.project_id_from_field_id(form_element_id))) WITH CHECK (public.session_is_admin(public.project_id_from_field_id(form_element_id)));
+
+
+--
+-- Name: form_logic_rules form_logic_rules_unprivileged; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY form_logic_rules_unprivileged ON public.form_logic_rules FOR SELECT USING (true);
 
 
 --
@@ -13844,6 +14079,20 @@ REVOKE ALL ON FUNCTION public.before_insert_or_update_data_sources_trigger() FRO
 
 
 --
+-- Name: FUNCTION before_insert_or_update_form_logic_conditions_100(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_insert_or_update_form_logic_conditions_100() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION before_insert_or_update_form_logic_rules_100(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_insert_or_update_form_logic_rules_100() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION before_insert_or_update_table_of_contents_items_trigger(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -14172,7 +14421,7 @@ REVOKE ALL ON FUNCTION public.citext_smaller(public.citext, public.citext) FROM 
 --
 
 GRANT SELECT ON TABLE public.form_elements TO anon;
-GRANT INSERT,DELETE ON TABLE public.form_elements TO seasketch_user;
+GRANT ALL ON TABLE public.form_elements TO seasketch_user;
 
 
 --
@@ -14645,6 +14894,22 @@ GRANT ALL ON FUNCTION public.create_survey_invites("surveyId" integer, "includeP
 
 
 --
+-- Name: TABLE form_logic_rules; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.form_logic_rules TO anon;
+GRANT ALL ON TABLE public.form_logic_rules TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator) TO seasketch_user;
+
+
+--
 -- Name: TABLE survey_responses; Type: ACL; Schema: public; Owner: -
 --
 
@@ -14970,11 +15235,35 @@ GRANT ALL ON FUNCTION public.form_elements_type(e public.form_elements) TO anon;
 
 
 --
+-- Name: TABLE form_logic_conditions; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.form_logic_conditions TO anon;
+GRANT ALL ON TABLE public.form_logic_conditions TO seasketch_user;
+
+
+--
+-- Name: FUNCTION form_logic_rules_conditions(rule public.form_logic_rules); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.form_logic_rules_conditions(rule public.form_logic_rules) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.form_logic_rules_conditions(rule public.form_logic_rules) TO anon;
+
+
+--
 -- Name: FUNCTION forms_form_elements(f public.forms); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.forms_form_elements(f public.forms) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.forms_form_elements(f public.forms) TO anon;
+
+
+--
+-- Name: FUNCTION forms_logic_rules(form public.forms); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.forms_logic_rules(form public.forms) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.forms_logic_rules(form public.forms) TO anon;
 
 
 --
@@ -17916,6 +18205,14 @@ GRANT ALL ON FUNCTION public.session_on_acl(acl_id integer) TO anon;
 
 REVOKE ALL ON FUNCTION public.set_form_element_order("elementIds" integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.set_form_element_order("elementIds" integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION set_form_logic_rule_order("ruleIds" integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_form_logic_rule_order("ruleIds" integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_form_logic_rule_order("ruleIds" integer[]) TO seasketch_user;
 
 
 --
@@ -21562,42 +21859,6 @@ GRANT SELECT(bucket) ON TABLE public.data_sources_buckets TO seasketch_user;
 --
 
 GRANT SELECT,UPDATE ON TABLE public.email_notification_preferences TO seasketch_user;
-
-
---
--- Name: TABLE form_conditional_rendering_rules; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.form_conditional_rendering_rules TO anon;
-GRANT INSERT,DELETE ON TABLE public.form_conditional_rendering_rules TO seasketch_user;
-
-
---
--- Name: COLUMN form_conditional_rendering_rules.field_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(field_id) ON TABLE public.form_conditional_rendering_rules TO seasketch_user;
-
-
---
--- Name: COLUMN form_conditional_rendering_rules.predicate_field_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(predicate_field_id) ON TABLE public.form_conditional_rendering_rules TO seasketch_user;
-
-
---
--- Name: COLUMN form_conditional_rendering_rules.value; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(value) ON TABLE public.form_conditional_rendering_rules TO seasketch_user;
-
-
---
--- Name: COLUMN form_conditional_rendering_rules.operator; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(operator) ON TABLE public.form_conditional_rendering_rules TO seasketch_user;
 
 
 --

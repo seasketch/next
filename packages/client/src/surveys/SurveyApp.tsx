@@ -1,11 +1,10 @@
-import { MouseEventHandler, useEffect, useRef, useState } from "react";
+import { MouseEventHandler, useEffect, useRef, useState, useMemo } from "react";
 import { useHistory, useParams } from "react-router";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import {
-  FormElement,
-  FormElementType,
-  Maybe,
+  SurveyAppFormElementFragment,
+  SurveyAppRuleFragment,
   useCreateResponseMutation,
   useSurveyQuery,
 } from "../generated/graphql";
@@ -28,6 +27,12 @@ import {
   SurveyContext,
 } from "../formElements/FormElement";
 import { components } from "../formElements";
+import { getSurveyPagingState, SurveyPagingState } from "./paging";
+import {
+  collectHeaders,
+  collectQuestion,
+  collectText,
+} from "../admin/surveys/collectText";
 require("./surveys.css");
 
 interface FormElementState {
@@ -36,19 +41,6 @@ interface FormElementState {
   errors: boolean;
   submissionAttempted?: boolean;
 }
-
-type FE = Pick<
-  FormElement,
-  | "typeId"
-  | "id"
-  | "isRequired"
-  | "position"
-  | "unsplashAuthorName"
-  | "unsplashAuthorUrl"
-  | "body"
-  | "componentSettings"
-> &
-  FormElementStyleProps;
 
 /**
  * Coordinates the rendering of FormElements, collection of user data, maintenance of response state,
@@ -78,17 +70,142 @@ function SurveyApp() {
     onError,
   });
   const [formElement, setFormElement] = useState<{
-    current?: FE;
-    exiting?: FE;
+    current?: SurveyAppFormElementFragment;
+    exiting?: SurveyAppFormElementFragment;
   }>({});
+
+  /**
+   * Update response state for just the given FormElement. Partial state can be supplied to be
+   * applied to previous state.
+   * @param formElement
+   * @param state
+   */
+  async function updateState(
+    formElement: { id: number },
+    state: Partial<FormElementState>
+  ) {
+    return setResponseState((prev) => {
+      return {
+        ...prev,
+        [formElement.id]: {
+          ...prev[formElement.id],
+          ...state,
+        },
+      };
+    });
+  }
+
+  /**
+   * Whether user should be allowed to proceed to the next page based on input
+   * and validation state
+   * @returns boolean
+   */
+  function canAdvance() {
+    if (!formElement.current) {
+      return false;
+    }
+    const state = responseState[formElement.current.id];
+    if (
+      !formElement.current.isRequired ||
+      (state?.value !== undefined && !state?.errors)
+    ) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  let index = 0;
+  if (position) {
+    index = parseInt(position);
+  }
+
+  const elements = sortFormElements(data?.survey?.form?.formElements || []);
+  const [responseState, setResponseState] = useLocalStorage<{
+    [id: number]: FormElementState;
+    facilitated: boolean;
+  }>(
+    // eslint-disable-next-line i18next/no-literal-string
+    `survey-${surveyId}`,
+    { facilitated: false }
+  );
+
+  const pagingState = useMemo(() => {
+    if (data?.survey?.form?.logicRules) {
+      return getSurveyPagingState(
+        index,
+        elements,
+        data.survey.form.logicRules || [],
+        Object.keys(responseState).reduce((answers, id) => {
+          if (id !== "facilitated") {
+            const n = parseInt(id);
+            answers[n] = responseState[n].value;
+          }
+          return answers;
+        }, {} as { [formElementId: number]: any })
+      );
+    } else {
+      return null;
+    }
+  }, [index, data?.survey?.form?.logicRules, elements, responseState]);
+  const [autoAdvance, setAutoAdvance] = useState(false);
+
+  async function handleAdvance(e?: any) {
+    updateState(formElement.current!, {
+      submissionAttempted: true,
+    });
+    if (canAdvance()) {
+      setFormElement((prev) => ({ ...prev, exiting: prev.current }));
+      if (pagingState?.isLastQuestion) {
+        const responseData: { [elementId: number]: any } = {};
+        for (const element of elements.filter((e) => e.type!.isInput)) {
+          responseData[element.id] = responseState[element.id]?.value;
+        }
+        const response = await createResponse({
+          variables: {
+            surveyId: data!.survey!.id,
+            isDraft: false,
+            bypassedDuplicateSubmissionControl: false,
+            facilitated: !!responseState.facilitated,
+            responseData,
+            practice: !!practice,
+          },
+        });
+        if (response && !response.errors) {
+          setResponseState({ facilitated: false });
+          history.push(
+            // eslint-disable-next-line i18next/no-literal-string
+            `/${slug}/surveys/${surveyId}/${elements.indexOf(
+              pagingState.nextFormElement!
+            )}/${practice ? "practice" : ""}`
+          );
+        }
+      } else if (pagingState) {
+        history.push(
+          // eslint-disable-next-line i18next/no-literal-string
+          `/${slug}/surveys/${surveyId}/${elements.indexOf(
+            pagingState.nextFormElement!
+          )}/${practice ? "practice" : ""}`
+        );
+      } else {
+        throw new Error("Unknown paging state");
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (pagingState && autoAdvance) {
+      handleAdvance(pagingState);
+      setAutoAdvance(false);
+    }
+  }, [autoAdvance, pagingState]);
+
   const surveyButtonFooter = useRef<HTMLDivElement>(null);
 
   const style = useCurrentStyle(
     data?.survey?.form?.formElements,
     formElement.exiting || formElement.current
   );
-
-  const elements = sortFormElements(data?.survey?.form?.formElements || []);
 
   useEffect(() => {
     if (surveyId && elements.length) {
@@ -103,113 +220,29 @@ function SurveyApp() {
     }
   }, [data?.survey?.form?.formElements, position, surveyId]);
 
-  const [responseState, setResponseState] = useLocalStorage<{
-    [id: number]: FormElementState;
-    facilitated: boolean;
-    // eslint-disable-next-line i18next/no-literal-string
-  }>(
-    // eslint-disable-next-line i18next/no-literal-string
-    `survey-${surveyId}`,
-    { facilitated: false }
-  );
-
-  if (!data?.survey?.form?.formElements || loading) {
+  if (!data?.survey?.form?.formElements || !pagingState || loading) {
     return <div></div>;
   } else if (!data?.survey) {
     return <div>{t("Survey not found")}</div>;
   } else if (!formElement.current) {
     return null;
   } else {
-    const form = data.survey.form;
-    let index = 0;
-    if (position) {
-      index = parseInt(position);
-    }
+    const pagingState = getSurveyPagingState(
+      index,
+      elements,
+      data.survey.form.logicRules || [],
+      Object.keys(responseState).reduce((answers, id) => {
+        if (id !== "facilitated") {
+          const n = parseInt(id);
+          answers[n] = responseState[n].value;
+        }
+        return answers;
+      }, {} as { [formElementId: number]: any })
+    );
+
     const state = responseState[formElement.current.id];
     /* Last (question) page. True last page is ThankYou */
     const lastPage = index === elements.length - 2;
-
-    /**
-     * Update response state for just the given FormElement. Partial state can be supplied to be
-     * applied to previous state.
-     * @param formElement
-     * @param state
-     */
-    function updateState(
-      formElement: { id: number },
-      state: Partial<FormElementState>
-    ) {
-      setResponseState((prev) => {
-        return {
-          ...prev,
-          [formElement.id]: {
-            ...prev[formElement.id],
-            ...state,
-          },
-        };
-      });
-    }
-
-    /**
-     * Whether user should be allowed to proceed to the next page based on input
-     * and validation state
-     * @returns boolean
-     */
-    function canAdvance() {
-      if (!formElement.current) {
-        return false;
-      }
-      const state = responseState[formElement.current.id];
-      if (
-        !formElement.current.isRequired ||
-        (state?.value !== undefined && !state?.errors)
-      ) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-
-    async function handleAdvance(e?: any) {
-      updateState(formElement.current!, {
-        submissionAttempted: true,
-      });
-      if (canAdvance() || e?.advanceAutomatically) {
-        setFormElement((prev) => ({ ...prev, exiting: prev.current }));
-        if (lastPage) {
-          const responseData: { [elementId: number]: any } = {};
-          for (const element of elements.filter((e) => e.type!.isInput)) {
-            responseData[element.id] = responseState[element.id]?.value;
-          }
-          const response = await createResponse({
-            variables: {
-              surveyId: data!.survey!.id,
-              isDraft: false,
-              bypassedDuplicateSubmissionControl: false,
-              facilitated: !!responseState.facilitated,
-              responseData,
-              practice: !!practice,
-            },
-          });
-          if (response && !response.errors) {
-            setResponseState({ facilitated: false });
-            history.push(
-              // eslint-disable-next-line i18next/no-literal-string
-              `/${slug}/surveys/${surveyId}/${index + 1}/${
-                practice ? "practice" : ""
-              }`
-            );
-          }
-        } else {
-          history.push(
-            // eslint-disable-next-line i18next/no-literal-string
-            `/${slug}/surveys/${surveyId}/${index + 1}/${
-              practice ? "practice" : ""
-            }`
-          );
-        }
-      }
-    }
 
     const currentValue = responseState[formElement.current.id]?.value;
     return (
@@ -326,15 +359,16 @@ function SurveyApp() {
                         updateState(formElement.current!, {
                           value,
                           errors,
+                        }).then(() => {
+                          if (
+                            advancesAutomatically(formElement.current!) &&
+                            (value || !formElement.current?.isRequired)
+                          ) {
+                            setTimeout(() => {
+                              setAutoAdvance(true);
+                            }, 500);
+                          }
                         });
-                        if (
-                          advancesAutomatically(formElement.current) &&
-                          (value || !formElement.current?.isRequired)
-                        ) {
-                          setTimeout(() => {
-                            handleAdvance({ advanceAutomatically: true });
-                          }, 500);
-                        }
                       }
                     }}
                     onSubmit={handleAdvance}
@@ -359,7 +393,7 @@ function SurveyApp() {
                       <Button
                         className="mb-10"
                         label={
-                          lastPage && !!!formElement.exiting
+                          pagingState.isLastQuestion && !!!formElement.exiting
                             ? t("Complete Submission")
                             : currentValue === undefined ||
                               currentValue === null
@@ -380,10 +414,9 @@ function SurveyApp() {
             </AnimatePresence>
             {formElement.current?.typeId !== "ThankYou" && (
               <SurveyNav
+                pagingState={pagingState}
                 canAdvance={canAdvance()}
                 buttonColor={style.secondaryColor}
-                lastPage={lastPage}
-                index={parseInt(position)}
                 onPrev={() => setBackwards(true)}
                 slug={slug}
                 surveyId={surveyId}
@@ -440,54 +473,54 @@ function SurveyApp() {
 }
 
 function SurveyNav({
-  lastPage,
+  pagingState,
   buttonColor,
   onNext,
   onPrev,
-  index,
   slug,
   surveyId,
   canAdvance,
   practice,
 }: {
   canAdvance: boolean;
-  lastPage: boolean;
   buttonColor: string;
   onNext: MouseEventHandler<HTMLAnchorElement>;
   onPrev: MouseEventHandler<HTMLAnchorElement>;
-  index: number;
   slug: string;
   surveyId: string;
   practice?: string;
+  pagingState: SurveyPagingState<SurveyAppFormElementFragment>;
 }) {
   return (
     <div
       style={{ width: "fit-content", height: "fit-content" }}
       className={`z-20 fixed bottom-3 right-3 lg:left-2 ${
         practice ? "lg:top-8" : "lg:top-5"
-      } ${index === 0 && "hidden"}`}
+      } ${!pagingState.previousFormElement && "hidden"}`}
     >
-      <Link
-        onClick={onPrev}
-        to={`/${slug}/surveys/${surveyId}/${index - 1}/${
-          practice ? "practice" : ""
-        }`}
-        className="inline-block "
-      >
-        <UpArrowIcon
-          className="inline-block transition-colors duration-300"
-          style={{ color: buttonColor, width: 48, height: 48 }}
-        />
-      </Link>
-      {!lastPage && (
+      {pagingState.previousFormElement && (
+        <Link
+          onClick={onPrev}
+          to={`/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(
+            pagingState.previousFormElement
+          )}/${practice ? "practice" : ""}`}
+          className="inline-block "
+        >
+          <UpArrowIcon
+            className="inline-block transition-colors duration-300"
+            style={{ color: buttonColor, width: 48, height: 48 }}
+          />
+        </Link>
+      )}
+      {!pagingState.isLastQuestion && (
         <Link
           onClick={onNext}
           className={`inline-block ${
             !canAdvance && "opacity-50 cursor-default"
           }`}
-          to={`/${slug}/surveys/${surveyId}/${index + 1}/${
-            practice ? "practice" : ""
-          }`}
+          to={`/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(
+            pagingState.nextFormElement!
+          )}/${practice ? "practice" : ""}`}
         >
           <DownArrowIcon
             className="inline-block transition-colors duration-300"
@@ -500,7 +533,7 @@ function SurveyNav({
 }
 
 export function advancesAutomatically(
-  formElement: Pick<FE, "typeId" | "componentSettings"> | undefined
+  formElement: SurveyAppFormElementFragment
 ): boolean {
   let advanceAutomatically = false;
   if (
@@ -514,7 +547,7 @@ export function advancesAutomatically(
       advanceAutomatically = aa || false;
     }
   }
+  // return false;
   return advanceAutomatically;
 }
-
 export default SurveyApp;

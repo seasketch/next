@@ -1,6 +1,7 @@
 import { ReactElement, useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
+  adminValueInputCommonClassNames,
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
@@ -280,5 +281,35 @@ function valueOrUndefined(value: any | undefined | null) {
     return value;
   }
 }
+
+Number.icon = (
+  <div className="bg-red-800 w-full h-full font-bold text-center flex justify-center items-center  italic text-white">
+    <MinusIcon strokeWidth={4} className="w-1/3 h-1/3" />
+    <PlusIcon className="w-1/3 h-1/3" />
+  </div>
+);
+
+Number.adminValueInput = function ({
+  value,
+  onChange,
+  componentSettings,
+}: {
+  value: any;
+  onChange: (value: any) => void;
+  componentSettings: NumberProps;
+}) {
+  return (
+    <input
+      autoComplete="false"
+      spellCheck={false}
+      type="number"
+      min={componentSettings.min}
+      max={componentSettings.max}
+      className={`bg-transparent border-none text-center w-full ${adminValueInputCommonClassNames}`}
+      value={value}
+      onChange={(e) => onChange(parseInt(e.target.value))}
+    />
+  );
+};
 
 export default Number;

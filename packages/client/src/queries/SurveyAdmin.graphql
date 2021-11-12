@@ -44,21 +44,12 @@ query SurveyById($id: Int!) {
 fragment FormElementFullDetails on FormElement {
   body
   componentSettings
-  conditionalRenderingRules {
-    id
-    field {
-      id
-      exportId
-    }
-    operator
-    predicateFieldId
-    value
-  }
   exportId
   formId
   id
   isRequired
   position
+  jumpToId
   type {
     componentName
     isHidden
@@ -66,6 +57,7 @@ fragment FormElementFullDetails on FormElement {
     isSingleUseOnly
     isSurveysOnly
     label
+    supportedOperators
   }
   typeId
   backgroundColor
@@ -91,6 +83,7 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
     isSingleUseOnly
     isSurveysOnly
     label
+    supportedOperators
   }
   survey(id: $id) {
     ...SurveyListDetails
@@ -102,6 +95,21 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
       templateType
       formElements {
         ...FormElementFullDetails
+      }
+      logicRules {
+        booleanOperator
+        command
+        id
+        jumpToId
+        position
+        formElementId
+        conditions {
+          id
+          operator
+          value
+          subjectId
+          ruleId
+        }
       }
     }
   }
@@ -139,6 +147,8 @@ mutation UpdateFormElement(
   $body: JSON
   $exportId: String
   $componentSettings: JSON
+  $jumpToId: Int
+  $typeId: String
 ) {
   updateFormElement(
     input: {
@@ -148,6 +158,8 @@ mutation UpdateFormElement(
         body: $body
         exportId: $exportId
         componentSettings: $componentSettings
+        jumpToId: $jumpToId
+        typeId: $typeId
       }
     }
   ) {
@@ -157,6 +169,8 @@ mutation UpdateFormElement(
       body
       exportId
       componentSettings
+      jumpToId
+      typeId
     }
   }
 }
@@ -352,6 +366,125 @@ mutation clearFormElementStyle($id: Int!) {
       unsplashAuthorUrl
       textVariant
       secondaryColor
+    }
+  }
+}
+
+mutation createLogicRuleForSurvey(
+  $formElementId: Int!
+  $operator: FieldRuleOperator!
+  $jumpToId: Int!
+) {
+  createSurveyJumpRule(
+    input: {
+      formElementId: $formElementId
+      booleanOperator: OR
+      jumpToId: $jumpToId
+      operator: $operator
+    }
+  ) {
+    formLogicRule {
+      id
+      position
+      booleanOperator
+      command
+      formElementId
+      jumpToId
+      conditions {
+        id
+        operator
+        ruleId
+        subjectId
+        value
+      }
+    }
+  }
+}
+
+mutation UpdateFormLogicRule(
+  $id: Int!
+  $jumpToId: Int
+  $booleanOperator: FormLogicOperator
+  $formElementId: Int
+) {
+  updateFormLogicRule(
+    input: {
+      id: $id
+      patch: {
+        jumpToId: $jumpToId
+        booleanOperator: $booleanOperator
+        formElementId: $formElementId
+      }
+    }
+  ) {
+    formLogicRule {
+      id
+      booleanOperator
+      command
+      jumpToId
+      position
+    }
+  }
+}
+
+mutation UpdateLogicCondition(
+  $id: Int!
+  $operator: FieldRuleOperator
+  $value: JSON
+) {
+  updateFormLogicCondition(
+    input: { id: $id, patch: { operator: $operator, value: $value } }
+  ) {
+    formLogicCondition {
+      id
+      ruleId
+      operator
+      subjectId
+      value
+    }
+  }
+}
+
+mutation DeleteLogicCondition($id: Int!) {
+  deleteFormLogicCondition(input: { id: $id }) {
+    formLogicCondition {
+      id
+      ruleId
+    }
+  }
+}
+
+mutation DeleteLogicRule($id: Int!) {
+  deleteFormLogicRule(input: { id: $id }) {
+    formLogicRule {
+      id
+      formElementId
+    }
+  }
+}
+
+mutation AddCondition(
+  $operator: FieldRuleOperator!
+  $ruleId: Int!
+  $subjectId: Int!
+  $value: JSON
+) {
+  createFormLogicCondition(
+    input: {
+      formLogicCondition: {
+        operator: $operator
+        ruleId: $ruleId
+        subjectId: $subjectId
+        value: $value
+      }
+    }
+  ) {
+    formLogicCondition {
+      id
+      operator
+      ruleId
+      subjectId
+      value
     }
   }
 }

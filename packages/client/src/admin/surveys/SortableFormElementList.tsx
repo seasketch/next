@@ -1,5 +1,5 @@
 import { FormElement, FormElementType, Maybe } from "../../generated/graphql";
-import { collectText } from "./collectText";
+import { collectHeaders, collectQuestion, collectText } from "./collectText";
 import {
   DragDropContext,
   Draggable,
@@ -9,6 +9,8 @@ import {
 } from "react-beautiful-dnd";
 import Spinner from "../../components/Spinner";
 import { CSSProperties } from "react";
+import { components } from "../../formElements";
+import { defaultFormElementIcon } from "../../formElements/FormElement";
 
 interface Props {
   items: (Pick<
@@ -19,6 +21,7 @@ interface Props {
   onClick?: (id: number) => void;
   onReorder?: (sortedIds: number[]) => void;
   className?: CSSProperties;
+  dim: boolean;
 }
 
 /**
@@ -41,6 +44,8 @@ export default function SortableFormElementList(props: Props) {
       {welcome && (
         <div className="mb-2">
           <FormElementListItem
+            dim={props.dim}
+            typeId={welcome.typeId}
             selected={props.selection === welcome.id}
             element={welcome}
             typeName={welcome.type?.label || welcome.typeId}
@@ -88,6 +93,8 @@ export default function SortableFormElementList(props: Props) {
                 >
                   {(provided, snapshot) => (
                     <FormElementListItem
+                      dim={props.dim}
+                      typeId={element.typeId}
                       draggable={true}
                       provided={provided}
                       snapshot={snapshot}
@@ -113,6 +120,8 @@ export default function SortableFormElementList(props: Props) {
       {thankYou && (
         <div className="mt-2">
           <FormElementListItem
+            dim={props.dim}
+            typeId={thankYou.typeId}
             selected={props.selection === thankYou.id}
             element={thankYou}
             typeName={thankYou.type?.label || thankYou.typeId}
@@ -138,15 +147,19 @@ function FormElementListItem({
   draggable,
   snapshot,
   creating,
+  typeId,
+  dim,
 }: {
   element: Pick<FormElement, "body" | "exportId">;
   typeName: string;
+  typeId: string;
   onClick?: () => void;
   selected: boolean;
   provided?: DraggableProvided;
   draggable?: boolean;
   snapshot?: DraggableStateSnapshot;
   creating?: boolean;
+  dim: boolean;
 }) {
   return (
     <div
@@ -158,17 +171,30 @@ function FormElementListItem({
       onClick={onClick}
       className={`relative select-none cursor-pointer ${
         snapshot?.isDragging && "shadow-lg"
-      } mx-2 px-4 py-2 ${
+      } mx-2 h-11 ${
         draggable && "shadow-md"
-      } bg-white w-50 border border-black border-opacity-20 rounded ${
+      } bg-white w-50 border border-black border-opacity-20 rounded overflow-hidden ${
         selected && "ring-2 ring-blue-300"
       } ${creating ? "opacity-50" : ""}`}
     >
       {creating && <Spinner className="absolute right-1 top-1" />}
-      <div className="">{typeName}</div>
+      <div className="w-full h-full flex items-center">
+        <div
+          className={`w-10 h-full`}
+          style={{
+            filter: dim ? "grayscale(40%)" : "",
+          }}
+        >
+          {components[typeId]?.icon || defaultFormElementIcon}
+        </div>
+        <div className="truncate flex-1 px-2 text-sm">
+          {collectQuestion(element.body) || collectHeaders(element.body)}
+        </div>
+      </div>
+      {/* <div className="">{typeName}</div>
       <div className="text-xs italic overflow-x-hidden truncate">
         {collectText(element.body)}
-      </div>
+      </div> */}
     </div>
   );
 }

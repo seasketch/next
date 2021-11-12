@@ -5,8 +5,12 @@ import { useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { components } from "../../formElements";
+import { defaultFormElementIcon } from "../../formElements/FormElement";
 import {
+  AddFormElementDocument,
+  AddFormElementMutation,
   FormElementBackgroundImagePlacement,
+  FormElementFullDetailsFragmentDoc,
   FormElementTextVariant,
   FormElementType,
   useAddFormElementMutation,
@@ -34,6 +38,7 @@ export default function AddFormElementButton({
   const [addFormElement, addFormElementState] = useAddFormElementMutation({
     onError,
   });
+
   return (
     <>
       <Button
@@ -73,7 +78,7 @@ export default function AddFormElementButton({
                 .map(([id, C]) => (
                   <div
                     key={id}
-                    className="py-4 px-4 cursor-pointer my-2 hover:bg-cool-gray-100"
+                    className="py-4 px-4 cursor-pointer my-2 hover:bg-cool-gray-100 flex items-center"
                     onClick={async () => {
                       const result = await addFormElement({
                         variables: {
@@ -96,7 +101,6 @@ export default function AddFormElementButton({
                               typeId: id,
                               isRequired: false,
                               position: nextPosition,
-                              conditionalRenderingRules: [],
                               type: {
                                 ...types.find((t) => t.componentName === id)!,
                               },
@@ -109,6 +113,12 @@ export default function AddFormElementButton({
                                 FormElementBackgroundImagePlacement.Top,
                               textVariant: FormElementTextVariant.Dynamic,
                               backgroundPalette: null,
+                              jumpToId: null,
+                              secondaryColor: null,
+                              unsplashAuthorName: null,
+                              unsplashAuthorUrl: null,
+                              backgroundHeight: null,
+                              backgroundWidth: null,
                             },
                           },
                         },
@@ -129,21 +139,12 @@ export default function AddFormElementButton({
                                       fragment NewElement on FormElement {
                                         body
                                         componentSettings
-                                        conditionalRenderingRules {
-                                          id
-                                          field {
-                                            id
-                                            exportId
-                                          }
-                                          operator
-                                          predicateFieldId
-                                          value
-                                        }
                                         exportId
                                         formId
                                         id
                                         isRequired
                                         position
+                                        jumpToId
                                         type {
                                           componentName
                                           isHidden
@@ -151,8 +152,19 @@ export default function AddFormElementButton({
                                           isSingleUseOnly
                                           isSurveysOnly
                                           label
+                                          supportedOperators
                                         }
                                         typeId
+                                        backgroundColor
+                                        secondaryColor
+                                        backgroundImage
+                                        backgroundImagePlacement
+                                        backgroundPalette
+                                        textVariant
+                                        unsplashAuthorUrl
+                                        unsplashAuthorName
+                                        backgroundWidth
+                                        backgroundHeight
                                       }
                                     `,
                                   });
@@ -172,10 +184,17 @@ export default function AddFormElementButton({
                       }
                     }}
                   >
-                    <div className="text-base font-medium text-gray-800">
-                      {C.label}
+                    <div className="w-8 h-8 rounded overflow-hidden mr-4">
+                      {C.icon || defaultFormElementIcon}
                     </div>
-                    <div className="text-sm text-gray-800">{C.description}</div>
+                    <div>
+                      <div className="text-base font-medium text-gray-800">
+                        {C.label}
+                      </div>
+                      <div className="text-sm text-gray-800">
+                        {C.description}
+                      </div>
+                    </div>
                   </div>
                 ))}
             </motion.div>

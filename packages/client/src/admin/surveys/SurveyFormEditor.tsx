@@ -1,8 +1,12 @@
-import { AdjustmentsIcon, ChevronLeftIcon } from "@heroicons/react/outline";
+import {
+  AdjustmentsIcon,
+  ChevronDoubleDownIcon,
+  ChevronLeftIcon,
+} from "@heroicons/react/outline";
 import { EyeIcon } from "@heroicons/react/solid";
 import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useHistory } from "react-router-dom";
 import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
@@ -17,13 +21,14 @@ import {
   useUpdateFormElementBackgroundMutation,
   useSetFormElementBackgroundMutation,
   useClearFormElementStyleMutation,
-  useCurrentProjectMetadataQuery,
+  FormElement,
 } from "../../generated/graphql";
 import FormElementFactory from "../../surveys/FormElementFactory";
 import { SurveyAppLayout } from "../../surveys/SurveyAppLayout";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   FormEditorPortalContext,
+  sortFormElements,
   SurveyButtonFooterPortalContext,
   SurveyContext,
   useUpdateFormElement,
@@ -40,6 +45,8 @@ import SortableFormElementList from "./SortableFormElementList";
 import AddFormElementButton from "./AddFormElementButton";
 import { useCurrentStyle } from "../../surveys/appearance";
 import { advancesAutomatically } from "../../surveys/SurveyApp";
+import SurveyFlowMap from "./SurveyFlowMap";
+import LogicRuleEditor from "./LogicRuleEditor";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -49,9 +56,13 @@ require("../../formElements/BodyEditor");
 export default function SurveyFormEditor({
   surveyId,
   slug,
+  route,
+  formElementId,
 }: {
   surveyId: number;
   slug: string;
+  route: "basic" | "logic" | "formElement";
+  formElementId: number | null;
 }) {
   const { t } = useTranslation();
   const formElementEditorContainerRef = useRef<HTMLDivElement>(null);
@@ -65,30 +76,25 @@ export default function SurveyFormEditor({
   });
   const [imageChooserOpen, setImageChooserOpen] = useState(false);
   const [updateOrder, updateOrderState] = useUpdateFormElementOrderMutation();
-  const [focusState, setFocusState] = useState<{
-    basicSettings: boolean;
-    formElement: number | undefined;
-  }>({
-    basicSettings: false,
-    formElement: undefined,
-  });
-
+  const history = useHistory();
   const [values, setValues] = useState<{ [id: number]: any | undefined }>({});
 
+  const [selectedLogicFormElements, setSelectedLogicFormElements] = useState<
+    number[]
+  >([]);
   const surveyButtonFooter = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (
-      focusState.formElement === undefined &&
-      focusState.basicSettings === false &&
+      route === "formElement" &&
+      formElementId === null &&
       data?.survey?.form?.formElements?.length
     ) {
-      setFocusState({
-        formElement: data.survey.form.formElements[0].id,
-        basicSettings: false,
-      });
+      history.replace(
+        history.location.pathname + "/" + data.survey.form.formElements[0].id
+      );
     }
-  }, [data, focusState]);
+  }, [data, route]);
 
   const [
     updateBackground,
@@ -200,12 +206,11 @@ export default function SurveyFormEditor({
     onError,
   });
 
-  const formElements = [...(data?.survey?.form?.formElements || [])];
-  formElements.sort((a, b) => a.position - b.position);
+  const formElements = sortFormElements([
+    ...(data?.survey?.form?.formElements || []),
+  ]);
 
-  const selectedFormElement = formElements.find(
-    (e) => e.id === focusState.formElement
-  );
+  const selectedFormElement = formElements.find((e) => e.id === formElementId);
 
   const style = useCurrentStyle(
     data?.survey?.form?.formElements,
@@ -256,28 +261,23 @@ export default function SurveyFormEditor({
       </nav>
       <div className="flex-1 flex" style={{ maxHeight: "calc(100vh - 56px)" }}>
         {/* Left Sidebar */}
-        <div className="bg-white w-56 shadow">
-          <div className="flex-1 overflow-y-auto flex flex-col min-h-full">
+        <div className="bg-white w-56 shadow z-10">
+          <div className="flex-1 overflow-y-auto flex flex-col min-h-full max-h-full">
             <nav className="px-2 mt-2">
               <div className="space-y-1">
-                <button
+                <Link
                   className={`${
-                    focusState.basicSettings
-                      ? "bg-cool-gray-100 text-black"
+                    route === "basic"
+                      ? "bg-blue-100 text-black"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   }
                       group flex items-center px-2 py-2 text-base leading-5 rounded-md w-full`}
-                  aria-current={focusState.basicSettings ? "page" : undefined}
-                  onClick={() =>
-                    setFocusState({
-                      basicSettings: true,
-                      formElement: undefined,
-                    })
-                  }
+                  aria-current={route === "basic" ? "page" : undefined}
+                  to={"./basic"}
                 >
                   <AdjustmentsIcon
                     className={`${
-                      focusState.basicSettings
+                      route === "basic"
                         ? "text-gray-500"
                         : "text-gray-400 group-hover:text-gray-500"
                     }
@@ -285,7 +285,28 @@ export default function SurveyFormEditor({
                     aria-hidden="true"
                   />
                   {t("Base Settings")}
-                </button>
+                </Link>
+                <Link
+                  className={`${
+                    route === "logic"
+                      ? "bg-blue-100 text-black"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }
+                      group flex items-center px-2 py-2 text-base leading-5 rounded-md w-full`}
+                  aria-current={route === "logic" ? "page" : undefined}
+                  to={"./logic"}
+                >
+                  <ChevronDoubleDownIcon
+                    className={`${
+                      route === "logic"
+                        ? "text-gray-500"
+                        : "text-gray-400 group-hover:text-gray-500"
+                    }
+                        mr-3 flex-shrink-0 h-6 w-6`}
+                    aria-hidden="true"
+                  />
+                  {t("Skip Logic")}
+                </Link>
               </div>
             </nav>
             <nav className="mt-2 bg-cool-gray-100 flex-1">
@@ -295,18 +316,17 @@ export default function SurveyFormEditor({
                   nextPosition={formElements.length + 1}
                   types={data?.formElementTypes || []}
                   formId={formId!}
-                  onAdd={(formElement) =>
-                    setFocusState({ basicSettings: false, formElement })
-                  }
+                  onAdd={(formElement) => history.replace(`./${formElement}`)}
                   existingTypes={formElements.map((el) => el.typeId)}
                 />
               </h3>
               <SortableFormElementList
-                selection={focusState.formElement}
-                items={formElements}
-                onClick={(formElement) =>
-                  setFocusState({ basicSettings: false, formElement })
+                dim={route === "logic"}
+                selection={
+                  route === "formElement" ? selectedFormElement?.id : undefined
                 }
+                items={formElements}
+                onClick={(formElement) => history.replace(`./${formElement}`)}
                 onReorder={(elementIds) => {
                   updateOrder({
                     variables: {
@@ -330,8 +350,25 @@ export default function SurveyFormEditor({
           </div>
         </div>
         {/* Content */}
-        <div className="flex-1">
-          {data?.survey && selectedFormElement && (
+        <div
+          className="flex-1 max-h-full overflow-y-auto"
+          style={{
+            background:
+              route !== "logic"
+                ? "transparent"
+                : "url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAACFJREFUKFNjXL58oxQDEYARpDAy0v8ZIbWjCvGGENHBAwCZWCYkLmgNZgAAAABJRU5ErkJggg==) repeat rgb(238 240 241)",
+          }}
+        >
+          {route === "logic" && (
+            <SurveyFlowMap
+              formElements={data?.survey?.form?.formElements || []}
+              onSelection={(selection) => {
+                setSelectedLogicFormElements(selection);
+              }}
+              rules={data?.survey?.form?.logicRules || []}
+            />
+          )}
+          {route === "formElement" && data?.survey && selectedFormElement && (
             <SurveyContext.Provider
               value={{
                 isAdmin: true,
@@ -406,14 +443,46 @@ export default function SurveyFormEditor({
           )}
         </div>
         {/* Right Sidebar */}
-        <div className="bg-white w-64 shadow overflow-y-auto">
+        <div
+          className={`bg-white ${
+            route === "logic" ? "w-72" : "w-64"
+          } shadow overflow-y-auto`}
+        >
           <>
             <h3 className="flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-b border-blue-gray-200  items-center">
-              {focusState.basicSettings
-                ? t("Base Settings")
-                : selectedFormElement?.type?.componentName}
+              {(() => {
+                if (route === "basic") {
+                  return t("Base Settings");
+                } else if (route === "logic") {
+                  if (selectedFormElement) {
+                    return t("Skip Logic");
+                    // return selectedFormElement?.type?.componentName;
+                  } else {
+                    return t("Skip Logic");
+                  }
+                } else {
+                  return selectedFormElement?.type?.componentName;
+                }
+              })()}
             </h3>
-            {!focusState.basicSettings &&
+            {route === "logic" && !selectedLogicFormElements.length && (
+              <p className="text-sm p-2 text-gray-500">
+                <Trans ns="admin:surveys">
+                  Select an input element to skip ahead based on answers.
+                </Trans>
+              </p>
+            )}
+            {route === "logic" && selectedLogicFormElements.length > 0 && (
+              <>
+                <LogicRuleEditor
+                  form={data!.survey!.form!}
+                  selectedIds={selectedLogicFormElements}
+                  rules={data?.survey?.form?.logicRules || []}
+                  formElements={formElements || []}
+                />
+              </>
+            )}
+            {route === "formElement" &&
               selectedFormElement &&
               selectedFormElement.type?.isInput && (
                 <div className="px-3 text-sm pt-3">
@@ -430,7 +499,7 @@ export default function SurveyFormEditor({
                 </div>
               )}
             <div className="text-sm" ref={formElementEditorContainerRef}>
-              {focusState.basicSettings && (
+              {route === "basic" && (
                 <div className="p-3">
                   <InputBlock
                     labelType="small"
@@ -447,7 +516,7 @@ export default function SurveyFormEditor({
                 </div>
               )}
             </div>
-            {!focusState.basicSettings &&
+            {route === "formElement" &&
               selectedFormElement &&
               selectedFormElement.typeId !== "WelcomeMessage" &&
               selectedFormElement.typeId !== "ThankYou" && (
@@ -473,10 +542,7 @@ export default function SurveyFormEditor({
                       onClick={() => {
                         if (window.confirm(t("Are you sure?"))) {
                           const formElement = selectedFormElement!;
-                          setFocusState({
-                            formElement: undefined,
-                            basicSettings: true,
-                          });
+                          history.replace(`../${surveyId}/basic`);
                           deleteFormElement({
                             variables: { id: formElement.id },
                             optimisticResponse: {
@@ -524,7 +590,7 @@ export default function SurveyFormEditor({
                 </>
               )}
           </>
-          {selectedFormElement && (
+          {route === "formElement" && selectedFormElement && (
             <>
               <h3 className="mt-4 flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-b border-t border-blue-gray-200  items-center">
                 {t("Appearance")}
@@ -854,7 +920,7 @@ export default function SurveyFormEditor({
               )}
             </>
           )}
-          {focusState.basicSettings &&
+          {route === "basic" &&
             auth0.user &&
             auth0.user["https://seasketch.org/superuser"] && (
               <div>
