@@ -20,12 +20,12 @@ export const components: {
 components["WelcomeMessage"] = WelcomeMessage;
 components["Name"] = Name;
 components["Email"] = Email;
+components["MultipleChoice"] = MultipleChoice;
 components["ShortText"] = ShortText;
 components["TextArea"] = TextArea;
 components["Number"] = Number;
 components["Rating"] = Rating;
 components["Statement"] = Statement;
 components["YesNo"] = YesNo;
-components["MultipleChoice"] = MultipleChoice;
 components["ComboBox"] = ComboBox;
 components["ThankYou"] = ThankYou;

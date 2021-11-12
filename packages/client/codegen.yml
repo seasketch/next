@@ -11,5 +11,6 @@ generates:
       - typescript
       - typescript-operations
       - typescript-react-apollo
+      - named-operations-object
     config:
       withMutationFn: true

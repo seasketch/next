@@ -1,7 +1,9 @@
 import { CheckIcon } from "@heroicons/react/outline";
 import { Trans, useTranslation } from "react-i18next";
+import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
+import { ChoiceAdminValueInput } from "./ComboBox";
 import {
   FormElementBody,
   FormElementComponent,
@@ -106,6 +108,21 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
                   />
                 }
               />
+              <Button
+                small
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      t(
+                        "Are you sure? ComboBox's do not support multiple-select. You can always change back."
+                      )
+                    )
+                  ) {
+                    updateBaseSetting("typeId")("ComboBox");
+                  }
+                }}
+                label={t("Change to ComboBox")}
+              />
               <FormElementOptionsInput
                 key={props.id}
                 initialValue={props.componentSettings.options || []}
@@ -135,5 +152,23 @@ MultipleChoice.defaultComponentSettings = {
   })),
 };
 MultipleChoice.advanceAutomatically = (settings) => !settings.multipleSelect;
+
+MultipleChoice.icon = (
+  <div className="bg-green-600 w-full h-full font-bold text-center flex justify-center items-center  italic text-white">
+    <svg
+      viewBox="0 0 16 16"
+      height="20"
+      width="20"
+      focusable="false"
+      role="img"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M7 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-1zM0 12a3 3 0 1 1 6 0 3 3 0 0 1-6 0zm7-1.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-1zm0-5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 8a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zM3 1a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 4.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"></path>
+    </svg>
+  </div>
+);
+
+MultipleChoice.adminValueInput = ChoiceAdminValueInput;
 
 export default MultipleChoice;

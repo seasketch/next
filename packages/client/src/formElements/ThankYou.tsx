@@ -19,7 +19,7 @@ import {
 import { useParams } from "react-router";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import { LinkIcon } from "@heroicons/react/outline";
+import { HeartIcon, LinkIcon } from "@heroicons/react/outline";
 import TextInput from "../components/TextInput";
 import Button from "../components/Button";
 import { useContext } from "react";
@@ -198,5 +198,13 @@ ThankYou.defaultProps = {
     linkToProject: true,
   },
 };
+
+ThankYou.icon = (
+  <div className="bg-gray-100 w-full h-full font-bold text-center flex justify-center items-center   text-white">
+    {/*eslint-disable-next-line i18next/no-literal-string*/}
+    <span className="text-2xl font-serif">🙏</span>
+    {/* <HeartIcon className="w-1/2 h-1/2" /> */}
+  </div>
+);
 
 export default ThankYou;

@@ -144,7 +144,7 @@ export function FormElementBody({
 export class FormElementEditorPortal extends Component<{
   render: (
     updateBaseSetting: (
-      setting: "body" | "isRequired" | "exportId"
+      setting: "body" | "isRequired" | "exportId" | "typeId"
     ) => (value: any) => void,
     updateComponentSetting: (
       setting: string,
@@ -180,7 +180,7 @@ function FormElementEditorContainer({
   surveyId: number;
   render: (
     updateBaseSetting: (
-      setting: "body" | "isRequired" | "exportId"
+      setting: "body" | "isRequired" | "exportId" | "typeId"
     ) => (value: any) => void,
     updateComponentSetting: (
       setting: string,
@@ -218,11 +218,13 @@ function FormElementEditorContainer({
 
 export function useUpdateFormElement(
   data?: Pick<
-    FormElementProps<any, any>,
-    "body" | "componentSettings" | "id" | "isRequired"
+    FormElement,
+    "body" | "componentSettings" | "id" | "isRequired" | "typeId"
   >
 ): [
-  (setting: "body" | "isRequired" | "exportId") => (value: any) => void,
+  (
+    setting: "body" | "isRequired" | "exportId" | "typeId"
+  ) => (value: any) => void,
   (setting: string, currentSettings: any) => (value: any) => void,
   MutationResult<UpdateFormElementMutation>
 ] {
@@ -235,7 +237,7 @@ export function useUpdateFormElement(
     variables: Partial<
       Pick<
         FormElement,
-        "body" | "componentSettings" | "isRequired" | "exportId"
+        "body" | "componentSettings" | "isRequired" | "exportId" | "typeId"
       >
     >
   ) => {
@@ -258,7 +260,9 @@ export function useUpdateFormElement(
       },
     }).catch((e) => onError(e));
   };
-  const updateBaseSetting = (setting: "body" | "isRequired" | "exportId") => {
+  const updateBaseSetting = (
+    setting: "body" | "isRequired" | "exportId" | "typeId"
+  ) => {
     return (value: any) => updater({ [setting]: value });
   };
   const updateComponentSetting = (
@@ -283,12 +287,31 @@ export interface FormElementComponent<T, V = {}>
   /** For components like WelcomeMessage that shouldn't be a user option */
   templatesOnly?: boolean;
   advanceAutomatically?: boolean | ((componentSettings: T) => boolean);
-  // validate?: (
-  //   value: any,
-  //   isRequired: boolean,
-  //   componentSettings: any
-  // ) => JSX.Element | string | undefined | false;
+  icon?: ReactNode;
+  /**
+   * Used in the admin interface to define skip logic. If not specified, a default text
+   * input will be used.
+   * For example, when using the Number input you may want to skip ahead in the survey if
+   * the value is greater than a certain value. To specify that value, the adminValueInput
+   * will be used. The default text input isn't great. An <input type="number" /> is better,
+   * and if the componentSettings specify a small range, a dropdown may be even better.
+   */
+  adminValueInput?: React.FunctionComponent<{
+    onChange: (value: V) => void;
+    value: V;
+    componentSettings: T;
+  }>;
 }
+
+// eslint-disable-next-line i18next/no-literal-string
+export const adminValueInputCommonClassNames = `bg-transparent border-none focus:ring-0 focus:border-none focus:outline-none focus:bg-blue-900 focus:bg-opacity-10 w-full text-center`;
+
+export const defaultFormElementIcon = (
+  <div className="bg-gray-200 w-full h-full text-gray-50 font-bold text-center flex justify-center items-center">
+    {/* eslint-disable-next-line i18next/no-literal-string */}
+    <span>D</span>
+  </div>
+);
 
 export function sortFormElements<
   T extends {
@@ -296,20 +319,24 @@ export function sortFormElements<
     typeId: string;
   }
 >(elements: T[]) {
-  [...elements].sort((a, b) => {
-    if (a.typeId === "WelcomeMessage") {
-      return 1;
-    } else if (b.typeId === "WelcomeMessage") {
-      return -1;
-    }
-    if (a.typeId === "ThankYou") {
-      return -1;
-    } else if (b.typeId === "ThankYou") {
-      return 1;
-    }
+  if (elements.length === 0) {
+    return [];
+  }
+  const Welcome = elements.find((el) => el.typeId === "WelcomeMessage");
+  const ThankYou = elements.find((el) => el.typeId === "ThankYou");
+  if (!Welcome) {
+    throw new Error("WelcomeMessage FormElement not in Form");
+  }
+  if (!ThankYou) {
+    throw new Error("ThankYou FormElement not in Form");
+  }
+  const bodyElements = elements.filter(
+    (el) => el.typeId !== "WelcomeMessage" && el.typeId !== "ThankYou"
+  );
+  bodyElements.sort((a, b) => {
     return a.position - b.position;
   });
-  return elements;
+  return [Welcome, ...bodyElements, ThankYou] as T[];
 }
 
 export const SurveyContext = createContext<{

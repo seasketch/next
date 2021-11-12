@@ -1343,6 +1343,40 @@ export type CreateSurveyInvitesPayload = {
   surveyInvites?: Maybe<Array<SurveyInvite>>;
 };
 
+/** All input for the `createSurveyJumpRule` mutation. */
+export type CreateSurveyJumpRuleInput = {
+  booleanOperator?: Maybe<FormLogicOperator>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formElementId?: Maybe<Scalars['Int']>;
+  jumpToId?: Maybe<Scalars['Int']>;
+  operator?: Maybe<FieldRuleOperator>;
+};
+
+/** The output of our `createSurveyJumpRule` mutation. */
+export type CreateSurveyJumpRulePayload = {
+  __typename?: 'CreateSurveyJumpRulePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** An edge for our `FormLogicRule`. May be used by Relay 1. */
+  formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createSurveyJumpRule` mutation. */
+export type CreateSurveyJumpRulePayloadFormLogicRuleEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+};
+
 /** The output of our create `Survey` mutation. */
 export type CreateSurveyPayload = {
   __typename?: 'CreateSurveyPayload';
@@ -3602,6 +3636,12 @@ export type FormElement = Node & {
   id: Scalars['Int'];
   /** Users must provide input for these fields before submission. */
   isRequired: Scalars['Boolean'];
+  /**
+   * Used only in surveys. If set, the survey will advance to the page of the
+   * specified form element. If null, the survey will simply advance to the next
+   * question in the list by `position`.
+   */
+  jumpToId?: Maybe<Scalars['Int']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -3662,6 +3702,12 @@ export type FormElementInput = {
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
   /**
+   * Used only in surveys. If set, the survey will advance to the page of the
+   * specified form element. If null, the survey will simply advance to the next
+   * question in the list by `position`.
+   */
+  jumpToId?: Maybe<Scalars['Int']>;
+  /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
@@ -3703,8 +3749,17 @@ export type FormElementPatch = {
    * from the first several characters of the text in FormElement.body.
    */
   exportId?: Maybe<Scalars['String']>;
+  /** Form this field belongs to. */
+  formId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
+  /**
+   * Used only in surveys. If set, the survey will advance to the page of the
+   * specified form element. If null, the survey will simply advance to the next
+   * question in the list by `position`.
+   */
+  jumpToId?: Maybe<Scalars['Int']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
@@ -3816,7 +3871,7 @@ export type FormLogicCondition = Node & {
   operator: FieldRuleOperator;
   ruleId: Scalars['Int'];
   subjectId: Scalars['Int'];
-  value: Scalars['JSON'];
+  value?: Maybe<Scalars['JSON']>;
 };
 
 /** An input for mutations affecting `FormLogicCondition` */
@@ -3825,7 +3880,7 @@ export type FormLogicConditionInput = {
   operator?: Maybe<FieldRuleOperator>;
   ruleId: Scalars['Int'];
   subjectId: Scalars['Int'];
-  value: Scalars['JSON'];
+  value?: Maybe<Scalars['JSON']>;
 };
 
 /** Represents an update to a `FormLogicCondition`. Fields that are set will be updated. */
@@ -5027,6 +5082,8 @@ export type Mutation = {
   /** Creates a single `SurveyInvitedGroup`. */
   createSurveyInvitedGroup?: Maybe<CreateSurveyInvitedGroupPayload>;
   createSurveyInvites?: Maybe<CreateSurveyInvitesPayload>;
+  /** Initializes a new FormLogicRule with a single condition and command=JUMP. */
+  createSurveyJumpRule?: Maybe<CreateSurveyJumpRulePayload>;
   createSurveyResponse?: Maybe<CreateSurveyResponsePayload>;
   /** Creates a single `TableOfContentsItem`. */
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
@@ -5616,6 +5673,12 @@ export type MutationCreateSurveyInvitedGroupArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSurveyInvitesArgs = {
   input: CreateSurveyInvitesInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateSurveyJumpRuleArgs = {
+  input: CreateSurveyJumpRuleInput;
 };
 
 
@@ -12764,11 +12827,38 @@ export type NewZIndexFragment = (
 
 export type NewElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators'>
   )> }
+);
+
+export type LogicRuleEditorFormElementFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'id' | 'body' | 'typeId' | 'jumpToId' | 'componentSettings' | 'exportId' | 'isRequired'>
+  & { type?: Maybe<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'supportedOperators' | 'isInput'>
+  )> }
+);
+
+export type LogicRuleEditorRuleFragment = (
+  { __typename?: 'FormLogicRule' }
+  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
+  & { conditions?: Maybe<Array<(
+    { __typename?: 'FormLogicCondition' }
+    & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
+  )>> }
+);
+
+export type NewRuleFragment = (
+  { __typename?: 'FormLogicRule' }
+  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
+  & { conditions?: Maybe<Array<(
+    { __typename?: 'FormLogicCondition' }
+    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
+  )>> }
 );
 
 export type NewSurveyFragment = (
@@ -14150,7 +14240,7 @@ export type SurveyByIdQuery = (
 
 export type FormElementFullDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators'>
@@ -14181,7 +14271,7 @@ export type SurveyFormEditorDetailsQuery = (
         & FormElementFullDetailsFragment
       )>>, logicRules?: Maybe<Array<(
         { __typename?: 'FormLogicRule' }
-        & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position'>
+        & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
         & { conditions?: Maybe<Array<(
           { __typename?: 'FormLogicCondition' }
           & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
@@ -14219,6 +14309,8 @@ export type UpdateFormElementMutationVariables = Exact<{
   body?: Maybe<Scalars['JSON']>;
   exportId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
+  jumpToId?: Maybe<Scalars['Int']>;
+  typeId?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -14228,7 +14320,7 @@ export type UpdateFormElementMutation = (
     { __typename?: 'UpdateFormElementPayload' }
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'isRequired' | 'body' | 'exportId' | 'componentSettings'>
+      & Pick<FormElement, 'id' | 'isRequired' | 'body' | 'exportId' | 'componentSettings' | 'jumpToId' | 'typeId'>
     )> }
   )> }
 );
@@ -14423,6 +14515,116 @@ export type ClearFormElementStyleMutation = (
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
       & Pick<FormElement, 'id' | 'backgroundColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'textVariant' | 'secondaryColor'>
+    )> }
+  )> }
+);
+
+export type CreateLogicRuleForSurveyMutationVariables = Exact<{
+  formElementId: Scalars['Int'];
+  operator: FieldRuleOperator;
+  jumpToId: Scalars['Int'];
+}>;
+
+
+export type CreateLogicRuleForSurveyMutation = (
+  { __typename?: 'Mutation' }
+  & { createSurveyJumpRule?: Maybe<(
+    { __typename?: 'CreateSurveyJumpRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id' | 'position' | 'booleanOperator' | 'command' | 'formElementId' | 'jumpToId'>
+      & { conditions?: Maybe<Array<(
+        { __typename?: 'FormLogicCondition' }
+        & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
+      )>> }
+    )> }
+  )> }
+);
+
+export type UpdateFormLogicRuleMutationVariables = Exact<{
+  id: Scalars['Int'];
+  jumpToId?: Maybe<Scalars['Int']>;
+  booleanOperator?: Maybe<FormLogicOperator>;
+  formElementId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type UpdateFormLogicRuleMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormLogicRule?: Maybe<(
+    { __typename?: 'UpdateFormLogicRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id' | 'booleanOperator' | 'command' | 'jumpToId' | 'position'>
+    )> }
+  )> }
+);
+
+export type UpdateLogicConditionMutationVariables = Exact<{
+  id: Scalars['Int'];
+  operator?: Maybe<FieldRuleOperator>;
+  value?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateLogicConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormLogicCondition?: Maybe<(
+    { __typename?: 'UpdateFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id' | 'ruleId' | 'operator' | 'subjectId' | 'value'>
+    )> }
+  )> }
+);
+
+export type DeleteLogicConditionMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteLogicConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteFormLogicCondition?: Maybe<(
+    { __typename?: 'DeleteFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id' | 'ruleId'>
+    )> }
+  )> }
+);
+
+export type DeleteLogicRuleMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteLogicRuleMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteFormLogicRule?: Maybe<(
+    { __typename?: 'DeleteFormLogicRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id' | 'formElementId'>
+    )> }
+  )> }
+);
+
+export type AddConditionMutationVariables = Exact<{
+  operator: FieldRuleOperator;
+  ruleId: Scalars['Int'];
+  subjectId: Scalars['Int'];
+  value?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type AddConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { createFormLogicCondition?: Maybe<(
+    { __typename?: 'CreateFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
     )> }
   )> }
 );
@@ -15067,6 +15269,7 @@ export const NewElementFragmentDoc = gql`
   id
   isRequired
   position
+  jumpToId
   type {
     componentName
     isHidden
@@ -15074,8 +15277,68 @@ export const NewElementFragmentDoc = gql`
     isSingleUseOnly
     isSurveysOnly
     label
+    supportedOperators
   }
   typeId
+  backgroundColor
+  secondaryColor
+  backgroundImage
+  backgroundImagePlacement
+  backgroundPalette
+  textVariant
+  unsplashAuthorUrl
+  unsplashAuthorName
+  backgroundWidth
+  backgroundHeight
+}
+    `;
+export const LogicRuleEditorFormElementFragmentDoc = gql`
+    fragment LogicRuleEditorFormElement on FormElement {
+  id
+  body
+  typeId
+  jumpToId
+  componentSettings
+  exportId
+  isRequired
+  type {
+    supportedOperators
+    isInput
+  }
+}
+    `;
+export const LogicRuleEditorRuleFragmentDoc = gql`
+    fragment LogicRuleEditorRule on FormLogicRule {
+  booleanOperator
+  command
+  formElementId
+  id
+  jumpToId
+  position
+  conditions {
+    id
+    operator
+    ruleId
+    subjectId
+    value
+  }
+}
+    `;
+export const NewRuleFragmentDoc = gql`
+    fragment NewRule on FormLogicRule {
+  booleanOperator
+  command
+  id
+  jumpToId
+  position
+  formElementId
+  conditions {
+    id
+    operator
+    value
+    subjectId
+    ruleId
+  }
 }
     `;
 export const NewSurveyFragmentDoc = gql`
@@ -15154,6 +15417,7 @@ export const FormElementFullDetailsFragmentDoc = gql`
   id
   isRequired
   position
+  jumpToId
   type {
     componentName
     isHidden
@@ -18655,6 +18919,7 @@ export const SurveyFormEditorDetailsDocument = gql`
         id
         jumpToId
         position
+        formElementId
         conditions {
           id
           operator
@@ -18743,9 +19008,9 @@ export type UpdateSurveyBaseSettingsMutationHookResult = ReturnType<typeof useUp
 export type UpdateSurveyBaseSettingsMutationResult = Apollo.MutationResult<UpdateSurveyBaseSettingsMutation>;
 export type UpdateSurveyBaseSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>;
 export const UpdateFormElementDocument = gql`
-    mutation UpdateFormElement($id: Int!, $isRequired: Boolean, $body: JSON, $exportId: String, $componentSettings: JSON) {
+    mutation UpdateFormElement($id: Int!, $isRequired: Boolean, $body: JSON, $exportId: String, $componentSettings: JSON, $jumpToId: Int, $typeId: String) {
   updateFormElement(
-    input: {id: $id, patch: {isRequired: $isRequired, body: $body, exportId: $exportId, componentSettings: $componentSettings}}
+    input: {id: $id, patch: {isRequired: $isRequired, body: $body, exportId: $exportId, componentSettings: $componentSettings, jumpToId: $jumpToId, typeId: $typeId}}
   ) {
     formElement {
       id
@@ -18753,6 +19018,8 @@ export const UpdateFormElementDocument = gql`
       body
       exportId
       componentSettings
+      jumpToId
+      typeId
     }
   }
 }
@@ -18777,6 +19044,8 @@ export type UpdateFormElementMutationFn = Apollo.MutationFunction<UpdateFormElem
  *      body: // value for 'body'
  *      exportId: // value for 'exportId'
  *      componentSettings: // value for 'componentSettings'
+ *      jumpToId: // value for 'jumpToId'
+ *      typeId: // value for 'typeId'
  *   },
  * });
  */
@@ -19230,6 +19499,260 @@ export function useClearFormElementStyleMutation(baseOptions?: Apollo.MutationHo
 export type ClearFormElementStyleMutationHookResult = ReturnType<typeof useClearFormElementStyleMutation>;
 export type ClearFormElementStyleMutationResult = Apollo.MutationResult<ClearFormElementStyleMutation>;
 export type ClearFormElementStyleMutationOptions = Apollo.BaseMutationOptions<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>;
+export const CreateLogicRuleForSurveyDocument = gql`
+    mutation createLogicRuleForSurvey($formElementId: Int!, $operator: FieldRuleOperator!, $jumpToId: Int!) {
+  createSurveyJumpRule(
+    input: {formElementId: $formElementId, booleanOperator: OR, jumpToId: $jumpToId, operator: $operator}
+  ) {
+    formLogicRule {
+      id
+      position
+      booleanOperator
+      command
+      formElementId
+      jumpToId
+      conditions {
+        id
+        operator
+        ruleId
+        subjectId
+        value
+      }
+    }
+  }
+}
+    `;
+export type CreateLogicRuleForSurveyMutationFn = Apollo.MutationFunction<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>;
+
+/**
+ * __useCreateLogicRuleForSurveyMutation__
+ *
+ * To run a mutation, you first call `useCreateLogicRuleForSurveyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateLogicRuleForSurveyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createLogicRuleForSurveyMutation, { data, loading, error }] = useCreateLogicRuleForSurveyMutation({
+ *   variables: {
+ *      formElementId: // value for 'formElementId'
+ *      operator: // value for 'operator'
+ *      jumpToId: // value for 'jumpToId'
+ *   },
+ * });
+ */
+export function useCreateLogicRuleForSurveyMutation(baseOptions?: Apollo.MutationHookOptions<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>(CreateLogicRuleForSurveyDocument, options);
+      }
+export type CreateLogicRuleForSurveyMutationHookResult = ReturnType<typeof useCreateLogicRuleForSurveyMutation>;
+export type CreateLogicRuleForSurveyMutationResult = Apollo.MutationResult<CreateLogicRuleForSurveyMutation>;
+export type CreateLogicRuleForSurveyMutationOptions = Apollo.BaseMutationOptions<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>;
+export const UpdateFormLogicRuleDocument = gql`
+    mutation UpdateFormLogicRule($id: Int!, $jumpToId: Int, $booleanOperator: FormLogicOperator, $formElementId: Int) {
+  updateFormLogicRule(
+    input: {id: $id, patch: {jumpToId: $jumpToId, booleanOperator: $booleanOperator, formElementId: $formElementId}}
+  ) {
+    formLogicRule {
+      id
+      booleanOperator
+      command
+      jumpToId
+      position
+    }
+  }
+}
+    `;
+export type UpdateFormLogicRuleMutationFn = Apollo.MutationFunction<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>;
+
+/**
+ * __useUpdateFormLogicRuleMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormLogicRuleMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormLogicRuleMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormLogicRuleMutation, { data, loading, error }] = useUpdateFormLogicRuleMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      jumpToId: // value for 'jumpToId'
+ *      booleanOperator: // value for 'booleanOperator'
+ *      formElementId: // value for 'formElementId'
+ *   },
+ * });
+ */
+export function useUpdateFormLogicRuleMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>(UpdateFormLogicRuleDocument, options);
+      }
+export type UpdateFormLogicRuleMutationHookResult = ReturnType<typeof useUpdateFormLogicRuleMutation>;
+export type UpdateFormLogicRuleMutationResult = Apollo.MutationResult<UpdateFormLogicRuleMutation>;
+export type UpdateFormLogicRuleMutationOptions = Apollo.BaseMutationOptions<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>;
+export const UpdateLogicConditionDocument = gql`
+    mutation UpdateLogicCondition($id: Int!, $operator: FieldRuleOperator, $value: JSON) {
+  updateFormLogicCondition(
+    input: {id: $id, patch: {operator: $operator, value: $value}}
+  ) {
+    formLogicCondition {
+      id
+      ruleId
+      operator
+      subjectId
+      value
+    }
+  }
+}
+    `;
+export type UpdateLogicConditionMutationFn = Apollo.MutationFunction<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>;
+
+/**
+ * __useUpdateLogicConditionMutation__
+ *
+ * To run a mutation, you first call `useUpdateLogicConditionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateLogicConditionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateLogicConditionMutation, { data, loading, error }] = useUpdateLogicConditionMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      operator: // value for 'operator'
+ *      value: // value for 'value'
+ *   },
+ * });
+ */
+export function useUpdateLogicConditionMutation(baseOptions?: Apollo.MutationHookOptions<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>(UpdateLogicConditionDocument, options);
+      }
+export type UpdateLogicConditionMutationHookResult = ReturnType<typeof useUpdateLogicConditionMutation>;
+export type UpdateLogicConditionMutationResult = Apollo.MutationResult<UpdateLogicConditionMutation>;
+export type UpdateLogicConditionMutationOptions = Apollo.BaseMutationOptions<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>;
+export const DeleteLogicConditionDocument = gql`
+    mutation DeleteLogicCondition($id: Int!) {
+  deleteFormLogicCondition(input: {id: $id}) {
+    formLogicCondition {
+      id
+      ruleId
+    }
+  }
+}
+    `;
+export type DeleteLogicConditionMutationFn = Apollo.MutationFunction<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>;
+
+/**
+ * __useDeleteLogicConditionMutation__
+ *
+ * To run a mutation, you first call `useDeleteLogicConditionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteLogicConditionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteLogicConditionMutation, { data, loading, error }] = useDeleteLogicConditionMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteLogicConditionMutation(baseOptions?: Apollo.MutationHookOptions<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>(DeleteLogicConditionDocument, options);
+      }
+export type DeleteLogicConditionMutationHookResult = ReturnType<typeof useDeleteLogicConditionMutation>;
+export type DeleteLogicConditionMutationResult = Apollo.MutationResult<DeleteLogicConditionMutation>;
+export type DeleteLogicConditionMutationOptions = Apollo.BaseMutationOptions<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>;
+export const DeleteLogicRuleDocument = gql`
+    mutation DeleteLogicRule($id: Int!) {
+  deleteFormLogicRule(input: {id: $id}) {
+    formLogicRule {
+      id
+      formElementId
+    }
+  }
+}
+    `;
+export type DeleteLogicRuleMutationFn = Apollo.MutationFunction<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>;
+
+/**
+ * __useDeleteLogicRuleMutation__
+ *
+ * To run a mutation, you first call `useDeleteLogicRuleMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteLogicRuleMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteLogicRuleMutation, { data, loading, error }] = useDeleteLogicRuleMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteLogicRuleMutation(baseOptions?: Apollo.MutationHookOptions<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>(DeleteLogicRuleDocument, options);
+      }
+export type DeleteLogicRuleMutationHookResult = ReturnType<typeof useDeleteLogicRuleMutation>;
+export type DeleteLogicRuleMutationResult = Apollo.MutationResult<DeleteLogicRuleMutation>;
+export type DeleteLogicRuleMutationOptions = Apollo.BaseMutationOptions<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>;
+export const AddConditionDocument = gql`
+    mutation AddCondition($operator: FieldRuleOperator!, $ruleId: Int!, $subjectId: Int!, $value: JSON) {
+  createFormLogicCondition(
+    input: {formLogicCondition: {operator: $operator, ruleId: $ruleId, subjectId: $subjectId, value: $value}}
+  ) {
+    formLogicCondition {
+      id
+      operator
+      ruleId
+      subjectId
+      value
+    }
+  }
+}
+    `;
+export type AddConditionMutationFn = Apollo.MutationFunction<AddConditionMutation, AddConditionMutationVariables>;
+
+/**
+ * __useAddConditionMutation__
+ *
+ * To run a mutation, you first call `useAddConditionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddConditionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addConditionMutation, { data, loading, error }] = useAddConditionMutation({
+ *   variables: {
+ *      operator: // value for 'operator'
+ *      ruleId: // value for 'ruleId'
+ *      subjectId: // value for 'subjectId'
+ *      value: // value for 'value'
+ *   },
+ * });
+ */
+export function useAddConditionMutation(baseOptions?: Apollo.MutationHookOptions<AddConditionMutation, AddConditionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddConditionMutation, AddConditionMutationVariables>(AddConditionDocument, options);
+      }
+export type AddConditionMutationHookResult = ReturnType<typeof useAddConditionMutation>;
+export type AddConditionMutationResult = Apollo.MutationResult<AddConditionMutation>;
+export type AddConditionMutationOptions = Apollo.BaseMutationOptions<AddConditionMutation, AddConditionMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -20327,3 +20850,159 @@ export function useUpdateProfileMutation(baseOptions?: Apollo.MutationHookOption
 export type UpdateProfileMutationHookResult = ReturnType<typeof useUpdateProfileMutation>;
 export type UpdateProfileMutationResult = Apollo.MutationResult<UpdateProfileMutation>;
 export type UpdateProfileMutationOptions = Apollo.BaseMutationOptions<UpdateProfileMutation, UpdateProfileMutationVariables>;
+export const namedOperations = {
+  Query: {
+    ProjectBucketSetting: 'ProjectBucketSetting',
+    GetAcl: 'GetAcl',
+    Groups: 'Groups',
+    VerifyProjectInvite: 'VerifyProjectInvite',
+    GetBasemaps: 'GetBasemaps',
+    GetBasemap: 'GetBasemap',
+    OptionalLayer: 'OptionalLayer',
+    GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
+    GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
+    CurrentProjectMetadata: 'CurrentProjectMetadata',
+    DraftTableOfContents: 'DraftTableOfContents',
+    layersAndSourcesForItems: 'layersAndSourcesForItems',
+    GetFolder: 'GetFolder',
+    GetLayerItem: 'GetLayerItem',
+    InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',
+    DataSourceUrlProperties: 'DataSourceUrlProperties',
+    GetMetadata: 'GetMetadata',
+    ProjectHostingQuota: 'ProjectHostingQuota',
+    InteractivitySettingsById: 'InteractivitySettingsById',
+    ProjectAccessControlSettings: 'ProjectAccessControlSettings',
+    ProjectRegion: 'ProjectRegion',
+    GetProjectBySlug: 'GetProjectBySlug',
+    ProjectSlugExists: 'ProjectSlugExists',
+    PublishedTableOfContents: 'PublishedTableOfContents',
+    SimpleProjectList: 'SimpleProjectList',
+    Surveys: 'Surveys',
+    SurveyById: 'SurveyById',
+    SurveyFormEditorDetails: 'SurveyFormEditorDetails',
+    GetPhotos: 'GetPhotos',
+    Survey: 'Survey',
+    UserAdminCounts: 'UserAdminCounts',
+    Participants: 'Participants',
+    Admins: 'Admins',
+    GroupMembers: 'GroupMembers',
+    UserSettingsLists: 'UserSettingsLists',
+    UserInfo: 'UserInfo',
+    ProjectInvites: 'ProjectInvites',
+    InviteEditorModalQuery: 'InviteEditorModalQuery'
+  },
+  Mutation: {
+    UpdateProjectStorageBucket: 'UpdateProjectStorageBucket',
+    UpdateAclType: 'UpdateAclType',
+    AddGroupToAcl: 'AddGroupToAcl',
+    RemoveGroupFromAcl: 'RemoveGroupFromAcl',
+    CreateTableOfContentsItem: 'CreateTableOfContentsItem',
+    CreateArcGISDynamicDataSource: 'CreateArcGISDynamicDataSource',
+    CreateArcGISImageSource: 'CreateArcGISImageSource',
+    CreateSeaSketchVectorSource: 'CreateSeaSketchVectorSource',
+    CreateDataLayer: 'CreateDataLayer',
+    GetOrCreateSprite: 'GetOrCreateSprite',
+    AddImageToSprite: 'AddImageToSprite',
+    ConfirmProjectInvite: 'ConfirmProjectInvite',
+    ResendEmailVerification: 'ResendEmailVerification',
+    RequestInviteOnlyProjectAccess: 'RequestInviteOnlyProjectAccess',
+    CreateBasemap: 'CreateBasemap',
+    UpdateBasemap: 'UpdateBasemap',
+    UpdateBasemapUrl: 'UpdateBasemapUrl',
+    UpdateBasemapLabelsLayer: 'UpdateBasemapLabelsLayer',
+    Toggle3dTerrain: 'Toggle3dTerrain',
+    Set3dTerrain: 'Set3dTerrain',
+    UpdateTerrainExaggeration: 'UpdateTerrainExaggeration',
+    DeleteBasemap: 'DeleteBasemap',
+    UpdateOptionalLayerName: 'UpdateOptionalLayerName',
+    CreateOptionalLayer: 'CreateOptionalLayer',
+    UpdateOptionalLayer: 'UpdateOptionalLayer',
+    DeleteOptionalLayer: 'DeleteOptionalLayer',
+    UpdateOptionalBasemapLayerLayerList: 'UpdateOptionalBasemapLayerLayerList',
+    UpdateOptionalBasemapLayerOptions: 'UpdateOptionalBasemapLayerOptions',
+    UpdateOptionalBasemapLayerMetadata: 'UpdateOptionalBasemapLayerMetadata',
+    UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
+    CreateProject: 'CreateProject',
+    CreateFolder: 'CreateFolder',
+    DeleteBranch: 'DeleteBranch',
+    UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
+    UpdateFolder: 'UpdateFolder',
+    UpdateTableOfContentsItem: 'UpdateTableOfContentsItem',
+    UpdateEnableDownload: 'UpdateEnableDownload',
+    UpdateLayer: 'UpdateLayer',
+    UpdateDataSource: 'UpdateDataSource',
+    UpdateInteractivitySettings: 'UpdateInteractivitySettings',
+    UpdateZIndexes: 'UpdateZIndexes',
+    UpdateRenderUnderType: 'UpdateRenderUnderType',
+    UpdateQueryParameters: 'UpdateQueryParameters',
+    UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
+    UpdateMetadata: 'UpdateMetadata',
+    PublishTableOfContents: 'PublishTableOfContents',
+    updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
+    UpdateProjectRegion: 'UpdateProjectRegion',
+    CreateSurvey: 'CreateSurvey',
+    UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
+    UpdateFormElement: 'UpdateFormElement',
+    UpdateComponentSettings: 'UpdateComponentSettings',
+    UpdateFormElementBody: 'UpdateFormElementBody',
+    UpdateFormElementOrder: 'UpdateFormElementOrder',
+    AddFormElement: 'AddFormElement',
+    DeleteFormElement: 'DeleteFormElement',
+    UpdateForm: 'UpdateForm',
+    UpdateFormElementBackground: 'UpdateFormElementBackground',
+    SetFormElementBackground: 'SetFormElementBackground',
+    clearFormElementStyle: 'clearFormElementStyle',
+    createLogicRuleForSurvey: 'createLogicRuleForSurvey',
+    UpdateFormLogicRule: 'UpdateFormLogicRule',
+    UpdateLogicCondition: 'UpdateLogicCondition',
+    DeleteLogicCondition: 'DeleteLogicCondition',
+    DeleteLogicRule: 'DeleteLogicRule',
+    AddCondition: 'AddCondition',
+    CreateResponse: 'CreateResponse',
+    UpdateProjectName: 'UpdateProjectName',
+    UpdateProjectSettings: 'UpdateProjectSettings',
+    CreateGroup: 'CreateGroup',
+    toggleAdminAccess: 'toggleAdminAccess',
+    setUserGroups: 'setUserGroups',
+    toggleForumPostingBan: 'toggleForumPostingBan',
+    deleteGroup: 'deleteGroup',
+    createProjectInvites: 'createProjectInvites',
+    UpdateProjectInvite: 'UpdateProjectInvite',
+    DeleteProjectInvite: 'DeleteProjectInvite',
+    SendInvite: 'SendInvite',
+    RenameGroup: 'RenameGroup',
+    SendInvites: 'SendInvites',
+    UpdateProfile: 'UpdateProfile'
+  },
+  Subscription: {
+    ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
+  },
+  Fragment: {
+    UpdateTerrainExaggeration: 'UpdateTerrainExaggeration',
+    NewLabelsLayer: 'NewLabelsLayer',
+    NewTerrain: 'NewTerrain',
+    NewBasemap: 'NewBasemap',
+    NewQueryParameters: 'NewQueryParameters',
+    UpdateHighDPI: 'UpdateHighDPI',
+    UpdateFormat: 'UpdateFormat',
+    NewGLStyle: 'NewGLStyle',
+    NewRenderUnder: 'NewRenderUnder',
+    NewZIndex: 'NewZIndex',
+    NewElement: 'NewElement',
+    LogicRuleEditorFormElement: 'LogicRuleEditorFormElement',
+    LogicRuleEditorRule: 'LogicRuleEditorRule',
+    NewRule: 'NewRule',
+    NewSurvey: 'NewSurvey',
+    NewGroup: 'NewGroup',
+    NewInviteEmail: 'NewInviteEmail',
+    NewLayerOptions: 'NewLayerOptions',
+    UpdateComponentSettings: 'UpdateComponentSettings',
+    UpdateBody: 'UpdateBody',
+    SurveyListDetails: 'SurveyListDetails',
+    FormElementFullDetails: 'FormElementFullDetails',
+    ParticipantListDetails: 'ParticipantListDetails',
+    UserListDetails: 'UserListDetails',
+    InviteDetails: 'InviteDetails',
+    InviteEmailDetails: 'InviteEmailDetails'
+  }
+}

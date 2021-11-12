@@ -2355,6 +2355,7 @@ CREATE TABLE public.form_elements (
     background_height integer,
     text_variant public.form_element_text_variant DEFAULT 'DYNAMIC'::public.form_element_text_variant NOT NULL,
     background_image_placement public.form_element_background_image_placement DEFAULT 'TOP'::public.form_element_background_image_placement NOT NULL,
+    jump_to_id integer,
     CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
     CONSTRAINT form_fields_position_check CHECK (("position" > 0))
 );
@@ -2483,6 +2484,15 @@ Indicates whether the form element should be displayed with dark or light text v
 
 COMMENT ON COLUMN public.form_elements.background_image_placement IS '
 Layout of image in relation to form_element content.
+';
+
+
+--
+-- Name: COLUMN form_elements.jump_to_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.jump_to_id IS '
+Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`.
 ';
 
 
@@ -3508,6 +3518,57 @@ $$;
 
 
 --
+-- Name: form_logic_rules; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.form_logic_rules (
+    id integer NOT NULL,
+    form_element_id integer NOT NULL,
+    boolean_operator public.form_logic_operator DEFAULT 'OR'::public.form_logic_operator NOT NULL,
+    command public.form_logic_command NOT NULL,
+    jump_to_id integer,
+    "position" integer NOT NULL
+);
+
+
+--
+-- Name: TABLE form_logic_rules; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.form_logic_rules IS '
+@omit all
+Form logic rules can be used to hide or show FormElements based on the values of 
+preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
+';
+
+
+--
+-- Name: create_survey_jump_rule(integer, integer, public.form_logic_operator, public.field_rule_operator); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator) RETURNS public.form_logic_rules
+    LANGUAGE plpgsql
+    AS $$
+    declare
+      logic_rule form_logic_rules;
+    begin
+      insert into form_logic_rules (form_element_id, boolean_operator, command, jump_to_id) values ("formElementId", 'OR', 'JUMP', "jumpToId") returning * into logic_rule;
+      insert into form_logic_conditions (rule_id, subject_id, operator) values (logic_rule.id, "formElementId", "operator");
+      return logic_rule;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator) IS '
+Initializes a new FormLogicRule with a single condition and command=JUMP.
+';
+
+
+--
 -- Name: survey_responses; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4233,7 +4294,7 @@ CREATE TABLE public.form_logic_conditions (
     rule_id integer NOT NULL,
     subject_id integer NOT NULL,
     operator public.field_rule_operator DEFAULT '='::public.field_rule_operator NOT NULL,
-    value jsonb NOT NULL
+    value jsonb
 );
 
 
@@ -4246,31 +4307,6 @@ COMMENT ON TABLE public.form_logic_conditions IS '
 Conditions are nested within FormLogicRules. In many cases there may be
 only a single condition, but in others the FormLogicRule.booleanOperator
 property defines how they are applied.
-';
-
-
---
--- Name: form_logic_rules; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.form_logic_rules (
-    id integer NOT NULL,
-    form_element_id integer NOT NULL,
-    boolean_operator public.form_logic_operator DEFAULT 'OR'::public.form_logic_operator NOT NULL,
-    command public.form_logic_command NOT NULL,
-    jump_to_id integer,
-    "position" integer NOT NULL
-);
-
-
---
--- Name: TABLE form_logic_rules; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.form_logic_rules IS '
-@omit all
-Form logic rules can be used to hide or show FormElements based on the values of 
-preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
 ';
 
 
@@ -11646,6 +11682,14 @@ ALTER TABLE ONLY public.email_notification_preferences
 
 
 --
+-- Name: form_elements form_elements_jump_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_elements
+    ADD CONSTRAINT form_elements_jump_to_id_fkey FOREIGN KEY (jump_to_id) REFERENCES public.form_elements(id) ON DELETE SET NULL;
+
+
+--
 -- Name: form_elements form_elements_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14377,7 +14421,7 @@ REVOKE ALL ON FUNCTION public.citext_smaller(public.citext, public.citext) FROM 
 --
 
 GRANT SELECT ON TABLE public.form_elements TO anon;
-GRANT INSERT,DELETE ON TABLE public.form_elements TO seasketch_user;
+GRANT ALL ON TABLE public.form_elements TO seasketch_user;
 
 
 --
@@ -14850,6 +14894,22 @@ GRANT ALL ON FUNCTION public.create_survey_invites("surveyId" integer, "includeP
 
 
 --
+-- Name: TABLE form_logic_rules; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.form_logic_rules TO anon;
+GRANT ALL ON TABLE public.form_logic_rules TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_survey_jump_rule("formElementId" integer, "jumpToId" integer, "booleanOperator" public.form_logic_operator, operator public.field_rule_operator) TO seasketch_user;
+
+
+--
 -- Name: TABLE survey_responses; Type: ACL; Schema: public; Owner: -
 --
 
@@ -15180,14 +15240,6 @@ GRANT ALL ON FUNCTION public.form_elements_type(e public.form_elements) TO anon;
 
 GRANT SELECT ON TABLE public.form_logic_conditions TO anon;
 GRANT ALL ON TABLE public.form_logic_conditions TO seasketch_user;
-
-
---
--- Name: TABLE form_logic_rules; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.form_logic_rules TO anon;
-GRANT ALL ON TABLE public.form_logic_rules TO seasketch_user;
 
 
 --

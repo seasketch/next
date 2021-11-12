@@ -1,3 +1,4 @@
+import { MailIcon } from "@heroicons/react/solid";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import TextInput from "../components/TextInput";
@@ -112,5 +113,11 @@ function validate(text: string | undefined, required: boolean) {
     return <Trans ns="surveys">Does not appear to be a valid email</Trans>;
   }
 }
+Email.icon = (
+  <div className="bg-blue-800 w-full h-full font-bold text-center flex justify-center items-center italic">
+    {/* eslint-disable-next-line i18next/no-literal-string */}
+    <MailIcon style={{ color: "rgb(244 236 255)" }} className="w-2/3 h-2/3" />
+  </div>
+);
 
 export default Email;

@@ -31,6 +31,7 @@ module.exports = {
           "cache.writeFragment",
           "questionBodyFromMarkdown",
           "console.log",
+          "Error",
         ],
         onlyAttribute: ["label", "title", "description", "footer"],
         ignoreProperty: ["href", "className"],

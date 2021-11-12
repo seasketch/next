@@ -144,4 +144,11 @@ WelcomeMessage.defaultBody = fromMarkdown(`
 Thank you for participating.
 `);
 
+WelcomeMessage.icon = (
+  <div className="bg-gray-100 w-full h-full text-gray-50 font-bold text-center flex justify-center items-center">
+    {/* eslint-disable-next-line i18next/no-literal-string */}
+    <span className="text-xl">👋</span>
+  </div>
+);
+
 export default WelcomeMessage;
