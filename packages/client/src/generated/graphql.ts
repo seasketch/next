@@ -14629,6 +14629,40 @@ export type AddConditionMutation = (
   )> }
 );
 
+export type SurveyAppRuleFragment = (
+  { __typename?: 'FormLogicRule' }
+  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
+  & { conditions?: Maybe<Array<(
+    { __typename?: 'FormLogicCondition' }
+    & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
+  )>> }
+);
+
+export type SurveyAppFormElementFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId'>
+  & { type?: Maybe<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+  )> }
+);
+
+export type SurveyAppSurveyFragment = (
+  { __typename?: 'Survey' }
+  & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption'>
+  & { form?: Maybe<(
+    { __typename?: 'Form' }
+    & Pick<Form, 'id'>
+    & { logicRules?: Maybe<Array<(
+      { __typename?: 'FormLogicRule' }
+      & SurveyAppRuleFragment
+    )>>, formElements?: Maybe<Array<(
+      { __typename?: 'FormElement' }
+      & SurveyAppFormElementFragment
+    )>> }
+  )> }
+);
+
 export type SurveyQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
@@ -14648,19 +14682,7 @@ export type SurveyQuery = (
     & Pick<Project, 'name' | 'url'>
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
-    & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption'>
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id'>
-      & { formElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight'>
-        & { type?: Maybe<(
-          { __typename?: 'FormElementType' }
-          & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
-        )> }
-      )>> }
-    )> }
+    & SurveyAppSurveyFragment
   )> }
 );
 
@@ -15440,6 +15462,70 @@ export const FormElementFullDetailsFragmentDoc = gql`
   backgroundHeight
 }
     `;
+export const SurveyAppRuleFragmentDoc = gql`
+    fragment SurveyAppRule on FormLogicRule {
+  booleanOperator
+  command
+  conditions {
+    id
+    operator
+    ruleId
+    subjectId
+    value
+  }
+  formElementId
+  id
+  jumpToId
+  position
+}
+    `;
+export const SurveyAppFormElementFragmentDoc = gql`
+    fragment SurveyAppFormElement on FormElement {
+  id
+  componentSettings
+  body
+  isRequired
+  position
+  typeId
+  type {
+    componentName
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+  }
+  backgroundColor
+  secondaryColor
+  backgroundImage
+  backgroundImagePlacement
+  textVariant
+  unsplashAuthorName
+  unsplashAuthorUrl
+  backgroundWidth
+  backgroundHeight
+  jumpToId
+}
+    `;
+export const SurveyAppSurveyFragmentDoc = gql`
+    fragment SurveyAppSurvey on Survey {
+  id
+  name
+  accessType
+  isDisabled
+  showProgress
+  showFacilitationOption
+  form {
+    id
+    logicRules {
+      ...SurveyAppRule
+    }
+    formElements {
+      ...SurveyAppFormElement
+    }
+  }
+}
+    ${SurveyAppRuleFragmentDoc}
+${SurveyAppFormElementFragmentDoc}`;
 export const ParticipantListDetailsFragmentDoc = gql`
     fragment ParticipantListDetails on User {
   id
@@ -19767,42 +19853,10 @@ export const SurveyDocument = gql`
     url
   }
   survey(id: $id) {
-    id
-    name
-    accessType
-    isDisabled
-    showProgress
-    showFacilitationOption
-    form {
-      id
-      formElements {
-        id
-        componentSettings
-        body
-        isRequired
-        position
-        typeId
-        type {
-          componentName
-          isInput
-          isSingleUseOnly
-          isSurveysOnly
-          label
-        }
-        backgroundColor
-        secondaryColor
-        backgroundImage
-        backgroundImagePlacement
-        textVariant
-        unsplashAuthorName
-        unsplashAuthorUrl
-        backgroundWidth
-        backgroundHeight
-      }
-    }
+    ...SurveyAppSurvey
   }
 }
-    `;
+    ${SurveyAppSurveyFragmentDoc}`;
 
 /**
  * __useSurveyQuery__
@@ -21000,6 +21054,9 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     SurveyListDetails: 'SurveyListDetails',
     FormElementFullDetails: 'FormElementFullDetails',
+    SurveyAppRule: 'SurveyAppRule',
+    SurveyAppFormElement: 'SurveyAppFormElement',
+    SurveyAppSurvey: 'SurveyAppSurvey',
     ParticipantListDetails: 'ParticipantListDetails',
     UserListDetails: 'UserListDetails',
     InviteDetails: 'InviteDetails',

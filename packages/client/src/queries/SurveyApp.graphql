@@ -1,3 +1,63 @@
+fragment SurveyAppRule on FormLogicRule {
+  booleanOperator
+  command
+  conditions {
+    id
+    operator
+    ruleId
+    subjectId
+    value
+  }
+  formElementId
+  id
+  jumpToId
+  position
+}
+
+fragment SurveyAppFormElement on FormElement {
+  id
+  componentSettings
+  body
+  isRequired
+  position
+  typeId
+  type {
+    componentName
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+  }
+  backgroundColor
+  secondaryColor
+  backgroundImage
+  backgroundImagePlacement
+  textVariant
+  unsplashAuthorName
+  unsplashAuthorUrl
+  backgroundWidth
+  backgroundHeight
+  jumpToId
+}
+
+fragment SurveyAppSurvey on Survey {
+  id
+  name
+  accessType
+  isDisabled
+  showProgress
+  showFacilitationOption
+  form {
+    id
+    logicRules {
+      ...SurveyAppRule
+    }
+    formElements {
+      ...SurveyAppFormElement
+    }
+  }
+}
+
 query Survey($id: Int!) {
   me {
     isAdmin
@@ -11,39 +71,7 @@ query Survey($id: Int!) {
     url
   }
   survey(id: $id) {
-    id
-    name
-    accessType
-    isDisabled
-    showProgress
-    showFacilitationOption
-    form {
-      id
-      formElements {
-        id
-        componentSettings
-        body
-        isRequired
-        position
-        typeId
-        type {
-          componentName
-          isInput
-          isSingleUseOnly
-          isSurveysOnly
-          label
-        }
-        backgroundColor
-        secondaryColor
-        backgroundImage
-        backgroundImagePlacement
-        textVariant
-        unsplashAuthorName
-        unsplashAuthorUrl
-        backgroundWidth
-        backgroundHeight
-      }
-    }
+    ...SurveyAppSurvey
   }
 }
 
