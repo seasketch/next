@@ -181,11 +181,6 @@ function SurveyApp() {
           );
         }
       } else if (pagingState) {
-        console.info(
-          "ADVANCING",
-          pagingState.nextFormElement,
-          elements.indexOf(pagingState.nextFormElement!)
-        );
         history.push(
           // eslint-disable-next-line i18next/no-literal-string
           `/${slug}/surveys/${surveyId}/${elements.indexOf(
