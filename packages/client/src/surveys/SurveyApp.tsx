@@ -124,10 +124,11 @@ function SurveyApp() {
   const [responseState, setResponseState] = useLocalStorage<{
     [id: number]: FormElementState;
     facilitated: boolean;
+    submitted: boolean;
   }>(
     // eslint-disable-next-line i18next/no-literal-string
     `survey-${surveyId}`,
-    { facilitated: false }
+    { facilitated: false, submitted: false }
   );
 
   const pagingState = useMemo(() => {
@@ -137,7 +138,7 @@ function SurveyApp() {
         elements,
         data.survey.form.logicRules || [],
         Object.keys(responseState).reduce((answers, id) => {
-          if (id !== "facilitated") {
+          if (id !== "facilitated" && id !== "submitted") {
             const n = parseInt(id);
             answers[n] = responseState[n].value;
           }
@@ -172,13 +173,14 @@ function SurveyApp() {
           },
         });
         if (response && !response.errors) {
-          setResponseState({ facilitated: false });
+          await setResponseState((prev) => ({ ...prev, submitted: true }));
           history.push(
             // eslint-disable-next-line i18next/no-literal-string
             `/${slug}/surveys/${surveyId}/${elements.indexOf(
               pagingState.nextFormElement!
             )}/${practice ? "practice" : ""}`
           );
+          setResponseState({ facilitated: false, submitted: false });
         }
       } else if (pagingState) {
         history.push(
@@ -232,7 +234,7 @@ function SurveyApp() {
       elements,
       data.survey.form.logicRules || [],
       Object.keys(responseState).reduce((answers, id) => {
-        if (id !== "facilitated") {
+        if (id !== "facilitated" && id !== "submitted") {
           const n = parseInt(id);
           answers[n] = responseState[n].value;
         }
