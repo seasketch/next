@@ -1666,6 +1666,22 @@ CREATE FUNCTION public.before_basemap_insert_create_interactivity_settings_func(
 
 
 --
+-- Name: before_delete_sketch_class_check_form_element_id(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_delete_sketch_class_check_form_element_id() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  begin
+    if (OLD.form_element_id and (select count(*) from form_elements where form_element_id = OLD.form_element_id) > 0) then
+      raise exception 'Sketch Class is associated with a form element. Delete form element first';
+    end if;
+    return OLD;
+    end;
+  $$;
+
+
+--
 -- Name: before_insert_form_elements_func(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3086,7 +3102,7 @@ CREATE TABLE public.projects (
     is_deleted boolean DEFAULT false NOT NULL,
     deleted_at timestamp with time zone,
     region public.geometry(Polygon) DEFAULT public.st_geomfromgeojson('{"coordinates":[[[-157.05324470015358,69.74201326987497],[135.18377661193057,69.74201326987497],[135.18377661193057,-43.27449014737426],[-157.05324470015358,-43.27449014737426],[-157.05324470015358,69.74201326987497]]],"type":"Polygon"}'::text) NOT NULL,
-    data_sources_bucket_id text DEFAULT public.get_default_data_sources_bucket() NOT NULL,
+    data_sources_bucket_id text DEFAULT public.get_default_data_sources_bucket(),
     invite_email_subject text DEFAULT 'You have been invited to a SeaSketch project'::text NOT NULL,
     invite_email_template_text text DEFAULT 'Hello {{name}},
 You have been invited to join the {{projectName}} SeaSketch project. To sign up, just follow this link and you will be able to create an account and start exploring the application.
@@ -4221,6 +4237,153 @@ COMMENT ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" in
 
 
 --
+-- Name: sketch_classes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sketch_classes (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    name text NOT NULL,
+    geometry_type public.sketch_geometry_type DEFAULT 'POLYGON'::public.sketch_geometry_type NOT NULL,
+    allow_multi boolean DEFAULT false NOT NULL,
+    is_archived boolean DEFAULT false NOT NULL,
+    geoprocessing_project_url text,
+    geoprocessing_client_url text,
+    geoprocessing_client_name text,
+    mapbox_gl_style jsonb,
+    form_element_id integer,
+    CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
+    CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
+);
+
+
+--
+-- Name: TABLE sketch_classes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sketch_classes IS '
+@omit all
+Sketch Classes act as a schema for sketches drawn by users.
+';
+
+
+--
+-- Name: COLUMN sketch_classes.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_classes.project_id IS 'SketchClasses belong to a single project.';
+
+
+--
+-- Name: COLUMN sketch_classes.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_classes.name IS 'Label chosen by project admins that is shown to users.';
+
+
+--
+-- Name: COLUMN sketch_classes.geometry_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_classes.geometry_type IS '
+Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.
+';
+
+
+--
+-- Name: COLUMN sketch_classes.allow_multi; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_classes.allow_multi IS '
+If set to true, a geometry_type of POLYGON would allow for both POLYGONs and 
+MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still 
+digitize single features. 
+
+Note that this feature should be used seldomly, since for planning purposes it 
+is unlikely to have non-contiguous zones.
+
+For CHOOSE_FEATURE geometry types, this field will enable the selction of 
+multiple features.
+';
+
+
+--
+-- Name: COLUMN sketch_classes.is_archived; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_classes.is_archived IS '
+If set to true, (non-admin) users should not be able to digitize new features using this sketch class, but they should still be able to access the sketch class in order to render existing sketches of this type.
+';
+
+
+--
+-- Name: COLUMN sketch_classes.geoprocessing_project_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_classes.geoprocessing_project_url IS '
+Root endpoint of a [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project that should be used for reporting.
+';
+
+
+--
+-- Name: COLUMN sketch_classes.geoprocessing_client_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_classes.geoprocessing_client_url IS '
+Endpoint for the client javascript bundle.
+';
+
+
+--
+-- Name: COLUMN sketch_classes.geoprocessing_client_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_classes.geoprocessing_client_name IS '
+Name of the report to be displayed.
+';
+
+
+--
+-- Name: COLUMN sketch_classes.mapbox_gl_style; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_classes.mapbox_gl_style IS '
+[Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
+render features. Sketches can be styled based on attribute data by using 
+[Expressions](https://docs.mapbox.com/help/glossary/expression/).
+';
+
+
+--
+-- Name: COLUMN sketch_classes.form_element_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_classes.form_element_id IS '
+If set, this sketch class is only for use in a survey indicated by the form_element.
+';
+
+
+--
+-- Name: form_elements_sketch_class(public.form_elements); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.form_elements_sketch_class(form_element public.form_elements) RETURNS public.sketch_classes
+    LANGUAGE sql STABLE
+    AS $$
+    select * from sketch_classes where sketch_classes.form_element_id = form_element.id limit 1;
+$$;
+
+
+--
+-- Name: FUNCTION form_elements_sketch_class(form_element public.form_elements); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.form_elements_sketch_class(form_element public.form_elements) IS '
+Sketch Class to be used in conjuction with a form element that supports spatial feature input.
+';
+
+
+--
 -- Name: form_element_types; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4232,7 +4395,9 @@ CREATE TABLE public.form_element_types (
     is_hidden boolean DEFAULT false NOT NULL,
     is_single_use_only boolean DEFAULT false NOT NULL,
     is_required_for_surveys boolean DEFAULT false NOT NULL,
-    supported_operators public.field_rule_operator[] DEFAULT '{}'::public.field_rule_operator[] NOT NULL
+    supported_operators public.field_rule_operator[] DEFAULT '{}'::public.field_rule_operator[] NOT NULL,
+    is_spatial boolean DEFAULT false NOT NULL,
+    default_sketch_class_template text
 );
 
 
@@ -5031,6 +5196,8 @@ CREATE TABLE public.sketches (
     bbox real[] GENERATED ALWAYS AS (public.create_bbox(geom)) STORED,
     num_vertices integer GENERATED ALWAYS AS (public.st_npoints(geom)) STORED,
     folder_id integer,
+    survey_response_id integer,
+    attributes jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
 );
 
@@ -8081,133 +8248,6 @@ COMMENT ON FUNCTION public.shared_basemaps() IS '
 
 
 --
--- Name: sketch_classes; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.sketch_classes (
-    id integer NOT NULL,
-    project_id integer NOT NULL,
-    name text NOT NULL,
-    geometry_type public.sketch_geometry_type DEFAULT 'POLYGON'::public.sketch_geometry_type NOT NULL,
-    allow_multi boolean DEFAULT false NOT NULL,
-    is_archived boolean DEFAULT false NOT NULL,
-    is_my_plans_option boolean DEFAULT true NOT NULL,
-    geoprocessing_project_url text,
-    geoprocessing_client_url text,
-    geoprocessing_client_name text,
-    mapbox_gl_style jsonb,
-    CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
-    CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
-);
-
-
---
--- Name: TABLE sketch_classes; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.sketch_classes IS '
-@omit all
-Sketch Classes act as a schema for sketches drawn by users.
-';
-
-
---
--- Name: COLUMN sketch_classes.project_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_classes.project_id IS 'SketchClasses belong to a single project.';
-
-
---
--- Name: COLUMN sketch_classes.name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_classes.name IS 'Label chosen by project admins that is shown to users.';
-
-
---
--- Name: COLUMN sketch_classes.geometry_type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_classes.geometry_type IS '
-Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.
-';
-
-
---
--- Name: COLUMN sketch_classes.allow_multi; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_classes.allow_multi IS '
-If set to true, a geometry_type of POLYGON would allow for both POLYGONs and 
-MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still 
-digitize single features. 
-
-Note that this feature should be used seldomly, since for planning purposes it 
-is unlikely to have non-contiguous zones.
-
-For CHOOSE_FEATURE geometry types, this field will enable the selction of 
-multiple features.
-';
-
-
---
--- Name: COLUMN sketch_classes.is_archived; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_classes.is_archived IS '
-If set to true, (non-admin) users should not be able to digitize new features using this sketch class, but they should still be able to access the sketch class in order to render existing sketches of this type.
-';
-
-
---
--- Name: COLUMN sketch_classes.is_my_plans_option; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_classes.is_my_plans_option IS '
-If set to true, show as an option in the digitizing tools. If set to false, this sketch class may be solely for survey responses.
-';
-
-
---
--- Name: COLUMN sketch_classes.geoprocessing_project_url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_classes.geoprocessing_project_url IS '
-Root endpoint of a [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project that should be used for reporting.
-';
-
-
---
--- Name: COLUMN sketch_classes.geoprocessing_client_url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_classes.geoprocessing_client_url IS '
-Endpoint for the client javascript bundle.
-';
-
-
---
--- Name: COLUMN sketch_classes.geoprocessing_client_name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_classes.geoprocessing_client_name IS '
-Name of the report to be displayed.
-';
-
-
---
--- Name: COLUMN sketch_classes.mapbox_gl_style; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_classes.mapbox_gl_style IS '
-[Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
-render features. Sketches can be styled based on attribute data by using 
-[Expressions](https://docs.mapbox.com/help/glossary/expression/).
-';
-
-
---
 -- Name: sketch_classes_can_digitize(public.sketch_classes); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11044,6 +11084,146 @@ CREATE INDEX projects_data_sources_bucket_id_idx ON public.projects USING btree 
 
 
 --
+-- Name: sketch_classes_form_element_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx1 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx10; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx10 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx11; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx11 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx12; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx12 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx13; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx13 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx14; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx14 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx15; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx15 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx16; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx16 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx17; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx17 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx18; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx18 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx19; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx19 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx2 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx3; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx3 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx4; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx4 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx5; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx5 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx6; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx6 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx7; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx7 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx8; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx8 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
+-- Name: sketch_classes_form_element_id_idx9; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_classes_form_element_id_idx9 ON public.sketch_classes USING btree (form_element_id);
+
+
+--
 -- Name: sketch_classes_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11321,6 +11501,13 @@ CREATE TRIGGER before_basemap_insert_create_interactivity_settings BEFORE INSERT
 --
 
 CREATE TRIGGER before_delete_on_form_elements_001 BEFORE DELETE ON public.form_elements FOR EACH ROW EXECUTE FUNCTION public.check_element_type();
+
+
+--
+-- Name: sketch_classes before_delete_sketch_class_001; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_delete_sketch_class_001 BEFORE DELETE ON public.sketch_classes FOR EACH ROW EXECUTE FUNCTION public.before_delete_sketch_class_check_form_element_id();
 
 
 --
@@ -11967,6 +12154,23 @@ ALTER TABLE ONLY public.projects_shared_basemaps
 
 
 --
+-- Name: sketch_classes sketch_classes_form_element_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_classes
+    ADD CONSTRAINT sketch_classes_form_element_id_fkey FOREIGN KEY (form_element_id) REFERENCES public.form_elements(id) ON DELETE CASCADE;
+
+
+--
+-- Name: CONSTRAINT sketch_classes_form_element_id_fkey ON sketch_classes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT sketch_classes_form_element_id_fkey ON public.sketch_classes IS '
+@omit many
+';
+
+
+--
 -- Name: sketch_classes sketch_classes_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12097,6 +12301,14 @@ ALTER TABLE ONLY public.sketches
 --
 
 COMMENT ON CONSTRAINT sketches_sketch_class_id_fkey ON public.sketches IS '@omit many';
+
+
+--
+-- Name: sketches sketches_survey_response_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketches
+    ADD CONSTRAINT sketches_survey_response_id_fkey FOREIGN KEY (survey_response_id) REFERENCES public.survey_responses(id) ON DELETE CASCADE;
 
 
 --
@@ -14058,6 +14270,13 @@ REVOKE ALL ON FUNCTION public.before_basemap_insert_create_interactivity_setting
 
 
 --
+-- Name: FUNCTION before_delete_sketch_class_check_form_element_id(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_delete_sketch_class_check_form_element_id() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION before_insert_form_elements_func(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15217,6 +15436,64 @@ REVOKE ALL ON FUNCTION public.equals(geom1 public.geometry, geom2 public.geometr
 --
 
 REVOKE ALL ON FUNCTION public.find_srid(character varying, character varying, character varying) FROM PUBLIC;
+
+
+--
+-- Name: TABLE sketch_classes; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.sketch_classes TO anon;
+GRANT INSERT,DELETE ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.name; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(name) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.allow_multi; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(allow_multi) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.is_archived; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_archived) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.geoprocessing_project_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(geoprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.geoprocessing_client_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(geoprocessing_client_url) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.geoprocessing_client_name; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(geoprocessing_client_name) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: FUNCTION form_elements_sketch_class(form_element public.form_elements); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.form_elements_sketch_class(form_element public.form_elements) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.form_elements_sketch_class(form_element public.form_elements) TO anon;
 
 
 --
@@ -18297,56 +18574,6 @@ GRANT ALL ON FUNCTION public.set_user_groups("userId" integer, "projectId" integ
 
 REVOKE ALL ON FUNCTION public.shared_basemaps() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.shared_basemaps() TO anon;
-
-
---
--- Name: TABLE sketch_classes; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.sketch_classes TO anon;
-GRANT INSERT,DELETE ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.name; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(name) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.allow_multi; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(allow_multi) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.is_archived; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(is_archived) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.geoprocessing_project_url; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(geoprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.geoprocessing_client_url; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(geoprocessing_client_url) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.geoprocessing_client_name; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(geoprocessing_client_name) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --

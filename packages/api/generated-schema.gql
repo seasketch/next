@@ -1351,6 +1351,9 @@ type CreateSketchClassPayload {
   """
   clientMutationId: String
 
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
+
   """Reads a single `Project` that is related to this `SketchClass`."""
   project: Project
 
@@ -3527,6 +3530,9 @@ type DeleteSketchClassPayload {
   clientMutationId: String
   deletedSketchClassNodeId: ID
 
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
+
   """Reads a single `Project` that is related to this `SketchClass`."""
   project: Project
 
@@ -4311,6 +4317,12 @@ type FormElement implements Node {
   secondaryColor: String
 
   """
+  Sketch Class to be used in conjuction with a form element that supports spatial feature input.
+  
+  """
+  sketchClass: SketchClass
+
+  """
   Indicates whether the form element should be displayed with dark or light text
   variants to match the background color. Admin interface should automatically
   set this value based on `background_color`, though admins may wish to manually override.
@@ -4522,6 +4534,7 @@ Identifies the type of element in a form, including metadata about that element 
 """
 type FormElementType implements Node {
   componentName: String!
+  defaultSketchClassTemplate: String
   isHidden: Boolean!
 
   """
@@ -4533,6 +4546,7 @@ type FormElementType implements Node {
 
   """These elements can only be added to a form once."""
   isSingleUseOnly: Boolean!
+  isSpatial: Boolean!
 
   """
   If true, the element type should only be added to forms related to a survey.
@@ -7907,7 +7921,7 @@ type Project implements Node {
 
   """Reads a single `DataSourcesBucket` that is related to this `Project`."""
   dataSourcesBucket: DataSourcesBucket
-  dataSourcesBucketId: String!
+  dataSourcesBucketId: String
 
   """
   Retrieve DataSources for a given set of TableOfContentsItem IDs. Should be used
@@ -9784,6 +9798,8 @@ these records.
 
 """
 type Sketch implements Node {
+  attributes: JSON!
+
   """
   Bounding box of the final preprocessed geometry. [xmin, ymin, xmax, ymax]
   """
@@ -9839,6 +9855,7 @@ type Sketch implements Node {
 
   """SketchClass that defines the behavior of this type of sketch."""
   sketchClassId: Int!
+  surveyResponseId: Int
 
   """Reads a single `User` that is related to this `Sketch`."""
   user: User
@@ -9890,6 +9907,15 @@ type SketchClass implements Node {
   """Form schema used to collect attributes on these sketches."""
   form: Form
 
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
+
+  """
+  If set, this sketch class is only for use in a survey indicated by the form_element.
+  
+  """
+  formElementId: Int
+
   """
   Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.
   
@@ -9924,13 +9950,6 @@ type SketchClass implements Node {
   
   """
   isArchived: Boolean!
-
-  """
-  If set to true, show as an option in the digitizing tools. If set to false,
-  this sketch class may be solely for survey responses.
-  
-  """
-  isMyPlansOption: Boolean!
 
   """
   [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
@@ -9974,6 +9993,9 @@ A condition to be used against `SketchClass` object types. All fields are tested
 for equality and combined with a logical ‘and.’
 """
 input SketchClassCondition {
+  """Checks for equality with the object’s `formElementId` field."""
+  formElementId: Int
+
   """Checks for equality with the object’s `id` field."""
   id: Int
 
@@ -9992,6 +10014,8 @@ type SketchClassesEdge {
 
 """Methods to use when ordering `SketchClass`."""
 enum SketchClassesOrderBy {
+  FORM_ELEMENT_ID_ASC
+  FORM_ELEMENT_ID_DESC
   ID_ASC
   ID_DESC
   NATURAL
@@ -10016,6 +10040,12 @@ input SketchClassInput {
   
   """
   allowMulti: Boolean
+
+  """
+  If set, this sketch class is only for use in a survey indicated by the form_element.
+  
+  """
+  formElementId: Int
 
   """
   Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.
@@ -10051,13 +10081,6 @@ input SketchClassInput {
   
   """
   isArchived: Boolean
-
-  """
-  If set to true, show as an option in the digitizing tools. If set to false,
-  this sketch class may be solely for survey responses.
-  
-  """
-  isMyPlansOption: Boolean
 
   """
   [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
@@ -10220,6 +10243,8 @@ enum SketchGeometryType {
 
 """An input for mutations affecting `Sketch`"""
 input SketchInput {
+  attributes: JSON
+
   """
   Bounding box of the final preprocessed geometry. [xmin, ymin, xmax, ymax]
   """
@@ -10261,6 +10286,7 @@ input SketchInput {
 
   """SketchClass that defines the behavior of this type of sketch."""
   sketchClassId: Int!
+  surveyResponseId: Int
 
   """
   Spatial feature the user directly digitized, without preprocessing. This is
@@ -12774,6 +12800,9 @@ type UpdateSketchClassPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
+
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
 
   """Reads a single `Project` that is related to this `SketchClass`."""
   project: Project

@@ -1196,6 +1196,8 @@ export type CreateSketchClassPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
   /** Reads a single `Project` that is related to this `SketchClass`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -2982,6 +2984,8 @@ export type DeleteSketchClassPayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   deletedSketchClassNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
   /** Reads a single `Project` that is related to this `SketchClass`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -3652,6 +3656,8 @@ export type FormElement = Node & {
   position: Scalars['Int'];
   /** Color used to style navigation controls */
   secondaryColor?: Maybe<Scalars['String']>;
+  /** Sketch Class to be used in conjuction with a form element that supports spatial feature input. */
+  sketchClass?: Maybe<SketchClass>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -3787,6 +3793,7 @@ export enum FormElementTextVariant {
 export type FormElementType = Node & {
   __typename?: 'FormElementType';
   componentName: Scalars['String'];
+  defaultSketchClassTemplate?: Maybe<Scalars['String']>;
   isHidden: Scalars['Boolean'];
   /**
    * Whether the element is an input that collects information from users or
@@ -3796,6 +3803,7 @@ export type FormElementType = Node & {
   isRequiredForSurveys: Scalars['Boolean'];
   /** These elements can only be added to a form once. */
   isSingleUseOnly: Scalars['Boolean'];
+  isSpatial: Scalars['Boolean'];
   /** If true, the element type should only be added to forms related to a survey. */
   isSurveysOnly: Scalars['Boolean'];
   /**
@@ -6880,7 +6888,7 @@ export type Project = Node & {
   dataLayersForItems?: Maybe<Array<DataLayer>>;
   /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
   dataSourcesBucket?: Maybe<DataSourcesBucket>;
-  dataSourcesBucketId: Scalars['String'];
+  dataSourcesBucketId?: Maybe<Scalars['String']>;
   /**
    * Retrieve DataSources for a given set of TableOfContentsItem IDs. Should be used
    * in conjuction with `dataLayersForItems` to progressively load layer information
@@ -9825,6 +9833,7 @@ export type SetUserGroupsPayload = {
  */
 export type Sketch = Node & {
   __typename?: 'Sketch';
+  attributes: Scalars['JSON'];
   /** Bounding box of the final preprocessed geometry. [xmin, ymin, xmax, ymax] */
   bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
@@ -9861,6 +9870,7 @@ export type Sketch = Node & {
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
   sketchClassId: Scalars['Int'];
+  surveyResponseId?: Maybe<Scalars['Int']>;
   /** Reads a single `User` that is related to this `Sketch`. */
   user?: Maybe<User>;
   /**
@@ -9902,6 +9912,10 @@ export type SketchClass = Node & {
   canDigitize?: Maybe<Scalars['Boolean']>;
   /** Form schema used to collect attributes on these sketches. */
   form?: Maybe<Form>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
+  /** If set, this sketch class is only for use in a survey indicated by the form_element. */
+  formElementId?: Maybe<Scalars['Int']>;
   /** Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry. */
   geometryType: SketchGeometryType;
   /** Name of the report to be displayed. */
@@ -9921,11 +9935,6 @@ export type SketchClass = Node & {
    * class in order to render existing sketches of this type.
    */
   isArchived: Scalars['Boolean'];
-  /**
-   * If set to true, show as an option in the digitizing tools. If set to false,
-   * this sketch class may be solely for survey responses.
-   */
-  isMyPlansOption: Scalars['Boolean'];
   /**
    * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
    * render features. Sketches can be styled based on attribute data by using
@@ -9958,6 +9967,8 @@ export type SketchClassValidChildrenArgs = {
  * for equality and combined with a logical ‘and.’
  */
 export type SketchClassCondition = {
+  /** Checks for equality with the object’s `formElementId` field. */
+  formElementId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
@@ -9978,6 +9989,8 @@ export type SketchClassInput = {
    * multiple features.
    */
   allowMulti?: Maybe<Scalars['Boolean']>;
+  /** If set, this sketch class is only for use in a survey indicated by the form_element. */
+  formElementId?: Maybe<Scalars['Int']>;
   /** Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry. */
   geometryType?: Maybe<SketchGeometryType>;
   /** Name of the report to be displayed. */
@@ -9997,11 +10010,6 @@ export type SketchClassInput = {
    * class in order to render existing sketches of this type.
    */
   isArchived?: Maybe<Scalars['Boolean']>;
-  /**
-   * If set to true, show as an option in the digitizing tools. If set to false,
-   * this sketch class may be solely for survey responses.
-   */
-  isMyPlansOption?: Maybe<Scalars['Boolean']>;
   /**
    * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
    * render features. Sketches can be styled based on attribute data by using
@@ -10059,6 +10067,8 @@ export type SketchClassesEdge = {
 
 /** Methods to use when ordering `SketchClass`. */
 export enum SketchClassesOrderBy {
+  FormElementIdAsc = 'FORM_ELEMENT_ID_ASC',
+  FormElementIdDesc = 'FORM_ELEMENT_ID_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   Natural = 'NATURAL',
@@ -10147,6 +10157,7 @@ export enum SketchGeometryType {
 
 /** An input for mutations affecting `Sketch` */
 export type SketchInput = {
+  attributes?: Maybe<Scalars['JSON']>;
   /** Bounding box of the final preprocessed geometry. [xmin, ymin, xmax, ymax] */
   bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
@@ -10175,6 +10186,7 @@ export type SketchInput = {
   numVertices?: Maybe<Scalars['Int']>;
   /** SketchClass that defines the behavior of this type of sketch. */
   sketchClassId: Scalars['Int'];
+  surveyResponseId?: Maybe<Scalars['Int']>;
   /**
    * Spatial feature the user directly digitized, without preprocessing. This is
    * the feature that should be used if the Sketch is later edited.
@@ -12151,6 +12163,8 @@ export type UpdateSketchClassPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
   /** Reads a single `Project` that is related to this `SketchClass`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
