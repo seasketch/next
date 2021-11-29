@@ -33,6 +33,10 @@ import {
   collectQuestion,
   collectText,
 } from "../admin/surveys/collectText";
+import { HeadProvider, Title, Meta } from "react-head";
+import { colord } from "colord";
+import { useLocalForage } from "../useLocalForage";
+
 require("./surveys.css");
 
 interface FormElementState {
@@ -73,6 +77,11 @@ function SurveyApp() {
     current?: SurveyAppFormElementFragment;
     exiting?: SurveyAppFormElementFragment;
   }>({});
+
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    setStage(0);
+  }, [formElement.current]);
 
   /**
    * Update response state for just the given FormElement. Partial state can be supplied to be
@@ -121,7 +130,18 @@ function SurveyApp() {
   }
 
   const elements = sortFormElements(data?.survey?.form?.formElements || []);
-  const [responseState, setResponseState] = useLocalStorage<{
+
+  // const [responseState, setResponseState] = useLocalStorage<{
+  //   [id: number]: FormElementState;
+  //   facilitated: boolean;
+  //   submitted: boolean;
+  // }>(
+  //   // eslint-disable-next-line i18next/no-literal-string
+  //   `survey-${surveyId}`,
+  //   { facilitated: false, submitted: false }
+  // );
+
+  const [responseState, setResponseState] = useLocalForage<{
     [id: number]: FormElementState;
     facilitated: boolean;
     submitted: boolean;
@@ -174,6 +194,7 @@ function SurveyApp() {
         });
         if (response && !response.errors) {
           await setResponseState((prev) => ({ ...prev, submitted: true }));
+          window.scrollTo(0, 0);
           history.push(
             // eslint-disable-next-line i18next/no-literal-string
             `/${slug}/surveys/${surveyId}/${elements.indexOf(
@@ -183,6 +204,7 @@ function SurveyApp() {
           setResponseState({ facilitated: false, submitted: false });
         }
       } else if (pagingState) {
+        window.scrollTo(0, 0);
         history.push(
           // eslint-disable-next-line i18next/no-literal-string
           `/${slug}/surveys/${surveyId}/${elements.indexOf(
@@ -261,6 +283,9 @@ function SurveyApp() {
             bestName: data.me?.profile?.fullname || auth0.user?.name,
           }}
         >
+          <Title>{data.survey.name}</Title>
+          <Meta name="theme-color" content={style.backgroundColor} />
+
           <SurveyAppLayout
             showProgress={data.survey.showProgress}
             progress={index / elements.length}
@@ -319,6 +344,10 @@ function SurveyApp() {
                   value={surveyButtonFooter.current}
                 >
                   <FormElementFactory
+                    onRequestStageChange={(n) => setStage(n)}
+                    stage={stage}
+                    featureNumber={1}
+                    isSpatial={formElement.current?.type?.isSpatial || false}
                     {...formElement.current}
                     typeName={formElement.current.typeId}
                     submissionAttempted={!!state?.submissionAttempted}
@@ -378,7 +407,8 @@ function SurveyApp() {
                     value={state?.value}
                   />
                 </SurveyButtonFooterPortalContext.Provider>
-                {formElement.current?.typeId !== "ThankYou" &&
+                {!formElement.current?.type?.isSpatial &&
+                  formElement.current?.typeId !== "ThankYou" &&
                   formElement.current?.typeId !== "WelcomeMessage" &&
                   (!advancesAutomatically(formElement.current) ||
                     !formElement.current.isRequired) && (

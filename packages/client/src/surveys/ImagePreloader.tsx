@@ -1,6 +1,8 @@
+import { getLayout } from "../formElements/FormElement";
 import {
   FormElement,
-  FormElementBackgroundImagePlacement,
+  FormElementDetailsFragment,
+  FormElementLayout,
 } from "../generated/graphql";
 
 /**
@@ -16,8 +18,8 @@ export default function ImagePreloader({
   formElements,
 }: {
   formElements: Pick<
-    FormElement,
-    "backgroundImage" | "backgroundImagePlacement"
+    FormElementDetailsFragment,
+    "backgroundImage" | "layout" | "type"
   >[];
 }) {
   const unique: { [id: string]: true } = {};
@@ -37,7 +39,7 @@ export default function ImagePreloader({
                 href={el.backgroundImage + "&w=1280&auto=format,compress"}
                 // @ts-ignore
                 imagesrcset={srcSet(el.backgroundImage)}
-                imagesizes={sizes(el.backgroundImagePlacement)}
+                imagesizes={sizes(getLayout(el))}
               />
             );
           }
@@ -67,14 +69,11 @@ export function srcSet(imageUrl: string) {
 /**
  * Returns a string that can be used for img[sizes]. Use in conjunction with
  * srcSet() and <ImagePreloader /> to support responsive background images in surveys
- * @param layout FormElementBackgroundImagePlacement
+ * @param layout FormElementLayout
  * @returns String
  */
-export function sizes(layout: FormElementBackgroundImagePlacement) {
-  if (
-    layout === FormElementBackgroundImagePlacement.Top ||
-    layout === FormElementBackgroundImagePlacement.Cover
-  ) {
+export function sizes(layout: FormElementLayout) {
+  if (layout === FormElementLayout.Top || layout === FormElementLayout.Cover) {
     return "100vw";
   } else {
     return "60vw";

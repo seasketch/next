@@ -1,4 +1,4 @@
-import { sql, SqlTokenType } from "slonik";
+import { DatabaseTransactionConnectionType, sql, SqlTokenType } from "slonik";
 import { createPool } from "./pool";
 import {
   createUser,
@@ -23,6 +23,33 @@ const pool = createPool("test");
 
 const FormElementType = "TestTextFieldForm";
 beforeAll(async () => {});
+
+async function createForm(
+  callback: (
+    conn: DatabaseTransactionConnectionType,
+    formId: number,
+    surveyId: number,
+    projectId: number,
+    adminId: number,
+    userIds: [number, number]
+  ) => Promise<void>
+) {
+  await projectTransaction(
+    pool,
+    "public",
+    async (conn, projectId, adminId, userIds) => {
+      await createSession(conn, adminId, true, false, projectId);
+      const surveyId = await conn.oneFirst<number>(
+        sql`select id from make_survey('Survey A', ${projectId}, null)`
+      );
+      const formId = await conn.oneFirst<number>(
+        sql`select id from forms where survey_id = ${surveyId}`
+      );
+      await clearSession(conn);
+      await callback(conn, formId, surveyId, projectId, adminId, userIds);
+    }
+  );
+}
 
 describe("Forms", () => {
   describe("access control", () => {
@@ -683,4 +710,23 @@ test("export_id will be generated from body if blank", () => {
 test("export_id can be explicitly set", () => {
   const body = createBody("This is my question, it is really long");
   expect(createExportId(12, body, "my_export_id")).toBe("my_export_id");
+});
+
+test.todo("Make sure form logic rules are copied along with templates");
+
+test("check form_element_type.allowed_layouts", async () => {
+  await createForm(
+    async (conn, formId, surveyId, projectId, adminId, userIds) => {
+      await createSession(conn, adminId, true, false, projectId);
+      const elementId = await conn.oneFirst<number>(
+        sql`insert into form_elements (form_id, type_id, body, layout) values (${formId}, 'ShortText', '{}'::jsonb, 'LEFT') returning id`
+      );
+      expect(elementId).toBeTruthy();
+      expect(
+        conn.oneFirst<number>(
+          sql`insert into form_elements (form_id, type_id, body, layout) values (${formId}, 'SingleSpatialInput', '{}'::jsonb, 'LEFT') returning id`
+        )
+      ).rejects.toThrow(/layout/i);
+    }
+  );
 });

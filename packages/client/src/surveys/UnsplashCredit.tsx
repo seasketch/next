@@ -1,6 +1,6 @@
 import { CameraIcon } from "@heroicons/react/solid";
 import { Trans } from "react-i18next";
-import { FormElementBackgroundImagePlacement } from "../generated/graphql";
+import { FormElementLayout } from "../generated/graphql";
 
 export default function UnsplashCredit({
   name,
@@ -10,7 +10,7 @@ export default function UnsplashCredit({
 }: {
   name?: string;
   url?: string;
-  layout: FormElementBackgroundImagePlacement;
+  layout: FormElementLayout;
   isDark: boolean;
 }) {
   if (name && url) {
@@ -19,11 +19,11 @@ export default function UnsplashCredit({
         className={`z-10 ${
           isDark ? "text-white" : "text-gray-800"
         } p-2 font-medium text-sm sm:block opacity-50 ${
-          layout === FormElementBackgroundImagePlacement.Cover
+          layout === FormElementLayout.Cover
             ? "absolute bottom-0 left-0"
-            : layout === FormElementBackgroundImagePlacement.Left
+            : layout === FormElementLayout.Left
             ? "absolute bottom-0"
-            : layout === FormElementBackgroundImagePlacement.Top
+            : layout === FormElementLayout.Top
             ? "hidden sm:hidden"
             : "absolute bottom-0 right-0"
         }`}

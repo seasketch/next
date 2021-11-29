@@ -214,10 +214,11 @@ function validate(state: NameType, facilitated: boolean) {
   return true;
 }
 
-Name.icon = (
+Name.icon = () => (
   <div className="bg-gray-600 w-full h-full font-bold text-center flex justify-center items-center italic">
     {/* eslint-disable-next-line i18next/no-literal-string */}
     <UserCircleIcon style={{ color: "#bbd0dd" }} className="w-2/3 h-2/3" />
   </div>
 );
+
 export default Name;

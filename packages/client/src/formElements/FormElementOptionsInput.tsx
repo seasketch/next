@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { ReactNode, useEffect } from "react";
 import { useState } from "react";
 import Papa, { ParseError } from "papaparse";
 import { Trans, useTranslation } from "react-i18next";
@@ -11,9 +11,13 @@ export type FormElementOption = {
 export default function FormElementOptionsInput({
   initialValue,
   onChange,
+  heading,
+  description,
 }: {
   initialValue: FormElementOption[];
   onChange: (options: FormElementOption[]) => void;
+  heading?: string;
+  description?: ReactNode | string;
 }) {
   const [state, setState] = useState(toText(initialValue));
   const [errors, setErrors] = useState<string[]>([]);
@@ -43,8 +47,11 @@ export default function FormElementOptionsInput({
   return (
     <div>
       <h3 className="text-sm font-medium text-gray-800 leading-5">
-        <Trans ns="admin:surveys">Options</Trans>
+        {heading || <Trans ns="admin:surveys">Options</Trans>}
       </h3>
+      {description && (
+        <p className="text-sm text-gray-500 mb-2">{description}</p>
+      )}
       <p className="text-sm text-gray-500">
         <Trans ns="admin:surveys">
           List options as{" "}
@@ -59,7 +66,7 @@ export default function FormElementOptionsInput({
       <span></span>
       <textarea
         spellCheck={false}
-        className={`mt-1 w-full text-sm text-gray-800 rounded h-24 border-1 ${
+        className={`mt-1 w-full text-sm text-gray-800 rounded h-24 whitespace-nowrap border-1 ${
           errors.length
             ? "border-red-800 active:ring active:outline-red-800"
             : "border-gray-500"

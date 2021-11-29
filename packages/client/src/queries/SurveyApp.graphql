@@ -21,17 +21,25 @@ fragment SurveyAppFormElement on FormElement {
   isRequired
   position
   typeId
+  formId
   type {
     componentName
     isInput
     isSingleUseOnly
     isSurveysOnly
     label
+    isSpatial
+    allowedLayouts
+    supportedOperators
+    isHidden
+  }
+  sketchClass {
+    ...SketchClassDetails
   }
   backgroundColor
   secondaryColor
   backgroundImage
-  backgroundImagePlacement
+  layout
   textVariant
   unsplashAuthorName
   unsplashAuthorUrl

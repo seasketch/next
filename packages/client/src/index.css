@@ -208,3 +208,13 @@ label.required:after {
 .unsplash-thumb:hover span {
   display: block;
 }
+
+.absolute.mapboxgl-map {
+  position: absolute !important;
+}
+
+@media (max-width: 420px) {
+  .survey .absolute.mapboxgl-map .mapboxgl-ctrl-logo {
+    display: none;
+  }
+}

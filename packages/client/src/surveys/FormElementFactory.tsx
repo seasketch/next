@@ -1,6 +1,7 @@
 import { FormElementProps } from "../formElements/FormElement";
 import { Trans } from "react-i18next";
 import { components } from "../formElements";
+import { SketchClassDetailsFragment } from "../generated/graphql";
 
 /**
  * Returns the appropriate component for a given FormElement config based on type.componentName
@@ -12,19 +13,9 @@ export default function FormElementFactory({
   componentSettings,
   value,
   ...formElementData
-}: Pick<
-  FormElementProps<any>,
-  | "body"
-  | "id"
-  | "componentSettings"
-  | "isRequired"
-  | "submissionAttempted"
-  | "value"
-  | "onChange"
-  | "onSubmit"
-  | "editable"
-> & {
+}: FormElementProps<any> & {
   typeName: string;
+  sketchClass?: SketchClassDetailsFragment | undefined | null;
 }) {
   if (typeName in components) {
     const Component = components[typeName];

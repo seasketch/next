@@ -8,3 +8,17 @@
   flex: 3;
   min-height: 50px;
 }
+
+body.survey {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Avoid Chrome to see Safari hack */
+@supports (-webkit-touch-callout: none) {
+  body.survey {
+    /* The hack for Safari */
+    min-height: -webkit-fill-available;
+  }
+}

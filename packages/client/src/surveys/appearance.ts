@@ -1,7 +1,8 @@
 import {
   FormElement,
   FormElementTextVariant,
-  FormElementBackgroundImagePlacement,
+  FormElementLayout,
+  FormElementDetailsFragment,
 } from "../generated/graphql";
 import { colord, extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
@@ -13,14 +14,14 @@ export type FormElementStyleProps = Pick<
   FormElement,
   | "backgroundColor"
   | "backgroundImage"
-  | "backgroundImagePlacement"
+  | "layout"
   | "textVariant"
   | "secondaryColor"
->;
+> & { type?: { isSpatial: boolean } | null };
 export type ComputedFormElementStyle = {
   backgroundColor: string;
   backgroundImage: string;
-  backgroundImagePlacement: FormElementBackgroundImagePlacement;
+  layout: FormElementLayout;
   textVariant: FormElementTextVariant;
   secondaryColor: string;
   secondaryColor2: string;
@@ -41,7 +42,7 @@ export const defaultStyle = {
     ? "text-white"
     : "text-gray-900",
   textVariant: FormElementTextVariant.Dynamic,
-  backgroundImagePlacement: FormElementBackgroundImagePlacement.Top,
+  layout: FormElementLayout.Top,
   backgroundImage:
     "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
   textClass: "text-white",
@@ -60,8 +61,8 @@ export const defaultStyle = {
  * @returns
  */
 export function useCurrentStyle(
-  formElements: FormElementStyleProps[] | undefined | null,
-  current: FormElementStyleProps | undefined
+  formElements: FormElementDetailsFragment[] | undefined | null,
+  current: FormElementDetailsFragment | undefined
 ): ComputedFormElementStyle {
   const isSmall = useMediaQuery("(max-width: 767px)");
   if (!formElements || !current || formElements.length === 0) {
@@ -84,10 +85,7 @@ export function useCurrentStyle(
           formElements[i].textVariant ||
           style.textVariant ||
           defaultStyle.textVariant,
-        backgroundImagePlacement:
-          formElements[i].backgroundImagePlacement ||
-          style.backgroundImagePlacement ||
-          defaultStyle.backgroundImagePlacement,
+        layout: formElements[i].layout || style.layout || defaultStyle.layout,
         backgroundImage:
           formElements[i].backgroundImage ||
           style.backgroundImage ||
@@ -95,16 +93,22 @@ export function useCurrentStyle(
       };
     }
   }
-  if (isSmall) {
-    if (
-      style.backgroundImagePlacement !==
-      FormElementBackgroundImagePlacement.Cover
-    ) {
-      style = {
-        ...style,
-        backgroundImagePlacement: FormElementBackgroundImagePlacement.Top,
-      };
+
+  if (current.type?.allowedLayouts?.length) {
+    if (current.type.allowedLayouts.indexOf(style.layout!) === -1) {
+      style = { ...style };
+      style.layout = current.type.allowedLayouts[0];
     }
+  }
+  if (
+    isSmall &&
+    (style.layout === FormElementLayout.Left ||
+      style.layout === FormElementLayout.Right)
+  ) {
+    style = {
+      ...style,
+      layout: FormElementLayout.Top,
+    };
   }
   let isDark = colord(style.backgroundColor || "#efefef").isDark();
   let textClass = "text-white";
@@ -132,7 +136,7 @@ export function useCurrentStyle(
 }
 
 export function surveyBackground(
-  layout: FormElementBackgroundImagePlacement,
+  layout: FormElementLayout,
   image: string,
   color: string
 ) {
@@ -143,10 +147,10 @@ export function surveyBackground(
     : // eslint-disable-next-line i18next/no-literal-string
       `url(${image}&auto=compress,format&w=1280)`;
   switch (layout) {
-    case FormElementBackgroundImagePlacement.Cover:
+    case FormElementLayout.Cover:
       position = "center / cover no-repeat";
       break;
-    case FormElementBackgroundImagePlacement.Top:
+    case FormElementLayout.Top:
       position = "fixed no-repeat";
       // eslint-disable-next-line i18next/no-literal-string
       // image = `linear-gradient(128deg, ${color}, ${secondaryColor})`;

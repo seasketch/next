@@ -4,7 +4,7 @@ import {
   ChevronLeftIcon,
 } from "@heroicons/react/outline";
 import { EyeIcon } from "@heroicons/react/solid";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useHistory } from "react-router-dom";
 import Button from "../../components/Button";
@@ -16,12 +16,14 @@ import {
   useUpdateFormElementOrderMutation,
   useDeleteFormElementMutation,
   useUpdateFormMutation,
-  FormElementBackgroundImagePlacement,
+  FormElementLayout,
   FormElementTextVariant,
   useUpdateFormElementBackgroundMutation,
   useSetFormElementBackgroundMutation,
   useClearFormElementStyleMutation,
   FormElement,
+  FormElementFullDetailsFragment,
+  LogicRuleDetailsFragment,
 } from "../../generated/graphql";
 import FormElementFactory from "../../surveys/FormElementFactory";
 import { SurveyAppLayout } from "../../surveys/SurveyAppLayout";
@@ -47,6 +49,7 @@ import { useCurrentStyle } from "../../surveys/appearance";
 import { advancesAutomatically } from "../../surveys/SurveyApp";
 import SurveyFlowMap from "./SurveyFlowMap";
 import LogicRuleEditor from "./LogicRuleEditor";
+import { components } from "../../formElements";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -78,6 +81,28 @@ export default function SurveyFormEditor({
   const [updateOrder, updateOrderState] = useUpdateFormElementOrderMutation();
   const history = useHistory();
   const [values, setValues] = useState<{ [id: number]: any | undefined }>({});
+
+  const { flattenedFormElements, flattenedRules } = useMemo(() => {
+    const results: {
+      flattenedFormElements: FormElementFullDetailsFragment[];
+      flattenedRules: LogicRuleDetailsFragment[];
+    } = { flattenedFormElements: [], flattenedRules: [] };
+    if (data?.survey?.form?.formElements && data?.survey?.form?.logicRules) {
+      results.flattenedRules.push(...data.survey.form.logicRules);
+      for (const element of data.survey.form.formElements) {
+        results.flattenedFormElements.push(element);
+        if (element.sketchClass?.form?.formElements?.length) {
+          results.flattenedFormElements.push(
+            ...element.sketchClass.form.formElements
+          );
+          results.flattenedRules.push(
+            ...(element.sketchClass.form.logicRules || [])
+          );
+        }
+      }
+    }
+    return results;
+  }, [data?.survey?.form?.formElements, data?.survey?.form?.logicRules]);
 
   const [selectedLogicFormElements, setSelectedLogicFormElements] = useState<
     number[]
@@ -210,7 +235,30 @@ export default function SurveyFormEditor({
     ...(data?.survey?.form?.formElements || []),
   ]);
 
-  const selectedFormElement = formElements.find((e) => e.id === formElementId);
+  let selectedFormElement: FormElementFullDetailsFragment | undefined;
+  let selectedParentFormElement: FormElementFullDetailsFragment | null = null;
+  for (const element of formElements) {
+    if (element.sketchClass?.form?.formElements?.length) {
+      for (const subElement of element.sketchClass.form.formElements) {
+        if (subElement.id === formElementId) {
+          selectedFormElement = subElement;
+          selectedParentFormElement = element;
+          break;
+        }
+      }
+    }
+    if (element.id === formElementId) {
+      selectedFormElement = element;
+    }
+    if (selectedFormElement) {
+      break;
+    }
+  }
+
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    setStage(0);
+  }, [selectedFormElement?.id]);
 
   const style = useCurrentStyle(
     data?.survey?.form?.formElements,
@@ -313,9 +361,27 @@ export default function SurveyFormEditor({
               <h3 className="flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-blue-gray-200 border items-center">
                 <span className="flex-1">{t("Form Elements")}</span>
                 <AddFormElementButton
+                  formIsSketchClass={
+                    !!(
+                      selectedParentFormElement?.sketchClass?.form ||
+                      selectedFormElement?.sketchClass
+                    )
+                  }
                   nextPosition={formElements.length + 1}
                   types={data?.formElementTypes || []}
-                  formId={formId!}
+                  formId={
+                    selectedParentFormElement?.sketchClass?.form
+                      ? selectedParentFormElement.sketchClass?.form?.id!
+                      : selectedFormElement?.sketchClass
+                      ? selectedFormElement.sketchClass.form!.id
+                      : formId!
+                  }
+                  heading={
+                    selectedParentFormElement?.sketchClass?.form ||
+                    selectedFormElement?.sketchClass
+                      ? t("Add to spatial input...")
+                      : t("Add to survey...")
+                  }
                   onAdd={(formElement) => history.replace(`./${formElement}`)}
                   existingTypes={formElements.map((el) => el.typeId)}
                 />
@@ -361,11 +427,12 @@ export default function SurveyFormEditor({
         >
           {route === "logic" && (
             <SurveyFlowMap
-              formElements={data?.survey?.form?.formElements || []}
+              primaryFormId={formId!}
+              formElements={flattenedFormElements}
               onSelection={(selection) => {
                 setSelectedLogicFormElements(selection);
               }}
-              rules={data?.survey?.form?.logicRules || []}
+              rules={flattenedRules}
             />
           )}
           {route === "formElement" && data?.survey && selectedFormElement && (
@@ -410,12 +477,29 @@ export default function SurveyFormEditor({
                   >
                     {selectedFormElement && (
                       <>
+                        {components[selectedFormElement.typeId].stages && (
+                          <StageSelect
+                            value={stage}
+                            onChange={(n) => setStage(n)}
+                            stages={
+                              components[selectedFormElement.typeId].stages!
+                            }
+                          />
+                        )}
                         <FormElementFactory
+                          stage={stage}
+                          onRequestStageChange={(n) => setStage(n)}
+                          featureNumber={1}
                           {...selectedFormElement!}
+                          sketchClass={
+                            selectedParentFormElement?.sketchClass ||
+                            selectedFormElement.sketchClass
+                          }
+                          isSpatial={!!selectedFormElement.type?.isSpatial}
                           onChange={(value) =>
                             setValues((prev) => ({
                               ...prev,
-                              [selectedFormElement.id]: value,
+                              [selectedFormElement!.id]: value,
                             }))
                           }
                           onSubmit={() => null}
@@ -426,7 +510,8 @@ export default function SurveyFormEditor({
                         <div className="flex items-center mb-10 space-x-4">
                           {selectedFormElement.typeId !== "WelcomeMessage" &&
                             selectedFormElement.typeId !== "ThankYou" &&
-                            !advancesAutomatically(selectedFormElement) && (
+                            !advancesAutomatically(selectedFormElement) &&
+                            !components[selectedFormElement.typeId].stages && (
                               <Button
                                 label={t("Next")}
                                 backgroundColor={style.secondaryColor}
@@ -461,7 +546,9 @@ export default function SurveyFormEditor({
                     return t("Skip Logic");
                   }
                 } else {
-                  return selectedFormElement?.type?.componentName;
+                  return (
+                    components[selectedFormElement?.typeId || ""]?.label || ""
+                  );
                 }
               })()}
             </h3>
@@ -477,14 +564,15 @@ export default function SurveyFormEditor({
                 <LogicRuleEditor
                   form={data!.survey!.form!}
                   selectedIds={selectedLogicFormElements}
-                  rules={data?.survey?.form?.logicRules || []}
-                  formElements={formElements || []}
+                  rules={flattenedRules}
+                  formElements={flattenedFormElements}
                 />
               </>
             )}
             {route === "formElement" &&
               selectedFormElement &&
-              selectedFormElement.type?.isInput && (
+              selectedFormElement.type?.isInput &&
+              selectedFormElement.typeId !== "FeatureName" && (
                 <div className="px-3 text-sm pt-3">
                   <InputBlock
                     labelType="small"
@@ -519,22 +607,24 @@ export default function SurveyFormEditor({
             {route === "formElement" &&
               selectedFormElement &&
               selectedFormElement.typeId !== "WelcomeMessage" &&
-              selectedFormElement.typeId !== "ThankYou" && (
+              selectedFormElement.typeId !== "ThankYou" &&
+              selectedFormElement.typeId !== "FeatureName" && (
                 <>
                   <div className="px-3 text-base">
-                    {selectedFormElement.type?.isInput && (
-                      <div className="pt-2">
-                        <TextInput
-                          label={t("Export ID")}
-                          name="exportid"
-                          description={t(
-                            "Setting an export id will give a stable column name when exporting your results"
-                          )}
-                          value={selectedFormElement.exportId || ""}
-                          onChange={updateElementSetting("exportId")}
-                        />
-                      </div>
-                    )}
+                    {selectedFormElement.type?.isInput &&
+                      !selectedFormElement.type?.isSpatial && (
+                        <div className="pt-2">
+                          <TextInput
+                            label={t("Export ID")}
+                            name="exportid"
+                            description={t(
+                              "Setting an export id will give a stable column name when exporting your results"
+                            )}
+                            value={selectedFormElement.exportId || ""}
+                            onChange={updateElementSetting("exportId")}
+                          />
+                        </div>
+                      )}
                     <Button
                       className="mt-4"
                       label={t("Delete Element")}
@@ -590,336 +680,338 @@ export default function SurveyFormEditor({
                 </>
               )}
           </>
-          {route === "formElement" && selectedFormElement && (
-            <>
-              <h3 className="mt-4 flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-b border-t border-blue-gray-200  items-center">
-                {t("Appearance")}
-              </h3>
-              <UnsplashImageChooser
-                onRequestClose={() => setImageChooserOpen(false)}
-                open={imageChooserOpen}
-                onChange={(photo, colors) => {
-                  setBackground({
-                    variables: {
-                      id: selectedFormElement.id,
-                      downloadUrl: photo.links.download_location,
-                      backgroundUrl: photo.urls.raw,
-                      backgroundColor: colors[0],
-                      secondaryColor: secondaryPalette(colors[0], colors)[0],
-                      backgroundPalette: colors,
-                      unsplashAuthorName: photo.user.name,
-                      unsplashAuthorUrl: photo.user.links.html,
-                      backgroundHeight: photo.height,
-                      backgroundWidth: photo.width,
-                    },
-                  });
-                  // setBackgroundColor(colors[0]);
-                  // setImageUrl(photo.urls.regular);
-                  setImageChooserOpen(false);
-                }}
-              />
-              {!selectedFormElement.backgroundImage && (
-                <div className="px-3 py-2 space-y-4 text-base">
-                  <p className="text-sm">
-                    <Trans ns="admin:surveys">
-                      Choose a background image first to customize the
-                      appearance of this page
-                    </Trans>
-                  </p>
-                  <div>
-                    <div className="flex-rows flex space-x-4 py-2 items-center justify-center">
-                      <Button
-                        small
-                        label={t("Choose image...")}
-                        onClick={() => setImageChooserOpen(true)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-              {selectedFormElement.backgroundImage && (
-                <div className="px-3 py-2 space-y-4 text-base">
-                  <p className="text-sm">
-                    <Trans ns="admin:surveys">
-                      Changing appearance settings will impact all following
-                      pages until another customized page appears.
-                    </Trans>
-                  </p>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-800">
-                      {t("Background image")}
-                    </h4>
-                    <div className="flex-rows flex space-x-4 py-2 items-center justify-center">
-                      <div
-                        className="flex-1 h-12"
-                        style={{
-                          background: `url(${selectedFormElement.backgroundImage}&w=200) no-repeat center`,
-                          backgroundSize: "cover",
-                        }}
-                      ></div>
-                      <Button
-                        small
-                        label={t("Choose image...")}
-                        onClick={() => setImageChooserOpen(true)}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-800 mb-2">
-                      {t("Background color")}
-                    </h4>
-                    <div className="space-x-2 w-36 pl-2">
-                      {(selectedFormElement.backgroundPalette || []).map(
-                        (c) => (
-                          <button
-                            key={c!.toString()}
-                            onClick={() => {
-                              updateBackground({
-                                variables: {
-                                  id: selectedFormElement.id,
-                                  backgroundColor: c,
-                                },
-                              });
-                            }}
-                            className={`w-4 h-4 rounded-full shadow ${
-                              selectedFormElement.backgroundColor === c
-                                ? "ring"
-                                : ""
-                            }`}
-                            style={{ backgroundColor: c! }}
-                          />
-                        )
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-800 mb-2">
-                      {t("Secondary color")}
-                    </h4>
-                    <div className="space-x-2 w-36 pl-2">
-                      {secondaryPalette(
-                        selectedFormElement.backgroundColor || "black",
-                        (selectedFormElement.backgroundPalette ||
-                          []) as string[]
-                      ).map((c, i) => {
-                        return (
-                          <button
-                            key={c!.toString()}
-                            onClick={() => {
-                              updateBackground({
-                                variables: {
-                                  id: selectedFormElement.id,
-                                  secondaryColor: c,
-                                },
-                              });
-                            }}
-                            className={`w-4 h-4 rounded-full shadow ${
-                              selectedFormElement.secondaryColor === c
-                                ? "ring"
-                                : ""
-                            }`}
-                            style={{ backgroundColor: c! }}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-800 mb-2">
-                      {t("Background layout")}
-                    </h4>
-                    <div className="flex space-x-2">
-                      <div
-                        title="Full Screen Image"
-                        onClick={() => {
-                          updateBackground({
-                            variables: {
-                              id: selectedFormElement.id,
-                              backgroundImagePlacement:
-                                FormElementBackgroundImagePlacement.Cover,
-                            },
-                          });
-                        }}
-                        className={`w-12 h-8 border rounded bg-cool-gray-600 flex flex-col justify-center space-y-1 shadow cursor-pointer ${
-                          selectedFormElement.backgroundImagePlacement ===
-                            FormElementBackgroundImagePlacement.Cover && "ring"
-                        }`}
-                      >
-                        <div className="w-8 mx-auto bg-white rounded h-0.5"></div>
-                        <div className="w-6 mx-auto bg-white rounded h-0.5"></div>
-                        <div className="w-8 mx-auto bg-white rounded h-0.5"></div>
-                      </div>
-                      <div
-                        title="Top Header Image"
-                        onClick={() => {
-                          updateBackground({
-                            variables: {
-                              id: selectedFormElement.id,
-                              backgroundImagePlacement:
-                                FormElementBackgroundImagePlacement.Top,
-                            },
-                          });
-                        }}
-                        className={`w-12 h-8 border overflow-hidden rounded flex flex-col justify-center space-y-1 shadow cursor-pointer ${
-                          selectedFormElement.backgroundImagePlacement ===
-                            FormElementBackgroundImagePlacement.Top && "ring"
-                        }`}
-                      >
-                        <div className="w-full -mt-1 bg-gray-400 h-2"></div>
-                        <div className="w-8 ml-1 bg-gray-500 rounded h-0.5"></div>
-                        <div className="w-6 ml-1 bg-gray-500 rounded h-0.5"></div>
-                        <div className="w-8 ml-1 bg-gray-500 rounded h-0.5"></div>
-                      </div>
-                      <div
-                        title="Left Side Image"
-                        onClick={() => {
-                          updateBackground({
-                            variables: {
-                              id: selectedFormElement.id,
-                              backgroundImagePlacement:
-                                FormElementBackgroundImagePlacement.Left,
-                            },
-                          });
-                        }}
-                        className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
-                          selectedFormElement.backgroundImagePlacement ===
-                            FormElementBackgroundImagePlacement.Left && "ring"
-                        }`}
-                      >
-                        <div className="w-1/3 h-full bg-gray-400"></div>
-                        <div className="w-2/3 space-y-1">
-                          <div className="w-3/4 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
-                          <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
-                          <div className="w-3/4 ml-1 bg-gray-500 rounded h-0.5"></div>
-                        </div>
-                      </div>
-                      <div
-                        title="Right Side Image"
-                        onClick={() => {
-                          updateBackground({
-                            variables: {
-                              id: selectedFormElement.id,
-                              backgroundImagePlacement:
-                                FormElementBackgroundImagePlacement.Right,
-                            },
-                          });
-                        }}
-                        className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
-                          selectedFormElement.backgroundImagePlacement ===
-                            FormElementBackgroundImagePlacement.Right && "ring"
-                        }`}
-                      >
-                        <div className="w-2/3 space-y-1">
-                          <div className="w-3/4 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
-                          <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
-                          <div className="w-3/4 ml-1 bg-gray-500 rounded h-0.5"></div>
-                        </div>
-                        <div className="w-1/3 h-full bg-gray-400"></div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-800 mt-2.5">
+          {route === "formElement" &&
+            selectedFormElement &&
+            !selectedFormElement.type?.isSpatial &&
+            !selectedParentFormElement && (
+              <>
+                <h3 className="mt-4 flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-b border-t border-blue-gray-200  items-center">
+                  {t("Appearance")}
+                </h3>
+                <UnsplashImageChooser
+                  onRequestClose={() => setImageChooserOpen(false)}
+                  open={imageChooserOpen}
+                  onChange={(photo, colors) => {
+                    setBackground({
+                      variables: {
+                        id: selectedFormElement!.id,
+                        downloadUrl: photo.links.download_location,
+                        backgroundUrl: photo.urls.raw,
+                        backgroundColor: colors[0],
+                        secondaryColor: secondaryPalette(colors[0], colors)[0],
+                        backgroundPalette: colors,
+                        unsplashAuthorName: photo.user.name,
+                        unsplashAuthorUrl: photo.user.links.html,
+                        backgroundHeight: photo.height,
+                        backgroundWidth: photo.width,
+                      },
+                    });
+                    // setBackgroundColor(colors[0]);
+                    // setImageUrl(photo.urls.regular);
+                    setImageChooserOpen(false);
+                  }}
+                />
+                {!selectedFormElement.backgroundImage && (
+                  <div className="px-3 py-2 space-y-4 text-base">
+                    <p className="text-sm">
                       <Trans ns="admin:surveys">
-                        Note that on mobile phones and other small devices, the
-                        top-image layout will be used if left or right image
-                        layout is selected.
+                        Choose a background image first to customize the
+                        appearance of this page
                       </Trans>
                     </p>
+                    <div>
+                      <div className="flex-rows flex space-x-4 py-2 items-center justify-center">
+                        <Button
+                          small
+                          label={t("Choose image...")}
+                          onClick={() => setImageChooserOpen(true)}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  {selectedFormElement.typeId !== "WelcomeMessage" && (
-                    <div className="mt-2">
-                      <Button
-                        small
-                        label={t("Clear style")}
-                        onClick={() => {
-                          clearStyle({
-                            variables: { id: selectedFormElement.id },
-                          });
-                        }}
-                      />
+                )}
+                {selectedFormElement.backgroundImage && (
+                  <div className="px-3 py-2 space-y-4 text-base">
+                    <p className="text-sm">
+                      <Trans ns="admin:surveys">
+                        Changing appearance settings will impact all following
+                        pages until another customized page appears.
+                      </Trans>
+                    </p>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-800">
+                        {t("Background image")}
+                      </h4>
+                      <div className="flex-rows flex space-x-4 py-2 items-center justify-center">
+                        <div
+                          className="flex-1 h-12"
+                          style={{
+                            background: `url(${selectedFormElement.backgroundImage}&w=200) no-repeat center`,
+                            backgroundSize: "cover",
+                          }}
+                        ></div>
+                        <Button
+                          small
+                          label={t("Choose image...")}
+                          onClick={() => setImageChooserOpen(true)}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-800 mb-2">
+                        {t("Background color")}
+                      </h4>
+                      <div className="space-x-2 w-36 pl-2">
+                        {(selectedFormElement.backgroundPalette || []).map(
+                          (c) => (
+                            <button
+                              key={c!.toString()}
+                              onClick={() => {
+                                updateBackground({
+                                  variables: {
+                                    id: selectedFormElement!.id,
+                                    backgroundColor: c,
+                                  },
+                                });
+                              }}
+                              className={`w-4 h-4 rounded-full shadow ${
+                                selectedFormElement!.backgroundColor === c
+                                  ? "ring"
+                                  : ""
+                              }`}
+                              style={{ backgroundColor: c! }}
+                            />
+                          )
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-800 mb-2">
+                        {t("Secondary color")}
+                      </h4>
+                      <div className="space-x-2 w-36 pl-2">
+                        {secondaryPalette(
+                          selectedFormElement.backgroundColor || "black",
+                          (selectedFormElement.backgroundPalette ||
+                            []) as string[]
+                        ).map((c, i) => {
+                          return (
+                            <button
+                              key={c!.toString()}
+                              onClick={() => {
+                                updateBackground({
+                                  variables: {
+                                    id: selectedFormElement!.id,
+                                    secondaryColor: c,
+                                  },
+                                });
+                              }}
+                              className={`w-4 h-4 rounded-full shadow ${
+                                selectedFormElement!.secondaryColor === c
+                                  ? "ring"
+                                  : ""
+                              }`}
+                              style={{ backgroundColor: c! }}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-800 mb-2">
+                        {t("Background layout")}
+                      </h4>
+                      <div className="flex space-x-2">
+                        <div
+                          title="Full Screen Image"
+                          onClick={() => {
+                            updateBackground({
+                              variables: {
+                                id: selectedFormElement!.id,
+                                layout: FormElementLayout.Cover,
+                              },
+                            });
+                          }}
+                          className={`w-12 h-8 border rounded bg-cool-gray-600 flex flex-col justify-center space-y-1 shadow cursor-pointer ${
+                            selectedFormElement.layout ===
+                              FormElementLayout.Cover && "ring"
+                          }`}
+                        >
+                          <div className="w-8 mx-auto bg-white rounded h-0.5"></div>
+                          <div className="w-6 mx-auto bg-white rounded h-0.5"></div>
+                          <div className="w-8 mx-auto bg-white rounded h-0.5"></div>
+                        </div>
+                        <div
+                          title="Top Header Image"
+                          onClick={() => {
+                            updateBackground({
+                              variables: {
+                                id: selectedFormElement!.id,
+                                layout: FormElementLayout.Top,
+                              },
+                            });
+                          }}
+                          className={`w-12 h-8 border overflow-hidden rounded flex flex-col justify-center space-y-1 shadow cursor-pointer ${
+                            selectedFormElement.layout ===
+                              FormElementLayout.Top && "ring"
+                          }`}
+                        >
+                          <div className="w-full -mt-1 bg-gray-400 h-2"></div>
+                          <div className="w-8 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          <div className="w-6 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          <div className="w-8 ml-1 bg-gray-500 rounded h-0.5"></div>
+                        </div>
+                        <div
+                          title="Left Side Image"
+                          onClick={() => {
+                            updateBackground({
+                              variables: {
+                                id: selectedFormElement!.id,
+                                layout: FormElementLayout.Left,
+                              },
+                            });
+                          }}
+                          className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
+                            selectedFormElement.layout ===
+                              FormElementLayout.Left && "ring"
+                          }`}
+                        >
+                          <div className="w-1/3 h-full bg-gray-400"></div>
+                          <div className="w-2/3 space-y-1">
+                            <div className="w-3/4 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
+                            <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
+                            <div className="w-3/4 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          </div>
+                        </div>
+                        <div
+                          title="Right Side Image"
+                          onClick={() => {
+                            updateBackground({
+                              variables: {
+                                id: selectedFormElement!.id,
+                                layout: FormElementLayout.Right,
+                              },
+                            });
+                          }}
+                          className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
+                            selectedFormElement.layout ===
+                              FormElementLayout.Right && "ring"
+                          }`}
+                        >
+                          <div className="w-2/3 space-y-1">
+                            <div className="w-3/4 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
+                            <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
+                            <div className="w-3/4 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          </div>
+                          <div className="w-1/3 h-full bg-gray-400"></div>
+                        </div>
+                      </div>
                       <p className="text-sm text-gray-800 mt-2.5">
-                        <Trans>
-                          Removing style settings will mean that this page will
-                          share the same appearance as previous pages.
+                        <Trans ns="admin:surveys">
+                          Note that on mobile phones and other small devices,
+                          the top-image layout will be used if left or right
+                          image layout is selected.
                         </Trans>
                       </p>
                     </div>
-                  )}
-                  <h4 className="text-sm font-medium text-gray-800 mb-2">
-                    {t("Text color")}
-                  </h4>
-                  <div className="flex space-x-2">
-                    <div
-                      className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
-                        style.textVariant === FormElementTextVariant.Dynamic &&
-                        "ring"
-                      }`}
-                      style={{ backgroundColor: style.backgroundColor }}
-                      onClick={() =>
-                        updateBackground({
-                          variables: {
-                            id: selectedFormElement.id,
-                            textVariant: FormElementTextVariant.Dynamic,
-                          },
-                        })
-                      }
-                    >
-                      {/* eslint-disable-next-line i18next/no-literal-string */}
-                      <span className={`font-bold text-lg ${dynamicTextClass}`}>
-                        T
-                      </span>
-                      <span className="absolute -bottom-5 text-xs">
-                        {t("auto")}
-                      </span>
-                    </div>
-                    <div
-                      className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
-                        style.textVariant === FormElementTextVariant.Light &&
-                        "ring"
-                      }`}
-                      style={{ backgroundColor: style.backgroundColor }}
-                      onClick={() =>
-                        updateBackground({
-                          variables: {
-                            id: selectedFormElement.id,
-                            textVariant: FormElementTextVariant.Light,
-                          },
-                        })
-                      }
-                    >
-                      {/* eslint-disable-next-line i18next/no-literal-string */}
-                      <span className={`font-bold text-lg text-white`}>T</span>
-                      <span className="absolute -bottom-5 text-xs">
-                        {t("light")}
-                      </span>
-                    </div>
-                    <div
-                      className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
-                        style.textVariant === FormElementTextVariant.Dark &&
-                        "ring"
-                      }`}
-                      style={{ backgroundColor: style.backgroundColor }}
-                      onClick={() =>
-                        updateBackground({
-                          variables: {
-                            id: selectedFormElement.id,
-                            textVariant: FormElementTextVariant.Dark,
-                          },
-                        })
-                      }
-                    >
-                      {/* eslint-disable-next-line i18next/no-literal-string */}
-                      <span className={`font-bold text-lg text-grey-800`}>
-                        T
-                      </span>
-                      <span className="absolute -bottom-5 text-xs">
-                        {t("dark")}
-                      </span>
+                    {selectedFormElement.typeId !== "WelcomeMessage" && (
+                      <div className="mt-2">
+                        <Button
+                          small
+                          label={t("Clear style")}
+                          onClick={() => {
+                            clearStyle({
+                              variables: { id: selectedFormElement!.id },
+                            });
+                          }}
+                        />
+                        <p className="text-sm text-gray-800 mt-2.5">
+                          <Trans>
+                            Removing style settings will mean that this page
+                            will share the same appearance as previous pages.
+                          </Trans>
+                        </p>
+                      </div>
+                    )}
+                    <h4 className="text-sm font-medium text-gray-800 mb-2">
+                      {t("Text color")}
+                    </h4>
+                    <div className="flex space-x-2">
+                      <div
+                        className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
+                          style.textVariant ===
+                            FormElementTextVariant.Dynamic && "ring"
+                        }`}
+                        style={{ backgroundColor: style.backgroundColor }}
+                        onClick={() =>
+                          updateBackground({
+                            variables: {
+                              id: selectedFormElement!.id,
+                              textVariant: FormElementTextVariant.Dynamic,
+                            },
+                          })
+                        }
+                      >
+                        <span
+                          className={`font-bold text-lg ${dynamicTextClass}`}
+                        >
+                          {t("T", { ns: "no-translate" })}
+                        </span>
+                        <span className="absolute -bottom-5 text-xs">
+                          {t("auto")}
+                        </span>
+                      </div>
+                      <div
+                        className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
+                          style.textVariant === FormElementTextVariant.Light &&
+                          "ring"
+                        }`}
+                        style={{ backgroundColor: style.backgroundColor }}
+                        onClick={() =>
+                          updateBackground({
+                            variables: {
+                              id: selectedFormElement!.id,
+                              textVariant: FormElementTextVariant.Light,
+                            },
+                          })
+                        }
+                      >
+                        {/* eslint-disable-next-line i18next/no-literal-string */}
+                        <span className={`font-bold text-lg text-white`}>
+                          T
+                        </span>
+                        <span className="absolute -bottom-5 text-xs">
+                          {t("light")}
+                        </span>
+                      </div>
+                      <div
+                        className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
+                          style.textVariant === FormElementTextVariant.Dark &&
+                          "ring"
+                        }`}
+                        style={{ backgroundColor: style.backgroundColor }}
+                        onClick={() =>
+                          updateBackground({
+                            variables: {
+                              id: selectedFormElement!.id,
+                              textVariant: FormElementTextVariant.Dark,
+                            },
+                          })
+                        }
+                      >
+                        {/* eslint-disable-next-line i18next/no-literal-string */}
+                        <span className={`font-bold text-lg text-grey-800`}>
+                          T
+                        </span>
+                        <span className="absolute -bottom-5 text-xs">
+                          {t("dark")}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )}
           {route === "basic" &&
             auth0.user &&
             auth0.user["https://seasketch.org/superuser"] && (
@@ -1022,4 +1114,36 @@ function secondaryPalette(
     );
   }
   return palette;
+}
+
+function StageSelect({
+  stages,
+  onChange,
+  value,
+}: {
+  stages: { [stage: string]: number };
+  onChange: (n: number) => void;
+  value: number;
+}) {
+  return (
+    <div
+      className="p-1 p1-2 left-1/2 bg-yellow-400 bg-opacity-60 text-black rounded absolute top-4 z-10 text-sm items-center mx-auto text-center"
+      style={{ width: 460, marginLeft: -230 }}
+    >
+      <span className="mr-3">
+        <Trans ns="admin:surveys">This element has multiple stages</Trans>
+      </span>
+      <select
+        className="text-sm py-1 p1-2 pr-10 rounded bg-yellow-100"
+        value={value.toString()}
+        onChange={(e) => onChange(parseInt(e.target.value))}
+      >
+        {Object.keys(stages).map((key) => (
+          <option value={stages[key].toString()} key={key}>
+            {key.replace("_", " ").toLowerCase()}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 }

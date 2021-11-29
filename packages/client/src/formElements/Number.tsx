@@ -282,7 +282,7 @@ function valueOrUndefined(value: any | undefined | null) {
   }
 }
 
-Number.icon = (
+Number.icon = () => (
   <div className="bg-red-800 w-full h-full font-bold text-center flex justify-center items-center  italic text-white">
     <MinusIcon strokeWidth={4} className="w-1/3 h-1/3" />
     <PlusIcon className="w-1/3 h-1/3" />
@@ -306,7 +306,7 @@ Number.adminValueInput = function ({
       min={componentSettings.min}
       max={componentSettings.max}
       className={`bg-transparent border-none text-center w-full ${adminValueInputCommonClassNames}`}
-      value={value}
+      value={value || ""}
       onChange={(e) => onChange(parseInt(e.target.value))}
     />
   );

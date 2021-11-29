@@ -16,7 +16,9 @@ describe("Access control", () => {
         await conn.any(
           sql`update projects set is_listed = false where id = ${pid}`
         );
-        const count = await conn.oneFirst(sql`select count(*) from projects`);
+        const count = await conn.oneFirst<number>(
+          sql`select count(*) from projects where slug != 'superuser'`
+        );
         expect(count).toBe(1);
         await conn.any(sql`ROLLBACK;`);
       });
@@ -33,7 +35,9 @@ describe("Access control", () => {
           sql`INSERT INTO projects (name, slug, is_listed, creator_id, support_email) values ('listed', 'listed', true, ${userId}, 'ahab@example.com')`
         );
         await conn.any(sql`SET ROLE seasketch_superuser`);
-        const count = await conn.oneFirst(sql`select count(*) from projects`);
+        const count = await conn.oneFirst(
+          sql`select count(*) from projects where slug != 'superuser'`
+        );
         expect(count).toBe(2);
         await conn.any(sql`ROLLBACK;`);
       });
@@ -438,7 +442,7 @@ describe("Access control", () => {
         );
         await conn.any(sql`SET ROLE seasketch_superuser`);
         const superuserCount = await conn.oneFirst(
-          sql`select count(*) from projects`
+          sql`select count(*) from projects where slug != 'superuser'`
         );
         expect(superuserCount).toBe(0);
         await conn.any(sql`SET ROLE seasketch_user`);

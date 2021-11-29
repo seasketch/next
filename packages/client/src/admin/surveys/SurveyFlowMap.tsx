@@ -1,9 +1,13 @@
 import {
   FieldRuleOperator,
   FormElement,
+  FormElementDetailsFragment,
+  FormElementFullDetailsFragment,
   FormLogicCondition,
   FormLogicRule,
+  LogicRuleDetailsFragment,
   Maybe,
+  SketchGeometryType,
 } from "../../generated/graphql";
 import { components } from "../../formElements";
 import ReactFlow, {
@@ -24,38 +28,27 @@ import {
   defaultFormElementIcon,
   sortFormElements,
 } from "../../formElements/FormElement";
-import { memo, useMemo } from "react";
+import { FunctionComponent, memo, useMemo } from "react";
 import { OPERATOR_LABELS } from "./LogicRuleEditor";
 import { Trans } from "react-i18next";
+import { Icons } from "../../components/SketchGeometryTypeSelector";
 
-type FE = Pick<
-  FormElement,
-  "id" | "body" | "position" | "typeId" | "isRequired" | "jumpToId"
-> & {
-  type?: Maybe<{ isInput: boolean; label: string }> | undefined;
-};
-
-type Rule = Pick<
-  FormLogicRule,
-  "jumpToId" | "command" | "formElementId" | "id"
-> & {
-  conditions?: Maybe<
-    Pick<FormLogicCondition, "id" | "operator" | "value" | "subjectId">[]
-  >;
-};
+type Rule = LogicRuleDetailsFragment;
 
 export default function SurveyFlowMap({
   formElements,
   onSelection,
   rules,
+  primaryFormId,
 }: {
-  formElements: FE[];
+  primaryFormId: number;
+  formElements: FormElementFullDetailsFragment[];
   rules: Rule[];
   onSelection?: (formElementId: number[]) => void;
 }) {
   const flowElements = useMemo(() => {
     if (formElements) {
-      return getReactFlowElements(sortFormElements([...formElements]), rules);
+      return getReactFlowElements(formElements, rules, primaryFormId);
     } else {
       return [];
     }
@@ -75,7 +68,7 @@ export default function SurveyFlowMap({
       minZoom={0.1}
       elementsSelectable={true}
       nodesConnectable={false}
-      nodesDraggable={false}
+      nodesDraggable={true}
       onConnect={(params) => {}}
       onSelectionChange={(elements) => {
         if (onSelection) {
@@ -99,12 +92,14 @@ export default function SurveyFlowMap({
   );
 }
 
-const maxWidth = 380;
+const maxWidth = 340;
 const nodeHeight = 36;
-const nodeWidth = (label: string) => Math.min(label.length * 9 + 57, maxWidth);
+const nodeWidth = (label: string, parent: boolean) =>
+  Math.min(label.length * 9.5 + (parent ? 110 : 57), maxWidth);
 function getReactFlowElements(
-  formElements: FE[],
+  formElements: FormElementFullDetailsFragment[],
   rules: Rule[],
+  primaryFormId: number,
   direction = "TB"
 ): Elements<any> {
   const dagreGraph = new dagre.graphlib.Graph();
@@ -117,73 +112,15 @@ function getReactFlowElements(
     // nodesep: 100,
     // edgesep: 70,
   });
-  const elements: Elements<any> = [];
-  for (const formElement of formElements) {
-    const label = formElement.type?.isInput
-      ? collectQuestion(formElement.body)
-      : collectHeaders(formElement.body, 18);
-    elements.push({
-      // type: formElement.type?.isInput ? "question" : "statement",
-      type: "formElement",
-      id: formElement.id.toString(),
-      position: { x: 0, y: 0 },
-      // selectable: formElement.type?.isInput,
-      data: {
-        label,
-        type: formElement.typeId,
-        typeLabel: formElement.type?.label,
-        isRequired: formElement.isRequired,
-        isInput: formElement.type?.isInput,
-        id: formElement.id,
-        isSource: false,
-      },
-      // className: "shadow max-w-md whitespace-nowrap overflow-hidden truncate",
-      style: {
-        width: nodeWidth(label),
-      },
-    });
-    const index = formElements.indexOf(formElement);
-    const applicableRules = rules.filter(
-      (r) => r.formElementId === formElement.id && r.jumpToId
-    );
-    if (index < formElements.length - 1) {
-      elements.push({
-        // type: "smoothstep",
-        // eslint-disable-next-line i18next/no-literal-string
-        id: `e${formElement.id}`,
-        position: { x: 0, y: 0 },
-        source: formElement.id.toString(),
-        target:
-          formElement.jumpToId?.toString() ||
-          formElements[index + 1].id.toString(),
-        arrowHeadType: ArrowHeadType.ArrowClosed,
-        label: applicableRules.length ? "default" : undefined,
-      });
-      for (const rule of applicableRules) {
-        elements.push({
-          // type: "smoothstep",
-          // eslint-disable-next-line i18next/no-literal-string
-          id: `e${formElement.id}-r${rule.id}`,
-          position: { x: 0, y: 0 },
-          source: formElement.id.toString(),
-          target: rule.jumpToId!.toString(),
-          arrowHeadType: ArrowHeadType.ArrowClosed,
-          label:
-            (rule.conditions || [])
-              .map((condition) =>
-                condition.operator === FieldRuleOperator.IsBlank
-                  ? `${OPERATOR_LABELS[condition.operator]}`
-                  : `${OPERATOR_LABELS[condition.operator]} ${condition.value}`
-              )
-              .join(", ") || "",
-        });
-      }
-    }
-  }
+  const elements: Elements<any> = getElementsForForm(
+    primaryFormId,
+    formElements,
+    rules
+  );
   elements.forEach((el) => {
     if (isNode(el)) {
       dagreGraph.setNode(el.id, {
-        width: nodeWidth(el.data.label),
+        width: nodeWidth(el.data.label, !!el.data.ParentIcon),
         height: nodeHeight,
       });
     } else {
@@ -210,7 +147,7 @@ function getReactFlowElements(
       el.position = {
         x:
           nodeWithPosition.x -
-          nodeWidth(el.data.label) / 2 +
+          nodeWidth(el.data.label, !!el.data.ParentIcon) / 2 +
           Math.random() / 1000,
         y: nodeWithPosition.y - nodeHeight / 2,
       };
@@ -219,6 +156,188 @@ function getReactFlowElements(
 
     return el;
   });
+}
+
+function getElementsForForm(
+  formId: number,
+  formElements: FormElementFullDetailsFragment[],
+  rules: LogicRuleDetailsFragment[],
+  parentId?: number,
+  parentSpatialType?: SketchGeometryType,
+  isMultiSpatial?: boolean
+): Elements<any> {
+  const elements: Elements<any> = [];
+  const sortedElements = sortFormElements(
+    formElements.filter((f) => f.formId === formId)
+  );
+  for (const formElement of sortedElements) {
+    const label = formElement.type?.isInput
+      ? collectQuestion(formElement.body)
+      : collectHeaders(formElement.body, 18);
+    elements.push({
+      // type: formElement.type?.isInput ? "question" : "statement",
+      type: "formElement",
+      id: formElement.id.toString(),
+      position: { x: 0, y: 0 },
+      // selectable: formElement.type?.isInput,
+      data: {
+        ...formElement,
+        label,
+        type: formElement.typeId,
+        typeLabel: formElement.type?.label,
+        isRequired: formElement.isRequired,
+        isInput: formElement.type?.isInput,
+        id: formElement.id,
+        isSource: false,
+        ParentIcon: parentId
+          ? components[formElements.find((f) => f.id === parentId)!.typeId]!
+              .icon
+          : undefined,
+      },
+      // className: "shadow max-w-md whitespace-nowrap overflow-hidden truncate",
+      style: {
+        width: nodeWidth(label, !!parentId),
+      },
+    });
+    const index = sortedElements.indexOf(formElement);
+    const applicableRules = rules.filter(
+      (r) => r.formElementId === formElement.id && r.jumpToId
+    );
+    if (formElement.sketchClass?.form?.formElements?.length) {
+      const subElements = getElementsForForm(
+        formElement.sketchClass.form.id,
+        formElements,
+        rules,
+        formElement.id,
+        formElement.sketchClass.geometryType,
+        formElement.typeId !== "SingleSpatialInput"
+      );
+      elements.push(...subElements);
+      // Connect current form element to subform
+      elements.push({
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `eRoot${formElement.id}`,
+        position: { x: 0, y: 0 },
+        source: formElement.id.toString(),
+        target: subElements[0].id,
+        // arrowHeadType: ArrowHeadType.ArrowClosed,
+        // animated: true,
+        // label: applicableRules.length ? "default" : undefined,
+      });
+      const nextQuestion =
+        formElement.jumpToId?.toString() ||
+        sortedElements[index + 1].id.toString();
+      // connect end of sub-form to next form element
+      if (subElements[subElements.length - 1].data.jumpToId === null) {
+        elements.push({
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `eFinish${formElement.id}`,
+          position: { x: 0, y: 0 },
+          source: subElements[subElements.length - 1].id.toString(),
+          target: nextQuestion,
+          arrowHeadType: ArrowHeadType.ArrowClosed,
+          // label: applicableRules.length ? "default" : undefined,
+        });
+      }
+      // connect any jumpTo -> parent links to the next question
+      for (const subElement of subElements.filter((el) => isNode(el))) {
+        const applicableRules = rules.filter(
+          (r) => r.formElementId === subElement.data.id
+        );
+        if (subElement.data.jumpToId === formElement.id) {
+          elements.push({
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `eFinish${formElement.id}-${subElement.id}`,
+            position: { x: 0, y: 0 },
+            source: subElement.id,
+            target: nextQuestion,
+            arrowHeadType: ArrowHeadType.ArrowClosed,
+            label: applicableRules.length ? "default" : undefined,
+          });
+        }
+        for (const rule of applicableRules) {
+          if (rule.jumpToId === formElement.id) {
+            elements.push({
+              // type: "smoothstep",
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `e${formElement.id}-r${rule.id}`,
+              position: { x: 0, y: 0 },
+              source: subElement.id.toString(),
+              target: nextQuestion,
+              arrowHeadType: ArrowHeadType.ArrowClosed,
+              label:
+                (rule.conditions || [])
+                  .map((condition) =>
+                    condition.operator === FieldRuleOperator.IsBlank
+                      ? `${OPERATOR_LABELS[condition.operator]}`
+                      : `${OPERATOR_LABELS[condition.operator]} ${
+                          condition.value
+                        }`
+                  )
+                  .join(", ") || "",
+            });
+          }
+        }
+      }
+    } else if (formElement.sketchClass) {
+      // Sketch Class with no form elements (singlespatialinput?)
+      const nextQuestion =
+        formElement.jumpToId?.toString() ||
+        sortedElements[index + 1].id.toString();
+      // connect end of sub-form to next form element
+      elements.push({
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `eFinish${formElement.id}`,
+        position: { x: 0, y: 0 },
+        source: formElement.id.toString(),
+        target: nextQuestion,
+        arrowHeadType: ArrowHeadType.ArrowClosed,
+        // label: applicableRules.length ? "default" : undefined,
+      });
+    }
+
+    if (index < sortedElements.length - 1 && !formElement.sketchClass?.form) {
+      if (!formElement.jumpToId || formElement.jumpToId !== parentId) {
+        elements.push({
+          // type: "smoothstep",
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `e${formElement.id}`,
+          position: { x: 0, y: 0 },
+          source: formElement.id.toString(),
+          target:
+            formElement.jumpToId?.toString() ||
+            sortedElements[index + 1].id.toString(),
+          // animated: !!parentId,
+          arrowHeadType: ArrowHeadType.ArrowClosed,
+          label: applicableRules.length ? "default" : undefined,
+        });
+      }
+      for (const rule of applicableRules) {
+        if (rule.jumpToId !== parentId) {
+          elements.push({
+            // type: "smoothstep",
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `e${formElement.id}-r${rule.id}`,
+            position: { x: 0, y: 0 },
+            source: formElement.id.toString(),
+            target: rule.jumpToId!.toString(),
+            arrowHeadType: ArrowHeadType.ArrowClosed,
+            label:
+              (rule.conditions || [])
+                .map((condition) =>
+                  condition.operator === FieldRuleOperator.IsBlank
+                    ? `${OPERATOR_LABELS[condition.operator]}`
+                    : `${OPERATOR_LABELS[condition.operator]} ${
+                        condition.value
+                      }`
+                )
+                .join(", ") || "",
+          });
+        }
+      }
+    }
+  }
+  return elements;
 }
 
 const nodeTypes = {
@@ -230,11 +349,13 @@ const nodeTypes = {
       isRequired: boolean;
       isInput: boolean;
       isSource: boolean;
-    };
+      ParentIcon: FunctionComponent;
+    } & FormElementFullDetailsFragment;
   }>((d) => {
     // @ts-ignore
     const { data, selected } = d;
     const orphan = data.isSource && data.type !== "WelcomeMessage";
+    const Icon = components[data.type]!.icon;
     return (
       <>
         {data.type !== "WelcomeMessage" && (
@@ -272,10 +393,28 @@ const nodeTypes = {
               <Trans ns="admin:surveys">always skipped</Trans>
             </div>
           )}
-          <div className="h-10 w-12 rounded-l overflow-hidden">
-            {components[data.type]?.icon || defaultFormElementIcon}
+          {data.ParentIcon && (
+            <div className={`h-10 w-10 rounded-l overflow-hidden relative`}>
+              <data.ParentIcon />
+            </div>
+          )}
+          <div
+            className={`h-10 w-10 overflow-hidden relative ${
+              !!data.ParentIcon ? "bg-red-500 p-1 -ml-1" : "rounded-l"
+            }`}
+          >
+            <div
+              className={`${
+                !!data.ParentIcon ? "rounded" : ""
+              } h-full w-full overflow-hidden`}
+            >
+              <Icon
+                componentSettings={data.componentSettings}
+                sketchClass={data.sketchClass}
+              />
+            </div>
           </div>
-          <h3 className="w-full truncate text-base text-center px-4 py-2 ">
+          <h3 className="w-full truncate text-base text-center px-4 py-2 flex-1">
             {data.label}
             {data.isRequired ? "*" : ""}
           </h3>

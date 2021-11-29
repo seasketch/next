@@ -284,7 +284,7 @@ ComboBox.defaultComponentSettings = {
   })),
 };
 
-ComboBox.icon = (
+ComboBox.icon = () => (
   <div className="bg-blue-500 w-full h-full font-bold text-center flex justify-center items-center text-white">
     {/*eslint-disable-next-line i18next/no-literal-string*/}
     <SearchIcon className="w-2/3 h-2/3" />
