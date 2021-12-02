@@ -86,6 +86,10 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
   featureNumber: number;
   onRequestStageChange: (stage: number) => void;
   stage: number;
+  /** Component requests advancement to the next question */
+  onRequestNext: () => void;
+  /** Component requests navigation to the previous question */
+  onRequestPrevious: () => void;
 }
 
 /**
@@ -393,6 +397,28 @@ export interface FormElementComponent<T, V = {}>
    * text and other aspects of the FormElement can be customized
    */
   stages?: { [stage: string]: number };
+  hideNav?:
+    | boolean
+    | ((componentSettings: T, isMobile: boolean, stage?: number) => boolean);
+}
+
+export function hideNav(
+  Component: FormElementComponent<any, any>,
+  componentSettings: any,
+  isMobile: boolean,
+  stage?: number
+) {
+  if (Component.hideNav === undefined) {
+    return false;
+  } else if (Component.hideNav === false) {
+    return false;
+  } else if (Component.hideNav === true) {
+    return true;
+  } else if (typeof Component.hideNav === "function") {
+    return Component.hideNav(componentSettings, isMobile, stage);
+  } else {
+    throw new Error("Component has invalid hideNav Class property");
+  }
 }
 
 // eslint-disable-next-line i18next/no-literal-string
@@ -472,7 +498,7 @@ export type UnsavedSketchProps = {
 export type UnsavedSketches = FeatureCollection<any, UnsavedSketchProps>;
 
 export function toFeatureCollection(
-  features: Feature<any, UnsavedSketchProps>[],
+  features: Feature<any, any>[],
   autoGenerateNames?: boolean
 ) {
   if (autoGenerateNames) {

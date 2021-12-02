@@ -33,5 +33,7 @@
     "editor.rulers": [50]
   },
   "jest.rootPath": "packages/api",
-  "jest.showCoverageOnLoad": true
+  "jest.showCoverageOnLoad": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
 }

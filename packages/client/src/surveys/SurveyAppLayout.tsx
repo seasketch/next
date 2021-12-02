@@ -131,7 +131,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
                 className={`w-full relative ${
                   topImage
                     ? mapStacked
-                      ? "h-12 md:h-32 lg:h-32 flex-none"
+                      ? "h-0 md:h-0 lg:h-0 pb-2 md:pb-5 flex-none"
                       : "h-32 md:h-52 lg:h-64 flex-none"
                     : "h-full max-w-4xl"
                 } overflow-hidden`}
@@ -150,7 +150,9 @@ export const SurveyAppLayout: React.FunctionComponent<{
                   animate="current"
                   exit="exit"
                   alt={"Survey page background"}
-                  className="w-full h-full object-cover absolute top-0"
+                  className={`${
+                    mapStacked ? "w-0 h-0" : "w-full h-full"
+                  } object-cover absolute top-0`}
                   src={
                     /data:/.test(style.backgroundImage)
                       ? `${style.backgroundImage}`

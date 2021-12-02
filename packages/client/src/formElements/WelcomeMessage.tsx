@@ -151,4 +151,6 @@ WelcomeMessage.icon = () => (
   </div>
 );
 
+WelcomeMessage.hideNav = true;
+
 export default WelcomeMessage;

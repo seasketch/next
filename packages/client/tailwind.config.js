@@ -8,8 +8,27 @@ module.exports = {
     "src/**/*.tsx",
     "public/**/*.html",
   ],
+  darkMode: "media",
   theme: {
     extend: {
+      maxWidth: {
+        "1/4": "25%",
+        "1/3": "33.33%",
+        "1/2": "50%",
+        "3/4": "75%",
+      },
+      screens: {
+        tall: { raw: "(min-height: 700px)" },
+      },
+      flexGrow: {
+        0: 0,
+        1: 1,
+        2: 2,
+        DEFAULT: 1,
+      },
+      flex: {
+        2: "2 2 0%",
+      },
       spacing: {
         144: "36rem",
         128: "32rem",

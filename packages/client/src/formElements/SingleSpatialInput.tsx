@@ -20,16 +20,26 @@ import {
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import { motion } from "framer-motion";
 import { SurveyStyleContext } from "../surveys/appearance";
-import DigitizingInstructions, {
-  DigitizingState,
-} from "./DigitizingInstructions";
+import DigitizingTools from "./DigitizingTools";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { Map } from "mapbox-gl";
+import { LngLatBoundsLike, LngLatLike, Map } from "mapbox-gl";
 import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
 import { useParams } from "react-router";
+import bbox from "@turf/bbox";
+import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
+import useMapboxGLDraw, { DigitizingState } from "../draw/useMapboxGLDraw";
+import DigitizingActionsPopup, {
+  NextQuestion,
+  PreviousQuestion,
+  ResetView,
+  ZoomToFeature,
+} from "../draw/DigitizingActionsPopup";
+require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
-export type SingleSpatialInputProps = {};
+export type SingleSpatialInputProps = {
+  startingBounds?: LngLatBoundsLike;
+};
 
 /**
  * Displays a rich text section
@@ -39,11 +49,6 @@ const SingleSpatialInput: FormElementComponent<
   UnsavedSketches
 > = (props) => {
   const { t } = useTranslation("admin:surveys");
-  const [digitizingState, setDigitizingState] = useState(
-    props.value?.features?.length
-      ? DigitizingState.FINISHED
-      : DigitizingState.BLANK
-  );
   const { slug } = useParams<{ slug: string }>();
   const { data, loading, error } = useGetBasemapsQuery({
     variables: {
@@ -52,67 +57,24 @@ const SingleSpatialInput: FormElementComponent<
   });
 
   const [map, setMap] = useState<Map | null>(null);
-  const [draw, setDraw] = useState<MapboxDraw | null>(null);
   // eslint-disable-next-line i18next/no-literal-string
   const mapContext = useMapContext(`form-element-${props.id}`);
   const mapPortalContext = useContext(SurveyMapPortalContext);
   const style = useContext(SurveyStyleContext);
   const geometryType = props.sketchClass!.geometryType!;
-  const drawMode = glDrawMode(style.isSmall, geometryType);
-  useEffect(() => {
-    if (map) {
-      const draw = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: {},
-        defaultMode: drawMode,
-        modes: Object.assign(
-          {
-            draw_line_string: DrawLineString,
-            draw_polygon: DrawPolygon,
-          },
-          MapboxDraw.modes
-        ),
-      });
-      setDraw(draw);
-      map.addControl(draw);
-      if (props.value && props.value.features?.length) {
-        draw.add(props.value.features[0]);
-        draw.changeMode("direct_select", {
-          featureId: props.value.features[0].id,
-        });
+
+  const { digitizingState, actions } = useMapboxGLDraw(
+    map,
+    geometryType,
+    props.value?.features[0] || null,
+    (feature) => {
+      if (feature) {
+        props.onChange(toFeatureCollection([feature], true), false);
+      } else {
+        props.onChange(toFeatureCollection([], true), false);
       }
-      map.on("draw.create", function (e) {
-        setDigitizingState(DigitizingState.FINISHED);
-        props.onChange(toFeatureCollection(e.features, true), false);
-      });
-
-      map.on("draw.update", function (e) {
-        props.onChange(toFeatureCollection(e.features, true), false);
-      });
-
-      map.on("seasketch.drawing_started", function (e) {
-        setDigitizingState(DigitizingState.STARTED);
-      });
-      map.on("seasketch.can_complete", function (e) {
-        setDigitizingState(DigitizingState.CAN_COMPLETE);
-      });
-      map.on("draw.delete", function (e) {
-        setDigitizingState(DigitizingState.BLANK);
-        draw.changeMode(drawMode);
-      });
-      map.on("draw.selectionchange", function (e) {
-        if (e.features.length) {
-          setDigitizingState(DigitizingState.EDITING);
-        } else {
-          setDigitizingState(DigitizingState.FINISHED);
-        }
-      });
-
-      return () => {
-        map.removeControl(draw);
-      };
     }
-  }, [map]);
+  );
 
   useEffect(() => {
     if (mapContext?.manager && data?.projectBySlug?.basemaps) {
@@ -155,12 +117,20 @@ const SingleSpatialInput: FormElementComponent<
               delayChildren: 1,
             }}
           >
-            <DigitizingInstructions
+            <DigitizingTools
+              onRequestEdit={actions.edit}
               state={digitizingState}
               geometryType={geometryType}
-              onRequestTrash={() => {
-                if (draw) {
-                  draw.trash();
+              onRequestFinishEditing={actions.finishEditing}
+              onRequestReset={() => {
+                if (
+                  window.confirm(
+                    t("Are you sure you want to delete this shape?", {
+                      ns: "surveys",
+                    })
+                  )
+                ) {
+                  actions.reset();
                 }
               }}
               onRequestSubmit={() => {
@@ -168,8 +138,34 @@ const SingleSpatialInput: FormElementComponent<
                   props.onSubmit();
                 }
               }}
-            />
+            >
+              <PreviousQuestion
+                phoneOnly={true}
+                onClick={props.onRequestPrevious}
+              />
+              <NextQuestion
+                phoneOnly={true}
+                onClick={props.onRequestNext}
+                disabled={props.isRequired && !props.value?.features.length}
+              />
+              <ResetView
+                map={mapContext.manager?.map!}
+                bounds={
+                  props.componentSettings.startingBounds || [
+                    [-119.91579655058345, 33.87415760617607],
+                    [-119.24033098014716, 34.2380902987356],
+                  ]
+                }
+              />
+              <ZoomToFeature
+                map={mapContext.manager?.map!}
+                feature={props.value?.features[0]}
+                isSmall={style.isSmall}
+                geometryType={props.sketchClass!.geometryType!}
+              />
+            </DigitizingTools>
             <MapboxMap
+              hideDrawControls
               onLoad={(map) => setMap(map)}
               className="w-full h-full absolute top-0 bottom-0"
               initOptions={{
@@ -237,19 +233,10 @@ SingleSpatialInput.icon = ({ componentSettings, sketchClass }) => {
 
 export default SingleSpatialInput;
 
-export function glDrawMode(
-  isSmall: boolean,
-  geometryType: SketchGeometryType
-): string {
-  // if (isSmall) {
-  // } else {
-  if (geometryType === SketchGeometryType.Point) {
-    return "draw_point";
-  } else if (geometryType === SketchGeometryType.Linestring) {
-    return "draw_line_string";
-  } else if (geometryType === SketchGeometryType.Polygon) {
-    return "draw_polygon";
+SingleSpatialInput.hideNav = (componentSettings, isMobile, stage) => {
+  if (isMobile) {
+    return true;
+  } else {
+    return false;
   }
-  // }
-  throw new Error("Not implemented");
-}
+};

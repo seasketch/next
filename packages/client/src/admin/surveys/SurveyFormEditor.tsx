@@ -506,6 +506,8 @@ export default function SurveyFormEditor({
                           typeName={selectedFormElement!.typeId}
                           editable={true}
                           value={values[selectedFormElement.id]}
+                          onRequestNext={() => null}
+                          onRequestPrevious={() => null}
                         />
                         <div className="flex items-center mb-10 space-x-4">
                           {selectedFormElement.typeId !== "WelcomeMessage" &&

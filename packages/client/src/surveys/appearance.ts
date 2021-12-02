@@ -29,6 +29,8 @@ export type ComputedFormElementStyle = {
   textClass: string;
   isDark: boolean;
   isSmall: boolean;
+  unsplashAuthorName?: string;
+  unsplashAuthorUrl?: string;
 };
 
 export const defaultStyle = {
@@ -65,11 +67,18 @@ export function useCurrentStyle(
   current: FormElementDetailsFragment | undefined
 ): ComputedFormElementStyle {
   const isSmall = useMediaQuery("(max-width: 767px)");
+  let unsplashAuthorName: string | undefined;
+  let unsplashAuthorUrl: string | undefined;
   if (!formElements || !current || formElements.length === 0) {
     return defaultStyle;
   }
   const index = formElements.indexOf(current) || 0;
   let style: FormElementStyleProps = formElements[0];
+  if (formElements[0].unsplashAuthorName) {
+    unsplashAuthorName = formElements[0].unsplashAuthorName!;
+    unsplashAuthorUrl = formElements[0].unsplashAuthorUrl!;
+  }
+
   for (var i = 1; i <= index; i++) {
     if (formElements[i] && formElements[i].backgroundImage) {
       style = {
@@ -91,6 +100,10 @@ export function useCurrentStyle(
           style.backgroundImage ||
           defaultStyle.backgroundImage,
       };
+      if (formElements[i].unsplashAuthorName) {
+        unsplashAuthorName = formElements[i].unsplashAuthorName!;
+        unsplashAuthorUrl = formElements[i].unsplashAuthorUrl!;
+      }
     }
   }
 
@@ -132,6 +145,8 @@ export function useCurrentStyle(
     secondaryTextClass: colord(style.secondaryColor!).isDark()
       ? "text-white"
       : "text-gray-900",
+    unsplashAuthorName,
+    unsplashAuthorUrl,
   } as ComputedFormElementStyle;
 }
 

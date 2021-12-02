@@ -207,4 +207,6 @@ ThankYou.icon = () => (
   </div>
 );
 
+ThankYou.hideNav = true;
+
 export default ThankYou;

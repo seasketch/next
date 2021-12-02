@@ -10,6 +10,7 @@ export interface OverlayMapProps {
   className?: string;
   bounds?: [number, number, number, number];
   initOptions?: Partial<MapboxOptions>;
+  hideDrawControls?: boolean;
 }
 
 mapboxgl.prewarm();
@@ -47,7 +48,12 @@ export default function MapboxMap(props: OverlayMapProps) {
   ]);
 
   return (
-    <div className={`flex-1 bg-gray-300 ${props.className}`} ref={mapContainer}>
+    <div
+      className={`flex-1 bg-gray-300 ${props.className} ${
+        props.hideDrawControls ? "hide-draw-controls" : ""
+      }`}
+      ref={mapContainer}
+    >
       <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">
         <AnimatePresence>
           {mapContext.bannerMessages?.length ? (
