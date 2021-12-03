@@ -3619,7 +3619,6 @@ export type FormElement = Node & {
   position: Scalars['Int'];
   /** Color used to style navigation controls */
   secondaryColor?: Maybe<Scalars['String']>;
-  /** Sketch Class to be used in conjuction with a form element that supports spatial feature input. */
   sketchClass?: Maybe<SketchClass>;
   /**
    * Indicates whether the form element should be displayed with dark or light text

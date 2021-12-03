@@ -4272,11 +4272,6 @@ type FormElement implements Node {
   
   """
   secondaryColor: String
-
-  """
-  Sketch Class to be used in conjuction with a form element that supports spatial feature input.
-  
-  """
   sketchClass: SketchClass
 
   """

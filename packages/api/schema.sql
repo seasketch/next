@@ -4609,15 +4609,6 @@ $$;
 
 
 --
--- Name: FUNCTION form_elements_sketch_class(form_element public.form_elements); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.form_elements_sketch_class(form_element public.form_elements) IS '
-Sketch Class to be used in conjuction with a form element that supports spatial feature input.
-';
-
-
---
 -- Name: form_element_types; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -13430,9 +13421,7 @@ ALTER TABLE ONLY public.sketch_classes
 -- Name: CONSTRAINT sketch_classes_form_element_id_fkey ON sketch_classes; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON CONSTRAINT sketch_classes_form_element_id_fkey ON public.sketch_classes IS '
-@omit many
-';
+COMMENT ON CONSTRAINT sketch_classes_form_element_id_fkey ON public.sketch_classes IS '@omit many';
 
 
 --
