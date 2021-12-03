@@ -96,6 +96,9 @@ export default function BoundsInput({
       return () => {
         map.off("draw.create", onCreate);
         map.removeControl(draw);
+        if (onAfterInput) {
+          onAfterInput();
+        }
       };
     }
   }, [map, digitizing]);
