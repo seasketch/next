@@ -74,6 +74,7 @@ jobs:
     name: Run DB Migrations
     if: github.event.inputs.force == 'true' || needs.detect_changes.outputs.migrations == 'true'
     concurrency: ${{github.event.inputs.environment }}_db_migrations
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     environment:
       name: ${{github.event.inputs.environment }}_db_migrations
@@ -99,6 +100,7 @@ jobs:
     name: Deploy Server
     if: always() && needs.run_migrations.result != 'failure' && (github.event.inputs.force == 'true' || needs.detect_changes.outputs.api == 'true')
     concurrency: ${{github.event.inputs.environment }}_server
+    timeout-minutes: 12
     environment:
       name: ${{github.event.inputs.environment }}_server
       url: https://api.seasket.ch/graphiql
@@ -153,6 +155,7 @@ jobs:
   deploy_client:
     name: Deploy Client
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     if: github.event.inputs.force == 'true' || needs.detect_changes.outputs.client == 'true'
     concurrency: ${{github.event.inputs.environment }}_client
     environment:
