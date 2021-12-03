@@ -282,7 +282,6 @@ function SurveyApp() {
     const lastPage = index === elements.length - 2;
 
     const currentValue = responseState[formElement.current.id]?.value;
-    console.log(data.currentProject!.region);
     return (
       <>
         <SurveyContext.Provider
