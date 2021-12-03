@@ -25,11 +25,12 @@ import {
   AddConditionMutationVariables,
   DeleteLogicConditionDocument,
   DeleteLogicRuleDocument,
+  FormElementFullDetailsFragment,
 } from "../../generated/graphql";
 import { useCreate, useDelete } from "../../graphqlHookWrappers";
 import { collectHeaders, collectQuestion } from "./collectText";
 
-type FE = LogicRuleEditorFormElementFragment;
+type FE = FormElementFullDetailsFragment;
 
 export default function LogicRuleEditor({
   rules,
@@ -43,11 +44,18 @@ export default function LogicRuleEditor({
   selectedIds: number[];
 }) {
   const formElementId = selectedIds[0];
-  rules = rules.filter((r) => r.formElementId === formElementId);
   const formElement = formElements.find((e) => e.id === formElementId)!;
+  rules = rules.filter((r) => r.formElementId === formElementId);
   const index = formElements.indexOf(formElement);
   const { t } = useTranslation("admin:surveys");
   const onError = useGlobalErrorHandler();
+  let parentFormElementId: number | null = null;
+  if (formElement) {
+    const parent = formElements.find(
+      (f) => f.sketchClass?.form?.id === formElement.formId
+    );
+    parentFormElementId = parent?.id || null;
+  }
   const [
     initializeRule,
     initializeRuleState,
@@ -276,7 +284,9 @@ export default function LogicRuleEditor({
                   </button>
                 </h4>
                 <FormElementSelect
-                  formElements={formElements}
+                  formElements={formElements.filter(
+                    (f) => f.formId === formElement.formId
+                  )}
                   currentFormElementId={formElementId}
                   includeBlankOption={false}
                   disableBeforeCurrentItem={true}
@@ -290,6 +300,7 @@ export default function LogicRuleEditor({
                       },
                     });
                   }}
+                  endOfSubformOption={parentFormElementId || undefined}
                 />
 
                 <h4 className="text-sm py-1 mt-1">{t("When")}</h4>
@@ -371,15 +382,16 @@ export default function LogicRuleEditor({
                     </div>
                   );
                 })}
+
                 <button
                   className="p-1 mt-2 rounded px-2 bg-blue-50 shadow-sm items-center flex border-black border border-opacity-20"
-                  onClick={() =>
+                  onClick={() => {
                     createCondition({
                       ruleId: rule.id,
                       subjectId: formElement.id,
                       operator: formElement.type!.supportedOperators[0]!,
-                    })
-                  }
+                    });
+                  }}
                 >
                   <PlusIcon className="w-3 h-3 inline mr-1" />
                   <Trans ns="admin:surveys">add condition</Trans>
@@ -402,57 +414,71 @@ export default function LogicRuleEditor({
         )}
       </div>
 
-      <p className="p-2 text-sm">
-        {rules.length === 0 ? (
-          <Trans ns="admin:surveys">
-            Survey advances from this question to...
-          </Trans>
-        ) : (
-          <Trans ns="admin:surveys">
-            If the above conditions do not match, survey advances to...
-          </Trans>
-        )}
-      </p>
-      <div className="p-2 w-full">
-        <FormElementSelect
-          value={formElement.jumpToId!}
-          onChange={(value) => {
-            updateFormElement({
-              variables: {
-                id: formElementId,
-                jumpToId: value,
-              },
-              optimisticResponse: {
-                __typename: "Mutation",
-                updateFormElement: {
-                  __typename: "UpdateFormElementPayload",
-                  formElement: {
-                    ...formElement,
+      {formElement.type.supportedOperators.length > 0 ? (
+        <>
+          <p className="p-2 text-sm">
+            {rules.length === 0 ? (
+              <Trans ns="admin:surveys">
+                Survey advances from this question to...
+              </Trans>
+            ) : (
+              <Trans ns="admin:surveys">
+                If the above conditions do not match, survey advances to...
+              </Trans>
+            )}
+          </p>
+          <div className="p-2 w-full">
+            <FormElementSelect
+              value={formElement.jumpToId!}
+              onChange={(value) => {
+                updateFormElement({
+                  variables: {
+                    id: formElementId,
                     jumpToId: value,
                   },
-                },
-              },
-            });
-          }}
-          blankLabel={t("Default, next in list")}
-          currentFormElementId={formElementId}
-          formElements={formElements}
-          disableBeforeCurrentItem={true}
-          includeBlankOption={true}
-        />
-      </div>
-      <div className="p-2">
-        {rules.length === 0 && (
-          <Button
-            label={t("Add conditions")}
-            onClick={
-              formElement.type?.supportedOperators[0]
-                ? createRule(formElement.type?.supportedOperators[0])
-                : undefined
-            }
-          />
-        )}
-      </div>
+                  optimisticResponse: {
+                    __typename: "Mutation",
+                    updateFormElement: {
+                      __typename: "UpdateFormElementPayload",
+                      formElement: {
+                        ...formElement,
+                        jumpToId: value,
+                      },
+                    },
+                  },
+                });
+              }}
+              blankLabel={t("Default, next in list")}
+              currentFormElementId={formElementId}
+              formElements={formElements.filter(
+                (f) => f.formId === formElement.formId
+              )}
+              disableBeforeCurrentItem={true}
+              includeBlankOption={true}
+              endOfSubformOption={parentFormElementId || undefined}
+            />
+          </div>
+          <div className="p-2">
+            {rules.length === 0 &&
+              formElement.type?.supportedOperators.length > 0 && (
+                <Button
+                  label={t("Add conditions")}
+                  onClick={
+                    formElement.type?.supportedOperators[0]
+                      ? createRule(formElement.type?.supportedOperators[0])
+                      : undefined
+                  }
+                />
+              )}
+          </div>
+        </>
+      ) : (
+        <p className="px-2 text-sm text-gray-500">
+          <Trans ns="surveys:admin">
+            This form element type does not support conditional logic.
+          </Trans>
+        </p>
+      )}
     </div>
   );
 }
@@ -465,6 +491,7 @@ function FormElementSelect({
   onChange,
   includeBlankOption,
   blankLabel,
+  endOfSubformOption,
 }: {
   value: number;
   onChange: (id: number | null) => void;
@@ -473,10 +500,12 @@ function FormElementSelect({
   disableBeforeCurrentItem: boolean;
   includeBlankOption: boolean;
   blankLabel: string;
+  endOfSubformOption?: number;
 }) {
   const currentElement = formElements.find(
     (e) => e.id === currentFormElementId
   )!;
+  const { t } = useTranslation("admin:surveys");
   const currentFormElementIndex = formElements.indexOf(currentElement);
   return (
     <select
@@ -502,6 +531,11 @@ function FormElementSelect({
             {collectQuestion(el.body) || collectHeaders(el.body)}
           </option>
         ))}
+      {endOfSubformOption && (
+        <option value={endOfSubformOption}>
+          {t("End of spatial attributes")}
+        </option>
+      )}
     </select>
   );
 }

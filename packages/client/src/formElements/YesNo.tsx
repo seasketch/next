@@ -57,7 +57,7 @@ YesNo.defaultBody = questionBodyFromMarkdown(`
 # 
 `);
 YesNo.advanceAutomatically = true;
-YesNo.icon = (
+YesNo.icon = () => (
   <div className="bg-green-600 w-full h-full font-bold text-center flex justify-center items-center  italic text-white">
     <CheckIcon className="w-2/3" />
   </div>

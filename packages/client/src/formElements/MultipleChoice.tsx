@@ -35,17 +35,7 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
         editable={props.editable}
       />
       <div className="inline-block">
-        <div
-          className="py-4 pb-6 space-y-2 flex flex-col"
-          // style={{
-          //   width:
-          //     Math.max(
-          //       ...(props.componentSettings.options || []).map(
-          //         (o) => o.label.length
-          //       )
-          //     ) * 12,
-          // }}
-        >
+        <div className="py-4 pb-6 space-y-2 flex flex-col">
           {(props.componentSettings.options || []).map(({ label, value }) => {
             const current = props.value || [];
             const selected = current.indexOf(value || label) !== -1;
@@ -153,7 +143,7 @@ MultipleChoice.defaultComponentSettings = {
 };
 MultipleChoice.advanceAutomatically = (settings) => !settings.multipleSelect;
 
-MultipleChoice.icon = (
+MultipleChoice.icon = () => (
   <div className="bg-green-600 w-full h-full font-bold text-center flex justify-center items-center  italic text-white">
     <svg
       viewBox="0 0 16 16"

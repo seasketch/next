@@ -1,42 +1,46 @@
+fragment BasemapDetails on Basemap {
+  id
+  attribution
+  interactivitySettings {
+    cursor
+    id
+    layers
+    longTemplate
+    shortTemplate
+    type
+  }
+  labelsLayerId
+  name
+  optionalBasemapLayers {
+    basemapId
+    id
+    defaultVisibility
+    description
+    options
+    groupType
+    layers
+    metadata
+    name
+  }
+  description
+  projectId
+  terrainExaggeration
+  terrainMaxZoom
+  terrainOptional
+  terrainTileSize
+  terrainUrl
+  terrainVisibilityDefault
+  thumbnail
+  tileSize
+  type
+  url
+}
+
 query GetBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     basemaps {
-      id
-      attribution
-      interactivitySettings {
-        cursor
-        id
-        layers
-        longTemplate
-        shortTemplate
-        type
-      }
-      labelsLayerId
-      name
-      optionalBasemapLayers {
-        basemapId
-        id
-        defaultVisibility
-        description
-        options
-        groupType
-        layers
-        metadata
-        name
-      }
-      description
-      projectId
-      terrainExaggeration
-      terrainMaxZoom
-      terrainOptional
-      terrainTileSize
-      terrainUrl
-      terrainVisibilityDefault
-      thumbnail
-      tileSize
-      type
-      url
+      ...BasemapDetails
     }
   }
 }

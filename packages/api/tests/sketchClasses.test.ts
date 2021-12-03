@@ -1,4 +1,4 @@
-import { sql } from "slonik";
+import { DatabaseTransactionConnectionType, sql } from "slonik";
 import { createPool } from "./pool";
 import {
   createUser,
@@ -8,6 +8,7 @@ import {
   clearSession,
   createGroup,
   addGroupToAcl,
+  projectTransaction,
 } from "./helpers";
 
 const pool = createPool("test");
@@ -113,42 +114,6 @@ describe("Access Control", () => {
       ).toBe(false);
       await conn.any(sql`ROLLBACK`);
     });
-  });
-});
-
-test("Cannot change geometry_type", async () => {
-  await pool.transaction(async (conn) => {
-    const adminId = await createUser(conn);
-    const projectId = await createProject(conn, adminId, "invite_only");
-    await createSession(conn, adminId, true, false, projectId);
-    const sketchClass = await conn.one(
-      sql`insert into sketch_classes (project_id, name) values (${projectId}, 'MPA') returning *`
-    );
-    expect(sketchClass.name).toBe("MPA");
-    expect(
-      conn.any(
-        sql`update sketch_classes set geometry_type = 'POINT' where id = ${sketchClass.id}`
-      )
-    ).rejects.toThrow();
-    await conn.any(sql`ROLLBACK`);
-  });
-});
-
-test("Cannot change is_my_plans_option", async () => {
-  await pool.transaction(async (conn) => {
-    const adminId = await createUser(conn);
-    const projectId = await createProject(conn, adminId, "invite_only");
-    await createSession(conn, adminId, true, false, projectId);
-    const sketchClass = await conn.one(
-      sql`insert into sketch_classes (project_id, name) values (${projectId}, 'MPA') returning *`
-    );
-    expect(sketchClass.name).toBe("MPA");
-    expect(
-      conn.any(
-        sql`update sketch_classes set is_my_plans_option = false where id = ${sketchClass.id}`
-      )
-    ).rejects.toThrow();
-    await conn.any(sql`ROLLBACK`);
   });
 });
 
@@ -357,3 +322,121 @@ test("Cannot delete SketchClasses with more that 10 sketches", async () => {
     await conn.any(sql`ROLLBACK`);
   });
 });
+
+async function createForm(
+  callback: (
+    conn: DatabaseTransactionConnectionType,
+    formId: number,
+    surveyId: number,
+    projectId: number,
+    adminId: number,
+    userIds: [number, number]
+  ) => Promise<void>
+) {
+  await projectTransaction(
+    pool,
+    "public",
+    async (conn, projectId, adminId, userIds) => {
+      await createSession(conn, adminId, true, false, projectId);
+      const surveyId = await conn.oneFirst<number>(
+        sql`select id from make_survey('Survey A', ${projectId}, null)`
+      );
+      const formId = await conn.oneFirst<number>(
+        sql`select id from forms where survey_id = ${surveyId}`
+      );
+      await clearSession(conn);
+      await callback(conn, formId, surveyId, projectId, adminId, userIds);
+    }
+  );
+}
+
+describe("Sketch Classes tied to FormElements", () => {
+  test("spatial form elements are initialized with a sketch class copied from sketch_class_template_id", async () => {
+    await createForm(
+      async (conn, formId, surveyId, projectId, adminId, userIds) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const elementId = await conn.oneFirst<number>(
+          sql`insert into form_elements (form_id, type_id, body) values (${formId}, 'MultiSpatialInput', '{}'::jsonb) returning id`
+        );
+        const sketchClass = await conn.one<{
+          allow_multi: boolean;
+          geometry_type: string;
+          form_element_id: number;
+          id: number;
+        }>(
+          sql`select * from sketch_classes where form_element_id = ${elementId}`
+        );
+        expect(sketchClass.allow_multi).toBe(false);
+        expect(sketchClass.geometry_type).toBe("POLYGON");
+        // TODO: ensure form is copied as well
+        const form = await conn.one<{
+          id: number;
+          is_template: boolean;
+        }>(sql`select * from forms where sketch_class_id = ${sketchClass.id}`);
+        expect(form.is_template).toBe(false);
+        const formElements = await conn.any<{ id: number }>(
+          sql`select * from form_elements where form_id = ${form.id}`
+        );
+        expect(formElements.length).toBeGreaterThan(0);
+      }
+    );
+  });
+  test("sketch classes associated with a form element cannot be deleted", async () => {
+    await createForm(
+      async (conn, formId, surveyId, projectId, adminId, userIds) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const elementId = await conn.oneFirst<number>(
+          sql`insert into form_elements (form_id, type_id, body) values (${formId}, 'MultiSpatialInput', '{}'::jsonb) returning id`
+        );
+        const sketchClass = await conn.one<{
+          allow_multi: boolean;
+          geometry_type: string;
+          form_element_id: number;
+          id: number;
+        }>(
+          sql`select * from sketch_classes where form_element_id = ${elementId}`
+        );
+        expect(sketchClass.allow_multi).toBe(false);
+        expect(sketchClass.geometry_type).toBe("POLYGON");
+        expect(
+          conn.any(sql`delete from sketch_classes where id = ${sketchClass.id}`)
+        ).rejects.toThrow(/form element/i);
+      }
+    );
+  });
+  test("survey sketch classes are deleted along with parent form element", async () => {
+    await createForm(
+      async (conn, formId, surveyId, projectId, adminId, userIds) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const elementId = await conn.oneFirst<number>(
+          sql`insert into form_elements (form_id, type_id, body) values (${formId}, 'MultiSpatialInput', '{}'::jsonb) returning id`
+        );
+        const sketchClass = await conn.one<{
+          allow_multi: boolean;
+          geometry_type: string;
+          form_element_id: number;
+          id: number;
+        }>(
+          sql`select * from sketch_classes where form_element_id = ${elementId}`
+        );
+        expect(sketchClass.allow_multi).toBe(false);
+        expect(sketchClass.geometry_type).toBe("POLYGON");
+        const form = await conn.one<{
+          id: number;
+          is_template: boolean;
+        }>(sql`select * from forms where sketch_class_id = ${sketchClass.id}`);
+        await conn.any(sql`delete from form_elements where id = ${elementId}`);
+        expect(
+          conn.one(
+            sql`select * from sketch_classes where id = ${sketchClass.id}`
+          )
+        ).rejects.toThrow(/not found/i);
+        expect(
+          conn.one(sql`select * from forms where id = ${form.id}`)
+        ).rejects.toThrow(/not found/i);
+      }
+    );
+  });
+});
+
+test.todo("Don't allow geometry type to be changed if sketches already exist");

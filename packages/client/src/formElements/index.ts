@@ -11,6 +11,10 @@ import ThankYou from "./ThankYou";
 import Name from "./Name";
 import ComboBox from "./ComboBox";
 import MultipleChoice from "./MultipleChoice";
+import SingleSpatialInput from "./SingleSpatialInput";
+import MultiSpatialInput from "./MultiSpatialInput";
+import FeatureName from "./FeatureName";
+import SpatialAcessPriority from "./SpatialAccessPriority";
 
 export const components: {
   /** componentName must match form_elements db table */
@@ -29,3 +33,7 @@ components["Statement"] = Statement;
 components["YesNo"] = YesNo;
 components["ComboBox"] = ComboBox;
 components["ThankYou"] = ThankYou;
+components["SingleSpatialInput"] = SingleSpatialInput;
+components["MultiSpatialInput"] = MultiSpatialInput;
+components["SpatialAccessPriorityInput"] = SpatialAcessPriority;
+components["FeatureName"] = FeatureName;

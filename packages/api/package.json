@@ -27,7 +27,8 @@
     "db:start": "docker-compose up -d",
     "db:stop": "docker-compose stop",
     "db:down": "docker-compose down",
-    "db:schema": "docker exec seasketch_db pg_dump --no-sync --schema-only --no-owner --exclude-schema=graphile_migrate --exclude-schema=postgraphile_watch -U postgres seasketch > ./schema.sql"
+    "db:schema": "docker exec seasketch_db pg_dump --no-sync --schema-only --no-owner --exclude-schema=graphile_migrate --exclude-schema=postgraphile_watch -U postgres seasketch > ./schema.sql",
+    "db:logs": "docker-compose logs -f --tail=100 db"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"

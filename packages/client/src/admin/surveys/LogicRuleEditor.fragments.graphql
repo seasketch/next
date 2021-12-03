@@ -2,6 +2,7 @@ fragment LogicRuleEditorFormElement on FormElement {
   id
   body
   typeId
+  formId
   jumpToId
   componentSettings
   exportId

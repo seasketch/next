@@ -199,12 +199,14 @@ ThankYou.defaultProps = {
   },
 };
 
-ThankYou.icon = (
+ThankYou.icon = () => (
   <div className="bg-gray-100 w-full h-full font-bold text-center flex justify-center items-center   text-white">
     {/*eslint-disable-next-line i18next/no-literal-string*/}
     <span className="text-2xl font-serif">🙏</span>
     {/* <HeartIcon className="w-1/2 h-1/2" /> */}
   </div>
 );
+
+ThankYou.hideNav = true;
 
 export default ThankYou;

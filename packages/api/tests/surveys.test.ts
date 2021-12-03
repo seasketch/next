@@ -929,3 +929,101 @@ async function surveyTransaction(
     }
   );
 }
+
+describe("Handling of sketches", () => {
+  test("embedded sketches are moved to their own table", async () => {
+    await surveyTransaction(
+      pool,
+      "PUBLIC",
+      async (conn, projectId, adminId, surveyId) => {
+        const formId = await conn.oneFirst<number>(
+          sql`select id from forms where survey_id = ${surveyId}`
+        );
+
+        await createSession(conn, adminId, true, false, projectId);
+        const elementId = await conn.oneFirst<string>(
+          sql`insert into form_elements (form_id, type_id, body) values (${formId}, 'MultiSpatialInput', ${createBody(
+            "Shape"
+          )}) returning id`
+        );
+        await conn.any(
+          sql`update sketch_classes set geometry_type = 'POINT' where form_element_id = ${elementId}`
+        );
+        const response = await conn.one<{
+          id: number;
+          data: any;
+          user_id: number;
+        }>(
+          sql`select * from create_survey_response(${surveyId}, ${sql.json({
+            [elementId]: {
+              type: "FeatureCollection",
+              features: [
+                {
+                  type: "Feature",
+                  properties: {
+                    name: "Location 1",
+                    otherAttribute: "foo",
+                  },
+                  geometry: {
+                    type: "Point",
+                    coordinates: [-119.1234, 34.4321],
+                  },
+                },
+                {
+                  type: "Feature",
+                  properties: {
+                    name: "Location 2",
+                    otherAttribute: "bar",
+                  },
+                  geometry: {
+                    type: "Point",
+                    coordinates: [-119.1234, 34.12345],
+                  },
+                },
+              ],
+            },
+          })}, false, true, false, false)`
+        );
+        expect(response.user_id).toBe(adminId);
+        expect(response.data[elementId].length).toBe(2);
+        const sketches = await conn.many(
+          sql`select * from sketches where response_id = ${response.id}`
+        );
+        expect(sketches.length).toBe(2);
+        expect(sketches[0].user_id).toBe(adminId);
+        expect(sketches[0].properties).toHaveProperty("otherAttribute");
+      }
+    );
+  });
+
+  test("embeded sketches must be a feature collection", async () => {
+    await surveyTransaction(
+      pool,
+      "PUBLIC",
+      async (conn, projectId, adminId, surveyId) => {
+        const formId = await conn.oneFirst<number>(
+          sql`select id from forms where survey_id = ${surveyId}`
+        );
+        await createSession(conn, adminId, true, false, projectId);
+        const elementId = await conn.oneFirst<string>(
+          sql`insert into form_elements (form_id, type_id, body) values (${formId}, 'SingleSpatialInput', ${createBody(
+            "Shape"
+          )}) returning id`
+        );
+        expect(
+          conn.one(
+            sql`select * from create_survey_response(${surveyId}, ${sql.json({
+              [elementId]: {
+                type: "Feature",
+                properties: {
+                  name: "Location 1",
+                  otherAttribute: "foo",
+                },
+              },
+            })}, false, true, false, false)`
+          )
+        ).rejects.toThrow("FeatureCollection");
+      }
+    );
+  });
+});

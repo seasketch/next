@@ -144,8 +144,12 @@ input::placeholder {
   outline: none !important;
 }
 
-.mapboxgl-canvas-container {
-  cursor: default !important;
+body .mapboxgl-canvas-container.mapboxgl-interactive {
+  cursor: default;
+}
+
+.hide-draw-controls .mapboxgl-control-container {
+  display: none;
 }
 
 .seasketch-skeleton {
@@ -207,4 +211,14 @@ label.required:after {
 }
 .unsplash-thumb:hover span {
   display: block;
+}
+
+.absolute.mapboxgl-map {
+  position: absolute !important;
+}
+
+@media (max-width: 420px) {
+  .survey .absolute.mapboxgl-map .mapboxgl-ctrl-logo {
+    display: none;
+  }
 }

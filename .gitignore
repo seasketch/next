@@ -3,3 +3,5 @@
 **/dist/*
 NOTES.md
 **/.env
+.cert/
+lerna-debug.log

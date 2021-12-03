@@ -1,13 +1,16 @@
-import mapboxgl, { Map } from "mapbox-gl";
+import mapboxgl, { Map, MapboxOptions } from "mapbox-gl";
 import ReactDOM from "react-dom";
 import React, { useEffect, useState, useRef, useContext } from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { motion, AnimatePresence } from "framer-motion";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
   className?: string;
   bounds?: [number, number, number, number];
+  initOptions?: Partial<MapboxOptions>;
+  hideDrawControls?: boolean;
 }
 
 mapboxgl.prewarm();
@@ -25,7 +28,7 @@ export default function MapboxMap(props: OverlayMapProps) {
       mapContext.ready
     ) {
       mapContext.manager
-        .createMap(mapContainer.current, props.bounds)
+        .createMap(mapContainer.current, props.bounds, props.initOptions)
         .then((map) => {
           setMap(map);
           map.on("load", () => {
@@ -46,7 +49,9 @@ export default function MapboxMap(props: OverlayMapProps) {
 
   return (
     <div
-      className={`flex-1 bg-gray-300 ${props.className} relative`}
+      className={`flex-1 bg-gray-300 ${props.className} ${
+        props.hideDrawControls ? "hide-draw-controls" : ""
+      }`}
       ref={mapContainer}
     >
       <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">

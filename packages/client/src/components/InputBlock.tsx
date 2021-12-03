@@ -48,7 +48,7 @@ const InputBlock: FunctionComponent<InputBlockProps> = ({
           </div>
           <div className="text-sm text-gray-600 font-normal">{children}</div>
         </div>
-        <div className="flex-2  text-right flex items-center">{input}</div>
+        <div className="text-right flex items-center">{input}</div>
       </div>
     </div>
   );

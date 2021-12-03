@@ -41,7 +41,19 @@ query SurveyById($id: Int!) {
   }
 }
 
-fragment FormElementFullDetails on FormElement {
+fragment AddFormElementTypeDetails on FormElementType {
+  componentName
+  isHidden
+  isInput
+  isSingleUseOnly
+  isSurveysOnly
+  label
+  supportedOperators
+  isSpatial
+  allowedLayouts
+}
+
+fragment FormElementDetails on FormElement {
   body
   componentSettings
   exportId
@@ -51,19 +63,13 @@ fragment FormElementFullDetails on FormElement {
   position
   jumpToId
   type {
-    componentName
-    isHidden
-    isInput
-    isSingleUseOnly
-    isSurveysOnly
-    label
-    supportedOperators
+    ...AddFormElementTypeDetails
   }
   typeId
   backgroundColor
   secondaryColor
   backgroundImage
-  backgroundImagePlacement
+  layout
   backgroundPalette
   textVariant
   unsplashAuthorUrl
@@ -72,18 +78,55 @@ fragment FormElementFullDetails on FormElement {
   backgroundHeight
 }
 
+fragment SketchClassDetails on SketchClass {
+  id
+  mapboxGlStyle
+  formElementId
+  geometryType
+  geoprocessingClientName
+  geoprocessingClientUrl
+  geoprocessingProjectUrl
+  allowMulti
+  form {
+    formElements {
+      ...FormElementDetails
+    }
+    id
+    logicRules {
+      ...LogicRuleDetails
+    }
+  }
+}
+
+fragment FormElementFullDetails on FormElement {
+  ...FormElementDetails
+  sketchClass {
+    ...SketchClassDetails
+  }
+}
+
+fragment LogicRuleDetails on FormLogicRule {
+  booleanOperator
+  command
+  id
+  jumpToId
+  position
+  formElementId
+  conditions {
+    id
+    operator
+    value
+    subjectId
+    ruleId
+  }
+}
+
 query SurveyFormEditorDetails($id: Int!, $slug: String!) {
   projectBySlug(slug: $slug) {
     name
   }
   formElementTypes {
-    componentName
-    isHidden
-    isInput
-    isSingleUseOnly
-    isSurveysOnly
-    label
-    supportedOperators
+    ...AddFormElementTypeDetails
   }
   survey(id: $id) {
     ...SurveyListDetails
@@ -97,25 +140,16 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
         ...FormElementFullDetails
       }
       logicRules {
-        booleanOperator
-        command
-        id
-        jumpToId
-        position
-        formElementId
-        conditions {
-          id
-          operator
-          value
-          subjectId
-          ruleId
-        }
+        ...LogicRuleDetails
       }
     }
   }
   currentProject {
     name
     url
+    region {
+      geojson
+    }
   }
 }
 
@@ -137,6 +171,40 @@ mutation UpdateSurveyBaseSettings(
       id
       showProgress
       showFacilitationOption
+    }
+  }
+}
+
+mutation UpdateFormElementSketchClass(
+  $id: Int!
+  $geometryType: SketchGeometryType
+  $allowMulti: Boolean
+  $mapboxGlStyle: JSON
+  $geoprocessingClientName: String
+  $geoprocessingClientUrl: String
+  $geoprocessingProjectUrl: String
+) {
+  updateSketchClass(
+    input: {
+      id: $id
+      patch: {
+        geometryType: $geometryType
+        allowMulti: $allowMulti
+        mapboxGlStyle: $mapboxGlStyle
+        geoprocessingClientName: $geoprocessingClientName
+        geoprocessingClientUrl: $geoprocessingClientUrl
+        geoprocessingProjectUrl: $geoprocessingProjectUrl
+      }
+    }
+  ) {
+    sketchClass {
+      id
+      geometryType
+      allowMulti
+      mapboxGlStyle
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
     }
   }
 }
@@ -291,7 +359,7 @@ mutation UpdateFormElementBackground(
   $secondaryColor: String
   $backgroundPalette: [String]
   $textVariant: FormElementTextVariant
-  $backgroundImagePlacement: FormElementBackgroundImagePlacement
+  $layout: FormElementLayout
 ) {
   updateFormElement(
     input: {
@@ -301,7 +369,7 @@ mutation UpdateFormElementBackground(
         secondaryColor: $secondaryColor
         backgroundPalette: $backgroundPalette
         textVariant: $textVariant
-        backgroundImagePlacement: $backgroundImagePlacement
+        layout: $layout
       }
     }
   ) {
@@ -310,7 +378,7 @@ mutation UpdateFormElementBackground(
       backgroundColor
       secondaryColor
       backgroundImage
-      backgroundImagePlacement
+      layout
       backgroundPalette
       textVariant
       unsplashAuthorName

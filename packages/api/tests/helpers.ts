@@ -96,7 +96,6 @@ export async function createSession(
   }
   if (userId) {
     await conn.any(sql`select set_config('session.user_id', ${userId}, true)`);
-    // console.log("set session.canonical_email", `test-${userId}@example.com`);
     await conn.any(
       sql`select set_config('session.canonical_email', ${`test-${userId}@example.com`}, true)`
     );

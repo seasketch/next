@@ -106,7 +106,7 @@ Rating.defaultBody = questionBodyFromMarkdown(`
 # 
 `);
 
-Rating.icon = (
+Rating.icon = () => (
   <div className="bg-yellow-200 w-full h-full font-bold text-center flex justify-center items-center  italic text-white">
     <StarIcon className="w-2/3 text-yellow-600" />
   </div>

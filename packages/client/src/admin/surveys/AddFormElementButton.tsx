@@ -9,7 +9,9 @@ import { defaultFormElementIcon } from "../../formElements/FormElement";
 import {
   AddFormElementDocument,
   AddFormElementMutation,
-  FormElementBackgroundImagePlacement,
+  AddFormElementTypeDetailsFragment,
+  FormElementLayout,
+  FormElementDetailsFragment,
   FormElementFullDetailsFragmentDoc,
   FormElementTextVariant,
   FormElementType,
@@ -19,10 +21,12 @@ import {
 interface Props {
   onAdd: (id: number) => void;
   formId: number;
-  types: Omit<FormElementType, "nodeId" | "isRequiredForSurveys">[];
+  formIsSketchClass: boolean;
+  types: AddFormElementTypeDetailsFragment[];
   existingTypes: string[];
   /** Specify the highest position in the current form + 1 to add items to the end of the form */
   nextPosition: number;
+  heading?: string;
 }
 
 export default function AddFormElementButton({
@@ -31,6 +35,8 @@ export default function AddFormElementButton({
   types,
   nextPosition,
   existingTypes,
+  heading,
+  formIsSketchClass,
 }: Props) {
   const { t } = useTranslation("admin:surveys");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -62,12 +68,19 @@ export default function AddFormElementButton({
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
-              className="absolute left-56 ml-2 p-0 top-28 mt-2 max-h-128 overflow-y-auto bg-white rounded shadow "
+              className="absolute left-56 ml-2 p-0 top-28 mt-2 max-h-128 overflow-y-auto bg-white rounded shadow pr-2"
             >
+              {heading && <h4 className="px-4 pt-4 text-lg">{heading}</h4>}
               {Object.entries(components)
                 .filter(([id, C]) => !C.templatesOnly)
                 .filter(([id, C]) => {
                   const type = types.find((t) => t.componentName === id);
+                  if (
+                    formIsSketchClass &&
+                    (type?.isSurveysOnly || type?.isSpatial)
+                  ) {
+                    return false;
+                  }
                   if (type && type.isSingleUseOnly) {
                     if (existingTypes.indexOf(id) !== -1) {
                       return false;
@@ -109,8 +122,7 @@ export default function AddFormElementButton({
                                 C.defaultExportId || "loading-" + nextPosition,
                               backgroundColor: null,
                               backgroundImage: null,
-                              backgroundImagePlacement:
-                                FormElementBackgroundImagePlacement.Top,
+                              layout: FormElementLayout.Top,
                               textVariant: FormElementTextVariant.Dynamic,
                               backgroundPalette: null,
                               jumpToId: null,
@@ -158,7 +170,7 @@ export default function AddFormElementButton({
                                         backgroundColor
                                         secondaryColor
                                         backgroundImage
-                                        backgroundImagePlacement
+                                        layout
                                         backgroundPalette
                                         textVariant
                                         unsplashAuthorUrl
@@ -185,7 +197,9 @@ export default function AddFormElementButton({
                     }}
                   >
                     <div className="w-8 h-8 rounded overflow-hidden mr-4">
-                      {C.icon || defaultFormElementIcon}
+                      <C.icon
+                        componentSettings={C.defaultComponentSettings || {}}
+                      />
                     </div>
                     <div>
                       <div className="text-base font-medium text-gray-800">

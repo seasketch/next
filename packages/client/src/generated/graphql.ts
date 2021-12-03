@@ -1177,41 +1177,6 @@ export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
-/** All input for the create `SketchClass` mutation. */
-export type CreateSketchClassInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `SketchClass` to be created by this mutation. */
-  sketchClass: SketchClassInput;
-};
-
-/** The output of our create `SketchClass` mutation. */
-export type CreateSketchClassPayload = {
-  __typename?: 'CreateSketchClassPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Project` that is related to this `SketchClass`. */
-  project?: Maybe<Project>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** The `SketchClass` that was created by this mutation. */
-  sketchClass?: Maybe<SketchClass>;
-  /** An edge for our `SketchClass`. May be used by Relay 1. */
-  sketchClassEdge?: Maybe<SketchClassesEdge>;
-};
-
-
-/** The output of our create `SketchClass` mutation. */
-export type CreateSketchClassPayloadSketchClassEdgeArgs = {
-  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
-};
-
 /** All input for the create `SketchFolder` mutation. */
 export type CreateSketchFolderInput = {
   /**
@@ -1278,15 +1243,16 @@ export type CreateSketchPayload = {
   user?: Maybe<User>;
 };
 
-/** All input for the create `Survey` mutation. */
+/** All input for the `createSurvey` mutation. */
 export type CreateSurveyInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** The `Survey` to be created by this mutation. */
-  survey: SurveyInput;
+  name?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  templateId?: Maybe<Scalars['Int']>;
 };
 
 /** All input for the create `SurveyInvitedGroup` mutation. */
@@ -1377,7 +1343,7 @@ export type CreateSurveyJumpRulePayloadFormLogicRuleEdgeArgs = {
   orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
 };
 
-/** The output of our create `Survey` mutation. */
+/** The output of our `createSurvey` mutation. */
 export type CreateSurveyPayload = {
   __typename?: 'CreateSurveyPayload';
   /**
@@ -1389,7 +1355,6 @@ export type CreateSurveyPayload = {
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-  /** The `Survey` that was created by this mutation. */
   survey?: Maybe<Survey>;
 };
 
@@ -2982,6 +2947,8 @@ export type DeleteSketchClassPayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   deletedSketchClassNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
   /** Reads a single `Project` that is related to this `SketchClass`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -3611,8 +3578,6 @@ export type FormElement = Node & {
   backgroundHeight?: Maybe<Scalars['Int']>;
   /** Optional background image to display when this form_element appears. */
   backgroundImage?: Maybe<Scalars['String']>;
-  /** Layout of image in relation to form_element content. */
-  backgroundImagePlacement: FormElementBackgroundImagePlacement;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
   backgroundWidth?: Maybe<Scalars['Int']>;
   /**
@@ -3642,6 +3607,8 @@ export type FormElement = Node & {
    * question in the list by `position`.
    */
   jumpToId?: Maybe<Scalars['Int']>;
+  /** Layout of image in relation to form_element content. */
+  layout?: Maybe<FormElementLayout>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -3652,6 +3619,7 @@ export type FormElement = Node & {
   position: Scalars['Int'];
   /** Color used to style navigation controls */
   secondaryColor?: Maybe<Scalars['String']>;
+  sketchClass?: Maybe<SketchClass>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -3664,20 +3632,11 @@ export type FormElement = Node & {
   unsplashAuthorUrl?: Maybe<Scalars['String']>;
 };
 
-export enum FormElementBackgroundImagePlacement {
-  Cover = 'COVER',
-  Left = 'LEFT',
-  Right = 'RIGHT',
-  Top = 'TOP'
-}
-
 /** An input for mutations affecting `FormElement` */
 export type FormElementInput = {
   /** Optional background color to transition the form to when this element is displayed. */
   backgroundColor?: Maybe<Scalars['String']>;
   backgroundHeight?: Maybe<Scalars['Int']>;
-  /** Layout of image in relation to form_element content. */
-  backgroundImagePlacement?: Maybe<FormElementBackgroundImagePlacement>;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
   backgroundWidth?: Maybe<Scalars['Int']>;
   /**
@@ -3707,6 +3666,8 @@ export type FormElementInput = {
    * question in the list by `position`.
    */
   jumpToId?: Maybe<Scalars['Int']>;
+  /** Layout of image in relation to form_element content. */
+  layout?: Maybe<FormElementLayout>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
@@ -3724,13 +3685,21 @@ export type FormElementInput = {
   typeId: Scalars['String'];
 };
 
+export enum FormElementLayout {
+  Cover = 'COVER',
+  Left = 'LEFT',
+  MapSidebarLeft = 'MAP_SIDEBAR_LEFT',
+  MapSidebarRight = 'MAP_SIDEBAR_RIGHT',
+  MapStacked = 'MAP_STACKED',
+  Right = 'RIGHT',
+  Top = 'TOP'
+}
+
 /** Represents an update to a `FormElement`. Fields that are set will be updated. */
 export type FormElementPatch = {
   /** Optional background color to transition the form to when this element is displayed. */
   backgroundColor?: Maybe<Scalars['String']>;
   backgroundHeight?: Maybe<Scalars['Int']>;
-  /** Layout of image in relation to form_element content. */
-  backgroundImagePlacement?: Maybe<FormElementBackgroundImagePlacement>;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
   backgroundWidth?: Maybe<Scalars['Int']>;
   /**
@@ -3760,6 +3729,8 @@ export type FormElementPatch = {
    * question in the list by `position`.
    */
   jumpToId?: Maybe<Scalars['Int']>;
+  /** Layout of image in relation to form_element content. */
+  layout?: Maybe<FormElementLayout>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
@@ -3786,6 +3757,7 @@ export enum FormElementTextVariant {
 /** Identifies the type of element in a form, including metadata about that element type. */
 export type FormElementType = Node & {
   __typename?: 'FormElementType';
+  allowedLayouts?: Maybe<Array<Maybe<FormElementLayout>>>;
   componentName: Scalars['String'];
   isHidden: Scalars['Boolean'];
   /**
@@ -3793,9 +3765,11 @@ export type FormElementType = Node & {
    * contains presentational content like a Welcome Message component.
    */
   isInput: Scalars['Boolean'];
+  isRequiredForSketchClasses: Scalars['Boolean'];
   isRequiredForSurveys: Scalars['Boolean'];
   /** These elements can only be added to a form once. */
   isSingleUseOnly: Scalars['Boolean'];
+  isSpatial: Scalars['Boolean'];
   /** If true, the element type should only be added to forms related to a survey. */
   isSurveysOnly: Scalars['Boolean'];
   /**
@@ -3807,6 +3781,7 @@ export type FormElementType = Node & {
   label: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  sketchClassTemplateId?: Maybe<Scalars['Int']>;
   supportedOperators: Array<Maybe<FieldRuleOperator>>;
 };
 
@@ -4556,77 +4531,6 @@ export enum GroupsOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
-/** All input for the `initializeBlankSketchClassForm` mutation. */
-export type InitializeBlankSketchClassFormInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  sketchClassId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `initializeBlankSketchClassForm` mutation. */
-export type InitializeBlankSketchClassFormPayload = {
-  __typename?: 'InitializeBlankSketchClassFormPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  form?: Maybe<Form>;
-  /** An edge for our `Form`. May be used by Relay 1. */
-  formEdge?: Maybe<FormsEdge>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** Reads a single `SketchClass` that is related to this `Form`. */
-  sketchClass?: Maybe<SketchClass>;
-  /** Reads a single `Survey` that is related to this `Form`. */
-  survey?: Maybe<Survey>;
-};
-
-
-/** The output of our `initializeBlankSketchClassForm` mutation. */
-export type InitializeBlankSketchClassFormPayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
-};
-
-/** All input for the `initializeSketchClassFormFromTemplate` mutation. */
-export type InitializeSketchClassFormFromTemplateInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  sketchClassId?: Maybe<Scalars['Int']>;
-  templateId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `initializeSketchClassFormFromTemplate` mutation. */
-export type InitializeSketchClassFormFromTemplatePayload = {
-  __typename?: 'InitializeSketchClassFormFromTemplatePayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  form?: Maybe<Form>;
-  /** An edge for our `Form`. May be used by Relay 1. */
-  formEdge?: Maybe<FormsEdge>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** Reads a single `SketchClass` that is related to this `Form`. */
-  sketchClass?: Maybe<SketchClass>;
-  /** Reads a single `Survey` that is related to this `Form`. */
-  survey?: Maybe<Survey>;
-};
-
-
-/** The output of our `initializeSketchClassFormFromTemplate` mutation. */
-export type InitializeSketchClassFormFromTemplatePayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
-};
-
 export type InteractivitySetting = Node & {
   __typename?: 'InteractivitySetting';
   /** Reads and enables pagination through a set of `Basemap`. */
@@ -4924,6 +4828,43 @@ export type MakeResponseDraftPayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
 
+/** All input for the `makeSketchClass` mutation. */
+export type MakeSketchClassInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  name?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  templateId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `makeSketchClass` mutation. */
+export type MakeSketchClassPayload = {
+  __typename?: 'MakeSketchClassPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
+  /** Reads a single `Project` that is related to this `SketchClass`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sketchClass?: Maybe<SketchClass>;
+  /** An edge for our `SketchClass`. May be used by Relay 1. */
+  sketchClassEdge?: Maybe<SketchClassesEdge>;
+};
+
+
+/** The output of our `makeSketchClass` mutation. */
+export type MakeSketchClassPayloadSketchClassEdgeArgs = {
+  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+};
+
 /** All input for the `makeSurvey` mutation. */
 export type MakeSurveyInput = {
   /**
@@ -5073,11 +5014,8 @@ export type Mutation = {
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
   /** Creates a single `Sketch`. */
   createSketch?: Maybe<CreateSketchPayload>;
-  /** Creates a single `SketchClass`. */
-  createSketchClass?: Maybe<CreateSketchClassPayload>;
   /** Creates a single `SketchFolder`. */
   createSketchFolder?: Maybe<CreateSketchFolderPayload>;
-  /** Creates a single `Survey`. */
   createSurvey?: Maybe<CreateSurveyPayload>;
   /** Creates a single `SurveyInvitedGroup`. */
   createSurveyInvitedGroup?: Maybe<CreateSurveyInvitedGroupPayload>;
@@ -5216,17 +5154,6 @@ export type Mutation = {
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   /**
-   * When creating a new SketchClass, admins can either choose from a set of
-   * templates or start with a blank form. This mutation will initialize with a blank
-   * form with no fields configured.
-   */
-  initializeBlankSketchClassForm?: Maybe<InitializeBlankSketchClassFormPayload>;
-  /**
-   * Admins can choose to start a new SketchClass with a form derived from the list
-   * of Form templates.
-   */
-  initializeSketchClassFormFromTemplate?: Maybe<InitializeSketchClassFormFromTemplatePayload>;
-  /**
    * Adds current user to the list of participants for a project, sharing their
    * profile with administrators in user listings. Their profile will also be shared
    * in public or group discussion forum posts.
@@ -5251,6 +5178,7 @@ export type Mutation = {
    * resubmitted by the respondant.
    */
   makeResponseDraft?: Maybe<MakeResponseDraftPayload>;
+  makeSketchClass?: Maybe<MakeSketchClassPayload>;
   makeSurvey?: Maybe<MakeSurveyPayload>;
   /**
    * Mark the topic as read by the current session user. Used to avoid sending email
@@ -5647,12 +5575,6 @@ export type MutationCreateSketchArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateSketchClassArgs = {
-  input: CreateSketchClassInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSketchFolderArgs = {
   input: CreateSketchFolderInput;
 };
@@ -6042,18 +5964,6 @@ export type MutationGrantAdminAccessArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationInitializeBlankSketchClassFormArgs = {
-  input: InitializeBlankSketchClassFormInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationInitializeSketchClassFormFromTemplateArgs = {
-  input: InitializeSketchClassFormFromTemplateInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationJoinProjectArgs = {
   input: JoinProjectInput;
 };
@@ -6068,6 +5978,12 @@ export type MutationLeaveProjectArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMakeResponseDraftArgs = {
   input: MakeResponseDraftInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationMakeSketchClassArgs = {
+  input: MakeSketchClassInput;
 };
 
 
@@ -6880,7 +6796,7 @@ export type Project = Node & {
   dataLayersForItems?: Maybe<Array<DataLayer>>;
   /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
   dataSourcesBucket?: Maybe<DataSourcesBucket>;
-  dataSourcesBucketId: Scalars['String'];
+  dataSourcesBucketId?: Maybe<Scalars['String']>;
   /**
    * Retrieve DataSources for a given set of TableOfContentsItem IDs. Should be used
    * in conjuction with `dataLayersForItems` to progressively load layer information
@@ -9825,7 +9741,6 @@ export type SetUserGroupsPayload = {
  */
 export type Sketch = Node & {
   __typename?: 'Sketch';
-  /** Bounding box of the final preprocessed geometry. [xmin, ymin, xmax, ymax] */
   bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   collection?: Maybe<Sketch>;
@@ -9840,6 +9755,7 @@ export type Sketch = Node & {
   copyOf?: Maybe<Scalars['Int']>;
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
   folderId?: Maybe<Scalars['Int']>;
+  formElementId?: Maybe<Scalars['Int']>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
@@ -9852,11 +9768,9 @@ export type Sketch = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  /**
-   * Number of points in the final geometry. Can be used to gauge the complexity of
-   * the shape and decide whether to load via graphql or use a vector tile service.
-   */
   numVertices?: Maybe<Scalars['Int']>;
+  properties: Scalars['JSON'];
+  responseId?: Maybe<Scalars['Int']>;
   /** Reads a single `SketchClass` that is related to this `Sketch`. */
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
@@ -9869,7 +9783,7 @@ export type Sketch = Node & {
    */
   userGeom?: Maybe<GeometryGeometry>;
   /** Owner of the sketch. */
-  userId: Scalars['Int'];
+  userId?: Maybe<Scalars['Int']>;
 };
 
 /** Sketch Classes act as a schema for sketches drawn by users. */
@@ -9902,6 +9816,10 @@ export type SketchClass = Node & {
   canDigitize?: Maybe<Scalars['Boolean']>;
   /** Form schema used to collect attributes on these sketches. */
   form?: Maybe<Form>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
+  /** If set, this sketch class is only for use in a survey indicated by the form_element. */
+  formElementId?: Maybe<Scalars['Int']>;
   /** Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry. */
   geometryType: SketchGeometryType;
   /** Name of the report to be displayed. */
@@ -9921,11 +9839,6 @@ export type SketchClass = Node & {
    * class in order to render existing sketches of this type.
    */
   isArchived: Scalars['Boolean'];
-  /**
-   * If set to true, show as an option in the digitizing tools. If set to false,
-   * this sketch class may be solely for survey responses.
-   */
-  isMyPlansOption: Scalars['Boolean'];
   /**
    * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
    * render features. Sketches can be styled based on attribute data by using
@@ -9958,14 +9871,16 @@ export type SketchClassValidChildrenArgs = {
  * for equality and combined with a logical ‘and.’
  */
 export type SketchClassCondition = {
+  /** Checks for equality with the object’s `formElementId` field. */
+  formElementId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
 };
 
-/** An input for mutations affecting `SketchClass` */
-export type SketchClassInput = {
+/** Represents an update to a `SketchClass`. Fields that are set will be updated. */
+export type SketchClassPatch = {
   /**
    * If set to true, a geometry_type of POLYGON would allow for both POLYGONs and
    * MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still
@@ -9990,60 +9905,18 @@ export type SketchClassInput = {
    * that should be used for reporting.
    */
   geoprocessingProjectUrl?: Maybe<Scalars['String']>;
-  id?: Maybe<Scalars['Int']>;
   /**
    * If set to true, (non-admin) users should not be able to digitize new features
    * using this sketch class, but they should still be able to access the sketch
    * class in order to render existing sketches of this type.
    */
   isArchived?: Maybe<Scalars['Boolean']>;
-  /**
-   * If set to true, show as an option in the digitizing tools. If set to false,
-   * this sketch class may be solely for survey responses.
-   */
-  isMyPlansOption?: Maybe<Scalars['Boolean']>;
   /**
    * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
    * render features. Sketches can be styled based on attribute data by using
    * [Expressions](https://docs.mapbox.com/help/glossary/expression/).
    */
   mapboxGlStyle?: Maybe<Scalars['JSON']>;
-  /** Label chosen by project admins that is shown to users. */
-  name: Scalars['String'];
-  /** SketchClasses belong to a single project. */
-  projectId: Scalars['Int'];
-};
-
-/** Represents an update to a `SketchClass`. Fields that are set will be updated. */
-export type SketchClassPatch = {
-  /**
-   * If set to true, a geometry_type of POLYGON would allow for both POLYGONs and
-   * MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still
-   * digitize single features.
-   *
-   * Note that this feature should be used seldomly, since for planning purposes it
-   * is unlikely to have non-contiguous zones.
-   *
-   * For CHOOSE_FEATURE geometry types, this field will enable the selction of
-   * multiple features.
-   */
-  allowMulti?: Maybe<Scalars['Boolean']>;
-  /** Name of the report to be displayed. */
-  geoprocessingClientName?: Maybe<Scalars['String']>;
-  /** Endpoint for the client javascript bundle. */
-  geoprocessingClientUrl?: Maybe<Scalars['String']>;
-  /**
-   * Root endpoint of a
-   * [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
-   * that should be used for reporting.
-   */
-  geoprocessingProjectUrl?: Maybe<Scalars['String']>;
-  /**
-   * If set to true, (non-admin) users should not be able to digitize new features
-   * using this sketch class, but they should still be able to access the sketch
-   * class in order to render existing sketches of this type.
-   */
-  isArchived?: Maybe<Scalars['Boolean']>;
   /** Label chosen by project admins that is shown to users. */
   name?: Maybe<Scalars['String']>;
 };
@@ -10059,6 +9932,8 @@ export type SketchClassesEdge = {
 
 /** Methods to use when ordering `SketchClass`. */
 export enum SketchClassesOrderBy {
+  FormElementIdAsc = 'FORM_ELEMENT_ID_ASC',
+  FormElementIdDesc = 'FORM_ELEMENT_ID_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   Natural = 'NATURAL',
@@ -10147,7 +10022,6 @@ export enum SketchGeometryType {
 
 /** An input for mutations affecting `Sketch` */
 export type SketchInput = {
-  /** Bounding box of the final preprocessed geometry. [xmin, ymin, xmax, ymax] */
   bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
   collectionId?: Maybe<Scalars['Int']>;
@@ -10158,6 +10032,7 @@ export type SketchInput = {
   copyOf?: Maybe<Scalars['Int']>;
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
   folderId?: Maybe<Scalars['Int']>;
+  formElementId?: Maybe<Scalars['Int']>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
@@ -10168,11 +10043,9 @@ export type SketchInput = {
   id?: Maybe<Scalars['Int']>;
   /** User provided name for the sketch. */
   name: Scalars['String'];
-  /**
-   * Number of points in the final geometry. Can be used to gauge the complexity of
-   * the shape and decide whether to load via graphql or use a vector tile service.
-   */
   numVertices?: Maybe<Scalars['Int']>;
+  properties?: Maybe<Scalars['JSON']>;
+  responseId?: Maybe<Scalars['Int']>;
   /** SketchClass that defines the behavior of this type of sketch. */
   sketchClassId: Scalars['Int'];
   /**
@@ -10181,7 +10054,7 @@ export type SketchInput = {
    */
   userGeom?: Maybe<Scalars['GeoJSON']>;
   /** Owner of the sketch. */
-  userId: Scalars['Int'];
+  userId?: Maybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `Sketch`. Fields that are set will be updated. */
@@ -10462,34 +10335,6 @@ export type SurveyCondition = {
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
-};
-
-/** An input for mutations affecting `Survey` */
-export type SurveyInput = {
-  /** PUBLIC or INVITE_ONLY */
-  accessType?: Maybe<SurveyAccessType>;
-  /** If set, responses that originate from an IP address outside this fence will be flagged. */
-  geofence?: Maybe<Scalars['GeoJSON']>;
-  id?: Maybe<Scalars['Int']>;
-  /**
-   * Disabled surveys will not be accessible to non-admins. Invite email sending will
-   * be paused.
-   */
-  isDisabled?: Maybe<Scalars['Boolean']>;
-  /**
-   * If set, there can only be one response with matching contact information. The
-   * app will also discourage multiple submissions from the same browser session.
-   */
-  limitToSingleResponse?: Maybe<Scalars['Boolean']>;
-  name: Scalars['String'];
-  projectId: Scalars['Int'];
-  showFacilitationOption?: Maybe<Scalars['Boolean']>;
-  showProgress?: Maybe<Scalars['Boolean']>;
-  /**
-   * Only applicable for public surveys. Show tools to respondants for sharing the
-   * survey on social media to encourage responses.
-   */
-  showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
 };
 
 export type SurveyInvite = Node & {
@@ -12151,6 +11996,8 @@ export type UpdateSketchClassPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
   /** Reads a single `Project` that is related to this `SketchClass`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -12827,7 +12674,7 @@ export type NewZIndexFragment = (
 
 export type NewElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators'>
@@ -12836,7 +12683,7 @@ export type NewElementFragment = (
 
 export type LogicRuleEditorFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'body' | 'typeId' | 'jumpToId' | 'componentSettings' | 'exportId' | 'isRequired'>
+  & Pick<FormElement, 'id' | 'body' | 'typeId' | 'formId' | 'jumpToId' | 'componentSettings' | 'exportId' | 'isRequired'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'supportedOperators' | 'isInput'>
@@ -13193,6 +13040,18 @@ export type RequestInviteOnlyProjectAccessMutation = (
   )> }
 );
 
+export type BasemapDetailsFragment = (
+  { __typename?: 'Basemap' }
+  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
+  & { interactivitySettings?: Maybe<(
+    { __typename?: 'InteractivitySetting' }
+    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
+  )>, optionalBasemapLayers: Array<(
+    { __typename?: 'OptionalBasemapLayer' }
+    & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
+  )> }
+);
+
 export type GetBasemapsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13205,14 +13064,7 @@ export type GetBasemapsQuery = (
     & Pick<Project, 'id'>
     & { basemaps?: Maybe<Array<(
       { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
-      & { interactivitySettings?: Maybe<(
-        { __typename?: 'InteractivitySetting' }
-        & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-      )>, optionalBasemapLayers: Array<(
-        { __typename?: 'OptionalBasemapLayer' }
-        & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
-      )> }
+      & BasemapDetailsFragment
     )>> }
   )> }
 );
@@ -14238,13 +14090,52 @@ export type SurveyByIdQuery = (
   )> }
 );
 
-export type FormElementFullDetailsFragment = (
+export type AddFormElementTypeDetailsFragment = (
+  { __typename?: 'FormElementType' }
+  & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators' | 'isSpatial' | 'allowedLayouts'>
+);
+
+export type FormElementDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators'>
+    & AddFormElementTypeDetailsFragment
   )> }
+);
+
+export type SketchClassDetailsFragment = (
+  { __typename?: 'SketchClass' }
+  & Pick<SketchClass, 'id' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'allowMulti'>
+  & { form?: Maybe<(
+    { __typename?: 'Form' }
+    & Pick<Form, 'id'>
+    & { formElements?: Maybe<Array<(
+      { __typename?: 'FormElement' }
+      & FormElementDetailsFragment
+    )>>, logicRules?: Maybe<Array<(
+      { __typename?: 'FormLogicRule' }
+      & LogicRuleDetailsFragment
+    )>> }
+  )> }
+);
+
+export type FormElementFullDetailsFragment = (
+  { __typename?: 'FormElement' }
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & SketchClassDetailsFragment
+  )> }
+  & FormElementDetailsFragment
+);
+
+export type LogicRuleDetailsFragment = (
+  { __typename?: 'FormLogicRule' }
+  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
+  & { conditions?: Maybe<Array<(
+    { __typename?: 'FormLogicCondition' }
+    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
+  )>> }
 );
 
 export type SurveyFormEditorDetailsQueryVariables = Exact<{
@@ -14260,7 +14151,7 @@ export type SurveyFormEditorDetailsQuery = (
     & Pick<Project, 'name'>
   )>, formElementTypes?: Maybe<Array<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators'>
+    & AddFormElementTypeDetailsFragment
   )>>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & { form?: Maybe<(
@@ -14271,17 +14162,17 @@ export type SurveyFormEditorDetailsQuery = (
         & FormElementFullDetailsFragment
       )>>, logicRules?: Maybe<Array<(
         { __typename?: 'FormLogicRule' }
-        & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
-        & { conditions?: Maybe<Array<(
-          { __typename?: 'FormLogicCondition' }
-          & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
-        )>> }
+        & LogicRuleDetailsFragment
       )>> }
     )> }
     & SurveyListDetailsFragment
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'name' | 'url'>
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ) }
   )> }
 );
 
@@ -14299,6 +14190,28 @@ export type UpdateSurveyBaseSettingsMutation = (
     & { survey?: Maybe<(
       { __typename?: 'Survey' }
       & Pick<Survey, 'id' | 'showProgress' | 'showFacilitationOption'>
+    )> }
+  )> }
+);
+
+export type UpdateFormElementSketchClassMutationVariables = Exact<{
+  id: Scalars['Int'];
+  geometryType?: Maybe<SketchGeometryType>;
+  allowMulti?: Maybe<Scalars['Boolean']>;
+  mapboxGlStyle?: Maybe<Scalars['JSON']>;
+  geoprocessingClientName?: Maybe<Scalars['String']>;
+  geoprocessingClientUrl?: Maybe<Scalars['String']>;
+  geoprocessingProjectUrl?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateFormElementSketchClassMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchClass?: Maybe<(
+    { __typename?: 'UpdateSketchClassPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'geometryType' | 'allowMulti' | 'mapboxGlStyle' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
     )> }
   )> }
 );
@@ -14466,7 +14379,7 @@ export type UpdateFormElementBackgroundMutationVariables = Exact<{
   secondaryColor?: Maybe<Scalars['String']>;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
   textVariant?: Maybe<FormElementTextVariant>;
-  backgroundImagePlacement?: Maybe<FormElementBackgroundImagePlacement>;
+  layout?: Maybe<FormElementLayout>;
 }>;
 
 
@@ -14476,7 +14389,7 @@ export type UpdateFormElementBackgroundMutation = (
     { __typename?: 'UpdateFormElementPayload' }
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl'>
+      & Pick<FormElement, 'id' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl'>
     )> }
   )> }
 );
@@ -14640,10 +14553,13 @@ export type SurveyAppRuleFragment = (
 
 export type SurveyAppFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundImagePlacement' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label'>
+    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
+  )>, sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & SketchClassDetailsFragment
   )> }
 );
 
@@ -14680,6 +14596,10 @@ export type SurveyQuery = (
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'name' | 'url'>
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ) }
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & SurveyAppSurveyFragment
@@ -15305,7 +15225,7 @@ export const NewElementFragmentDoc = gql`
   backgroundColor
   secondaryColor
   backgroundImage
-  backgroundImagePlacement
+  layout
   backgroundPalette
   textVariant
   unsplashAuthorUrl
@@ -15319,6 +15239,7 @@ export const LogicRuleEditorFormElementFragmentDoc = gql`
   id
   body
   typeId
+  formId
   jumpToId
   componentSettings
   exportId
@@ -15411,6 +15332,45 @@ export const UpdateBodyFragmentDoc = gql`
   body
 }
     `;
+export const BasemapDetailsFragmentDoc = gql`
+    fragment BasemapDetails on Basemap {
+  id
+  attribution
+  interactivitySettings {
+    cursor
+    id
+    layers
+    longTemplate
+    shortTemplate
+    type
+  }
+  labelsLayerId
+  name
+  optionalBasemapLayers {
+    basemapId
+    id
+    defaultVisibility
+    description
+    options
+    groupType
+    layers
+    metadata
+    name
+  }
+  description
+  projectId
+  terrainExaggeration
+  terrainMaxZoom
+  terrainOptional
+  terrainTileSize
+  terrainUrl
+  terrainVisibilityDefault
+  thumbnail
+  tileSize
+  type
+  url
+}
+    `;
 export const SurveyListDetailsFragmentDoc = gql`
     fragment SurveyListDetails on Survey {
   id
@@ -15430,8 +15390,21 @@ export const SurveyListDetailsFragmentDoc = gql`
   showFacilitationOption
 }
     `;
-export const FormElementFullDetailsFragmentDoc = gql`
-    fragment FormElementFullDetails on FormElement {
+export const AddFormElementTypeDetailsFragmentDoc = gql`
+    fragment AddFormElementTypeDetails on FormElementType {
+  componentName
+  isHidden
+  isInput
+  isSingleUseOnly
+  isSurveysOnly
+  label
+  supportedOperators
+  isSpatial
+  allowedLayouts
+}
+    `;
+export const FormElementDetailsFragmentDoc = gql`
+    fragment FormElementDetails on FormElement {
   body
   componentSettings
   exportId
@@ -15441,19 +15414,13 @@ export const FormElementFullDetailsFragmentDoc = gql`
   position
   jumpToId
   type {
-    componentName
-    isHidden
-    isInput
-    isSingleUseOnly
-    isSurveysOnly
-    label
-    supportedOperators
+    ...AddFormElementTypeDetails
   }
   typeId
   backgroundColor
   secondaryColor
   backgroundImage
-  backgroundImagePlacement
+  layout
   backgroundPalette
   textVariant
   unsplashAuthorUrl
@@ -15461,7 +15428,55 @@ export const FormElementFullDetailsFragmentDoc = gql`
   backgroundWidth
   backgroundHeight
 }
+    ${AddFormElementTypeDetailsFragmentDoc}`;
+export const LogicRuleDetailsFragmentDoc = gql`
+    fragment LogicRuleDetails on FormLogicRule {
+  booleanOperator
+  command
+  id
+  jumpToId
+  position
+  formElementId
+  conditions {
+    id
+    operator
+    value
+    subjectId
+    ruleId
+  }
+}
     `;
+export const SketchClassDetailsFragmentDoc = gql`
+    fragment SketchClassDetails on SketchClass {
+  id
+  mapboxGlStyle
+  formElementId
+  geometryType
+  geoprocessingClientName
+  geoprocessingClientUrl
+  geoprocessingProjectUrl
+  allowMulti
+  form {
+    formElements {
+      ...FormElementDetails
+    }
+    id
+    logicRules {
+      ...LogicRuleDetails
+    }
+  }
+}
+    ${FormElementDetailsFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
+export const FormElementFullDetailsFragmentDoc = gql`
+    fragment FormElementFullDetails on FormElement {
+  ...FormElementDetails
+  sketchClass {
+    ...SketchClassDetails
+  }
+}
+    ${FormElementDetailsFragmentDoc}
+${SketchClassDetailsFragmentDoc}`;
 export const SurveyAppRuleFragmentDoc = gql`
     fragment SurveyAppRule on FormLogicRule {
   booleanOperator
@@ -15487,17 +15502,25 @@ export const SurveyAppFormElementFragmentDoc = gql`
   isRequired
   position
   typeId
+  formId
   type {
     componentName
     isInput
     isSingleUseOnly
     isSurveysOnly
     label
+    isSpatial
+    allowedLayouts
+    supportedOperators
+    isHidden
+  }
+  sketchClass {
+    ...SketchClassDetails
   }
   backgroundColor
   secondaryColor
   backgroundImage
-  backgroundImagePlacement
+  layout
   textVariant
   unsplashAuthorName
   unsplashAuthorUrl
@@ -15505,7 +15528,7 @@ export const SurveyAppFormElementFragmentDoc = gql`
   backgroundHeight
   jumpToId
 }
-    `;
+    ${SketchClassDetailsFragmentDoc}`;
 export const SurveyAppSurveyFragmentDoc = gql`
     fragment SurveyAppSurvey on Survey {
   id
@@ -16389,45 +16412,11 @@ export const GetBasemapsDocument = gql`
   projectBySlug(slug: $slug) {
     id
     basemaps {
-      id
-      attribution
-      interactivitySettings {
-        cursor
-        id
-        layers
-        longTemplate
-        shortTemplate
-        type
-      }
-      labelsLayerId
-      name
-      optionalBasemapLayers {
-        basemapId
-        id
-        defaultVisibility
-        description
-        options
-        groupType
-        layers
-        metadata
-        name
-      }
-      description
-      projectId
-      terrainExaggeration
-      terrainMaxZoom
-      terrainOptional
-      terrainTileSize
-      terrainUrl
-      terrainVisibilityDefault
-      thumbnail
-      tileSize
-      type
-      url
+      ...BasemapDetails
     }
   }
 }
-    `;
+    ${BasemapDetailsFragmentDoc}`;
 
 /**
  * __useGetBasemapsQuery__
@@ -18980,13 +18969,7 @@ export const SurveyFormEditorDetailsDocument = gql`
     name
   }
   formElementTypes {
-    componentName
-    isHidden
-    isInput
-    isSingleUseOnly
-    isSurveysOnly
-    label
-    supportedOperators
+    ...AddFormElementTypeDetails
   }
   survey(id: $id) {
     ...SurveyListDetails
@@ -19000,29 +18983,22 @@ export const SurveyFormEditorDetailsDocument = gql`
         ...FormElementFullDetails
       }
       logicRules {
-        booleanOperator
-        command
-        id
-        jumpToId
-        position
-        formElementId
-        conditions {
-          id
-          operator
-          value
-          subjectId
-          ruleId
-        }
+        ...LogicRuleDetails
       }
     }
   }
   currentProject {
     name
     url
+    region {
+      geojson
+    }
   }
 }
-    ${SurveyListDetailsFragmentDoc}
-${FormElementFullDetailsFragmentDoc}`;
+    ${AddFormElementTypeDetailsFragmentDoc}
+${SurveyListDetailsFragmentDoc}
+${FormElementFullDetailsFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
 
 /**
  * __useSurveyFormEditorDetailsQuery__
@@ -19093,6 +19069,55 @@ export function useUpdateSurveyBaseSettingsMutation(baseOptions?: Apollo.Mutatio
 export type UpdateSurveyBaseSettingsMutationHookResult = ReturnType<typeof useUpdateSurveyBaseSettingsMutation>;
 export type UpdateSurveyBaseSettingsMutationResult = Apollo.MutationResult<UpdateSurveyBaseSettingsMutation>;
 export type UpdateSurveyBaseSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>;
+export const UpdateFormElementSketchClassDocument = gql`
+    mutation UpdateFormElementSketchClass($id: Int!, $geometryType: SketchGeometryType, $allowMulti: Boolean, $mapboxGlStyle: JSON, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
+  updateSketchClass(
+    input: {id: $id, patch: {geometryType: $geometryType, allowMulti: $allowMulti, mapboxGlStyle: $mapboxGlStyle, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
+  ) {
+    sketchClass {
+      id
+      geometryType
+      allowMulti
+      mapboxGlStyle
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+    }
+  }
+}
+    `;
+export type UpdateFormElementSketchClassMutationFn = Apollo.MutationFunction<UpdateFormElementSketchClassMutation, UpdateFormElementSketchClassMutationVariables>;
+
+/**
+ * __useUpdateFormElementSketchClassMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormElementSketchClassMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormElementSketchClassMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormElementSketchClassMutation, { data, loading, error }] = useUpdateFormElementSketchClassMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      geometryType: // value for 'geometryType'
+ *      allowMulti: // value for 'allowMulti'
+ *      mapboxGlStyle: // value for 'mapboxGlStyle'
+ *      geoprocessingClientName: // value for 'geoprocessingClientName'
+ *      geoprocessingClientUrl: // value for 'geoprocessingClientUrl'
+ *      geoprocessingProjectUrl: // value for 'geoprocessingProjectUrl'
+ *   },
+ * });
+ */
+export function useUpdateFormElementSketchClassMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementSketchClassMutation, UpdateFormElementSketchClassMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormElementSketchClassMutation, UpdateFormElementSketchClassMutationVariables>(UpdateFormElementSketchClassDocument, options);
+      }
+export type UpdateFormElementSketchClassMutationHookResult = ReturnType<typeof useUpdateFormElementSketchClassMutation>;
+export type UpdateFormElementSketchClassMutationResult = Apollo.MutationResult<UpdateFormElementSketchClassMutation>;
+export type UpdateFormElementSketchClassMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementSketchClassMutation, UpdateFormElementSketchClassMutationVariables>;
 export const UpdateFormElementDocument = gql`
     mutation UpdateFormElement($id: Int!, $isRequired: Boolean, $body: JSON, $exportId: String, $componentSettings: JSON, $jumpToId: Int, $typeId: String) {
   updateFormElement(
@@ -19433,16 +19458,16 @@ export type GetPhotosQueryHookResult = ReturnType<typeof useGetPhotosQuery>;
 export type GetPhotosLazyQueryHookResult = ReturnType<typeof useGetPhotosLazyQuery>;
 export type GetPhotosQueryResult = Apollo.QueryResult<GetPhotosQuery, GetPhotosQueryVariables>;
 export const UpdateFormElementBackgroundDocument = gql`
-    mutation UpdateFormElementBackground($id: Int!, $backgroundColor: String, $secondaryColor: String, $backgroundPalette: [String], $textVariant: FormElementTextVariant, $backgroundImagePlacement: FormElementBackgroundImagePlacement) {
+    mutation UpdateFormElementBackground($id: Int!, $backgroundColor: String, $secondaryColor: String, $backgroundPalette: [String], $textVariant: FormElementTextVariant, $layout: FormElementLayout) {
   updateFormElement(
-    input: {id: $id, patch: {backgroundColor: $backgroundColor, secondaryColor: $secondaryColor, backgroundPalette: $backgroundPalette, textVariant: $textVariant, backgroundImagePlacement: $backgroundImagePlacement}}
+    input: {id: $id, patch: {backgroundColor: $backgroundColor, secondaryColor: $secondaryColor, backgroundPalette: $backgroundPalette, textVariant: $textVariant, layout: $layout}}
   ) {
     formElement {
       id
       backgroundColor
       secondaryColor
       backgroundImage
-      backgroundImagePlacement
+      layout
       backgroundPalette
       textVariant
       unsplashAuthorName
@@ -19471,7 +19496,7 @@ export type UpdateFormElementBackgroundMutationFn = Apollo.MutationFunction<Upda
  *      secondaryColor: // value for 'secondaryColor'
  *      backgroundPalette: // value for 'backgroundPalette'
  *      textVariant: // value for 'textVariant'
- *      backgroundImagePlacement: // value for 'backgroundImagePlacement'
+ *      layout: // value for 'layout'
  *   },
  * });
  */
@@ -19851,6 +19876,9 @@ export const SurveyDocument = gql`
   currentProject {
     name
     url
+    region {
+      geojson
+    }
   }
   survey(id: $id) {
     ...SurveyAppSurvey
@@ -20996,6 +21024,7 @@ export const namedOperations = {
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
+    UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',
     UpdateFormElement: 'UpdateFormElement',
     UpdateComponentSettings: 'UpdateComponentSettings',
     UpdateFormElementBody: 'UpdateFormElementBody',
@@ -21052,8 +21081,13 @@ export const namedOperations = {
     NewLayerOptions: 'NewLayerOptions',
     UpdateComponentSettings: 'UpdateComponentSettings',
     UpdateBody: 'UpdateBody',
+    BasemapDetails: 'BasemapDetails',
     SurveyListDetails: 'SurveyListDetails',
+    AddFormElementTypeDetails: 'AddFormElementTypeDetails',
+    FormElementDetails: 'FormElementDetails',
+    SketchClassDetails: 'SketchClassDetails',
     FormElementFullDetails: 'FormElementFullDetails',
+    LogicRuleDetails: 'LogicRuleDetails',
     SurveyAppRule: 'SurveyAppRule',
     SurveyAppFormElement: 'SurveyAppFormElement',
     SurveyAppSurvey: 'SurveyAppSurvey',

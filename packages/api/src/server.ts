@@ -37,6 +37,8 @@ import cors from "cors";
 import BuildPlugin from "./plugins/buildPlugin";
 import ExportIdPlugin from "./plugins/exportIdPlugin";
 import UnsplashPlugin from "./plugins/unsplashPlugin";
+import https from "https";
+import fs from "fs";
 
 const app = express();
 
@@ -149,7 +151,9 @@ run({
   concurrency: parseInt(process.env.GRAPHILE_WORKER_CONCURRENCY || "0"),
   // Install signal handlers for graceful shutdown on SIGINT, SIGTERM, etc
   noHandleSignals: false,
-  pollInterval: 1000,
+  pollInterval: process.env.GRAPHILE_POLL_INTERVAL
+    ? parseInt(process.env.GRAPHILE_POLL_INTERVAL)
+    : 1000,
   taskDirectory: path.join(__dirname, "..", "tasks"),
 });
 
@@ -224,13 +228,31 @@ app.use(
   })
 );
 
-app.listen(process.env.PORT || 3857);
-
-console.log(
-  `SeaSketch server running on http://localhost:${
-    process.env.PORT || 3857
-  }/graphiql`
-);
+if (process.env.SSL_CRT_FILE && process.env.SSL_KEY_FILE) {
+  https
+    .createServer(
+      {
+        key: fs.readFileSync(process.env.SSL_KEY_FILE),
+        cert: fs.readFileSync(process.env.SSL_CRT_FILE),
+      },
+      app
+    )
+    .listen(3857, function () {
+      console.log(
+        `SeaSketch server running on https://0.0.0.0:${
+          process.env.PORT || 3857
+        }/graphiql`
+      );
+    });
+} else {
+  app.listen(process.env.PORT || 3857, () => {
+    console.log(
+      `SeaSketch server running on http://localhost:${
+        process.env.PORT || 3857
+      }/graphiql`
+    );
+  });
+}
 
 (async function () {
   rotateKeys(pool);

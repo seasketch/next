@@ -123,7 +123,6 @@ export default {
       "id",
       "projectId",
       "name",
-      "isMyPlansOption",
       "isArchived",
       "canDigitize",
       "form",

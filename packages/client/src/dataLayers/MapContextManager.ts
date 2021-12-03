@@ -19,6 +19,7 @@ import {
 import { Feature, Polygon } from "geojson";
 import {
   Basemap,
+  BasemapDetailsFragment,
   DataLayer,
   DataSource as GeneratedDataSource,
   DataSourceTypes,
@@ -113,43 +114,44 @@ export type ClientDataLayer = Pick<
   >;
 };
 
-export type ClientBasemap = Pick<
-  Basemap,
-  | "id"
-  | "attribution"
-  | "type"
-  | "description"
-  | "name"
-  | "projectId"
-  | "labelsLayerId"
-  | "terrainExaggeration"
-  | "terrainMaxZoom"
-  | "terrainOptional"
-  | "terrainTileSize"
-  | "terrainUrl"
-  | "terrainVisibilityDefault"
-  | "thumbnail"
-  | "tileSize"
-  | "url"
-> & {
-  optionalBasemapLayers: Pick<
-    OptionalBasemapLayer,
-    | "basemapId"
-    | "id"
-    | "options"
-    | "name"
-    | "groupType"
-    | "defaultVisibility"
-    | "description"
-    | "layers"
-    | "metadata"
-  >[];
-} & {
-  interactivitySettings?: Pick<
-    InteractivitySetting,
-    "id" | "cursor" | "layers" | "longTemplate" | "shortTemplate" | "type"
-  >;
-};
+export type ClientBasemap = BasemapDetailsFragment;
+// Pick<
+//   Basemap,
+//   | "id"
+//   | "attribution"
+//   | "type"
+//   | "description"
+//   | "name"
+//   | "projectId"
+//   | "labelsLayerId"
+//   | "terrainExaggeration"
+//   | "terrainMaxZoom"
+//   | "terrainOptional"
+//   | "terrainTileSize"
+//   | "terrainUrl"
+//   | "terrainVisibilityDefault"
+//   | "thumbnail"
+//   | "tileSize"
+//   | "url"
+// > & {
+//   optionalBasemapLayers: Pick<
+//     OptionalBasemapLayer,
+//     | "basemapId"
+//     | "id"
+//     | "options"
+//     | "name"
+//     | "groupType"
+//     | "defaultVisibility"
+//     | "description"
+//     | "layers"
+//     | "metadata"
+//   >[];
+// } & {
+//   interactivitySettings?: Pick<
+//     InteractivitySetting,
+//     "id" | "cursor" | "layers" | "longTemplate" | "shortTemplate" | "type"
+//   >;
+// };
 
 class MapContextManager {
   map?: Map;
@@ -254,7 +256,8 @@ class MapContextManager {
    */
   async createMap(
     container: HTMLDivElement,
-    bounds?: [number, number, number, number]
+    bounds?: [number, number, number, number],
+    options?: Partial<MapboxOptions>
   ) {
     if (this.map) {
       // throw new Error("Map already created in this context");
@@ -282,7 +285,6 @@ class MapContextManager {
       pitch: this.initialCameraOptions?.pitch || 0,
       bearing: this.initialCameraOptions?.bearing || 0,
       maxPitch: 70,
-      // @ts-ignore
       optimizeForTerrain: true,
       logoPosition: "bottom-right",
     };
@@ -293,11 +295,13 @@ class MapContextManager {
         zoom: this.initialCameraOptions.zoom,
         pitch: this.initialCameraOptions.pitch,
         bearing: this.initialCameraOptions.bearing,
+        ...options,
       };
     } else if (this.initialBounds) {
       mapOptions = {
         ...mapOptions,
         bounds: this.initialBounds,
+        ...options,
       };
     } else {
       throw new Error("Both initialBounds and initialCameraOptions are empty");
@@ -373,7 +377,7 @@ class MapContextManager {
    * updated.
    * @param basemaps List of Basemap objects
    */
-  setBasemaps(basemaps: ClientBasemap[]) {
+  setBasemaps(basemaps: BasemapDetailsFragment[]) {
     this.basemaps = {};
     for (const basemap of basemaps) {
       this.basemaps[basemap.id.toString()] = basemap;

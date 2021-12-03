@@ -2,6 +2,7 @@ import { Schema, Node, DOMSerializer } from "prosemirror-model";
 import {
   Component,
   createContext,
+  FunctionComponent,
   lazy,
   ReactElement,
   ReactNode,
@@ -15,8 +16,13 @@ import { addListNodes } from "prosemirror-schema-list";
 import { createPortal } from "react-dom";
 import {
   FormElement,
+  FormElementDetailsFragment,
+  FormElementLayout,
+  Sketch,
+  SketchClassDetailsFragment,
   UpdateFormElementMutation,
   useUpdateFormElementMutation,
+  useUpdateFormElementSketchClassMutation,
   useUpdateSurveyBaseSettingsMutation,
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
@@ -24,6 +30,18 @@ import { MutationResult } from "@apollo/client";
 import { formElements as editorConfig } from "../editor/config";
 import Spinner from "../components/Spinner";
 import { Trans } from "react-i18next";
+import {
+  MapContext,
+  MapContextInterface,
+} from "../dataLayers/MapContextManager";
+import {
+  BBox,
+  Feature,
+  FeatureCollection,
+  GeoJsonProperties,
+  Geometry,
+} from "geojson";
+import { LngLatBoundsLike } from "mapbox-gl";
 require("./prosemirror-body.css");
 require("./unreset.css");
 const LazyBodyEditor = lazy(() => import("./BodyEditor"));
@@ -35,6 +53,10 @@ export const FormEditorPortalContext = createContext<{
 } | null>(null);
 
 export const SurveyButtonFooterPortalContext = createContext<HTMLDivElement | null>(
+  null
+);
+
+export const SurveyMapPortalContext = createContext<HTMLDivElement | null>(
   null
 );
 
@@ -61,6 +83,15 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
    * Used to request that the controller advance to the next question. For example, on Enter keydown
    */
   onSubmit: () => void;
+  isSpatial: boolean;
+  sketchClass?: SketchClassDetailsFragment | null;
+  featureNumber: number;
+  onRequestStageChange: (stage: number) => void;
+  stage: number;
+  /** Component requests advancement to the next question */
+  onRequestNext: () => void;
+  /** Component requests navigation to the previous question */
+  onRequestPrevious: () => void;
 }
 
 /**
@@ -141,20 +172,24 @@ export function FormElementBody({
   }
 }
 
+type FormElementRenderer = (
+  updateBaseSetting: (
+    setting: "body" | "isRequired" | "exportId" | "typeId"
+  ) => (value: any) => void,
+  updateComponentSetting: (
+    setting: string,
+    currentSettings: any
+  ) => (value: any) => void,
+  updateSurveySettings: (settings: {
+    showFacilitationOption?: boolean;
+    showProgress?: boolean;
+  }) => void,
+  updateSketchClass: (
+    settings: Pick<SketchClassDetailsFragment, "geometryType">
+  ) => void
+) => ReactNode;
 export class FormElementEditorPortal extends Component<{
-  render: (
-    updateBaseSetting: (
-      setting: "body" | "isRequired" | "exportId" | "typeId"
-    ) => (value: any) => void,
-    updateComponentSetting: (
-      setting: string,
-      currentSettings: any
-    ) => (value: any) => void,
-    updateSurveySettings: (settings: {
-      showFacilitationOption?: boolean;
-      showProgress?: boolean;
-    }) => void
-  ) => ReactNode;
+  render: FormElementRenderer;
 }> {
   static contextType = FormEditorPortalContext;
   render() {
@@ -173,26 +208,50 @@ export class FormElementEditorPortal extends Component<{
   }
 }
 
+export const SurveyMapPortal: FunctionComponent<{
+  mapContext: MapContextInterface;
+}> = (props) => {
+  const portalContext = useContext(SurveyMapPortalContext);
+  if (portalContext) {
+    return createPortal(
+      <MapContext.Provider value={props.mapContext}>
+        {props.children}
+      </MapContext.Provider>,
+      portalContext
+    );
+  } else {
+    return null;
+  }
+};
+// export class SurveyMapPortal extends Component<{
+//   render: () => ReactNode;
+//   mapContext: MapContextInterface;
+// }> {
+//   static contextType = SurveyMapPortalContext;
+//   render() {
+//     const container = this.context?.container;
+//     if (container) {
+//       return createPortal(
+//         <MapContext.Provider value={this.props.mapContext}>
+//           {this.props.render()}
+//         </MapContext.Provider>,
+//         container
+//       );
+//     } else {
+//       return null;
+//     }
+//   }
+// }
+
 function FormElementEditorContainer({
   render,
   surveyId,
 }: {
   surveyId: number;
-  render: (
-    updateBaseSetting: (
-      setting: "body" | "isRequired" | "exportId" | "typeId"
-    ) => (value: any) => void,
-    updateComponentSetting: (
-      setting: string,
-      currentSettings: any
-    ) => (value: any) => void,
-    updateSurveySettings: (settings: {
-      showFacilitationOption?: boolean;
-      showProgress?: boolean;
-    }) => void
-  ) => ReactNode;
+  render: FormElementRenderer;
 }) {
   const context = useContext(FormEditorPortalContext);
+  const onError = useGlobalErrorHandler();
   const [
     updateBaseSetting,
     updateComponentSetting,
@@ -202,15 +261,43 @@ function FormElementEditorContainer({
     updateSurvey,
     updateSurveyState,
   ] = useUpdateSurveyBaseSettingsMutation();
+  const [
+    updateSketchClass,
+    updateSketchClassState,
+  ] = useUpdateFormElementSketchClassMutation({
+    onError,
+  });
   return (
     <div className="space-y-4 text-sm p-3">
-      {render(updateBaseSetting, updateComponentSetting, (settings) =>
-        updateSurvey({
-          variables: {
-            id: surveyId,
-            ...settings,
-          },
-        })
+      {render(
+        updateBaseSetting,
+        updateComponentSetting,
+        (settings) =>
+          updateSurvey({
+            variables: {
+              id: surveyId,
+              ...settings,
+            },
+          }),
+        (settings: Pick<SketchClassDetailsFragment, "geometryType">) => {
+          updateSketchClass({
+            variables: {
+              id: context!.formElementSettings.sketchClass.id,
+              ...settings,
+            },
+            optimisticResponse: (data) => ({
+              __typename: "Mutation",
+              updateSketchClass: {
+                __typename: "UpdateSketchClassPayload",
+                sketchClass: {
+                  __typename: "SketchClass",
+                  ...context!.formElementSettings.sketchClass,
+                  ...data,
+                },
+              },
+            }),
+          });
+        }
       )}
     </div>
   );
@@ -287,7 +374,10 @@ export interface FormElementComponent<T, V = {}>
   /** For components like WelcomeMessage that shouldn't be a user option */
   templatesOnly?: boolean;
   advanceAutomatically?: boolean | ((componentSettings: T) => boolean);
-  icon?: ReactNode;
+  icon: FunctionComponent<{
+    componentSettings: T;
+    sketchClass?: SketchClassDetailsFragment | undefined | null;
+  }>;
   /**
    * Used in the admin interface to define skip logic. If not specified, a default text
    * input will be used.
@@ -301,6 +391,36 @@ export interface FormElementComponent<T, V = {}>
     value: V;
     componentSettings: T;
   }>;
+  /**
+   * FormElements can have different "stages" of user interaction. For example, a spatial input
+   * may have a stage for digitizing a shape, for showing a list of input shapes, and for showing
+   * introductory information. FormElement components will be passed a onRequestStageChange function.
+   * Enumerating stages makes it easy to represent different pages in the admin interface so that
+   * text and other aspects of the FormElement can be customized
+   */
+  stages?: { [stage: string]: number };
+  hideNav?:
+    | boolean
+    | ((componentSettings: T, isMobile: boolean, stage?: number) => boolean);
+}
+
+export function hideNav(
+  Component: FormElementComponent<any, any>,
+  componentSettings: any,
+  isMobile: boolean,
+  stage?: number
+) {
+  if (Component.hideNav === undefined) {
+    return false;
+  } else if (Component.hideNav === false) {
+    return false;
+  } else if (Component.hideNav === true) {
+    return true;
+  } else if (typeof Component.hideNav === "function") {
+    return Component.hideNav(componentSettings, isMobile, stage);
+  } else {
+    throw new Error("Component has invalid hideNav Class property");
+  }
 }
 
 // eslint-disable-next-line i18next/no-literal-string
@@ -324,19 +444,23 @@ export function sortFormElements<
   }
   const Welcome = elements.find((el) => el.typeId === "WelcomeMessage");
   const ThankYou = elements.find((el) => el.typeId === "ThankYou");
-  if (!Welcome) {
-    throw new Error("WelcomeMessage FormElement not in Form");
-  }
-  if (!ThankYou) {
-    throw new Error("ThankYou FormElement not in Form");
-  }
   const bodyElements = elements.filter(
     (el) => el.typeId !== "WelcomeMessage" && el.typeId !== "ThankYou"
   );
   bodyElements.sort((a, b) => {
     return a.position - b.position;
   });
-  return [Welcome, ...bodyElements, ThankYou] as T[];
+  if (Welcome || ThankYou) {
+    if (!Welcome) {
+      throw new Error("WelcomeMessage FormElement not in Form");
+    }
+    if (!ThankYou) {
+      throw new Error("ThankYou FormElement not in Form");
+    }
+    return [Welcome, ...bodyElements, ThankYou] as T[];
+  } else {
+    return [...bodyElements] as T[];
+  }
 }
 
 export const SurveyContext = createContext<{
@@ -348,4 +472,48 @@ export const SurveyContext = createContext<{
   isFacilitatedResponse: boolean;
   bestName?: string;
   bestEmail?: string;
+  projectBounds?: BBox;
 } | null>(null);
+
+export function getLayout(
+  formElement: Pick<
+    FormElementDetailsFragment,
+    "backgroundImage" | "layout" | "type"
+  >
+): FormElementLayout {
+  if (formElement.layout) {
+    return formElement.layout!;
+  } else if (formElement.type?.allowedLayouts?.length) {
+    return formElement.type.allowedLayouts[0]!;
+  } else {
+    return FormElementLayout.Top;
+  }
+}
+
+export type UnsavedSketchProps = {
+  name: string;
+  // Maybe this should rather be a seperate cache in the client somewhere?
+  // or so fast, it's a rendering concern and needs no caching ;)
+  // preprocessedGeometry: Geometry;
+  [exportid: string]: any;
+};
+
+export type UnsavedSketches = FeatureCollection<any, UnsavedSketchProps>;
+
+export function toFeatureCollection(
+  features: Feature<any, any>[],
+  autoGenerateNames?: boolean
+) {
+  if (autoGenerateNames) {
+    for (const feature of features) {
+      if (!feature.properties.name) {
+        // eslint-disable-next-line i18next/no-literal-string
+        feature.properties.name = `Location ${features.indexOf(feature)}`;
+      }
+    }
+  }
+  return ({
+    type: "FeatureCollection",
+    features,
+  } as unknown) as FeatureCollection<any, UnsavedSketchProps>;
+}

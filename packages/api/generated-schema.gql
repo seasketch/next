@@ -1331,44 +1331,6 @@ type CreateProjectsSharedBasemapPayload {
   query: Query
 }
 
-"""All input for the create `SketchClass` mutation."""
-input CreateSketchClassInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """The `SketchClass` to be created by this mutation."""
-  sketchClass: SketchClassInput!
-}
-
-"""The output of our create `SketchClass` mutation."""
-type CreateSketchClassPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """Reads a single `Project` that is related to this `SketchClass`."""
-  project: Project
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """The `SketchClass` that was created by this mutation."""
-  sketchClass: SketchClass
-
-  """An edge for our `SketchClass`. May be used by Relay 1."""
-  sketchClassEdge(
-    """The method to use when ordering `SketchClass`."""
-    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): SketchClassesEdge
-}
-
 """All input for the create `SketchFolder` mutation."""
 input CreateSketchFolderInput {
   """
@@ -1445,16 +1407,16 @@ type CreateSketchPayload {
   user: User
 }
 
-"""All input for the create `Survey` mutation."""
+"""All input for the `createSurvey` mutation."""
 input CreateSurveyInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-
-  """The `Survey` to be created by this mutation."""
-  survey: SurveyInput!
+  name: String
+  projectId: Int
+  templateId: Int
 }
 
 """All input for the create `SurveyInvitedGroup` mutation."""
@@ -1553,7 +1515,7 @@ type CreateSurveyJumpRulePayload {
   query: Query
 }
 
-"""The output of our create `Survey` mutation."""
+"""The output of our `createSurvey` mutation."""
 type CreateSurveyPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
@@ -1568,8 +1530,6 @@ type CreateSurveyPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
-
-  """The `Survey` that was created by this mutation."""
   survey: Survey
 }
 
@@ -3527,6 +3487,9 @@ type DeleteSketchClassPayload {
   clientMutationId: String
   deletedSketchClassNodeId: ID
 
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
+
   """Reads a single `Project` that is related to this `SketchClass`."""
   project: Project
 
@@ -4244,12 +4207,6 @@ type FormElement implements Node {
   
   """
   backgroundImage: String
-
-  """
-  Layout of image in relation to form_element content.
-  
-  """
-  backgroundImagePlacement: FormElementBackgroundImagePlacement!
   backgroundPalette: [String]
   backgroundWidth: Int
 
@@ -4292,6 +4249,12 @@ type FormElement implements Node {
   jumpToId: Int
 
   """
+  Layout of image in relation to form_element content.
+  
+  """
+  layout: FormElementLayout
+
+  """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
@@ -4309,6 +4272,7 @@ type FormElement implements Node {
   
   """
   secondaryColor: String
+  sketchClass: SketchClass
 
   """
   Indicates whether the form element should be displayed with dark or light text
@@ -4323,13 +4287,6 @@ type FormElement implements Node {
   unsplashAuthorUrl: String
 }
 
-enum FormElementBackgroundImagePlacement {
-  COVER
-  LEFT
-  RIGHT
-  TOP
-}
-
 """An input for mutations affecting `FormElement`"""
 input FormElementInput {
   """
@@ -4338,12 +4295,6 @@ input FormElementInput {
   """
   backgroundColor: String
   backgroundHeight: Int
-
-  """
-  Layout of image in relation to form_element content.
-  
-  """
-  backgroundImagePlacement: FormElementBackgroundImagePlacement
   backgroundPalette: [String]
   backgroundWidth: Int
 
@@ -4386,6 +4337,12 @@ input FormElementInput {
   jumpToId: Int
 
   """
+  Layout of image in relation to form_element content.
+  
+  """
+  layout: FormElementLayout
+
+  """
   Determines order of field display. Clients should display fields in ascending 
   order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
   update.
@@ -4409,6 +4366,16 @@ input FormElementInput {
   typeId: String!
 }
 
+enum FormElementLayout {
+  COVER
+  LEFT
+  MAP_SIDEBAR_LEFT
+  MAP_SIDEBAR_RIGHT
+  MAP_STACKED
+  RIGHT
+  TOP
+}
+
 """
 Represents an update to a `FormElement`. Fields that are set will be updated.
 """
@@ -4419,12 +4386,6 @@ input FormElementPatch {
   """
   backgroundColor: String
   backgroundHeight: Int
-
-  """
-  Layout of image in relation to form_element content.
-  
-  """
-  backgroundImagePlacement: FormElementBackgroundImagePlacement
   backgroundPalette: [String]
   backgroundWidth: Int
 
@@ -4465,6 +4426,12 @@ input FormElementPatch {
   
   """
   jumpToId: Int
+
+  """
+  Layout of image in relation to form_element content.
+  
+  """
+  layout: FormElementLayout
 
   """
   Determines order of field display. Clients should display fields in ascending 
@@ -4521,6 +4488,7 @@ Identifies the type of element in a form, including metadata about that element 
 
 """
 type FormElementType implements Node {
+  allowedLayouts: [FormElementLayout]
   componentName: String!
   isHidden: Boolean!
 
@@ -4529,10 +4497,12 @@ type FormElementType implements Node {
   contains presentational content like a Welcome Message component.
   """
   isInput: Boolean!
+  isRequiredForSketchClasses: Boolean!
   isRequiredForSurveys: Boolean!
 
   """These elements can only be added to a form once."""
   isSingleUseOnly: Boolean!
+  isSpatial: Boolean!
 
   """
   If true, the element type should only be added to forms related to a survey.
@@ -4551,6 +4521,7 @@ type FormElementType implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  sketchClassTemplateId: Int
   supportedOperators: [FieldRuleOperator]!
 }
 
@@ -5322,81 +5293,6 @@ enum GroupsOrderBy {
   PROJECT_ID_DESC
 }
 
-"""All input for the `initializeBlankSketchClassForm` mutation."""
-input InitializeBlankSketchClassFormInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  sketchClassId: Int
-}
-
-"""The output of our `initializeBlankSketchClassForm` mutation."""
-type InitializeBlankSketchClassFormPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  form: Form
-
-  """An edge for our `Form`. May be used by Relay 1."""
-  formEdge(
-    """The method to use when ordering `Form`."""
-    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): FormsEdge
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """Reads a single `SketchClass` that is related to this `Form`."""
-  sketchClass: SketchClass
-
-  """Reads a single `Survey` that is related to this `Form`."""
-  survey: Survey
-}
-
-"""All input for the `initializeSketchClassFormFromTemplate` mutation."""
-input InitializeSketchClassFormFromTemplateInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  sketchClassId: Int
-  templateId: Int
-}
-
-"""The output of our `initializeSketchClassFormFromTemplate` mutation."""
-type InitializeSketchClassFormFromTemplatePayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  form: Form
-
-  """An edge for our `Form`. May be used by Relay 1."""
-  formEdge(
-    """The method to use when ordering `Form`."""
-    orderBy: [FormsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): FormsEdge
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """Reads a single `SketchClass` that is related to this `Form`."""
-  sketchClass: SketchClass
-
-  """Reads a single `Survey` that is related to this `Form`."""
-  survey: Survey
-}
-
 type InteractivitySetting implements Node {
   """Reads and enables pagination through a set of `Basemap`."""
   basemapsByInteractivitySettingsIdConnection(
@@ -5787,6 +5683,45 @@ type MakeResponseDraftPayload {
   ): SurveyResponsesEdge
 }
 
+"""All input for the `makeSketchClass` mutation."""
+input MakeSketchClassInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  name: String
+  projectId: Int
+  templateId: Int
+}
+
+"""The output of our `makeSketchClass` mutation."""
+type MakeSketchClassPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
+
+  """Reads a single `Project` that is related to this `SketchClass`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sketchClass: SketchClass
+
+  """An edge for our `SketchClass`. May be used by Relay 1."""
+  sketchClassEdge(
+    """The method to use when ordering `SketchClass`."""
+    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchClassesEdge
+}
+
 """All input for the `makeSurvey` mutation."""
 input MakeSurveyInput {
   """
@@ -6126,14 +6061,6 @@ type Mutation {
     input: CreateSketchInput!
   ): CreateSketchPayload
 
-  """Creates a single `SketchClass`."""
-  createSketchClass(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateSketchClassInput!
-  ): CreateSketchClassPayload
-
   """Creates a single `SketchFolder`."""
   createSketchFolder(
     """
@@ -6141,8 +6068,6 @@ type Mutation {
     """
     input: CreateSketchFolderInput!
   ): CreateSketchFolderPayload
-
-  """Creates a single `Survey`."""
   createSurvey(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -6673,31 +6598,6 @@ type Mutation {
   ): GrantAdminAccessPayload
 
   """
-  When creating a new SketchClass, admins can either choose from a set of 
-  templates or start with a blank form. This mutation will initialize with a blank
-  form with no fields configured.
-  
-  """
-  initializeBlankSketchClassForm(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: InitializeBlankSketchClassFormInput!
-  ): InitializeBlankSketchClassFormPayload
-
-  """
-  Admins can choose to start a new SketchClass with a form derived from the list
-  of Form templates.
-  
-  """
-  initializeSketchClassFormFromTemplate(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: InitializeSketchClassFormFromTemplateInput!
-  ): InitializeSketchClassFormFromTemplatePayload
-
-  """
   Adds current user to the list of participants for a project, sharing their 
   profile with administrators in user listings. Their profile will also be shared 
   in public or group discussion forum posts.
@@ -6742,6 +6642,12 @@ type Mutation {
     """
     input: MakeResponseDraftInput!
   ): MakeResponseDraftPayload
+  makeSketchClass(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: MakeSketchClassInput!
+  ): MakeSketchClassPayload
   makeSurvey(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -7907,7 +7813,7 @@ type Project implements Node {
 
   """Reads a single `DataSourcesBucket` that is related to this `Project`."""
   dataSourcesBucket: DataSourcesBucket
-  dataSourcesBucketId: String!
+  dataSourcesBucketId: String
 
   """
   Retrieve DataSources for a given set of TableOfContentsItem IDs. Should be used
@@ -9784,9 +9690,6 @@ these records.
 
 """
 type Sketch implements Node {
-  """
-  Bounding box of the final preprocessed geometry. [xmin, ymin, xmax, ymax]
-  """
   bbox: [Float]
 
   """Reads a single `Sketch` that is related to this `Sketch`."""
@@ -9810,6 +9713,7 @@ type Sketch implements Node {
   Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.
   """
   folderId: Int
+  formElementId: Int
 
   """
   The geometry of the Sketch **after** it has been preprocessed. This is the
@@ -9827,12 +9731,9 @@ type Sketch implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
-
-  """
-  Number of points in the final geometry. Can be used to gauge the complexity of
-  the shape and decide whether to load via graphql or use a vector tile service.
-  """
   numVertices: Int
+  properties: JSON!
+  responseId: Int
 
   """Reads a single `SketchClass` that is related to this `Sketch`."""
   sketchClass: SketchClass
@@ -9850,7 +9751,7 @@ type Sketch implements Node {
   userGeom: GeometryGeometry
 
   """Owner of the sketch."""
-  userId: Int!
+  userId: Int
 }
 
 """
@@ -9890,6 +9791,15 @@ type SketchClass implements Node {
   """Form schema used to collect attributes on these sketches."""
   form: Form
 
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
+
+  """
+  If set, this sketch class is only for use in a survey indicated by the form_element.
+  
+  """
+  formElementId: Int
+
   """
   Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.
   
@@ -9924,13 +9834,6 @@ type SketchClass implements Node {
   
   """
   isArchived: Boolean!
-
-  """
-  If set to true, show as an option in the digitizing tools. If set to false,
-  this sketch class may be solely for survey responses.
-  
-  """
-  isMyPlansOption: Boolean!
 
   """
   [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
@@ -9974,6 +9877,9 @@ A condition to be used against `SketchClass` object types. All fields are tested
 for equality and combined with a logical ‘and.’
 """
 input SketchClassCondition {
+  """Checks for equality with the object’s `formElementId` field."""
+  formElementId: Int
+
   """Checks for equality with the object’s `id` field."""
   id: Int
 
@@ -9992,6 +9898,8 @@ type SketchClassesEdge {
 
 """Methods to use when ordering `SketchClass`."""
 enum SketchClassesOrderBy {
+  FORM_ELEMENT_ID_ASC
+  FORM_ELEMENT_ID_DESC
   ID_ASC
   ID_DESC
   NATURAL
@@ -10001,8 +9909,10 @@ enum SketchClassesOrderBy {
   PROJECT_ID_DESC
 }
 
-"""An input for mutations affecting `SketchClass`"""
-input SketchClassInput {
+"""
+Represents an update to a `SketchClass`. Fields that are set will be updated.
+"""
+input SketchClassPatch {
   """
   If set to true, a geometry_type of POLYGON would allow for both POLYGONs and 
   MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still 
@@ -10042,7 +9952,6 @@ input SketchClassInput {
   
   """
   geoprocessingProjectUrl: String
-  id: Int
 
   """
   If set to true, (non-admin) users should not be able to digitize new features
@@ -10051,13 +9960,6 @@ input SketchClassInput {
   
   """
   isArchived: Boolean
-
-  """
-  If set to true, show as an option in the digitizing tools. If set to false,
-  this sketch class may be solely for survey responses.
-  
-  """
-  isMyPlansOption: Boolean
 
   """
   [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
@@ -10066,59 +9968,6 @@ input SketchClassInput {
   
   """
   mapboxGlStyle: JSON
-
-  """Label chosen by project admins that is shown to users."""
-  name: String!
-
-  """SketchClasses belong to a single project."""
-  projectId: Int!
-}
-
-"""
-Represents an update to a `SketchClass`. Fields that are set will be updated.
-"""
-input SketchClassPatch {
-  """
-  If set to true, a geometry_type of POLYGON would allow for both POLYGONs and 
-  MULTIPOLYGONs after preprocessing or on spatial file upload. Users will still 
-  digitize single features. 
-  
-  Note that this feature should be used seldomly, since for planning purposes it 
-  is unlikely to have non-contiguous zones.
-  
-  For CHOOSE_FEATURE geometry types, this field will enable the selction of 
-  multiple features.
-  
-  """
-  allowMulti: Boolean
-
-  """
-  Name of the report to be displayed.
-  
-  """
-  geoprocessingClientName: String
-
-  """
-  Endpoint for the client javascript bundle.
-  
-  """
-  geoprocessingClientUrl: String
-
-  """
-  Root endpoint of a
-  [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
-  that should be used for reporting.
-  
-  """
-  geoprocessingProjectUrl: String
-
-  """
-  If set to true, (non-admin) users should not be able to digitize new features
-  using this sketch class, but they should still be able to access the sketch
-  class in order to render existing sketches of this type.
-  
-  """
-  isArchived: Boolean
 
   """Label chosen by project admins that is shown to users."""
   name: String
@@ -10220,9 +10069,6 @@ enum SketchGeometryType {
 
 """An input for mutations affecting `Sketch`"""
 input SketchInput {
-  """
-  Bounding box of the final preprocessed geometry. [xmin, ymin, xmax, ymax]
-  """
   bbox: [Float]
 
   """
@@ -10240,6 +10086,7 @@ input SketchInput {
   Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.
   """
   folderId: Int
+  formElementId: Int
 
   """
   The geometry of the Sketch **after** it has been preprocessed. This is the
@@ -10252,12 +10099,9 @@ input SketchInput {
 
   """User provided name for the sketch."""
   name: String!
-
-  """
-  Number of points in the final geometry. Can be used to gauge the complexity of
-  the shape and decide whether to load via graphql or use a vector tile service.
-  """
   numVertices: Int
+  properties: JSON
+  responseId: Int
 
   """SketchClass that defines the behavior of this type of sketch."""
   sketchClassId: Int!
@@ -10269,7 +10113,7 @@ input SketchInput {
   userGeom: GeoJSON
 
   """Owner of the sketch."""
-  userId: Int!
+  userId: Int
 }
 
 """
@@ -10644,45 +10488,6 @@ input SurveyCondition {
 
   """Checks for equality with the object’s `projectId` field."""
   projectId: Int
-}
-
-"""An input for mutations affecting `Survey`"""
-input SurveyInput {
-  """
-  PUBLIC or INVITE_ONLY
-  
-  """
-  accessType: SurveyAccessType
-
-  """
-  If set, responses that originate from an IP address outside this fence will be flagged.
-  """
-  geofence: GeoJSON
-  id: Int
-
-  """
-  Disabled surveys will not be accessible to non-admins. Invite email sending will
-  be paused.
-  
-  """
-  isDisabled: Boolean
-
-  """
-  If set, there can only be one response with matching contact information. The
-  app will also discourage multiple submissions from the same browser session.
-  """
-  limitToSingleResponse: Boolean
-  name: String!
-  projectId: Int!
-  showFacilitationOption: Boolean
-  showProgress: Boolean
-
-  """
-  Only applicable for public surveys. Show tools to respondants for sharing the 
-  survey on social media to encourage responses.
-  
-  """
-  showSocialMediaButtons: Boolean
 }
 
 type SurveyInvite implements Node {
@@ -12774,6 +12579,9 @@ type UpdateSketchClassPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
+
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
 
   """Reads a single `Project` that is related to this `SketchClass`."""
   project: Project

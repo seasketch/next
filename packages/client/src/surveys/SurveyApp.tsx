@@ -3,6 +3,7 @@ import { useHistory, useParams } from "react-router";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import {
+  FormElementLayout,
   SurveyAppFormElementFragment,
   SurveyAppRuleFragment,
   useCreateResponseMutation,
@@ -14,7 +15,11 @@ import { useTranslation, Trans } from "react-i18next";
 import UpArrowIcon from "../components/UpArrowIcon";
 import DownArrowIcon from "../components/DownArrowIcon";
 import useLocalStorage from "../useLocalStorage";
-import { FormElementStyleProps, useCurrentStyle } from "./appearance";
+import {
+  ComputedFormElementStyle,
+  FormElementStyleProps,
+  useCurrentStyle,
+} from "./appearance";
 import ImagePreloader from "./ImagePreloader";
 import SurveyAppLayout from "./SurveyAppLayout";
 import FormElementFactory from "./FormElementFactory";
@@ -22,6 +27,7 @@ import Modal from "../components/Modal";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Auth0User } from "../auth/Auth0User";
 import {
+  hideNav,
   sortFormElements,
   SurveyButtonFooterPortalContext,
   SurveyContext,
@@ -33,6 +39,14 @@ import {
   collectQuestion,
   collectText,
 } from "../admin/surveys/collectText";
+import { HeadProvider, Title, Meta } from "react-head";
+import { colord } from "colord";
+import { useLocalForage } from "../useLocalForage";
+import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/outline";
+import useMobileDeviceDetector from "./useMobileDeviceDetector";
+import bbox from "@turf/bbox";
+import { LngLatBoundsLike } from "mapbox-gl";
+
 require("./surveys.css");
 
 interface FormElementState {
@@ -66,6 +80,7 @@ function SurveyApp() {
   });
   const [practiceModalOpen, setPracticeModalOpen] = useState(false);
 
+  const isMobile = useMobileDeviceDetector();
   const [createResponse, createResponseState] = useCreateResponseMutation({
     onError,
   });
@@ -73,6 +88,11 @@ function SurveyApp() {
     current?: SurveyAppFormElementFragment;
     exiting?: SurveyAppFormElementFragment;
   }>({});
+
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    setStage(0);
+  }, [formElement.current]);
 
   /**
    * Update response state for just the given FormElement. Partial state can be supplied to be
@@ -121,7 +141,18 @@ function SurveyApp() {
   }
 
   const elements = sortFormElements(data?.survey?.form?.formElements || []);
-  const [responseState, setResponseState] = useLocalStorage<{
+
+  // const [responseState, setResponseState] = useLocalStorage<{
+  //   [id: number]: FormElementState;
+  //   facilitated: boolean;
+  //   submitted: boolean;
+  // }>(
+  //   // eslint-disable-next-line i18next/no-literal-string
+  //   `survey-${surveyId}`,
+  //   { facilitated: false, submitted: false }
+  // );
+
+  const [responseState, setResponseState] = useLocalForage<{
     [id: number]: FormElementState;
     facilitated: boolean;
     submitted: boolean;
@@ -156,7 +187,6 @@ function SurveyApp() {
       submissionAttempted: true,
     });
     if (canAdvance()) {
-      setFormElement((prev) => ({ ...prev, exiting: prev.current }));
       if (pagingState?.isLastQuestion) {
         const responseData: { [elementId: number]: any } = {};
         for (const element of elements.filter((e) => e.type!.isInput)) {
@@ -173,7 +203,9 @@ function SurveyApp() {
           },
         });
         if (response && !response.errors) {
+          setFormElement((prev) => ({ ...prev, exiting: prev.current }));
           await setResponseState((prev) => ({ ...prev, submitted: true }));
+          window.scrollTo(0, 0);
           history.push(
             // eslint-disable-next-line i18next/no-literal-string
             `/${slug}/surveys/${surveyId}/${elements.indexOf(
@@ -181,8 +213,11 @@ function SurveyApp() {
             )}/${practice ? "practice" : ""}`
           );
           setResponseState({ facilitated: false, submitted: false });
+        } else {
         }
       } else if (pagingState) {
+        setFormElement((prev) => ({ ...prev, exiting: prev.current }));
+        window.scrollTo(0, 0);
         history.push(
           // eslint-disable-next-line i18next/no-literal-string
           `/${slug}/surveys/${surveyId}/${elements.indexOf(
@@ -255,20 +290,22 @@ function SurveyApp() {
             isFacilitatedResponse: responseState.facilitated,
             surveySupportsFacilitation: !!data.survey.showFacilitationOption,
             projectName: data.currentProject!.name,
+            projectBounds: bbox(data.currentProject!.region.geojson),
             projectUrl: data.currentProject!.url!,
             surveyUrl: `${data.currentProject!.url!}surveys/${surveyId}`,
             bestEmail: data.me?.profile?.email || auth0.user?.email,
             bestName: data.me?.profile?.fullname || auth0.user?.name,
           }}
         >
+          <Title>{data.survey.name}</Title>
+          <Meta name="theme-color" content={style.backgroundColor} />
+
           <SurveyAppLayout
             showProgress={data.survey.showProgress}
             progress={index / elements.length}
             style={style}
-            unsplashUserName={
-              formElement.current.unsplashAuthorName || undefined
-            }
-            unsplashUserUrl={formElement.current.unsplashAuthorUrl || undefined}
+            unsplashUserName={style.unsplashAuthorName}
+            unsplashUserUrl={style.unsplashAuthorUrl}
             practice={!!practice}
             onPracticeClick={() => {
               setPracticeModalOpen(true);
@@ -319,6 +356,10 @@ function SurveyApp() {
                   value={surveyButtonFooter.current}
                 >
                   <FormElementFactory
+                    onRequestStageChange={(n) => setStage(n)}
+                    stage={stage}
+                    featureNumber={1}
+                    isSpatial={formElement.current?.type?.isSpatial || false}
                     {...formElement.current}
                     typeName={formElement.current.typeId}
                     submissionAttempted={!!state?.submissionAttempted}
@@ -376,49 +417,67 @@ function SurveyApp() {
                     onSubmit={handleAdvance}
                     editable={false}
                     value={state?.value}
+                    onRequestNext={handleAdvance}
+                    onRequestPrevious={() => {
+                      setBackwards(true);
+                      const url = `/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(
+                        pagingState.previousFormElement!
+                      )}/${practice ? "practice" : ""}`;
+                      history.push(url);
+                    }}
                   />
                 </SurveyButtonFooterPortalContext.Provider>
-                {formElement.current?.typeId !== "ThankYou" &&
-                  formElement.current?.typeId !== "WelcomeMessage" &&
-                  (!advancesAutomatically(formElement.current) ||
-                    !formElement.current.isRequired) && (
-                    <div
-                      className={`${
-                        !formElement.exiting &&
+                {(createResponseState.loading ||
+                  (!formElement.current?.type?.isSpatial &&
+                    formElement.current?.typeId !== "ThankYou" &&
+                    formElement.current?.typeId !== "WelcomeMessage" &&
+                    (!advancesAutomatically(formElement.current) ||
+                      !formElement.current.isRequired))) && (
+                  <div
+                    className={`${
+                      createResponseState.loading ||
+                      createResponseState.error ||
+                      (!formElement.exiting &&
                         (!!state?.value || !formElement.current.isRequired) &&
                         formElement.current.typeId !== "WelcomeMessage" &&
-                        !state?.errors
-                          ? "opacity-100 transition-opacity duration-300"
-                          : "opacity-0"
-                      }`}
-                    >
-                      <Button
-                        className="mb-10"
-                        label={
-                          pagingState.isLastQuestion && !!!formElement.exiting
-                            ? t("Complete Submission")
-                            : currentValue === undefined ||
-                              currentValue === null
-                            ? t("Skip Question")
-                            : t("Next")
-                        }
-                        onClick={handleAdvance}
-                        disabled={
-                          createResponseState.loading || !!formElement.exiting
-                        }
-                        loading={createResponseState.loading}
-                        backgroundColor={style.secondaryColor}
-                      />
-                      <span ref={surveyButtonFooter} className="ml-2"></span>
-                    </div>
-                  )}
+                        !state?.errors)
+                        ? "opacity-100 transition-opacity duration-300"
+                        : "opacity-0"
+                    }`}
+                  >
+                    <Button
+                      className="mb-10"
+                      label={
+                        pagingState.isLastQuestion && !!!formElement.exiting
+                          ? t("Complete Submission")
+                          : currentValue === undefined || currentValue === null
+                          ? t("Skip Question")
+                          : createResponseState.loading
+                          ? t("Submitting")
+                          : t("Next")
+                      }
+                      onClick={handleAdvance}
+                      disabled={
+                        createResponseState.loading || !!formElement.exiting
+                      }
+                      loading={createResponseState.loading}
+                      backgroundColor={style.secondaryColor}
+                    />
+                    <span ref={surveyButtonFooter} className="ml-2"></span>
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
-            {formElement.current?.typeId !== "ThankYou" && (
+            {!hideNav(
+              components[formElement.current!.typeId],
+              formElement.current.componentSettings,
+              isMobile,
+              0
+            ) && (
               <SurveyNav
+                style={style}
                 pagingState={pagingState}
                 canAdvance={canAdvance()}
-                buttonColor={style.secondaryColor}
                 onPrev={() => setBackwards(true)}
                 slug={slug}
                 surveyId={surveyId}
@@ -476,58 +535,83 @@ function SurveyApp() {
 
 function SurveyNav({
   pagingState,
-  buttonColor,
   onNext,
   onPrev,
   slug,
   surveyId,
   canAdvance,
   practice,
+  style,
 }: {
   canAdvance: boolean;
-  buttonColor: string;
   onNext: MouseEventHandler<HTMLAnchorElement>;
   onPrev: MouseEventHandler<HTMLAnchorElement>;
   slug: string;
   surveyId: string;
   practice?: string;
   pagingState: SurveyPagingState<SurveyAppFormElementFragment>;
+  style: ComputedFormElementStyle;
 }) {
+  const { t } = useTranslation("surveys");
+  let position =
+    "bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
+  switch (style.layout) {
+    case FormElementLayout.Right:
+      position =
+        "bottom-3 right-3 md:right-1/2 md:bottom-6 md:pr-4 lg:bottom-10 lg:pr-8";
+      break;
+    case FormElementLayout.MapStacked:
+      position =
+        "bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-5";
+      break;
+    default:
+      break;
+  }
   return (
     <div
-      style={{ width: "fit-content", height: "fit-content" }}
-      className={`z-20 fixed bottom-3 right-3 lg:left-2 ${
-        practice ? "lg:top-8" : "lg:top-5"
-      } ${!pagingState.previousFormElement && "hidden"}`}
+      style={{
+        width: "fit-content",
+        height: "fit-content",
+      }}
+      className={`z-20 fixed flex ${position} ${style.secondaryTextClass} ${
+        !pagingState.previousFormElement && "hidden"
+      }`}
     >
       {pagingState.previousFormElement && (
         <Link
+          title={t("Previous Question")}
           onClick={onPrev}
           to={`/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(
             pagingState.previousFormElement
           )}/${practice ? "practice" : ""}`}
-          className="inline-block "
+          className={`inline-block border-r shadow border-${style.secondaryTextClass.replace(
+            "text-",
+            ""
+          )} border-opacity-10 opacity-95 hover:opacity-100 p-2 rounded-l`}
+          style={{
+            background: `linear-gradient(${style.secondaryColor}, ${style.secondaryColor2})`,
+          }}
         >
-          <UpArrowIcon
-            className="inline-block transition-colors duration-300"
-            style={{ color: buttonColor, width: 48, height: 48 }}
-          />
+          <ChevronUpIcon className="w-6 h-6" />
         </Link>
       )}
       {!pagingState.isLastQuestion && (
         <Link
+          title={t("Next Question")}
           onClick={onNext}
-          className={`inline-block ${
-            !canAdvance && "opacity-50 cursor-default"
+          className={`inline-flex items-center p-2 shadow rounded-r ${
+            !canAdvance
+              ? "opacity-50 cursor-default"
+              : "opacity-95 hover:opacity-100"
           }`}
           to={`/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(
             pagingState.nextFormElement!
           )}/${practice ? "practice" : ""}`}
+          style={{
+            background: `linear-gradient(${style.secondaryColor}, ${style.secondaryColor2})`,
+          }}
         >
-          <DownArrowIcon
-            className="inline-block transition-colors duration-300"
-            style={{ color: buttonColor, width: 48, height: 48 }}
-          />
+          <ChevronDownIcon className="w-6 h-6" />
         </Link>
       )}
     </div>
