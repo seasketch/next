@@ -12,6 +12,10 @@ cp .env.template .env
 npm start
 ```
 
+## SSL
+
+If you need to run locally using SSL, you'll need to setup the [environment properly for both the api server and the client](https://github.com/seasketch/next/wiki/Setting-up-SSL-on-localhost).
+
 ## i18n
 
 Localization is managed using [i18next](https://react.i18next.com/). Wrap _all_ strings in appropriate tags so they can be translated into multiple languages.
