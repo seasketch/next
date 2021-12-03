@@ -6,7 +6,7 @@ import {
 } from "@heroicons/react/outline";
 import bbox from "@turf/bbox";
 import { AnimatePresence, motion } from "framer-motion";
-import { Feature } from "geojson";
+import { BBox, Feature } from "geojson";
 import { map } from "lodash";
 import { LngLatBoundsLike, LngLatLike, Map } from "mapbox-gl";
 import {
@@ -147,14 +147,16 @@ export function NextQuestion(
 }
 
 export function ResetView(
-  props: DigitizingActionItem<{ map: Map; bounds: LngLatBoundsLike }>
+  props: DigitizingActionItem<{ map: Map; bounds: BBox }>
 ) {
   const { t } = useTranslation("surveys");
   return (
     <Item
       {...props}
       Icon={ZoomOutIcon}
-      onClick={() => props.map.fitBounds(props.bounds, { animate: true })}
+      onClick={() =>
+        props.map.fitBounds(props.bounds as LngLatBoundsLike, { animate: true })
+      }
       title={t("Reset view")}
     />
   );
@@ -178,7 +180,8 @@ export function ZoomToFeature(
       onClick={() =>
         props.map.fitBounds(bbox(props.feature) as LngLatBoundsLike, {
           animate: true,
-          padding: props.isSmall ? 50 : 200,
+          padding: props.isSmall ? 50 : 100,
+          maxZoom: 17,
         })
       }
       title={t("Focus on location")}

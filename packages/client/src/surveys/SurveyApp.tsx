@@ -44,6 +44,8 @@ import { colord } from "colord";
 import { useLocalForage } from "../useLocalForage";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/outline";
 import useMobileDeviceDetector from "./useMobileDeviceDetector";
+import bbox from "@turf/bbox";
+import { LngLatBoundsLike } from "mapbox-gl";
 
 require("./surveys.css");
 
@@ -288,6 +290,7 @@ function SurveyApp() {
             isFacilitatedResponse: responseState.facilitated,
             surveySupportsFacilitation: !!data.survey.showFacilitationOption,
             projectName: data.currentProject!.name,
+            projectBounds: bbox(data.currentProject!.region),
             projectUrl: data.currentProject!.url!,
             surveyUrl: `${data.currentProject!.url!}surveys/${surveyId}`,
             bestEmail: data.me?.profile?.email || auth0.user?.email,

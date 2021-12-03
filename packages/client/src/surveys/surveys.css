@@ -9,15 +9,20 @@
   min-height: 50px;
 }
 
-body.survey {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+html.survey {
+  height: 100%;
+}
+
+.survey body {
+  /* min-height: 100vh; */
+  height: 100%;
+  /* display: flex; */
+  /* flex-direction: column; */
 }
 
 /* Avoid Chrome to see Safari hack */
 @supports (-webkit-touch-callout: none) {
-  body.survey {
+  .survey body {
     /* The hack for Safari */
     min-height: -webkit-fill-available;
   }

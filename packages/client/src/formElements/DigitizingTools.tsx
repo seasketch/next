@@ -64,6 +64,10 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
       break;
   }
 
+  if (state === DigitizingState.DISABLED) {
+    return null;
+  }
+
   const bottomToolbar = isMobile && style.isSmall;
 
   const buttons = (

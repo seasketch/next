@@ -31,6 +31,8 @@ export enum DigitizingState {
   EDITING,
   /** Shape is not in editing mode. */
   FINISHED,
+  /** Digitizing has been disabled using disable(). Call enable() */
+  DISABLED,
 }
 
 /**
@@ -53,9 +55,10 @@ export default function useMapboxGLDraw(
   const [state, setState] = useState(
     value ? DigitizingState.FINISHED : DigitizingState.BLANK
   );
+  const [disabled, setDisabled] = useState(false);
 
   useEffect(() => {
-    if (map && geometryType) {
+    if (map && geometryType && !disabled) {
       const draw = new MapboxDraw({
         keybindings: true,
         clickBuffer: 4,
@@ -70,6 +73,7 @@ export default function useMapboxGLDraw(
       });
       setDraw(draw);
       map.addControl(draw);
+
       if (value) {
         draw.add(value);
 
@@ -79,46 +83,77 @@ export default function useMapboxGLDraw(
       } else {
         draw.changeMode(drawMode);
       }
-      map.on("draw.create", function (e) {
-        setState(DigitizingState.CREATED);
-        onChange(e.features[0]);
-        setTimeout(() => {
-          draw.changeMode("simple_select");
+
+      setState(value ? DigitizingState.FINISHED : DigitizingState.BLANK);
+
+      const handlers = {
+        create: function (e: any) {
           setState(DigitizingState.CREATED);
-        }, 1);
-      });
+          onChange(e.features[0]);
+          setTimeout(() => {
+            draw.changeMode("simple_select");
+            setState(DigitizingState.CREATED);
+          }, 1);
+        },
+        update: (e: any) => onChange(e.features[0]),
+        drawingStarted: () => setState(DigitizingState.STARTED),
+        canComplete: () => setState(DigitizingState.CAN_COMPLETE),
+        delete: function () {
+          draw.changeMode(drawMode);
+          onChange(null);
+          setState(DigitizingState.BLANK);
+        },
+        modeChange: function (e: any) {
+          if (e.mode === "simple_select") {
+            setState(DigitizingState.FINISHED);
+          } else if (e.mode === "direct_select") {
+            setState(DigitizingState.EDITING);
+          }
+        },
+        selectionChange: function (e: any) {
+          if (!e.features?.length) {
+            if (state === DigitizingState.EDITING) {
+              setState(DigitizingState.FINISHED);
+            }
+          }
+          if (geometryType === SketchGeometryType.Point) {
+            if (e.features?.length) {
+              setState(DigitizingState.EDITING);
+            } else {
+              setState(DigitizingState.FINISHED);
+            }
+          }
+        },
+      };
 
-      map.on("draw.update", function (e) {
-        onChange(e.features[0]);
-      });
-
-      map.on("seasketch.drawing_started", function (e) {
-        setState(DigitizingState.STARTED);
-      });
-      map.on("seasketch.can_complete", function (e) {
-        setState(DigitizingState.CAN_COMPLETE);
-      });
-      map.on("draw.delete", function (e) {
-        draw.changeMode(drawMode);
-        onChange(null);
-        setState(DigitizingState.BLANK);
-      });
-
-      map.on("draw.modechange", function (e) {
-        if (e.mode === "simple_select") {
-          setState(DigitizingState.FINISHED);
-        } else if (e.mode === "direct_select") {
-          setState(DigitizingState.EDITING);
-        }
-      });
+      map.on("draw.create", handlers.create);
+      map.on("draw.update", handlers.update);
+      map.on("seasketch.drawing_started", handlers.drawingStarted);
+      map.on("seasketch.can_complete", handlers.canComplete);
+      map.on("draw.delete", handlers.delete);
+      map.on("draw.modechange", handlers.modeChange);
+      map.on("draw.selectionchange", handlers.selectionChange);
 
       return () => {
         if (map && draw) {
           map.removeControl(draw);
+          map.off("draw.create", handlers.create);
+          map.off("draw.update", handlers.update);
+          map.off("seasketch.drawing_started", handlers.drawingStarted);
+          map.off("seasketch.can_complete", handlers.canComplete);
+          map.off("draw.delete", handlers.delete);
+          map.off("draw.modechange", handlers.modeChange);
+          map.off("draw.selectionchange", handlers.selectionChange);
         }
       };
     }
-  }, [map, geometryType]);
+  }, [map, geometryType, disabled]);
+
+  useEffect(() => {
+    if (disabled) {
+      setState(DigitizingState.DISABLED);
+    }
+  }, [disabled]);
 
   const actions = {
     /**
@@ -134,7 +169,7 @@ export default function useMapboxGLDraw(
           state === DigitizingState.EDITING ||
           state === DigitizingState.CAN_COMPLETE
         ) {
-          draw.changeMode("simple_select");
+          draw.changeMode("simple_select", { featureIds: [] });
           setState(DigitizingState.FINISHED);
         } else {
           throw new Error(`Cannot finish editing from state ${state}`);
@@ -169,10 +204,17 @@ export default function useMapboxGLDraw(
         if (!value) {
           throw new Error("No feature exists to edit");
         }
-        // @ts-ignore
-        draw.changeMode("direct_select", {
-          featureId: value.id,
-        });
+        if (geometryType === SketchGeometryType.Point) {
+          // @ts-ignore
+          draw.changeMode("simple_select", {
+            featureIds: [value.id],
+          });
+        } else {
+          // @ts-ignore
+          draw.changeMode("direct_select", {
+            featureId: value.id,
+          });
+        }
         setState(DigitizingState.EDITING);
       } else {
         throw new Error("draw has not been initialized");
@@ -183,6 +225,10 @@ export default function useMapboxGLDraw(
   return {
     digitizingState: state,
     actions,
+    /** Temporarily disable drawing */
+    disable: () => setDisabled(true),
+    /** Re-enable drawing */
+    enable: () => setDisabled(false),
   };
 }
 

@@ -1,5 +1,5 @@
 import { LocationMarkerIcon, MapIcon } from "@heroicons/react/solid";
-import { Feature } from "geojson";
+import { BBox, Feature } from "geojson";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import MapboxMap from "../components/MapboxMap";
@@ -12,6 +12,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  SurveyContext,
   SurveyMapPortal,
   SurveyMapPortalContext,
   toFeatureCollection,
@@ -35,15 +36,22 @@ import DigitizingActionsPopup, {
   ResetView,
   ZoomToFeature,
 } from "../draw/DigitizingActionsPopup";
+import Button from "../components/Button";
+import BoundsInput from "../components/BoundsInput";
+import bboxPolygon from "@turf/bbox-polygon";
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
+const defaultStartingBounds = [
+  -119.91579655058345,
+  33.87415760617607,
+  -119.24033098014716,
+  34.2380902987356,
+] as BBox;
+
 export type SingleSpatialInputProps = {
-  startingBounds?: LngLatBoundsLike;
+  startingBounds?: BBox;
 };
 
-/**
- * Displays a rich text section
- */
 const SingleSpatialInput: FormElementComponent<
   SingleSpatialInputProps,
   UnsavedSketches
@@ -57,13 +65,20 @@ const SingleSpatialInput: FormElementComponent<
   });
 
   const [map, setMap] = useState<Map | null>(null);
+  const mapContext = useMapContext();
   // eslint-disable-next-line i18next/no-literal-string
-  const mapContext = useMapContext(`form-element-${props.id}`);
+  // `form-element-${props.id}`
   const mapPortalContext = useContext(SurveyMapPortalContext);
   const style = useContext(SurveyStyleContext);
+  const context = useContext(SurveyContext);
+  const bounds =
+    props.componentSettings.startingBounds ||
+    context?.projectBounds ||
+    defaultStartingBounds;
+
   const geometryType = props.sketchClass!.geometryType!;
 
-  const { digitizingState, actions } = useMapboxGLDraw(
+  const { digitizingState, actions, disable, enable } = useMapboxGLDraw(
     map,
     geometryType,
     props.value?.features[0] || null,
@@ -78,7 +93,17 @@ const SingleSpatialInput: FormElementComponent<
 
   useEffect(() => {
     if (mapContext?.manager && data?.projectBySlug?.basemaps) {
+      // mapContext.manager.setProjectBounds(bboxPolygon(bounds));
       mapContext.manager?.setBasemaps(data.projectBySlug.basemaps);
+      // TODO: This is a pretty shitty way to do this. MapContextManager needs
+      // to be modified a bit to account for these simpler use-cases that aren't
+      // so bound to project-wide settings
+      setTimeout(() => {
+        mapContext!.manager!.map!.fitBounds(bounds as LngLatBoundsLike, {
+          animate: false,
+          padding: 2,
+        });
+      }, 200);
     }
   }, [data?.projectBySlug?.basemaps, mapContext.manager]);
 
@@ -151,10 +176,8 @@ const SingleSpatialInput: FormElementComponent<
               <ResetView
                 map={mapContext.manager?.map!}
                 bounds={
-                  props.componentSettings.startingBounds || [
-                    [-119.91579655058345, 33.87415760617607],
-                    [-119.24033098014716, 34.2380902987356],
-                  ]
+                  props.componentSettings.startingBounds ||
+                  (defaultStartingBounds as BBox)
                 }
               />
               <ZoomToFeature
@@ -205,6 +228,16 @@ const SingleSpatialInput: FormElementComponent<
                   simpleFeatures
                 />
               </div>
+              <BoundsInput
+                value={bounds}
+                map={map || undefined}
+                onBeforeInput={() => disable()}
+                onAfterInput={() => enable()}
+                onChange={updateSetting(
+                  "startingBounds",
+                  props.componentSettings
+                )}
+              />
             </>
           );
         }}

@@ -147,6 +147,9 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
   currentProject {
     name
     url
+    region {
+      geojson
+    }
   }
 }
 

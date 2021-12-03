@@ -35,11 +35,13 @@ import {
   MapContextInterface,
 } from "../dataLayers/MapContextManager";
 import {
+  BBox,
   Feature,
   FeatureCollection,
   GeoJsonProperties,
   Geometry,
 } from "geojson";
+import { LngLatBoundsLike } from "mapbox-gl";
 require("./prosemirror-body.css");
 require("./unreset.css");
 const LazyBodyEditor = lazy(() => import("./BodyEditor"));
@@ -470,6 +472,7 @@ export const SurveyContext = createContext<{
   isFacilitatedResponse: boolean;
   bestName?: string;
   bestEmail?: string;
+  projectBounds?: BBox;
 } | null>(null);
 
 export function getLayout(

@@ -50,6 +50,8 @@ import { advancesAutomatically } from "../../surveys/SurveyApp";
 import SurveyFlowMap from "./SurveyFlowMap";
 import LogicRuleEditor from "./LogicRuleEditor";
 import { components } from "../../formElements";
+import bbox from "@turf/bbox";
+import { LngLatBoundsLike, LngLatLike } from "mapbox-gl";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -417,7 +419,7 @@ export default function SurveyFormEditor({
         </div>
         {/* Content */}
         <div
-          className="flex-1 max-h-full overflow-y-auto"
+          className="flex-1 h-full overflow-y-auto"
           style={{
             background:
               route !== "logic"
@@ -443,6 +445,7 @@ export default function SurveyFormEditor({
                 surveySupportsFacilitation: data.survey.showFacilitationOption,
                 projectName: data.currentProject!.name,
                 projectUrl: data.currentProject!.url!,
+                projectBounds: bbox(data.currentProject!.region.geojson),
                 surveyUrl: `${data.currentProject!.url!}/surveys/${
                   data.survey.id
                 }`,

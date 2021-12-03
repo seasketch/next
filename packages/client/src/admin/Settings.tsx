@@ -590,8 +590,6 @@ function MapExtentSettings() {
         setMap(mapInstance);
         setDraw(draw);
         mapInstance.addControl(draw);
-        // @ts-ignore
-        window.draw = draw;
 
         // when mode drawing should be activated
         // draw.changeMode("draw_rectangle", {});

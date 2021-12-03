@@ -14170,6 +14170,10 @@ export type SurveyFormEditorDetailsQuery = (
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'name' | 'url'>
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ) }
   )> }
 );
 
@@ -14593,6 +14597,10 @@ export type SurveyQuery = (
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'name' | 'url'>
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ) }
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & SurveyAppSurveyFragment
@@ -18983,6 +18991,9 @@ export const SurveyFormEditorDetailsDocument = gql`
   currentProject {
     name
     url
+    region {
+      geojson
+    }
   }
 }
     ${AddFormElementTypeDetailsFragmentDoc}
@@ -19866,6 +19877,9 @@ export const SurveyDocument = gql`
   currentProject {
     name
     url
+    region {
+      geojson
+    }
   }
   survey(id: $id) {
     ...SurveyAppSurvey
