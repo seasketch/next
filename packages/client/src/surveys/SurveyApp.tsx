@@ -282,6 +282,7 @@ function SurveyApp() {
     const lastPage = index === elements.length - 2;
 
     const currentValue = responseState[formElement.current.id]?.value;
+    console.log(data.currentProject!.region);
     return (
       <>
         <SurveyContext.Provider
@@ -290,7 +291,7 @@ function SurveyApp() {
             isFacilitatedResponse: responseState.facilitated,
             surveySupportsFacilitation: !!data.survey.showFacilitationOption,
             projectName: data.currentProject!.name,
-            projectBounds: bbox(data.currentProject!.region),
+            projectBounds: bbox(data.currentProject!.region.geojson),
             projectUrl: data.currentProject!.url!,
             surveyUrl: `${data.currentProject!.url!}surveys/${surveyId}`,
             bestEmail: data.me?.profile?.email || auth0.user?.email,
