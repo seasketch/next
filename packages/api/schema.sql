@@ -13421,7 +13421,10 @@ ALTER TABLE ONLY public.sketch_classes
 -- Name: CONSTRAINT sketch_classes_form_element_id_fkey ON sketch_classes; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON CONSTRAINT sketch_classes_form_element_id_fkey ON public.sketch_classes IS '@omit many';
+COMMENT ON CONSTRAINT sketch_classes_form_element_id_fkey ON public.sketch_classes IS '
+@foreignSingleFieldName sketchClassFk
+@omit many
+';
 
 
 --
