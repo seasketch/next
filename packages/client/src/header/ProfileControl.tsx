@@ -28,6 +28,7 @@ export default function ProfileControl() {
             <div>
               <ProfileStatusButton onClick={() => setProfileModalOpen(true)}>
                 <button
+                  title="Sign In"
                   onClick={() =>
                     loginWithRedirect({
                       appState: {

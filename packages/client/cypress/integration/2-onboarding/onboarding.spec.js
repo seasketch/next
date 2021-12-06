@@ -1,17 +1,44 @@
-Feature: User Onboarding
+// type definitions for Cypress object "cy"
+/// <reference types="cypress" />
 
+/**
+  Feature: User Onboarding
     Users may land on a SeaSketch project in a variety of ways. It could be via an email invitation, a link directly to a project, or social media posts. It's important that each of these scenarios are well tested so that a new user's first experience with SeaSketch isn't a frustrating one.
-
     # Project access controls
+*/
 
-    Scenario: Visitors can navigate to public projects from the homepage
-      Given A public project named "SeaSketch Demo"
-      And I am an anonymous User
-      When I visit the SeaSketch project listing
-      Then I see "SeaSketch Demo" listed
-      When I click the link
-      Then I see the project map screen      
+/**
+ Scenario: Visitors can navigate to public projects from the homepage
+  Given A public project named "SeaSketch Demo"
+  And I am an anonymous User
+  When I visit the SeaSketch project listing
+  Then I see "SeaSketch Demo" listed
+  When I click the link
+  Then I see the project map screen
+ */
 
+describe("Visitors can navigate to public projects from the homepage", () => {
+  before(() => {
+    /**
+      Setup
+        * Create "SeaSketch Demo" Project
+        * No need to login, user is anonymous
+        * Start at the homepage /
+     */
+    cy.visit("/");
+  });
+  it("User can navigate from the homepage to the project listing");
+  it("Project listing should contain 'SeaSketch Demo'");
+  it("Clicking this link should bring up that project's map screen");
+  after(() => {
+    /**
+      Teardown
+        * Delete "SeaSketch Demo" project
+    */
+  });
+});
+
+/**    
     Scenario: Visitors are denied access to invite-only projects, but can request access
       Given I am an anonymous user
       And an invite-only project named "Secret Council"
@@ -88,6 +115,5 @@ Feature: User Onboarding
       And I have received an invitation link via email
       When I follow the invitation link
       Then I am immediately brought to the project map screen
-      And the invite status in the db is set to CONFIRMED      
-  
-
+      And the invite status in the db is set to CONFIRMED
+*/

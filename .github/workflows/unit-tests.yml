@@ -148,3 +148,105 @@ jobs:
           REACT_APP_BUILD: ${{ steps.short_sha.outputs.sha }}
         run: |
           CI=false npm run build
+  integration-tests:
+    name: Cypress Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # container: cypress/browsers:node16.5.0-chrome94-ff93
+    services:
+      postgres:
+        image: underbluewaters/seasketch_db_base
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_PASSWORD: password
+      redis:
+        image: "redis:alpine"
+        ports:
+          - "6379:6379"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - id: short_sha
+        run: |
+          echo `git rev-parse HEAD`
+          echo "::set-output name=sha::`git rev-parse --short HEAD`"
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-integration-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install
+        run: |
+          npm install
+          npm install -g lerna
+          npm install http-server -g
+          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
+      - name: Init docker db
+        working-directory: ./packages/api
+        env:
+          TEST_DB: postgres://postgres:password@localhost:5432/
+          DATABASE_URL: postgres://postgres:password@localhost:5432/seasketch
+        run: |
+          node tests/init_dockerdb.js
+          npm run db:migrate
+      - name: Start API Server
+        working-directory: ./packages/api
+        env:
+          DATABASE_URL: postgres://graphile:password@localhost:5432/seasketch
+          ADMIN_DATABASE_URL: postgres://postgres:password@localhost:5432/seasketch
+          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+          HOST: ${{ secrets.HOST }}
+          JWKS_URI: ${{ secrets.JWKS_URI }}
+          JWT_AUD: ${{ secrets.JWT_AUD }}
+          JWT_ISS: ${{ secrets.JWT_ISS }}
+          PUBLIC_S3_BUCKET: ${{ secrets.PUBLIC_S3_BUCKET }}
+          PUBLIC_UPLOADS_DOMAIN: ${{ secrets.PUBLIC_UPLOADS_DOMAIN }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          SES_EMAIL_SOURCE: ${{ secrets.SES_EMAIL_SOURCE }}
+          UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
+          NODE_ENV: staging
+          GRAPHILE_WORKER_CONCURRENCY: 5
+        run: |
+          npm run build
+          npm start &
+      - name: Start client
+        working-directory: ./packages/client
+        run: |
+          CI=false npm run build
+          http-server ./build -a localhost -p 3000 &
+        env:
+          SKIP_PREFLIGHT_CHECK: true
+          REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+          REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
+          REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
+          REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857
+          REACT_APP_PUBLIC_URL: http://localhost:3000
+          REACT_APP_BUILD: e2e-tests-${{ steps.short_sha.outputs.sha }}
+      - name: Cypress run
+        uses: cypress-io/github-action@v2
+        with:
+          record: true
+          browser: chrome
+          wait-on: "http://localhost:3000"
+          install-command: "true"
+          working-directory: ./packages/client
+          wait-on-timeout: 240
+          config: baseUrl=http://localhost:3000
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORDING_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

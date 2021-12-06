@@ -21,3 +21,5 @@ yarn-error.log*
 NOTES.md
 storybook-static
 build-storybook.log
+cypress/screenshots
+cypress/**/*.mp4

@@ -80,6 +80,7 @@
     "comlink-loader": "^2.0.0",
     "dagre": "^0.8.5",
     "downshift": "^6.1.7",
+    "eslint-plugin-cypress": "^2.12.1",
     "formik": "^2.2.9",
     "formik-persist": "^1.1.0",
     "framer-motion": "^2.9.4",
@@ -174,7 +175,9 @@
     "storybook": "start-storybook -p 6006 -s public",
     "build-storybook": "build-storybook -s public",
     "lint": "NODE_ENV=production npx eslint . --quiet",
-    "deploy": "bin/deploy.sh"
+    "deploy": "bin/deploy.sh",
+    "cypress": "CYPRESS_BASE_URL=${REACT_APP_PUBLIC_URL} cypress open",
+    "cypress:run": "CYPRESS_BASE_URL=${REACT_APP_PUBLIC_URL} cypress run"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -211,6 +214,7 @@
     "autoprefixer": "^9.8.7",
     "babel-eslint": "^10.1.0",
     "chokidar-cli": "^2.1.0",
+    "cypress": "^9.1.0",
     "eslint": "^7.19.0",
     "eslint-config-react-app": "^6.0.0",
     "eslint-plugin-flowtype": "^5.2.0",
