@@ -193,7 +193,7 @@ jobs:
           npm install
           npm install -g lerna
           npm install http-server -g
-          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
+          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers --scope=@seasketch/api
       - name: Init docker db
         working-directory: ./packages/api
         env:
