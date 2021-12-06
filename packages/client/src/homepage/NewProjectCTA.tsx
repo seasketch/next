@@ -19,6 +19,7 @@ export default function NewProjectCTA() {
             <Link
               to="/new-project"
               className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base leading-6 font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:shadow-outline transition duration-150 ease-in-out"
+              id="get-started"
             >
               {t("Get started")}
             </Link>

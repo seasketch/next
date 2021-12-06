@@ -27,6 +27,6 @@ describe("Homepage smoke test", () => {
       cy.get("[title='Sign In']").should("be.visible");
     });
   });
-  it("Has a link to create a new project");
+  it("Has a link to create a new project", () => cy.get("[id=get-started]"));
   it("Links to the project listing");
 });
