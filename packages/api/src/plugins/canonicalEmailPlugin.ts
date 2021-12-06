@@ -45,7 +45,7 @@ const CanonicalEmailPlugin = makeExtendSchemaPlugin((build) => {
             return {
               success: true,
             };
-          } catch (e) {
+          } catch (e: any) {
             return {
               success: false,
               error: e.toString(),

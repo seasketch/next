@@ -428,7 +428,7 @@ export async function verifySurveyInvite(
   let claims;
   try {
     claims = await verify<SurveyInviteTokenClaims>(client, token, host);
-  } catch (e) {
+  } catch (e: any) {
     if (e.name === "TokenExpiredError") {
       throw e;
     } else {

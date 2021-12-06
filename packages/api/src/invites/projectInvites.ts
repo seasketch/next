@@ -126,7 +126,7 @@ export async function sendProjectInviteEmail(
           [token, expiration / 1000, response.MessageId, emailId]
         );
       }
-    } catch (e) {
+    } catch (e: any) {
       await client.query(
         `update invite_emails set status = 'ERROR', updated_at = now(), error = $1 where id = $2`,
         [e.toString() || "Unknown Error", emailId]

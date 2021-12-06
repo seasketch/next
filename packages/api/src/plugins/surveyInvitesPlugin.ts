@@ -82,7 +82,7 @@ const SurveyInvitesPlugin = makeExtendSchemaPlugin((build) => {
             return {
               claims,
             };
-          } catch (e) {
+          } catch (e: any) {
             return {
               error: e.message,
             };

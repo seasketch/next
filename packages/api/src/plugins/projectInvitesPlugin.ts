@@ -94,7 +94,7 @@ const ProjectInvitesPlugin = makeExtendSchemaPlugin((build) => {
               claims,
               existingAccount: rows[0].account_exists,
             };
-          } catch (e) {
+          } catch (e: any) {
             return {
               error: e.message,
             };

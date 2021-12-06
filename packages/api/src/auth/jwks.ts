@@ -169,7 +169,7 @@ export async function verify<Claims>(
       try {
         const publicKey = await getPublicKey(client, header.kid);
         callback(null, publicKey);
-      } catch (e) {
+      } catch (e: any) {
         callback(e, "");
       }
     } else {
