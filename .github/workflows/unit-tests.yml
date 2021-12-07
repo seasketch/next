@@ -62,7 +62,7 @@ jobs:
           check-name: API Test Output
           run-name: Test GraphQL API Server
   database-drift:
-    name: Check for schema drift
+    name: Check for schema and generated code drift
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -100,7 +100,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap --scope=@seasketch/api
+          lerna bootstrap --scope=@seasketch/api --scope=client --scope=mapbox-gl-esri-feature-layers
       - name: Initialize database
         working-directory: ./packages/api
         env:
@@ -115,11 +115,16 @@ jobs:
           node tests/init_dockerdb.js
           IN_TESTS=1 npm run db:migrate -- --shadow
           node dist/src/createCleanGraphqlSchema.js
-      - name: Check for drift
+      - name: Check for graphql schema drift
         working-directory: ./packages/api
         run: |
           ls -lh generated-schema*
           npm run db:drift
+      - name: Check for drift in hooks
+        working-directory: ./packages/client
+        run: |
+          npx graphql-codegen --config codegen.yml
+          git diff --exit-code ./src/generated/graphql.ts
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest
