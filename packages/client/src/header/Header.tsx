@@ -69,6 +69,7 @@ export default function Header(props: { projectMode?: boolean }) {
                   style={{ width: props.projectMode ? 37 : 47, height: "auto" }}
                   src={logo}
                   alt={t("SeaSketch logo")}
+                  id="seasketch-logo"
                 />
                 {
                   // eslint-disable-next-line

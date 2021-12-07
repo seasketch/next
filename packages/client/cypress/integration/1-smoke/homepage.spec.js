@@ -14,10 +14,14 @@ describe("Homepage smoke test", () => {
     cy.visit("/");
   });
   it("SeaSketch homepage renders", () => {
-    cy.contains("SeaSketch");
+    cy.get("[id=seasketch-logo]");
     devices.forEach((viewport) => {});
   });
-  it("Describes the project", () => cy.contains("SeaSketch"));
+  it("Describes the project", () => {
+    cy.get("[id=homepage-heading]");
+    cy.get("[id=homepage-description]")
+  
+  });
   devices.forEach((device) => {
     it(`Shows an option to sign in - ${device}`, () => {
       cy.viewport(device);
