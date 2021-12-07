@@ -19,13 +19,15 @@ describe("Homepage smoke test", () => {
   });
   it("SeaSketch logo links to root", () => {
     cy.get("[id=seasketch-logo]").click();
-    //cy.url().should('eq', Cypress.config().baseUrl + '/');
+    cy.url().should('eq', Cypress.config().baseUrl + '/');
   });
   it("Links to about page", () => {
     cy.get("[id=nav-about]")
   });
   it("Links to project listings", () => {
-    cy.get("[id=nav-projects]")
+    cy.get("[id=nav-projects]").click(); 
+    cy.url().should('eq', Cypress.config().baseUrl + '/projects');
+    cy.visit("/");
   });
   it("Links to api page", () => {
     cy.get("[id=nav-api]")
@@ -44,15 +46,9 @@ describe("Homepage smoke test", () => {
     });
   });
   it("Has a link to learn more", () => {
-    cy.get("[id=learn-more]").click(); 
-    //cy.url().should('eq', Cypress.config().baseUrl + '/team');
-    //cy.visit("/");
+    cy.get("[id=learn-more]");
   });
   it("Has a link to create a new project", () => {
-    cy.get("[id=get-started]").click(); 
-    //cy.url().should('eq', Cypress.config().baseUrl + '/new-project');
-    //cy.visit("/")
+    cy.get("[id=get-started]")
   });
-  
-  //it("Links to the project listing", () => cy.get("[id=projects]"));
 });
