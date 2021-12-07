@@ -2,7 +2,6 @@ import redis, { RedisClient } from "redis";
 
 let client: RedisClient;
 if (process.env.NODE_ENV !== "test") {
-  console.log("connecting to redis...", process.env.REDIS_HOST || "127.0.0.1");
   client = redis.createClient({
     connect_timeout: 5000,
     host: process.env.REDIS_HOST || "127.0.0.1",
