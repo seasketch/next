@@ -13,7 +13,8 @@ module.exports = {
       _: "command",
       shadow: true,
       command:
-        'echo \'after\' && if [ "$IN_TESTS" != "1" ]; then npm run db:schema; fi',
+        'echo \'after\' && if [ "$IN_TESTS" != "1" ]; then npm run db:schema && node dist/src/createCleanGraphqlSchema.js; fi',
     },
   ],
+  afterReset: ["afterReset.sql"],
 };
