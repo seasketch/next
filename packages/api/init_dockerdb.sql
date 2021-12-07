@@ -4,7 +4,6 @@ CREATE USER graphile WITH PASSWORD 'password';
 CREATE USER graphile_migrate WITH PASSWORD 'password';
 
 CREATE DATABASE seasketch OWNER graphile_migrate;
-CREATE DATABASE graphql_schema_clean OWNER graphile_migrate;
 CREATE DATABASE seasketch_shadow OWNER graphile_migrate;
 
 alter user graphile_migrate with superuser createrole;

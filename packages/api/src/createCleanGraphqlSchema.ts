@@ -12,5 +12,6 @@ createPostGraphileSchema(DB_URL, "public", {
 }).then((schema) => {
   const sorted = lexicographicSortSchema(schema);
   fs.writeFileSync("generated-schema-clean.gql", printSchema(sorted));
+  console.log(`wrote generated-schema-clean.gql`);
   process.exit();
 });

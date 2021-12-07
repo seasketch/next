@@ -8,7 +8,14 @@ const client = new Client(process.env.TEST_DB + "template1");
   await client.query("CREATE USER graphile_migrate WITH PASSWORD 'password'");
   await client.query("CREATE DATABASE seasketch OWNER graphile_migrate;");
   await client.query(
+    "CREATE DATABASE seasketch_shadow OWNER graphile_migrate;"
+  );
+
+  await client.query(
     "GRANT ALL PRIVILEGES ON DATABASE seasketch TO graphile_migrate;"
+  );
+  await client.query(
+    "GRANT ALL PRIVILEGES ON DATABASE seasketch_shadow TO graphile_migrate;"
   );
   await client.end();
 })();

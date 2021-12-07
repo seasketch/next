@@ -68,7 +68,7 @@ jobs:
       postgres:
         image: underbluewaters/seasketch_db_base
         ports:
-          - "5432:5432"
+          - "54321:5432"
         env:
           POSTGRES_PASSWORD: password
       redis:
@@ -101,17 +101,25 @@ jobs:
       - name: Install dependencies
         run: |
           lerna bootstrap --scope=@seasketch/api
-      - name: Init docker db
+      - name: Initialize database
         working-directory: ./packages/api
         env:
-          TEST_DB: postgres://postgres:password@localhost:5432/
-          DATABASE_URL: postgres://postgres:password@localhost:5432/seasketch
+          TEST_DB: postgres://postgres:password@localhost:54321/
+          DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch
+          ADMIN_DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch
+          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+          GM_DBURL: postgres://postgres:password@localhost:54321/seasketch_shadow
         run: |
           node tests/init_dockerdb.js
-          npm run db:migrate
+          IN_TESTS=1 npm run db:migrate -- --shadow
+          node dist/src/createCleanGraphqlSchema.js
       - name: Check for drift
         working-directory: ./packages/api
-        run: npm run db:drift
+        run: |
+          ls -lh generated-schema*
+          npm run db:drift
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest

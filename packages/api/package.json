@@ -17,6 +17,7 @@
     "debug": "nodemon --inspect dist/src/server.js",
     "watch": "nodemon dist/src/server.js",
     "build": "tsc -b",
+    "install": "npm run build",
     "db:migrate": "graphile-migrate migrate",
     "db:watch": "graphile-migrate watch",
     "db:commit": "graphile-migrate commit",
