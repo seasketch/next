@@ -61,6 +61,70 @@ jobs:
           working-directory: ./packages/api
           check-name: API Test Output
           run-name: Test GraphQL API Server
+  database-drift:
+    name: Check for schema and generated code drift
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: underbluewaters/seasketch_db_base
+        ports:
+          - "54321:5432"
+        env:
+          POSTGRES_PASSWORD: password
+      redis:
+        image: "redis:alpine"
+        ports:
+          - "6379:6379"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-server-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install lerna
+        run: |
+          npm install
+      - name: Install dependencies
+        run: |
+          lerna bootstrap --scope=@seasketch/api --scope=client --scope=mapbox-gl-esri-feature-layers
+      - name: Initialize database
+        working-directory: ./packages/api
+        env:
+          TEST_DB: postgres://postgres:password@localhost:54321/
+          DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch
+          ADMIN_DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch
+          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+          GM_DBURL: postgres://postgres:password@localhost:54321/seasketch_shadow
+        run: |
+          node tests/init_dockerdb.js
+          IN_TESTS=1 npm run db:migrate -- --shadow
+          node dist/src/createCleanGraphqlSchema.js
+      - name: Check for graphql schema drift
+        working-directory: ./packages/api
+        run: |
+          ls -lh generated-schema*
+          npm run db:drift
+      - name: Check for drift in hooks
+        working-directory: ./packages/client
+        run: |
+          npx graphql-codegen --config codegen.yml
+          git diff --exit-code ./src/generated/graphql.ts
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest

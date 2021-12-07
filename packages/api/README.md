@@ -166,3 +166,13 @@ Shortcut to start a psql shell using the dev database connection string.
 #### `npm run db:schema`
 
 Writes the current database schema to `schema.sql`.
+
+#### `npm run db:drift`
+
+Compares generated-schema.gql with generated-schema-clean.gql. -clean is build
+using the shadow database. If these two don't match it is an indicator of [drift
+in the developer's database](https://github.com/graphile/migrate#drift).
+
+#### `npm run db:logs`
+
+On a local development machine, this command will tail the logs of the db in the docker container.
