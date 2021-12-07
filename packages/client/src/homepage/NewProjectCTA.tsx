@@ -28,6 +28,7 @@ export default function NewProjectCTA() {
             <Link
               to="/team"
               className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base leading-6 font-medium rounded-md text-secondary-500 bg-white  focus:outline-none focus:shadow-outline transition duration-150 ease-in-out"
+              id="learn-more"
             >
               {t("Learn more")}
             </Link>

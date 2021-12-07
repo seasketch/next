@@ -17,11 +17,23 @@ describe("Homepage smoke test", () => {
     cy.get("[id=seasketch-logo]");
     devices.forEach((viewport) => {});
   });
-  it("Describes the project", () => {
-    cy.get("[id=homepage-heading]");
-    cy.get("[id=homepage-description]")
-  
+  it("SeaSketch logo links to root", () => {
+    cy.get("[id=seasketch-logo]").click();
+    //cy.url().should('eq', Cypress.config().baseUrl + '/');
   });
+  it("Links to about page", () => {
+    cy.get("[id=nav-about]")
+  });
+  it("Links to project listings", () => {
+    cy.get("[id=nav-projects]")
+  });
+  it("Links to api page", () => {
+    cy.get("[id=nav-api]")
+  });
+  it("Links to team page", () => {
+    cy.get("[id=nav-team]")
+  });
+  it("Describes the project", () => cy.contains("SeaSketch"));
   devices.forEach((device) => {
     it(`Shows an option to sign in - ${device}`, () => {
       cy.viewport(device);
@@ -31,6 +43,16 @@ describe("Homepage smoke test", () => {
       cy.get("[title='Sign In']").should("be.visible");
     });
   });
-  it("Has a link to create a new project", () => cy.get("[id=get-started]"));
-  it("Links to the project listing");
+  it("Has a link to learn more", () => {
+    cy.get("[id=learn-more]").click(); 
+    //cy.url().should('eq', Cypress.config().baseUrl + '/team');
+    //cy.visit("/");
+  });
+  it("Has a link to create a new project", () => {
+    cy.get("[id=get-started]").click(); 
+    //cy.url().should('eq', Cypress.config().baseUrl + '/new-project');
+    //cy.visit("/")
+  });
+  
+  //it("Links to the project listing", () => cy.get("[id=projects]"));
 });

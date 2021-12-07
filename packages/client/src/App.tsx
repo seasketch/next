@@ -75,17 +75,13 @@ function App() {
               </Route>
               <Route exact path="/">
                 <div className="p-4 pb-12 bg-white">
-                  <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10"
-                    id="homepage-heading"
-                  >
+                  <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
                     {t(
                       "SeaSketch Supports Collaborative Planning for our Oceans"
                     )}
                     
                   </h1>
-                  <p className="max-w-4xl mx-auto"
-                    id="homepage-description"
-                  >
+                  <p className="max-w-4xl mx-auto">
                     {t(`SeaSketch puts powerful tools into the hands of ocean planners,
               stakeholders and the public that were once limited to GIS
               professionals, enabling participatory marine spatial planning

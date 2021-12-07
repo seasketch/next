@@ -32,18 +32,22 @@ export default function Header(props: { projectMode?: boolean }) {
     {
       to: "/",
       label: t("About"),
+      id: "nav-about"
     },
     {
       to: "/projects",
       label: t("Projects"),
+      id: "nav-projects"
     },
     {
       to: "/api",
       label: t("Developer API"),
+      id: "nav-api"
     },
     {
       to: "/team",
       label: t("Team"),
+      id: "nav-team"
     },
   ];
   return (
@@ -92,6 +96,7 @@ export default function Header(props: { projectMode?: boolean }) {
                     hover:text-white hover:bg-gray-700 focus:outline-none 
                     focus:text-white focus:bg-gray-700
                     `}
+                      id={link.id}
                       activeClassName="bg-gray-900 text-white"
                       activeStyle={{ color: "white" }}
                     >
