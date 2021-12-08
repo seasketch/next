@@ -39,17 +39,30 @@ function Auth0ProviderWithRouter(props: any) {
 }
 
 function ApolloProviderWithToken(props: any) {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
   const httpLink = createUploadLink({
     uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!,
   });
-  const authMiddleware = setContext(async (_, { headers }) => {
-    const token = await getAccessTokenSilently({
+
+  const getToken = async () => {
+    let token: string;
+    const opts = {
       audience: process.env.REACT_APP_AUTH0_AUDIENCE,
       scope: process.env.REACT_APP_AUTH0_SCOPE,
-    });
-    // get the authentication token from local storage if it exists
-    // return the headers to the context so httpLink can read them
+    };
+    try {
+      token = await getAccessTokenSilently(opts);
+    } catch (e) {
+      if (e.error === "consent_required") {
+        token = await getAccessTokenWithPopup(opts);
+      } else {
+        throw e;
+      }
+    }
+    return token;
+  };
+  const authMiddleware = setContext(async (_, { headers }) => {
+    const token = await getToken();
     return {
       headers: {
         ...headers,
