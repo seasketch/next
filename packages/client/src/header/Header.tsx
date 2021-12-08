@@ -159,6 +159,7 @@ export default function Header() {
               key={link.to}
               exact={link.to === "/"}
               to={link.to}
+              id={`modal-` + link.id}
               className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold
                     `}
             >
@@ -178,6 +179,7 @@ export default function Header() {
             type="submit"
             className="block w-full text-left px-4 py-2 text-base md:text-sm leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900"
             role="menuitem"
+            id="modal-sign-in"
             onClick={() =>
               loginWithRedirect({
                 appState: {
@@ -188,6 +190,7 @@ export default function Header() {
             }
           >
             {t("Sign in")}
+            
           </button>
         )}
       </div> }
