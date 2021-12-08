@@ -11,16 +11,12 @@ import {
   ApolloClient,
   InMemoryCache,
   split,
-  ApolloLink,
   concat,
 } from "@apollo/client";
 import { createUploadLink } from "apollo-upload-client";
 import { setContext } from "@apollo/client/link/context";
 import { BrowserRouter as Router, useHistory } from "react-router-dom";
-import {
-  relayStylePagination,
-  getMainDefinition,
-} from "@apollo/client/utilities";
+import { getMainDefinition } from "@apollo/client/utilities";
 import { WebSocketLink } from "@apollo/client/link/ws";
 
 function Auth0ProviderWithRouter(props: any) {
@@ -35,30 +31,29 @@ function Auth0ProviderWithRouter(props: any) {
           history.replace("/");
         }
       }}
-      scope="openid profile email permissions"
+      scope={process.env.REACT_APP_AUTH0_SCOPE}
       cacheLocation="localstorage"
-    >
-      {props.children}
-    </Auth0Provider>
+      children={props.children}
+    />
   );
 }
 
 function ApolloProviderWithToken(props: any) {
-  const auth = useAuth0();
+  const { getAccessTokenSilently } = useAuth0();
   const httpLink = createUploadLink({
     uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!,
   });
   const authMiddleware = setContext(async (_, { headers }) => {
-    // @ts-ignore
-    const idClaims = await auth.getIdTokenClaims();
-
-    const token = idClaims?.__raw || null;
+    const token = await getAccessTokenSilently({
+      audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+      scope: process.env.REACT_APP_AUTH0_SCOPE,
+    });
     // get the authentication token from local storage if it exists
     // return the headers to the context so httpLink can read them
     return {
       headers: {
         ...headers,
-        // eslint-disable-next-line
+        // eslint-disable-next-line i18next/no-literal-string
         authorization: token ? `Bearer ${token}` : "",
         "x-ss-slug": window.location.pathname.split("/")[1],
       },
@@ -71,8 +66,10 @@ function ApolloProviderWithToken(props: any) {
       reconnect: true,
       // lazy: true,
       connectionParams: async () => {
-        const idClaims = await auth.getIdTokenClaims();
-        const token = idClaims?.__raw || null;
+        const token = await getAccessTokenSilently({
+          audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+          scope: process.env.REACT_APP_AUTH0_SCOPE,
+        });
         return {
           // eslint-disable-next-line i18next/no-literal-string
           Authorization: token ? `Bearer ${token}` : "",

@@ -2,7 +2,6 @@ import express from "express";
 import { postgraphile, makePluginHook } from "postgraphile";
 import compression from "compression";
 import path from "path";
-import authConfig from "./authConfig.json";
 import pool, { workerPool } from "./pool";
 import { getJWKS, rotateKeys } from "./auth/jwks";
 import authorizationMiddleware from "./middleware/authorizationMiddleware";
@@ -55,7 +54,8 @@ app.get("/auth_config.json", (req, res) => {
   res.contentType("json");
   res.send(
     JSON.stringify({
-      ...authConfig,
+      domain: process.env.AUTH0_DOMAIN,
+      clientId: process.env.AUTH0_CLIENT_ID,
       audience: process.env.JWT_AUD,
     })
   );

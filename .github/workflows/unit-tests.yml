@@ -206,6 +206,8 @@ jobs:
           SKIP_PREFLIGHT_CHECK: true
           REACT_APP_AUTH0_CLIENT_ID: abc123
           REACT_APP_AUTH0_DOMAIN: seasketch
+          REACT_APP_AUTH0_SCOPE: "openid profile email permissions"
+          REACT_APP_AUTH0_AUDIENCE: https://api.seasketch.org
           REACT_APP_MAPBOX_ACCESS_TOKEN: abc123
           REACT_APP_GRAPHQL_ENDPOINT: https://example.com/graphql
           REACT_APP_PUBLIC_URL: https://example.com
@@ -297,6 +299,8 @@ jobs:
           SKIP_PREFLIGHT_CHECK: true
           REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
           REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
+          REACT_APP_AUTH0_SCOPE: "openid profile email permissions"
+          REACT_APP_AUTH0_AUDIENCE: https://api.seasketch.org
           REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
           REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857
           REACT_APP_PUBLIC_URL: http://localhost:3000
