@@ -687,39 +687,6 @@ export type CreateDataSourcePayloadDataSourceEdgeArgs = {
   orderBy?: Maybe<Array<DataSourcesOrderBy>>;
 };
 
-/** All input for the create `DataSourcesBucket` mutation. */
-export type CreateDataSourcesBucketInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `DataSourcesBucket` to be created by this mutation. */
-  dataSourcesBucket: DataSourcesBucketInput;
-};
-
-/** The output of our create `DataSourcesBucket` mutation. */
-export type CreateDataSourcesBucketPayload = {
-  __typename?: 'CreateDataSourcesBucketPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `DataSourcesBucket` that was created by this mutation. */
-  dataSourcesBucket?: Maybe<DataSourcesBucket>;
-  /** An edge for our `DataSourcesBucket`. May be used by Relay 1. */
-  dataSourcesBucketEdge?: Maybe<DataSourcesBucketsEdge>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
-
-/** The output of our create `DataSourcesBucket` mutation. */
-export type CreateDataSourcesBucketPayloadDataSourcesBucketEdgeArgs = {
-  orderBy?: Maybe<Array<DataSourcesBucketsOrderBy>>;
-};
-
 /** All input for the create `FormElement` mutation. */
 export type CreateFormElementInput = {
   /**
@@ -1243,18 +1210,6 @@ export type CreateSketchPayload = {
   user?: Maybe<User>;
 };
 
-/** All input for the `createSurvey` mutation. */
-export type CreateSurveyInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  templateId?: Maybe<Scalars['Int']>;
-};
-
 /** All input for the create `SurveyInvitedGroup` mutation. */
 export type CreateSurveyInvitedGroupInput = {
   /**
@@ -1341,21 +1296,6 @@ export type CreateSurveyJumpRulePayload = {
 /** The output of our `createSurveyJumpRule` mutation. */
 export type CreateSurveyJumpRulePayloadFormLogicRuleEdgeArgs = {
   orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
-};
-
-/** The output of our `createSurvey` mutation. */
-export type CreateSurveyPayload = {
-  __typename?: 'CreateSurveyPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Project` that is related to this `Survey`. */
-  project?: Maybe<Project>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  survey?: Maybe<Survey>;
 };
 
 /** All input for the `createSurveyResponse` mutation. */
@@ -2114,18 +2054,6 @@ export type DataSourcesBucketProjectsConnectionArgs = {
 export type DataSourcesBucketCondition = {
   /** Checks for equality with the object’s `url` field. */
   url?: Maybe<Scalars['String']>;
-};
-
-/** An input for mutations affecting `DataSourcesBucket` */
-export type DataSourcesBucketInput = {
-  bucket?: Maybe<Scalars['String']>;
-  location: Scalars['GeoJSON'];
-  name: Scalars['String'];
-  /** Indicates the DataHostingStack for this region has been deleted */
-  offline?: Maybe<Scalars['Boolean']>;
-  region: Scalars['String'];
-  /** Base url for this point-of-presence. */
-  url: Scalars['String'];
 };
 
 /** A connection to a list of `DataSourcesBucket` values. */
@@ -2917,6 +2845,17 @@ export type DeleteSketchByNodeIdInput = {
   nodeId: Scalars['ID'];
 };
 
+/** All input for the `deleteSketchClassByFormElementId` mutation. */
+export type DeleteSketchClassByFormElementIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** If set, this sketch class is only for use in a survey indicated by the form_element. */
+  formElementId: Scalars['Int'];
+};
+
 /** All input for the `deleteSketchClassByNodeId` mutation. */
 export type DeleteSketchClassByNodeIdInput = {
   /**
@@ -3619,7 +3558,10 @@ export type FormElement = Node & {
   position: Scalars['Int'];
   /** Color used to style navigation controls */
   secondaryColor?: Maybe<Scalars['String']>;
+  /** Sketch Class to be used in conjuction with a form element that supports spatial feature input. */
   sketchClass?: Maybe<SketchClass>;
+  /** Reads a single `SketchClass` that is related to this `FormElement`. */
+  sketchClassFk?: Maybe<SketchClass>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -4967,8 +4909,6 @@ export type Mutation = {
   createDataLayer?: Maybe<CreateDataLayerPayload>;
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
-  /** Creates a single `DataSourcesBucket`. */
-  createDataSourcesBucket?: Maybe<CreateDataSourcesBucketPayload>;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
   /** Creates a single `FormLogicCondition`. */
@@ -5016,7 +4956,6 @@ export type Mutation = {
   createSketch?: Maybe<CreateSketchPayload>;
   /** Creates a single `SketchFolder`. */
   createSketchFolder?: Maybe<CreateSketchFolderPayload>;
-  createSurvey?: Maybe<CreateSurveyPayload>;
   /** Creates a single `SurveyInvitedGroup`. */
   createSurveyInvitedGroup?: Maybe<CreateSurveyInvitedGroupPayload>;
   createSurveyInvites?: Maybe<CreateSurveyInvitesPayload>;
@@ -5108,6 +5047,8 @@ export type Mutation = {
   deleteSketchByNodeId?: Maybe<DeleteSketchPayload>;
   /** Deletes a single `SketchClass` using a unique key. */
   deleteSketchClass?: Maybe<DeleteSketchClassPayload>;
+  /** Deletes a single `SketchClass` using a unique key. */
+  deleteSketchClassByFormElementId?: Maybe<DeleteSketchClassPayload>;
   /** Deletes a single `SketchClass` using its globally unique id. */
   deleteSketchClassByNodeId?: Maybe<DeleteSketchClassPayload>;
   /** Deletes a single `SketchFolder` using a unique key. */
@@ -5246,7 +5187,6 @@ export type Mutation = {
    * group memberships in the project. Available only to admins.
    */
   setUserGroups?: Maybe<SetUserGroupsPayload>;
-  subscriptionAuthorizationFunc?: Maybe<SubscriptionAuthorizationFuncPayload>;
   /**
    * Toggle admin access for the given project and user. User must have already
    * joined the project and shared their user profile.
@@ -5343,6 +5283,8 @@ export type Mutation = {
   updateSketchByNodeId?: Maybe<UpdateSketchPayload>;
   /** Updates a single `SketchClass` using a unique key and a patch. */
   updateSketchClass?: Maybe<UpdateSketchClassPayload>;
+  /** Updates a single `SketchClass` using a unique key and a patch. */
+  updateSketchClassByFormElementId?: Maybe<UpdateSketchClassPayload>;
   /** Updates a single `SketchClass` using its globally unique id and a patch. */
   updateSketchClassByNodeId?: Maybe<UpdateSketchClassPayload>;
   /** Updates a single `SketchFolder` using a unique key and a patch. */
@@ -5479,12 +5421,6 @@ export type MutationCreateDataSourceArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateDataSourcesBucketArgs = {
-  input: CreateDataSourcesBucketInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateFormElementArgs = {
   input: CreateFormElementInput;
 };
@@ -5577,12 +5513,6 @@ export type MutationCreateSketchArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSketchFolderArgs = {
   input: CreateSketchFolderInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateSurveyArgs = {
-  input: CreateSurveyInput;
 };
 
 
@@ -5845,6 +5775,12 @@ export type MutationDeleteSketchClassArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteSketchClassByFormElementIdArgs = {
+  input: DeleteSketchClassByFormElementIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchClassByNodeIdArgs = {
   input: DeleteSketchClassByNodeIdInput;
 };
@@ -6101,12 +6037,6 @@ export type MutationSetTopicStickyArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetUserGroupsArgs = {
   input: SetUserGroupsInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationSubscriptionAuthorizationFuncArgs = {
-  input: SubscriptionAuthorizationFuncInput;
 };
 
 
@@ -6389,6 +6319,12 @@ export type MutationUpdateSketchByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchClassArgs = {
   input: UpdateSketchClassInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateSketchClassByFormElementIdArgs = {
+  input: UpdateSketchClassByFormElementIdInput;
 };
 
 
@@ -7738,6 +7674,7 @@ export type Query = Node & {
   /** Reads a single `Sketch` using its globally unique `ID`. */
   sketchByNodeId?: Maybe<Sketch>;
   sketchClass?: Maybe<SketchClass>;
+  sketchClassByFormElementId?: Maybe<SketchClass>;
   /** Reads a single `SketchClass` using its globally unique `ID`. */
   sketchClassByNodeId?: Maybe<SketchClass>;
   sketchFolder?: Maybe<SketchFolder>;
@@ -7767,6 +7704,8 @@ export type Query = Node & {
   surveyResponse?: Maybe<SurveyResponse>;
   /** Reads a single `SurveyResponse` using its globally unique `ID`. */
   surveyResponseByNodeId?: Maybe<SurveyResponse>;
+  /** Reads and enables pagination through a set of `SurveyResponse`. */
+  surveyResponsesConnection?: Maybe<SurveyResponsesConnection>;
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
   tableOfContentsItemByDataLayerId?: Maybe<TableOfContentsItem>;
   /** Reads a single `TableOfContentsItem` using its globally unique `ID`. */
@@ -8940,6 +8879,22 @@ export type QuerySketchClassArgs = {
  * for each database table. These are unlikely to be needed often but may possibly
  * be utilized by sophisticated GraphQL clients in the future to update caches.
  */
+export type QuerySketchClassByFormElementIdArgs = {
+  formElementId: Scalars['Int'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
 export type QuerySketchClassByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
@@ -9186,6 +9141,28 @@ export type QuerySurveyResponseArgs = {
  */
 export type QuerySurveyResponseByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/**
+ * Most relevant root-level queries are listed first, which concern getting
+ * the currently logged-in user (`me`) and project (`currentProject`).
+ * There are also cross-project resources such as form templates and of
+ * course the project listing connection. Most queries when working from a project
+ * should be performed using fields on the `Project` type.
+ *
+ * Postgraphile also automatically generates a variety of accessor queries
+ * for each database table. These are unlikely to be needed often but may possibly
+ * be utilized by sophisticated GraphQL clients in the future to update caches.
+ */
+export type QuerySurveyResponsesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SurveyResponseCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
 
 
@@ -10191,29 +10168,6 @@ export type Subscription = {
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
-};
-
-/** All input for the `subscriptionAuthorizationFunc` mutation. */
-export type SubscriptionAuthorizationFuncInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  topic?: Maybe<Scalars['String']>;
-};
-
-/** The output of our `subscriptionAuthorizationFunc` mutation. */
-export type SubscriptionAuthorizationFuncPayload = {
-  __typename?: 'SubscriptionAuthorizationFuncPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  string?: Maybe<Scalars['String']>;
 };
 
 export type Survey = Node & {
@@ -11961,6 +11915,19 @@ export type UpdateSketchByNodeIdInput = {
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Sketch` being updated. */
   patch: SketchPatch;
+};
+
+/** All input for the `updateSketchClassByFormElementId` mutation. */
+export type UpdateSketchClassByFormElementIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** If set, this sketch class is only for use in a survey indicated by the form_element. */
+  formElementId: Scalars['Int'];
+  /** An object where the defined keys will be set on the `SketchClass` being updated. */
+  patch: SketchClassPatch;
 };
 
 /** All input for the `updateSketchClassByNodeId` mutation. */

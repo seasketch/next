@@ -7,5 +7,3 @@ CREATE DATABASE seasketch OWNER graphile_migrate;
 CREATE DATABASE seasketch_shadow OWNER graphile_migrate;
 
 alter user graphile_migrate with superuser createrole;
-
--- GRANT CONNECT ON seasketch TO graphile;

@@ -1,21 +1,8 @@
 import express from "express";
 import { postgraphile, makePluginHook } from "postgraphile";
-import PgSimplifyInflectorPlugin from "@graphile-contrib/pg-simplify-inflector";
 import compression from "compression";
 import path from "path";
-import authConfig from "./authConfig.json";
 import pool, { workerPool } from "./pool";
-import graphqlSchemaModifiers from "./graphqlSchemaModifiers";
-import reorderSchemaFields from "./plugins/reorderSchemaFieldsPlugin";
-import extraDocumentationPlugin from "./plugins/extraDocumentationPlugin";
-import ProjectInvitesPlugin from "./plugins/projectInvitesPlugin";
-import SurveyInvitesPlugin from "./plugins/surveyInvitesPlugin";
-import postgisPlugin from "@graphile/postgis";
-import CanonicalEmailPlugin from "./plugins/canonicalEmailPlugin";
-import ProjectInviteStateSubscriptionPlugin from "./plugins/ProjectInviteStateSubscriptionPlugin";
-import SanitizeInteractivityTemplatesPlugin from "./plugins/sanitizeInteractivityTemplatesPlugin";
-import DataSourcePlugin from "./plugins/dataSourcePlugin";
-import SpritesPlugin from "./plugins/spritesPlugin";
 import { getJWKS, rotateKeys } from "./auth/jwks";
 import authorizationMiddleware from "./middleware/authorizationMiddleware";
 import userAccountMiddlware from "./middleware/userAccountMiddleware";
@@ -23,22 +10,15 @@ import currentProjectMiddlware from "./middleware/currentProjectMiddleware";
 import surveyInviteMiddlware from "./middleware/surveyInviteMiddleware";
 import { IncomingRequest } from "./middleware/IncomingRequest";
 import verifyEmailMiddleware from "./middleware/verifyEmailMiddleware";
-// @ts-ignore
-import orderTopicsByDateAndStickyPlugin from "./plugins/orderTopicsByDateAndStickyPlugin";
 import { unsubscribeFromTopic } from "./activityNotifications/topicNotifications";
-// @ts-ignore
-import PostGraphileUploadFieldPlugin from "postgraphile-plugin-upload-field";
 import { graphqlUploadExpress } from "graphql-upload";
-import uploadFieldDefinitions from "./uploadFieldDefinitions";
 import { default as PgPubsub } from "@graphile/pg-pubsub";
 import bytes from "bytes";
 import { run } from "graphile-worker";
 import cors from "cors";
-import BuildPlugin from "./plugins/buildPlugin";
-import ExportIdPlugin from "./plugins/exportIdPlugin";
-import UnsplashPlugin from "./plugins/unsplashPlugin";
 import https from "https";
 import fs from "fs";
+import graphileOptions from "./graphileOptions";
 
 const app = express();
 
@@ -74,7 +54,8 @@ app.get("/auth_config.json", (req, res) => {
   res.contentType("json");
   res.send(
     JSON.stringify({
-      ...authConfig,
+      domain: process.env.AUTH0_DOMAIN,
+      clientId: process.env.AUTH0_CLIENT_ID,
       audience: process.env.JWT_AUD,
     })
   );
@@ -144,8 +125,6 @@ app.use(function (req, res, next) {
   next();
 });
 
-const pluginHook = makePluginHook([PgPubsub]);
-
 run({
   pgPool: workerPool,
   concurrency: parseInt(process.env.GRAPHILE_WORKER_CONCURRENCY || "0"),
@@ -159,16 +138,7 @@ run({
 
 app.use(
   postgraphile(pool, "public", {
-    ownerConnectionString: process.env.ADMIN_DATABASE_URL,
-    watchPg: true,
-    graphiql: true,
-    enhanceGraphiql: true,
-    allowExplain: (req) => process.env.NODE_ENV !== "production",
-    ignoreRBAC: false,
-    ignoreIndexes: false,
-    // enableCors: true,
-    dynamicJson: true,
-    setofFunctionsContainNulls: false,
+    ...graphileOptions(),
     pgSettings: async (req: IncomingRequest) => {
       // These session vars will be added to each postgres transaction
       return {
@@ -186,38 +156,12 @@ app.use(
         "session.survey_invite_id": req.surveyInvite?.inviteId,
       };
     },
-    pluginHook,
-    appendPlugins: [
-      PgSimplifyInflectorPlugin,
-      PostGraphileUploadFieldPlugin,
-      postgisPlugin,
-      ProjectInvitesPlugin,
-      SurveyInvitesPlugin,
-      CanonicalEmailPlugin,
-      DataSourcePlugin,
-      ExportIdPlugin,
-      SanitizeInteractivityTemplatesPlugin,
-      orderTopicsByDateAndStickyPlugin,
-      ProjectInviteStateSubscriptionPlugin,
-      BuildPlugin,
-      reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
-      extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
-      SpritesPlugin,
-      UnsplashPlugin,
-    ],
-    graphileBuildOptions: {
-      pgOmitListSuffix: true,
-      uploadFieldDefinitions,
-    },
-    subscriptions: true,
     websocketMiddlewares: [
       authorizationMiddleware,
       currentProjectMiddlware,
       userAccountMiddlware,
       verifyEmailMiddleware,
     ],
-    exportGqlSchemaPath: "./generated-schema.gql",
-    sortExport: true,
     async additionalGraphQLContextFromRequest(req, res) {
       // Return here things that your resolvers need
       return {

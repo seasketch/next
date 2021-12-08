@@ -1205,47 +1205,6 @@ If set, this sketch class is only for use in a survey indicated by the form_elem
 
 
 --
--- Name: _create_sketch_class(text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public._create_sketch_class(name text, project_id integer, template_id integer DEFAULT NULL::integer) RETURNS public.sketch_classes
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    declare
-      sc_id int;
-      templateid int;
-      sketch_class sketch_classes;
-      geometrytype sketch_geometry_type;
-      multi boolean;
-      project_url text;
-      client_name text;
-      client_url text;
-      gl_style jsonb;
-    begin
-      if template_id is null then
-        select id, sketch_class_id into templateid, sc_id from forms where template_name = 'Basic Template' and template_type = 'SKETCHES';
-        if templateid is null then
-          raise exception 'Form template with name "Basic Template" has not been created!';
-        end if;
-      else
-        templateid = template_id;
-      end if;
-
-      select geometry_type, is_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style into geometrytype, multi, project_url, client_name, client_url, gl_style from sketch_classes where id = sc_id;
-
-      if session_is_admin(project_id) then
-        insert into sketch_classes (name, project_id, geometry_type, is_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style) values ('generated_from_template', project_id, geometrytype, multi, project_url, client_name, client_url, gl_style) returning id into sc_id;
-        perform initialize_sketch_class_form_from_template(sc_id, templateid);
-        select * into sketch_class from sketch_classes where id = sc_id;
-        return sketch_class;
-      else
-        raise exception 'Permission denied';
-      end if;
-    end;
-  $$;
-
-
---
 -- Name: _create_sketch_class(text, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1284,6 +1243,13 @@ CREATE FUNCTION public._create_sketch_class(name text, project_id integer, form_
       end if;
     end;
   $$;
+
+
+--
+-- Name: FUNCTION _create_sketch_class(name text, project_id integer, form_element_id integer, template_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._create_sketch_class(name text, project_id integer, form_element_id integer, template_id integer) IS '@omit';
 
 
 --
@@ -1391,6 +1357,13 @@ CREATE FUNCTION public._create_survey(name text, project_id integer, template_id
 
 
 --
+-- Name: FUNCTION _create_survey(name text, project_id integer, template_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._create_survey(name text, project_id integer, template_id integer) IS '@omit';
+
+
+--
 -- Name: _delete_table_of_contents_item(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1415,6 +1388,13 @@ CREATE FUNCTION public._delete_table_of_contents_item(tid integer) RETURNS void
     return;
   end;
 $$;
+
+
+--
+-- Name: FUNCTION _delete_table_of_contents_item(tid integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._delete_table_of_contents_item(tid integer) IS '@omit';
 
 
 --
@@ -1800,35 +1780,6 @@ CREATE FUNCTION public.after_insert_or_update_or_delete_project_invite_email() R
     else
       return NEW;
     end if;
-  end;
-  $$;
-
-
---
--- Name: after_insert_or_update_project_invite_email(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.after_insert_or_update_project_invite_email() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-  declare
-    pid int;
-    iid int;
-  begin
-    if NEW.project_invite_id is null then
-      return NEW;
-    else if OLD is null or OLD.status != NEW.status then
-      select id, project_id into iid, pid from project_invites where id = NEW.project_invite_id;
-      if pid is not null and iid is not null then
-        perform pg_notify(concat('graphql:project:', pid, ':project_invite_status_change'), json_build_object('inviteId', iid)::text);
-        return NEW;
-      else
-        raise exception 'Could not find project_invite';
-      end if;
-    else
-      return NEW;
-    end if;
-  end if;
   end;
   $$;
 
@@ -2657,15 +2608,15 @@ CREATE TABLE public.form_elements (
     type_id text NOT NULL,
     body jsonb NOT NULL,
     background_color text,
-    background_image text,
-    background_palette text[],
     secondary_color text,
+    text_variant public.form_element_text_variant DEFAULT 'DYNAMIC'::public.form_element_text_variant NOT NULL,
+    background_image text,
+    layout public.form_element_layout,
+    background_palette text[],
     unsplash_author_name text,
     unsplash_author_url text,
     background_width integer,
     background_height integer,
-    text_variant public.form_element_text_variant DEFAULT 'DYNAMIC'::public.form_element_text_variant NOT NULL,
-    layout public.form_element_layout,
     jump_to_id integer,
     CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
     CONSTRAINT form_fields_position_check CHECK (("position" > 0))
@@ -2748,6 +2699,24 @@ Optional background color to transition the form to when this element is display
 
 
 --
+-- Name: COLUMN form_elements.secondary_color; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.secondary_color IS '
+Color used to style navigation controls
+';
+
+
+--
+-- Name: COLUMN form_elements.text_variant; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.text_variant IS '
+Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override.
+';
+
+
+--
 -- Name: COLUMN form_elements.background_image; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -2758,11 +2727,11 @@ Optional background image to display when this form_element appears.
 
 
 --
--- Name: COLUMN form_elements.secondary_color; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN form_elements.layout; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.form_elements.secondary_color IS '
-Color used to style navigation controls
+COMMENT ON COLUMN public.form_elements.layout IS '
+Layout of image in relation to form_element content.
 ';
 
 
@@ -2778,24 +2747,6 @@ COMMENT ON COLUMN public.form_elements.unsplash_author_name IS '@omit create,upd
 --
 
 COMMENT ON COLUMN public.form_elements.unsplash_author_url IS '@omit create,update';
-
-
---
--- Name: COLUMN form_elements.text_variant; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.text_variant IS '
-Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override.
-';
-
-
---
--- Name: COLUMN form_elements.layout; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.layout IS '
-Layout of image in relation to form_element content.
-';
 
 
 --
@@ -3348,6 +3299,13 @@ CREATE TABLE public.posts (
 
 
 --
+-- Name: TABLE posts; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.posts IS '@omit create,update';
+
+
+--
 -- Name: COLUMN posts.message_contents; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -3464,11 +3422,11 @@ CREATE TABLE public.projects (
     deleted_at timestamp with time zone,
     region public.geometry(Polygon) DEFAULT public.st_geomfromgeojson('{"coordinates":[[[-157.05324470015358,69.74201326987497],[135.18377661193057,69.74201326987497],[135.18377661193057,-43.27449014737426],[-157.05324470015358,-43.27449014737426],[-157.05324470015358,69.74201326987497]]],"type":"Polygon"}'::text) NOT NULL,
     data_sources_bucket_id text DEFAULT public.get_default_data_sources_bucket(),
-    invite_email_subject text DEFAULT 'You have been invited to a SeaSketch project'::text NOT NULL,
     invite_email_template_text text DEFAULT 'Hello {{name}},
 You have been invited to join the {{projectName}} SeaSketch project. To sign up, just follow this link and you will be able to create an account and start exploring the application.
 
 {{inviteLink}}'::text NOT NULL,
+    invite_email_subject text DEFAULT 'You have been invited to a SeaSketch project'::text NOT NULL,
     support_email text NOT NULL,
     created_at timestamp without time zone DEFAULT now(),
     creator_id integer NOT NULL,
@@ -3482,7 +3440,7 @@ You have been invited to join the {{projectName}} SeaSketch project. To sign up,
 --
 
 COMMENT ON TABLE public.projects IS '
-@omit delete
+@omit create,delete
 SeaSketch Project type. This root type contains most of the fields and queries
 needed to drive the application.
 ';
@@ -3810,17 +3768,6 @@ COMMENT ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type p
 
 
 --
--- Name: create_survey(text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_survey(name text, project_id integer, template_id integer) RETURNS public.surveys
-    LANGUAGE sql SECURITY DEFINER
-    AS $$
-    select _create_survey(name, project_id, template_id);
-$$;
-
-
---
 -- Name: survey_invites; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3972,9 +3919,7 @@ CREATE TABLE public.survey_responses (
 -- Name: TABLE survey_responses; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.survey_responses IS '
-@omit all
-';
+COMMENT ON TABLE public.survey_responses IS '@omit create';
 
 
 --
@@ -4120,6 +4065,13 @@ CREATE TABLE public.topics (
     locked boolean DEFAULT false NOT NULL,
     CONSTRAINT titlechk CHECK ((char_length(title) <= 80))
 );
+
+
+--
+-- Name: TABLE topics; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.topics IS '@omit create';
 
 
 --
@@ -4609,6 +4561,15 @@ $$;
 
 
 --
+-- Name: FUNCTION form_elements_sketch_class(form_element public.form_elements); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.form_elements_sketch_class(form_element public.form_elements) IS '
+Sketch Class to be used in conjuction with a form element that supports spatial feature input.
+';
+
+
+--
 -- Name: form_element_types; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4621,10 +4582,10 @@ CREATE TABLE public.form_element_types (
     is_single_use_only boolean DEFAULT false NOT NULL,
     is_required_for_surveys boolean DEFAULT false NOT NULL,
     supported_operators public.field_rule_operator[] DEFAULT '{}'::public.field_rule_operator[] NOT NULL,
-    is_spatial boolean DEFAULT false NOT NULL,
-    is_required_for_sketch_classes boolean DEFAULT false NOT NULL,
     allowed_layouts public.form_element_layout[],
-    sketch_class_template_id integer
+    is_spatial boolean DEFAULT false NOT NULL,
+    sketch_class_template_id integer,
+    is_required_for_sketch_classes boolean DEFAULT false NOT NULL
 );
 
 
@@ -5016,28 +4977,6 @@ COMMENT ON FUNCTION public.initialize_sketch_class_form_from_template(sketch_cla
 
 
 --
--- Name: initialize_survey(text, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.initialize_survey(name text, project_id integer) RETURNS public.surveys
-    LANGUAGE sql SECURITY DEFINER
-    AS $$
-    select _create_survey(name, project_id);
-$$;
-
-
---
--- Name: initialize_survey(text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.initialize_survey(name text, project_id integer, template_id integer) RETURNS public.surveys
-    LANGUAGE sql SECURITY DEFINER
-    AS $$
-    select _create_survey(name, project_id, template_id);
-$$;
-
-
---
 -- Name: initialize_survey_form_from_template(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5132,28 +5071,6 @@ $$;
 --
 
 COMMENT ON FUNCTION public.is_admin(_project_id integer, _user_id integer) IS '@omit';
-
-
---
--- Name: is_admin(integer, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.is_admin("userId" integer, "projectSlug" text) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select coalesce(is_admin, false) from project_participants where user_id = "userId" and project_id = (select id from projects where slug = "projectSlug" and session_is_admin(id))
-  $$;
-
-
---
--- Name: is_admin(public.users, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.is_admin(u public.users, "projectSlug" text) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select coalesce(is_admin, false) from project_participants where project_id = (select id from projects where slug = "projectSlug" and session_is_admin(id))
-  $$;
 
 
 --
@@ -5419,9 +5336,9 @@ CREATE TABLE public.sketches (
     geom public.geometry(Geometry,4326),
     folder_id integer,
     properties jsonb DEFAULT '{}'::jsonb NOT NULL,
-    form_element_id integer,
     bbox real[] GENERATED ALWAYS AS (public.create_bbox(COALESCE(geom, user_geom))) STORED,
     num_vertices integer GENERATED ALWAYS AS (public.st_npoints(COALESCE(geom, user_geom))) STORED,
+    form_element_id integer,
     response_id integer,
     CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
 );
@@ -5888,53 +5805,6 @@ CREATE FUNCTION public.project_invites_status(invite public.project_invites) RET
         end if;
       end if;
     end;      
-  $$;
-
-
---
--- Name: project_participants; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.project_participants (
-    user_id integer NOT NULL,
-    project_id integer NOT NULL,
-    is_admin boolean DEFAULT false,
-    approved boolean DEFAULT false NOT NULL,
-    requested_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-    share_profile boolean DEFAULT false NOT NULL,
-    is_banned_from_forums boolean DEFAULT false NOT NULL
-);
-
-
---
--- Name: TABLE project_participants; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.project_participants IS '@omit';
-
-
---
--- Name: COLUMN project_participants.approved; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.project_participants.approved IS 'Approval status for projects with access set to invite_only';
-
-
---
--- Name: COLUMN project_participants.share_profile; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.project_participants.share_profile IS 'Whether user profile can be shared with project administrators, and other users if participating in the forum.';
-
-
---
--- Name: project_participants_canonical_email(public.project_participants); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.project_participants_canonical_email(participant public.project_participants) RETURNS text
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select canonical_email from users where id = participant.user_id;
   $$;
 
 
@@ -6921,7 +6791,7 @@ CREATE FUNCTION public.projects_participants(p public.projects, order_by public.
         user_profiles.email
       END
     END DESC
-  $$;
+$$;
 
 
 --
@@ -8588,26 +8458,6 @@ $$;
 
 
 --
--- Name: subscription_authorization_func(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.subscription_authorization_func(topic text) RETURNS text
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    declare
-      pid int;
-    begin
-      RAISE EXCEPTION 'Subscription denied';
-      IF session_is_admin(200) THEN
-        RETURN 'go-nuts';
-      ELSE
-        RAISE EXCEPTION 'Subscription denied';
-      END IF;
-    end;
-  $$;
-
-
---
 -- Name: survey_group_ids(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9837,15 +9687,6 @@ ALTER TABLE public.forums ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 
 --
--- Name: has_complaint; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.has_complaint (
-    "exists" boolean
-);
-
-
---
 -- Name: interactivity_settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -10108,6 +9949,42 @@ ALTER TABLE public.project_invites ALTER COLUMN id ADD GENERATED BY DEFAULT AS I
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- Name: project_participants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_participants (
+    user_id integer NOT NULL,
+    project_id integer NOT NULL,
+    is_admin boolean DEFAULT false,
+    approved boolean DEFAULT false NOT NULL,
+    requested_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+    share_profile boolean DEFAULT false NOT NULL,
+    is_banned_from_forums boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: TABLE project_participants; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_participants IS '@omit';
+
+
+--
+-- Name: COLUMN project_participants.approved; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project_participants.approved IS 'Approval status for projects with access set to invite_only';
+
+
+--
+-- Name: COLUMN project_participants.share_profile; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.project_participants.share_profile IS 'Whether user profile can be shared with project administrators, and other users if participating in the forum.';
 
 
 --
@@ -10798,6 +10675,14 @@ ALTER TABLE ONLY public.projects
 
 
 --
+-- Name: sketch_classes sketch_classes_form_element_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_classes
+    ADD CONSTRAINT sketch_classes_form_element_id_key UNIQUE (form_element_id);
+
+
+--
 -- Name: sketch_classes sketch_classes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11303,1154 +11188,6 @@ CREATE INDEX sketch_classes_form_element_id_idx ON public.sketch_classes USING b
 
 
 --
--- Name: sketch_classes_form_element_id_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx1 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx10; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx10 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx100; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx100 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx101; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx101 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx102; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx102 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx103; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx103 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx104; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx104 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx105; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx105 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx106; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx106 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx107; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx107 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx108; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx108 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx109; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx109 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx11; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx11 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx110; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx110 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx111; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx111 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx112; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx112 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx113; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx113 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx114; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx114 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx115; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx115 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx116; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx116 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx117; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx117 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx118; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx118 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx119; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx119 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx12; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx12 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx120; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx120 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx121; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx121 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx122; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx122 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx123; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx123 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx124; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx124 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx125; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx125 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx126; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx126 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx127; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx127 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx128; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx128 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx129; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx129 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx13; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx13 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx130; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx130 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx131; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx131 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx132; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx132 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx133; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx133 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx134; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx134 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx135; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx135 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx136; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx136 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx137; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx137 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx138; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx138 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx139; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx139 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx14; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx14 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx140; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx140 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx141; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx141 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx142; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx142 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx143; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx143 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx144; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx144 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx145; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx145 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx146; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx146 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx147; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx147 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx148; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx148 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx149; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx149 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx15; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx15 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx150; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx150 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx151; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx151 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx152; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx152 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx153; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx153 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx154; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx154 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx155; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx155 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx156; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx156 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx157; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx157 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx158; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx158 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx159; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx159 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx16; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx16 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx160; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx160 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx161; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx161 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx162; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx162 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx163; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx163 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx164; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx164 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx17; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx17 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx18; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx18 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx19; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx19 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx2 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx20; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx20 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx21; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx21 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx22; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx22 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx23; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx23 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx24; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx24 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx25; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx25 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx26; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx26 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx27; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx27 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx28; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx28 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx29; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx29 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx3; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx3 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx30; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx30 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx31; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx31 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx32; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx32 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx33; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx33 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx34; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx34 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx35; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx35 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx36; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx36 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx37; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx37 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx38; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx38 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx39; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx39 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx4; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx4 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx40; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx40 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx41; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx41 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx42; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx42 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx43; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx43 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx44; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx44 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx45; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx45 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx46; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx46 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx47; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx47 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx48; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx48 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx49; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx49 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx5; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx5 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx50; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx50 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx51; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx51 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx52; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx52 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx53; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx53 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx54; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx54 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx55; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx55 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx56; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx56 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx57; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx57 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx58; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx58 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx59; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx59 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx6; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx6 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx60; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx60 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx61; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx61 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx62; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx62 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx63; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx63 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx64; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx64 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx65; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx65 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx66; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx66 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx67; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx67 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx68; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx68 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx69; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx69 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx7; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx7 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx70; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx70 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx71; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx71 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx72; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx72 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx73; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx73 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx74; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx74 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx75; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx75 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx76; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx76 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx77; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx77 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx78; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx78 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx79; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx79 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx8; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx8 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx80; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx80 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx81; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx81 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx82; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx82 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx83; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx83 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx84; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx84 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx85; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx85 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx86; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx86 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx87; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx87 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx88; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx88 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx89; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx89 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx9; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx9 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx90; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx90 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx91; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx91 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx92; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx92 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx93; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx93 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx94; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx94 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx95; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx95 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx96; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx96 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx97; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx97 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx98; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx98 ON public.sketch_classes USING btree (form_element_id);
-
-
---
--- Name: sketch_classes_form_element_id_idx99; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX sketch_classes_form_element_id_idx99 ON public.sketch_classes USING btree (form_element_id);
-
-
---
 -- Name: sketch_classes_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12686,13 +11423,6 @@ CREATE TRIGGER _001_unnest_survey_response_sketches_trigger BEFORE INSERT OR UPD
 --
 
 CREATE TRIGGER _500_gql_insert_or_update_or_delete_project_invite_email AFTER INSERT OR DELETE OR UPDATE ON public.invite_emails FOR EACH ROW EXECUTE FUNCTION public.after_insert_or_update_or_delete_project_invite_email();
-
-
---
--- Name: invite_emails _500_gql_insert_or_update_project_invite_email; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER _500_gql_insert_or_update_project_invite_email AFTER UPDATE ON public.invite_emails FOR EACH ROW EXECUTE FUNCTION public.after_insert_or_update_project_invite_email();
 
 
 --
@@ -13153,6 +11883,14 @@ ALTER TABLE ONLY public.form_elements
 --
 
 COMMENT ON CONSTRAINT form_fields_form_id_fkey ON public.form_elements IS '@omit';
+
+
+--
+-- Name: form_logic_conditions form_logic_conditions_rule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_logic_conditions
+    ADD CONSTRAINT form_logic_conditions_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES public.form_logic_rules(id);
 
 
 --
@@ -14833,6 +13571,90 @@ REVOKE ALL ON FUNCTION public.gen_random_uuid() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION add_job(identifier text, payload json, queue_name text, run_at timestamp with time zone, max_attempts integer, job_key text, priority integer, flags text[], job_key_mode text); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.add_job(identifier text, payload json, queue_name text, run_at timestamp with time zone, max_attempts integer, job_key text, priority integer, flags text[], job_key_mode text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION complete_job(worker_id text, job_id bigint); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.complete_job(worker_id text, job_id bigint) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION complete_jobs(job_ids bigint[]); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.complete_jobs(job_ids bigint[]) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION fail_job(worker_id text, job_id bigint, error_message text); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.fail_job(worker_id text, job_id bigint, error_message text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION get_job(worker_id text, task_identifiers text[], job_expiry interval, forbidden_flags text[]); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[], job_expiry interval, forbidden_flags text[]) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION jobs__decrease_job_queue_count(); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.jobs__decrease_job_queue_count() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION jobs__increase_job_queue_count(); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.jobs__increase_job_queue_count() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION permanently_fail_jobs(job_ids bigint[], error_message text); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.permanently_fail_jobs(job_ids bigint[], error_message text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION remove_job(job_key text); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.remove_job(job_key text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION reschedule_jobs(job_ids bigint[], run_at timestamp with time zone, priority integer, attempts integer, max_attempts integer); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timestamp with time zone, priority integer, attempts integer, max_attempts integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION tg__update_timestamp(); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.tg__update_timestamp() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION tg_jobs__notify_new_jobs(); Type: ACL; Schema: graphile_worker; Owner: -
+--
+
+REVOKE ALL ON FUNCTION graphile_worker.tg_jobs__notify_new_jobs() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION gen_random_uuid(); Type: ACL; Schema: pg_catalog; Owner: -
 --
 
@@ -14915,13 +13737,6 @@ GRANT UPDATE(geoprocessing_client_name) ON TABLE public.sketch_classes TO seaske
 --
 
 GRANT UPDATE(mapbox_gl_style) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: FUNCTION _create_sketch_class(name text, project_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public._create_sketch_class(name text, project_id integer, template_id integer) FROM PUBLIC;
 
 
 --
@@ -15563,13 +14378,6 @@ REVOKE ALL ON FUNCTION public.after_insert_or_update_or_delete_project_invite_em
 
 
 --
--- Name: FUNCTION after_insert_or_update_project_invite_email(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.after_insert_or_update_project_invite_email() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION after_post_insert(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16050,6 +14858,20 @@ GRANT UPDATE(background_color) ON TABLE public.form_elements TO seasketch_user;
 
 
 --
+-- Name: COLUMN form_elements.secondary_color; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(secondary_color) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.text_variant; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(text_variant) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
 -- Name: COLUMN form_elements.background_image; Type: ACL; Schema: public; Owner: -
 --
 
@@ -16057,17 +14879,17 @@ GRANT UPDATE(background_image) ON TABLE public.form_elements TO seasketch_user;
 
 
 --
+-- Name: COLUMN form_elements.layout; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(layout) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
 -- Name: COLUMN form_elements.background_palette; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(background_palette) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.secondary_color; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(secondary_color) ON TABLE public.form_elements TO seasketch_user;
 
 
 --
@@ -16096,20 +14918,6 @@ GRANT UPDATE(background_width) ON TABLE public.form_elements TO seasketch_user;
 --
 
 GRANT UPDATE(background_height) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.text_variant; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(text_variant) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.layout; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(layout) ON TABLE public.form_elements TO seasketch_user;
 
 
 --
@@ -16360,17 +15168,17 @@ GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
 
 
 --
--- Name: COLUMN projects.invite_email_subject; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.invite_email_template_text; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT SELECT(invite_email_template_text),UPDATE(invite_email_template_text) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.invite_email_subject; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -16444,14 +15252,6 @@ REVOKE ALL ON FUNCTION public.create_sketch_class_acl() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) TO seasketch_user;
-
-
---
--- Name: FUNCTION create_survey(name text, project_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.create_survey(name text, project_id integer, template_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_survey(name text, project_id integer, template_id integer) TO seasketch_user;
 
 
 --
@@ -17767,22 +16567,6 @@ GRANT ALL ON FUNCTION public.initialize_sketch_class_form_from_template(sketch_c
 
 
 --
--- Name: FUNCTION initialize_survey(name text, project_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.initialize_survey(name text, project_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.initialize_survey(name text, project_id integer) TO seasketch_user;
-
-
---
--- Name: FUNCTION initialize_survey(name text, project_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.initialize_survey(name text, project_id integer, template_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.initialize_survey(name text, project_id integer, template_id integer) TO seasketch_user;
-
-
---
 -- Name: FUNCTION initialize_survey_form_from_template(survey_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17794,22 +16578,6 @@ REVOKE ALL ON FUNCTION public.initialize_survey_form_from_template(survey_id int
 --
 
 REVOKE ALL ON FUNCTION public.is_admin(_project_id integer, _user_id integer) FROM PUBLIC;
-
-
---
--- Name: FUNCTION is_admin("userId" integer, "projectSlug" text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.is_admin("userId" integer, "projectSlug" text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.is_admin("userId" integer, "projectSlug" text) TO seasketch_user;
-
-
---
--- Name: FUNCTION is_admin(u public.users, "projectSlug" text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.is_admin(u public.users, "projectSlug" text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.is_admin(u public.users, "projectSlug" text) TO seasketch_user;
 
 
 --
@@ -18989,20 +17757,6 @@ GRANT ALL ON FUNCTION public.project_invites_groups(invite public.project_invite
 
 REVOKE ALL ON FUNCTION public.project_invites_status(invite public.project_invites) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.project_invites_status(invite public.project_invites) TO seasketch_user;
-
-
---
--- Name: TABLE project_participants; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
-
-
---
--- Name: FUNCTION project_participants_canonical_email(participant public.project_participants); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.project_participants_canonical_email(participant public.project_participants) FROM PUBLIC;
 
 
 --
@@ -22777,14 +21531,6 @@ REVOKE ALL ON FUNCTION public.subpath(public.ltree, integer, integer) FROM PUBLI
 
 
 --
--- Name: FUNCTION subscription_authorization_func(topic text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.subscription_authorization_func(topic text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.subscription_authorization_func(topic text) TO anon;
-
-
---
 -- Name: FUNCTION survey_group_ids(id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -23121,7 +21867,6 @@ GRANT ALL ON FUNCTION public.users_groups(u public.users) TO seasketch_user;
 --
 
 REVOKE ALL ON FUNCTION public.users_is_admin(u public.users) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.users_is_admin(u public.users) TO seasketch_user;
 GRANT ALL ON FUNCTION public.users_is_admin(u public.users) TO anon;
 
 
@@ -23393,7 +22138,6 @@ GRANT SELECT ON TABLE public.data_source_types TO anon;
 --
 
 GRANT SELECT ON TABLE public.data_sources_buckets TO anon;
-GRANT INSERT ON TABLE public.data_sources_buckets TO seasketch_superuser;
 
 
 --
@@ -23445,6 +22189,13 @@ GRANT SELECT ON TABLE public.project_group_members TO seasketch_user;
 --
 
 GRANT ALL ON TABLE public.project_invite_groups TO seasketch_user;
+
+
+--
+-- Name: TABLE project_participants; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
 
 
 --

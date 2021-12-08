@@ -792,41 +792,6 @@ type CreateDataSourcePayload {
   query: Query
 }
 
-"""All input for the create `DataSourcesBucket` mutation."""
-input CreateDataSourcesBucketInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """The `DataSourcesBucket` to be created by this mutation."""
-  dataSourcesBucket: DataSourcesBucketInput!
-}
-
-"""The output of our create `DataSourcesBucket` mutation."""
-type CreateDataSourcesBucketPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """The `DataSourcesBucket` that was created by this mutation."""
-  dataSourcesBucket: DataSourcesBucket
-
-  """An edge for our `DataSourcesBucket`. May be used by Relay 1."""
-  dataSourcesBucketEdge(
-    """The method to use when ordering `DataSourcesBucket`."""
-    orderBy: [DataSourcesBucketsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): DataSourcesBucketsEdge
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
 """All input for the create `FormElement` mutation."""
 input CreateFormElementInput {
   """
@@ -1407,18 +1372,6 @@ type CreateSketchPayload {
   user: User
 }
 
-"""All input for the `createSurvey` mutation."""
-input CreateSurveyInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  name: String
-  projectId: Int
-  templateId: Int
-}
-
 """All input for the create `SurveyInvitedGroup` mutation."""
 input CreateSurveyInvitedGroupInput {
   """
@@ -1513,24 +1466,6 @@ type CreateSurveyJumpRulePayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
-}
-
-"""The output of our `createSurvey` mutation."""
-type CreateSurveyPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """Reads a single `Project` that is related to this `Survey`."""
-  project: Project
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  survey: Survey
 }
 
 """All input for the `createSurveyResponse` mutation."""
@@ -2509,20 +2444,6 @@ input DataSourcesBucketCondition {
   url: String
 }
 
-"""An input for mutations affecting `DataSourcesBucket`"""
-input DataSourcesBucketInput {
-  bucket: String
-  location: GeoJSON!
-  name: String!
-
-  """Indicates the DataHostingStack for this region has been deleted"""
-  offline: Boolean
-  region: String!
-
-  """Base url for this point-of-presence."""
-  url: String!
-}
-
 """A connection to a list of `DataSourcesBucket` values."""
 type DataSourcesBucketsConnection {
   """
@@ -3454,6 +3375,21 @@ input DeleteSketchByNodeIdInput {
   nodeId: ID!
 }
 
+"""All input for the `deleteSketchClassByFormElementId` mutation."""
+input DeleteSketchClassByFormElementIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  If set, this sketch class is only for use in a survey indicated by the form_element.
+  
+  """
+  formElementId: Int!
+}
+
 """All input for the `deleteSketchClassByNodeId` mutation."""
 input DeleteSketchClassByNodeIdInput {
   """
@@ -4272,7 +4208,15 @@ type FormElement implements Node {
   
   """
   secondaryColor: String
+
+  """
+  Sketch Class to be used in conjuction with a form element that supports spatial feature input.
+  
+  """
   sketchClass: SketchClass
+
+  """Reads a single `SketchClass` that is related to this `FormElement`."""
+  sketchClassFk: SketchClass
 
   """
   Indicates whether the form element should be displayed with dark or light text
@@ -5918,14 +5862,6 @@ type Mutation {
     input: CreateDataSourceInput!
   ): CreateDataSourcePayload
 
-  """Creates a single `DataSourcesBucket`."""
-  createDataSourcesBucket(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateDataSourcesBucketInput!
-  ): CreateDataSourcesBucketPayload
-
   """Creates a single `FormElement`."""
   createFormElement(
     """
@@ -6068,12 +6004,6 @@ type Mutation {
     """
     input: CreateSketchFolderInput!
   ): CreateSketchFolderPayload
-  createSurvey(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateSurveyInput!
-  ): CreateSurveyPayload
 
   """Creates a single `SurveyInvitedGroup`."""
   createSurveyInvitedGroup(
@@ -6426,6 +6356,14 @@ type Mutation {
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
     input: DeleteSketchClassInput!
+  ): DeleteSketchClassPayload
+
+  """Deletes a single `SketchClass` using a unique key."""
+  deleteSketchClassByFormElementId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteSketchClassByFormElementIdInput!
   ): DeleteSketchClassPayload
 
   """Deletes a single `SketchClass` using its globally unique id."""
@@ -6838,12 +6776,6 @@ type Mutation {
     """
     input: SetUserGroupsInput!
   ): SetUserGroupsPayload
-  subscriptionAuthorizationFunc(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: SubscriptionAuthorizationFuncInput!
-  ): SubscriptionAuthorizationFuncPayload
 
   """
   Toggle admin access for the given project and user. User must have already
@@ -7245,6 +7177,14 @@ type Mutation {
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
     input: UpdateSketchClassInput!
+  ): UpdateSketchClassPayload
+
+  """Updates a single `SketchClass` using a unique key and a patch."""
+  updateSketchClassByFormElementId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSketchClassByFormElementIdInput!
   ): UpdateSketchClassPayload
 
   """
@@ -9132,6 +9072,7 @@ type Query implements Node {
     nodeId: ID!
   ): Sketch
   sketchClass(id: Int!): SketchClass
+  sketchClassByFormElementId(formElementId: Int!): SketchClass
 
   """Reads a single `SketchClass` using its globally unique `ID`."""
   sketchClassByNodeId(
@@ -9194,6 +9135,35 @@ type Query implements Node {
     """
     nodeId: ID!
   ): SurveyResponse
+
+  """Reads and enables pagination through a set of `SurveyResponse`."""
+  surveyResponsesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SurveyResponseCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `SurveyResponse`."""
+    orderBy: [SurveyResponsesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyResponsesConnection
   tableOfContentsItem(id: Int!): TableOfContentsItem
   tableOfContentsItemByDataLayerId(dataLayerId: Int!): TableOfContentsItem
 
@@ -10277,31 +10247,6 @@ type Subscription {
   x-ss-slug to determine appropriate project.
   """
   projectInviteStateUpdated: ProjectInviteStateSubscriptionPayload
-}
-
-"""All input for the `subscriptionAuthorizationFunc` mutation."""
-input SubscriptionAuthorizationFuncInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  topic: String
-}
-
-"""The output of our `subscriptionAuthorizationFunc` mutation."""
-type SubscriptionAuthorizationFuncPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  string: String
 }
 
 type Survey implements Node {
@@ -12536,6 +12481,26 @@ input UpdateSketchByNodeIdInput {
   An object where the defined keys will be set on the `Sketch` being updated.
   """
   patch: SketchPatch!
+}
+
+"""All input for the `updateSketchClassByFormElementId` mutation."""
+input UpdateSketchClassByFormElementIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  If set, this sketch class is only for use in a survey indicated by the form_element.
+  
+  """
+  formElementId: Int!
+
+  """
+  An object where the defined keys will be set on the `SketchClass` being updated.
+  """
+  patch: SketchClassPatch!
 }
 
 """All input for the `updateSketchClassByNodeId` mutation."""
