@@ -44,28 +44,16 @@ describe("Homepage smoke test", () => {
         cy.url().should('eq', Cypress.config().baseUrl + '/');
       });
       it(`Links to project listings - ${device}`, () => {
-        cy.viewport(device);
-        cy.screenshot({
-          capture: "viewport",
-        });
         cy.get("[id=nav-projects]").click(); 
         cy.url().should('eq', Cypress.config().baseUrl + '/projects');
         cy.visit("/");
       });
       it(`Links to api page - ${device}`, () => {
-        cy.viewport(device);
-        cy.screenshot({
-          capture: "viewport",
-        });
         cy.get("[id=nav-api]").click()
         cy.url().should('eq', Cypress.config().baseUrl + '/api');
         cy.visit("/");
       });
       it(`Links to team page - ${device}`, () => {
-        cy.viewport(device);
-        cy.screenshot({
-          capture: "viewport",
-        });
         cy.get("[id=nav-team]").click()
         cy.url().should('eq', Cypress.config().baseUrl + '/team');
         cy.visit("/");
@@ -83,18 +71,12 @@ describe("Homepage smoke test", () => {
       })
       it(`Links to about page - ${device}`, () => {
         cy.viewport(device);
-        cy.screenshot({
-          capture: "viewport",
-        });
         cy.get("[id=collapsed-nav]").click()
         cy.get("[id=modal-nav-about]").click()
         cy.url().should('eq', Cypress.config().baseUrl + '/');
       });
       it(`Links to project listings - ${device}`, () => {
         cy.viewport(device);
-        cy.screenshot({
-          capture: "viewport",
-        });
         cy.get("[id=collapsed-nav]").click()
         cy.get("[id=modal-nav-projects]").click(); 
         cy.url().should('eq', Cypress.config().baseUrl + '/projects');
@@ -102,9 +84,6 @@ describe("Homepage smoke test", () => {
       });
       it(`Links to api page - ${device}`, () => {
         cy.viewport(device);
-        cy.screenshot({
-          capture: "viewport",
-        });
         cy.get("[id=collapsed-nav]").click()
         cy.get("[id=modal-nav-api]").click()
         cy.url().should('eq', Cypress.config().baseUrl + '/api');
@@ -112,14 +91,9 @@ describe("Homepage smoke test", () => {
       });
       it(`Links to team page - ${device}`, () => {
         cy.viewport(device);
-        cy.screenshot({
-          capture: "viewport",
-        });
         cy.get("[id=collapsed-nav]").click()
         cy.get("[id=modal-nav-team]").click()
         cy.url().should('eq', Cypress.config().baseUrl + '/team');
-        //cy.visit("/");
-      
       })
     });
     //Signed out user
