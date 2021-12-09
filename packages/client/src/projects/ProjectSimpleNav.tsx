@@ -22,7 +22,7 @@ export default function ProjectSimpleNav() {
     <div>
       <Switch>
         <Route exact path={path}>
-          <Header projectMode />
+          <Header />
           <nav className="max-w-lg mt-4 mx-auto text-center bg-white rounded shadow">
             {data && data.currentProject?.sessionIsAdmin && (
               <Link

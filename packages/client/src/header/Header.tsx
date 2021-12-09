@@ -8,7 +8,7 @@ import ProfileContextMenu from "./ProfileContextMenu";
 import { useCurrentProjectMetadataQuery } from "../generated/graphql";
 import ProfileControl from "./ProfileControl";
 
-export default function Header(props: { projectMode?: boolean }) {
+export default function Header() {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
   const { t, i18n } = useTranslation(["nav"]);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -18,7 +18,7 @@ export default function Header(props: { projectMode?: boolean }) {
   const handleDocumentClick = useCallback(() => setProfileModalOpen(false), [
     setProfileModalOpen,
   ]);
-
+  
   useEffect(() => {
     if (profileModalOpen) {
       document.addEventListener("click", handleDocumentClick);
@@ -32,18 +32,22 @@ export default function Header(props: { projectMode?: boolean }) {
     {
       to: "/",
       label: t("About"),
+      id: "nav-about"
     },
     {
       to: "/projects",
       label: t("Projects"),
+      id: "nav-projects"
     },
     {
       to: "/api",
       label: t("Developer API"),
+      id: "nav-api"
     },
     {
       to: "/team",
       label: t("Team"),
+      id: "nav-team"
     },
   ];
   return (
@@ -51,7 +55,7 @@ export default function Header(props: { projectMode?: boolean }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            {props.projectMode && (
+            {(
               <div className="flex-shrink-0 flex items-center text-lg text-gray-200 pr-4 mr-4 border-r border-gray-700">
                 {/* <img
                   className="block h-10 mr-2"
@@ -66,9 +70,10 @@ export default function Header(props: { projectMode?: boolean }) {
               <div className="flex-shrink-0 flex items-center text-lg text-gray-200">
                 <img
                   className="block h-10 mr-2"
-                  style={{ width: props.projectMode ? 37 : 47, height: "auto" }}
+                  style={{ width: 47, height: "auto" }}
                   src={logo}
                   alt={t("SeaSketch logo")}
+                  id="seasketch-logo"
                 />
                 {
                   // eslint-disable-next-line
@@ -77,9 +82,7 @@ export default function Header(props: { projectMode?: boolean }) {
               </div>
             </Link>
             <div className="hidden md:block">
-              {props.projectMode ? (
-                ""
-              ) : (
+              {(
                 <div className="ml-10 flex items-baseline space-x-4">
                   {navigationLinks.map((link) => (
                     <NavLink
@@ -91,6 +94,7 @@ export default function Header(props: { projectMode?: boolean }) {
                     hover:text-white hover:bg-gray-700 focus:outline-none 
                     focus:text-white focus:bg-gray-700
                     `}
+                      id={link.id}
                       activeClassName="bg-gray-900 text-white"
                       activeStyle={{ color: "white" }}
                     >
@@ -102,8 +106,8 @@ export default function Header(props: { projectMode?: boolean }) {
             </div>
           </div>
           <ProfileControl />
-          {/* <div className="-mr-2 flex md:hidden">
-            <!-- Mobile menu button -->
+          { <div className="-mr-2 flex md:hidden">
+            {/*<!-- Mobile menu button -->*/}
             <button
               onClick={() => setProfileModalOpen(true)}
               className={`
@@ -111,8 +115,9 @@ export default function Header(props: { projectMode?: boolean }) {
             text-gray-400 hover:text-white hover:bg-gray-700 
               focus:outline-none focus:bg-gray-700 focus:text-white
             `}
+              id="collapsed-nav"
             >
-              <!-- Menu open: "hidden", Menu closed: "block" -->
+              {/*<!-- Menu open: "hidden", Menu closed: "block" -->*/}
               <svg
                 className="block h-6 w-6"
                 stroke="currentColor"
@@ -126,7 +131,7 @@ export default function Header(props: { projectMode?: boolean }) {
                   d="M4 6h16M4 12h16M4 18h16"
                 />
               </svg>
-              <!-- Menu open: "block", Menu closed: "hidden" -->
+              {/*<!-- Menu open: "block", Menu closed: "hidden" -->*/}
               <svg
                 className="hidden h-6 w-6"
                 stroke="currentColor"
@@ -141,20 +146,20 @@ export default function Header(props: { projectMode?: boolean }) {
                 />
               </svg>
             </button>
-          </div> */}
+          </div> }
         </div>
       </div>
-      {/* <div
+      { <div
         className={`${
           profileModalOpen ? "md:hidden" : "hidden"
-        } bg-white absolute top left w-full h-full pt-2`}
+        } bg-white absolute top left w-full h-content shadow-xl z-10 pt-2`}
       >
-        {props.projectMode === false &&
-          navigationLinks.map((link) => (
+        {navigationLinks.map((link) => (
             <NavLink
               key={link.to}
               exact={link.to === "/"}
               to={link.to}
+              id={`modal-` + link.id}
               className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold
                     `}
             >
@@ -162,17 +167,19 @@ export default function Header(props: { projectMode?: boolean }) {
             </NavLink>
           ))}
 
-        {props.projectMode === false && (
+        {(
           <div className="border-t border-gray-100 mt-2"></div>
         )}
 
         {isAuthenticated ? (
           <ProfileContextMenu itemClassName="text-base" />
         ) : (
+          
           <button
             type="submit"
             className="block w-full text-left px-4 py-2 text-base md:text-sm leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900"
             role="menuitem"
+            id="modal-sign-in"
             onClick={() =>
               loginWithRedirect({
                 appState: {
@@ -183,9 +190,10 @@ export default function Header(props: { projectMode?: boolean }) {
             }
           >
             {t("Sign in")}
+            
           </button>
         )}
-      </div> */}
+      </div> }
     </nav>
   );
 }

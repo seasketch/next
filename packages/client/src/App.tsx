@@ -79,6 +79,7 @@ function App() {
                     {t(
                       "SeaSketch Supports Collaborative Planning for our Oceans"
                     )}
+                    
                   </h1>
                   <p className="max-w-4xl mx-auto">
                     {t(`SeaSketch puts powerful tools into the hands of ocean planners,
