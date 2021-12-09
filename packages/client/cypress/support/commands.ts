@@ -19,10 +19,15 @@ declare global {
   namespace Cypress {
     interface Chainable {
       /**
-       * Login the named user. Users are found in fixtures/user.json
+       * Sign in to SeaSketch using auth0 token service
+       * @param userName Named user from fixtures/user.json
        * @example cy.login('User 1')
        */
       login(userName: string);
+      /**
+       * Get token from auth0
+       * @param userName Named user from fixtures/user.json
+       */
       getToken(
         userName: string
       ): Chainable<{
@@ -31,14 +36,47 @@ declare global {
         scope: string;
         token_type: "Bearer";
       }>;
+      /**
+       * Run a graphql query.
+       * @param doc DocumentNode created using gql (@apollo/client)
+       * @param data Data to apply to the query
+       * @param token access_token for a user to run the query under
+       */
       query(doc: DocumentNode, data: any, token?: string): Chainable<any>;
+      /**
+       * Run a graphql mutation. (same as cy.query)
+       * @param doc DocumentNode created using gql (@apollo/client)
+       * @param data Data to apply to the mutation
+       * @param token access_token for a user to run the mutation under
+       */
       mutation(doc: DocumentNode, data: any, token?: string): Chainable<any>;
+      /**
+       * Create a new SeaSketch project. Project must be created by a named
+       * user. Set a token using the following code:
+       *   ```typescript
+       *   cy.getToken("User 1").then(({ access_token }) => {
+       *     cy.wrap(access_token).as("token");
+       *   });
+       *   ```
+       * @param name Name for the project
+       * @param slug Slug is appended to the url, e.g. seasketch.org/:slug
+       * @param accessControl ProjectAccessControlSetting. Public, AdminsOnly or InviteOnly
+       * @param isListed Whether to publically list the project on the homepage. Public projects must be listed
+       */
       createProject(
         name: string,
         slug: string,
         accessControl: ProjectAccessControlSetting,
         isListed: boolean
       ): Chainable<number>;
+      /**
+       * Permanently deletes the project from the database, by slug. Note that
+       * this operation happens directly in the db, rather than through the
+       * graphql api. The GraphQL API does not support deleting projects
+       * entirely, but rather marks them as deleted so that their slug can't be
+       * re-used. For testing purproses, these need to be permanently deleted.
+       * @param slug
+       */
       deleteProject(slug: string);
     }
   }
@@ -85,8 +123,13 @@ Cypress.Commands.add("login", (userName) => {
       `@@auth0spajs@@::${AUTH0_CLIENT_ID}::default::${AUTH0_SCOPE}`,
       JSON.stringify(item)
     );
-
-    cy.visit("/");
+    window.localStorage.setItem(
+      // The client sets up a connection using @auth/auth0-react
+      // This ID used to store the data in localstorage is determined by it
+      `@@auth0spajs@@::${AUTH0_CLIENT_ID}::${AUTH0_AUDIENCE}::${AUTH0_SCOPE}`,
+      JSON.stringify(item)
+    );
+    cy.log(`Logged in ${userName}`);
   });
 });
 
@@ -156,20 +199,7 @@ Cypress.Commands.add(
 Cypress.Commands.add(
   "mutation",
   (doc: DocumentNode, data: any, token?: string) => {
-    const doQuery = async (headers: any) => {
-      return request(
-        Cypress.env("graphql_endpoint") as string,
-        doc,
-        data,
-        headers
-      );
-    };
-    return cy.location().then((location) => {
-      return doQuery({
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
-        "x-ss-slug": location.pathname.split("/")[1],
-      });
-    });
+    return cy.query(doc, data, token);
   }
 );
 
