@@ -71,7 +71,9 @@ describe("Homepage smoke test", () => {
       })
       it(`Links to about page - ${device}`, () => {
         cy.viewport(device);
-        cy.get("[id=collapsed-nav]").click()
+        cy.get("[id=collapsed-nav]").click().screenshot({
+          capture: "viewport"
+        })
         cy.get("[id=modal-nav-about]").click()
         cy.url().should('eq', Cypress.config().baseUrl + '/');
       });
