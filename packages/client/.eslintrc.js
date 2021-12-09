@@ -47,7 +47,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: ["*.spec.js", "*.spec.ts"], // Or *.test.js
+      files: ["*.spec.js", "*.spec.ts", "cypress/**/*.js"],
       rules: {
         "i18next/no-literal-string": "off",
       },

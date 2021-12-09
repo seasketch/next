@@ -45,7 +45,7 @@ function ApolloProviderWithToken(props: any) {
   });
 
   const getToken = async () => {
-    let token: string;
+    let token: string | null;
     const opts = {
       audience: process.env.REACT_APP_AUTH0_AUDIENCE,
       scope: process.env.REACT_APP_AUTH0_SCOPE,
@@ -55,7 +55,10 @@ function ApolloProviderWithToken(props: any) {
     } catch (e) {
       if (e.error === "consent_required") {
         token = await getAccessTokenWithPopup(opts);
+      } else if (e.error === "login_required") {
+        token = null;
       } else {
+        console.error(e.error);
         throw e;
       }
     }

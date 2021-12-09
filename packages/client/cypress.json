@@ -1,5 +1,4 @@
 {
   "projectId": "jo53du",
-  "testFiles": ["**/*.spec.js"], 
-  "baseUrl": "http://localhost:3000"
+  "testFiles": ["**/*.spec.js", "**/*.spec.ts"]
 }
