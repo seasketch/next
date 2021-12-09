@@ -259,7 +259,7 @@ jobs:
         run: |
           npm install
           npm install -g lerna
-          npm install http-server -g
+          npm install serve -g
           lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers --scope=@seasketch/api
       - name: Init docker db
         working-directory: ./packages/api
@@ -295,8 +295,7 @@ jobs:
         working-directory: ./packages/client
         run: |
           CI=false npm run build
-          cp ./build/index.html ./build/404.html
-          http-server ./build -a localhost -p 3000 &
+          serve -s build
         env:
           SKIP_PREFLIGHT_CHECK: true
           REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
