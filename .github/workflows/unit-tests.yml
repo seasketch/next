@@ -295,6 +295,7 @@ jobs:
         working-directory: ./packages/client
         run: |
           CI=false npm run build
+          cp ./build/index.html ./build/404.html
           http-server ./build -a localhost -p 3000 &
         env:
           SKIP_PREFLIGHT_CHECK: true
