@@ -295,7 +295,7 @@ jobs:
         working-directory: ./packages/client
         run: |
           CI=false npm run build
-          serve -s build
+          serve -s build &
         env:
           SKIP_PREFLIGHT_CHECK: true
           REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
