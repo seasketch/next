@@ -22,6 +22,10 @@ export default function Header() {
   useEffect(() => {
     if (profileModalOpen) {
       document.addEventListener("click", handleDocumentClick);
+      const span = document.getElementById("create-project-btn")
+      span?.classList.remove('relative')
+      const body = document.getElementsByTagName('body')
+      body[0].classList.remove('relative')
     }
     return () => {
       document.removeEventListener("click", handleDocumentClick);
