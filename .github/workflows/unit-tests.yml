@@ -249,6 +249,7 @@ jobs:
             node_modules
             */*/node_modules
             ~/.npm
+            ~/.cache/Cypress
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-build-${{ env.cache-name }}-
@@ -324,3 +325,4 @@ jobs:
           REACT_APP_AUTH0_SCOPE: ${{ secrets.REACT_APP_AUTH0_SCOPE }}
           REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
           REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857
+          CYPRESS_TEST_DB: postgres://postgres:password@localhost:5432/seasketch
