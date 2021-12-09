@@ -9,7 +9,7 @@ export default function ProjectsPage() {
     <div>
       <SimpleProjectList />
       <div className="mx-auto max-w-lg">
-        <Button id="create-project-btn" href="/new-project" label={t("Create a Project")} />
+        <Button href="/new-project" label={t("Create a Project")} />
       </div>
     </div>
   );

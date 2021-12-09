@@ -19,8 +19,6 @@ export interface ButtonProps {
   loading?: boolean;
   /** Render a <label /> with htmlFor set */
   labelFor?: string;
-  /* Added id prop to pass to create project button due to layout issues */
-  id?: string;
   href?: string;
   mailTo?: string;
   children?: React.ReactNode;
@@ -142,8 +140,6 @@ export default function Button(props: ButtonProps) {
       className={`inline-flex relative ${props.shadowSize || "shadow-sm"} ${
         props.className
       }`}
-      //added id for create project button layout issues
-      id={props.id}
       onClick={props.disabled ? undefined : onClick}
     >
       {props.labelFor ? (

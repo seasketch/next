@@ -18,14 +18,10 @@ export default function Header() {
   const handleDocumentClick = useCallback(() => setProfileModalOpen(false), [
     setProfileModalOpen,
   ]);
-
+  
   useEffect(() => {
     if (profileModalOpen) {
       document.addEventListener("click", handleDocumentClick);
-      const span = document.getElementById("create-project-btn")
-      span?.classList.remove('relative')
-      const body = document.getElementsByTagName('body')
-      body[0].classList.remove('relative')
     }
     return () => {
       document.removeEventListener("click", handleDocumentClick);
@@ -156,7 +152,7 @@ export default function Header() {
       { <div
         className={`${
           profileModalOpen ? "md:hidden" : "hidden"
-        } bg-white absolute top left w-full h-full pt-2`}
+        } bg-white absolute top left w-full h-content shadow-xl z-10 pt-2`}
       >
         {navigationLinks.map((link) => (
             <NavLink
