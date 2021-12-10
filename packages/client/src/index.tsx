@@ -56,8 +56,9 @@ function ApolloProviderWithToken(props: any) {
         // eslint-disable-next-line i18next/no-literal-string
         `@@auth0spajs@@::${process.env.REACT_APP_AUTH0_CLIENT_ID!}::${
           process.env.REACT_APP_AUTH0_AUDIENCE
-        }::${process.env.REACT_APP_AUTH0_CLIENT_SCOPE!}`
+        }::${process.env.REACT_APP_AUTH0_SCOPE!}`
       );
+      console.log({ token });
     } else {
       try {
         token = await getAccessTokenSilently(opts);
@@ -81,7 +82,7 @@ function ApolloProviderWithToken(props: any) {
       headers: {
         ...headers,
         // eslint-disable-next-line i18next/no-literal-string
-        authorization: token ? `Bearer ${token}` : "",
+        ...(token && token.length ? { authorization: `Bearer ${token}` } : {}),
         "x-ss-slug": window.location.pathname.split("/")[1],
       },
     };
