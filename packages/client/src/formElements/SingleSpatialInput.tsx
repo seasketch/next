@@ -7,7 +7,11 @@ import SketchGeometryTypeSelector, {
   Icons,
 } from "../components/SketchGeometryTypeSelector";
 import { useMapContext } from "../dataLayers/MapContextManager";
-import { SketchGeometryType, useGetBasemapsQuery } from "../generated/graphql";
+import {
+  BasemapDetailsFragment,
+  SketchGeometryType,
+  useGetBasemapsQuery,
+} from "../generated/graphql";
 import {
   FormElementBody,
   FormElementComponent,
@@ -31,14 +35,17 @@ import bbox from "@turf/bbox";
 import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
 import useMapboxGLDraw, { DigitizingState } from "../draw/useMapboxGLDraw";
 import DigitizingActionsPopup, {
+  BasemapControl,
   NextQuestion,
   PreviousQuestion,
   ResetView,
   ZoomToFeature,
 } from "../draw/DigitizingActionsPopup";
 import Button from "../components/Button";
-import BoundsInput from "../components/BoundsInput";
+import BoundsInput from "../admin/surveys/BoundsInput";
 import bboxPolygon from "@turf/bbox-polygon";
+import BasemapMultiSelectInput from "../admin/surveys/BasemapMultiSelectInput";
+import MiniBasemapSelector from "../admin/data/MiniBasemapSelector";
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
 const defaultStartingBounds = [
@@ -50,6 +57,7 @@ const defaultStartingBounds = [
 
 export type SingleSpatialInputProps = {
   startingBounds?: BBox;
+  basemaps?: number[];
 };
 
 const SingleSpatialInput: FormElementComponent<
@@ -66,8 +74,6 @@ const SingleSpatialInput: FormElementComponent<
 
   const [map, setMap] = useState<Map | null>(null);
   const mapContext = useMapContext();
-  // eslint-disable-next-line i18next/no-literal-string
-  // `form-element-${props.id}`
   const mapPortalContext = useContext(SurveyMapPortalContext);
   const style = useContext(SurveyStyleContext);
   const context = useContext(SurveyContext);
@@ -91,21 +97,39 @@ const SingleSpatialInput: FormElementComponent<
     }
   );
 
+  const [basemaps, setBasemaps] = useState<BasemapDetailsFragment[]>([]);
+
   useEffect(() => {
-    if (mapContext?.manager && data?.projectBySlug?.basemaps) {
+    if (mapContext?.manager && data?.projectBySlug?.basemaps?.length) {
+      let basemaps: BasemapDetailsFragment[] = [];
+      if (props.componentSettings.basemaps?.length) {
+        basemaps = data.projectBySlug.basemaps.filter(
+          (b) => props.componentSettings.basemaps?.indexOf(b.id) !== -1
+        );
+      }
+      if (!basemaps.length) {
+        basemaps = [data.projectBySlug.basemaps[0]];
+      }
+      setBasemaps(basemaps);
       // mapContext.manager.setProjectBounds(bboxPolygon(bounds));
-      mapContext.manager?.setBasemaps(data.projectBySlug.basemaps);
+      mapContext.manager?.setBasemaps(basemaps);
       // TODO: This is a pretty shitty way to do this. MapContextManager needs
       // to be modified a bit to account for these simpler use-cases that aren't
       // so bound to project-wide settings
       setTimeout(() => {
-        mapContext!.manager!.map!.fitBounds(bounds as LngLatBoundsLike, {
-          animate: false,
-          padding: 2,
-        });
+        if (mapContext?.manager?.map) {
+          mapContext!.manager!.map!.fitBounds(bounds as LngLatBoundsLike, {
+            animate: false,
+            padding: 2,
+          });
+        }
       }, 200);
     }
-  }, [data?.projectBySlug?.basemaps, mapContext.manager]);
+  }, [
+    data?.projectBySlug?.basemaps,
+    mapContext.manager,
+    props.componentSettings.basemaps,
+  ]);
 
   return (
     <>
@@ -120,6 +144,7 @@ const SingleSpatialInput: FormElementComponent<
       </div>
       {mapPortalContext && (
         <SurveyMapPortal mapContext={mapContext}>
+          {/* <MiniBasemapSelector basemaps={basemaps} /> */}
           <motion.div
             className="flex items-center justify-center"
             variants={{
@@ -173,19 +198,14 @@ const SingleSpatialInput: FormElementComponent<
                 onClick={props.onRequestNext}
                 disabled={props.isRequired && !props.value?.features.length}
               />
-              <ResetView
-                map={mapContext.manager?.map!}
-                bounds={
-                  props.componentSettings.startingBounds ||
-                  (defaultStartingBounds as BBox)
-                }
-              />
+              <ResetView map={mapContext.manager?.map!} bounds={bounds} />
               <ZoomToFeature
                 map={mapContext.manager?.map!}
                 feature={props.value?.features[0]}
                 isSmall={style.isSmall}
                 geometryType={props.sketchClass!.geometryType!}
               />
+              <BasemapControl basemaps={basemaps} />
             </DigitizingTools>
             <MapboxMap
               hideDrawControls
@@ -236,6 +256,13 @@ const SingleSpatialInput: FormElementComponent<
                 onChange={updateSetting(
                   "startingBounds",
                   props.componentSettings
+                )}
+              />
+              <BasemapMultiSelectInput
+                value={props.componentSettings.basemaps}
+                onChange={updateSetting(
+                  "basemaps",
+                  props.componentSettings.basemaps
                 )}
               />
             </>
