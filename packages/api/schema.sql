@@ -5884,7 +5884,8 @@ CREATE TABLE public.basemaps (
     terrain_visibility_default boolean DEFAULT true NOT NULL,
     terrain_exaggeration numeric DEFAULT 1 NOT NULL,
     description text,
-    interactivity_settings_id integer NOT NULL
+    interactivity_settings_id integer NOT NULL,
+    is_disabled boolean DEFAULT false NOT NULL
 );
 
 
@@ -5957,6 +5958,15 @@ COMMENT ON COLUMN public.basemaps.terrain_optional IS 'If set to false, terrain 
 
 COMMENT ON COLUMN public.basemaps.interactivity_settings_id IS '
 @omit create
+';
+
+
+--
+-- Name: COLUMN basemaps.is_disabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.is_disabled IS '
+Used to indicate whether the basemap is included in the public basemap listing. Useful for hiding an option temporarily, or adding a basemap to the project which will only be used in surveys.
 ';
 
 
