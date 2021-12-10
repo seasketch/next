@@ -58,7 +58,7 @@ function ApolloProviderWithToken(props: any) {
           process.env.REACT_APP_AUTH0_AUDIENCE
         }::${process.env.REACT_APP_AUTH0_SCOPE!}`
       );
-      console.log({ token });
+      console.warn("using token from cypress", { token });
     } else {
       try {
         token = await getAccessTokenSilently(opts);
