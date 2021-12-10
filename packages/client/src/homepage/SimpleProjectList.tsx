@@ -11,7 +11,20 @@ export default function SimpleProjectList() {
         <Trans>loading...</Trans>
       </span>
     );
-  if (error) return <span>{error.toString()}</span>;
+
+  if (error) {
+    // @ts-ignore
+    if (error.networkError?.bodyText) {
+      return (
+        <span
+          // @ts-ignore
+          dangerouslySetInnerHTML={{ __html: error.networkError?.bodyText }}
+        />
+      );
+    } else {
+      return <span>{error.toString()}</span>;
+    }
+  }
   return (
     <div className="mx-auto bg-white shadow sm:rounded-md sm:my-4 max-w-lg">
       <ul>
