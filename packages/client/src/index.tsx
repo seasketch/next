@@ -32,6 +32,7 @@ function Auth0ProviderWithRouter(props: any) {
         }
       }}
       scope={process.env.REACT_APP_AUTH0_SCOPE}
+      audience={process.env.REACT_APP_AUTH0_AUDIENCE}
       cacheLocation="localstorage"
       children={props.children}
     />
@@ -45,29 +46,43 @@ function ApolloProviderWithToken(props: any) {
   });
 
   const getToken = async () => {
-    let token: string;
+    let token: string | null;
     const opts = {
       audience: process.env.REACT_APP_AUTH0_AUDIENCE,
       scope: process.env.REACT_APP_AUTH0_SCOPE,
     };
-    try {
-      token = await getAccessTokenSilently(opts);
-    } catch (e) {
-      if (e.error === "consent_required") {
-        token = await getAccessTokenWithPopup(opts);
-      } else {
-        throw e;
+    if ("Cypress" in window) {
+      token = window.localStorage.getItem(
+        // eslint-disable-next-line i18next/no-literal-string
+        `@@auth0spajs@@::${process.env.REACT_APP_AUTH0_CLIENT_ID!}::${
+          process.env.REACT_APP_AUTH0_AUDIENCE
+        }::${process.env.REACT_APP_AUTH0_SCOPE!}`
+      );
+      console.warn("using token from cypress", { token });
+    } else {
+      try {
+        token = await getAccessTokenSilently(opts);
+      } catch (e) {
+        if (e.error === "consent_required") {
+          token = await getAccessTokenWithPopup(opts);
+        } else if (e.error === "login_required") {
+          token = null;
+        } else {
+          console.error(e.error);
+          throw e;
+        }
       }
     }
     return token;
   };
+
   const authMiddleware = setContext(async (_, { headers }) => {
     const token = await getToken();
     return {
       headers: {
         ...headers,
         // eslint-disable-next-line i18next/no-literal-string
-        authorization: token ? `Bearer ${token}` : "",
+        ...(token && token.length ? { authorization: `Bearer ${token}` } : {}),
         "x-ss-slug": window.location.pathname.split("/")[1],
       },
     };
