@@ -196,8 +196,10 @@ export function ZoomToFeature(
 
 export function BasemapControl({
   basemaps,
+  afterChange,
 }: {
   basemaps: BasemapDetailsFragment[];
+  afterChange?: () => void;
 }) {
   const mapContext = useContext(MapContext);
   const selectedBasemap = mapContext.manager?.getSelectedBasemap();
@@ -207,8 +209,10 @@ export function BasemapControl({
     <div>
       {basemaps.length > 1 && (
         <>
-          <hr className="my-3 w-full mx-auto" />
-          <h4 className={`w-full items-center px-3 py-2 text-sm text-gray-500`}>
+          <hr className="my-3 w-full mx-auto dark:border-gray-500" />
+          <h4
+            className={`w-full items-center px-3 py-2 text-sm text-gray-500 dark:text-gray-400`}
+          >
             {t("Basemap")}
           </h4>
           <div>
@@ -233,6 +237,9 @@ export function BasemapControl({
                       mapContext.manager.setSelectedBasemap(
                         basemap.id.toString()
                       );
+                      if (afterChange) {
+                        afterChange();
+                      }
                     }
                   }}
                 />

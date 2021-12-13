@@ -1,5 +1,5 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { Map } from "mapbox-gl";
+import { LngLatLike, Map } from "mapbox-gl";
 import { useEffect, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
@@ -8,6 +8,9 @@ import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
 import { Feature } from "geojson";
 import { useMediaQuery } from "beautiful-react-hooks";
+import DrawPoint from "./DrawPoint";
+import DirectSelect from "./DirectSelect";
+import SimpleSelect from "./SimpleSelect";
 
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
@@ -35,6 +38,12 @@ export enum DigitizingState {
   DISABLED,
 }
 
+export type DigitizingDragTarget = {
+  center: LngLatLike;
+  currentZoom: number;
+  point: { x: number; y: number };
+};
+
 /**
  *
  * @param map
@@ -56,6 +65,9 @@ export default function useMapboxGLDraw(
     value ? DigitizingState.FINISHED : DigitizingState.BLANK
   );
   const [disabled, setDisabled] = useState(false);
+  const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
+    null
+  );
 
   useEffect(() => {
     if (map && geometryType && !disabled) {
@@ -66,9 +78,12 @@ export default function useMapboxGLDraw(
         controls: {},
         defaultMode: "simple_select",
         modes: MapboxDrawWaypoint.enable({
+          ...MapboxDraw.modes,
           draw_line_string: DrawLineString,
           draw_polygon: DrawPolygon,
-          ...MapboxDraw.modes,
+          draw_point: DrawPoint,
+          direct_select: DirectSelect,
+          simple_select: SimpleSelect,
         }),
       });
       setDraw(draw);
@@ -95,7 +110,9 @@ export default function useMapboxGLDraw(
             setState(DigitizingState.CREATED);
           }, 1);
         },
-        update: (e: any) => onChange(e.features[0]),
+        update: (e: any) => {
+          onChange(e.features[0]);
+        },
         drawingStarted: () => setState(DigitizingState.STARTED),
         canComplete: () => setState(DigitizingState.CAN_COMPLETE),
         delete: function () {
@@ -124,12 +141,24 @@ export default function useMapboxGLDraw(
             }
           }
         },
+        dragTarget: function (e: any) {
+          if (e.coordinates) {
+            setDragTarget({
+              center: e.coordinates,
+              currentZoom: map.getZoom(),
+              point: e.point,
+            });
+          } else {
+            setDragTarget(null);
+          }
+        },
       };
 
       map.on("draw.create", handlers.create);
       map.on("draw.update", handlers.update);
       map.on("seasketch.drawing_started", handlers.drawingStarted);
       map.on("seasketch.can_complete", handlers.canComplete);
+      map.on("seasketch.drag_target", handlers.dragTarget);
       map.on("draw.delete", handlers.delete);
       map.on("draw.modechange", handlers.modeChange);
       map.on("draw.selectionchange", handlers.selectionChange);
@@ -140,6 +169,7 @@ export default function useMapboxGLDraw(
           map.off("draw.create", handlers.create);
           map.off("draw.update", handlers.update);
           map.off("seasketch.drawing_started", handlers.drawingStarted);
+          map.off("seasketch.drag_target", handlers.dragTarget);
           map.off("seasketch.can_complete", handlers.canComplete);
           map.off("draw.delete", handlers.delete);
           map.off("draw.modechange", handlers.modeChange);
@@ -229,6 +259,7 @@ export default function useMapboxGLDraw(
     disable: () => setDisabled(true),
     /** Re-enable drawing */
     enable: () => setDisabled(false),
+    dragTarget,
   };
 }
 
