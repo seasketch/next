@@ -84,6 +84,7 @@ const SingleSpatialInput: FormElementComponent<
     disable,
     enable,
     dragTarget,
+    kinks,
   } = useMapboxGLDraw(
     map,
     geometryType,
@@ -187,6 +188,7 @@ const SingleSpatialInput: FormElementComponent<
               state={digitizingState}
               geometryType={geometryType}
               onRequestFinishEditing={actions.finishEditing}
+              topologyErrors={kinks.features.length > 0}
               onRequestReset={() => {
                 if (
                   window.confirm(

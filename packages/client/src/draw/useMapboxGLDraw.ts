@@ -1,16 +1,20 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { LngLatLike, Map } from "mapbox-gl";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
 import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
-import { Feature } from "geojson";
+import { Feature, FeatureCollection, Point } from "geojson";
 import { useMediaQuery } from "beautiful-react-hooks";
 import DrawPoint from "./DrawPoint";
 import DirectSelect from "./DirectSelect";
 import SimpleSelect from "./SimpleSelect";
+import getKinks from "@turf/kinks";
+import styles from "./styles";
+import debounce from "lodash.debounce";
+import { useTranslation } from "react-i18next";
 
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
@@ -44,6 +48,11 @@ export type DigitizingDragTarget = {
   point: { x: number; y: number };
 };
 
+const EMPTY_FEATURE_COLLECTION = {
+  type: "FeatureCollection",
+  features: [],
+} as FeatureCollection<Point>;
+
 /**
  *
  * @param map
@@ -58,6 +67,7 @@ export default function useMapboxGLDraw(
   value: Feature<any> | null,
   onChange: (value: Feature<any> | null) => void
 ) {
+  const { t } = useTranslation("digitizing");
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
   const drawMode = glDrawMode(isSmall, geometryType);
@@ -68,6 +78,50 @@ export default function useMapboxGLDraw(
   const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
     null
   );
+
+  const [kinks, setKinks] = useState<FeatureCollection<Point>>(
+    EMPTY_FEATURE_COLLECTION
+  );
+
+  const updateKinks = useCallback(
+    (feature: Feature<any>) => {
+      if (draw && feature.geometry.type === "Polygon") {
+        const kinks = getKinks(feature);
+        draw.setFeatureProperty(
+          feature.id as string,
+          "kinks",
+          (kinks.features.length > 0).toString()
+        );
+        // draw.setFeatureProperty(
+        //   feature.id as string,
+        //   "error_message",
+        //   t("Invalid Polygon")
+        // );
+        setKinks(kinks);
+      }
+    },
+    [draw]
+  );
+
+  const kinksUpdater = useCallback(
+    debounce(
+      () => {
+        if (draw) {
+          const collection = draw.getAll();
+          if (collection.features[0]) {
+            updateKinks(collection.features[0]);
+          }
+        }
+      },
+      64,
+      {
+        maxWait: 100,
+      }
+    ),
+    [draw]
+  );
+
+  useEffect(() => kinksUpdater, [dragTarget, draw, value, drawMode, state]);
 
   useEffect(() => {
     if (map && geometryType && !disabled) {
@@ -85,7 +139,11 @@ export default function useMapboxGLDraw(
           direct_select: DirectSelect,
           simple_select: SimpleSelect,
         }),
+        styles,
+        userProperties: true,
       });
+      // @ts-ignore
+      window.map = map;
       setDraw(draw);
       map.addControl(draw);
 
@@ -103,6 +161,7 @@ export default function useMapboxGLDraw(
 
       const handlers = {
         create: function (e: any) {
+          updateKinks(draw.getAll().features[0]);
           setState(DigitizingState.CREATED);
           onChange(e.features[0]);
           setTimeout(() => {
@@ -111,11 +170,13 @@ export default function useMapboxGLDraw(
           }, 1);
         },
         update: (e: any) => {
+          // updateKinks(e.features[0]);
           onChange(e.features[0]);
         },
         drawingStarted: () => setState(DigitizingState.STARTED),
         canComplete: () => setState(DigitizingState.CAN_COMPLETE),
         delete: function () {
+          setKinks(EMPTY_FEATURE_COLLECTION);
           draw.changeMode(drawMode);
           onChange(null);
           setState(DigitizingState.BLANK);
@@ -166,6 +227,7 @@ export default function useMapboxGLDraw(
       return () => {
         if (map && draw) {
           map.removeControl(draw);
+          setDraw(null);
           map.off("draw.create", handlers.create);
           map.off("draw.update", handlers.update);
           map.off("seasketch.drawing_started", handlers.drawingStarted);
@@ -234,7 +296,10 @@ export default function useMapboxGLDraw(
         if (!value) {
           throw new Error("No feature exists to edit");
         }
-        if (geometryType === SketchGeometryType.Point) {
+        if (
+          geometryType === SketchGeometryType.Point ||
+          value.geometry.type === "Point"
+        ) {
           // @ts-ignore
           draw.changeMode("simple_select", {
             featureIds: [value.id],
@@ -260,6 +325,7 @@ export default function useMapboxGLDraw(
     /** Re-enable drawing */
     enable: () => setDisabled(false),
     dragTarget,
+    kinks,
   };
 }
 

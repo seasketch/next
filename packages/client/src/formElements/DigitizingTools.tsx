@@ -27,6 +27,7 @@ import DigitizingActionsPopup, {
 interface DigitizingInstructionsProps {
   geometryType: SketchGeometryType;
   state: DigitizingState;
+  topologyErrors: boolean;
   /** Request deletion of selected feature */
   onRequestReset: () => void;
   onRequestSubmit: () => void;
@@ -37,6 +38,7 @@ interface DigitizingInstructionsProps {
 const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   geometryType,
   state,
+  topologyErrors,
   onRequestSubmit,
   onRequestReset,
   onRequestEdit,
@@ -64,6 +66,13 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
       break;
   }
 
+  if (
+    topologyErrors &&
+    (state === DigitizingState.FINISHED || state === DigitizingState.CREATED)
+  ) {
+    instructions = t("Invalid shape");
+  }
+
   if (state === DigitizingState.DISABLED) {
     return null;
   }
@@ -78,7 +87,8 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         onClick={() => {
           setToolsOpen(true);
         }}
-        className="pointer-events-auto rounded-full bg-gray-300 hover:text-gray-500 p-2 border border-gray-300"
+        className={`pointer-events-auto rounded-full  hover:text-gray-500 p-2 border border-gray-300 bg-gray-300
+        `}
       >
         <DotsHorizontalIcon className={bottomToolbar ? "w-6 h-6" : "w-5 h-5"} />
       </button>
@@ -112,6 +122,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         <Button
           onClick={onRequestSubmit}
           primary
+          disabled={topologyErrors}
           label={t("Continue Survey")}
           className={`pointer-events-auto whitespace-nowrap ${
             bottomToolbar && "flex-2 content-center"
