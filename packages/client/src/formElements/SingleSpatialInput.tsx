@@ -25,7 +25,7 @@ import { questionBodyFromMarkdown } from "./fromMarkdown";
 import { motion } from "framer-motion";
 import { SurveyStyleContext } from "../surveys/appearance";
 import DigitizingTools from "./DigitizingTools";
-import { LngLatBoundsLike, LngLatLike, Map, Style } from "mapbox-gl";
+import { LngLatBoundsLike, Map, Style } from "mapbox-gl";
 import { useParams } from "react-router";
 import useMapboxGLDraw from "../draw/useMapboxGLDraw";
 import {
@@ -38,6 +38,7 @@ import {
 import BoundsInput from "../admin/surveys/BoundsInput";
 import BasemapMultiSelectInput from "../admin/surveys/BasemapMultiSelectInput";
 import DigitizingMiniMap from "./DigitizingMiniMap";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
 const defaultStartingBounds = [
@@ -58,10 +59,12 @@ const SingleSpatialInput: FormElementComponent<
 > = (props) => {
   const { t } = useTranslation("admin:surveys");
   const { slug } = useParams<{ slug: string }>();
-  const { data, loading, error } = useGetBasemapsQuery({
+  const onError = useGlobalErrorHandler();
+  const { data } = useGetBasemapsQuery({
     variables: {
       slug,
     },
+    onError,
   });
 
   const [map, setMap] = useState<Map | null>(null);
@@ -84,6 +87,7 @@ const SingleSpatialInput: FormElementComponent<
     disable,
     enable,
     dragTarget,
+    kinks,
   } = useMapboxGLDraw(
     map,
     geometryType,
@@ -187,6 +191,7 @@ const SingleSpatialInput: FormElementComponent<
               state={digitizingState}
               geometryType={geometryType}
               onRequestFinishEditing={actions.finishEditing}
+              topologyErrors={kinks.features.length > 0}
               onRequestReset={() => {
                 if (
                   window.confirm(
@@ -236,6 +241,7 @@ const SingleSpatialInput: FormElementComponent<
             />
             {miniMapStyle && map && (
               <DigitizingMiniMap
+                topologyErrors={kinks.features.length > 0}
                 style={miniMapStyle}
                 dragTarget={dragTarget}
                 onLoad={(map) => setMiniMap(map)}
