@@ -97,7 +97,6 @@ const UnsplashPlugin = makeExtendSchemaPlugin((build) => {
           // Start a sub-transaction
           await pgClient.query("SAVEPOINT graphql_mutation");
           try {
-            console.log(args);
             await unsplash.photos.trackDownload({
               downloadLocation: args.downloadUrl,
             });
