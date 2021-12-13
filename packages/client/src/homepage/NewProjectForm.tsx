@@ -106,7 +106,7 @@ export default function NewProjectForm() {
 
           <div className="relative bottom-2">
             <span className="block w-full rounded-md shadow-md">
-              <button className="w-full flex justify-center py-2 px-4 border border-transparent text-lg sm:text-base rounded-md text-white bg-primary-500 focus:outline-none focus:shadow-outline-indigo hover:bg-primary-600 transition duration-150 ease-in-out">
+              <button id="create-project-btn" className="w-full flex justify-center py-2 px-4 border border-transparent text-lg sm:text-base rounded-md text-white bg-primary-500 focus:outline-none focus:shadow-outline-indigo hover:bg-primary-600 transition duration-150 ease-in-out">
                 {t("Create your project")}
               </button>
             </span>

@@ -19,6 +19,8 @@ export interface ButtonProps {
   loading?: boolean;
   /** Render a <label /> with htmlFor set */
   labelFor?: string;
+  /* Id for targetting specific buttons */
+  id?: string;
   href?: string;
   mailTo?: string;
   children?: React.ReactNode;
@@ -141,6 +143,7 @@ export default function Button(props: ButtonProps) {
         props.className
       }`}
       onClick={props.disabled ? undefined : onClick}
+      id={props.id}
     >
       {props.labelFor ? (
         <label
