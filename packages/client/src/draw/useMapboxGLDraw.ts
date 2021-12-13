@@ -1,6 +1,6 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { LngLatLike, Map } from "mapbox-gl";
-import { useCallback, useEffect, useState } from "react";
+import { GeoJSONSource, LngLatLike, Map } from "mapbox-gl";
+import { useEffect, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
@@ -14,7 +14,6 @@ import SimpleSelect from "./SimpleSelect";
 import getKinks from "@turf/kinks";
 import styles from "./styles";
 import debounce from "lodash.debounce";
-import { useTranslation } from "react-i18next";
 
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
@@ -53,6 +52,35 @@ const EMPTY_FEATURE_COLLECTION = {
   features: [],
 } as FeatureCollection<Point>;
 
+const debouncedUpdateKinks = debounce(
+  (
+    getFeatures: () => FeatureCollection<any>,
+    setKinks: (value: FeatureCollection<Point>) => void,
+    state: DigitizingState,
+    setFeatureProperty: (
+      featureId: string,
+      property: string,
+      value: any
+    ) => void
+  ) => {
+    const collection = getFeatures();
+    if (collection.features.length > 0) {
+      const feature = collection.features[0];
+      if (feature.geometry.type === "Polygon") {
+        const kinks = getKinks(feature);
+        setFeatureProperty(
+          feature.id as string,
+          "kinks",
+          (kinks.features.length > 0).toString()
+        );
+        setKinks(kinks);
+      }
+    }
+  },
+  32,
+  { maxWait: 100, leading: false }
+);
+
 /**
  *
  * @param map
@@ -67,7 +95,6 @@ export default function useMapboxGLDraw(
   value: Feature<any> | null,
   onChange: (value: Feature<any> | null) => void
 ) {
-  const { t } = useTranslation("digitizing");
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
   const drawMode = glDrawMode(isSmall, geometryType);
@@ -83,45 +110,22 @@ export default function useMapboxGLDraw(
     EMPTY_FEATURE_COLLECTION
   );
 
-  const updateKinks = useCallback(
-    (feature: Feature<any>) => {
-      if (draw && feature.geometry.type === "Polygon") {
-        const kinks = getKinks(feature);
-        draw.setFeatureProperty(
-          feature.id as string,
-          "kinks",
-          (kinks.features.length > 0).toString()
+  useEffect(() => {
+    if (draw) {
+      if (
+        state !== DigitizingState.CAN_COMPLETE &&
+        state !== DigitizingState.STARTED &&
+        state !== DigitizingState.BLANK
+      ) {
+        debouncedUpdateKinks(
+          draw.getAll,
+          setKinks,
+          state,
+          draw.setFeatureProperty
         );
-        // draw.setFeatureProperty(
-        //   feature.id as string,
-        //   "error_message",
-        //   t("Invalid Polygon")
-        // );
-        setKinks(kinks);
       }
-    },
-    [draw]
-  );
-
-  const kinksUpdater = useCallback(
-    debounce(
-      () => {
-        if (draw) {
-          const collection = draw.getAll();
-          if (collection.features[0]) {
-            updateKinks(collection.features[0]);
-          }
-        }
-      },
-      64,
-      {
-        maxWait: 100,
-      }
-    ),
-    [draw]
-  );
-
-  useEffect(() => kinksUpdater, [dragTarget, draw, value, drawMode, state]);
+    }
+  }, [dragTarget, draw, value, drawMode, state]);
 
   useEffect(() => {
     if (map && geometryType && !disabled) {
@@ -142,10 +146,31 @@ export default function useMapboxGLDraw(
         styles,
         userProperties: true,
       });
-      // @ts-ignore
-      window.map = map;
       setDraw(draw);
       map.addControl(draw);
+
+      map.addSource("kinks", {
+        type: "geojson",
+        data: kinks,
+      });
+
+      map.addLayer({
+        id: "kinks-symbol",
+        type: "symbol",
+        source: "kinks",
+        layout: {
+          "text-field": "↚",
+          "text-size": 32,
+          "text-offset": [0, -0.1],
+          "text-allow-overlap": true,
+        },
+        paint: {
+          "text-opacity": 0.8,
+          "text-halo-color": "rgba(81.6%, 23.1%, 23.1%, 0.8)",
+          "text-halo-width": 1,
+          "text-halo-blur": 0,
+        },
+      });
 
       if (value) {
         draw.add(value);
@@ -161,16 +186,17 @@ export default function useMapboxGLDraw(
 
       const handlers = {
         create: function (e: any) {
-          updateKinks(draw.getAll().features[0]);
           setState(DigitizingState.CREATED);
           onChange(e.features[0]);
+          // This is a stupid hack to make sure the state is set properly and
+          // that the poly is turned red if there are kinks. It has something to
+          // do with mapbox-gl-draw's internal render loop.
           setTimeout(() => {
             draw.changeMode("simple_select");
             setState(DigitizingState.CREATED);
-          }, 1);
+          }, 60);
         },
         update: (e: any) => {
-          // updateKinks(e.features[0]);
           onChange(e.features[0]);
         },
         drawingStarted: () => setState(DigitizingState.STARTED),
@@ -223,10 +249,13 @@ export default function useMapboxGLDraw(
       map.on("draw.delete", handlers.delete);
       map.on("draw.modechange", handlers.modeChange);
       map.on("draw.selectionchange", handlers.selectionChange);
-
+      // @ts-ignore
+      window.map = map;
       return () => {
         if (map && draw) {
           map.removeControl(draw);
+          map.removeSource("kinks");
+          map.removeLayer("kinks-points");
           setDraw(null);
           map.off("draw.create", handlers.create);
           map.off("draw.update", handlers.update);
@@ -240,6 +269,15 @@ export default function useMapboxGLDraw(
       };
     }
   }, [map, geometryType, disabled]);
+
+  useEffect(() => {
+    if (map) {
+      try {
+        const source = map.getSource("kinks") as GeoJSONSource;
+        source.setData(kinks);
+      } catch (e) {}
+    }
+  }, [kinks, map]);
 
   useEffect(() => {
     if (disabled) {

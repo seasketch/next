@@ -10,10 +10,12 @@ export default function DigitizingMiniMap({
   style,
   dragTarget,
   onLoad,
+  topologyErrors,
 }: {
   style: Style;
   dragTarget?: DigitizingDragTarget | null;
   onLoad?: (map: Map | null) => void;
+  topologyErrors?: boolean;
 }) {
   const isSmall = useMediaQuery("(max-width: 767px)");
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -82,7 +84,9 @@ export default function DigitizingMiniMap({
         },
       }}
       animate={dragTarget ? variant : "hidden"}
-      className={`w-36 h-36 md:w-40 md:h-40 rounded-full overflow-hidden z-20 md:m-1 absolute shadow-2xl ring-4 pointer-events-none`}
+      className={`w-36 h-36 md:w-40 md:h-40 rounded-full overflow-hidden z-20 md:m-1 absolute shadow-2xl ring-4 pointer-events-none ${
+        topologyErrors ? "ring-red-500" : ""
+      }`}
     >
       <div ref={mapContainer} className="w-full h-full"></div>
       <svg

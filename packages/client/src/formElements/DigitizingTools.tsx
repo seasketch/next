@@ -17,12 +17,14 @@ import {
   DotsHorizontalIcon,
   TrashIcon,
 } from "@heroicons/react/outline";
+import { QuestionMarkCircleIcon } from "@heroicons/react/solid";
 import useMobileDeviceDetector from "../surveys/useMobileDeviceDetector";
 import { DigitizingState } from "../draw/useMapboxGLDraw";
 import DigitizingActionsPopup, {
   DigitizingActionItem,
   NextQuestion,
 } from "../draw/DigitizingActionsPopup";
+import BowtieInstructions from "../draw/BowtieInstructions";
 
 interface DigitizingInstructionsProps {
   geometryType: SketchGeometryType;
@@ -50,6 +52,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   const isMobile = useMobileDeviceDetector();
   const [toolsOpen, setToolsOpen] = useState(false);
   const actionsButtonAnchor = useRef<HTMLButtonElement>(null);
+  const [showInvalidShapeModal, setShowInvalidShapeModal] = useState(false);
 
   let instructions: ReactNode;
   switch (geometryType) {
@@ -81,6 +84,16 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
 
   const buttons = (
     <>
+      {topologyErrors &&
+        (state === DigitizingState.FINISHED ||
+          state === DigitizingState.CREATED) && (
+          <button
+            className="pointer-events-auto"
+            onClick={() => setShowInvalidShapeModal(true)}
+          >
+            <QuestionMarkCircleIcon className="w-4 h-4 text-gray-900" />
+          </button>
+        )}
       <button
         title="Options"
         ref={actionsButtonAnchor}
@@ -120,9 +133,15 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
       {(state === DigitizingState.FINISHED ||
         state === DigitizingState.CREATED) && (
         <Button
-          onClick={onRequestSubmit}
+          onClick={() => {
+            if (topologyErrors) {
+              setShowInvalidShapeModal(true);
+            } else {
+              onRequestSubmit();
+            }
+          }}
           primary
-          disabled={topologyErrors}
+          // disabled={topologyErrors}
           label={t("Continue Survey")}
           className={`pointer-events-auto whitespace-nowrap ${
             bottomToolbar && "flex-2 content-center"
@@ -170,6 +189,10 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   if (bottomToolbar) {
     return (
       <>
+        <BowtieInstructions
+          open={showInvalidShapeModal}
+          onRequestClose={() => setShowInvalidShapeModal(false)}
+        />
         <DigitizingActionsPopup
           open={toolsOpen}
           onRequestClose={() => setToolsOpen(false)}
@@ -197,6 +220,11 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   } else {
     return (
       <>
+        <BowtieInstructions
+          open={showInvalidShapeModal}
+          onRequestClose={() => setShowInvalidShapeModal(false)}
+        />
+
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
