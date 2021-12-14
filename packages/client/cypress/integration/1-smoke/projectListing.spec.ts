@@ -23,7 +23,7 @@ describe("Project Listing smoke test", () => {
       cy.contains("Public Project One");
     });
   });
-  
+
   describe("Admin-only projects are not visible to anonymous users", () => {
     before(() => {
       cy.getToken("User 1").then(({ access_token }) => {
@@ -104,11 +104,12 @@ describe("Project Listing smoke test", () => {
         "cy-user-project",
         ProjectAccessControlSetting.Public,
         true
-      ).then((projectId) => {
+      )
+      .then((projectId) => {
         cy.wrap(projectId).as("projectId");
-      });
+      })
       cy.visit("/cy-user-project/admin")
-      cy.contains("Admin Dashboard")
+      cy.contains("Admin Dashboard", { timeout: 30000 })
     });
     it("Project links to appropriate project app page", () => {
       cy.visit("/projects")
