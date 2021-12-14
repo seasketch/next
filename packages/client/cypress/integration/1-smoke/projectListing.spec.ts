@@ -23,6 +23,54 @@ describe("Project Listing smoke test", () => {
       cy.contains("Public Project One");
     });
   });
+  
+  describe("Admin-only projects are not visible to anonymous users", () => {
+    before(() => {
+      cy.getToken("User 1").then(({ access_token }) => {
+        cy.wrap(access_token).as("token");
+        cy.createProject(
+          "Admin Project One",
+          "cy-admin",
+          ProjectAccessControlSetting.AdminsOnly,
+          false
+        )
+        .then((projectId) => {
+          cy.wrap(projectId).as("projectId");
+        });
+      });
+      cy.visit('/projects')
+    });
+    after(() => {
+      cy.deleteProject("cy-admin");
+    }); 
+    it("Does not render admin-only projects", () => {
+      cy.contains("Admin Project One").should("not.exist")
+    })
+  });
+
+  describe("Invite-only projects are not visible to anonymous users unless changed by admin", () => {
+    before(() => {
+      cy.getToken("User 1").then(({ access_token }) => {
+        cy.wrap(access_token).as("token");
+        cy.createProject(
+          "Invite Project One",
+          "cy-invite",
+          ProjectAccessControlSetting.InviteOnly,
+          false
+        )
+        .then((projectId) => {
+          cy.wrap(projectId).as("projectId");
+        });
+      });
+      cy.visit('/projects')
+    });
+    after(() => {
+      cy.deleteProject("cy-invite");
+    }); 
+    it("Does not render invite-only projects", () => {
+      cy.contains("Invite Project One").should("not.exist")
+    })
+  });
 
   describe('User can login and has the option to create a project', () => {
     before(() => {
@@ -47,31 +95,37 @@ describe("Project Listing smoke test", () => {
         cy.wrap(resp["access_token"]).as("token")
       });
     });
-      it("Allows a user to login", () => {
-        cy.get("#user-menu").should("be.visible");
-      })
-      it("Allows user to create a project", () => {
-        cy.createProject(
-          "User Project One",
-          "cy-user-project",
-          ProjectAccessControlSetting.Public,
-          true
-        ).then((projectId) => {
-          cy.wrap(projectId).as("projectId");
-        });
-        cy.visit("/projects")
-        cy.contains("User Project One")
+    it("Allows a user to login", () => {
+      cy.get("#user-menu").should("be.visible");
+    })
+    it("Allows user to create a project", () => {
+      cy.createProject(
+        "User Project One",
+        "cy-user-project",
+        ProjectAccessControlSetting.Public,
+        true
+      ).then((projectId) => {
+        cy.wrap(projectId).as("projectId");
       });
+      cy.visit("/cy-user-project/admin")
+      cy.contains("Admin Dashboard")
+    });
+    it("Project links to appropriate project app page", () => {
+      cy.visit("/projects")
+      cy.contains("User Project One").click()
+      cy.url().should('eq', Cypress.config().baseUrl + '/cy-user-project/app'); 
+    })
     after(() => {
       cy.deleteProject("cy-user-project");
     }); 
-  });
-});   
-  //I am an anon user and I can see public projects
-  //I am a signed in user and can create a project
+  });  
+});
+  
+  //**I am an anon user and I can see public projects
+  //**I am a signed in user and can create a project
   //I am a signed in user and can set visibility restrictions on my project
   //I am a signed in user and can delete a project
-  //I am a signed in user and expect my projects to be listed on the projects page
-  //I am a signed in user and clicking on any projects leads me to 
-  //Anonymous users cannot see invite-only projects
-
+  //**I am a signed in user and expect my projects to be listed on my projects page
+  //**I am a signed in user and clicking on any project leads me to project app page
+  //**Anonymous users cannot see admin-only projects
+  //**Anonymous user cannot see invite-only projects by default */
