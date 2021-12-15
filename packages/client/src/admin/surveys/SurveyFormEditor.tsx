@@ -103,6 +103,9 @@ export default function SurveyFormEditor({
         }
       }
     }
+    results.flattenedFormElements = sortFormElements(
+      results.flattenedFormElements
+    );
     return results;
   }, [data?.survey?.form?.formElements, data?.survey?.form?.logicRules]);
 
