@@ -7,7 +7,7 @@ import {
   FormElementEditorPortal,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
-import { useCombobox } from "downshift";
+import { useCombobox, UseComboboxStateChangeTypes } from "downshift";
 import { SearchIcon, SelectorIcon } from "@heroicons/react/outline";
 import { SurveyStyleContext } from "../surveys/appearance";
 import FormElementOptionsInput, {
@@ -44,6 +44,8 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
     }
   }, [props.value]);
 
+  console.warn("inputValue", inputValue);
+
   useEffect(() => {
     if (
       (props.value === undefined || (props.value === null && props.editable)) &&
@@ -77,7 +79,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
     selectedItem: selectedOption?.label || null,
     items: choices,
     onInputValueChange: (e) => {
-      if (e.type === "__input_change__") {
+      if (e.type === useCombobox.stateChangeTypes.InputChange) {
         const inputValue = e.inputValue;
         if (inputValue) {
           setChoices(
