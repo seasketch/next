@@ -1,5 +1,6 @@
 import { ProjectAccessControlSetting } from "../../../src/generated/graphql";
 
+
 describe("Project Listing smoke test", () => {
   describe("Public projects visible to anonymous users", () => {
     before(() => {
@@ -72,7 +73,7 @@ describe("Project Listing smoke test", () => {
     })
   });
 
-  describe('User can login and has the option to create a project', () => {
+  describe('User can login and projects page renders button to create a project', () => {
     before(() => {
       cy.login("User 1"); 
       cy.visit("/projects")
@@ -80,10 +81,8 @@ describe("Project Listing smoke test", () => {
     it("Logs in the user", () => {
       cy.get("#user-menu").should("be.visible");
     });
-    it("Invites user to create a project from projects page", () => {
+    it("Create project button is visible and links to new project form", () => {
       cy.get("#new-project-btn").should("be.visible")
-    });
-    it("Directs user to new project page and new project form is visible", () => {
       cy.get('#new-project-btn').click()
       cy.url().should('eq', Cypress.config().baseUrl + '/new-project');
       cy.get("#create-project-btn").should("be.visible")
@@ -94,31 +93,28 @@ describe("Project Listing smoke test", () => {
       cy.login("User 1").then((resp) => {
         cy.wrap(resp["access_token"]).as("token")
       });
+      cy.intercept("http://localhost:3857/graphql", (req) => {
+        if (req.body.variables.slug === "formproject") {
+          //console.log("yes")
+          req.alias = "submitForm"
+          //console.log(req.alias)
+        };
+      });
     });
-    it("Allows a user to login", () => {
+    it("Logs in the user", () => {
       cy.get("#user-menu").should("be.visible");
-    })
-    it("Allows user to create a project", () => {
-      cy.createProject(
-        "User Project One",
-        "cy-user-project",
-        ProjectAccessControlSetting.Public,
-        true
-      )
-      .then((projectId) => {
-        cy.wrap(projectId).as("projectId");
-      })
-      cy.visit("/cy-user-project/admin")
-      cy.contains("Admin Dashboard", { timeout: 30000 })
     });
-    it("Project links to appropriate project app page", () => {
-      cy.visit("/projects")
-      cy.contains("User Project One").click()
-      cy.url().should('eq', Cypress.config().baseUrl + '/cy-user-project/app'); 
+    it("Allows user to create a project", () => {
+      
+      cy.visit('/new-project')
+      cy.get('input[id=name]').type('Form Project One').as("projectTitle")
+      cy.get('input[id=slug]').type('form-project').as("projectSlug")
+      
+      cy.get('#create-project-btn').click()
+
+      cy.wait('@submitForm')
+        .its('response.statusCode').should('eq', 200)
     })
-    after(() => {
-      cy.deleteProject("cy-user-project");
-    }); 
   });  
 });
   
