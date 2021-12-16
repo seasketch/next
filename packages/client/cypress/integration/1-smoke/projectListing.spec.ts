@@ -1,7 +1,11 @@
+/* eslint-disable cypress/no-unnecessary-waiting */
 import { ProjectAccessControlSetting } from "../../../src/generated/graphql";
 
-
+//const [createProject] = useCreateProjectMutation({
+//  refetchQueries: ["SimpleProjectList"],
+//});
 describe("Project Listing smoke test", () => {
+
   describe("Public projects visible to anonymous users", () => {
     before(() => {
       cy.getToken("User 1").then(({ access_token }) => {
@@ -83,39 +87,49 @@ describe("Project Listing smoke test", () => {
     });
     it("Create project button is visible and links to new project form", () => {
       cy.get("#new-project-btn").should("be.visible")
-      cy.get('#new-project-btn').click()
-      cy.url().should('eq', Cypress.config().baseUrl + '/new-project');
+        .get('#new-project-btn').click()
+        .url().should('eq', Cypress.config().baseUrl + '/new-project');
       cy.get("#create-project-btn").should("be.visible")
     });
   });
+
   describe("A logged-in user can create a project", () => {
     beforeEach(() => {
       cy.login("User 1").then((resp) => {
         cy.wrap(resp["access_token"]).as("token")
+        console.log("token")
       });
-      cy.intercept("http://localhost:3857/graphql", (req) => {
-        if (req.body.variables.slug === "formproject") {
-          //console.log("yes")
-          req.alias = "submitForm"
-          //console.log(req.alias)
-        };
-      });
+      cy.intercept("http://localhost:3857/graphql", ((req) => {
+        if (req.body.operationName && req.body.operationName === "CreateProject") {
+          req.alias = "createProject"
+        }
+        if (req.body.operationName && req.body.operationName === "CurrentProjectMetadata") {
+          req.alias = "currentProject"
+        }
+      }));
     });
     it("Logs in the user", () => {
       cy.get("#user-menu").should("be.visible");
     });
     it("Allows user to create a project", () => {
-      
       cy.visit('/new-project')
-      cy.get('input[id=name]').type('Form Project One').as("projectTitle")
-      cy.get('input[id=slug]').type('form-project').as("projectSlug")
-      
+        .get('input[id=name]').type('Form Project Two')
+        .should('have.value', 'Form Project Two')
+      cy.get('input[id=slug]').type('form2')
+        .should ('have.value', 'form2')
+        //Debounce slug
+        .wait(500)
       cy.get('#create-project-btn').click()
-
-      cy.wait('@submitForm')
-        .its('response.statusCode').should('eq', 200)
+      .wait('@createProject')
+      .wait('@currentProject')
+    });
+  });
+  
+  describe("An unverified user cannot create a project", () => {
+    it("A user with an unverified email address cannot login", () => {
+      cy.login('Unverified Email')
     })
-  });  
+  })  
 });
   
   //**I am an anon user and I can see public projects
@@ -126,3 +140,4 @@ describe("Project Listing smoke test", () => {
   //**I am a signed in user and clicking on any project leads me to project app page
   //**Anonymous users cannot see admin-only projects
   //**Anonymous user cannot see invite-only projects by default */
+  //I am a user whose email is unverified
