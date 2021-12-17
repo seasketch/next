@@ -13,6 +13,7 @@ import {
 import logo from "../header/seasketch-logo.png";
 import { useAuth0 } from "@auth0/auth0-react";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
+import { useGetProjectBySlugQuery } from "../generated/graphql";
 
 export default function FullSidebar({
   open,
@@ -28,6 +29,16 @@ export default function FullSidebar({
   const { slug } = useParams<{ slug: string }>();
   const { loginWithRedirect } = useAuth0();
   const { data, loading, error, refetch } = useCurrentProjectMetadataQuery();
+  const getProjectName = () => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const { data, loading, error } = useGetProjectBySlugQuery({
+      variables: {
+         slug: slug
+      },
+    });
+    return data?.projectBySlug?.name
+   }
+  const projectName = getProjectName()
   const { user, logout } = useAuth0();
   let social: string | false = false;
   if (user?.sub) {
@@ -52,7 +63,7 @@ export default function FullSidebar({
     history.replace(`/${slug}/app/${sidebar}`);
     onClose();
   };
-
+  
   const project = data?.currentProject;
   return (
     <motion.div
@@ -91,7 +102,7 @@ export default function FullSidebar({
           )}
         </div>
         <div className="flex-1 max-w-md flex items-center text-xl">
-          <h1 className=" ">{project?.name}</h1>
+          <h1 className="">{projectName}</h1>
         </div>
         <button
           onClick={onClose}

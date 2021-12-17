@@ -8,7 +8,7 @@ import {
   Redirect,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useCurrentProjectMetadataQuery } from "../generated/graphql";
+import { useCurrentProjectMetadataQuery, useGetProjectBySlugQuery } from "../generated/graphql";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useBreadcrumbs from "use-react-router-breadcrumbs";
 import { Trans } from "react-i18next";
@@ -21,10 +21,12 @@ import PhoneAccessGate from "./PhoneAccessGate";
 import { useAuth0 } from "@auth0/auth0-react";
 import Spinner from "../components/Spinner";
 
+
 const LazyBasicSettings = React.lazy(() => import("./Settings"));
 const LazyDataSettings = React.lazy(() => import("./data/DataSettings"));
 const LazyUserSettings = React.lazy(() => import("./users/UserSettings"));
 const LazySurveyAdmin = React.lazy(() => import("./surveys/SurveyAdmin"));
+
 
 interface Section {
   breadcrumb: string;
@@ -236,7 +238,22 @@ export default function AdminApp() {
   if (data && data.currentProject?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;
   }
-
+  
+  const getProjectName = () => {
+   // eslint-disable-next-line react-hooks/rules-of-hooks
+     const { data, loading, error } = useGetProjectBySlugQuery({
+       variables: {
+          slug: slug
+       },
+     });
+     return data?.projectBySlug?.name
+  }
+  
+  const projectName = getProjectName()
+   
+  //if (data && data.currentProject?.sessionIsAdmin === false) {
+  //  return <Redirect to={`/${slug}`} />;
+  //}
   return (
     <AdminMobileHeaderContext.Provider
       value={{ ...mobileHeaderState, setState: setMobileHeaderState }}
@@ -247,7 +264,7 @@ export default function AdminApp() {
         <MobileSidebar
           sections={sections}
           slug={slug}
-          projectName={data?.currentProject?.name || "▌"}
+          projectName={projectName || "▌"}
           open={mobileSidebarOpen}
           onRequestClose={() => setMobileSidebarOpen(false)}
         />
@@ -256,7 +273,7 @@ export default function AdminApp() {
         <StaticSidebar
           sections={sections}
           slug={slug}
-          projectName={data?.currentProject?.name || "▌"}
+          projectName={projectName || "▌"} 
         />
         <div className="flex w-0 flex-1 max-h-screen">
           {/* Header (mobile-only) */}
