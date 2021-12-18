@@ -11,6 +11,7 @@ import { SurveyStyleContext } from "../surveys/appearance";
 import { MinusIcon, PlusIcon } from "@heroicons/react/outline";
 import NumberInput from "../components/NumberInput";
 import InputBlock from "../components/InputBlock";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 require("./Number.css");
 
 export type NumberProps = {
@@ -25,7 +26,7 @@ export type NumberProps = {
  */
 const Number: FormElementComponent<NumberProps, number | null> = (props) => {
   const { t } = useTranslation("surveys");
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   const defaultValue = props.componentSettings.defaultValue || 0;
   const min = valueOrUndefined(props.componentSettings.min);
   const max = valueOrUndefined(props.componentSettings.max);

@@ -13,7 +13,7 @@ import FormElementOptionsInput, {
   FormElementOption,
 } from "./FormElementOptionsInput";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
-import SurveyButton from "./SurveyButton";
+import SurveyInputButton from "./SurveyInputButton";
 
 export type MultipleChoiceProps = {
   multipleSelect?: boolean;
@@ -40,7 +40,7 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
             const current = props.value || [];
             const selected = current.indexOf(value || label) !== -1;
             return (
-              <SurveyButton
+              <SurveyInputButton
                 key={value || label}
                 className={"w-full"}
                 label={label}

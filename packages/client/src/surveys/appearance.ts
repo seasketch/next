@@ -3,11 +3,13 @@ import {
   FormElementTextVariant,
   FormElementLayout,
   FormElementDetailsFragment,
+  Maybe,
 } from "../generated/graphql";
 import { colord, extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { createContext } from "react";
 import { useMediaQuery } from "beautiful-react-hooks";
+import { components } from "../formElements";
 extend([a11yPlugin]);
 
 export type FormElementStyleProps = Pick<
@@ -64,7 +66,8 @@ export const defaultStyle = {
  */
 export function useCurrentStyle(
   formElements: FormElementDetailsFragment[] | undefined | null,
-  current: FormElementDetailsFragment | undefined
+  current: FormElementDetailsFragment | undefined,
+  stage: number
 ): ComputedFormElementStyle {
   const isSmall = useMediaQuery("(max-width: 767px)");
   let unsplashAuthorName: string | undefined;
@@ -107,6 +110,8 @@ export function useCurrentStyle(
     }
   }
 
+  const prevLayout = style.layout;
+
   if (current.type?.allowedLayouts?.length) {
     if (current.type.allowedLayouts.indexOf(style.layout!) === -1) {
       style = { ...style };
@@ -131,6 +136,17 @@ export function useCurrentStyle(
     textClass = "text-white";
   } else {
     textClass = "text-grey-800";
+  }
+
+  // If a component has a callback to set it's own layout, trust it to set it
+  const C = components[current.typeId];
+  if (C.getLayout) {
+    style.layout = C.getLayout(
+      stage,
+      current.componentSettings,
+      prevLayout || style.layout || FormElementLayout.Top,
+      isSmall
+    );
   }
 
   return {

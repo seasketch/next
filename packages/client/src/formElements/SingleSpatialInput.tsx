@@ -1,4 +1,4 @@
-import { BBox } from "geojson";
+import { BBox, FeatureCollection } from "geojson";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import MapboxMap from "../components/MapboxMap";
@@ -8,6 +8,7 @@ import SketchGeometryTypeSelector, {
 import { useMapContext } from "../dataLayers/MapContextManager";
 import {
   BasemapDetailsFragment,
+  FormElementLayout,
   SketchGeometryType,
   useGetBasemapsQuery,
 } from "../generated/graphql";
@@ -39,6 +40,7 @@ import BoundsInput from "../admin/surveys/BoundsInput";
 import BasemapMultiSelectInput from "../admin/surveys/BasemapMultiSelectInput";
 import DigitizingMiniMap from "./DigitizingMiniMap";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
 const defaultStartingBounds = [
@@ -55,7 +57,7 @@ export type SingleSpatialInputProps = {
 
 const SingleSpatialInput: FormElementComponent<
   SingleSpatialInputProps,
-  UnsavedSketches
+  { collection: FeatureCollection<any> }
 > = (props) => {
   const { t } = useTranslation("admin:surveys");
   const { slug } = useParams<{ slug: string }>();
@@ -71,8 +73,9 @@ const SingleSpatialInput: FormElementComponent<
   const [miniMap, setMiniMap] = useState<Map | null>(null);
   const [miniMapStyle, setMiniMapStyle] = useState<Style>();
   const mapContext = useMapContext();
-  const mapPortalContext = useContext(SurveyMapPortalContext);
-  const style = useContext(SurveyStyleContext);
+  const layoutContext = useContext(SurveyLayoutContext);
+  const mapPortalContext = layoutContext.mapPortal;
+  const style = layoutContext.style;
   const context = useContext(SurveyContext);
   const bounds =
     props.componentSettings.startingBounds ||
@@ -91,12 +94,15 @@ const SingleSpatialInput: FormElementComponent<
   } = useMapboxGLDraw(
     map,
     geometryType,
-    props.value?.features[0] || null,
+    props.value?.collection?.features[0] || null,
     (feature) => {
       if (feature) {
-        props.onChange(toFeatureCollection([feature], true), false);
+        props.onChange(
+          { collection: toFeatureCollection([feature], true) },
+          false
+        );
       } else {
-        props.onChange(toFeatureCollection([], true), false);
+        props.onChange({ collection: toFeatureCollection([], true) }, false);
       }
     }
   );
@@ -163,9 +169,8 @@ const SingleSpatialInput: FormElementComponent<
       </div>
       {mapPortalContext && (
         <SurveyMapPortal mapContext={mapContext}>
-          {/* <MiniBasemapSelector basemaps={basemaps} /> */}
           <motion.div
-            className="flex items-center justify-center"
+            className="flex items-center justify-center w-full h-full"
             variants={{
               start: {
                 opacity: 0,
@@ -204,7 +209,7 @@ const SingleSpatialInput: FormElementComponent<
                 }
               }}
               onRequestSubmit={() => {
-                if (props.value?.features?.length) {
+                if (props.value?.collection.features?.length) {
                   props.onSubmit();
                 }
               }}
@@ -216,12 +221,14 @@ const SingleSpatialInput: FormElementComponent<
               <NextQuestion
                 phoneOnly={true}
                 onClick={props.onRequestNext}
-                disabled={props.isRequired && !props.value?.features.length}
+                disabled={
+                  props.isRequired && !props.value?.collection.features.length
+                }
               />
               <ResetView map={mapContext.manager?.map!} bounds={bounds} />
               <ZoomToFeature
                 map={mapContext.manager?.map!}
-                feature={props.value?.features[0]}
+                feature={props.value?.collection.features[0]}
                 isSmall={style.isSmall}
                 geometryType={props.sketchClass!.geometryType!}
               />
@@ -232,7 +239,9 @@ const SingleSpatialInput: FormElementComponent<
             </DigitizingTools>
             <MapboxMap
               hideDrawControls
-              onLoad={(map) => setMap(map)}
+              onLoad={(map) => {
+                setMap(map);
+              }}
               className="w-full h-full absolute top-0 bottom-0"
               initOptions={{
                 logoPosition: "bottom-left",

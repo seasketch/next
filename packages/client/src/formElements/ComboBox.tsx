@@ -17,6 +17,7 @@ import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import { XIcon } from "@heroicons/react/outline";
 import Button from "../components/Button";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
 export type ComboBoxProps = {
   options?: FormElementOption[];
@@ -61,7 +62,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
     }
   }, [props.componentSettings.autoSelectFirstOptionInList]);
 
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   const {
     isOpen,
     getToggleButtonProps,
@@ -272,7 +273,7 @@ ComboBox.description = <Trans>For large lists of options</Trans>;
 ComboBox.defaultBody = questionBodyFromMarkdown(`
 # Choices, choices
 
-Use a combo box when you have a long list of choices and it's necessary to be able to search using the keyboard. Note that in most cases a Choice field is a better solution. Dropdowns have many issues problems, [especially on mobile](https://www.lukew.com/ff/entry.asp?1950).
+Use a combo box when you have a long list of choices and it's necessary to be able to search using the keyboard. Note that in most cases a Choice field is a better solution. Dropdowns have many UX issues, [especially on mobile](https://www.lukew.com/ff/entry.asp?1950).
 
 On small mobile devices, the native *select* input of the operating system will be shown.
 `);

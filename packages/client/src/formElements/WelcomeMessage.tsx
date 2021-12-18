@@ -7,6 +7,7 @@ import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
 import { SurveyStyleContext } from "../surveys/appearance";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 import {
   FormElementBody,
   FormElementComponent,
@@ -24,7 +25,7 @@ const WelcomeMessage: FormElementComponent<
   { dropdownSelection?: string }
 > = (props) => {
   const { t } = useTranslation("admin:surveys");
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   const context = useContext(SurveyContext);
   if (!context) {
     throw new Error("SurveyContext not set");

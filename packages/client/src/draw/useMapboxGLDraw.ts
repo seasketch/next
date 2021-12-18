@@ -47,10 +47,10 @@ export type DigitizingDragTarget = {
   point: { x: number; y: number };
 };
 
-const EMPTY_FEATURE_COLLECTION = {
+export const EMPTY_FEATURE_COLLECTION = {
   type: "FeatureCollection",
   features: [],
-} as FeatureCollection<Point>;
+} as FeatureCollection<any>;
 
 const debouncedUpdateKinks = debounce(
   (
@@ -85,21 +85,21 @@ const debouncedUpdateKinks = debounce(
  *
  * @param map
  * @param geometryType
- * @param value
+ * @param initialValue
  * @param onChange
  * @returns
  */
 export default function useMapboxGLDraw(
   map: Map | null | undefined,
   geometryType: SketchGeometryType,
-  value: Feature<any> | null,
+  initialValue: Feature<any> | null,
   onChange: (value: Feature<any> | null) => void
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
   const drawMode = glDrawMode(isSmall, geometryType);
   const [state, setState] = useState(
-    value ? DigitizingState.FINISHED : DigitizingState.BLANK
+    initialValue ? DigitizingState.FINISHED : DigitizingState.BLANK
   );
   const [disabled, setDisabled] = useState(false);
   const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
@@ -125,10 +125,11 @@ export default function useMapboxGLDraw(
         );
       }
     }
-  }, [dragTarget, draw, value, drawMode, state]);
+  }, [dragTarget, draw, initialValue, drawMode, state]);
 
   useEffect(() => {
     if (map && geometryType && !disabled) {
+      console.log("useEffect: setup draw");
       const draw = new MapboxDraw({
         keybindings: true,
         clickBuffer: 4,
@@ -172,17 +173,17 @@ export default function useMapboxGLDraw(
         },
       });
 
-      if (value) {
-        draw.add(value);
+      if (initialValue) {
+        draw.add(initialValue);
 
-        map.fitBounds(bbox(value) as [number, number, number, number], {
+        map.fitBounds(bbox(initialValue) as [number, number, number, number], {
           padding: isSmall ? 100 : 200,
         });
       } else {
         draw.changeMode(drawMode);
       }
 
-      setState(value ? DigitizingState.FINISHED : DigitizingState.BLANK);
+      setState(initialValue ? DigitizingState.FINISHED : DigitizingState.BLANK);
 
       const handlers = {
         create: function (e: any) {
@@ -249,13 +250,12 @@ export default function useMapboxGLDraw(
       map.on("draw.delete", handlers.delete);
       map.on("draw.modechange", handlers.modeChange);
       map.on("draw.selectionchange", handlers.selectionChange);
-      // @ts-ignore
-      window.map = map;
       return () => {
+        console.log("cleanup", map, draw);
         if (map && draw) {
-          map.removeControl(draw);
           map.removeSource("kinks");
           map.removeLayer("kinks-points");
+          map.removeControl(draw);
           setDraw(null);
           map.off("draw.create", handlers.create);
           map.off("draw.update", handlers.update);
@@ -314,7 +314,7 @@ export default function useMapboxGLDraw(
      */
     reset: () => {
       if (draw) {
-        if (!value) {
+        if (!initialValue) {
           throw new Error("No feature exists to delete");
         }
         draw.deleteAll();
@@ -331,21 +331,21 @@ export default function useMapboxGLDraw(
      */
     edit: () => {
       if (draw) {
-        if (!value) {
+        if (!initialValue) {
           throw new Error("No feature exists to edit");
         }
         if (
           geometryType === SketchGeometryType.Point ||
-          value.geometry.type === "Point"
+          initialValue.geometry.type === "Point"
         ) {
           // @ts-ignore
           draw.changeMode("simple_select", {
-            featureIds: [value.id],
+            featureIds: [initialValue.id],
           });
         } else {
           // @ts-ignore
           draw.changeMode("direct_select", {
-            featureId: value.id,
+            featureId: initialValue.id,
           });
         }
         setState(DigitizingState.EDITING);

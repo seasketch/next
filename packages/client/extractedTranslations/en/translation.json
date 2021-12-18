@@ -16,29 +16,73 @@
       "": "Access to <2></2> is limited to project administrators. You may contact the site support email to request access."
     }
   },
+  "Access to this area of <2></2> is limited to project administrators": {
+    "": "Access to this area of <2></2> is limited to project administrators."
+  },
+  "Add to spatial input": {
+    "": {
+      "": {
+        "": ""
+      }
+    }
+  },
+  "Add to survey": {
+    "": {
+      "": {
+        "": ""
+      }
+    }
+  },
   "Admins Only": "Admins Only",
   "An account with this email address already exists": {
     "": "An account with this email address already exists."
   },
+  "Appearance": "",
   "Appears next to forum posts in place of your name if provided": "",
+  "Are you sure?": "",
+  "Background color": "",
+  "Background image": "",
+  "Background layout": "",
+  "Base Settings": "",
   "Bio and Affiliations": "",
+  "Boolean input": "Boolean input",
   "Cancel": "",
+  "Choose image": {
+    "": {
+      "": {
+        "": ""
+      }
+    }
+  },
+  "Choose one or more values": "Choose one or more values",
+  "Clear style": "",
   "Confirming invite": "Confirming invite",
   "Consent to share this personal information": "Consent to share this personal information",
   "Contact ": "Contact ",
   "Contact support": "Contact support",
+  "Create a Project": "",
   "Create an Account": "",
   "Create an account": "Create an account",
   "Create your own<1></1><2> SeaSketch Project</2>": "Create your own<1></1><2> SeaSketch Project</2>",
   "Create your project": "",
+  "Delete Element": "",
   "Email": "",
   "Email Not Verified": "Email Not Verified",
+  "Enter a URL": "",
   "Error Loading Project": "Error Loading Project",
+  "Export ID": "",
+  "For large lists of options": "For large lists of options",
+  "Form Elements": "",
   "Full Name": "",
+  "Groups can be used to organize users and control access to resources like data layers and discussion forums": {
+    "": ""
+  },
   "I understand that this profile will be shared with project admins and accompany my posts to the discussion forums": {
     "": "I understand that this profile will be shared with project admins and accompany my posts to the discussion forums."
   },
   "Information in the profile will be included with your request": "Information in the profile will be included with your request",
+  "Input must be  characters or greater": "Input must be  characters or greater",
+  "Input must be  characters or less": "Input must be  characters or less",
   "Loading": {
     "": {
       "": {
@@ -46,7 +90,16 @@
       }
     }
   },
+  "Location Name": "Location Name",
+  "Longer text input": "Longer text input",
+  "Name": "Name",
+  "Name for a spatial feature": "Name for a spatial feature",
+  "Name of respondent": "Name of respondent",
+  "Next": "",
   "Nickname": "",
+  "Number": "Number",
+  "Numeric rating": "Numeric rating",
+  "Preview Survey": "",
   "Privacy Policy": "Privacy Policy",
   "Private Project": "Private Project",
   "Profile sharing is required to access private projects so that administrators know who is requesting access": {
@@ -58,18 +111,33 @@
   "Project name": "",
   "Projects": "",
   "Provide any institutional affiliations you would like to share and describe yourself (optional)": "",
+  "Removing style settings will mean that this page will share the same appearance as previous pages": {
+    "": "Removing style settings will mean that this page will share the same appearance as previous pages."
+  },
   "Request Awaiting Approval": "Request Awaiting Approval",
+  "Required field": "Required field",
   "Resend verification email": "Resend verification email",
+  "Return to ": "Return to ",
   "SeaSketch does not have a project located at this url": {
     " Try browsing our <2>list of projects</2> to find what you are looking for": {
       "": "SeaSketch does not have a project located at this url. Try browsing our <2>list of projects</2> to find what you are looking for."
     }
   },
+  "Search": "",
+  "Search Unsplash for Photos": "",
+  "Secondary color": "",
   "Send Request": "",
+  "Setting an export id will give a stable column name when exporting your results": "",
   "Share Profile and Request Access": "Share Profile and Request Access",
+  "Short Text": "Short Text",
+  "Show Progress": "",
   "Sign In": "",
   "Sign Out": "",
   "Sign in": "Sign in",
+  "Single integer input": "Single integer input",
+  "Single line of text for short answers": "Single line of text for short answers",
+  "Skip Logic": "",
+  "Text color": "",
   "The API server did not return any public details for this project": {
     "": "The API server did not return any public details for this project."
   },
@@ -82,6 +150,13 @@
   "This invitation was originally sent to <2></2>": {
     "": "This invitation was originally sent to <2></2>."
   },
+  "Try Kelp, Coral Reef, Atoll, Santa Barbara Ocean": {
+    "": {
+      "": {
+        "": ""
+      }
+    }
+  },
   "Upload Avatar Photo": "",
   "Uploading": "",
   "Use another account": "",
@@ -92,7 +167,9 @@
       }
     }
   },
+  "User Groups": "",
   "User Profile": "User Profile",
+  "Validated email input": "Validated email input",
   "Verification email sent": {
     " Check your inbox": {
       "": ""
@@ -103,6 +180,7 @@
   "Welcome!": "Welcome!",
   "Welcome, !": "Welcome, !",
   "Will be shared wherever your profile is visible (optional)": "",
+  "Yes/No": "Yes/No",
   "You are approved to access <2></2> but first you must verify your email address": {
     " This is to protect your account and sensitive data within the project": {
       " Check your email, including your spam folder, for a verification link from SeaSketch": {
@@ -129,7 +207,10 @@
       }
     }
   },
+  "auto": "",
+  "dark": "",
   "dismiss": "dismiss",
+  "light": "",
   "loading": {
     "": {
       "": {

@@ -42,6 +42,7 @@ import {
   Geometry,
 } from "geojson";
 import { LngLatBoundsLike } from "mapbox-gl";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 require("./prosemirror-body.css");
 require("./unreset.css");
 const LazyBodyEditor = lazy(() => import("./BodyEditor"));
@@ -211,7 +212,7 @@ export class FormElementEditorPortal extends Component<{
 export const SurveyMapPortal: FunctionComponent<{
   mapContext: MapContextInterface;
 }> = (props) => {
-  const portalContext = useContext(SurveyMapPortalContext);
+  const portalContext = useContext(SurveyLayoutContext).mapPortal;
   if (portalContext) {
     return createPortal(
       <MapContext.Provider value={props.mapContext}>
@@ -402,6 +403,12 @@ export interface FormElementComponent<T, V = {}>
   hideNav?:
     | boolean
     | ((componentSettings: T, isMobile: boolean, stage?: number) => boolean);
+  getLayout?: (
+    stage: number,
+    componentSettings: T,
+    defaultLayout: FormElementLayout,
+    isSmall: boolean
+  ) => FormElementLayout | null;
 }
 
 export function hideNav(

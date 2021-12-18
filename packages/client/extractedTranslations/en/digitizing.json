@@ -1,0 +1,11 @@
+{
+  "Invalid Shape": "",
+  "Okay": "",
+  "Your shape will turn red if invalid": {
+    " When this happens make sure your shape does not cross itself, as indicated by the arrow symbols": {
+      " If you continue to have trouble, consider deleting your shape and starting over": {
+        "": "Your shape will turn red if invalid. When this happens make sure your shape does not cross itself, as indicated by the arrow symbols. If you continue to have trouble, consider deleting your shape and starting over."
+      }
+    }
+  }
+}

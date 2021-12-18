@@ -267,9 +267,10 @@ export default function SurveyFormEditor({
 
   const style = useCurrentStyle(
     data?.survey?.form?.formElements,
-    selectedFormElement
+    selectedFormElement,
+    stage
   );
-
+  console.log("style", style, selectedFormElement?.layout);
   let isDark = colord(style.backgroundColor || "#efefef").isDark();
   let dynamicTextClass = "text-white";
   dynamicTextClass = isDark ? "text-white" : "text-grey-800";

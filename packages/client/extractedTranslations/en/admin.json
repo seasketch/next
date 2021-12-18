@@ -13,6 +13,7 @@
   },
   "Access Control": "",
   "Access Control Settings": "",
+  "Access Requests": "",
   "Access limited to listed user groups, as well as project administrators": "",
   "Accessible only to project administrators": "",
   "Accessible to anyone with project access": "",
@@ -25,7 +26,21 @@
   "Add description": "",
   "Admin": "Admin",
   "Admin Dashboard": "Admin Dashboard",
+  "Administrator Access": "",
+  "Administrators will be given full access to change project settings": {
+    " They can manage data layers, change access control settings, and moderate the discussion forums": {
+      "": "Administrators will be given full access to change project settings. They can manage data layers, change access control settings, and moderate the discussion forums."
+    }
+  },
+  "Admins": "",
   "Admins Only": "",
+  "Admins have full access to project settings": "",
+  "Admins will be given full access to change project settings": {
+    " They can manage data layers, change access control settings, and moderate the discussion forums": {
+      "": "Admins will be given full access to change project settings. They can manage data layers, change access control settings, and moderate the discussion forums."
+    }
+  },
+  "Affiliations": "Affiliations",
   "Always on": "",
   "An error occured when retrieving this dataset and it cannot be imported": {
     " ": "An error occured when retrieving this dataset and it cannot be imported. "
@@ -47,9 +62,20 @@
   "Are you sure you want to delete this folder? Items contained will also be deleted": {
     "": "Are you sure you want to delete this folder? Items contained will also be deleted."
   },
+  "Are you sure you want to delete this group?": "",
   "Are you sure you want to delete this layer?": "Are you sure you want to delete this layer?",
+  "Are you sure you want to delete this project invite?": "",
+  "Assign Administrator Access": "",
+  "Assign Group Membership": "",
   "Attribution": "",
   "Back to Project": "",
+  "Ban": "Ban",
+  "Ban from Forums": "",
+  "Banned users cannot post to any forums": {
+    " Existing posts will remain unless hidden": {
+      "": "Banned users cannot post to any forums. Existing posts will remain unless hidden."
+    }
+  },
   "Banner": "",
   "Basemap Integration": "",
   "Basemap Labels": "",
@@ -60,6 +86,8 @@
   "Before importing vector sources, SeaSketch will these vector sources for compatability and file size issues": {
     "": "Before importing vector sources, SeaSketch will these vector sources for compatability and file size issues."
   },
+  "Bio": "Bio",
+  "Bounces, Complaints, and Errors": "",
   "Brief description below the name": "",
   "Browse": "Browse",
   "By Group": "",
@@ -67,6 +95,7 @@
     "": "By identifying the lowest labels layer in this basemap you will be able to configure layers to render below them."
   },
   "Cancel": "",
+  "Canonical Email": "Canonical Email",
   "Change description": "",
   "Change label": "",
   "Change name": "",
@@ -84,22 +113,32 @@
   },
   "Copied URL": "",
   "Cover Basemap": "",
+  "Create Group": "",
+  "Create a User Group": "",
   "Create a thumbnail image that best represents this basemap": "Create a thumbnail image that best represents this basemap",
+  "Created At": "",
   "Custom Basemap": "",
+  "Data Layers": "",
   "Data Source Details": "Data Source Details",
   "Data Source Options": "",
   "Data Storage Location": "",
+  "Data layer administration requires at least a tablet-sized screen": {
+    "": ""
+  },
   "Default": "Default",
   "Default off": "",
   "Default on": "",
   "Default option name": "",
   "Delete": "",
+  "Delete Group": "",
+  "Delete Invite": "",
   "Description": "",
   "Discard Changes": "Discard Changes",
   "Display this layer under any text labels on the basemap": {
     "": ""
   },
   "Download": "Download",
+  "Draft Invitations": "",
   "Draw a box around the region where your project will be used": {
     " SeaSketch will ensure that users see the entirety of this area when they first load the map, regardless of their display size": {
       "": "Draw a box around the region where your project will be used. SeaSketch will ensure that users see the entirety of this area when they first load the map, regardless of their display size."
@@ -114,24 +153,53 @@
   },
   "Edit": "",
   "Edit Basemap": "Edit Basemap",
+  "Edit Invite": "",
   "Edit Layer": "Edit Layer",
   "Edit Link": "",
   "Edit Metadata": "Edit Metadata",
   "Edit description": "",
   "Edit metadata": "",
+  "Email": "Email",
+  "Email List": "",
+  "Email Status": "",
+  "Email bounced": "Email bounced",
+  "Email cannot be changed because the invite is currently being sent": {
+    "": ""
+  },
+  "Email cannot be changed because the invite was already sent": {
+    "": ""
+  },
+  "Email delivered ": "Email delivered ",
+  "Email failed with error": "Email failed with error",
+  "Email is being sent": "Email is being sent",
+  "Email sent ": "Email sent ",
+  "Email status is unknown": "",
+  "Email was marked as spam by recipient": "Email was marked as spam by recipient",
   "Enable High-DPI Requests": "",
   "Enable data download": "Enable data download",
+  "Enabling public access will also enable public listing": {
+    " Are you sure?": ""
+  },
   "Enter a <2>url template</2> the tells SeaSketch how to load a raster tile data source": {
     "": "Enter a <2>url template</2> the tells SeaSketch how to load a raster tile data source."
   },
   "Enter a new description": "",
+  "Enter a new group name": "",
   "Enter a new label": "",
+  "Enter comma-separated values for user emails and names below": {
+    " Order matters": {
+      " You may find it easiest to copy and paste from a spreadsheet": {
+        "": "Enter comma-separated values for user emails and names below. Order matters. You may find it easiest to copy and paste from a spreadsheet."
+      }
+    }
+  },
   "Error fetching settings": {
     "": ""
   },
   "Error saving settings": {
     "": ""
   },
+  "Errors": "",
   "Exclude all from import": "",
   "Featured Project": "",
   "Featured projects will be displayed more prominently on project listing pages": {
@@ -154,9 +222,12 @@
       "": "Folders of this type do not enable users to turn on all layers at once. They can use the folder to toggle all layers <i>off</i>."
     }
   },
+  "Full Name": "",
+  "Full name": "Full name",
   "GeoJSON data hosted on SeaSketch": "GeoJSON data hosted on SeaSketch",
   "Geometry Precision": "",
   "Go Back": "",
+  "Group Name": "",
   "Groups of mutually exclusive layers can be chosen from a dropdown menu": "",
   "Groups of mutually exclusive layers can be chosen from a list of radio options": "",
   "Hidden children": "Hidden children",
@@ -191,8 +262,13 @@
   },
   "Included": "Included",
   "Included Fields": "Included Fields",
+  "Invitation token expired ": "Invitation token expired ",
   "Invite Only": "",
+  "Invite Users": "",
+  "Invites": "",
+  "Invites can fail due to incorrect addresses, or problems with a destination server, or being marked as spam": "",
   "Labels Layer": "Labels Layer",
+  "Last Updated": "",
   "Limit the fields included in this dataset in order to reduce download size": {
     " Does not apply to uploaded revisions": {
       " Be careful not to remove fields used in styles": {
@@ -207,11 +283,19 @@
   "Map": "Map",
   "Map Extent Settings": "",
   "Mapbox GL Style": "",
+  "Monitor the status of invites that have been emailed to users": "",
   "Name": "",
+  "Name is required and must be less than 33 characters": "",
+  "Never": "",
   "New Optional Layer": "New Optional Layer",
   "New description": "",
   "New name": "",
+  "Nickname": "Nickname",
   "None": "",
+  "None found": "None found",
+  "Not provided": "Not provided",
+  "Number must be equal to or greater than ": "Number must be equal to or greater than ",
+  "Number must be equal to or less than ": "Number must be equal to or less than ",
   "Off by default": "",
   "On by default": "",
   "Only a single item within this folder can be turned on at one time": {
@@ -228,12 +312,17 @@
   "Option Type": "",
   "Option name": "",
   "Optional Layers": "Optional Layers",
+  "Optionally provide the recipient's name": {
+    "": ""
+  },
   "Options": "",
   "Original Source": "Original Source",
+  "Participants": "",
   "Permanent Project URL": "",
   "Please review the layer list and exclude any that you do not wish to display, and check that the above settings render well": {
     "": "Please review the layer list and exclude any that you do not wish to display, and check that the above settings render well."
   },
+  "Profile": "Profile",
   "Project Name": "",
   "Public": "",
   "Public Listing": "",
@@ -249,7 +338,10 @@
   "Radio children": "Radio children",
   "Raster tile url template": "",
   "Recently Used Servers": "Recently Used Servers",
+  "Recipient": "",
+  "Recipient unsubscribed from all SeaSketch emails": "Recipient unsubscribed from all SeaSketch emails",
   "Redraw Bounds": "",
+  "Rename Group": "",
   "Render this layer above the basemap entirely": {
     "": ""
   },
@@ -275,6 +367,7 @@
   "SeaSketch is preparing for import by reviewing your settings and the file sizes of the selected layers": {
     "": "SeaSketch is preparing for import by reviewing your settings and the file sizes of the selected layers."
   },
+  "Search": "Search",
   "Select All": "",
   "Select None": "",
   "Select all layers in the basemap that will be controlled by this option": {
@@ -286,6 +379,12 @@
     "": "Select all layers in the basemap that you would like to be interactive."
   },
   "Select applicable layers": "",
+  "Send All Invites": "Send All Invites",
+  "Send Email Now": "",
+  "Send Invite Email": "",
+  "Send another email": "",
+  "Send reminder email": "",
+  "Sent Invitations": "",
   "Set Layers": "",
   "Set layers": "",
   "Settings": "Settings",
@@ -296,9 +395,13 @@
     "": ""
   },
   "Show Under Labels": "",
+  "Sign Out": "Sign Out",
+  "Signed in as": "",
   "Simple switch to toggle a set of optional layers": "",
   "Source Server": "Source Server",
   "Source Type": "Source Type",
+  "Submit": "",
+  "Submit Changes": "",
   "Supported": {
     " Users can control layer visibility, opacity, and ordering": {
       "": "Supported. Users can control layer visibility, opacity, and ordering."
@@ -307,6 +410,11 @@
   "Terrain Exaggeration": "",
   "Terrain will be enabled whenever this basemap is visible": "",
   "Terrain works best with imagery data and is often best disabled otherwise": "",
+  "The invitation will be sent here": {
+    " If the recipient would like to register using a different email they can still accept the invitation": {
+      "": ""
+    }
+  },
   "There were errors found when analyzing this service": {
     " Either exclude layers with errors from the import or adjust their settings to fix the error before proceeding": {
       "": "There were errors found when analyzing this service. Either exclude layers with errors from the import or adjust their settings to fix the error before proceeding."
@@ -318,15 +426,36 @@
   "These settings will control who can find and visit your project": {
     "": ""
   },
+  "This group has no users": "This group has no users",
+  "This invite has not yet been sent": "This invite has not yet been sent",
   "Title": "",
+  "Token Expires": "",
+  "Token not yet assigned": "",
   "Tooltip": "",
   "Try Again": "",
   "Type": "Type",
+  "Unlike the email in a user's public profile, the <2>canonical email</2> is determined during registration and SeaSketch will verify ownership before assigning any permissions": {
+    " Reference this identity before assigning admin or group access": {
+      "": "Unlike the email in a user's public profile, the <2>canonical email</2> is determined during registration and SeaSketch will verify ownership before assigning any permissions. Reference this identity before assigning admin or group access."
+    }
+  },
+  "Unsent invites that need to be mailed": "",
   "Update from ArcGIS": "Update from ArcGIS",
   "Upload": "Upload",
   "Uploading": "",
+  "User Groups": "",
+  "User groups can be used to grant permission to access certain layers, forums, or sketching tools": {
+    "": "User groups can be used to grant permission to access certain layers, forums, or sketching tools."
+  },
+  "User profiles are entered and maintained by the user": {
+    " This information is shared along with any forum posts the user makes": {
+      "": "User profiles are entered and maintained by the user. This information is shared along with any forum posts the user makes."
+    }
+  },
+  "Users and Groups": "",
   "Users can turn off 3d terrain if desired": "",
   "Users can turn on 3d terrain if desired": "",
+  "Users will appear in the list if they have shared their profile": "",
   "Using a lower level of precision reduces a dataset's size, increasing download speed and improving map performance": {
     " Does not apply to uploads": {
       "": "Using a lower level of precision reduces a dataset's size, increasing download speed and improving map performance. Does not apply to uploads."
@@ -377,7 +506,16 @@
   "You cannot unlist a public project": {
     "": ""
   },
+  "You may choose to send the invitation email immediately, or send them later": {
+    "": "You may choose to send the invitation email immediately, or send them later."
+  },
+  "Your project is set to invite-only": {
+    " Requests to participate can be approved or denied": {
+      "": ""
+    }
+  },
   "attributes": "",
+  "details": "details",
   "download time": "",
   "features": "",
   "reset to defaults": "",

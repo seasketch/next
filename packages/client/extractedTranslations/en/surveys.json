@@ -1,0 +1,88 @@
+{
+  "<0></0>Click on the map to place a point ": "<0></0>Click on the map to place a point ",
+  "<0></0>Click on the map to start a line": "<0></0>Click on the map to start a line",
+  "<0></0>Click on the map to start a polygon": "<0></0>Click on the map to start a polygon",
+  "<0></0>Tap the map to place a point ": "<0></0>Tap the map to place a point ",
+  "<0><0>TouchApp icon</0><1></1><2></2><3></3></0>Tap the map to start a polygon": "<0><0>TouchApp icon</0><1></1><2></2><3></3></0>Tap the map to start a polygon",
+  "A name will be generated for each new feature (e": {
+    "g": {
+      " Location 4) which can be changed by the user": {
+        " The prefix will be joined with a localized number": {
+          "": ""
+        }
+      }
+    }
+  },
+  "Add": "",
+  "Are you sure you want to delete this shape?": "",
+  "Are you sure? ComboBox's do not support multiple-select": {
+    " You can always change back": {
+      "": ""
+    }
+  },
+  "Are you sure? You can change the element type back to ComboBox later if you like": {
+    "": ""
+  },
+  "Autocomplete ID": "",
+  "Basemap": "",
+  "Change to ComboBox": "",
+  "Change to Multiple Choice": "",
+  "Click and drag points to modify": "Click and drag points to modify",
+  "Click the starting point or double-click the last point to finish": "Click the starting point or double-click the last point to finish",
+  "Click to add more points": "Click to add more points",
+  "Click to add more points, Double-Click to finish": "Click to add more points, Double-Click to finish",
+  "Complete Submission": "",
+  "Continue Practice Mode": "",
+  "Continue Survey": "",
+  "Count My Response": "",
+  "Does not appear to be a valid email": "Does not appear to be a valid email",
+  "Done Editing": "",
+  "Drag point to modify": "Drag point to modify",
+  "Drag points to modify": "Drag points to modify",
+  "Edit": "",
+  "Enable Practice Mode": "",
+  "Facilitated Response": "",
+  "Finish Shape": "",
+  "Focus on location": "",
+  "Generated Name Prefix": "",
+  "Invalid shape": "",
+  "Line created": "Line created",
+  "Multiple Select": "",
+  "Next": "",
+  "Next Question": "",
+  "No": "",
+  "Number required": "Number required",
+  "Placeholder": "",
+  "Point placed": "Point placed",
+  "Practice": "",
+  "Practice Mode": "",
+  "Practice mode": "Practice mode",
+  "Practice mode saves your responses seperately so that they are not counted in the survey results": {
+    "": "Practice mode saves your responses seperately so that they are not counted in the survey results."
+  },
+  "Previous Question": "",
+  "Previous question": "",
+  "Required": "",
+  "Required field": "",
+  "Reset view": "",
+  "Select an option": {
+    "": {
+      "": {
+        "": ""
+      }
+    }
+  },
+  "Selection required": "",
+  "Shape saved": "Shape saved",
+  "Show Facilitation Option": "",
+  "Skip Question": "",
+  "Skip to next question": "",
+  "Submitting": "",
+  "Subtract": "",
+  "Survey not found": "",
+  "Take Survey": "",
+  "Tap start point or double tap to finish": "Tap start point or double tap to finish",
+  "Tap to add more points": "Tap to add more points",
+  "Yes": "",
+  "none": ""
+}

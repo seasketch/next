@@ -25,6 +25,7 @@ import DigitizingActionsPopup, {
   NextQuestion,
 } from "../draw/DigitizingActionsPopup";
 import BowtieInstructions from "../draw/BowtieInstructions";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
 interface DigitizingInstructionsProps {
   geometryType: SketchGeometryType;
@@ -48,7 +49,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   children,
 }) => {
   const { t } = useTranslation("surveys");
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   const isMobile = useMobileDeviceDetector();
   const [toolsOpen, setToolsOpen] = useState(false);
   const actionsButtonAnchor = useRef<HTMLButtonElement>(null);

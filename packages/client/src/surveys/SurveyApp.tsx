@@ -241,7 +241,8 @@ function SurveyApp() {
 
   const style = useCurrentStyle(
     data?.survey?.form?.formElements,
-    formElement.exiting || formElement.current
+    formElement.exiting || formElement.current,
+    stage
   );
 
   useEffect(() => {
@@ -347,7 +348,7 @@ function SurveyApp() {
                 transition={{
                   duration: 0.3,
                 }}
-                key={formElement.current.id}
+                key={formElement.current.id + stage}
                 initial="enter"
                 animate="show"
                 exit="exit"

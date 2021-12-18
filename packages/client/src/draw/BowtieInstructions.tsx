@@ -37,7 +37,14 @@ export default function BowtieInstructions({
           className="flex justify-center"
           style={{ backgroundColor: "rgb(117, 207, 240)" }}
         >
-          <video ref={videoRef} autoPlay={true} src={url} loop width="257" />
+          <video
+            playsInline
+            ref={videoRef}
+            autoPlay={true}
+            src={url}
+            loop
+            width="257"
+          />
         </div>
         <p className="p-5">
           <Trans ns="digitizing">
