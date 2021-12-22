@@ -55,6 +55,7 @@ describe("Project Listing smoke test", () => {
     before(() => {
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
+        console.log(window.localStorage)
         cy.createProject(
           "Invite Project One",
           "cy-invite",
@@ -88,40 +89,50 @@ describe("Project Listing smoke test", () => {
         .url().should('eq', Cypress.config().baseUrl + '/new-project');
       cy.get("#create-project-btn").should("be.visible")
     });
-  }); 
+  });
 //*************************************************************************** */
-  //describe("A logged-in user can create a project", () => {
-  //  beforeEach(() => {
-  //    cy.login("User 1").then((resp) => {
-  //      cy.wrap(resp["access_token"]).as("token")
-  //      console.log("token")
-  //    });
-  //    cy.intercept("http://localhost:3857/graphql", ((req) => {
-  //      if (req.body.operationName && req.body.operationName === "CreateProject") {
-  //        req.alias = "createProject"
-  //      }
-  //      if (req.body.operationName && req.body.operationName === "CurrentProjectMetadata") {
-  //        req.alias = "currentProject"
-  //      }
-  //    }));
-  //  });
-  //  it("Logs in the user", () => {
-  //    cy.visit('/')
-  //    cy.get("#user-menu").should("be.visible");
-  //  });
-  //  it("Allows user to create a project", () => {
-  //    cy.visit('/new-project')
-  //      .get('input[id=name]').type('Form Project Two')
-  //      .should('have.value', 'Form Project Two')
-  //    cy.get('input[id=slug]').type('form2')
-  //      .should ('have.value', 'form2')
-  //      //Debounce slug
-  //      .wait(500)
-  //    cy.get('#create-project-btn').click()
-  //    .wait('@createProject')
-  //    .wait('@currentProject')
-  //  });
-  //});
+  describe("A logged-in user can create a project", () => {
+    beforeEach(() => {
+      cy.login("User 1").then(({access_token}) => {
+        cy.wrap(access_token).as("token")
+        console.log("token")
+      });
+      //cy.intercept("http://localhost:3857/graphql").as("Request")
+      cy.intercept("http://localhost:3857/graphql", ((req) => {
+        if (req.body.operationName && req.body.operationName === "CreateProject") {
+          req.alias = "createProject"
+        }
+        if (req.body.operationName && req.body.operationName === "CurrentProjectMetadata") {
+          req.alias = "currentProject"
+        }
+      }));
+    });
+    it("Logs in the user", () => {
+      cy.visit('/')
+      cy.get("#user-menu").should("be.visible");
+    });
+    it("Allows user to create a project", () => {
+      cy.login("User 1").then(({access_token}) => {
+        cy.wrap(access_token).as("token")
+        console.log(access_token)
+      });
+      cy.visit('/new-project')
+      cy.login("User 1").then(({access_token}) => {
+        cy.wrap(access_token).as("token")
+        console.log(access_token)
+      });
+      console.log(window.localStorage)
+      cy.get('input[id=name]').type('Form Project Two')
+        .should('have.value', 'Form Project Two')
+      cy.get('input[id=slug]').type('form2')
+        .should ('have.value', 'form2')
+        //Debounce slug
+        .wait(200)
+      cy.get('#create-project-btn').click()
+      //.wait('@createProject')
+      //.wait('@currentProject')
+    });
+  });
   //*************************************************** */
 
   /**************************************************** */
@@ -143,7 +154,7 @@ describe("Project Listing smoke test", () => {
   //  })
   //})  
 //
-//********************************************************************** */
+//******************************************************************** */
   describe ("A public project title is visible on its app page", () => {
     before(() => {
       cy.getToken("User 1").then(({ access_token }) => {
@@ -170,9 +181,9 @@ describe("Project Listing smoke test", () => {
       cy.contains("Public Project")
     })
   });
-  //describe("A user's project is visible on admin", () => {
-  //  beforeEach(() => {
-  //    
+  ////describe("A user's project is visible on admin", () => {
+  ////  beforeEach(() => {
+  ////    
   //    cy.login("User 1").then(({access_token}) => {
   //      cy.wrap(access_token).as("token")
   //      window.localStorage.setItem("access_token", access_token)
@@ -212,7 +223,103 @@ describe("Project Listing smoke test", () => {
   //    cy.contains('User Project')
   //  })
   //})
+  describe ("A logged in user can view public projects", () => {
+    beforeEach(() => {
+      cy.login("User 1").then(({access_token}) => {
+        cy.wrap(access_token).as("token")
+        console.log(access_token)
+      });
+      //cy.intercept("http://localhost:3857/graphql").as("Request")
+      cy.intercept("http://localhost:3857/graphql", ((req) => {
+        if (req.body.operationName && req.body.operationName === "CypressCreateProject") {
+          req.alias = "createProject"
+        }
+      //  if (req.body.operationName && req.body.operationName === "CurrentProjectMetadata") {
+      //    req.alias = "currentProject"
+      //  }
+      }));
+    })
+    after(() => {
+      cy.deleteProject("cy-public");
+    }); 
+    it ("allows a user to create a project", () => {
+      cy.visit("/projects")
+      cy.createProject(
+        "Public Project",
+        "cy-public",
+        ProjectAccessControlSetting.Public,
+        true
+      )
+      .then((projectId) => {
+        cy.wrap(projectId).as("projectId");
+      }).then( () => {
+        cy.wait("@createProject").its("response").then((resp) => {
+          expect (resp.body.data.createProject != null)
+        })
+      })
+    })
+    it ("Shows the project", () => {
+      cy.visit('/projects')
+      cy.contains("Public Project")
+    })
+
+    describe ("A logged-in user can view invite-only projects created by them", () => {
+      beforeEach(() => {
+        cy.login("User 1").then(({access_token}) => {
+          cy.wrap(access_token).as("token")
+          console.log(access_token)
+        });
+        //cy.intercept("http://localhost:3857/graphql").as("Request")
+        cy.intercept("http://localhost:3857/graphql", ((req) => {
+          if (req.body.operationName && req.body.operationName === "CypressCreateProject") {
+            req.alias = "createProject"
+          }
+        //  if (req.body.operationName && req.body.operationName === "CurrentProjectMetadata") {
+        //    req.alias = "currentProject"
+        //  }
+        }));
+      })
+      after(() => {
+        cy.deleteProject("cy-invite");
+      }); 
+
+    it ("allows a user to create a project", () => {
+      cy.visit("/projects")
+      cy.createProject(
+        "Invite-Only Project",
+        "cy-invite",
+        ProjectAccessControlSetting.InviteOnly,
+        true
+      )
+      .then((projectId) => {
+        cy.wrap(projectId).as("projectId");
+      }).then( () => {
+        cy.wait("@createProject").its("response").then((resp) => {
+          expect (resp.body.data.createProject != null)
+        })
+      })
+    })
+    it ("Shows the project", () => {
+      cy.visit('/projects')
+      cy.contains("Invite-Only Project")
+    })
+  })
+    
+    
+      
+
+  })
 });//;
+
+//cy.intercept("http://localhost:3857/graphql").as("Request")
+      //cy.intercept("http://localhost:3857/graphql", ((req) => {
+      //  if (req.body.operationName && req.body.operationName === "CreateProject") {
+      //    req.alias = "createProject"
+      //  }
+      //  if (req.body.operationName && req.body.operationName === "CurrentProjectMetadata") {
+      //    req.alias = "currentProject"
+      //  }
+      //}));
   
   //**I am an anon user and I can see public projects
   //**I am a signed in user and can create a project
@@ -222,4 +329,5 @@ describe("Project Listing smoke test", () => {
   //**I am a signed in user and clicking on any project leads me to project app page
   //**Anonymous users cannot see admin-only projects
   //**Anonymous user cannot see invite-only projects by default */
-  //I am a user whose email is unverified
+  //I am a user whose email is unverified and cannot create a project
+  //

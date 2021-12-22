@@ -31,13 +31,13 @@ export default function FullSidebar({
   const { data, loading, error, refetch } = useCurrentProjectMetadataQuery();
   const getProjectName = () => {
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { data, loading, error } = useGetProjectBySlugQuery({
-      variables: {
-         slug: slug
-      },
-    });
-    return data?.projectBySlug?.name
-   }
+  const { data, loading, error } = useGetProjectBySlugQuery({
+    variables: {
+       slug: slug
+    },
+  });
+  return data?.projectBySlug?.name
+  }
   const projectName = getProjectName()
   const { user, logout } = useAuth0();
   let social: string | false = false;
