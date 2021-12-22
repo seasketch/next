@@ -1,13 +1,19 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { Map } from "mapbox-gl";
+import { GeoJSONSource, LngLatLike, Map } from "mapbox-gl";
 import { useEffect, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
 import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
-import { Feature } from "geojson";
+import { Feature, FeatureCollection, Point } from "geojson";
 import { useMediaQuery } from "beautiful-react-hooks";
+import DrawPoint from "./DrawPoint";
+import DirectSelect from "./DirectSelect";
+import SimpleSelect from "./SimpleSelect";
+import getKinks from "@turf/kinks";
+import styles from "./styles";
+import debounce from "lodash.debounce";
 
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
@@ -35,6 +41,46 @@ export enum DigitizingState {
   DISABLED,
 }
 
+export type DigitizingDragTarget = {
+  center: LngLatLike;
+  currentZoom: number;
+  point: { x: number; y: number };
+};
+
+const EMPTY_FEATURE_COLLECTION = {
+  type: "FeatureCollection",
+  features: [],
+} as FeatureCollection<Point>;
+
+const debouncedUpdateKinks = debounce(
+  (
+    getFeatures: () => FeatureCollection<any>,
+    setKinks: (value: FeatureCollection<Point>) => void,
+    state: DigitizingState,
+    setFeatureProperty: (
+      featureId: string,
+      property: string,
+      value: any
+    ) => void
+  ) => {
+    const collection = getFeatures();
+    if (collection.features.length > 0) {
+      const feature = collection.features[0];
+      if (feature.geometry.type === "Polygon") {
+        const kinks = getKinks(feature);
+        setFeatureProperty(
+          feature.id as string,
+          "kinks",
+          (kinks.features.length > 0).toString()
+        );
+        setKinks(kinks);
+      }
+    }
+  },
+  32,
+  { maxWait: 100, leading: false }
+);
+
 /**
  *
  * @param map
@@ -56,6 +102,30 @@ export default function useMapboxGLDraw(
     value ? DigitizingState.FINISHED : DigitizingState.BLANK
   );
   const [disabled, setDisabled] = useState(false);
+  const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
+    null
+  );
+
+  const [kinks, setKinks] = useState<FeatureCollection<Point>>(
+    EMPTY_FEATURE_COLLECTION
+  );
+
+  useEffect(() => {
+    if (draw) {
+      if (
+        state !== DigitizingState.CAN_COMPLETE &&
+        state !== DigitizingState.STARTED &&
+        state !== DigitizingState.BLANK
+      ) {
+        debouncedUpdateKinks(
+          draw.getAll,
+          setKinks,
+          state,
+          draw.setFeatureProperty
+        );
+      }
+    }
+  }, [dragTarget, draw, value, drawMode, state]);
 
   useEffect(() => {
     if (map && geometryType && !disabled) {
@@ -66,13 +136,41 @@ export default function useMapboxGLDraw(
         controls: {},
         defaultMode: "simple_select",
         modes: MapboxDrawWaypoint.enable({
+          ...MapboxDraw.modes,
           draw_line_string: DrawLineString,
           draw_polygon: DrawPolygon,
-          ...MapboxDraw.modes,
+          draw_point: DrawPoint,
+          direct_select: DirectSelect,
+          simple_select: SimpleSelect,
         }),
+        styles,
+        userProperties: true,
       });
       setDraw(draw);
       map.addControl(draw);
+
+      map.addSource("kinks", {
+        type: "geojson",
+        data: kinks,
+      });
+
+      map.addLayer({
+        id: "kinks-symbol",
+        type: "symbol",
+        source: "kinks",
+        layout: {
+          "text-field": "↚",
+          "text-size": 32,
+          "text-offset": [0, -0.1],
+          "text-allow-overlap": true,
+        },
+        paint: {
+          "text-opacity": 0.8,
+          "text-halo-color": "rgba(81.6%, 23.1%, 23.1%, 0.8)",
+          "text-halo-width": 1,
+          "text-halo-blur": 0,
+        },
+      });
 
       if (value) {
         draw.add(value);
@@ -90,15 +188,21 @@ export default function useMapboxGLDraw(
         create: function (e: any) {
           setState(DigitizingState.CREATED);
           onChange(e.features[0]);
+          // This is a stupid hack to make sure the state is set properly and
+          // that the poly is turned red if there are kinks. It has something to
+          // do with mapbox-gl-draw's internal render loop.
           setTimeout(() => {
             draw.changeMode("simple_select");
             setState(DigitizingState.CREATED);
-          }, 1);
+          }, 60);
         },
-        update: (e: any) => onChange(e.features[0]),
+        update: (e: any) => {
+          onChange(e.features[0]);
+        },
         drawingStarted: () => setState(DigitizingState.STARTED),
         canComplete: () => setState(DigitizingState.CAN_COMPLETE),
         delete: function () {
+          setKinks(EMPTY_FEATURE_COLLECTION);
           draw.changeMode(drawMode);
           onChange(null);
           setState(DigitizingState.BLANK);
@@ -124,22 +228,39 @@ export default function useMapboxGLDraw(
             }
           }
         },
+        dragTarget: function (e: any) {
+          if (e.coordinates) {
+            setDragTarget({
+              center: e.coordinates,
+              currentZoom: map.getZoom(),
+              point: e.point,
+            });
+          } else {
+            setDragTarget(null);
+          }
+        },
       };
 
       map.on("draw.create", handlers.create);
       map.on("draw.update", handlers.update);
       map.on("seasketch.drawing_started", handlers.drawingStarted);
       map.on("seasketch.can_complete", handlers.canComplete);
+      map.on("seasketch.drag_target", handlers.dragTarget);
       map.on("draw.delete", handlers.delete);
       map.on("draw.modechange", handlers.modeChange);
       map.on("draw.selectionchange", handlers.selectionChange);
-
+      // @ts-ignore
+      window.map = map;
       return () => {
         if (map && draw) {
           map.removeControl(draw);
+          map.removeSource("kinks");
+          map.removeLayer("kinks-points");
+          setDraw(null);
           map.off("draw.create", handlers.create);
           map.off("draw.update", handlers.update);
           map.off("seasketch.drawing_started", handlers.drawingStarted);
+          map.off("seasketch.drag_target", handlers.dragTarget);
           map.off("seasketch.can_complete", handlers.canComplete);
           map.off("draw.delete", handlers.delete);
           map.off("draw.modechange", handlers.modeChange);
@@ -148,6 +269,15 @@ export default function useMapboxGLDraw(
       };
     }
   }, [map, geometryType, disabled]);
+
+  useEffect(() => {
+    if (map) {
+      try {
+        const source = map.getSource("kinks") as GeoJSONSource;
+        source.setData(kinks);
+      } catch (e) {}
+    }
+  }, [kinks, map]);
 
   useEffect(() => {
     if (disabled) {
@@ -204,7 +334,10 @@ export default function useMapboxGLDraw(
         if (!value) {
           throw new Error("No feature exists to edit");
         }
-        if (geometryType === SketchGeometryType.Point) {
+        if (
+          geometryType === SketchGeometryType.Point ||
+          value.geometry.type === "Point"
+        ) {
           // @ts-ignore
           draw.changeMode("simple_select", {
             featureIds: [value.id],
@@ -229,6 +362,8 @@ export default function useMapboxGLDraw(
     disable: () => setDisabled(true),
     /** Re-enable drawing */
     enable: () => setDisabled(false),
+    dragTarget,
+    kinks,
   };
 }
 

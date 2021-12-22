@@ -108,7 +108,7 @@ export default function CreateBasemapModal({
     return () => {
       mapRef.current?.remove();
     };
-  }, [state.mapPreview, mapDivRef.current]);
+  }, [state.mapPreview]);
 
   return (
     <>

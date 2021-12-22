@@ -18,7 +18,11 @@ import {
 import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { Icons } from "../components/SketchGeometryTypeSelector";
-import { SketchGeometryType } from "../generated/graphql";
+import { MapContext } from "../dataLayers/MapContextManager";
+import {
+  BasemapDetailsFragment,
+  SketchGeometryType,
+} from "../generated/graphql";
 import { SurveyStyleContext } from "../surveys/appearance";
 
 const DigitizingActionsPopup: FunctionComponent<{
@@ -76,7 +80,8 @@ const Item: FunctionComponent<{
   Icon: FunctionComponent<{ className?: string }>;
   disabled?: boolean;
   phoneOnly?: boolean;
-}> = ({ onClick, title, Icon, disabled, phoneOnly }) => {
+  selected?: boolean;
+}> = ({ onClick, title, Icon, disabled, phoneOnly, selected }) => {
   const { isSmall } = useContext(SurveyStyleContext);
   if (phoneOnly && !isSmall) {
     return null;
@@ -85,7 +90,7 @@ const Item: FunctionComponent<{
     <button
       className={`flex text-left w-full items-center px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:bg-opacity-50 rounded ${
         disabled ? "opacity-50" : ""
-      }`}
+      } ${selected ? "font-semibold " : ""}`}
       onClick={(e) => {
         if (disabled) {
           e.preventDefault();
@@ -186,5 +191,63 @@ export function ZoomToFeature(
       }
       title={t("Focus on location")}
     />
+  );
+}
+
+export function BasemapControl({
+  basemaps,
+  afterChange,
+}: {
+  basemaps: BasemapDetailsFragment[];
+  afterChange?: () => void;
+}) {
+  const mapContext = useContext(MapContext);
+  const selectedBasemap = mapContext.manager?.getSelectedBasemap();
+  const { t } = useTranslation("surveys");
+
+  return (
+    <div>
+      {basemaps.length > 1 && (
+        <>
+          <hr className="my-3 w-full mx-auto dark:border-gray-500" />
+          <h4
+            className={`w-full items-center px-3 py-2 text-sm text-gray-500 dark:text-gray-400`}
+          >
+            {t("Basemap")}
+          </h4>
+          <div>
+            {basemaps.map((basemap) => {
+              const selected = basemap.id === selectedBasemap?.id;
+              return (
+                <Item
+                  selected={selected}
+                  key={basemap.id.toString()}
+                  Icon={() => (
+                    <img
+                      alt={`${basemap.name} basemap`}
+                      className={`w-8 h-8 rounded ${
+                        selected ? "shadow ring-2 ring-blue-600" : ""
+                      }`}
+                      src={basemap.thumbnail}
+                    />
+                  )}
+                  title={basemap.name}
+                  onClick={() => {
+                    if (mapContext.manager) {
+                      mapContext.manager.setSelectedBasemap(
+                        basemap.id.toString()
+                      );
+                      if (afterChange) {
+                        afterChange();
+                      }
+                    }
+                  }}
+                />
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

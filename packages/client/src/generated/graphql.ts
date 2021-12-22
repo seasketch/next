@@ -215,6 +215,12 @@ export type Basemap = Node & {
   /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
   interactivitySettingsId: Scalars['Int'];
+  /**
+   * Used to indicate whether the basemap is included in the public basemap
+   * listing. Useful for hiding an option temporarily, or adding a basemap to the
+   * project which will only be used in surveys.
+   */
+  isDisabled: Scalars['Boolean'];
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
@@ -295,6 +301,12 @@ export type BasemapInput = {
   attribution?: Maybe<Scalars['String']>;
   description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
+  /**
+   * Used to indicate whether the basemap is included in the public basemap
+   * listing. Useful for hiding an option temporarily, or adding a basemap to the
+   * project which will only be used in surveys.
+   */
+  isDisabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
@@ -339,6 +351,12 @@ export type BasemapPatch = {
   description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   interactivitySettingsId?: Maybe<Scalars['Int']>;
+  /**
+   * Used to indicate whether the basemap is included in the public basemap
+   * listing. Useful for hiding an option temporarily, or adding a basemap to the
+   * project which will only be used in surveys.
+   */
+  isDisabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */

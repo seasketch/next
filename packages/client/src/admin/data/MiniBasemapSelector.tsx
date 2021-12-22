@@ -10,7 +10,7 @@ export default function MiniBasemapSelector({
   const mapContext = useContext(MapContext);
   const selected = mapContext.manager?.getSelectedBasemap();
   return (
-    <div className="absolute left-0 top-0">
+    <div className="absolute left-2 top-2 z-10">
       {selected && !open && (
         <button
           className="border-primary-500 rounded border-2 shadow-md m-2"

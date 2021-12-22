@@ -3,7 +3,7 @@ import bboxPolygon from "@turf/bbox-polygon";
 import { LngLatBoundsLike, Map } from "mapbox-gl";
 import { useEffect, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
-import Button from "./Button";
+import Button from "../../components/Button";
 import truncate from "@turf/truncate";
 import { encode } from "@mapbox/polyline";
 import { BBox } from "geojson";

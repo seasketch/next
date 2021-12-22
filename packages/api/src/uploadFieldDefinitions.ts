@@ -56,7 +56,7 @@ async function resolveLogoUrlUpload(
     stream,
     mimetype,
     filename,
-    Object.keys(args.input.patch).indexOf("picture") !== -1
+    Object.keys(args.input.patch || {}).indexOf("picture") !== -1
   );
   return url;
 }

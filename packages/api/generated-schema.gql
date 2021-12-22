@@ -193,6 +193,14 @@ type Basemap implements Node {
   interactivitySettingsId: Int!
 
   """
+  Used to indicate whether the basemap is included in the public basemap
+  listing. Useful for hiding an option temporarily, or adding a basemap to the
+  project which will only be used in surveys.
+  
+  """
+  isDisabled: Boolean!
+
+  """
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
   """
   labelsLayerId: String
@@ -318,6 +326,14 @@ input BasemapInput {
   id: Int
 
   """
+  Used to indicate whether the basemap is included in the public basemap
+  listing. Useful for hiding an option temporarily, or adding a basemap to the
+  project which will only be used in surveys.
+  
+  """
+  isDisabled: Boolean
+
+  """
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
   """
   labelsLayerId: String
@@ -376,6 +392,14 @@ input BasemapPatch {
   description: String
   id: Int
   interactivitySettingsId: Int
+
+  """
+  Used to indicate whether the basemap is included in the public basemap
+  listing. Useful for hiding an option temporarily, or adding a basemap to the
+  project which will only be used in surveys.
+  
+  """
+  isDisabled: Boolean
 
   """
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
