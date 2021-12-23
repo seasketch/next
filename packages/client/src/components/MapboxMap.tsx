@@ -27,6 +27,7 @@ export default function MapboxMap(props: OverlayMapProps) {
       mapContext.manager &&
       mapContext.ready
     ) {
+      console.log("create map");
       let cancelled = false;
       const container = mapContainer.current;
       mapContext.manager
@@ -35,6 +36,7 @@ export default function MapboxMap(props: OverlayMapProps) {
           if (!cancelled) {
             setMap(map);
             map.on("load", () => {
+              console.log("map.on load", props.onLoad);
               if (!cancelled) {
                 map.resize();
                 if (props.onLoad) {
@@ -49,9 +51,9 @@ export default function MapboxMap(props: OverlayMapProps) {
           }
         });
       return () => {
-        // if (container !== mapContainer.current) {
-        //   cancelled = true;
-        // }
+        if (container !== mapContainer.current) {
+          cancelled = true;
+        }
       };
     }
   }, [

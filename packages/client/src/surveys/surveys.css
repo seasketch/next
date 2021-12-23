@@ -27,3 +27,8 @@ html.survey {
     min-height: -webkit-fill-available;
   }
 }
+
+.mapboxgl-map.mouse-not-allowed
+  .mapboxgl-canvas-container.mapboxgl-interactive {
+  cursor: not-allowed;
+}

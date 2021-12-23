@@ -1,6 +1,6 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { GeoJSONSource, LngLatLike, Map } from "mapbox-gl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
@@ -14,12 +14,13 @@ import SimpleSelect from "./SimpleSelect";
 import getKinks from "@turf/kinks";
 import styles from "./styles";
 import debounce from "lodash.debounce";
+import UnfinishedFeatureSelect from "./UnfinishedFeatureSelect";
 
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
 export enum DigitizingState {
   /** User has not yet started drawing */
-  BLANK,
+  CREATE,
   /** User has started drawing a non-point feature */
   STARTED,
   /**
@@ -28,17 +29,21 @@ export enum DigitizingState {
    * double-click to finish
    */
   CAN_COMPLETE,
-  /**
-   * A complete shape has been created. Similar to FINISHED, but a special state
-   * that exists right after initial creation of a new feature
-   */
-  CREATED,
   /** Finished shape has been put into an editable state */
   EDITING,
   /** Shape is not in editing mode. */
-  FINISHED,
+  NO_SELECTION,
   /** Digitizing has been disabled using disable(). Call enable() */
   DISABLED,
+  /**
+   * Digitizing may be complete, but required attributes are not filled out.
+   * This state is usefull to integrate with property editing components. Call
+   * create(unfinished:boolean) with unfinished=true to instruct this hook to
+   * keep the shape in an editable state until finished() is called. A shape
+   * can be put back into an unfinished state by calling invalidate(). Note that
+   * the current mode must be direct-select.
+   */
+  UNFINISHED,
 }
 
 export type DigitizingDragTarget = {
@@ -92,44 +97,49 @@ const debouncedUpdateKinks = debounce(
 export default function useMapboxGLDraw(
   map: Map | null | undefined,
   geometryType: SketchGeometryType,
-  initialValue: Feature<any> | null,
+  initialValue: FeatureCollection<any> | null,
   onChange: (value: Feature<any> | null) => void
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
   const drawMode = glDrawMode(isSmall, geometryType);
-  const [state, setState] = useState(
-    initialValue ? DigitizingState.FINISHED : DigitizingState.BLANK
-  );
+  const [state, setState] = useState(DigitizingState.NO_SELECTION);
   const [disabled, setDisabled] = useState(false);
   const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
     null
   );
+  const [selection, setSelection] = useState<null | Feature<any>>(null);
+  const handlerState = useRef<{
+    draw?: MapboxDraw;
+    onChange: (value: Feature<any> | null) => void;
+  }>({ onChange });
+
+  handlerState.current.onChange = onChange;
 
   const [kinks, setKinks] = useState<FeatureCollection<Point>>(
     EMPTY_FEATURE_COLLECTION
   );
 
   useEffect(() => {
-    if (draw) {
+    if (handlerState.current.draw) {
       if (
         state !== DigitizingState.CAN_COMPLETE &&
         state !== DigitizingState.STARTED &&
-        state !== DigitizingState.BLANK
+        state !== DigitizingState.CREATE
       ) {
         debouncedUpdateKinks(
-          draw.getAll,
+          handlerState.current.draw.getAll,
           setKinks,
           state,
-          draw.setFeatureProperty
+          handlerState.current.draw.setFeatureProperty
         );
       }
     }
   }, [dragTarget, draw, initialValue, drawMode, state]);
 
   useEffect(() => {
-    if (map && geometryType && !disabled) {
-      console.log("useEffect: setup draw");
+    if (map && geometryType && !disabled && !handlerState.current.draw) {
+      console.log("useMapboxGLDraw:setup");
       const draw = new MapboxDraw({
         keybindings: true,
         clickBuffer: 4,
@@ -143,89 +153,101 @@ export default function useMapboxGLDraw(
           draw_point: DrawPoint,
           direct_select: DirectSelect,
           simple_select: SimpleSelect,
+          unfinished_feature_select: UnfinishedFeatureSelect,
         }),
         styles,
         userProperties: true,
       });
+      // @ts-ignore
+      window.draw = draw;
+      handlerState.current.draw = draw;
       setDraw(draw);
+
       map.addControl(draw);
 
-      map.addSource("kinks", {
-        type: "geojson",
-        data: kinks,
-      });
-
-      map.addLayer({
-        id: "kinks-symbol",
-        type: "symbol",
-        source: "kinks",
-        layout: {
-          "text-field": "↚",
-          "text-size": 32,
-          "text-offset": [0, -0.1],
-          "text-allow-overlap": true,
-        },
-        paint: {
-          "text-opacity": 0.8,
-          "text-halo-color": "rgba(81.6%, 23.1%, 23.1%, 0.8)",
-          "text-halo-width": 1,
-          "text-halo-blur": 0,
-        },
-      });
-
       if (initialValue) {
-        draw.add(initialValue);
-
-        map.fitBounds(bbox(initialValue) as [number, number, number, number], {
-          padding: isSmall ? 100 : 200,
-        });
+        draw.set(initialValue);
+        if (initialValue.features.length) {
+          map.fitBounds(
+            bbox(initialValue) as [number, number, number, number],
+            {
+              padding: isSmall ? 100 : 200,
+            }
+          );
+        }
       } else {
-        draw.changeMode(drawMode);
+        // draw.changeMode(drawMode);
       }
 
-      setState(initialValue ? DigitizingState.FINISHED : DigitizingState.BLANK);
+      setState(DigitizingState.NO_SELECTION);
 
       const handlers = {
+        addLayers: function () {
+          map.addSource("kinks", {
+            type: "geojson",
+            data: kinks,
+          });
+
+          map.addLayer({
+            id: "kinks-symbol",
+            type: "symbol",
+            source: "kinks",
+            layout: {
+              "text-field": "↚",
+              "text-size": 32,
+              "text-offset": [0, -0.1],
+              "text-allow-overlap": true,
+            },
+            paint: {
+              "text-opacity": 0.8,
+              "text-halo-color": "rgba(81.6%, 23.1%, 23.1%, 0.8)",
+              "text-halo-width": 1,
+              "text-halo-blur": 0,
+            },
+          });
+        },
         create: function (e: any) {
-          setState(DigitizingState.CREATED);
-          onChange(e.features[0]);
-          // This is a stupid hack to make sure the state is set properly and
-          // that the poly is turned red if there are kinks. It has something to
-          // do with mapbox-gl-draw's internal render loop.
-          setTimeout(() => {
-            draw.changeMode("simple_select");
-            setState(DigitizingState.CREATED);
-          }, 60);
+          handlerState.current.onChange(e.features[0]);
         },
         update: (e: any) => {
-          onChange(e.features[0]);
+          handlerState.current.onChange(e.features[0]);
         },
-        drawingStarted: () => setState(DigitizingState.STARTED),
-        canComplete: () => setState(DigitizingState.CAN_COMPLETE),
-        delete: function () {
-          setKinks(EMPTY_FEATURE_COLLECTION);
+        drawingStarted: () => {
+          setState(DigitizingState.STARTED);
+        },
+        canComplete: () => {
+          setState(DigitizingState.CAN_COMPLETE);
+        },
+        delete: function (id: string) {
           draw.changeMode(drawMode);
-          onChange(null);
-          setState(DigitizingState.BLANK);
+          setKinks(EMPTY_FEATURE_COLLECTION);
+          handlerState.current.onChange(draw.delete(id).getAll());
+          setState(DigitizingState.CREATE);
         },
         modeChange: function (e: any) {
+          console.log("change mode", e);
           if (e.mode === "simple_select") {
-            setState(DigitizingState.FINISHED);
+            setKinks(EMPTY_FEATURE_COLLECTION);
+            setState(DigitizingState.NO_SELECTION);
           } else if (e.mode === "direct_select") {
+            setKinks(EMPTY_FEATURE_COLLECTION);
             setState(DigitizingState.EDITING);
           }
         },
         selectionChange: function (e: any) {
           if (!e.features?.length) {
             if (state === DigitizingState.EDITING) {
-              setState(DigitizingState.FINISHED);
+              setState(DigitizingState.NO_SELECTION);
             }
+            setSelection(null);
+          } else {
+            setSelection({ ...e.features[0] });
           }
           if (geometryType === SketchGeometryType.Point) {
             if (e.features?.length) {
               setState(DigitizingState.EDITING);
             } else {
-              setState(DigitizingState.FINISHED);
+              setState(DigitizingState.NO_SELECTION);
             }
           }
         },
@@ -242,6 +264,11 @@ export default function useMapboxGLDraw(
         },
       };
 
+      if (map.isStyleLoaded()) {
+        handlers.addLayers();
+      } else {
+        map.on("load", handlers.addLayers);
+      }
       map.on("draw.create", handlers.create);
       map.on("draw.update", handlers.update);
       map.on("seasketch.drawing_started", handlers.drawingStarted);
@@ -251,12 +278,18 @@ export default function useMapboxGLDraw(
       map.on("draw.modechange", handlers.modeChange);
       map.on("draw.selectionchange", handlers.selectionChange);
       return () => {
-        console.log("cleanup", map, draw);
+        console.log("useMapboxGLDraw:cleanup", map, draw);
         if (map && draw) {
-          map.removeSource("kinks");
-          map.removeLayer("kinks-points");
+          if (map.getSource("kinks")) {
+            map.removeSource("kinks");
+          }
+          if (map.getLayer("kinks-points")) {
+            map.removeLayer("kinks-points");
+          }
           map.removeControl(draw);
+          handlerState.current.draw = undefined;
           setDraw(null);
+          map.off("load", handlers.addLayers);
           map.off("draw.create", handlers.create);
           map.off("draw.update", handlers.update);
           map.off("seasketch.drawing_started", handlers.drawingStarted);
@@ -300,7 +333,7 @@ export default function useMapboxGLDraw(
           state === DigitizingState.CAN_COMPLETE
         ) {
           draw.changeMode("simple_select", { featureIds: [] });
-          setState(DigitizingState.FINISHED);
+          setState(DigitizingState.NO_SELECTION);
         } else {
           throw new Error(`Cannot finish editing from state ${state}`);
         }
@@ -318,8 +351,8 @@ export default function useMapboxGLDraw(
           throw new Error("No feature exists to delete");
         }
         draw.deleteAll();
-        onChange(null);
-        setState(DigitizingState.BLANK);
+        handlerState.current.onChange(null);
+        setState(DigitizingState.CREATE);
         // @ts-ignore
         draw.changeMode(drawMode);
       } else {
@@ -330,22 +363,24 @@ export default function useMapboxGLDraw(
      * Puts the current feature into editing mode.
      */
     edit: () => {
-      if (draw) {
-        if (!initialValue) {
-          throw new Error("No feature exists to edit");
+      if (handlerState.current.draw) {
+        const selected = handlerState.current.draw.getSelected();
+        if (!selected.features.length) {
+          throw new Error("No feature is selected");
         }
+        const feature = selected.features[0];
         if (
           geometryType === SketchGeometryType.Point ||
-          initialValue.geometry.type === "Point"
+          feature.geometry.type === "Point"
         ) {
           // @ts-ignore
           draw.changeMode("simple_select", {
-            featureIds: [initialValue.id],
+            featureIds: [feature.id],
           });
         } else {
           // @ts-ignore
           draw.changeMode("direct_select", {
-            featureId: initialValue.id,
+            featureId: feature.id,
           });
         }
         setState(DigitizingState.EDITING);
@@ -355,9 +390,33 @@ export default function useMapboxGLDraw(
     },
   };
 
+  /**
+   * If requireProps is set to true, EMPTY_PROPS and INVALID_PROPS states will
+   * be active. Set property validation state using actions.setPropsValid
+   * @param requireProps
+   */
+  function create(unfinished: boolean) {
+    if (handlerState.current.draw) {
+      setState(DigitizingState.CREATE);
+      handlerState.current.draw.changeMode(
+        // @ts-ignore
+        drawMode,
+        {
+          getNextMode: unfinished
+            ? (featureId: string) => [
+                "unfinished_feature_select",
+                { featureId },
+              ]
+            : (featureId: string) => ["direct_select", { featureId }],
+        }
+      );
+    }
+  }
   return {
     digitizingState: state,
+    selection,
     actions,
+    create,
     /** Temporarily disable drawing */
     disable: () => setDisabled(true),
     /** Re-enable drawing */

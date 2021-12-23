@@ -52,12 +52,12 @@ export default function Button(props: ButtonProps) {
   let C = (props: any) => <button {...props} />;
   const history = useHistory();
   let onClick = props.onClick;
-  if (props.mailTo) {
-    // eslint-disable-next-line i18next/no-literal-string
-    props.href = `mailto:${props.mailTo}`;
-  }
   if (props.href) {
-    const href = props.href;
+    let href = props.href;
+    if (props.mailTo) {
+      // eslint-disable-next-line i18next/no-literal-string
+      href = `mailto:${props.mailTo}`;
+    }
     C = (props) => <Link {...props} to={href} />;
   }
   // if (props.href) {

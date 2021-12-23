@@ -142,16 +142,6 @@ function SurveyApp() {
 
   const elements = sortFormElements(data?.survey?.form?.formElements || []);
 
-  // const [responseState, setResponseState] = useLocalStorage<{
-  //   [id: number]: FormElementState;
-  //   facilitated: boolean;
-  //   submitted: boolean;
-  // }>(
-  //   // eslint-disable-next-line i18next/no-literal-string
-  //   `survey-${surveyId}`,
-  //   { facilitated: false, submitted: false }
-  // );
-
   const [responseState, setResponseState] = useLocalForage<{
     [id: number]: FormElementState;
     facilitated: boolean;
@@ -302,6 +292,7 @@ function SurveyApp() {
           <Meta name="theme-color" content={style.backgroundColor} />
 
           <SurveyAppLayout
+            navigatingBackwards={backwards}
             showProgress={data.survey.showProgress}
             progress={index / elements.length}
             style={style}
@@ -348,7 +339,7 @@ function SurveyApp() {
                 transition={{
                   duration: 0.3,
                 }}
-                key={formElement.current.id + stage}
+                key={formElement.current.id}
                 initial="enter"
                 animate="show"
                 exit="exit"
@@ -406,7 +397,8 @@ function SurveyApp() {
                         }).then(() => {
                           if (
                             advancesAutomatically(formElement.current!) &&
-                            (value || !formElement.current?.isRequired)
+                            (value !== undefined ||
+                              !formElement.current?.isRequired)
                           ) {
                             setTimeout(() => {
                               setAutoAdvance(true);
@@ -439,7 +431,8 @@ function SurveyApp() {
                       createResponseState.loading ||
                       createResponseState.error ||
                       (!formElement.exiting &&
-                        (!!state?.value || !formElement.current.isRequired) &&
+                        (state?.value !== undefined ||
+                          !formElement.current.isRequired) &&
                         formElement.current.typeId !== "WelcomeMessage" &&
                         !state?.errors)
                         ? "opacity-100 transition-opacity duration-300"
@@ -565,6 +558,10 @@ function SurveyNav({
       position =
         "bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-5";
       break;
+    case FormElementLayout.MapSidebarLeft:
+      position =
+        "bottom-3 left-96 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
+      break;
     default:
       break;
   }
@@ -588,7 +585,9 @@ function SurveyNav({
           className={`inline-block border-r shadow border-${style.secondaryTextClass.replace(
             "text-",
             ""
-          )} border-opacity-10 opacity-95 hover:opacity-100 p-2 rounded-l`}
+          )} border-opacity-10 opacity-95 hover:opacity-100 p-2 rounded-l ${
+            pagingState.isLastQuestion ? "rounded-r" : ""
+          }`}
           style={{
             background: `linear-gradient(${style.secondaryColor}, ${style.secondaryColor2})`,
           }}

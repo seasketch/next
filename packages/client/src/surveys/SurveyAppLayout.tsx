@@ -21,6 +21,7 @@ require("./surveys.css");
 type LayoutContext = {
   mapPortal: HTMLDivElement | null;
   style: ComputedFormElementStyle & { isDark: boolean; isSmall: boolean };
+  navigatingBackwards?: boolean;
 };
 
 export const SurveyLayoutContext = createContext({
@@ -37,6 +38,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
   unsplashUserUrl?: string;
   practice?: boolean;
   onPracticeClick?: () => void;
+  navigatingBackwards?: boolean;
 }> = ({
   practice,
   progress,
@@ -47,6 +49,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
   unsplashUserName,
   unsplashUserUrl,
   onPracticeClick,
+  navigatingBackwards,
 }) => {
   style = style || defaultStyle;
   const [mapPortal, setMapPortal] = useState<HTMLDivElement | null>(null);
@@ -59,6 +62,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
   const [layoutContext, setLayoutContext] = useState<LayoutContext>({
     mapPortal: null,
     style: style,
+    navigatingBackwards,
   });
 
   useEffect(() => {
@@ -77,7 +81,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
     return () => {
       window.document.documentElement.classList.remove("survey");
     };
-  });
+  }, []);
 
   // eslint-disable-next-line i18next/no-literal-string
   let grid: string;
@@ -227,9 +231,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
                     gridArea: "map",
                   }}
                   ref={mapPortalRef}
-                >
-                  &nbsp;
-                </div>
+                />
               )}
             </div>
             {/* </div> */}

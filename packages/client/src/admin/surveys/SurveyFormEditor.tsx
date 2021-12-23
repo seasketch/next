@@ -270,7 +270,7 @@ export default function SurveyFormEditor({
     selectedFormElement,
     stage
   );
-  console.log("style", style, selectedFormElement?.layout);
+
   let isDark = colord(style.backgroundColor || "#efefef").isDark();
   let dynamicTextClass = "text-white";
   dynamicTextClass = isDark ? "text-white" : "text-grey-800";
@@ -1130,7 +1130,7 @@ function StageSelect({
   onChange,
   value,
 }: {
-  stages: { [stage: string]: number };
+  stages: { [stage: number]: string };
   onChange: (n: number) => void;
   value: number;
 }) {
@@ -1147,11 +1147,13 @@ function StageSelect({
         value={value.toString()}
         onChange={(e) => onChange(parseInt(e.target.value))}
       >
-        {Object.keys(stages).map((key) => (
-          <option value={stages[key].toString()} key={key}>
-            {key.replace("_", " ").toLowerCase()}
-          </option>
-        ))}
+        {Object.keys(stages)
+          .filter((key) => parseInt(key).toString() !== key)
+          .map((label, i) => (
+            <option value={i} key={label}>
+              {label.replace("_", " ").toLowerCase()}
+            </option>
+          ))}
       </select>
     </div>
   );

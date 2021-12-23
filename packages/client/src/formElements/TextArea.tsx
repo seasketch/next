@@ -32,7 +32,7 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
           editable={props.editable}
         />
         <textarea
-          autoFocus={true}
+          autoFocus={props.autoFocus}
           required={props.isRequired}
           className={`w-full rounded text-base text-black  my-4 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${
             showError ? "bg-red-50" : "bg-white"

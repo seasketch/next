@@ -118,16 +118,6 @@ export function useCurrentStyle(
       style.layout = current.type.allowedLayouts[0];
     }
   }
-  if (
-    isSmall &&
-    (style.layout === FormElementLayout.Left ||
-      style.layout === FormElementLayout.Right)
-  ) {
-    style = {
-      ...style,
-      layout: FormElementLayout.Top,
-    };
-  }
   let isDark = colord(style.backgroundColor || "#efefef").isDark();
   let textClass = "text-white";
   if (style.textVariant === FormElementTextVariant.Dynamic) {
@@ -147,6 +137,16 @@ export function useCurrentStyle(
       prevLayout || style.layout || FormElementLayout.Top,
       isSmall
     );
+  }
+  if (
+    isSmall &&
+    (style.layout === FormElementLayout.Left ||
+      style.layout === FormElementLayout.Right)
+  ) {
+    style = {
+      ...style,
+      layout: FormElementLayout.Top,
+    };
   }
 
   return {

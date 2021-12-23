@@ -141,7 +141,7 @@ const Number: FormElementComponent<NumberProps, number | null> = (props) => {
               props.onSubmit();
             }
           }}
-          autoFocus={true}
+          autoFocus={props.autoFocus}
           required={props.isRequired}
         />
         <button

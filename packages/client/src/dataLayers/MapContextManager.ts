@@ -261,6 +261,7 @@ class MapContextManager {
   ) {
     if (this.map) {
       // throw new Error("Map already created in this context");
+      console.warn("Map already created in this context");
       if (this.interactivityManager) {
         this.interactivityManager.destroy();
         delete this.interactivityManager;
@@ -306,6 +307,7 @@ class MapContextManager {
     } else {
       throw new Error("Both initialBounds and initialCameraOptions are empty");
     }
+    console.log("creating map");
     this.map = new Map(mapOptions);
     this.addSprites(sprites);
 
@@ -327,6 +329,8 @@ class MapContextManager {
     this.map.on("moveend", this.onMapMove);
     this.map.on("load", () => {
       this.mapIsLoaded = true;
+      // Use to trigger changes to mapContextManager.map
+      this.setState((prev) => ({ ...prev }));
     });
 
     return this.map;

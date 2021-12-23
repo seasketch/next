@@ -28,7 +28,9 @@ import { SurveyStyleContext } from "../surveys/appearance";
 import DigitizingTools from "./DigitizingTools";
 import { LngLatBoundsLike, Map, Style } from "mapbox-gl";
 import { useParams } from "react-router";
-import useMapboxGLDraw from "../draw/useMapboxGLDraw";
+import useMapboxGLDraw, {
+  EMPTY_FEATURE_COLLECTION,
+} from "../draw/useMapboxGLDraw";
 import {
   BasemapControl,
   NextQuestion,
@@ -94,7 +96,8 @@ const SingleSpatialInput: FormElementComponent<
   } = useMapboxGLDraw(
     map,
     geometryType,
-    props.value?.collection?.features[0] || null,
+    // props.value?.collection?.features[0] || null,
+    EMPTY_FEATURE_COLLECTION,
     (feature) => {
       if (feature) {
         props.onChange(
@@ -170,7 +173,7 @@ const SingleSpatialInput: FormElementComponent<
       {mapPortalContext && (
         <SurveyMapPortal mapContext={mapContext}>
           <motion.div
-            className="flex items-center justify-center w-full h-full"
+            className="flex items-center justify-center w-full"
             variants={{
               start: {
                 opacity: 0,
@@ -197,7 +200,7 @@ const SingleSpatialInput: FormElementComponent<
               geometryType={geometryType}
               onRequestFinishEditing={actions.finishEditing}
               topologyErrors={kinks.features.length > 0}
-              onRequestReset={() => {
+              onRequestDelete={() => {
                 if (
                   window.confirm(
                     t("Are you sure you want to delete this shape?", {

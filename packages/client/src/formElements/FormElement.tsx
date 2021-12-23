@@ -93,6 +93,7 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
   onRequestNext: () => void;
   /** Component requests navigation to the previous question */
   onRequestPrevious: () => void;
+  autoFocus?: boolean;
 }
 
 /**
@@ -399,7 +400,7 @@ export interface FormElementComponent<T, V = {}>
    * Enumerating stages makes it easy to represent different pages in the admin interface so that
    * text and other aspects of the FormElement can be customized
    */
-  stages?: { [stage: string]: number };
+  stages?: { [stage: number]: string };
   hideNav?:
     | boolean
     | ((componentSettings: T, isMobile: boolean, stage?: number) => boolean);
