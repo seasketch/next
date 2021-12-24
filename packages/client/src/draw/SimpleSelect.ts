@@ -1,7 +1,12 @@
 import * as MapboxDraw from "@mapbox/mapbox-gl-draw";
+import { Feature } from "geojson";
 import { LngLatLike } from "mapbox-gl";
+import getKinks from "@turf/kinks";
+import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
 
-const SimpleSelect = MapboxDraw.modes.simple_select;
+const SimpleSelect = MapboxDrawWaypoint.enable({
+  simple_select: MapboxDraw.modes.simple_select,
+}).simple_select;
 
 const _dragMove = SimpleSelect.dragMove;
 const _onTouchEnd = SimpleSelect.onTouchEnd;
@@ -37,4 +42,20 @@ SimpleSelect.dragMove = function (state: any, e: any) {
   return r;
 };
 
+const _toDisplayFeatures = SimpleSelect.toDisplayFeatures;
+
+SimpleSelect.toDisplayFeatures = function (
+  state: any,
+  geojson: any,
+  push: (feature: Feature<any>) => void
+) {
+  if (geojson.geometry?.type === "Polygon") {
+    const kinks = getKinks(geojson);
+    if (kinks.features.length > 0) {
+      geojson.properties.kinks = "true";
+    }
+  }
+
+  return _toDisplayFeatures.apply(this, [state, geojson, push]);
+};
 export default SimpleSelect;

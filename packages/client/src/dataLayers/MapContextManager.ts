@@ -307,7 +307,6 @@ class MapContextManager {
     } else {
       throw new Error("Both initialBounds and initialCameraOptions are empty");
     }
-    console.log("creating map");
     this.map = new Map(mapOptions);
     this.addSprites(sprites);
 

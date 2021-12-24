@@ -4337,6 +4337,7 @@ input FormElementInput {
 enum FormElementLayout {
   COVER
   LEFT
+  MAP_FULLSCREEN
   MAP_SIDEBAR_LEFT
   MAP_SIDEBAR_RIGHT
   MAP_STACKED

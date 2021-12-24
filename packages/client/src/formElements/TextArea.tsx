@@ -20,7 +20,6 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
   const { t } = useTranslation("surveys");
   const errors = props.isRequired && !props.value?.length;
   const showError = errors && props.submissionAttempted;
-
   return (
     <>
       <div className="flex flex-col" style={{ maxHeight: "60vh" }}>
@@ -51,7 +50,7 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
               props.onSubmit();
             }
           }}
-          value={props.value}
+          value={props.value || ""}
           onChange={(e) =>
             props.onChange(e.target.value, e.target.value.length === 0)
           }

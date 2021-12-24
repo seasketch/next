@@ -9,9 +9,11 @@ import url from "./bowtie.mp4";
 export default function BowtieInstructions({
   open,
   onRequestClose,
+  onRequestReset,
 }: {
   open: boolean;
   onRequestClose?: () => void;
+  onRequestReset?: () => void;
 }) {
   const { t } = useTranslation("digitizing");
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -22,9 +24,19 @@ export default function BowtieInstructions({
       title={t("Invalid Shape")}
       onRequestClose={onRequestClose}
       footer={
-        <div className="flex justify-end">
+        <div className="flex justify-end space-x-1">
+          {onRequestReset && onRequestClose && (
+            <Button
+              label={t("Reset Shape")}
+              onClick={() => {
+                onRequestReset();
+                onRequestClose();
+              }}
+            />
+          )}
           <Button
             primary
+            autofocus
             className=""
             label={t("Okay")}
             onClick={onRequestClose}

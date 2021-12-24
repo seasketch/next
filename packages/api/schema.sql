@@ -213,7 +213,8 @@ CREATE TYPE public.form_element_layout AS ENUM (
     'COVER',
     'MAP_STACKED',
     'MAP_SIDEBAR_LEFT',
-    'MAP_SIDEBAR_RIGHT'
+    'MAP_SIDEBAR_RIGHT',
+    'MAP_FULLSCREEN'
 );
 
 

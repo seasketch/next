@@ -3,7 +3,6 @@ import { GeoJSONSource, LngLatLike, Map } from "mapbox-gl";
 import { useEffect, useRef, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
-import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
 import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
 import { Feature, FeatureCollection, Point } from "geojson";
@@ -16,6 +15,12 @@ import styles from "./styles";
 import debounce from "lodash.debounce";
 import UnfinishedFeatureSelect from "./UnfinishedFeatureSelect";
 
+function hasKinks(feature?: Feature<any>) {
+  if (feature && feature.geometry.type === "Polygon") {
+    return getKinks(feature).features.length > 0;
+  }
+  return false;
+}
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
 export enum DigitizingState {
@@ -57,35 +62,6 @@ export const EMPTY_FEATURE_COLLECTION = {
   features: [],
 } as FeatureCollection<any>;
 
-const debouncedUpdateKinks = debounce(
-  (
-    getFeatures: () => FeatureCollection<any>,
-    setKinks: (value: FeatureCollection<Point>) => void,
-    state: DigitizingState,
-    setFeatureProperty: (
-      featureId: string,
-      property: string,
-      value: any
-    ) => void
-  ) => {
-    const collection = getFeatures();
-    if (collection.features.length > 0) {
-      const feature = collection.features[0];
-      if (feature.geometry.type === "Polygon") {
-        const kinks = getKinks(feature);
-        setFeatureProperty(
-          feature.id as string,
-          "kinks",
-          (kinks.features.length > 0).toString()
-        );
-        setKinks(kinks);
-      }
-    }
-  },
-  32,
-  { maxWait: 100, leading: false }
-);
-
 /**
  *
  * @param map
@@ -116,37 +92,17 @@ export default function useMapboxGLDraw(
 
   handlerState.current.onChange = onChange;
 
-  const [kinks, setKinks] = useState<FeatureCollection<Point>>(
-    EMPTY_FEATURE_COLLECTION
-  );
-
-  useEffect(() => {
-    if (handlerState.current.draw) {
-      if (
-        state !== DigitizingState.CAN_COMPLETE &&
-        state !== DigitizingState.STARTED &&
-        state !== DigitizingState.CREATE
-      ) {
-        debouncedUpdateKinks(
-          handlerState.current.draw.getAll,
-          setKinks,
-          state,
-          handlerState.current.draw.setFeatureProperty
-        );
-      }
-    }
-  }, [dragTarget, draw, initialValue, drawMode, state]);
+  const [selfIntersects, setSelfIntersects] = useState<boolean>(false);
 
   useEffect(() => {
     if (map && geometryType && !disabled && !handlerState.current.draw) {
-      console.log("useMapboxGLDraw:setup");
       const draw = new MapboxDraw({
         keybindings: true,
         clickBuffer: 4,
         displayControlsDefault: true,
         controls: {},
         defaultMode: "simple_select",
-        modes: MapboxDrawWaypoint.enable({
+        modes: {
           ...MapboxDraw.modes,
           draw_line_string: DrawLineString,
           draw_polygon: DrawPolygon,
@@ -154,7 +110,7 @@ export default function useMapboxGLDraw(
           direct_select: DirectSelect,
           simple_select: SimpleSelect,
           unfinished_feature_select: UnfinishedFeatureSelect,
-        }),
+        },
         styles,
         userProperties: true,
       });
@@ -182,34 +138,20 @@ export default function useMapboxGLDraw(
       setState(DigitizingState.NO_SELECTION);
 
       const handlers = {
-        addLayers: function () {
-          map.addSource("kinks", {
-            type: "geojson",
-            data: kinks,
-          });
-
-          map.addLayer({
-            id: "kinks-symbol",
-            type: "symbol",
-            source: "kinks",
-            layout: {
-              "text-field": "↚",
-              "text-size": 32,
-              "text-offset": [0, -0.1],
-              "text-allow-overlap": true,
-            },
-            paint: {
-              "text-opacity": 0.8,
-              "text-halo-color": "rgba(81.6%, 23.1%, 23.1%, 0.8)",
-              "text-halo-width": 1,
-              "text-halo-blur": 0,
-            },
-          });
-        },
         create: function (e: any) {
-          handlerState.current.onChange(e.features[0]);
+          if (hasKinks(e.features[0])) {
+            setSelfIntersects(true);
+          } else {
+            handlerState.current.onChange(e.features[0]);
+          }
         },
         update: (e: any) => {
+          const mode = handlerState.current.draw?.getMode() as string;
+          if (mode === "unfinished_feature_select") {
+            setState(DigitizingState.UNFINISHED);
+          } else {
+            setState(DigitizingState.EDITING);
+          }
           handlerState.current.onChange(e.features[0]);
         },
         drawingStarted: () => {
@@ -218,20 +160,40 @@ export default function useMapboxGLDraw(
         canComplete: () => {
           setState(DigitizingState.CAN_COMPLETE);
         },
-        delete: function (id: string) {
-          draw.changeMode(drawMode);
-          setKinks(EMPTY_FEATURE_COLLECTION);
-          handlerState.current.onChange(draw.delete(id).getAll());
-          setState(DigitizingState.CREATE);
-        },
+        // delete: function (id: string) {
+        //   draw.changeMode(drawMode);
+        //   setKinks(EMPTY_FEATURE_COLLECTION);
+        //   handlerState.current.onChange(draw.delete(id).getAll());
+        //   setState(DigitizingState.CREATE);
+        // },
         modeChange: function (e: any) {
-          console.log("change mode", e);
-          if (e.mode === "simple_select") {
-            setKinks(EMPTY_FEATURE_COLLECTION);
-            setState(DigitizingState.NO_SELECTION);
-          } else if (e.mode === "direct_select") {
-            setKinks(EMPTY_FEATURE_COLLECTION);
-            setState(DigitizingState.EDITING);
+          let state: DigitizingState | null = null;
+          switch (e.mode) {
+            case "simple_select":
+              // Only relevent to points
+              state = DigitizingState.NO_SELECTION;
+              break;
+            case "direct_select":
+              const selected = handlerState.current.draw?.getSelected();
+              // edit of existing feature
+              if (
+                selected?.features.length &&
+                selected.features[0].geometry.type === "Polygon"
+              ) {
+                state = DigitizingState.EDITING;
+              }
+              break;
+            case "unfinished_feature_select":
+              state = DigitizingState.UNFINISHED;
+              break;
+            // Should not need to account for draw_polygon, draw_point, etc
+            // These modes are entered into via direct API calls, and thus don't
+            // trigger events.
+            default:
+              break;
+          }
+          if (state) {
+            setState(state);
           }
         },
         selectionChange: function (e: any) {
@@ -262,55 +224,38 @@ export default function useMapboxGLDraw(
             setDragTarget(null);
           }
         },
+        handleKinks: function (e: { hasKinks: boolean }) {
+          const mode = handlerState.current.draw?.getMode() as string;
+          setSelfIntersects(e.hasKinks);
+        },
       };
 
-      if (map.isStyleLoaded()) {
-        handlers.addLayers();
-      } else {
-        map.on("load", handlers.addLayers);
-      }
       map.on("draw.create", handlers.create);
       map.on("draw.update", handlers.update);
       map.on("seasketch.drawing_started", handlers.drawingStarted);
       map.on("seasketch.can_complete", handlers.canComplete);
       map.on("seasketch.drag_target", handlers.dragTarget);
-      map.on("draw.delete", handlers.delete);
+      map.on("seasketch.kinks", handlers.handleKinks);
+      // map.on("draw.delete", handlers.delete);
       map.on("draw.modechange", handlers.modeChange);
       map.on("draw.selectionchange", handlers.selectionChange);
       return () => {
-        console.log("useMapboxGLDraw:cleanup", map, draw);
         if (map && draw) {
-          if (map.getSource("kinks")) {
-            map.removeSource("kinks");
-          }
-          if (map.getLayer("kinks-points")) {
-            map.removeLayer("kinks-points");
-          }
           map.removeControl(draw);
           handlerState.current.draw = undefined;
           setDraw(null);
-          map.off("load", handlers.addLayers);
           map.off("draw.create", handlers.create);
           map.off("draw.update", handlers.update);
           map.off("seasketch.drawing_started", handlers.drawingStarted);
           map.off("seasketch.drag_target", handlers.dragTarget);
           map.off("seasketch.can_complete", handlers.canComplete);
-          map.off("draw.delete", handlers.delete);
+          // map.off("draw.delete", handlers.delete);
           map.off("draw.modechange", handlers.modeChange);
           map.off("draw.selectionchange", handlers.selectionChange);
         }
       };
     }
   }, [map, geometryType, disabled]);
-
-  useEffect(() => {
-    if (map) {
-      try {
-        const source = map.getSource("kinks") as GeoJSONSource;
-        source.setData(kinks);
-      } catch (e) {}
-    }
-  }, [kinks, map]);
 
   useEffect(() => {
     if (disabled) {
@@ -328,22 +273,23 @@ export default function useMapboxGLDraw(
      */
     finishEditing: () => {
       if (draw) {
-        if (
-          state === DigitizingState.EDITING ||
-          state === DigitizingState.CAN_COMPLETE
-        ) {
-          draw.changeMode("simple_select", { featureIds: [] });
-          setState(DigitizingState.NO_SELECTION);
-        } else {
-          throw new Error(`Cannot finish editing from state ${state}`);
-        }
+        // if (
+        //   state === DigitizingState.EDITING ||
+        //   state === DigitizingState.CAN_COMPLETE
+        // ) {
+        draw.changeMode("simple_select", { featureIds: [] });
+        setState(DigitizingState.NO_SELECTION);
+        // } else {
+        //   throw new Error(`Cannot finish editing from state ${state}`);
+        // }
       } else {
         throw new Error("draw has not been initialized");
       }
     },
     /**
      * Resets editing by destroying the current feature. Throws an exception if
-     * no feature exists.
+     * no feature exists. Not that caller must take care to cleanup any state
+     * values since the onChange handler will not be fired.
      */
     reset: () => {
       if (draw) {
@@ -351,7 +297,6 @@ export default function useMapboxGLDraw(
           throw new Error("No feature exists to delete");
         }
         draw.deleteAll();
-        handlerState.current.onChange(null);
         setState(DigitizingState.CREATE);
         // @ts-ignore
         draw.changeMode(drawMode);
@@ -388,6 +333,14 @@ export default function useMapboxGLDraw(
         throw new Error("draw has not been initialized");
       }
     },
+    clearSelection: () => {
+      handlerState.current.draw?.changeMode("simple_select");
+      setState(DigitizingState.NO_SELECTION);
+    },
+    selectFeature: (featureId: string) => {
+      handlerState.current.draw?.changeMode("direct_select", { featureId });
+      setState(DigitizingState.EDITING);
+    },
   };
 
   /**
@@ -412,17 +365,53 @@ export default function useMapboxGLDraw(
       );
     }
   }
+
+  function setCollection(collection: FeatureCollection<any>) {
+    handlerState.current.draw?.set(collection);
+    setState(DigitizingState.NO_SELECTION);
+    setSelfIntersects(false);
+    handlerState.current.draw?.changeMode("simple_select");
+  }
+
+  function resetFeature(feature: Feature<any>) {
+    if (!handlerState.current.draw) {
+      throw new Error(`Draw not initialized`);
+    }
+    const collection = handlerState.current.draw.getAll();
+    const idx = collection.features.findIndex((f) => f.id === feature.id);
+    if (idx === -1) {
+      throw new Error(`Could not find ${idx} in draw's collection`);
+    }
+    const newCollection = {
+      ...collection,
+      features: [
+        ...collection.features.slice(0, idx),
+        feature,
+        ...collection.features.slice(idx + 1),
+      ],
+    };
+    handlerState.current.draw.set(newCollection);
+    setSelfIntersects(false);
+    // trigger check for kinks
+    handlerState.current.draw.changeMode("simple_select");
+    handlerState.current.draw.changeMode("direct_select", {
+      featureId: feature.id as string,
+    });
+  }
+
   return {
     digitizingState: state,
     selection,
     actions,
+    setCollection,
     create,
     /** Temporarily disable drawing */
     disable: () => setDisabled(true),
     /** Re-enable drawing */
     enable: () => setDisabled(false),
     dragTarget,
-    kinks,
+    selfIntersects,
+    resetFeature,
   };
 }
 

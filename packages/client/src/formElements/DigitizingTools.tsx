@@ -30,25 +30,36 @@ import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 interface DigitizingInstructionsProps {
   geometryType: SketchGeometryType;
   state: DigitizingState;
-  topologyErrors: boolean;
   /** Request deletion of selected feature */
   onRequestDelete: () => void;
   onRequestSubmit: () => void;
   onRequestEdit: () => void;
   onRequestFinishEditing: () => void;
+  onRequestResetFeature: () => void;
   multiFeature?: boolean;
+  /**
+   * Button or buttons to display when digitizing state is UNFINISHED. Useful
+   * since next steps may vary based on specifics of UI workflow, or whether the
+   * user is on desktop or a mobile device. For example, in surveys on desktop
+   * the feature properties form is displayed side-by-side with the map, while
+   * on mobile the user needs to transition from the map to a data entry form.
+   */
+  unfinishedStateButtons?: ReactNode;
+  selfIntersects?: boolean;
 }
 
 const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   geometryType,
   state,
-  topologyErrors,
   onRequestSubmit,
   onRequestDelete,
   onRequestEdit,
   onRequestFinishEditing,
+  onRequestResetFeature,
   children,
   multiFeature,
+  unfinishedStateButtons,
+  selfIntersects,
 }) => {
   const { t } = useTranslation("surveys");
   const style = useContext(SurveyLayoutContext).style;
@@ -56,7 +67,6 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   const [toolsOpen, setToolsOpen] = useState(false);
   const actionsButtonAnchor = useRef<HTMLButtonElement>(null);
   const [showInvalidShapeModal, setShowInvalidShapeModal] = useState(false);
-
   let instructions: ReactNode;
   switch (geometryType) {
     case SketchGeometryType.Point:
@@ -72,13 +82,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
       break;
   }
 
-  if (
-    topologyErrors &&
-    state === DigitizingState.NO_SELECTION
-    // state === DigitizingState.CREATED)
-  ) {
-    instructions = t("Invalid shape");
-  }
+  // if (selfIntersects) {
+  //   instructions = t("Invalid shape");
+  // }
 
   if (state === DigitizingState.DISABLED) {
     return null;
@@ -88,14 +94,14 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
 
   const buttons = (
     <>
-      {topologyErrors && state === DigitizingState.NO_SELECTION && (
+      {/* {selfIntersects && (
         <button
           className="pointer-events-auto"
           onClick={() => setShowInvalidShapeModal(true)}
         >
-          <QuestionMarkCircleIcon className="w-4 h-4 text-gray-900" />
+          <QuestionMarkCircleIcon className="w-6 h-6 text-gray-900" />
         </button>
-      )}
+      )} */}
       <button
         title="Options"
         ref={actionsButtonAnchor}
@@ -122,7 +128,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
       )}
-      {state === DigitizingState.EDITING && (
+      {(state === DigitizingState.EDITING || selfIntersects) && (
         <Button
           label={<TrashIcon className="w-5 h-5" />}
           onClick={onRequestDelete}
@@ -132,31 +138,15 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
       )}
-      {/* {DigitizingState.NO_SELECTION && (
+      {state === DigitizingState.EDITING && !selfIntersects && (
         <Button
           onClick={() => {
-            if (topologyErrors) {
+            if (selfIntersects) {
               setShowInvalidShapeModal(true);
             } else {
-              onRequestSubmit();
+              onRequestFinishEditing();
             }
           }}
-          primary
-          // disabled={topologyErrors}
-          label={t("Continue Survey")}
-          className={`pointer-events-auto whitespace-nowrap ${
-            bottomToolbar && "flex-2 content-center"
-          }`}
-          buttonClassName={
-            bottomToolbar
-              ? "py-3 text-base flex-1 text-center items-center justify-center"
-              : ""
-          }
-        />
-      )} */}
-      {state === DigitizingState.EDITING && (
-        <Button
-          onClick={onRequestFinishEditing}
           primary
           label={t("Done Editing")}
           className={`pointer-events-auto whitespace-nowrap ${
@@ -166,6 +156,22 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             bottomToolbar
               ? "py-3 text-base flex-1 text-center items-center justify-center"
               : ""
+          }
+        />
+      )}
+      {selfIntersects && (
+        <Button
+          onClick={() => {
+            setShowInvalidShapeModal(true);
+          }}
+          label={t("Invalid Shape")}
+          className={`pointer-events-auto whitespace-nowrap ${
+            bottomToolbar && "flex-2 content-center max-w-1/2"
+          }`}
+          buttonClassName={
+            bottomToolbar
+              ? "py-3 text-base flex-1 text-center items-center justify-center"
+              : "border-red-800 bg-red-50 text-red-900 hover:text-red-700"
           }
         />
       )}
@@ -184,6 +190,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
       )}
+      {state === DigitizingState.UNFINISHED && unfinishedStateButtons}
     </>
   );
 
@@ -193,6 +200,11 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         <BowtieInstructions
           open={showInvalidShapeModal}
           onRequestClose={() => setShowInvalidShapeModal(false)}
+          onRequestReset={
+            state === DigitizingState.EDITING
+              ? onRequestResetFeature
+              : undefined
+          }
         />
         <DigitizingActionsPopup
           open={toolsOpen}
@@ -224,6 +236,11 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         <BowtieInstructions
           open={showInvalidShapeModal}
           onRequestClose={() => setShowInvalidShapeModal(false)}
+          onRequestReset={
+            state === DigitizingState.EDITING
+              ? onRequestResetFeature
+              : undefined
+          }
         />
 
         <motion.div
@@ -372,7 +389,9 @@ function getPolygonInstructions(
           return null;
         }
       case DigitizingState.EDITING:
+      case DigitizingState.UNFINISHED:
         return <Trans ns="surveys">Drag points to modify</Trans>;
+      // return <Trans ns="surveys">Drag points to modify</Trans>;
       default:
         break;
     }
@@ -403,7 +422,8 @@ function getPolygonInstructions(
       // case DigitizingState.CREATED:
       //   return <Trans ns="surveys">Shape saved</Trans>;
       case DigitizingState.EDITING:
-        return <Trans ns="surveys">Click and drag points to modify</Trans>;
+      case DigitizingState.UNFINISHED:
+        return <Trans ns="surveys">Drag points to modify</Trans>;
       default:
         break;
     }

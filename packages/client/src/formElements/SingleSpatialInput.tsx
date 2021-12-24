@@ -92,7 +92,7 @@ const SingleSpatialInput: FormElementComponent<
     disable,
     enable,
     dragTarget,
-    kinks,
+    selfIntersects,
   } = useMapboxGLDraw(
     map,
     geometryType,
@@ -199,7 +199,7 @@ const SingleSpatialInput: FormElementComponent<
               state={digitizingState}
               geometryType={geometryType}
               onRequestFinishEditing={actions.finishEditing}
-              topologyErrors={kinks.features.length > 0}
+              onRequestResetFeature={() => {}}
               onRequestDelete={() => {
                 if (
                   window.confirm(
@@ -253,7 +253,7 @@ const SingleSpatialInput: FormElementComponent<
             />
             {miniMapStyle && map && (
               <DigitizingMiniMap
-                topologyErrors={kinks.features.length > 0}
+                topologyErrors={selfIntersects}
                 style={miniMapStyle}
                 dragTarget={dragTarget}
                 onLoad={(map) => setMiniMap(map)}

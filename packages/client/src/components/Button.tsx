@@ -49,7 +49,7 @@ export default function Button(props: ButtonProps) {
     return () => document.body.removeEventListener("click", fn);
   }, [dropdownOpen]);
 
-  let C = (props: any) => <button {...props} />;
+  let C = (props: any) => <div {...props} />;
   const history = useHistory();
   let onClick = props.onClick;
   if (props.href) {
