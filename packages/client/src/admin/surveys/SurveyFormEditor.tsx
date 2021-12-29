@@ -581,7 +581,8 @@ export default function SurveyFormEditor({
             {route === "formElement" &&
               selectedFormElement &&
               selectedFormElement.type?.isInput &&
-              selectedFormElement.typeId !== "FeatureName" && (
+              selectedFormElement.typeId !== "FeatureName" &&
+              selectedFormElement.typeId !== "SAPRange" && (
                 <div className="px-3 text-sm pt-3">
                   <InputBlock
                     labelType="small"
@@ -617,7 +618,8 @@ export default function SurveyFormEditor({
               selectedFormElement &&
               selectedFormElement.typeId !== "WelcomeMessage" &&
               selectedFormElement.typeId !== "ThankYou" &&
-              selectedFormElement.typeId !== "FeatureName" && (
+              selectedFormElement.typeId !== "FeatureName" &&
+              selectedFormElement.typeId !== "SAPRange" && (
                 <>
                   <div className="px-3 text-base">
                     {selectedFormElement.type?.isInput &&

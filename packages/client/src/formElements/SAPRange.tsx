@@ -123,4 +123,6 @@ SAPRange.adminValueInput = function ({
   );
 };
 
+SAPRange.templatesOnly = true;
+
 export default SAPRange;
