@@ -141,9 +141,8 @@ export default function useMapboxGLDraw(
         create: function (e: any) {
           if (hasKinks(e.features[0])) {
             setSelfIntersects(true);
-          } else {
-            handlerState.current.onChange(e.features[0]);
           }
+          handlerState.current.onChange(e.features[0]);
         },
         update: (e: any) => {
           const mode = handlerState.current.draw?.getMode() as string;

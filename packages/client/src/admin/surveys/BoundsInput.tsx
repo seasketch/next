@@ -108,7 +108,7 @@ export default function BoundsInput({
   let encodedPolyline: string | null = null;
   if (value) {
     const poly = bboxPolygon(value);
-    const encodedPolyline = encode(
+    encodedPolyline = encode(
       // @ts-ignore
       truncate(poly, {
         precision: 3,
@@ -172,7 +172,7 @@ export default function BoundsInput({
             }`}
           />
         ) : (
-          "disabled"
+          ""
         )}
       </div>
       {/* {digitizing && (

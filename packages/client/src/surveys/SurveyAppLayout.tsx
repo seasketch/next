@@ -200,7 +200,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
                 }}
                 className={`md:flex md:flex-col ${
                   scrollContentArea && "overflow-y-auto"
-                } p-5 ${centerIsh} ${style.textClass}`}
+                } p-3 lg:p-5 ${centerIsh} ${style.textClass}`}
               >
                 <div
                   className={`mx-auto ${

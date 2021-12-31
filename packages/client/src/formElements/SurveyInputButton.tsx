@@ -1,6 +1,5 @@
 import { colord } from "colord";
 import { FunctionComponent, MouseEventHandler, useContext } from "react";
-import { SurveyStyleContext } from "../surveys/appearance";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
 export default function SurveyInputButton({

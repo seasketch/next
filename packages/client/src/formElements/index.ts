@@ -14,7 +14,7 @@ import MultipleChoice from "./MultipleChoice";
 import SingleSpatialInput from "./SingleSpatialInput";
 import MultiSpatialInput from "./MultiSpatialInput";
 import FeatureName from "./FeatureName";
-import SpatialAccessPriority from "./SpatialAccessPriority";
+import SpatialAccessPriority from "./SpatialAccessPriority/SpatialAccessPriority";
 import SAPRange from "./SAPRange";
 
 export const components: {

@@ -11,45 +11,49 @@ import {
 import { Map } from "mapbox-gl";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import BasemapMultiSelectInput from "../admin/surveys/BasemapMultiSelectInput";
-import BoundsInput from "../admin/surveys/BoundsInput";
-import useMapEssentials from "../admin/surveys/useMapEssentials";
-import Button from "../components/Button";
-import MapboxMap from "../components/MapboxMap";
-import { Icons } from "../components/SketchGeometryTypeSelector";
+import BasemapMultiSelectInput from "../../admin/surveys/BasemapMultiSelectInput";
+import BoundsInput from "../../admin/surveys/BoundsInput";
+import useMapEssentials from "../../admin/surveys/useMapEssentials";
+import Button from "../../components/Button";
+import MapboxMap from "../../components/MapboxMap";
+import { Icons } from "../../components/SketchGeometryTypeSelector";
 import {
   BasemapControl,
   ResetView,
   ZoomToFeature,
-} from "../draw/DigitizingActionsPopup";
+} from "../../draw/DigitizingActionsPopup";
 import useMapboxGLDraw, {
   DigitizingState,
   EMPTY_FEATURE_COLLECTION,
-} from "../draw/useMapboxGLDraw";
+} from "../../draw/useMapboxGLDraw";
 import {
   FormElementFullDetailsFragment,
   FormElementLayout,
   SketchGeometryType,
-} from "../generated/graphql";
-import FormElementFactory from "../surveys/FormElementFactory";
-import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
-import SurveyButton from "../surveys/SurveyButton";
-import DigitizingTools from "./DigitizingTools";
+} from "../../generated/graphql";
+import FormElementFactory from "../../surveys/FormElementFactory";
+import { SurveyLayoutContext } from "../../surveys/SurveyAppLayout";
+import SurveyButton from "../../surveys/SurveyButton";
+import DigitizingTools from "../DigitizingTools";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
   sortFormElements,
   SurveyMapPortal,
-} from "./FormElement";
+} from "../FormElement";
 import FormElementOptionsInput, {
   FormElementOption,
-} from "./FormElementOptionsInput";
-import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
-import OptionPicker from "./OptionPicker";
+} from "../FormElementOptionsInput";
+import fromMarkdown, { questionBodyFromMarkdown } from "../fromMarkdown";
+import OptionPicker from "../OptionPicker";
+import PlusCircle from "@heroicons/react/outline/PlusCircleIcon";
+import SectorNavigation from "./SectorNavigation";
+import ChooseSectors from "./ChooseSectors";
 
-enum STAGES {
+export enum STAGES {
   CHOOSE_SECTORS,
+  SECTOR_NAVIGATION,
   DRAWING_INTRO,
   SHAPE_EDITOR,
   LIST_SHAPES,
@@ -57,6 +61,7 @@ enum STAGES {
   MOBILE_EDIT_PROPERTIES,
   MOBILE_MAP_FEATURES,
 }
+
 interface FormElementState {
   value: any;
   errors: boolean;
@@ -71,18 +76,20 @@ interface ResponseState {
 export type SpatialAccessPriorityProps = {
   sectorOptions?: FormElementOption[];
   beginBody?: any;
+  navBody?: any;
   listShapesBody?: any;
   startingBounds?: BBox;
   basemaps?: number[];
 };
 type SectorFeatureProps = { sector: string; [key: string]: any };
 type FC = FeatureCollection<Polygon, SectorFeatureProps>;
+export type SAPValueType = {
+  collection: FC;
+  sectors: string[];
+};
 const SpatialAccessPriority: FormElementComponent<
   SpatialAccessPriorityProps,
-  {
-    collection: FC;
-    sectors: string[];
-  }
+  SAPValueType
 > = (props) => {
   const { t } = useTranslation("admin:surveys");
   const context = useContext(SurveyLayoutContext);
@@ -113,6 +120,12 @@ const SpatialAccessPriority: FormElementComponent<
     (el) => el.typeId === "FeatureName"
   )?.id;
 
+  /**
+   * Updates GeoJSON features contained in props.value.collection. Be specifying
+   * either props or geometry (or both), you can update just part of the feature
+   * @param id
+   * @param opts
+   */
   function updateFeatureValue(
     id: string,
     opts: { props?: SectorFeatureProps; geometry?: Feature<Polygon> }
@@ -143,6 +156,19 @@ const SpatialAccessPriority: FormElementComponent<
     );
   }
 
+  // Calls updateFeatureValue whenever the property editing form is modified,
+  // as long as the feature is not new.
+  useEffect(() => {
+    if (responseState.featureId && geometryEditingState?.isNew !== true) {
+      updateFeatureValue(responseState.featureId as string, {
+        props: responseStateToProps(
+          sector!.value || sector!.label,
+          responseState
+        ),
+      });
+    }
+  }, [responseState, geometryEditingState?.isNew]);
+
   function updateResponseState(id: number) {
     return (value: any, errors: boolean) => {
       setResponseState((prev) => {
@@ -158,21 +184,16 @@ const SpatialAccessPriority: FormElementComponent<
     };
   }
 
-  useEffect(() => {
-    if (responseState.featureId && geometryEditingState?.isNew !== true) {
-      updateFeatureValue(responseState.featureId as string, {
-        props: responseStateToProps(
-          sector!.value || sector!.label,
-          responseState
-        ),
-      });
-    }
-  }, [responseState]);
+  console.log({ stage: STAGES[props.stage] });
 
+  // formElements need to be sorted before display
   const formElements = useMemo<FormElementFullDetailsFragment[]>(() => {
     return sortFormElements(props.sketchClass!.form!.formElements!);
   }, [props.sketchClass!.form?.formElements]);
 
+  /**
+   * Filter features to just those that belong to the current stage
+   */
   const filteredFeatures: FC = useMemo(() => {
     return props.value?.collection && sector
       ? {
@@ -197,7 +218,6 @@ const SpatialAccessPriority: FormElementComponent<
   } = useMapboxGLDraw(
     mapContext.manager?.map,
     props.sketchClass!.geometryType,
-    // null,
     filteredFeatures,
     (updatedFeature) => {
       if (!selection || geometryEditingState?.isNew) {
@@ -215,6 +235,21 @@ const SpatialAccessPriority: FormElementComponent<
       }
     }
   );
+
+  function setFilteredCollection(
+    collection: FeatureCollection<Polygon, { sector: string }>
+  ) {
+    if (!sector) {
+      throw new Error("Sector not set");
+    }
+    const filtered = {
+      ...EMPTY_FEATURE_COLLECTION,
+      features: collection.features.filter(
+        (f) => f.properties.sector === (sector.value || sector.label)
+      ),
+    };
+    setCollection(filtered);
+  }
 
   useEffect(() => {
     if (
@@ -324,6 +359,14 @@ const SpatialAccessPriority: FormElementComponent<
     }
   }
 
+  function onClickDoneMobile() {
+    if (selfIntersects) {
+      return window.alert(t("Please fix problems with your shape first."));
+    } else {
+      props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+    }
+  }
+
   function removeFeatureFromValue(featureId: string | number) {
     if (!props.value) {
       throw new Error("props.value not set");
@@ -388,7 +431,8 @@ const SpatialAccessPriority: FormElementComponent<
           exit="exit"
         >
           {props.stage !== STAGES.CHOOSE_SECTORS &&
-            props.stage !== STAGES.SHAPE_EDITOR && (
+            props.stage !== STAGES.SHAPE_EDITOR &&
+            props.stage !== STAGES.SECTOR_NAVIGATION && (
               <h4
                 className={`font-bold text-xl pb-4 ${!style.isSmall && "pt-6"}`}
               >
@@ -396,71 +440,10 @@ const SpatialAccessPriority: FormElementComponent<
               </h4>
             )}
           {props.stage === STAGES.CHOOSE_SECTORS && (
-            <div className="mb-5">
-              <FormElementBody
-                required={props.isRequired}
-                formElementId={props.id}
-                isInput={true}
-                body={props.body}
-                editable={props.editable}
-              />
-              {!props.componentSettings.sectorOptions?.length && (
-                <div className="rounded p-4 mt-4 bg-yellow-400 bg-opacity-60 text-black text-sm">
-                  <ExclamationIcon className="w-6 h-6 inline mr-2" />
-                  <Trans ns="admin:surveys">
-                    This stage will be skipped if no sector options are
-                    specified.
-                  </Trans>
-                </div>
-              )}
-              <OptionPicker
-                options={props.componentSettings.sectorOptions || []}
-                multi={true}
-                onChange={(sectors) => {
-                  props.onChange(
-                    {
-                      collection:
-                        props.value?.collection ||
-                        (EMPTY_FEATURE_COLLECTION as FC),
-                      sectors,
-                    },
-                    false
-                  );
-                }}
-                value={props.value?.sectors || []}
-              />
-              <SurveyButton
-                className={`transition-opacity duration-300 ${
-                  !props.value?.sectors?.length ? "opacity-0" : "opacity-100"
-                }`}
-                disabled={!props.value?.sectors?.length}
-                label={t("Next")}
-                onClick={() => {
-                  if (!props.value) {
-                    throw new Error("No sectors selected");
-                  }
-                  const nextSector = props.componentSettings.sectorOptions!.find(
-                    (s) => (s.value || s.label) === props.value!.sectors[0]
-                  );
-                  if (!nextSector) {
-                    throw new Error(
-                      `Cannot find next sector ${props.value.sectors[0]}`
-                    );
-                  }
-                  setSector(nextSector);
-                  const hasFeatures = !!props.value!.collection.features.find(
-                    (f) =>
-                      f.properties.sector ===
-                      (nextSector.value || nextSector.label)
-                  );
-                  if (hasFeatures) {
-                    props.onRequestStageChange(STAGES.LIST_SHAPES);
-                  } else {
-                    props.onRequestStageChange(STAGES.DRAWING_INTRO);
-                  }
-                }}
-              />
-            </div>
+            <ChooseSectors {...props} setSector={setSector} />
+          )}
+          {props.stage === STAGES.SECTOR_NAVIGATION && (
+            <SectorNavigation {...props} setSector={setSector} />
           )}
           {(props.stage === STAGES.DRAWING_INTRO ||
             props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) && (
@@ -591,17 +574,30 @@ const SpatialAccessPriority: FormElementComponent<
                   </div>
                 </div> */}
               </div>
-              <SurveyButton
-                label={t("New Shape")}
-                onClick={() => {
-                  setResponseState({ submissionAttempted: false });
-                  setGeometryEditingState({
-                    isNew: true,
-                  });
-                  props.onRequestStageChange(STAGES.SHAPE_EDITOR);
-                  create(true);
-                }}
-              />
+              <div className="space-x-1 flex">
+                <SurveyButton
+                  label={
+                    <>
+                      <PlusCircle className="w-5 h-5 mr-2" />
+                      {t("New Shape")}
+                    </>
+                  }
+                  onClick={() => {
+                    setResponseState({ submissionAttempted: false });
+                    setGeometryEditingState({
+                      isNew: true,
+                    });
+                    props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+                    create(true);
+                  }}
+                />
+                <SurveyButton
+                  label={<Trans ns="surveys">Finish Sector</Trans>}
+                  onClick={() => {
+                    props.onRequestStageChange(STAGES.SECTOR_NAVIGATION);
+                  }}
+                />
+              </div>
             </>
           )}
           {props.stage === STAGES.SHAPE_EDITOR && (
@@ -629,130 +625,150 @@ const SpatialAccessPriority: FormElementComponent<
                   />
                 );
               })}
-              <SurveyButton
-                label={geometryEditingState?.isNew ? t("Save") : t("Close")}
-                onClick={onClickSave}
-              />
-              {geometryEditingState?.isNew && (
+              <div className="space-x-2">
+                {geometryEditingState?.isNew && (
+                  <SurveyButton
+                    secondary={true}
+                    label={t("Cancel")}
+                    onClick={() => {
+                      if (!geometryEditingState?.isNew) {
+                        throw new Error(
+                          "Editor is not in state geometryEditingState.isNew"
+                        );
+                      }
+                      if (
+                        !geometryEditingState.feature ||
+                        window.confirm(
+                          t("Are you sure you want to delete this shape?")
+                        )
+                      ) {
+                        if (geometryEditingState.feature) {
+                          const collection = removeFeatureFromValue(
+                            geometryEditingState.feature.id!
+                          );
+                          setFilteredCollection(collection);
+                        }
+                        setGeometryEditingState({ isNew: false });
+                        props.onRequestStageChange(STAGES.LIST_SHAPES);
+                        actions.finishEditing();
+                        setFilteredCollection(props.value!.collection);
+                      }
+                    }}
+                  />
+                )}
                 <SurveyButton
-                  label={t("Cancel")}
-                  onClick={() => {
-                    if (!geometryEditingState?.isNew) {
-                      throw new Error(
-                        "Editor is not in state geometryEditingState.isNew"
-                      );
-                    }
-                    if (geometryEditingState.feature) {
-                      const collection = removeFeatureFromValue(
-                        geometryEditingState.feature.id!
-                      );
-                      setCollection(collection);
-                    }
-                    setGeometryEditingState({ isNew: false });
-                    props.onRequestStageChange(STAGES.LIST_SHAPES);
-                    actions.finishEditing();
-                    setCollection(props.value!.collection);
-                  }}
+                  label={geometryEditingState?.isNew ? t("Save") : t("Close")}
+                  onClick={onClickSave}
                 />
-              )}
+              </div>
             </div>
           )}
         </motion.div>
       </AnimatePresence>
-      {props.stage !== STAGES.CHOOSE_SECTORS && (
-        <SurveyMapPortal mapContext={mapContext}>
-          <div className="flex items-center justify-center w-full h-full">
-            <DigitizingTools
-              selfIntersects={selfIntersects}
-              multiFeature={true}
-              state={digitizingState}
-              geometryType={props.sketchClass!.geometryType}
-              onRequestEdit={actions.edit}
-              onRequestFinishEditing={actions.finishEditing}
-              unfinishedStateButtons={
-                <Button
-                  className="pointer-events-auto"
-                  primary
-                  label={t("Done")}
-                  onClick={onClickSave}
-                />
-              }
-              onRequestResetFeature={() => {
-                if (!selection) {
-                  throw new Error("No selection to perform feature reset");
+      {props.stage !== STAGES.CHOOSE_SECTORS &&
+        props.stage !== STAGES.SECTOR_NAVIGATION && (
+          <SurveyMapPortal mapContext={mapContext}>
+            <div className="flex items-center justify-center w-full h-full">
+              <DigitizingTools
+                selfIntersects={selfIntersects}
+                multiFeature={true}
+                state={digitizingState}
+                geometryType={props.sketchClass!.geometryType}
+                onRequestEdit={actions.edit}
+                onRequestFinishEditing={actions.finishEditing}
+                unfinishedStateButtons={
+                  <Button
+                    className="pointer-events-auto"
+                    primary
+                    label={t("Done")}
+                    onClick={style.isSmall ? onClickDoneMobile : onClickSave}
+                    buttonClassName={
+                      style.isSmall
+                        ? "py-3 flex-1 justify-center content-center"
+                        : ""
+                    }
+                  />
                 }
-                if (geometryEditingState?.isNew) {
-                  throw new Error(
-                    "Reset cannot be performed if geometry is new"
-                  );
-                } else {
-                  const goodFeature = props.value?.collection.features.find(
-                    (f) => f.id === selection.id
-                  );
-                  if (goodFeature) {
-                    resetFeature(goodFeature);
-                  } else {
-                    throw new Error(
-                      "Cannot find feature with id " + selection.id
-                    );
+                onRequestResetFeature={() => {
+                  if (!selection) {
+                    throw new Error("No selection to perform feature reset");
                   }
-                }
-              }}
-              onRequestDelete={() => {
-                if (!selection?.id) {
-                  throw new Error("No selection to delete");
-                }
-                if (!props.value) {
-                  throw new Error("No collection to delete feature from");
-                }
-                if (
-                  window.confirm(
-                    t("Are you sure you want to delete this shape?", {
-                      ns: "surveys",
-                    })
-                  )
-                ) {
-                  const collection = removeFeatureFromValue(selection.id);
-                  setCollection(collection);
                   if (geometryEditingState?.isNew) {
-                    setGeometryEditingState({ isNew: false });
+                    throw new Error(
+                      "Reset cannot be performed if geometry is new"
+                    );
+                  } else {
+                    const goodFeature = props.value?.collection.features.find(
+                      (f) => f.id === selection.id
+                    );
+                    if (goodFeature) {
+                      resetFeature(goodFeature);
+                    } else {
+                      throw new Error(
+                        "Cannot find feature with id " + selection.id
+                      );
+                    }
                   }
-                }
-              }}
-              onRequestSubmit={() => {
-                // if (props.value?.collection.features?.length) {
-                // console.log("onSubmit");
-                // props.onSubmit();
-                // }
-              }}
-            >
-              <ResetView map={mapContext.manager?.map!} bounds={bounds} />
-              {selection && (
-                <ZoomToFeature
-                  map={mapContext.manager?.map!}
-                  feature={selection}
-                  isSmall={style.isSmall}
-                  geometryType={props.sketchClass!.geometryType}
+                }}
+                onRequestDelete={() => {
+                  if (!selection?.id) {
+                    throw new Error("No selection to delete");
+                  }
+                  if (!props.value) {
+                    throw new Error("No collection to delete feature from");
+                  }
+                  if (
+                    window.confirm(
+                      t("Are you sure you want to delete this shape?", {
+                        ns: "surveys",
+                      })
+                    )
+                  ) {
+                    const collection = removeFeatureFromValue(selection.id);
+                    setFilteredCollection(collection);
+                    if (props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) {
+                      create(true);
+                    } else {
+                      if (geometryEditingState?.isNew) {
+                        setGeometryEditingState({ isNew: false });
+                      }
+                    }
+                  }
+                }}
+                onRequestSubmit={() => {
+                  // if (props.value?.collection.features?.length) {
+                  // console.log("onSubmit");
+                  // props.onSubmit();
+                  // }
+                }}
+              >
+                <ResetView map={mapContext.manager?.map!} bounds={bounds} />
+                {selection && (
+                  <ZoomToFeature
+                    map={mapContext.manager?.map!}
+                    feature={selection}
+                    isSmall={style.isSmall}
+                    geometryType={props.sketchClass!.geometryType}
+                  />
+                )}
+                <BasemapControl
+                  basemaps={basemaps}
+                  afterChange={() => {
+                    // updateMiniBasemap
+                  }}
                 />
-              )}
-              <BasemapControl
-                basemaps={basemaps}
-                afterChange={() => {
-                  // updateMiniBasemap
+              </DigitizingTools>
+              <MapboxMap
+                hideDrawControls
+                className="w-full h-full absolute top-0 bottom-0"
+                initOptions={{
+                  logoPosition: "bottom-left",
+                  attributionControl: !style.isSmall,
                 }}
               />
-            </DigitizingTools>
-            <MapboxMap
-              hideDrawControls
-              className="w-full h-full absolute top-0 bottom-0"
-              initOptions={{
-                logoPosition: "bottom-left",
-                attributionControl: !style.isSmall,
-              }}
-            />
-          </div>
-        </SurveyMapPortal>
-      )}
+            </div>
+          </SurveyMapPortal>
+        )}
       <Admin
         map={mapContext.manager?.map}
         bounds={bounds}
@@ -813,6 +829,11 @@ Add as many shapes as necessary to represent valued areas for this activity, the
 
 These scores will be summed among all survey responses to create a heatmap of valued areas.
 `),
+  // eslint-disable-next-line i18next/no-literal-string
+  navBody: fromMarkdown(`
+# Your sectors
+Please prioritize areas for each sector you represent.
+`),
 };
 
 SpatialAccessPriority.stages = STAGES;
@@ -823,7 +844,7 @@ SpatialAccessPriority.getLayout = (
   defaultLayout,
   isSmall
 ) => {
-  if (stage === STAGES.CHOOSE_SECTORS) {
+  if (stage === STAGES.CHOOSE_SECTORS || stage === STAGES.SECTOR_NAVIGATION) {
     // default to admin-setting, or setting from previous questions
     return defaultLayout;
   } else {
@@ -935,5 +956,11 @@ function responseStateToProps(sector: string, responseState: ResponseState) {
   }
   return properties;
 }
+
+SpatialAccessPriority.hideNav = (componentSettings, isMobile, stage) => {
+  return !(
+    stage === STAGES.CHOOSE_SECTORS || stage === STAGES.SECTOR_NAVIGATION
+  );
+};
 
 export default SpatialAccessPriority;

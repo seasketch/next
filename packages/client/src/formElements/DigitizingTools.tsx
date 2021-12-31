@@ -170,7 +170,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }`}
           buttonClassName={
             bottomToolbar
-              ? "py-3 text-base flex-1 text-center items-center justify-center"
+              ? "py-3 text-base flex-1 text-center items-center justify-center border-red-800 bg-red-50 text-red-900 hover:text-red-700"
               : "border-red-800 bg-red-50 text-red-900 hover:text-red-700"
           }
         />
