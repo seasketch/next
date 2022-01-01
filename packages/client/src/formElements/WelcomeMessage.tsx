@@ -42,7 +42,7 @@ const WelcomeMessage: FormElementComponent<
       <Button
         autofocus
         className="mt-6 mb-10"
-        onClick={props.onSubmit}
+        onClick={() => props.onChange({ dropdownSelection: "BEGIN" }, false)}
         label={
           props.componentSettings.beginButtonText?.length
             ? props.componentSettings.beginButtonText
@@ -153,5 +153,6 @@ WelcomeMessage.icon = () => (
 );
 
 WelcomeMessage.hideNav = true;
+WelcomeMessage.disableDeletion = true;
 
 export default WelcomeMessage;

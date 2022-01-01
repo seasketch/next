@@ -124,5 +124,5 @@ SAPRange.adminValueInput = function ({
 };
 
 SAPRange.templatesOnly = true;
-
+SAPRange.disableDeletion = true;
 export default SAPRange;

@@ -520,7 +520,8 @@ export default function SurveyFormEditor({
                           {selectedFormElement.typeId !== "WelcomeMessage" &&
                             selectedFormElement.typeId !== "ThankYou" &&
                             !advancesAutomatically(selectedFormElement) &&
-                            !components[selectedFormElement.typeId].stages && (
+                            !components[selectedFormElement.typeId].stages &&
+                            !components[selectedFormElement.typeId].hideNav && (
                               <Button
                                 label={t("Next")}
                                 backgroundColor={style.secondaryColor}
@@ -616,10 +617,7 @@ export default function SurveyFormEditor({
             </div>
             {route === "formElement" &&
               selectedFormElement &&
-              selectedFormElement.typeId !== "WelcomeMessage" &&
-              selectedFormElement.typeId !== "ThankYou" &&
-              selectedFormElement.typeId !== "FeatureName" &&
-              selectedFormElement.typeId !== "SAPRange" && (
+              !components[selectedFormElement.typeId].disableDeletion && (
                 <>
                   <div className="px-3 text-base">
                     {selectedFormElement.type?.isInput &&

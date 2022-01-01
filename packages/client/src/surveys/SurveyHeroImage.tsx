@@ -54,8 +54,8 @@ export default function SurveyHeroImage({
         // When using top-layout, the grid template row size it set to auto
         // so that tailwind classes can set a responsive height
         surveyStyle.layout === FormElementLayout.Top
-          ? "h-32 md:h-52 lg:h-64"
-          : ""
+          ? "h-32 md:h-52 lg:h-64 relative"
+          : "relative"
       }
     >
       <motion.img

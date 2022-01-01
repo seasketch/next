@@ -209,5 +209,5 @@ ThankYou.icon = () => (
 );
 
 ThankYou.hideNav = true;
-
+ThankYou.disableDeletion = true;
 export default ThankYou;

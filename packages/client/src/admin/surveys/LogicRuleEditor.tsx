@@ -521,7 +521,9 @@ function FormElementSelect({
         <option value="next">{blankLabel || "Default"}</option>
       )}
       {formElements
-        .filter((el) => el.id !== currentFormElementId)
+        .filter(
+          (el) => el.id !== currentFormElementId && el.typeId !== "ThankYou"
+        )
         .map((el) => (
           <option
             key={el.id}

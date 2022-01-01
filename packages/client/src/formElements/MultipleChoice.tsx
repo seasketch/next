@@ -34,7 +34,7 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
         required={props.isRequired}
         editable={props.editable}
       />
-      <div className="inline-block">
+      <div className="block sm:inline-block">
         <div className="py-4 pb-6 space-y-2 flex flex-col">
           {(props.componentSettings.options || []).map(({ label, value }) => {
             const current = props.value || [];

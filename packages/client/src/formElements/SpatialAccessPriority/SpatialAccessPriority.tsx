@@ -9,7 +9,7 @@ import {
   Polygon,
 } from "geojson";
 import { Map } from "mapbox-gl";
-import { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import BasemapMultiSelectInput from "../../admin/surveys/BasemapMultiSelectInput";
 import BoundsInput from "../../admin/surveys/BoundsInput";
@@ -120,6 +120,22 @@ const SpatialAccessPriority: FormElementComponent<
     (el) => el.typeId === "FeatureName"
   )?.id;
 
+  function onChange(value: SAPValueType) {
+    let errors = !value.sectors || value.sectors.length < 1;
+    if (!errors) {
+      for (const sector of value.sectors) {
+        const anyFeatures = (value.collection?.features || []).find(
+          (f) => f.properties.sector === sector
+        );
+        if (!anyFeatures) {
+          errors = true;
+          break;
+        }
+      }
+    }
+    props.onChange(value, props.isRequired ? errors : false);
+  }
+
   /**
    * Updates GeoJSON features contained in props.value.collection. Be specifying
    * either props or geometry (or both), you can update just part of the feature
@@ -136,24 +152,21 @@ const SpatialAccessPriority: FormElementComponent<
       throw new Error(`Can't find feature with id ${id}`);
     }
     const feature = features[idx];
-    props.onChange(
-      {
-        ...props.value!,
-        collection: {
-          ...props.value!.collection!,
-          features: [
-            ...features.slice(0, idx),
-            {
-              ...feature,
-              ...(opts.geometry ? { geometry: opts.geometry.geometry } : {}),
-              ...(opts.props ? { properties: opts.props } : {}),
-            } as Feature<Polygon, SectorFeatureProps>,
-            ...features.slice(idx + 1),
-          ],
-        },
+    onChange({
+      ...props.value!,
+      collection: {
+        ...props.value!.collection!,
+        features: [
+          ...features.slice(0, idx),
+          {
+            ...feature,
+            ...(opts.geometry ? { geometry: opts.geometry.geometry } : {}),
+            ...(opts.props ? { properties: opts.props } : {}),
+          } as Feature<Polygon, SectorFeatureProps>,
+          ...features.slice(idx + 1),
+        ],
       },
-      false
-    );
+    });
   }
 
   // Calls updateFeatureValue whenever the property editing form is modified,
@@ -183,8 +196,6 @@ const SpatialAccessPriority: FormElementComponent<
       });
     };
   }
-
-  console.log({ stage: STAGES[props.stage] });
 
   // formElements need to be sorted before display
   const formElements = useMemo<FormElementFullDetailsFragment[]>(() => {
@@ -337,21 +348,18 @@ const SpatialAccessPriority: FormElementComponent<
         ...responseStateToProps(sector.value || sector.label, responseState),
       };
 
-      props.onChange(
-        {
-          sectors: props.value!.sectors,
-          collection: {
-            ...props.value!.collection,
-            features: [
-              // @ts-ignore
-              ...props.value!.collection.features,
-              // @ts-ignore
-              feature,
-            ],
-          },
+      onChange({
+        sectors: props.value!.sectors,
+        collection: {
+          ...props.value!.collection,
+          features: [
+            // @ts-ignore
+            ...props.value!.collection.features,
+            // @ts-ignore
+            feature,
+          ],
         },
-        false
-      );
+      });
       props.onRequestStageChange(STAGES.LIST_SHAPES);
       setGeometryEditingState(null);
       setResponseState({ submissionAttempted: false });
@@ -377,13 +385,10 @@ const SpatialAccessPriority: FormElementComponent<
         (f) => f.id !== featureId
       ),
     };
-    props.onChange(
-      {
-        ...props.value,
-        collection,
-      },
-      false
-    );
+    onChange({
+      ...props.value,
+      collection,
+    });
     return collection;
   }
 
@@ -440,7 +445,11 @@ const SpatialAccessPriority: FormElementComponent<
               </h4>
             )}
           {props.stage === STAGES.CHOOSE_SECTORS && (
-            <ChooseSectors {...props} setSector={setSector} />
+            <ChooseSectors
+              {...props}
+              setSector={setSector}
+              updateValue={onChange}
+            />
           )}
           {props.stage === STAGES.SECTOR_NAVIGATION && (
             <SectorNavigation {...props} setSector={setSector} />
@@ -512,7 +521,7 @@ const SpatialAccessPriority: FormElementComponent<
                 </div>
 
                 {filteredFeatures.features.map((feature) => (
-                  <>
+                  <React.Fragment key={feature.id}>
                     <button
                       className="block rounded-l w-full text-left px-4 py-2 border-opacity-50 h-full"
                       style={{
@@ -521,7 +530,6 @@ const SpatialAccessPriority: FormElementComponent<
                           .toHex(),
                         // gridArea: "shape",
                       }}
-                      key={feature.id}
                       onClick={() =>
                         actions.selectFeature(feature.id as string)
                       }
@@ -557,7 +565,7 @@ const SpatialAccessPriority: FormElementComponent<
                         }}
                       />
                     </div>
-                  </>
+                  </React.Fragment>
                 ))}
                 <div className="flex align-middle h-full">
                   {/* <Trans ns="surveys">Name</Trans> */}
@@ -958,9 +966,19 @@ function responseStateToProps(sector: string, responseState: ResponseState) {
 }
 
 SpatialAccessPriority.hideNav = (componentSettings, isMobile, stage) => {
-  return !(
-    stage === STAGES.CHOOSE_SECTORS || stage === STAGES.SECTOR_NAVIGATION
-  );
+  if (stage === STAGES.CHOOSE_SECTORS || stage === STAGES.SECTOR_NAVIGATION) {
+    return false;
+  } else {
+    return true;
+  }
+};
+
+SpatialAccessPriority.getInitialStage = (value, componentSettings) => {
+  if (value?.sectors?.length > 0) {
+    return STAGES.SECTOR_NAVIGATION;
+  } else {
+    return STAGES.CHOOSE_SECTORS;
+  }
 };
 
 export default SpatialAccessPriority;

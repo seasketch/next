@@ -16,6 +16,7 @@ type ChooseSectorsProps = FormElementProps<
   SAPValueType
 > & {
   setSector: (sector: FormElementOption) => void;
+  updateValue: (value: SAPValueType) => void;
 };
 
 export default function ChooseSectors(props: ChooseSectorsProps) {
@@ -41,14 +42,11 @@ export default function ChooseSectors(props: ChooseSectorsProps) {
         options={props.componentSettings.sectorOptions || []}
         multi={true}
         onChange={(sectors) => {
-          props.onChange(
-            {
-              // @ts-ignore
-              collection: props.value?.collection || EMPTY_FEATURE_COLLECTION,
-              sectors,
-            },
-            false
-          );
+          props.updateValue({
+            // @ts-ignore
+            collection: props.value?.collection || EMPTY_FEATURE_COLLECTION,
+            sectors,
+          });
         }}
         value={props.value?.sectors || []}
       />

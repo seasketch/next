@@ -22,15 +22,19 @@ type SectorNavigationProps = FormElementProps<
 export default function SectorNavigation(props: SectorNavigationProps) {
   const style = useContext(SurveyStyleContext);
   const { t } = useTranslation("surveys");
-  const nextSector = (props.componentSettings.sectorOptions || []).find(
-    (sector) => {
+  const nextSector = (props.componentSettings.sectorOptions || [])
+    .filter(
+      (sector) =>
+        (props.value?.sectors || []).indexOf(sector.value || sector.label) !==
+        -1
+    )
+    .find((sector) => {
       return (
         (props.value?.collection.features || []).find(
           (f) => f.properties.sector === (sector.value || sector.label)
         ) === undefined
       );
-    }
-  );
+    });
   return (
     <>
       <FormElementBody
@@ -58,6 +62,7 @@ export default function SectorNavigation(props: SectorNavigationProps) {
             const hasValue = numShapes > 0;
             return (
               <button
+                key={sector.label}
                 className={`border rounded transition-all duration-200 active:scale-105 transform flex items-center ${
                   style.isDark ? "bg-white" : "bg-black"
                 } bg-opacity-5 hover:bg-opacity-10 hover:bg-white px-4 py-2 pr-6 text-white w-full text-left ${

@@ -11,7 +11,14 @@ import {
   SurveyStyleContext,
 } from "./appearance";
 import { createPortal } from "react-dom";
-import { createContext, useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { SurveyMapPortalContext } from "../formElements/FormElement";
 import PracticeBanner from "./PracticeBanner";
 import SurveyHeroImage from "./SurveyHeroImage";
@@ -39,6 +46,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
   practice?: boolean;
   onPracticeClick?: () => void;
   navigatingBackwards?: boolean;
+  navigation?: ReactNode;
 }> = ({
   practice,
   progress,
@@ -50,6 +58,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
   unsplashUserUrl,
   onPracticeClick,
   navigatingBackwards,
+  navigation,
 }) => {
   style = style || defaultStyle;
   const [mapPortal, setMapPortal] = useState<HTMLDivElement | null>(null);
@@ -85,13 +94,17 @@ export const SurveyAppLayout: React.FunctionComponent<{
 
   // eslint-disable-next-line i18next/no-literal-string
   let grid: string;
+  let navPosition: string =
+    "fixed bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
   switch (style.layout) {
     case FormElementLayout.Cover:
       // eslint-disable-next-line i18next/no-literal-string
       grid = `
-        [row2-start] "content content" auto [row2-end]
+        [row2-start] "content content" 100% [row2-end]
         / auto auto
       `;
+      navPosition =
+        "fixed bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
       break;
     case FormElementLayout.MapStacked:
       // eslint-disable-next-line i18next/no-literal-string
@@ -100,20 +113,26 @@ export const SurveyAppLayout: React.FunctionComponent<{
         [row2-start] "map map" 1fr [row2-end]
         / auto auto
       `;
+      navPosition =
+        "fixed bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-5";
       break;
     case FormElementLayout.Left:
       // eslint-disable-next-line i18next/no-literal-string
       grid = `
-        [row1-start] "content hero-image" auto [row1-end]
+        [row1-start] "content hero-image" 100% [row1-end]
         / minmax(480px, 1fr) 1fr
       `;
+      navPosition =
+        "fixed bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
       break;
     case FormElementLayout.Right:
       // eslint-disable-next-line i18next/no-literal-string
       grid = `
-        [row1-start] "hero-image content" auto [row1-end]
+        [row1-start] "hero-image content" 100% [row1-end]
         / 1fr minmax(480px, 1fr)
       `;
+      navPosition =
+        "fixed bottom-3 right-3 md:right-1/2 md:bottom-6 md:pr-4 lg:bottom-10 lg:pr-8";
       break;
     case FormElementLayout.MapSidebarLeft:
       // eslint-disable-next-line i18next/no-literal-string
@@ -130,6 +149,8 @@ export const SurveyAppLayout: React.FunctionComponent<{
         [row1-start] "map content" auto [row1-end]
         / 2fr minmax(480px, 1fr)
       `;
+      navPosition =
+        "fixed bottom-3 left-96 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
       break;
     case FormElementLayout.MapFullscreen:
       // eslint-disable-next-line i18next/no-literal-string
@@ -150,7 +171,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
       break;
   }
 
-  const centerIsh =
+  let centerIsh =
     // only vertically pad content if not one of these layouts
     style.layout !== FormElementLayout.Top &&
     style.layout !== FormElementLayout.MapStacked &&
@@ -159,22 +180,37 @@ export const SurveyAppLayout: React.FunctionComponent<{
       ? "center-ish"
       : "";
 
+  // TODO: Debugging. Erase this
+  // centerIsh = "";
+
   const mapLayout =
     style.layout === FormElementLayout.MapStacked ||
     style.layout === FormElementLayout.MapSidebarRight ||
     style.layout === FormElementLayout.MapSidebarLeft ||
     style.layout === FormElementLayout.MapFullscreen;
 
-  const scrollContentArea =
+  let scrollContentArea =
     style.layout === FormElementLayout.Left ||
-    style.layout === FormElementLayout.Right;
+    style.layout === FormElementLayout.Right ||
+    style.layout === FormElementLayout.MapSidebarLeft ||
+    style.layout === FormElementLayout.MapSidebarRight;
 
   const content = (
     <SurveyLayoutContext.Provider value={layoutContext}>
       <SurveyMapPortalContext.Provider value={mapPortal}>
         <SurveyStyleContext.Provider value={style}>
           <AnimatePresence initial={false} presenceAffectsLayout={false}>
-            <div className="grid h-full" style={{ grid }}>
+            <div
+              className={`grid overflow-hidden ${
+                scrollContentArea ? "h-full" : ""
+              }`}
+              style={{ grid }}
+            >
+              {!scrollContentArea && (
+                <div className="fixed z-10 right-3 bottom-3 lg:p-5 xl:p-10 2xl:p-14 3xl:p-20">
+                  {navigation}
+                </div>
+              )}
               {practice && <PracticeBanner onPracticeClick={onPracticeClick} />}
               {showProgress && (
                 <ProgressBar
@@ -198,19 +234,32 @@ export const SurveyAppLayout: React.FunctionComponent<{
                 style={{
                   gridArea: "content",
                 }}
-                className={`md:flex md:flex-col ${
+                className={`relative md:flex md:flex-col ${
                   scrollContentArea && "overflow-y-auto"
-                } p-3 lg:p-5 ${centerIsh} ${style.textClass}`}
+                } p-3 lg:p-5 xl:p-10 2xl:p-14 3xl:p-20 ${centerIsh} ${
+                  style.textClass
+                }`}
               >
+                {scrollContentArea && (
+                  <div
+                    className="sticky w-full flex justify-end z-10  pointer-events-none"
+                    style={{
+                      top: "calc(100% - 40px)",
+                      height: 0,
+                      overflow: "visible",
+                    }}
+                  >
+                    {navigation}
+                  </div>
+                )}
                 <div
                   className={`mx-auto ${
                     !scrollContentArea && "-mt-12 sm:mt-0"
-                  }`}
+                  } max-w-2xl`}
                 >
                   {children}
                 </div>
               </div>
-
               {style.layout === FormElementLayout.Cover && (
                 <UnsplashCredit
                   name={unsplashUserName}

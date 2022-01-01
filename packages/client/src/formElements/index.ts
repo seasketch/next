@@ -16,6 +16,7 @@ import MultiSpatialInput from "./MultiSpatialInput";
 import FeatureName from "./FeatureName";
 import SpatialAccessPriority from "./SpatialAccessPriority/SpatialAccessPriority";
 import SAPRange from "./SAPRange";
+import SaveScreen from "./SaveScreen";
 
 export const components: {
   /** componentName must match form_elements db table */
@@ -39,3 +40,4 @@ components["MultiSpatialInput"] = MultiSpatialInput;
 components["SpatialAccessPriorityInput"] = SpatialAccessPriority;
 components["FeatureName"] = FeatureName;
 components["SAPRange"] = SAPRange;
+components["SaveScreen"] = SaveScreen;
