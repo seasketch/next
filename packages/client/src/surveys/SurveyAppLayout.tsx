@@ -255,7 +255,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
                 <div
                   className={`mx-auto ${
                     !scrollContentArea && "-mt-12 sm:mt-0"
-                  } max-w-2xl`}
+                  } max-w-2xl w-full`}
                 >
                   {children}
                 </div>
