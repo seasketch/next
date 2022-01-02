@@ -621,7 +621,13 @@ const SpatialAccessPriority: FormElementComponent<
                     isSpatial={false}
                     onRequestStageChange={() => null}
                     featureNumber={
-                      (props.value?.collection.features.length || 0) + 1
+                      ((
+                        props.value?.collection.features.filter(
+                          (f) =>
+                            f.properties.sector ===
+                            (sector?.value || sector?.label)
+                        ) || []
+                      ).length || 0) + 1
                     }
                     stage={0}
                     onRequestNext={() => null}
