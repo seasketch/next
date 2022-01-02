@@ -1,6 +1,6 @@
 // import Color from "color";
 import React, { CSSProperties, useState, useEffect } from "react";
-import { useHistory } from "react-router-dom";
+import { Link, useHistory } from "react-router-dom";
 import { colord, extend } from "colord";
 import { ChevronDownIcon } from "@heroicons/react/outline";
 
@@ -49,19 +49,28 @@ export default function Button(props: ButtonProps) {
     return () => document.body.removeEventListener("click", fn);
   }, [dropdownOpen]);
 
+  let C = (props: any) => <div {...props} />;
   const history = useHistory();
   let onClick = props.onClick;
   if (props.href) {
-    onClick = () => {
-      history.push(props.href!);
-    };
-  }
-  if (props.mailTo) {
-    onClick = () => {
+    let href = props.href;
+    if (props.mailTo) {
       // eslint-disable-next-line i18next/no-literal-string
-      window.location.href = `mailto:${props.mailTo}`;
-    };
+      href = `mailto:${props.mailTo}`;
+    }
+    C = (props) => <Link {...props} to={href} />;
   }
+  // if (props.href) {
+  //   onClick = () => {
+  //     history.push(props.href!);
+  //   };
+  // }
+  // if (props.mailTo) {
+  //   onClick = () => {
+  //     // eslint-disable-next-line i18next/no-literal-string
+  //     window.location.href = `mailto:${props.mailTo}`;
+  //   };
+  // }
   let label: string | React.ReactNode = props.label;
   if (props.children) {
     label = props.children;
@@ -135,7 +144,7 @@ export default function Button(props: ButtonProps) {
   }
 
   return (
-    <span
+    <C
       title={props.title}
       className={`inline-flex relative ${props.shadowSize || "shadow-sm"} ${
         props.className
@@ -191,6 +200,6 @@ export default function Button(props: ButtonProps) {
           )}
         </button>
       )}
-    </span>
+    </C>
   );
 }

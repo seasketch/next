@@ -25,56 +25,66 @@ import DigitizingActionsPopup, {
   NextQuestion,
 } from "../draw/DigitizingActionsPopup";
 import BowtieInstructions from "../draw/BowtieInstructions";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
 interface DigitizingInstructionsProps {
   geometryType: SketchGeometryType;
   state: DigitizingState;
-  topologyErrors: boolean;
   /** Request deletion of selected feature */
-  onRequestReset: () => void;
+  onRequestDelete: () => void;
   onRequestSubmit: () => void;
   onRequestEdit: () => void;
   onRequestFinishEditing: () => void;
+  onRequestResetFeature: () => void;
+  multiFeature?: boolean;
+  /**
+   * Button or buttons to display when digitizing state is UNFINISHED. Useful
+   * since next steps may vary based on specifics of UI workflow, or whether the
+   * user is on desktop or a mobile device. For example, in surveys on desktop
+   * the feature properties form is displayed side-by-side with the map, while
+   * on mobile the user needs to transition from the map to a data entry form.
+   */
+  unfinishedStateButtons?: ReactNode;
+  selfIntersects?: boolean;
 }
 
 const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   geometryType,
   state,
-  topologyErrors,
   onRequestSubmit,
-  onRequestReset,
+  onRequestDelete,
   onRequestEdit,
   onRequestFinishEditing,
+  onRequestResetFeature,
   children,
+  multiFeature,
+  unfinishedStateButtons,
+  selfIntersects,
 }) => {
   const { t } = useTranslation("surveys");
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   const isMobile = useMobileDeviceDetector();
   const [toolsOpen, setToolsOpen] = useState(false);
   const actionsButtonAnchor = useRef<HTMLButtonElement>(null);
   const [showInvalidShapeModal, setShowInvalidShapeModal] = useState(false);
-
   let instructions: ReactNode;
   switch (geometryType) {
     case SketchGeometryType.Point:
-      instructions = getPointInstructions(state, isMobile);
+      instructions = getPointInstructions(state, isMobile, !!multiFeature);
       break;
     case SketchGeometryType.Linestring:
-      instructions = getLineInstructions(state, isMobile);
+      instructions = getLineInstructions(state, isMobile, !!multiFeature);
       break;
     case SketchGeometryType.Polygon:
-      instructions = getPolygonInstructions(state, isMobile);
+      instructions = getPolygonInstructions(state, isMobile, !!multiFeature);
       break;
     default:
       break;
   }
 
-  if (
-    topologyErrors &&
-    (state === DigitizingState.FINISHED || state === DigitizingState.CREATED)
-  ) {
-    instructions = t("Invalid shape");
-  }
+  // if (selfIntersects) {
+  //   instructions = t("Invalid shape");
+  // }
 
   if (state === DigitizingState.DISABLED) {
     return null;
@@ -84,16 +94,14 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
 
   const buttons = (
     <>
-      {topologyErrors &&
-        (state === DigitizingState.FINISHED ||
-          state === DigitizingState.CREATED) && (
-          <button
-            className="pointer-events-auto"
-            onClick={() => setShowInvalidShapeModal(true)}
-          >
-            <QuestionMarkCircleIcon className="w-4 h-4 text-gray-900" />
-          </button>
-        )}
+      {/* {selfIntersects && (
+        <button
+          className="pointer-events-auto"
+          onClick={() => setShowInvalidShapeModal(true)}
+        >
+          <QuestionMarkCircleIcon className="w-6 h-6 text-gray-900" />
+        </button>
+      )} */}
       <button
         title="Options"
         ref={actionsButtonAnchor}
@@ -105,8 +113,8 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
       >
         <DotsHorizontalIcon className={bottomToolbar ? "w-6 h-6" : "w-5 h-5"} />
       </button>
-      {(state === DigitizingState.FINISHED ||
-        state === DigitizingState.CREATED) && (
+
+      {DigitizingState.NO_SELECTION && !multiFeature && (
         <Button
           label={t("Edit")}
           onClick={onRequestEdit}
@@ -120,42 +128,25 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
       )}
-      {state === DigitizingState.EDITING && (
+      {(state === DigitizingState.EDITING || selfIntersects) && (
         <Button
           label={<TrashIcon className="w-5 h-5" />}
-          onClick={onRequestReset}
+          onClick={onRequestDelete}
           className={`pointer-events-auto`}
           buttonClassName={
             bottomToolbar ? "py-3 flex-1 justify-center content-center" : ""
           }
         />
       )}
-      {(state === DigitizingState.FINISHED ||
-        state === DigitizingState.CREATED) && (
+      {state === DigitizingState.EDITING && !selfIntersects && (
         <Button
           onClick={() => {
-            if (topologyErrors) {
+            if (selfIntersects) {
               setShowInvalidShapeModal(true);
             } else {
-              onRequestSubmit();
+              onRequestFinishEditing();
             }
           }}
-          primary
-          // disabled={topologyErrors}
-          label={t("Continue Survey")}
-          className={`pointer-events-auto whitespace-nowrap ${
-            bottomToolbar && "flex-2 content-center"
-          }`}
-          buttonClassName={
-            bottomToolbar
-              ? "py-3 text-base flex-1 text-center items-center justify-center"
-              : ""
-          }
-        />
-      )}
-      {state === DigitizingState.EDITING && (
-        <Button
-          onClick={onRequestFinishEditing}
           primary
           label={t("Done Editing")}
           className={`pointer-events-auto whitespace-nowrap ${
@@ -165,6 +156,22 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             bottomToolbar
               ? "py-3 text-base flex-1 text-center items-center justify-center"
               : ""
+          }
+        />
+      )}
+      {selfIntersects && (
+        <Button
+          onClick={() => {
+            setShowInvalidShapeModal(true);
+          }}
+          label={t("Invalid Shape")}
+          className={`pointer-events-auto whitespace-nowrap ${
+            bottomToolbar && "flex-2 content-center max-w-1/2"
+          }`}
+          buttonClassName={
+            bottomToolbar
+              ? "py-3 text-base flex-1 text-center items-center justify-center border-red-800 bg-red-50 text-red-900 hover:text-red-700"
+              : "border-red-800 bg-red-50 text-red-900 hover:text-red-700"
           }
         />
       )}
@@ -183,6 +190,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
       )}
+      {state === DigitizingState.UNFINISHED && unfinishedStateButtons}
     </>
   );
 
@@ -192,6 +200,11 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         <BowtieInstructions
           open={showInvalidShapeModal}
           onRequestClose={() => setShowInvalidShapeModal(false)}
+          onRequestReset={
+            state === DigitizingState.EDITING
+              ? onRequestResetFeature
+              : undefined
+          }
         />
         <DigitizingActionsPopup
           open={toolsOpen}
@@ -223,6 +236,11 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         <BowtieInstructions
           open={showInvalidShapeModal}
           onRequestClose={() => setShowInvalidShapeModal(false)}
+          onRequestReset={
+            state === DigitizingState.EDITING
+              ? onRequestResetFeature
+              : undefined
+          }
         />
 
         <motion.div
@@ -254,21 +272,25 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
 
 export default DigitizingTools;
 
-function getPointInstructions(state: DigitizingState, isMobile: boolean) {
+function getPointInstructions(
+  state: DigitizingState,
+  isMobile: boolean,
+  multiFeature: boolean
+) {
   switch (state) {
-    case DigitizingState.BLANK && !isMobile:
+    case DigitizingState.CREATE && !isMobile:
       return (
-        <Trans ns="surveys">
+        <>
           <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          Click on the map to place a point{" "}
-        </Trans>
+          <Trans ns="surveys">Click on the map to place a point </Trans>
+        </>
       );
-    case DigitizingState.BLANK && isMobile:
+    case DigitizingState.CREATE && isMobile:
       return (
-        <Trans ns="surveys">
+        <>
           <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          Tap the map to place a point{" "}
-        </Trans>
+          <Trans ns="surveys">Tap the map to place a point </Trans>
+        </>
       );
     case DigitizingState.STARTED:
       throw new Error(
@@ -276,25 +298,29 @@ function getPointInstructions(state: DigitizingState, isMobile: boolean) {
       );
     case DigitizingState.CAN_COMPLETE:
       throw new Error("Point can not be in state CAN_COMPLETE");
-    case DigitizingState.CREATED:
-      return <Trans ns="surveys">Point placed</Trans>;
+    // case DigitizingState.CREATED:
+    //   return <Trans ns="surveys">Point placed</Trans>;
     case DigitizingState.EDITING:
       return <Trans ns="surveys">Drag point to modify</Trans>;
-    case DigitizingState.FINISHED:
+    case DigitizingState.NO_SELECTION:
       return null;
     default:
       return null;
   }
 }
 
-function getLineInstructions(state: DigitizingState, isMobile: boolean) {
+function getLineInstructions(
+  state: DigitizingState,
+  isMobile: boolean,
+  multiFeature: boolean
+) {
   switch (state) {
-    case DigitizingState.BLANK:
+    case DigitizingState.CREATE:
       return (
-        <Trans ns="surveys">
+        <>
           <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          Click on the map to start a line
-        </Trans>
+          <Trans ns="surveys">Click on the map to start a line</Trans>
+        </>
       );
     case DigitizingState.STARTED:
       return (
@@ -308,11 +334,11 @@ function getLineInstructions(state: DigitizingState, isMobile: boolean) {
           Click to add more points, Double-Click to finish
         </Trans>
       );
-    case DigitizingState.CREATED:
-      return <Trans ns="surveys">Line created</Trans>;
+    // case DigitizingState.CREATED:
+    //   return <Trans ns="surveys">Line created</Trans>;
     case DigitizingState.EDITING:
       return <Trans ns="surveys">Click and drag points to modify</Trans>;
-    case DigitizingState.FINISHED:
+    case DigitizingState.NO_SELECTION:
       return null;
     // return <Trans ns="surveys">Click line to edit</Trans>;
     default:
@@ -320,12 +346,16 @@ function getLineInstructions(state: DigitizingState, isMobile: boolean) {
   }
 }
 
-function getPolygonInstructions(state: DigitizingState, isMobile: boolean) {
+function getPolygonInstructions(
+  state: DigitizingState,
+  isMobile: boolean,
+  multiFeature: boolean
+) {
   if (isMobile) {
     switch (state) {
-      case DigitizingState.BLANK:
+      case DigitizingState.CREATE:
         return (
-          <Trans ns="surveys">
+          <>
             <svg
               viewBox="0 0 24 24"
               height="48"
@@ -336,14 +366,13 @@ function getPolygonInstructions(state: DigitizingState, isMobile: boolean) {
               xmlns="http://www.w3.org/2000/svg"
               className="text-gray-700 w-6 h-6 inline-block mr-2"
             >
-              <title>TouchApp icon</title>
               <rect width="24" height="24" fill="none"></rect>
               <path d="M9 9.24V5.5a2.5 2.5 0 015 0v3.74c1.21-.81 2-2.18 2-3.74C16 3.01 13.99 1 11.5 1S7 3.01 7 5.5c0 1.56.79 2.93 2 3.74z"></path>
               <path d="M14.5 11.71c-.28-.14-.58-.21-.89-.21H13v-6c0-.83-.67-1.5-1.5-1.5S10 4.67 10 5.5v10.74l-3.44-.72a1.12 1.12 0 00-1.02 1.89l4.01 4.01c.37.37.88.58 1.41.58h6.41c1 0 1.84-.73 1.98-1.72l.63-4.46c.12-.85-.32-1.69-1.09-2.07l-4.39-2.04z"></path>
             </svg>
             {/* <CursorClickIcon className="w-6 h-6 inline-block mr-2" /> */}
-            Tap the map to start a polygon
-          </Trans>
+            <Trans ns="surveys">Tap the map to start a polygon</Trans>
+          </>
         );
       case DigitizingState.STARTED:
         return <Trans ns="surveys">Tap to add more points</Trans>;
@@ -351,18 +380,24 @@ function getPolygonInstructions(state: DigitizingState, isMobile: boolean) {
         return (
           <Trans ns="surveys">Tap start point or double tap to finish</Trans>
         );
-      case DigitizingState.CREATED:
-        return <Trans ns="surveys">Shape saved</Trans>;
-      case DigitizingState.FINISHED:
-        return null;
+      // case DigitizingState.CREATED:
+      //   return <Trans ns="surveys">Shape saved</Trans>;
+      case DigitizingState.NO_SELECTION:
+        if (multiFeature) {
+          return <Trans ns="surveys">Tap a shape to edit</Trans>;
+        } else {
+          return null;
+        }
       case DigitizingState.EDITING:
+      case DigitizingState.UNFINISHED:
         return <Trans ns="surveys">Drag points to modify</Trans>;
+      // return <Trans ns="surveys">Drag points to modify</Trans>;
       default:
         break;
     }
   } else {
     switch (state) {
-      case DigitizingState.BLANK:
+      case DigitizingState.CREATE:
         return (
           <Trans ns="surveys">
             <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
@@ -377,12 +412,18 @@ function getPolygonInstructions(state: DigitizingState, isMobile: boolean) {
             Click the starting point or double-click the last point to finish
           </Trans>
         );
-      case DigitizingState.FINISHED:
-        return null;
-      case DigitizingState.CREATED:
-        return <Trans ns="surveys">Shape saved</Trans>;
+      case DigitizingState.NO_SELECTION:
+        if (multiFeature) {
+          return <Trans ns="surveys">Click a shape to edit</Trans>;
+        } else {
+          return null;
+        }
+
+      // case DigitizingState.CREATED:
+      //   return <Trans ns="surveys">Shape saved</Trans>;
       case DigitizingState.EDITING:
-        return <Trans ns="surveys">Click and drag points to modify</Trans>;
+      case DigitizingState.UNFINISHED:
+        return <Trans ns="surveys">Drag points to modify</Trans>;
       default:
         break;
     }

@@ -39,14 +39,14 @@ test("Component renders with custom body and button text", async () => {
 });
 
 test("Clicking button proceeds to next page of survey", async () => {
-  const onSubmit = jest.fn();
+  const onChange = jest.fn();
   render(
     <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
       <WelcomeMessage
         body={body}
         id={1}
-        onChange={() => null}
-        onSubmit={onSubmit}
+        onChange={onChange}
+        onSubmit={() => null}
         editable={false}
         isRequired={false}
         componentSettings={{
@@ -59,6 +59,6 @@ test("Clicking button proceeds to next page of survey", async () => {
   await waitFor(() => {
     expect(screen.getByRole("button")).toHaveTextContent("Proceed");
     fireEvent.click(screen.getByRole("button"));
-    expect(onSubmit).toBeCalled();
+    expect(onChange).toBeCalled();
   });
 });

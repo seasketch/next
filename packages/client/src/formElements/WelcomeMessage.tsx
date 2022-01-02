@@ -7,6 +7,7 @@ import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
 import { SurveyStyleContext } from "../surveys/appearance";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 import {
   FormElementBody,
   FormElementComponent,
@@ -24,7 +25,7 @@ const WelcomeMessage: FormElementComponent<
   { dropdownSelection?: string }
 > = (props) => {
   const { t } = useTranslation("admin:surveys");
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   const context = useContext(SurveyContext);
   if (!context) {
     throw new Error("SurveyContext not set");
@@ -41,7 +42,7 @@ const WelcomeMessage: FormElementComponent<
       <Button
         autofocus
         className="mt-6 mb-10"
-        onClick={props.onSubmit}
+        onClick={() => props.onChange({ dropdownSelection: "BEGIN" }, false)}
         label={
           props.componentSettings.beginButtonText?.length
             ? props.componentSettings.beginButtonText
@@ -152,5 +153,6 @@ WelcomeMessage.icon = () => (
 );
 
 WelcomeMessage.hideNav = true;
+WelcomeMessage.disableDeletion = true;
 
 export default WelcomeMessage;

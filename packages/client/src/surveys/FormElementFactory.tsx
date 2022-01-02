@@ -23,6 +23,11 @@ export default function FormElementFactory({
       <Component
         value={value}
         componentSettings={componentSettings}
+        autoFocus={
+          formElementData.autoFocus === undefined
+            ? true
+            : formElementData.autoFocus
+        }
         {...formElementData}
       />
     );

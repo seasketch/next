@@ -26,6 +26,7 @@ import { useContext } from "react";
 import { SurveyStyleContext } from "../surveys/appearance";
 import { Link } from "react-router-dom";
 import { useCurrentProjectMetadataQuery } from "../generated/graphql";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
 export interface ThankYouProps {
   promptToRespondAgain?: boolean;
@@ -39,7 +40,7 @@ export interface ThankYouProps {
  */
 const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
   const { t } = useTranslation("admin:surveys");
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   const context = useContext(SurveyContext);
   // eslint-disable-next-line i18next/no-literal-string
   const shareUrl = new URL(context!.surveyUrl).pathname;
@@ -208,5 +209,5 @@ ThankYou.icon = () => (
 );
 
 ThankYou.hideNav = true;
-
+ThankYou.disableDeletion = true;
 export default ThankYou;

@@ -1,6 +1,6 @@
 import { CheckIcon } from "@heroicons/react/outline";
 import { FormElementOption } from "./FormElementOptionsInput";
-import SurveyButton from "./SurveyButton";
+import SurveyInputButton from "./SurveyInputButton";
 
 interface PropsSingle {
   value?: string;
@@ -30,7 +30,7 @@ export default function OptionPicker({
             ? value?.indexOf(option.value || option.label) !== -1
             : value === (option.value || option.label);
           return (
-            <SurveyButton
+            <SurveyInputButton
               key={option.value || option.label}
               className={"w-full text-left"}
               label={option.label}

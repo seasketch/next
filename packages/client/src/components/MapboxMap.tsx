@@ -27,17 +27,32 @@ export default function MapboxMap(props: OverlayMapProps) {
       mapContext.manager &&
       mapContext.ready
     ) {
+      let cancelled = false;
+      const container = mapContainer.current;
       mapContext.manager
         .createMap(mapContainer.current, props.bounds, props.initOptions)
         .then((map) => {
-          setMap(map);
-          map.on("load", () => {
-            map.resize();
-            if (props.onLoad) {
-              props.onLoad(map);
-            }
-          });
+          if (!cancelled) {
+            setMap(map);
+            map.on("load", () => {
+              if (!cancelled) {
+                map.resize();
+                if (props.onLoad) {
+                  props.onLoad(map);
+                }
+              } else {
+                console.warn("cancelled map load (on load)");
+              }
+            });
+          } else {
+            console.warn("cancelled map load");
+          }
         });
+      return () => {
+        if (container !== mapContainer.current) {
+          cancelled = true;
+        }
+      };
     }
   }, [
     map,

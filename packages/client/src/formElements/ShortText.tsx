@@ -63,7 +63,7 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
           }
           autocomplete={props.componentSettings.autocomplete}
           required={props.isRequired}
-          autoFocus={true}
+          autoFocus={props.autoFocus}
           placeholder={props.componentSettings.placeholder}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {

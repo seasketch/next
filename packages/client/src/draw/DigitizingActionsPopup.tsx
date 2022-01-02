@@ -24,6 +24,7 @@ import {
   SketchGeometryType,
 } from "../generated/graphql";
 import { SurveyStyleContext } from "../surveys/appearance";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
 const DigitizingActionsPopup: FunctionComponent<{
   open: boolean;
@@ -32,7 +33,7 @@ const DigitizingActionsPopup: FunctionComponent<{
 }> = ({ anchor, onRequestClose, open, children }) => {
   const { t } = useTranslation("surveys");
   const { x, y } = anchor?.getBoundingClientRect() || { x: 0, y: 0 };
-  const { isSmall } = useContext(SurveyStyleContext);
+  const { isSmall } = useContext(SurveyLayoutContext).style;
   return createPortal(
     <AnimatePresence>
       {open && (
@@ -82,7 +83,7 @@ const Item: FunctionComponent<{
   phoneOnly?: boolean;
   selected?: boolean;
 }> = ({ onClick, title, Icon, disabled, phoneOnly, selected }) => {
-  const { isSmall } = useContext(SurveyStyleContext);
+  const { isSmall } = useContext(SurveyLayoutContext).style;
   if (phoneOnly && !isSmall) {
     return null;
   }

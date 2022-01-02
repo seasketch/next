@@ -15,6 +15,7 @@ import { schema as baseSchema } from "prosemirror-schema-basic";
 import { addListNodes } from "prosemirror-schema-list";
 import { createPortal } from "react-dom";
 import {
+  CreateResponseMutation,
   FormElement,
   FormElementDetailsFragment,
   FormElementLayout,
@@ -26,7 +27,7 @@ import {
   useUpdateSurveyBaseSettingsMutation,
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import { MutationResult } from "@apollo/client";
+import { FetchResult, MutationResult } from "@apollo/client";
 import { formElements as editorConfig } from "../editor/config";
 import Spinner from "../components/Spinner";
 import { Trans } from "react-i18next";
@@ -42,6 +43,7 @@ import {
   Geometry,
 } from "geojson";
 import { LngLatBoundsLike } from "mapbox-gl";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 require("./prosemirror-body.css");
 require("./unreset.css");
 const LazyBodyEditor = lazy(() => import("./BodyEditor"));
@@ -92,6 +94,9 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
   onRequestNext: () => void;
   /** Component requests navigation to the previous question */
   onRequestPrevious: () => void;
+  autoFocus?: boolean;
+  /** Set to true if this is the last question in a survey */
+  isLastQuestion?: boolean;
 }
 
 /**
@@ -211,7 +216,7 @@ export class FormElementEditorPortal extends Component<{
 export const SurveyMapPortal: FunctionComponent<{
   mapContext: MapContextInterface;
 }> = (props) => {
-  const portalContext = useContext(SurveyMapPortalContext);
+  const portalContext = useContext(SurveyLayoutContext).mapPortal;
   if (portalContext) {
     return createPortal(
       <MapContext.Provider value={props.mapContext}>
@@ -398,10 +403,19 @@ export interface FormElementComponent<T, V = {}>
    * Enumerating stages makes it easy to represent different pages in the admin interface so that
    * text and other aspects of the FormElement can be customized
    */
-  stages?: { [stage: string]: number };
+  stages?: { [stage: number]: string };
   hideNav?:
     | boolean
     | ((componentSettings: T, isMobile: boolean, stage?: number) => boolean);
+  getLayout?: (
+    stage: number,
+    componentSettings: T,
+    defaultLayout: FormElementLayout,
+    isSmall: boolean
+  ) => FormElementLayout | null;
+  /** Will disable option in admin interface to delete the element. Useful for welcome message, thank you, etc that are created as part of templates */
+  disableDeletion?: boolean;
+  getInitialStage?: (value: V, componentSettings: T) => number;
 }
 
 export function hideNav(
@@ -444,8 +458,12 @@ export function sortFormElements<
   }
   const Welcome = elements.find((el) => el.typeId === "WelcomeMessage");
   const ThankYou = elements.find((el) => el.typeId === "ThankYou");
+  const SaveScreen = elements.find((el) => el.typeId === "SaveScreen");
   const bodyElements = elements.filter(
-    (el) => el.typeId !== "WelcomeMessage" && el.typeId !== "ThankYou"
+    (el) =>
+      el.typeId !== "WelcomeMessage" &&
+      el.typeId !== "ThankYou" &&
+      el.typeId !== "SaveScreen"
   );
   bodyElements.sort((a, b) => {
     return a.position - b.position;
@@ -457,7 +475,10 @@ export function sortFormElements<
     if (!ThankYou) {
       throw new Error("ThankYou FormElement not in Form");
     }
-    return [Welcome, ...bodyElements, ThankYou] as T[];
+    if (!SaveScreen) {
+      throw new Error("SaveScreen FormElement is not in Form");
+    }
+    return [Welcome, ...bodyElements, SaveScreen, ThankYou] as T[];
   } else {
     return [...bodyElements] as T[];
   }
@@ -473,6 +494,15 @@ export const SurveyContext = createContext<{
   bestName?: string;
   bestEmail?: string;
   projectBounds?: BBox;
+  saveResponse?: () => Promise<
+    FetchResult<
+      CreateResponseMutation,
+      Record<string, any>,
+      Record<string, any>
+    >
+  >;
+  resetResponse?: () => Promise<void>;
+  savingResponse?: boolean;
 } | null>(null);
 
 export function getLayout(

@@ -17,6 +17,7 @@ import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import { XIcon } from "@heroicons/react/outline";
 import Button from "../components/Button";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
 export type ComboBoxProps = {
   options?: FormElementOption[];
@@ -33,6 +34,15 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
   const [selectedOption, setSelectedOption] = useState<
     FormElementOption | undefined | null
   >();
+
+  function onChange(value: string | null) {
+    if (value === null) {
+      props.onChange(null, props.isRequired);
+    } else {
+      props.onChange(value, false);
+    }
+  }
+
   const [inputValue, setInputValue] = useState<string>("");
   useEffect(() => {
     if (props.value) {
@@ -51,19 +61,19 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
       (props.value === undefined || (props.value === null && props.editable)) &&
       props.componentSettings.autoSelectFirstOptionInList
     ) {
-      props.onChange(items[0].value || items[0].label, false);
+      onChange(items[0].value || items[0].label);
     }
     if (
       props.editable &&
       !props.componentSettings.autoSelectFirstOptionInList &&
       props.value === (items[0].value || items[0].label)
     ) {
-      props.onChange(null, false);
+      onChange(null);
       setInputValue("");
     }
   }, [props.componentSettings.autoSelectFirstOptionInList]);
 
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   const {
     isOpen,
     getToggleButtonProps,
@@ -95,14 +105,14 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
         if (selectedOption && selectedOption.label !== inputValue) {
           setSelectedOption(null);
           setChoices(items.map((i) => i.label));
-          props.onChange(null, false);
+          onChange(null);
         }
         setInputValue(e.inputValue || "");
       }
     },
     onSelectedItemChange: ({ selectedItem }) => {
       const item = items.find((i) => i.label === selectedItem);
-      props.onChange(item?.value || item?.label || null, false);
+      onChange(item?.value || item?.label || null);
     },
   });
 
@@ -142,7 +152,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
         {(selectedOption || inputValue.length > 0) && (
           <button
             onClick={(e) => {
-              props.onChange(null, false);
+              onChange(null);
               setInputValue("");
               setChoices(items.map((i) => i.label));
               e.preventDefault();
@@ -195,7 +205,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
         }
         onChange={(e) => {
           const item = items.find((i) => i.label === e.target.value);
-          props.onChange(item?.value || item?.label || null, false);
+          onChange(item?.value || item?.label || null);
         }}
       >
         {!props.isRequired && <option value="__NULL__">&nbsp;</option>}
@@ -274,7 +284,7 @@ ComboBox.description = <Trans>For large lists of options</Trans>;
 ComboBox.defaultBody = questionBodyFromMarkdown(`
 # Choices, choices
 
-Use a combo box when you have a long list of choices and it's necessary to be able to search using the keyboard. Note that in most cases a Choice field is a better solution. Dropdowns have many issues problems, [especially on mobile](https://www.lukew.com/ff/entry.asp?1950).
+Use a combo box when you have a long list of choices and it's necessary to be able to search using the keyboard. Note that in most cases a Choice field is a better solution. Dropdowns have many UX issues, [especially on mobile](https://www.lukew.com/ff/entry.asp?1950).
 
 On small mobile devices, the native *select* input of the operating system will be shown.
 `);

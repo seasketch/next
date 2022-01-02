@@ -44,7 +44,6 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
   const auth0 = useAuth0();
   const onError = useGlobalErrorHandler();
   const { data, loading, error, refetch } = useCurrentProjectMetadataQuery({
-    fetchPolicy: "cache-and-network",
     onError,
   });
   const { t } = useTranslation();
@@ -55,7 +54,6 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [madeRequest, setMadeRequest] = useState(false);
   // const [reverseTransition, setReverseTransition] = useState(false);
-
   const initialFocusRef = useRef();
   let title = <></>;
   let buttons = <></>;

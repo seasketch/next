@@ -16,12 +16,14 @@ export default function BoundsInput({
   map,
   onBeforeInput,
   onAfterInput,
+  disabled,
 }: {
-  value: BBox;
+  value?: BBox;
   onChange?: (value: BBox) => void;
   map?: Map;
   onBeforeInput?: () => void;
   onAfterInput?: () => void;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation("admin:surveys");
 
@@ -29,7 +31,7 @@ export default function BoundsInput({
   const [showBounds, setShowBounds] = useState(false);
 
   useEffect(() => {
-    if (map) {
+    if (map && value) {
       if (map.isStyleLoaded()) {
         if (showBounds) {
           const poly = bboxPolygon(value);
@@ -67,7 +69,7 @@ export default function BoundsInput({
         }
       }
     }
-  }, [showBounds, map]);
+  }, [showBounds, map, value]);
 
   useEffect(() => {
     if (map && digitizing) {
@@ -103,13 +105,16 @@ export default function BoundsInput({
     }
   }, [map, digitizing]);
 
-  const poly = bboxPolygon(value);
-  const encodedPolyline = encode(
-    // @ts-ignore
-    truncate(poly, {
-      precision: 3,
-    }).geometry.coordinates[0].map((position) => position.reverse())
-  );
+  let encodedPolyline: string | null = null;
+  if (value) {
+    const poly = bboxPolygon(value);
+    encodedPolyline = encode(
+      // @ts-ignore
+      truncate(poly, {
+        precision: 3,
+      }).geometry.coordinates[0].map((position) => position.reverse())
+    );
+  }
 
   return (
     <div>
@@ -152,19 +157,23 @@ export default function BoundsInput({
             </Trans>
           </span>
         )}
-        <img
-          alt="Region of interest"
-          className={
-            digitizing
-              ? "filter saturate-0 brightness-50 contrast-50 rounded"
-              : "rounded"
-          }
-          src={`https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/path+ffa424+ffdd00-0.1(${encodeURIComponent(
-            encodedPolyline
-          )})/auto/230x100@2x?before_layer=admin-0-boundary&padding=18&access_token=${
-            process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
-          }`}
-        />
+        {encodedPolyline ? (
+          <img
+            alt="Region of interest"
+            className={
+              digitizing
+                ? "filter saturate-0 brightness-50 contrast-50 rounded"
+                : "rounded"
+            }
+            src={`https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/path+ffa424+ffdd00-0.1(${encodeURIComponent(
+              encodedPolyline
+            )})/auto/230x100@2x?before_layer=admin-0-boundary&padding=18&access_token=${
+              process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
+            }`}
+          />
+        ) : (
+          ""
+        )}
       </div>
       {/* {digitizing && (
         <Button

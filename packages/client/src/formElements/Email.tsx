@@ -59,7 +59,7 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
           name={`form-element-${props.id}-email-input`}
           autocomplete="email"
           required={props.isRequired}
-          autoFocus={true}
+          autoFocus={props.autoFocus}
           placeholder={props.componentSettings.placeholder}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {

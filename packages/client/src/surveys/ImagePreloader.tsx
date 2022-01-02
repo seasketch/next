@@ -62,7 +62,7 @@ export function srcSet(imageUrl: string) {
     return imageUrl;
   }
   return [960, 1280, 1920, 2560]
-    .map((rez) => `${imageUrl}&auto=compress,format&w=${rez} ${rez}w`)
+    .map((rez) => `${imageUrl}&auto=compress&fm=jpg&w=${rez} ${rez}w`)
     .join(", ");
 }
 

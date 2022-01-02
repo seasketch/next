@@ -6,7 +6,7 @@ import {
   FormElementComponent,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
-import SurveyButton from "./SurveyButton";
+import SurveyInputButton from "./SurveyInputButton";
 
 export type YesNoProps = {};
 
@@ -25,13 +25,13 @@ const YesNo: FormElementComponent<YesNoProps, boolean> = (props) => {
         editable={props.editable}
       />
       <div className="w-full max-w-full form-element-short-text pt-1 my-4 space-x-3">
-        <SurveyButton
+        <SurveyInputButton
           label={t("Yes")}
           Icon={CheckIcon}
           selected={props.value === true}
           onClick={() => props.onChange(true, false)}
         />
-        <SurveyButton
+        <SurveyInputButton
           label={t("No")}
           Icon={XIcon}
           selected={props.value === false}

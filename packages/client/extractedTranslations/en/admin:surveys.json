@@ -1,0 +1,138 @@
+{
+  "Add": "",
+  "Add another rule": "",
+  "Add conditions": "",
+  "Are you sure you want to delete this condition?": "",
+  "Are you sure you want to delete this rule?": "",
+  "Are you sure? This will delete the entire rule": {
+    "": ""
+  },
+  "Auto-select first option": "",
+  "Basemaps": "",
+  "Begin": "",
+  "Changing appearance settings will impact all following pages until another customized page appears": {
+    "": "Changing appearance settings will impact all following pages until another customized page appears."
+  },
+  "Choose a background image first to customize the appearance of this page": "Choose a background image first to customize the appearance of this page",
+  "Choose a name for your survey": "",
+  "Choose which basemaps from your project to include as options": {
+    "": "Choose which basemaps from your project to include as options."
+  },
+  "Collect spatial features with attributes": "Collect spatial features with attributes",
+  "Combo Box": "Combo Box",
+  "Compact": "",
+  "Create a New Survey": "",
+  "Default Value": "",
+  "Default, next in list": "",
+  "Edit": "",
+  "Edit Form": "",
+  "Editing  items": "Editing  items",
+  "Editing  items_plural": "",
+  "Enabled": "",
+  "End of spatial attributes": "",
+  "Geometry Type": "",
+  "Geometry type cannot be changed after responses are collected": "Geometry type cannot be changed after responses are collected",
+  "Giving this input a <2>standard autocomplete attribute</2> can simplify tedious entries": "Giving this input a <2>standard autocomplete attribute</2> can simplify tedious entries",
+  "If a response is created with facilitation enabled, the user will be given the option to specify both a respondent and facilitator name": {
+    " Facilitation can be enabled from dropdown button on the Welcome page": {
+      "": "If a response is created with facilitation enabled, the user will be given the option to specify both a respondent and facilitator name. Facilitation can be enabled from dropdown button on the Welcome page."
+    }
+  },
+  "If no conditions match, survey advances from these questions to": {
+    "": {
+      "": {
+        "": "If no conditions match, survey advances from these questions to..."
+      }
+    }
+  },
+  "If none are selected, the first basemap in the list will be used": {
+    "": "If none are selected, the first basemap in the list will be used."
+  },
+  "If the above conditions do not match, survey advances to": {
+    "": {
+      "": {
+        "": "If the above conditions do not match, survey advances to..."
+      }
+    }
+  },
+  "Link to project": "",
+  "List options as <2>label,value </2>each on a new line": {
+    " Use quotes to escape commas": {
+      " Values are not required but will keep data consistent if text changes are needed": {
+        " Copying data from Google Sheets can help manage longer lists": {
+          "": "List options as <2>label,value </2>each on a new line. Use quotes to escape commas. Values are not required but will keep data consistent if text changes are needed. Copying data from Google Sheets can help manage longer lists."
+        }
+      }
+    }
+  },
+  "List sector options below to collect data related to different ocean uses": {
+    " If no sectors are provided then the sectors question will be skipped and only a single set of shapes will be collected": {
+      "": "List sector options below to collect data related to different ocean uses. If no sectors are provided then the sectors question will be skipped and only a single set of shapes will be collected."
+    }
+  },
+  "Max Length": "",
+  "Maximum": "",
+  "Message shown at end of survey": {
+    "": "Message shown at end of survey."
+  },
+  "Min Length": "",
+  "Minimum": "",
+  "Multiple Choice": "Multiple Choice",
+  "Multiple Locations": "Multiple Locations",
+  "Next": "",
+  "No": "",
+  "No options specified": "",
+  "Note that admins will always be given the option to submit another response": {
+    "": "Note that admins will always be given the option to submit another response."
+  },
+  "Note that on mobile phones and other small devices, the top-image layout will be used if left or right image layout is selected": {
+    "": "Note that on mobile phones and other small devices, the top-image layout will be used if left or right image layout is selected."
+  },
+  "One spatial feature without attributes": "One spatial feature without attributes",
+  "Options": "Options",
+  "Prioritize use by location": "Prioritize use by location",
+  "Prompt for multiple responses": "",
+  "Rating": "Rating",
+  "Required": "",
+  "Respond Again Button Text": "",
+  "Rich text block": "Rich text block",
+  "Sector Options": "",
+  "Select an input element to skip ahead based on answers": {
+    "": "Select an input element to skip ahead based on answers."
+  },
+  "Share buttons": "",
+  "Single Location": "Single Location",
+  "Skip logic cannot be specified for non-input elements": {
+    "": "Skip logic cannot be specified for non-input elements."
+  },
+  "Skip to": "",
+  "Spatial Access Priority": "Spatial Access Priority",
+  "Starting Bounds": "",
+  "Statement": "Statement",
+  "Survey List": "",
+  "Survey Responses": "",
+  "Survey advances from this question to": {
+    "": {
+      "": {
+        "": "Survey advances from this question to..."
+      }
+    }
+  },
+  "Survey must be published before sharing this link": "",
+  "Template": "",
+  "Text Area": "Text Area",
+  "Thank You": "Thank You",
+  "The map will be adjusted to start showing the entire region of interest": "The map will be adjusted to start showing the entire region of interest",
+  "This content will only appear when a facilitator is filling out a response for someone else": {
+    "": "This content will only appear when a facilitator is filling out a response for someone else."
+  },
+  "This element has multiple stages": "This element has multiple stages",
+  "This stage will be skipped if no sector options are specified": {
+    "": "This stage will be skipped if no sector options are specified."
+  },
+  "Use the map on the left to draw a new extent, or <2>cancel</2>": "Use the map on the left to draw a new extent, or <2>cancel</2>",
+  "When": "",
+  "Yes": "",
+  "add condition": "add condition",
+  "always skipped": "always skipped"
+}

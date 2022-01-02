@@ -1,7 +1,8 @@
+import { colord } from "colord";
 import { FunctionComponent, MouseEventHandler, useContext } from "react";
-import { SurveyStyleContext } from "../surveys/appearance";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
-export default function SurveyButton({
+export default function SurveyInputButton({
   label,
   Icon,
   onClick,
@@ -16,7 +17,7 @@ export default function SurveyButton({
   className?: string;
   iconPlacement?: "right" | "left";
 }) {
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   return (
     <button
       title={label}
@@ -31,7 +32,9 @@ export default function SurveyButton({
           ? {
               background: `linear-gradient(${style.secondaryColor}, ${style.secondaryColor2})`,
             }
-          : {}
+          : {
+              background: colord(style.backgroundColor).alpha(0.8).toHex(),
+            }
       }
     >
       <span>{label}</span>
