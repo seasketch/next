@@ -956,31 +956,33 @@ describe("Handling of sketches", () => {
         }>(
           sql`select * from create_survey_response(${surveyId}, ${sql.json({
             [elementId]: {
-              type: "FeatureCollection",
-              features: [
-                {
-                  type: "Feature",
-                  properties: {
-                    name: "Location 1",
-                    otherAttribute: "foo",
+              collection: {
+                type: "FeatureCollection",
+                features: [
+                  {
+                    type: "Feature",
+                    properties: {
+                      name: "Location 1",
+                      otherAttribute: "foo",
+                    },
+                    geometry: {
+                      type: "Point",
+                      coordinates: [-119.1234, 34.4321],
+                    },
                   },
-                  geometry: {
-                    type: "Point",
-                    coordinates: [-119.1234, 34.4321],
+                  {
+                    type: "Feature",
+                    properties: {
+                      name: "Location 2",
+                      otherAttribute: "bar",
+                    },
+                    geometry: {
+                      type: "Point",
+                      coordinates: [-119.1234, 34.12345],
+                    },
                   },
-                },
-                {
-                  type: "Feature",
-                  properties: {
-                    name: "Location 2",
-                    otherAttribute: "bar",
-                  },
-                  geometry: {
-                    type: "Point",
-                    coordinates: [-119.1234, 34.12345],
-                  },
-                },
-              ],
+                ],
+              },
             },
           })}, false, true, false, false)`
         );

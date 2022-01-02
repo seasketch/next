@@ -2,11 +2,8 @@ import * as MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { Feature } from "geojson";
 import { LngLatLike } from "mapbox-gl";
 import getKinks from "@turf/kinks";
-import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
 
-const SimpleSelect = MapboxDrawWaypoint.enable({
-  simple_select: MapboxDraw.modes.simple_select,
-}).simple_select;
+const SimpleSelect = MapboxDraw.modes.simple_select;
 
 const _dragMove = SimpleSelect.dragMove;
 const _onTouchEnd = SimpleSelect.onTouchEnd;
@@ -58,4 +55,22 @@ SimpleSelect.toDisplayFeatures = function (
 
   return _toDisplayFeatures.apply(this, [state, geojson, push]);
 };
+
+const _clickOnFeature = SimpleSelect.clickOnFeature;
+// Inspired by mapbox-gl-draw-waypoint
+SimpleSelect.clickOnFeature = function (state: any, e: any) {
+  if (e.featureTarget.geometry.type !== "point") {
+    // switch to direct_select mode for polygon/line features
+    this.changeMode("direct_select", {
+      featureId: e.featureTarget.properties.id,
+    });
+  } else {
+    // call parent
+    _clickOnFeature.apply(this, [state, e]);
+
+    // prevent multi-selection for consistency with direct_select mode
+    this.setSelected(e.featureTarget.properties.id);
+  }
+};
+
 export default SimpleSelect;

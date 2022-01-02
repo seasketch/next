@@ -1,9 +1,4 @@
-import DS from "./DirectSelect";
-import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
-
-const DirectSelect = MapboxDrawWaypoint.enable({
-  direct_select: DS,
-}).direct_select;
+import DirectSelect from "./DirectSelect";
 
 const _onSetup = DirectSelect.onSetup;
 

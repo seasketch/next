@@ -103,7 +103,8 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
                 <p className="text-base italic mb-4">
                   <Trans ns="admin:surveys">
                     This content will only appear when a facilitator is filling
-                    out a response for someone else.
+                    out a response for someone else. If the facilitator is
+                    signed-in, it will be populated by their profile.
                   </Trans>
                 </p>
               )}

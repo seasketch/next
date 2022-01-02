@@ -1063,7 +1063,7 @@ CREATE FUNCTION public._001_unnest_survey_response_sketches() RETURNS trigger
                   f.id::int, 
                   f.sketch_class_id, 
                   NEW.user_id,
-                  feature_data.feature::jsonb #> ARRAY['properties'::text,feature_name_element_id::text], 
+                  coalesce((feature_data.feature::jsonb #> ARRAY['properties'::text,feature_name_element_id::text])::text, ''::text), 
                   st_geomfromgeojson(feature_data.feature::jsonb ->> 'geometry'::text),
                   feature_data.feature::jsonb -> 'properties'::text
                 ) returning id into sketch_id;

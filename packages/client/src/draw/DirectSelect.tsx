@@ -2,12 +2,8 @@ import * as MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { DragTargetEvent } from "./SimpleSelect";
 import getKinks from "@turf/kinks";
 import { Feature } from "geojson";
-import * as MapboxDrawWaypoint from "mapbox-gl-draw-waypoint";
 
-const DirectSelect = MapboxDrawWaypoint.enable({
-  direct_select: MapboxDraw.modes.direct_select,
-}).direct_select;
-
+const DirectSelect = MapboxDraw.modes.direct_select;
 const _dragVertex = DirectSelect.dragVertex;
 const _stopDragging = DirectSelect.stopDragging;
 const _onSetup = DirectSelect.onSetup;
@@ -110,19 +106,56 @@ DirectSelect.clickNoTarget = function (state: any, e: any) {
   }
 };
 
-const _clickInactive = DirectSelect.clickInactive;
+// inspired by mapbox-gl-draw-waypoint
+// https://github.com/zakjan/mapbox-gl-draw-waypoint/blob/master/src/modes/direct_select.js
 DirectSelect.clickInactive = function (state: any, e: any) {
   if (state.kinks.features.length > 0) {
     // do nothing. don't allow switching away
   } else {
-    _clickInactive.apply(this, [state, e]);
+    if (e.featureTarget.geometry.type !== "point") {
+      // switch to direct_select mode for polygon/line features
+      this.changeMode("direct_select", {
+        featureId: e.featureTarget.properties.id,
+      });
+    } else {
+      // switch to simple_select mode for point features
+      this.changeMode("simple_select", {
+        featureIds: [e.featureTarget.properties.id],
+      });
+    }
   }
-  // this.changeMode(Constants.modes.SIMPLE_SELECT);
 };
+
+function isInactiveFeature(e: any) {
+  if (!e.featureTarget) return false;
+  if (!e.featureTarget.properties) return false;
+  return (
+    e.featureTarget.properties.active === "false" &&
+    e.featureTarget.properties.meta === "feature"
+  );
+}
+
+function isOfMetaType(type: string) {
+  return function (e: any) {
+    const featureTarget = e.featureTarget;
+    if (!featureTarget) return false;
+    if (!featureTarget.properties) return false;
+    return featureTarget.properties.meta === type;
+  };
+}
 
 const _onMouseMove = DirectSelect.onMouseMove;
 DirectSelect.onMouseMove = function (state: any, e: any) {
   const result = _onMouseMove.apply(this, [state, e]);
+
+  // show pointer cursor on inactive features, move cursor on active feature vertices
+  const isFeature = isInactiveFeature(e);
+  const onVertex = isOfMetaType("vertex")(e);
+  const onMidpoint = isOfMetaType("midpoint")(e);
+  if (isFeature || onMidpoint) this.updateUIClasses({ mouse: "pointer" });
+  else if (onVertex) this.updateUIClasses({ mouse: "move" });
+  else this.updateUIClasses({ mouse: "none" });
+
   if (state.kinks.features.length > 0) {
     if (
       e.featureTarget?.properties?.active === "false" &&
@@ -132,6 +165,10 @@ DirectSelect.onMouseMove = function (state: any, e: any) {
     }
   }
   return result;
+};
+
+DirectSelect.dragFeature = function (state: any, e: any, delta: any) {
+  // noop
 };
 
 export default DirectSelect;
