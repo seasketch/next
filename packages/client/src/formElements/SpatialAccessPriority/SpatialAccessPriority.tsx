@@ -104,6 +104,7 @@ const SpatialAccessPriority: FormElementComponent<
       : null
   );
 
+  console.log({ stage: STAGES[props.stage] });
   const [geometryEditingState, setGeometryEditingState] = useState<{
     isNew: boolean;
     feature?: Feature<any>;
@@ -773,6 +774,7 @@ const SpatialAccessPriority: FormElementComponent<
                 />
               </DigitizingTools>
               <MapboxMap
+                showNavigationControls
                 hideDrawControls
                 className="w-full h-full absolute top-0 bottom-0"
                 initOptions={{

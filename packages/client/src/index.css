@@ -152,8 +152,12 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
   display: none;
 }
 
-.hide-draw-controls .mapboxgl-ctrl-group.mapboxgl-ctrl {
+.hide-draw-controls .mapboxgl-ctrl-top-right {
   display: none;
+}
+
+.survey .mapboxgl-ctrl-top-left {
+  margin-top: 10px;
 }
 
 .seasketch-skeleton {

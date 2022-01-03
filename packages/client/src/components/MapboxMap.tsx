@@ -11,6 +11,7 @@ export interface OverlayMapProps {
   bounds?: [number, number, number, number];
   initOptions?: Partial<MapboxOptions>;
   hideDrawControls?: boolean;
+  showNavigationControls?: boolean;
 }
 
 mapboxgl.prewarm();
@@ -34,6 +35,9 @@ export default function MapboxMap(props: OverlayMapProps) {
         .then((map) => {
           if (!cancelled) {
             setMap(map);
+            if (props.showNavigationControls) {
+              map.addControl(new mapboxgl.NavigationControl(), "top-left");
+            }
             map.on("load", () => {
               if (!cancelled) {
                 map.resize();
