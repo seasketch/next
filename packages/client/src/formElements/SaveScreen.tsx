@@ -88,7 +88,7 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
         {isOnline && saving && <IndeterminantLoadingBar className="mt-5" />}
         {!isOnline && (
           <p>
-            <Trans ns="surveys">
+            <Trans ns="surveys" i18nKey="OfflineInstructions">
               We cannot submit your response until you are connected to the
               internet. Please check your connection. You may safely refresh
               this page.
@@ -100,13 +100,15 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
           <>
             <h4 className="font-mono text-base my-3">{errors.message}</h4>
 
-            <Trans ns="surveys">
-              <p>
+            <p>
+              <Trans ns="surveys" i18nKey="UnsubmittedResponse">
                 Your response is safe on this device, but will need to be
                 submitted to the server before being counted.
-              </p>{" "}
-              <p>
-                Contact{" "}
+              </Trans>
+            </p>
+            <p>
+              <Trans ns="surveys" i18nKey="ContactForAssistance">
+                Contact
                 <a
                   className="underline"
                   target="_blank"
@@ -114,17 +116,19 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
                   href="mailto:support@seasketch.org"
                 >
                   support@seasketch.org
-                </a>{" "}
+                </a>
                 for assistance.
-              </p>
-            </Trans>
+              </Trans>
+            </p>
 
             <div className="my-4 space-x-4 flex items-center">
               <SurveyButton
                 label={
                   <>
                     <RefreshIcon className="w-4 h-4 mr-2" />
-                    <Trans ns="surveys">Submit Again</Trans>
+                    <Trans i18nKey="RepeatSubmission" ns="surveys">
+                      Submit Again
+                    </Trans>
                   </>
                 }
                 onClick={save}
@@ -160,10 +164,10 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
           >
             <div className="w-full sm:w-128">
               <p>
-                <Trans ns="surveys">
-                  Resetting will delete all of your previously data so that you
-                  may start the survey again in a blank state. This action
-                  cannot be undone.
+                <Trans ns="surveys" i18nKey="ResetSurvey">
+                  Resetting will delete all of your previously entered data so
+                  that you may start the survey again in a blank state. This
+                  action cannot be undone.
                 </Trans>
               </p>
             </div>

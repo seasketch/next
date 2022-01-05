@@ -171,7 +171,7 @@
     "build": "craco build",
     "test": "craco test",
     "eject": "react-scripts eject",
-    "extract-translations": "NODE_ENV=development npx babel -f .babelrc 'src/**/*.{js,jsx,ts,tsx}' > /dev/null && echo 'Translations extracted to extractedTranslations/'",
+    "extract-translations": "rm -rf extractedTranslations && NODE_ENV=development npx babel -f .babelrc 'src/**/*.{js,jsx,ts,tsx}' > /dev/null && echo 'Translations extracted to extractedTranslations/'",
     "graphql:codegen": "graphql-codegen --config codegen.yml --watch 'src/**/*.tsx'",
     "start": "craco start",
     "storybook": "start-storybook -p 6006 -s public",

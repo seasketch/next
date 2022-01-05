@@ -73,13 +73,13 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
           return (
             <>
               <p className="text-sm text-gray-500">
-                <Trans ns="admins:survey">
+                <Trans ns="admin:surveys">
                   This input will be populated with the user's registered email
                   address if available
                 </Trans>
               </p>
               <TextInput
-                label={t("Placeholder", { ns: "admins:survey" })}
+                label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
                 value={props.componentSettings.placeholder || ""}
                 onChange={updateComponentSetting(

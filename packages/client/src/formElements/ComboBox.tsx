@@ -265,14 +265,15 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
                   if (
                     window.confirm(
                       t(
-                        "Are you sure? You can change the element type back to ComboBox later if you like."
+                        "Are you sure? You can change the element type back to ComboBox later if you like.",
+                        { ns: "admin:surveys" }
                       )
                     )
                   ) {
                     updateBaseSetting("typeId")("MultipleChoice");
                   }
                 }}
-                label={t("Change to Multiple Choice")}
+                label={t("Change to Multiple Choice", { ns: "admin:surveys" })}
               />
               <FormElementOptionsInput
                 initialValue={props.componentSettings.options || []}

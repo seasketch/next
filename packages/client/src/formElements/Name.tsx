@@ -149,14 +149,14 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
           return (
             <>
               <p className="text-sm text-gray-500">
-                <Trans ns="admins:survey">
+                <Trans ns="admin:surveys">
                   This input will be populated with the user's login information
                   if available
                 </Trans>
               </p>
               <InputBlock
                 labelType="small"
-                title={t("Show Facilitation Option")}
+                title={t("Show Facilitation Option", { ns: "admin:surveys" })}
                 input={
                   <Switch
                     isToggled={context.surveySupportsFacilitation}
@@ -175,7 +175,7 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
                 </Trans>
               </p>{" "}
               <TextInput
-                label={t("Placeholder", { ns: "admins:survey" })}
+                label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
                 value={props.componentSettings.placeholder || ""}
                 onChange={updateComponentSetting(

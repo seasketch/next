@@ -17,10 +17,10 @@ i18n
     resources,
     lng: "en",
 
-    keySeparator: false, // we do not use keys in form messages.welcome
-
+    keySeparator: false,
+    nsSeparator: ":",
     interpolation: {
-      escapeValue: false, // react already safes from xss
+      escapeValue: false,
     },
   });
 

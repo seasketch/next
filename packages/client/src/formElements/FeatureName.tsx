@@ -92,11 +92,18 @@ const FeatureName: FormElementComponent<FeatureNameProps, string> = (props) => {
             <>
               {props.sketchClass && (
                 <TextInput
-                  label={t("Generated Name Prefix")}
+                  label={t("Generated Name Prefix", { ns: "admin:surveys" })}
                   name="generatedNamePrefix"
-                  description={t(
-                    "A name will be generated for each new feature (e.g. Location 4) which can be changed by the user. The prefix will be joined with a localized number."
-                  )}
+                  description={
+                    <Trans
+                      ns="admin:surveys"
+                      i18nKey="FeatureNameGenerationDescription"
+                    >
+                      A name will be generated for each new feature (e.g.
+                      Location 4) which can be changed by the user. The prefix
+                      will be joined with a localized number.
+                    </Trans>
+                  }
                   value={props.componentSettings.generatedNamePrefix || ""}
                   onChange={updateComponentSetting(
                     "generatedNamePrefix",

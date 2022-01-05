@@ -101,8 +101,8 @@ export default function SectorNavigation(props: SectorNavigationProps) {
                 <div className="flex-1 items-center px-5">{sector.label}</div>
                 <div className="flex items-center">
                   {hasValue && (
-                    <Trans ns="surveys" count={numShapes}>
-                      {numShapes.toString()} areas
+                    <Trans i18nKey="AreaCount" ns="surveys" count={numShapes}>
+                      {{ count: numShapes }} areas
                     </Trans>
                   )}
                 </div>

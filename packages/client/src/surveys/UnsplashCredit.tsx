@@ -46,7 +46,7 @@ export default function UnsplashCredit({
               href={url + "?utm_source=SeaSketch&utm_medium=referral"}
               className="underline"
             >
-              {name}
+              {{ name }}
             </a>{" "}
             on{" "}
             <a
@@ -55,7 +55,6 @@ export default function UnsplashCredit({
             >
               Unsplash
             </a>
-            .
           </Trans>
         </span>
       </p>

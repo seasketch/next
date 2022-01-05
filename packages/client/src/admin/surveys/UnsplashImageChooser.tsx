@@ -104,7 +104,7 @@ export default function UnsplashImageChooser({
           data?.getUnsplashPhotos.results &&
           data?.getUnsplashPhotos.results.length === 0 ? (
             <p className="text-center text-gray-400 font-bold text-lg">
-              {t(`No results for "${debouncedQuery}"`)}
+              {t(`No results for {{debouncedQuery}}`)}
             </p>
           ) : (
             ""

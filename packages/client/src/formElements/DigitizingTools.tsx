@@ -292,14 +292,18 @@ function getPointInstructions(
       return (
         <>
           <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          <Trans ns="surveys">Click on the map to place a point </Trans>
+          <Trans ns="digitizing" i18nKey="StartPoint">
+            Click on the map to place a point
+          </Trans>
         </>
       );
     case DigitizingState.CREATE && isMobile:
       return (
         <>
           <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          <Trans ns="surveys">Tap the map to place a point </Trans>
+          <Trans ns="digitizing" i18nKey="StartPointTouch">
+            Tap the map to place a point
+          </Trans>
         </>
       );
     case DigitizingState.STARTED:
@@ -309,9 +313,13 @@ function getPointInstructions(
     case DigitizingState.CAN_COMPLETE:
       throw new Error("Point can not be in state CAN_COMPLETE");
     // case DigitizingState.CREATED:
-    //   return <Trans ns="surveys">Point placed</Trans>;
+    //   return <Trans ns="digitizing">Point placed</Trans>;
     case DigitizingState.EDITING:
-      return <Trans ns="surveys">Drag point to modify</Trans>;
+      return (
+        <Trans ns="digitizing" i18nKey="DragPoint">
+          Drag point to modify
+        </Trans>
+      );
     case DigitizingState.NO_SELECTION:
       return null;
     default:
@@ -329,28 +337,34 @@ function getLineInstructions(
       return (
         <>
           <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          <Trans ns="surveys">Click on the map to start a line</Trans>
+          <Trans ns="digitizing" i18nKey="StartLine">
+            Click on the map to start a line
+          </Trans>
         </>
       );
     case DigitizingState.STARTED:
       return (
-        <Trans ns="surveys">
+        <Trans ns="digitizing" i18nKey="ContinueDrawLine">
           Click to add more points, Double-Click to finish
         </Trans>
       );
     case DigitizingState.CAN_COMPLETE:
       return (
-        <Trans ns="surveys">
+        <Trans ns="digitizing" i18nKey="CanCompleteLine">
           Click to add more points, Double-Click to finish
         </Trans>
       );
     // case DigitizingState.CREATED:
-    //   return <Trans ns="surveys">Line created</Trans>;
+    //   return <Trans ns="digitizing">Line created</Trans>;
     case DigitizingState.EDITING:
-      return <Trans ns="surveys">Click and drag points to modify</Trans>;
+      return (
+        <Trans ns="digitizing" i18nKey="DragVertex">
+          Click and drag points to modify
+        </Trans>
+      );
     case DigitizingState.NO_SELECTION:
       return null;
-    // return <Trans ns="surveys">Click line to edit</Trans>;
+    // return <Trans ns="digitizing">Click line to edit</Trans>;
     default:
       return null;
   }
@@ -381,27 +395,43 @@ function getPolygonInstructions(
               <path d="M14.5 11.71c-.28-.14-.58-.21-.89-.21H13v-6c0-.83-.67-1.5-1.5-1.5S10 4.67 10 5.5v10.74l-3.44-.72a1.12 1.12 0 00-1.02 1.89l4.01 4.01c.37.37.88.58 1.41.58h6.41c1 0 1.84-.73 1.98-1.72l.63-4.46c.12-.85-.32-1.69-1.09-2.07l-4.39-2.04z"></path>
             </svg>
             {/* <CursorClickIcon className="w-6 h-6 inline-block mr-2" /> */}
-            <Trans ns="surveys">Tap the map to start a polygon</Trans>
+            <Trans ns="digitizing" i18nKey="StartPolygonTouch">
+              Tap the map to start a polygon
+            </Trans>
           </>
         );
       case DigitizingState.STARTED:
-        return <Trans ns="surveys">Tap to add more points</Trans>;
+        return (
+          <Trans ns="digitizing" i18nKey="ContinuePolygonTouch">
+            Tap to add more points
+          </Trans>
+        );
       case DigitizingState.CAN_COMPLETE:
         return (
-          <Trans ns="surveys">Tap start point or double tap to finish</Trans>
+          <Trans ns="digitizing" i18nKey="CanCompletePolygonTouch">
+            Tap start point or double tap to finish
+          </Trans>
         );
       // case DigitizingState.CREATED:
-      //   return <Trans ns="surveys">Shape saved</Trans>;
+      //   return <Trans ns="digitizing">Shape saved</Trans>;
       case DigitizingState.NO_SELECTION:
         if (multiFeature) {
-          return <Trans ns="surveys">Tap a shape to edit</Trans>;
+          return (
+            <Trans ns="digitizing" i18nKey="EditPolygonTouch">
+              Tap a shape to edit
+            </Trans>
+          );
         } else {
           return null;
         }
       case DigitizingState.EDITING:
       case DigitizingState.UNFINISHED:
-        return <Trans ns="surveys">Drag points to modify</Trans>;
-      // return <Trans ns="surveys">Drag points to modify</Trans>;
+        return (
+          <Trans ns="digitizing" i18nKey="DragVertexPolygonTouch">
+            Drag points to modify
+          </Trans>
+        );
+      // return <Trans ns="digitizing">Drag points to modify</Trans>;
       default:
         break;
     }
@@ -409,31 +439,43 @@ function getPolygonInstructions(
     switch (state) {
       case DigitizingState.CREATE:
         return (
-          <Trans ns="surveys">
+          <Trans ns="digitizing" i18nKey="StartPolygon">
             <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
             Click on the map to start a polygon
           </Trans>
         );
       case DigitizingState.STARTED:
-        return <Trans ns="surveys">Click to add more points</Trans>;
+        return (
+          <Trans ns="digitizing" i18nKey="ContinuePolygon">
+            Click to add more points
+          </Trans>
+        );
       case DigitizingState.CAN_COMPLETE:
         return (
-          <Trans ns="surveys">
+          <Trans ns="digitizing" i18nKey="FinishPolygonDesktop">
             Click the starting point or double-click the last point to finish
           </Trans>
         );
       case DigitizingState.NO_SELECTION:
         if (multiFeature) {
-          return <Trans ns="surveys">Click a shape to edit</Trans>;
+          return (
+            <Trans ns="digitizing" i18nKey="EditPolygonDesktop">
+              Click a shape to edit
+            </Trans>
+          );
         } else {
           return null;
         }
 
       // case DigitizingState.CREATED:
-      //   return <Trans ns="surveys">Shape saved</Trans>;
+      //   return <Trans ns="digitizing">Shape saved</Trans>;
       case DigitizingState.EDITING:
       case DigitizingState.UNFINISHED:
-        return <Trans ns="surveys">Drag points to modify</Trans>;
+        return (
+          <Trans ns="digitizing" i18nKey="EditPolygonDesktop">
+            Drag points to modify
+          </Trans>
+        );
       default:
         break;
     }

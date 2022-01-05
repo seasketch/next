@@ -135,7 +135,7 @@ export function PreviousQuestion(
 ) {
   const { t } = useTranslation("surveys");
   return (
-    <Item {...props} Icon={ChevronUpIcon} title={t("Previous question")} />
+    <Item {...props} Icon={ChevronUpIcon} title={t("Previous Question")} />
   );
 }
 

@@ -87,7 +87,7 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
             <>
               <InputBlock
                 labelType="small"
-                title={t("Multiple Select")}
+                title={t("Multiple Select", { ns: "admin:surveys" })}
                 input={
                   <Switch
                     isToggled={props.componentSettings.multipleSelect}
@@ -104,14 +104,15 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
                   if (
                     window.confirm(
                       t(
-                        "Are you sure? ComboBox's do not support multiple-select. You can always change back."
+                        "Are you sure? ComboBox's do not support multiple-select. You can always change back.",
+                        { ns: "admin:surveys" }
                       )
                     )
                   ) {
                     updateBaseSetting("typeId")("ComboBox");
                   }
                 }}
-                label={t("Change to ComboBox")}
+                label={t("Change to ComboBox", { ns: "admin:surveys" })}
               />
               <FormElementOptionsInput
                 key={props.id}

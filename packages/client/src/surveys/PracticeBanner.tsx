@@ -12,7 +12,7 @@ export default function PracticeBanner({
         onPracticeClick ? "cursor-pointer" : ""
       }`}
     >
-      <Trans ns="surveys">Practice mode</Trans>
+      <Trans ns="surveys">Practice Mode</Trans>
     </div>
   );
 }

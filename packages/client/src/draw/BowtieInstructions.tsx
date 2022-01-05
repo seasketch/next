@@ -59,7 +59,7 @@ export default function BowtieInstructions({
           />
         </div>
         <p className="p-5">
-          <Trans ns="digitizing">
+          <Trans ns="digitizing" i18nKey="InvalidShapeInstructions">
             Your shape will turn red if invalid. When this happens make sure
             your shape does not cross itself, as indicated by the X symbols. If
             you continue to have trouble, consider deleting your shape and
