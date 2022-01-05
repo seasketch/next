@@ -862,7 +862,7 @@ const SpatialAccessPriority: FormElementComponent<
                     />
                   </>
                 )}
-                {style.isSmall && (
+                {style.isSmall && !geometryEditingState?.isNew && (
                   <div
                     className={`rounded-full fixed top-4 right-2 z-10 shadow-lg bg-black bg-opacity-20`}
                     onClick={onClickSave}
