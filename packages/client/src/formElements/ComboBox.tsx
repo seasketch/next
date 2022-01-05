@@ -56,8 +56,6 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
     }
   }, [props.value]);
 
-  console.warn("inputValue", inputValue);
-
   useEffect(() => {
     if (
       (props.value === undefined || (props.value === null && props.editable)) &&
