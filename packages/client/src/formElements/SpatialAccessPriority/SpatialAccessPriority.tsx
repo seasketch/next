@@ -1,4 +1,10 @@
-import { ExclamationIcon, ScaleIcon } from "@heroicons/react/outline";
+import {
+  CheckIcon,
+  ExclamationIcon,
+  MapIcon,
+  ScaleIcon,
+  XIcon,
+} from "@heroicons/react/outline";
 import { colord } from "colord";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -8,8 +14,14 @@ import {
   GeoJsonProperties,
   Polygon,
 } from "geojson";
-import { Map } from "mapbox-gl";
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import { LngLatBoundsLike, Map, MapboxOptions, Style } from "mapbox-gl";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Trans, useTranslation } from "react-i18next";
 import BasemapMultiSelectInput from "../../admin/surveys/BasemapMultiSelectInput";
 import BoundsInput from "../../admin/surveys/BoundsInput";
@@ -50,6 +62,9 @@ import OptionPicker from "../OptionPicker";
 import PlusCircle from "@heroicons/react/outline/PlusCircleIcon";
 import SectorNavigation from "./SectorNavigation";
 import ChooseSectors from "./ChooseSectors";
+import bbox from "@turf/bbox";
+import { XCircleIcon } from "@heroicons/react/solid";
+import DigitizingMiniMap from "../DigitizingMiniMap";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -103,8 +118,9 @@ const SpatialAccessPriority: FormElementComponent<
       ? props.componentSettings.sectorOptions[0]
       : null
   );
+  const [miniMap, setMiniMap] = useState<Map | null>(null);
+  const [miniMapStyle, setMiniMapStyle] = useState<Style>();
 
-  console.log({ stage: STAGES[props.stage] });
   const [geometryEditingState, setGeometryEditingState] = useState<{
     isNew: boolean;
     feature?: Feature<any>;
@@ -227,6 +243,7 @@ const SpatialAccessPriority: FormElementComponent<
     selection,
     setCollection,
     resetFeature,
+    dragTarget,
   } = useMapboxGLDraw(
     mapContext.manager?.map,
     props.sketchClass!.geometryType,
@@ -242,8 +259,17 @@ const SpatialAccessPriority: FormElementComponent<
           geometry: updatedFeature,
         });
       }
-      if (props.stage === STAGES.DRAWING_INTRO) {
-        props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+      if (
+        props.stage === STAGES.DRAWING_INTRO ||
+        props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE
+      ) {
+        if (style.isSmall) {
+          if (!selfIntersects) {
+            props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
+          }
+        } else {
+          props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+        }
       }
     }
   );
@@ -262,6 +288,17 @@ const SpatialAccessPriority: FormElementComponent<
     };
     setCollection(filtered);
   }
+
+  useEffect(() => {
+    if (props.value?.collection) {
+      // set gl-draw collection to just those shapes in the sector
+      setFilteredCollection(props.value?.collection);
+      // reset the view extent
+      mapContext.manager?.map?.fitBounds(bounds as LngLatBoundsLike, {
+        animate: false,
+      });
+    }
+  }, [sector]);
 
   useEffect(() => {
     if (
@@ -287,13 +324,17 @@ const SpatialAccessPriority: FormElementComponent<
         setResponseState(
           propsToResponseState(selection.id as string, properties)
         );
-        if (props.stage === STAGES.LIST_SHAPES) {
-          props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+        if (!style.isSmall) {
+          if (props.stage === STAGES.LIST_SHAPES) {
+            props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+          }
         }
       }
     } else if (geometryEditingState?.isNew !== true) {
-      if (props.stage === STAGES.SHAPE_EDITOR) {
-        props.onRequestStageChange(STAGES.LIST_SHAPES);
+      if (!style.isSmall) {
+        if (props.stage === STAGES.SHAPE_EDITOR) {
+          props.onRequestStageChange(STAGES.LIST_SHAPES);
+        }
       }
       setResponseState({
         submissionAttempted: false,
@@ -314,11 +355,29 @@ const SpatialAccessPriority: FormElementComponent<
     }
   }, [props.value?.sectors, props.componentSettings.sectorOptions]);
 
+  async function updateMiniBasemap() {
+    if (miniMap && mapContext.manager && basemaps) {
+      const style = await mapContext.manager.getComputedStyle();
+      setMiniMapStyle(style.style);
+    }
+  }
+
+  useEffect(() => {
+    if (mapContext.manager && basemaps) {
+      mapContext.manager
+        .getComputedStyle()
+        .then((style) => setMiniMapStyle(style.style));
+    }
+  }, [mapContext.manager, basemaps]);
+
   function onClickSave() {
     if (selfIntersects) {
       return window.alert(t("Please fix problems with your shape first."));
     }
     if (geometryEditingState?.isNew !== true) {
+      if (style.isSmall) {
+        props.onRequestStageChange(STAGES.LIST_SHAPES);
+      }
       return actions.clearSelection();
     }
     let errors = false;
@@ -365,6 +424,9 @@ const SpatialAccessPriority: FormElementComponent<
       setGeometryEditingState(null);
       setResponseState({ submissionAttempted: false });
       actions.clearSelection();
+      if (style.isSmall) {
+        props.onRequestStageChange(STAGES.LIST_SHAPES);
+      }
     }
   }
 
@@ -372,7 +434,17 @@ const SpatialAccessPriority: FormElementComponent<
     if (selfIntersects) {
       return window.alert(t("Please fix problems with your shape first."));
     } else {
-      props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+      props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
+      setTimeout(() => {
+        if (mapContext.manager?.map && selection) {
+          // mapContext.manager.map.panTo()
+          mapContext.manager.map.resize();
+          mapContext.manager.map.fitBounds(
+            bbox(selection) as LngLatBoundsLike,
+            { padding: 20 }
+          );
+        }
+      }, 10);
     }
   }
 
@@ -393,12 +465,30 @@ const SpatialAccessPriority: FormElementComponent<
     return collection;
   }
 
+  const mapInitOptions = useMemo(() => {
+    return {
+      logoPosition: "bottom-left",
+      attributionControl: !style.isSmall,
+    } as Partial<MapboxOptions>;
+  }, [style.isSmall]);
+
+  const onClickMapNonInteractive = useCallback(() => {
+    props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+    setTimeout(() => {
+      if (mapContext.manager?.map && selection) {
+        mapContext.manager.map.resize();
+        mapContext.manager.map.fitBounds(bbox(selection) as LngLatBoundsLike, {
+          padding: 50,
+        });
+      }
+    }, 10);
+  }, [mapContext, props, selection]);
+
   return (
     <>
       <AnimatePresence
         initial={false}
         exitBeforeEnter={true}
-        custom={context.navigatingBackwards}
         presenceAffectsLayout={false}
         // onExitComplete={() => {
         //   setBackwards(false);
@@ -409,28 +499,52 @@ const SpatialAccessPriority: FormElementComponent<
         // }}
       >
         <motion.div
-          custom={context.navigatingBackwards}
-          className="relative"
+          custom={{
+            direction: context.navigatingBackwards,
+            stage: props.stage,
+            isSmall: style.isSmall,
+          }}
+          className="relative w-full"
           variants={{
-            exit: (direction: boolean) => ({
-              opacity: 0,
-              translateY: direction ? 100 : -100,
-              position: "relative",
-            }),
-            enter: (direction: boolean) => ({
+            exit: ({
+              direction,
+              stage,
+              isSmall,
+            }: {
+              direction: boolean;
+              stage: STAGES;
+              isSmall: boolean;
+            }) => {
+              return {
+                opacity: 0,
+                translateY: direction ? 100 : -100,
+                position: "relative",
+                transition:
+                  isSmall && stage === STAGES.SHAPE_EDITOR
+                    ? { duration: 0 }
+                    : {
+                        duration: 0.3,
+                      },
+              };
+            },
+            enter: ({ direction }: { direction: boolean; stage: STAGES }) => ({
               opacity: 0,
               translateY: direction ? -100 : 100,
               position: "relative",
             }),
-            show: () => ({
+            show: ({ direction }: { direction: boolean; stage: STAGES }) => ({
               opacity: 1,
               translateY: 0,
               position: "relative",
             }),
           }}
-          transition={{
-            duration: 0.3,
-          }}
+          transition={
+            style.isSmall
+              ? { duration: 0 }
+              : {
+                  duration: 0.3,
+                }
+          }
           key={props.stage}
           initial="enter"
           animate="show"
@@ -438,7 +552,8 @@ const SpatialAccessPriority: FormElementComponent<
         >
           {props.stage !== STAGES.CHOOSE_SECTORS &&
             props.stage !== STAGES.SHAPE_EDITOR &&
-            props.stage !== STAGES.SECTOR_NAVIGATION && (
+            props.stage !== STAGES.SECTOR_NAVIGATION &&
+            props.stage !== STAGES.MOBILE_EDIT_PROPERTIES && (
               <h4
                 className={`font-bold text-xl pb-4 ${!style.isSmall && "pt-6"}`}
               >
@@ -531,9 +646,27 @@ const SpatialAccessPriority: FormElementComponent<
                           .toHex(),
                         // gridArea: "shape",
                       }}
-                      onClick={() =>
-                        actions.selectFeature(feature.id as string)
-                      }
+                      onClick={() => {
+                        if (style.isSmall) {
+                          props.onRequestStageChange(
+                            STAGES.MOBILE_EDIT_PROPERTIES
+                          );
+                          if (mapContext?.manager?.map) {
+                            mapContext.manager.map.resize();
+                            setTimeout(() => {
+                              if (style.isSmall && mapContext?.manager?.map) {
+                                mapContext.manager.map.fitBounds(
+                                  bbox(feature) as LngLatBoundsLike,
+                                  { padding: 20, animate: false }
+                                );
+                              }
+                            }, 100);
+                          }
+                          actions.selectFeature(feature.id as string);
+                        } else {
+                          actions.selectFeature(feature.id as string);
+                        }
+                      }}
                     >
                       {nameElementId ? feature.properties[nameElementId] : ""}
                     </button>
@@ -568,23 +701,11 @@ const SpatialAccessPriority: FormElementComponent<
                     </div>
                   </React.Fragment>
                 ))}
-                <div className="flex align-middle h-full">
-                  {/* <Trans ns="surveys">Name</Trans> */}
-                </div>
-                {/* <div className="flex align-middle h-full text-xs uppercase px-2">
-                  <div className="flex-1">
-                    <Trans ns="surveys">Low</Trans>
-                  </div>
-                  <div className="flex-1 text-center">
-                    <Trans ns="surveys">Average</Trans>
-                  </div>
-                  <div className="flex-1 text-right">
-                    <Trans ns="surveys">High</Trans>
-                  </div>
-                </div> */}
               </div>
-              <div className="space-x-1 flex">
+              <div className="space-y-2 sm:space-y-0 sm:space-x-1 sm:flex sm:w-full">
                 <SurveyButton
+                  className="w-full sm:w-auto block"
+                  buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
                   label={
                     <>
                       <PlusCircle className="w-5 h-5 mr-2" />
@@ -596,12 +717,40 @@ const SpatialAccessPriority: FormElementComponent<
                     setGeometryEditingState({
                       isNew: true,
                     });
-                    props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+                    if (style.isSmall) {
+                      props.onRequestStageChange(
+                        STAGES.MOBILE_DRAW_FIRST_SHAPE
+                      );
+                    } else {
+                      props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+                    }
                     create(true);
                   }}
                 />
+                {style.isSmall && (
+                  <SurveyButton
+                    className="w-full sm:w-auto block"
+                    buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
+                    label={
+                      <>
+                        <MapIcon className="w-5 h-5 mr-2" />
+                        {t("View Map")}
+                      </>
+                    }
+                    onClick={() =>
+                      props.onRequestStageChange(STAGES.SHAPE_EDITOR)
+                    }
+                  />
+                )}
                 <SurveyButton
-                  label={<Trans ns="surveys">Finish Sector</Trans>}
+                  className="w-full sm:w-auto block"
+                  buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
+                  label={
+                    <>
+                      <CheckIcon className="w-5 h-5 mr-2" />
+                      <Trans ns="surveys">Finish Sector</Trans>
+                    </>
+                  }
                   onClick={() => {
                     props.onRequestStageChange(STAGES.SECTOR_NAVIGATION);
                   }}
@@ -609,7 +758,8 @@ const SpatialAccessPriority: FormElementComponent<
               </div>
             </>
           )}
-          {props.stage === STAGES.SHAPE_EDITOR && (
+          {(props.stage === STAGES.SHAPE_EDITOR ||
+            props.stage === STAGES.MOBILE_EDIT_PROPERTIES) && (
             <div className="py-5 space-y-2">
               {formElements.map((details, i) => {
                 // const Component = components[details.typeId];
@@ -675,15 +825,68 @@ const SpatialAccessPriority: FormElementComponent<
                   label={geometryEditingState?.isNew ? t("Save") : t("Close")}
                   onClick={onClickSave}
                 />
+                {!geometryEditingState?.isNew && style.isSmall && (
+                  <>
+                    <SurveyButton
+                      label={t("Edit on Map")}
+                      onClick={onClickMapNonInteractive}
+                    />
+                    <SurveyButton
+                      label={t("Delete")}
+                      onClick={() => {
+                        if (!selection?.id) {
+                          throw new Error("No selection to delete");
+                        }
+                        if (!props.value) {
+                          throw new Error(
+                            "No collection to delete feature from"
+                          );
+                        }
+                        if (
+                          window.confirm(
+                            t("Are you sure you want to delete this shape?", {
+                              ns: "surveys",
+                            })
+                          )
+                        ) {
+                          const collection = removeFeatureFromValue(
+                            selection.id
+                          );
+                          setFilteredCollection(collection);
+                          if (geometryEditingState?.isNew) {
+                            setGeometryEditingState({ isNew: false });
+                          }
+                          props.onRequestStageChange(STAGES.LIST_SHAPES);
+                        }
+                      }}
+                    />
+                  </>
+                )}
+                {style.isSmall && (
+                  <div
+                    className={`rounded-full fixed top-4 right-2 z-10 shadow-lg bg-black bg-opacity-20`}
+                    onClick={onClickSave}
+                    // style={{ backgroundColor: style.secondaryColor }}
+                  >
+                    <XIcon className="w-10 h-10" />
+                    {/* <XCircleIcon className="w-10 h-10" /> */}
+                  </div>
+                )}
               </div>
             </div>
           )}
         </motion.div>
       </AnimatePresence>
-      {props.stage !== STAGES.CHOOSE_SECTORS &&
-        props.stage !== STAGES.SECTOR_NAVIGATION && (
-          <SurveyMapPortal mapContext={mapContext}>
-            <div className="flex items-center justify-center w-full h-full">
+      {props.stage !== STAGES.CHOOSE_SECTORS && (
+        <SurveyMapPortal mapContext={mapContext}>
+          <div
+            className={`flex items-center justify-center w-full h-full ${
+              props.stage === STAGES.MOBILE_EDIT_PROPERTIES
+                ? "hide-all-gl-controls"
+                : ""
+            }`}
+          >
+            {props.stage !== STAGES.MOBILE_EDIT_PROPERTIES && (
               <DigitizingTools
                 selfIntersects={selfIntersects}
                 multiFeature={true}
@@ -691,6 +894,30 @@ const SpatialAccessPriority: FormElementComponent<
                 geometryType={props.sketchClass!.geometryType}
                 onRequestEdit={actions.edit}
                 onRequestFinishEditing={actions.finishEditing}
+                createStateButtons={
+                  style.isSmall && (
+                    <Button
+                      label={t("Cancel")}
+                      onClick={() => {
+                        if (geometryEditingState?.feature) {
+                          const collection = removeFeatureFromValue(
+                            geometryEditingState.feature.id!
+                          );
+                          setFilteredCollection(collection);
+                        }
+                        setGeometryEditingState({ isNew: false });
+                        props.onRequestStageChange(STAGES.LIST_SHAPES);
+                        actions.finishEditing();
+                        setFilteredCollection(props.value!.collection);
+                      }}
+                      buttonClassName={
+                        style.isSmall
+                          ? "py-3 flex-1 justify-center content-center text-base"
+                          : ""
+                      }
+                    />
+                  )
+                }
                 unfinishedStateButtons={
                   <Button
                     className="pointer-events-auto"
@@ -699,10 +926,40 @@ const SpatialAccessPriority: FormElementComponent<
                     onClick={style.isSmall ? onClickDoneMobile : onClickSave}
                     buttonClassName={
                       style.isSmall
-                        ? "py-3 flex-1 justify-center content-center"
+                        ? "py-3 flex-1 justify-center content-center text-base"
                         : ""
                     }
                   />
+                }
+                noSelectionStateButtons={
+                  style.isSmall ? (
+                    <>
+                      <Button
+                        className="pointer-events-auto"
+                        label={t("Back to List")}
+                        onClick={() => {
+                          props.onRequestStageChange(STAGES.LIST_SHAPES);
+                        }}
+                        buttonClassName={
+                          style.isSmall
+                            ? "py-3 flex-1 justify-center content-center text-base"
+                            : ""
+                        }
+                      />
+                      <Button
+                        className="pointer-events-auto"
+                        label={t("New Shape")}
+                        onClick={() => {
+                          create(true);
+                        }}
+                        buttonClassName={
+                          style.isSmall
+                            ? "py-3 flex-1 justify-center content-center text-base"
+                            : ""
+                        }
+                      />
+                    </>
+                  ) : undefined
                 }
                 onRequestResetFeature={() => {
                   if (!selection) {
@@ -758,14 +1015,29 @@ const SpatialAccessPriority: FormElementComponent<
                 }}
               >
                 <ResetView map={mapContext.manager?.map!} bounds={bounds} />
-                {selection && (
+                {selection || props.value?.collection ? (
                   <ZoomToFeature
                     map={mapContext.manager?.map!}
-                    feature={selection}
+                    feature={
+                      selection
+                        ? selection
+                        : {
+                            ...EMPTY_FEATURE_COLLECTION,
+                            features: (
+                              props.value?.collection ||
+                              EMPTY_FEATURE_COLLECTION
+                            ).features.filter(
+                              (f) =>
+                                f.properties?.sector ===
+                                (sector!.value || sector!.label)
+                            ),
+                          }
+                    }
                     isSmall={style.isSmall}
                     geometryType={props.sketchClass!.geometryType}
+                    title={!selection ? t("Focus on shapes") : undefined}
                   />
-                )}
+                ) : null}
                 <BasemapControl
                   basemaps={basemaps}
                   afterChange={() => {
@@ -773,18 +1045,28 @@ const SpatialAccessPriority: FormElementComponent<
                   }}
                 />
               </DigitizingTools>
-              <MapboxMap
-                showNavigationControls
-                hideDrawControls
-                className="w-full h-full absolute top-0 bottom-0"
-                initOptions={{
-                  logoPosition: "bottom-left",
-                  attributionControl: !style.isSmall,
-                }}
+            )}
+            <MapboxMap
+              key={`sap-map-${props.id}`}
+              interactive={props.stage !== STAGES.MOBILE_EDIT_PROPERTIES}
+              onClickNonInteractive={onClickMapNonInteractive}
+              showNavigationControls
+              hideDrawControls
+              className="w-full h-full absolute top-0 bottom-0"
+              initOptions={mapInitOptions}
+            />
+            {miniMapStyle && mapContext.manager?.map && (
+              <DigitizingMiniMap
+                topologyErrors={selfIntersects}
+                style={miniMapStyle}
+                dragTarget={dragTarget}
+                onLoad={(map) => setMiniMap(map)}
               />
-            </div>
-          </SurveyMapPortal>
-        )}
+            )}
+          </div>
+        </SurveyMapPortal>
+      )}
+
       <Admin
         map={mapContext.manager?.map}
         bounds={bounds}
@@ -867,12 +1149,13 @@ SpatialAccessPriority.getLayout = (
     if (isSmall) {
       if (
         stage === STAGES.MOBILE_DRAW_FIRST_SHAPE ||
-        stage === STAGES.MOBILE_MAP_FEATURES
+        stage === STAGES.MOBILE_MAP_FEATURES ||
+        stage === STAGES.SHAPE_EDITOR
       ) {
         return FormElementLayout.MapFullscreen;
       } else if (stage === STAGES.MOBILE_EDIT_PROPERTIES) {
         // Will need to add an option for a header map
-        return FormElementLayout.Top;
+        return FormElementLayout.MapTop;
       } else {
         return FormElementLayout.Top;
       }

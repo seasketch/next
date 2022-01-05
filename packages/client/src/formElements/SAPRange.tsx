@@ -14,6 +14,7 @@ export type SAPRangeProps = {
   min?: number;
   max?: number;
   step?: number;
+  defaultValue?: number;
   highText?: string | ReactNode;
   averageText?: string | ReactNode;
   lowText?: string | ReactNode;
@@ -37,9 +38,12 @@ const SAPRange: FormElementComponent<SAPRangeProps, number> = (props) => {
     selected: props.value || 0,
   });
 
+  const defaultValue =
+    props.componentSettings.defaultValue || Math.round((max - min) / 2);
+
   useEffect(() => {
     if (props.value === undefined) {
-      props.onChange(Math.round((max - min) / 2), false);
+      props.onChange(defaultValue, false);
     }
   }, []);
 
@@ -56,7 +60,7 @@ const SAPRange: FormElementComponent<SAPRangeProps, number> = (props) => {
         <input
           className="w-full SAPRange"
           type="range"
-          value={props.value}
+          value={props.value || defaultValue}
           onChange={(e) => props.onChange(parseInt(e.target.value), false)}
           min={min}
           max={max}

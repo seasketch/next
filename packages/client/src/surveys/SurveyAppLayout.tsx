@@ -155,9 +155,17 @@ export const SurveyAppLayout: React.FunctionComponent<{
     case FormElementLayout.MapFullscreen:
       // eslint-disable-next-line i18next/no-literal-string
       grid = `
-        [row0-start] "map" 1fr [row0-end]
         [row0-start] "content" 0px [row0-end]
+        [row1-start] "map" 1fr [row1-end]
         / 1fr
+      `;
+      break;
+    case FormElementLayout.MapTop:
+      // eslint-disable-next-line i18next/no-literal-string
+      grid = `
+        [row1-start] "map map" 120px [row1-end]
+        [row2-start] "content content" 1fr [row2-end]
+        / auto auto
       `;
       break;
     default:
@@ -166,6 +174,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
       grid = `
         [row1-start] "hero-image hero-image" auto [row1-end]
         [row2-start] "content content" 1fr [row2-end]
+        [row3-start] "map map" 0px [row3-end]
         / auto auto
       `;
       break;
@@ -180,10 +189,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
       ? "center-ish"
       : "";
 
-  // TODO: Debugging. Erase this
-  // centerIsh = "";
-
-  const mapLayout =
+  const fullscreenMapLayout =
     style.layout === FormElementLayout.MapStacked ||
     style.layout === FormElementLayout.MapSidebarRight ||
     style.layout === FormElementLayout.MapSidebarLeft ||
@@ -202,7 +208,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
           <AnimatePresence initial={false} presenceAffectsLayout={false}>
             <div
               className={`grid overflow-hidden ${
-                scrollContentArea ? "h-full" : ""
+                scrollContentArea || fullscreenMapLayout ? "h-full" : ""
               }`}
               style={{ grid }}
             >
@@ -238,6 +244,10 @@ export const SurveyAppLayout: React.FunctionComponent<{
                   scrollContentArea && "overflow-y-auto"
                 } p-3 lg:p-5 xl:p-10 2xl:p-14 3xl:p-20 ${centerIsh} ${
                   style.textClass
+                } ${
+                  style.layout === FormElementLayout.MapFullscreen
+                    ? "hidden"
+                    : ""
                 }`}
               >
                 {scrollContentArea && (
@@ -273,11 +283,22 @@ export const SurveyAppLayout: React.FunctionComponent<{
                 />
               )}
               {/* Map portal element */}
-              {mapLayout && (
+              {(fullscreenMapLayout ||
+                style.layout === FormElementLayout.Top ||
+                style.layout === FormElementLayout.MapTop) && (
                 <div
                   className="relative"
                   style={{
                     gridArea: "map",
+                    overflow: "hidden",
+                    ...(style.layout === FormElementLayout.MapTop
+                      ? {
+                          WebkitMaskImage:
+                            "linear-gradient(to top, transparent 0%, black 100%)",
+                          maskImage:
+                            "linear-gradient(to top, transparent 0%, black 100%)",
+                        }
+                      : {}),
                   }}
                   ref={mapPortalRef}
                 />

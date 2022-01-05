@@ -35,9 +35,11 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
     FormElementOption | undefined | null
   >();
 
-  function onChange(value: string | null) {
+  function onChange(value: string | null | undefined) {
     if (value === null) {
       props.onChange(null, props.isRequired);
+    } else if (value === undefined) {
+      props.onChange(undefined, props.isRequired);
     } else {
       props.onChange(value, false);
     }
@@ -205,10 +207,18 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
         }
         onChange={(e) => {
           const item = items.find((i) => i.label === e.target.value);
-          onChange(item?.value || item?.label || null);
+          let value: string | undefined | null = item?.value || item?.label;
+          if (e.target.value === "__UNDEFINED__") {
+            value = undefined;
+          } else if (e.target.value === "__NULL__") {
+            value = null;
+          }
+          // @ts-ignore
+          onChange(value);
         }}
       >
         {!props.isRequired && <option value="__NULL__">&nbsp;</option>}
+        {props.isRequired && <option value="__UNDEFINED__">&nbsp;</option>}
         {items.map((i) => (
           <option key={i.label} value={i.label}>
             {i.label}

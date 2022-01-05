@@ -80,10 +80,18 @@ DrawPolygon.clickAnywhere = function (state: any, e: any) {
 };
 
 DrawPolygon.clickOnVertex = function (state: any) {
-  if (state.getNextMode) {
-    this.changeMode.apply(this, state.getNextMode(state.polygon.id));
+  if (
+    !state.polygon.coordinates.length ||
+    state.polygon.coordinates[0].length < 4
+  ) {
+    // Avoid exceptions when user clicks on an existing vertex before a polygon has enough vertices
+    return;
   } else {
-    return _clickOnVertex(state);
+    if (state.getNextMode) {
+      this.changeMode.apply(this, state.getNextMode(state.polygon.id));
+    } else {
+      return _clickOnVertex(state);
+    }
   }
 };
 

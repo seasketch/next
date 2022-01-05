@@ -36,7 +36,7 @@ export default function SectorNavigation(props: SectorNavigationProps) {
       );
     });
   return (
-    <>
+    <div className="mb-5">
       <FormElementBody
         componentSettingName={"navBody"}
         componentSettings={props.componentSettings}
@@ -74,8 +74,9 @@ export default function SectorNavigation(props: SectorNavigationProps) {
                   );
                   props.setSector(sector);
                 }}
-                style={
-                  hasValue
+                style={{
+                  // width: "80%",
+                  ...(hasValue
                     ? {
                         background: `linear-gradient(${style.secondaryColor}, ${style.secondaryColor2})`,
                       }
@@ -83,8 +84,8 @@ export default function SectorNavigation(props: SectorNavigationProps) {
                         background: colord(style.backgroundColor)
                           .alpha(0.8)
                           .toHex(),
-                      }
-                }
+                      }),
+                }}
               >
                 <div className="flex items-center">
                   {hasValue ? (
@@ -97,9 +98,7 @@ export default function SectorNavigation(props: SectorNavigationProps) {
                     </div>
                   )}
                 </div>
-                <div className="flex-1 items-center px-5 truncate">
-                  {sector.label}
-                </div>
+                <div className="flex-1 items-center px-5">{sector.label}</div>
                 <div className="flex items-center">
                   {hasValue && (
                     <Trans ns="surveys" count={numShapes}>
@@ -136,6 +135,6 @@ export default function SectorNavigation(props: SectorNavigationProps) {
           <Trans ns="surveys">Change choices</Trans>
         </button>
       </div>
-    </>
+    </div>
   );
 }

@@ -6,7 +6,7 @@ import {
 } from "@heroicons/react/outline";
 import bbox from "@turf/bbox";
 import { AnimatePresence, motion } from "framer-motion";
-import { BBox, Feature } from "geojson";
+import { BBox, Feature, FeatureCollection } from "geojson";
 import { map } from "lodash";
 import { LngLatBoundsLike, LngLatLike, Map } from "mapbox-gl";
 import {
@@ -171,9 +171,10 @@ export function ResetView(
 export function ZoomToFeature(
   props: DigitizingActionItem<{
     map: Map;
-    feature?: Feature<any>;
+    feature?: Feature<any> | FeatureCollection<any>;
     isSmall: boolean;
     geometryType: SketchGeometryType;
+    title?: string;
   }>
 ) {
   const { t } = useTranslation("surveys");
@@ -190,7 +191,7 @@ export function ZoomToFeature(
           maxZoom: 17,
         })
       }
-      title={t("Focus on location")}
+      title={props.title || t("Focus on location")}
     />
   );
 }

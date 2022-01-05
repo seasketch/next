@@ -170,6 +170,7 @@ class MapContextManager {
   private internalState: MapContextInterface;
   arcgisVectorSourceCache: ArcGISVectorSourceCache;
   private mapIsLoaded = false;
+  private mapContainer?: HTMLDivElement;
 
   constructor(
     initialState: MapContextInterface,
@@ -259,6 +260,10 @@ class MapContextManager {
     bounds?: [number, number, number, number],
     options?: Partial<MapboxOptions>
   ) {
+    if (this.mapContainer === container) {
+      console.warn("Already initializing map");
+      return;
+    }
     if (this.map) {
       // throw new Error("Map already created in this context");
       console.warn("Map already created in this context");
@@ -269,6 +274,7 @@ class MapContextManager {
         this.map.off("data", this.onMapDataEvent);
         this.map.off("dataloading", this.onMapDataEvent);
         this.map.off("moveend", this.onMapMove);
+        this.map.remove();
       }
     }
     if (!this.internalState.ready) {

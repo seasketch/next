@@ -12,6 +12,9 @@ export interface OverlayMapProps {
   initOptions?: Partial<MapboxOptions>;
   hideDrawControls?: boolean;
   showNavigationControls?: boolean;
+  /** Defaults to true */
+  interactive?: boolean;
+  onClickNonInteractive?: () => void;
 }
 
 mapboxgl.prewarm();
@@ -20,6 +23,9 @@ export default function MapboxMap(props: OverlayMapProps) {
   const [map, setMap] = useState<Map>();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapContext = useContext(MapContext);
+
+  const interactive =
+    props.interactive === undefined ? true : props.interactive;
 
   useEffect(() => {
     if (
@@ -33,7 +39,7 @@ export default function MapboxMap(props: OverlayMapProps) {
       mapContext.manager
         .createMap(mapContainer.current, props.bounds, props.initOptions)
         .then((map) => {
-          if (!cancelled) {
+          if (!cancelled && map) {
             setMap(map);
             if (props.showNavigationControls) {
               map.addControl(new mapboxgl.NavigationControl(), "top-left");
@@ -70,8 +76,9 @@ export default function MapboxMap(props: OverlayMapProps) {
     <div
       className={`flex-1 bg-gray-300 ${props.className} ${
         props.hideDrawControls ? "hide-draw-controls" : ""
-      }`}
+      } ${!interactive ? "non-interactive" : ""}`}
       ref={mapContainer}
+      onClick={!interactive ? props.onClickNonInteractive : undefined}
     >
       <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">
         <AnimatePresence>

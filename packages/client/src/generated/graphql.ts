@@ -3652,6 +3652,7 @@ export enum FormElementLayout {
   MapSidebarLeft = 'MAP_SIDEBAR_LEFT',
   MapSidebarRight = 'MAP_SIDEBAR_RIGHT',
   MapStacked = 'MAP_STACKED',
+  MapTop = 'MAP_TOP',
   Right = 'RIGHT',
   Top = 'TOP'
 }

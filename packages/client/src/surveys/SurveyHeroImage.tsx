@@ -41,6 +41,7 @@ export default function SurveyHeroImage({
     surveyStyle.layout === FormElementLayout.MapSidebarLeft ||
     surveyStyle.layout === FormElementLayout.MapSidebarRight ||
     surveyStyle.layout === FormElementLayout.MapFullscreen ||
+    surveyStyle.layout === FormElementLayout.MapTop ||
     // In cover layout, the background image is set directly on document.body
     surveyStyle.layout === FormElementLayout.Cover
   ) {

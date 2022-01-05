@@ -45,6 +45,9 @@ interface DigitizingInstructionsProps {
    * on mobile the user needs to transition from the map to a data entry form.
    */
   unfinishedStateButtons?: ReactNode;
+  noSelectionStateButtons?: ReactNode;
+  /** Displayed if DigitizingState is CREATE, CAN_COMPLETE, or STARTED */
+  createStateButtons?: ReactNode;
   selfIntersects?: boolean;
 }
 
@@ -60,6 +63,8 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   multiFeature,
   unfinishedStateButtons,
   selfIntersects,
+  noSelectionStateButtons,
+  createStateButtons,
 }) => {
   const { t } = useTranslation("surveys");
   const style = useContext(SurveyLayoutContext).style;
@@ -191,6 +196,11 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         />
       )}
       {state === DigitizingState.UNFINISHED && unfinishedStateButtons}
+      {state === DigitizingState.NO_SELECTION && noSelectionStateButtons}
+      {(state === DigitizingState.CREATE ||
+        state === DigitizingState.CAN_COMPLETE ||
+        state === DigitizingState.STARTED) &&
+        createStateButtons}
     </>
   );
 

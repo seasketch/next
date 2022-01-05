@@ -240,7 +240,11 @@ export default function useMapboxGLDraw(
       map.on("draw.selectionchange", handlers.selectionChange);
       return () => {
         if (map && draw) {
-          map.removeControl(draw);
+          try {
+            map.removeControl(draw);
+          } catch (e) {
+            console.warn("exception thrown when removing draw control");
+          }
           handlerState.current.draw = undefined;
           setDraw(null);
           map.off("draw.create", handlers.create);
@@ -337,6 +341,10 @@ export default function useMapboxGLDraw(
       setState(DigitizingState.NO_SELECTION);
     },
     selectFeature: (featureId: string) => {
+      if (!handlerState.current.draw) {
+        console.warn("Draw not yet initialized");
+        return;
+      }
       handlerState.current.draw?.changeMode("direct_select", { featureId });
       setState(DigitizingState.EDITING);
     },

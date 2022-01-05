@@ -23,6 +23,15 @@ DirectSelect.stopDragging = function (state: any, e: any) {
 DirectSelect.dragVertex = function (state: any, e: any, delta: any) {
   const ret = _dragVertex.apply(this, [state, e, delta]);
   this.checkForKinks(state);
+  if ((delta.lng || delta.lat) && state.feature) {
+    const selectedCoords = state.selectedCoordPaths.map((coord_path: string) =>
+      state.feature.getCoordinate(coord_path)
+    );
+    this.map.fire("seasketch.drag_target", {
+      coordinates: selectedCoords[0],
+      point: e.point,
+    } as DragTargetEvent);
+  }
   return ret;
 };
 
