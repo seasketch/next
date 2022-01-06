@@ -23,6 +23,7 @@ export default function ProjectInviteLanding() {
     confirmWithCurrentAccount,
   } = useProjectInviteIngressFlow();
   const auth0 = useAuth0();
+  const email = auth0.user?.email || claims?.email;
   return (
     <div className="bg-white">
       <div className="max-w-7xl mx-auto text-center py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
@@ -144,17 +145,15 @@ export default function ProjectInviteLanding() {
                         <Button
                           primary
                           onClick={() => signInAndConfirm(true)}
-                          label={t(`Logout and sign in as {{email}}`, {
-                            email: claims?.email,
-                          })}
+                          label={
+                            <Trans>Logout and sign in as {{ email }}</Trans>
+                          }
                         />
                       </div>
                       <div className="ml-3 inline-flex">
                         <Button
                           onClick={() => confirmWithCurrentAccount()}
-                          label={t(`Accept as {{email}}`, {
-                            email: auth0.user!.email,
-                          })}
+                          label={<Trans>Accept as {{ email }}</Trans>}
                         />
                       </div>
                     </>
@@ -165,9 +164,7 @@ export default function ProjectInviteLanding() {
                         <Button
                           primary
                           onClick={() => confirmWithCurrentAccount()}
-                          label={t(`Accept as {{email}}`, {
-                            email: auth0.user!.email,
-                          })}
+                          label={<Trans>Accept as {{ email }}</Trans>}
                         />
                       </div>
                       <div className="ml-3 inline-flex">
