@@ -3648,9 +3648,11 @@ export type FormElementInput = {
 export enum FormElementLayout {
   Cover = 'COVER',
   Left = 'LEFT',
+  MapFullscreen = 'MAP_FULLSCREEN',
   MapSidebarLeft = 'MAP_SIDEBAR_LEFT',
   MapSidebarRight = 'MAP_SIDEBAR_RIGHT',
   MapStacked = 'MAP_STACKED',
+  MapTop = 'MAP_TOP',
   Right = 'RIGHT',
   Top = 'TOP'
 }
@@ -14613,6 +14615,24 @@ export type CreateResponseMutation = (
   )> }
 );
 
+export type GetBasemapsAndRegionQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetBasemapsAndRegionQuery = (
+  { __typename?: 'Query' }
+  & { currentProject?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { basemaps?: Maybe<Array<(
+      { __typename?: 'Basemap' }
+      & BasemapDetailsFragment
+    )>>, region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ) }
+  )> }
+);
+
 export type UpdateProjectNameMutationVariables = Exact<{
   name: Scalars['String'];
   slug: Scalars['String'];
@@ -19941,6 +19961,46 @@ export function useCreateResponseMutation(baseOptions?: Apollo.MutationHookOptio
 export type CreateResponseMutationHookResult = ReturnType<typeof useCreateResponseMutation>;
 export type CreateResponseMutationResult = Apollo.MutationResult<CreateResponseMutation>;
 export type CreateResponseMutationOptions = Apollo.BaseMutationOptions<CreateResponseMutation, CreateResponseMutationVariables>;
+export const GetBasemapsAndRegionDocument = gql`
+    query GetBasemapsAndRegion {
+  currentProject {
+    id
+    basemaps {
+      ...BasemapDetails
+    }
+    region {
+      geojson
+    }
+  }
+}
+    ${BasemapDetailsFragmentDoc}`;
+
+/**
+ * __useGetBasemapsAndRegionQuery__
+ *
+ * To run a query within a React component, call `useGetBasemapsAndRegionQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetBasemapsAndRegionQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetBasemapsAndRegionQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetBasemapsAndRegionQuery(baseOptions?: Apollo.QueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
+      }
+export function useGetBasemapsAndRegionLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
+        }
+export type GetBasemapsAndRegionQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionQuery>;
+export type GetBasemapsAndRegionLazyQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionLazyQuery>;
+export type GetBasemapsAndRegionQueryResult = Apollo.QueryResult<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>;
 export const UpdateProjectNameDocument = gql`
     mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
   updateProjectBySlug(
@@ -20949,6 +21009,7 @@ export const namedOperations = {
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
     GetPhotos: 'GetPhotos',
     Survey: 'Survey',
+    GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     UserAdminCounts: 'UserAdminCounts',
     Participants: 'Participants',
     Admins: 'Admins',

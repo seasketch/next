@@ -2,5 +2,8 @@
 // This is solely used to support i18next-extract
 {
   "presets": ["react-app"],
-  "plugins": ["i18next-extract"]
+  "plugins": [
+    ["i18next-extract", { "nsSeparator": ":", "keySeparator": false }]
+  ],
+  "exclude": "src/generated/graphql.ts"
 }

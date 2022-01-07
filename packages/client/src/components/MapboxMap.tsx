@@ -11,6 +11,10 @@ export interface OverlayMapProps {
   bounds?: [number, number, number, number];
   initOptions?: Partial<MapboxOptions>;
   hideDrawControls?: boolean;
+  showNavigationControls?: boolean;
+  /** Defaults to true */
+  interactive?: boolean;
+  onClickNonInteractive?: () => void;
 }
 
 mapboxgl.prewarm();
@@ -20,6 +24,9 @@ export default function MapboxMap(props: OverlayMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapContext = useContext(MapContext);
 
+  const interactive =
+    props.interactive === undefined ? true : props.interactive;
+
   useEffect(() => {
     if (
       !map &&
@@ -27,17 +34,35 @@ export default function MapboxMap(props: OverlayMapProps) {
       mapContext.manager &&
       mapContext.ready
     ) {
+      let cancelled = false;
+      const container = mapContainer.current;
       mapContext.manager
         .createMap(mapContainer.current, props.bounds, props.initOptions)
         .then((map) => {
-          setMap(map);
-          map.on("load", () => {
-            map.resize();
-            if (props.onLoad) {
-              props.onLoad(map);
+          if (!cancelled && map) {
+            setMap(map);
+            if (props.showNavigationControls) {
+              map.addControl(new mapboxgl.NavigationControl(), "top-left");
             }
-          });
+            map.on("load", () => {
+              if (!cancelled) {
+                map.resize();
+                if (props.onLoad) {
+                  props.onLoad(map);
+                }
+              } else {
+                console.warn("cancelled map load (on load)");
+              }
+            });
+          } else {
+            console.warn("cancelled map load");
+          }
         });
+      return () => {
+        if (container !== mapContainer.current) {
+          cancelled = true;
+        }
+      };
     }
   }, [
     map,
@@ -51,8 +76,9 @@ export default function MapboxMap(props: OverlayMapProps) {
     <div
       className={`flex-1 bg-gray-300 ${props.className} ${
         props.hideDrawControls ? "hide-draw-controls" : ""
-      }`}
+      } ${!interactive ? "non-interactive" : ""}`}
       ref={mapContainer}
+      onClick={!interactive ? props.onClickNonInteractive : undefined}
     >
       <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">
         <AnimatePresence>

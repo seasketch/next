@@ -30,6 +30,7 @@ export default function DigitizingMiniMap({
           ? Math.min(dragTarget.currentZoom * ZOOM_MULTIPLIER, 18)
           : 15,
         attributionControl: false,
+        logoPosition: "top-right",
       });
       setMap(mapInstance);
       if (onLoad) {
@@ -88,7 +89,10 @@ export default function DigitizingMiniMap({
         topologyErrors ? "ring-red-500" : ""
       }`}
     >
-      <div ref={mapContainer} className="w-full h-full"></div>
+      <div
+        ref={mapContainer}
+        className="w-full h-full minimap hide-all-gl-controls"
+      ></div>
       <svg
         viewBox="0 0 24 24"
         focusable="false"

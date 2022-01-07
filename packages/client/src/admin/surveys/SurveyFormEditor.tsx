@@ -267,7 +267,8 @@ export default function SurveyFormEditor({
 
   const style = useCurrentStyle(
     data?.survey?.form?.formElements,
-    selectedFormElement
+    selectedFormElement,
+    stage
   );
 
   let isDark = colord(style.backgroundColor || "#efefef").isDark();
@@ -519,7 +520,8 @@ export default function SurveyFormEditor({
                           {selectedFormElement.typeId !== "WelcomeMessage" &&
                             selectedFormElement.typeId !== "ThankYou" &&
                             !advancesAutomatically(selectedFormElement) &&
-                            !components[selectedFormElement.typeId].stages && (
+                            !components[selectedFormElement.typeId].stages &&
+                            !components[selectedFormElement.typeId].hideNav && (
                               <Button
                                 label={t("Next")}
                                 backgroundColor={style.secondaryColor}
@@ -580,7 +582,8 @@ export default function SurveyFormEditor({
             {route === "formElement" &&
               selectedFormElement &&
               selectedFormElement.type?.isInput &&
-              selectedFormElement.typeId !== "FeatureName" && (
+              selectedFormElement.typeId !== "FeatureName" &&
+              selectedFormElement.typeId !== "SAPRange" && (
                 <div className="px-3 text-sm pt-3">
                   <InputBlock
                     labelType="small"
@@ -614,9 +617,7 @@ export default function SurveyFormEditor({
             </div>
             {route === "formElement" &&
               selectedFormElement &&
-              selectedFormElement.typeId !== "WelcomeMessage" &&
-              selectedFormElement.typeId !== "ThankYou" &&
-              selectedFormElement.typeId !== "FeatureName" && (
+              !components[selectedFormElement.typeId].disableDeletion && (
                 <>
                   <div className="px-3 text-base">
                     {selectedFormElement.type?.isInput &&
@@ -1129,7 +1130,7 @@ function StageSelect({
   onChange,
   value,
 }: {
-  stages: { [stage: string]: number };
+  stages: { [stage: number]: string };
   onChange: (n: number) => void;
   value: number;
 }) {
@@ -1146,11 +1147,13 @@ function StageSelect({
         value={value.toString()}
         onChange={(e) => onChange(parseInt(e.target.value))}
       >
-        {Object.keys(stages).map((key) => (
-          <option value={stages[key].toString()} key={key}>
-            {key.replace("_", " ").toLowerCase()}
-          </option>
-        ))}
+        {Object.keys(stages)
+          .filter((key) => parseInt(key).toString() !== key)
+          .map((label, i) => (
+            <option value={i} key={label}>
+              {label.replace("_", " ").toLowerCase()}
+            </option>
+          ))}
       </select>
     </div>
   );

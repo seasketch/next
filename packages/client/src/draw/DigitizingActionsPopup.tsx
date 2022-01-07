@@ -6,7 +6,7 @@ import {
 } from "@heroicons/react/outline";
 import bbox from "@turf/bbox";
 import { AnimatePresence, motion } from "framer-motion";
-import { BBox, Feature } from "geojson";
+import { BBox, Feature, FeatureCollection } from "geojson";
 import { map } from "lodash";
 import { LngLatBoundsLike, LngLatLike, Map } from "mapbox-gl";
 import {
@@ -24,6 +24,7 @@ import {
   SketchGeometryType,
 } from "../generated/graphql";
 import { SurveyStyleContext } from "../surveys/appearance";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
 const DigitizingActionsPopup: FunctionComponent<{
   open: boolean;
@@ -32,7 +33,7 @@ const DigitizingActionsPopup: FunctionComponent<{
 }> = ({ anchor, onRequestClose, open, children }) => {
   const { t } = useTranslation("surveys");
   const { x, y } = anchor?.getBoundingClientRect() || { x: 0, y: 0 };
-  const { isSmall } = useContext(SurveyStyleContext);
+  const { isSmall } = useContext(SurveyLayoutContext).style;
   return createPortal(
     <AnimatePresence>
       {open && (
@@ -82,7 +83,7 @@ const Item: FunctionComponent<{
   phoneOnly?: boolean;
   selected?: boolean;
 }> = ({ onClick, title, Icon, disabled, phoneOnly, selected }) => {
-  const { isSmall } = useContext(SurveyStyleContext);
+  const { isSmall } = useContext(SurveyLayoutContext).style;
   if (phoneOnly && !isSmall) {
     return null;
   }
@@ -134,7 +135,7 @@ export function PreviousQuestion(
 ) {
   const { t } = useTranslation("surveys");
   return (
-    <Item {...props} Icon={ChevronUpIcon} title={t("Previous question")} />
+    <Item {...props} Icon={ChevronUpIcon} title={t("Previous Question")} />
   );
 }
 
@@ -170,9 +171,10 @@ export function ResetView(
 export function ZoomToFeature(
   props: DigitizingActionItem<{
     map: Map;
-    feature?: Feature<any>;
+    feature?: Feature<any> | FeatureCollection<any>;
     isSmall: boolean;
     geometryType: SketchGeometryType;
+    title?: string;
   }>
 ) {
   const { t } = useTranslation("surveys");
@@ -189,7 +191,7 @@ export function ZoomToFeature(
           maxZoom: 17,
         })
       }
-      title={t("Focus on location")}
+      title={props.title || t("Focus on location")}
     />
   );
 }

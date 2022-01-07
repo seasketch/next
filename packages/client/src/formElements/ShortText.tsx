@@ -63,7 +63,7 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
           }
           autocomplete={props.componentSettings.autocomplete}
           required={props.isRequired}
-          autoFocus={true}
+          autoFocus={props.autoFocus}
           placeholder={props.componentSettings.placeholder}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -109,7 +109,7 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
                 }
               />
               <TextInput
-                label={t("Placeholder")}
+                label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
                 value={props.componentSettings.placeholder || ""}
                 onChange={updateComponentSetting(
@@ -118,7 +118,7 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
                 )}
               />
               <TextInput
-                label={t("Autocomplete ID")}
+                label={t("Autocomplete ID", { ns: "admin:surveys" })}
                 name="autocomplete"
                 placeholder={"name, fname, email, etc"}
                 value={props.componentSettings.autocomplete || ""}

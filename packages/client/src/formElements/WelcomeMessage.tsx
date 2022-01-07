@@ -1,12 +1,10 @@
-import { useAuth0 } from "@auth0/auth0-react";
 import { useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Auth0User } from "../auth/Auth0User";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
-import { SurveyStyleContext } from "../surveys/appearance";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 import {
   FormElementBody,
   FormElementComponent,
@@ -24,12 +22,11 @@ const WelcomeMessage: FormElementComponent<
   { dropdownSelection?: string }
 > = (props) => {
   const { t } = useTranslation("admin:surveys");
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   const context = useContext(SurveyContext);
   if (!context) {
     throw new Error("SurveyContext not set");
   }
-  const auth0 = useAuth0<Auth0User>();
   return (
     <>
       <FormElementBody
@@ -41,7 +38,7 @@ const WelcomeMessage: FormElementComponent<
       <Button
         autofocus
         className="mt-6 mb-10"
-        onClick={props.onSubmit}
+        onClick={() => props.onChange({ dropdownSelection: "BEGIN" }, false)}
         label={
           props.componentSettings.beginButtonText?.length
             ? props.componentSettings.beginButtonText
@@ -105,7 +102,7 @@ const WelcomeMessage: FormElementComponent<
                   "beginButtonText",
                   props.componentSettings
                 )}
-                label={t("Begin Button Text")}
+                label={t("Begin Button Text", { ns: "admin:surveys" })}
               />
               <InputBlock
                 labelType="small"
@@ -134,8 +131,24 @@ const WelcomeMessage: FormElementComponent<
   );
 };
 
+// eslint-disable-next-line i18next/no-literal-string
+// WelcomeMessage.label = <span>Welcome</span>;
+// (
+//   <Trans key="WelcomeMessageLabel" ns="admin:surveys">
+//     Welcome Message
+//   </Trans>
+// );
+// eslint-disable-next-line i18next/no-literal-string
+// WelcomeMessage.description = <span>description</span>;
+// (
+//   <Trans key="WelcomeMessageDescription" ns="admin:surveys">
+//     Rich text block.
+//   </Trans>
+// );
+
 WelcomeMessage.label = <Trans ns="admin:surveys">Welcome Message</Trans>;
 WelcomeMessage.description = <Trans ns="admin:surveys">Rich text block.</Trans>;
+
 WelcomeMessage.templatesOnly = true;
 // eslint-disable-next-line i18next/no-literal-string
 WelcomeMessage.defaultBody = fromMarkdown(`
@@ -152,5 +165,6 @@ WelcomeMessage.icon = () => (
 );
 
 WelcomeMessage.hideNav = true;
+WelcomeMessage.disableDeletion = true;
 
 export default WelcomeMessage;

@@ -14,7 +14,9 @@ import MultipleChoice from "./MultipleChoice";
 import SingleSpatialInput from "./SingleSpatialInput";
 import MultiSpatialInput from "./MultiSpatialInput";
 import FeatureName from "./FeatureName";
-import SpatialAcessPriority from "./SpatialAccessPriority";
+import SpatialAccessPriority from "./SpatialAccessPriority/SpatialAccessPriority";
+import SAPRange from "./SAPRange";
+import SaveScreen from "./SaveScreen";
 
 export const components: {
   /** componentName must match form_elements db table */
@@ -35,5 +37,7 @@ components["ComboBox"] = ComboBox;
 components["ThankYou"] = ThankYou;
 components["SingleSpatialInput"] = SingleSpatialInput;
 components["MultiSpatialInput"] = MultiSpatialInput;
-components["SpatialAccessPriorityInput"] = SpatialAcessPriority;
+components["SpatialAccessPriorityInput"] = SpatialAccessPriority;
 components["FeatureName"] = FeatureName;
+components["SAPRange"] = SAPRange;
+components["SaveScreen"] = SaveScreen;

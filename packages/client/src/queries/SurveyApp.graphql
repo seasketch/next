@@ -110,3 +110,15 @@ mutation CreateResponse(
     }
   }
 }
+
+query GetBasemapsAndRegion {
+  currentProject {
+    id
+    basemaps {
+      ...BasemapDetails
+    }
+    region {
+      geojson
+    }
+  }
+}

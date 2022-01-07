@@ -23,10 +23,19 @@ export default function FormElementFactory({
       <Component
         value={value}
         componentSettings={componentSettings}
+        autoFocus={
+          formElementData.autoFocus === undefined
+            ? true
+            : formElementData.autoFocus
+        }
         {...formElementData}
       />
     );
   } else {
-    return <Trans ns="errors">missing form element type {typeName}</Trans>;
+    return (
+      <Trans values={{ typeName }} ns="errors">
+        Missing form element type {{ typeName }}
+      </Trans>
+    );
   }
 }

@@ -16,16 +16,15 @@ import {
   WhatsappIcon,
   WhatsappShareButton,
 } from "react-share";
-import { useParams } from "react-router";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import { HeartIcon, LinkIcon } from "@heroicons/react/outline";
+import { LinkIcon } from "@heroicons/react/outline";
 import TextInput from "../components/TextInput";
 import Button from "../components/Button";
 import { useContext } from "react";
-import { SurveyStyleContext } from "../surveys/appearance";
 import { Link } from "react-router-dom";
-import { useCurrentProjectMetadataQuery } from "../generated/graphql";
+import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import useClipboard from "react-use-clipboard";
 
 export interface ThankYouProps {
   promptToRespondAgain?: boolean;
@@ -39,11 +38,14 @@ export interface ThankYouProps {
  */
 const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
   const { t } = useTranslation("admin:surveys");
-  const style = useContext(SurveyStyleContext);
+  const style = useContext(SurveyLayoutContext).style;
   const context = useContext(SurveyContext);
-  // eslint-disable-next-line i18next/no-literal-string
-  const shareUrl = new URL(context!.surveyUrl).pathname;
+  const shareUrl = new URL(context!.surveyUrl).toString();
   const shareClassName = "w-8 h-8 rounded shadow cursor-pointer";
+  const [isCopied, setCopied] = useClipboard(shareUrl, {
+    // `isCopied` will go back to `false` after 2000ms.
+    successDuration: 1000,
+  });
   return (
     <>
       <div className="mb-5">
@@ -54,7 +56,7 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
           editable={props.editable}
         />
 
-        <div className="my-5 space-x-2">
+        <div className="my-5 space-x-2 flex items-center">
           {props.componentSettings.shareButtons && (
             <>
               <FacebookShareButton
@@ -71,12 +73,20 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
               <LinkedinShareButton url={shareUrl}>
                 <LinkedinIcon className={shareClassName} />
               </LinkedinShareButton>
-              <a
-                href={shareUrl}
-                className={`${shareClassName} bg-gray-400 inline-block text-center`}
+              <button
+                onClick={setCopied}
+                className={`${shareClassName} bg-gray-400 inline-block text-center relative`}
               >
-                <LinkIcon className="w-6 h-6 mx-auto mt-1" />
-              </a>
+                <LinkIcon className="w-6 h-6 mx-auto" />
+
+                <div
+                  className={`absolute ${
+                    isCopied ? "opacity-100" : "opacity-0"
+                  } transition-opacity duration-500 left-10 top-0 rounded px-2 py-1 bg-black shadow-lg text-white whitespace-nowrap`}
+                >
+                  <Trans ns="surveys">Copied URL</Trans>
+                </div>
+              </button>
             </>
           )}
         </div>
@@ -208,5 +218,5 @@ ThankYou.icon = () => (
 );
 
 ThankYou.hideNav = true;
-
+ThankYou.disableDeletion = true;
 export default ThankYou;

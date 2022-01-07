@@ -5,7 +5,7 @@ const styles = [
   //   filter: [
   //     "all",
   //     // ["==", "active", "false"],
-  //     // ["==", "user_kinks", true],
+  //     // ["==", "kinks", true],
   //     ["==", "$type", "Polygon"],
   //     // ["!=", "mode", "static"],
   //   ],
@@ -29,7 +29,7 @@ const styles = [
     filter: [
       "all",
       ["==", "active", "false"],
-      ["!=", "user_kinks", "true"],
+      ["!=", "kinks", "true"],
       ["==", "$type", "Polygon"],
       ["!=", "mode", "static"],
     ],
@@ -45,7 +45,7 @@ const styles = [
     filter: [
       "all",
       ["==", "active", "false"],
-      ["==", "user_kinks", "true"],
+      ["==", "kinks", "true"],
       ["==", "$type", "Polygon"],
       ["!=", "mode", "static"],
     ],
@@ -62,7 +62,7 @@ const styles = [
       "all",
       ["==", "active", "true"],
       ["==", "$type", "Polygon"],
-      ["!=", "user_kinks", "true"],
+      ["!=", "kinks", "true"],
     ],
     paint: {
       "fill-color": "#fbb03b",
@@ -77,7 +77,7 @@ const styles = [
       "all",
       ["==", "active", "true"],
       ["==", "$type", "Polygon"],
-      ["==", "user_kinks", "true"],
+      ["==", "kinks", "true"],
     ],
     paint: {
       "fill-color": "#fb3e3b",
@@ -101,7 +101,7 @@ const styles = [
       "all",
       ["==", "active", "false"],
       ["==", "$type", "Polygon"],
-      ["!=", "user_kinks", "true"],
+      ["!=", "kinks", "true"],
       ["!=", "mode", "static"],
     ],
     layout: {
@@ -120,7 +120,7 @@ const styles = [
       "all",
       ["==", "active", "false"],
       ["==", "$type", "Polygon"],
-      ["==", "user_kinks", "true"],
+      ["==", "kinks", "true"],
       ["!=", "mode", "static"],
     ],
     layout: {
@@ -139,7 +139,7 @@ const styles = [
       "all",
       ["==", "active", "true"],
       ["==", "$type", "Polygon"],
-      ["!=", "user_kinks", "true"],
+      ["!=", "kinks", "true"],
     ],
     layout: {
       "line-cap": "round",
@@ -158,7 +158,7 @@ const styles = [
       "all",
       ["==", "active", "true"],
       ["==", "$type", "Polygon"],
-      ["==", "user_kinks", "true"],
+      ["==", "kinks", "true"],
     ],
     layout: {
       "line-cap": "round",
@@ -332,6 +332,30 @@ const styles = [
     paint: {
       "circle-radius": 5,
       "circle-color": "#404040",
+    },
+  },
+  {
+    id: "gl-draw-polygon-self-intersection",
+    type: "symbol",
+    filter: [
+      "all",
+      ["==", "$type", "Point"],
+      ["==", "meta", "self-intersection"],
+    ],
+    layout: {
+      // "text-field": "↚",
+      // "text-size": 32,
+      "text-field": "✕",
+      "text-size": 14,
+      "text-offset": [0, 0],
+      "text-allow-overlap": true,
+    },
+    paint: {
+      "text-opacity": 0.8,
+      "text-halo-color": "rgba(81.6%, 23.1%, 23.1%, 0.8)",
+      // "text-color": "#fe6400",
+      "text-halo-width": 1,
+      "text-halo-blur": 0,
     },
   },
 ];

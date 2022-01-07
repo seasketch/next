@@ -38,11 +38,13 @@ export default function SortableFormElementList(props: Props) {
   const welcome = props.items.find((i) => i.typeId === "WelcomeMessage");
   const thankYou = props.items.find((i) => i.typeId === "ThankYou");
   const featureName = props.items.find((i) => i.typeId === "FeatureName");
+  const sapRange = props.items.find((i) => i.typeId === "SAPRange");
   const sortableFormElements = props.items.filter(
     (i) =>
       i.typeId !== "WelcomeMessage" &&
       i.typeId !== "ThankYou" &&
-      i.typeId != "FeatureName"
+      i.typeId !== "FeatureName" &&
+      i.typeId !== "SAPRange"
   );
   const [collapseSpatialItems, setCollapseSpatialItems] = useState(false);
 
@@ -76,6 +78,23 @@ export default function SortableFormElementList(props: Props) {
             onClick={() => {
               if (props.onClick) {
                 props.onClick(featureName.id);
+              }
+            }}
+            draggable={false}
+          />
+        </div>
+      )}
+      {sapRange && (
+        <div className="mb-2">
+          <FormElementListItem
+            dim={props.dim}
+            typeId={sapRange.typeId}
+            selected={props.selection === sapRange.id}
+            element={sapRange}
+            typeName={sapRange.type?.label || sapRange.typeId}
+            onClick={() => {
+              if (props.onClick) {
+                props.onClick(sapRange.id);
               }
             }}
             draggable={false}

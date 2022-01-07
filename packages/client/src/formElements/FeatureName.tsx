@@ -21,14 +21,23 @@ export type FeatureNameProps = {
  */
 const FeatureName: FormElementComponent<FeatureNameProps, string> = (props) => {
   const { t } = useTranslation("surveys");
-  const [val, setVal] = useState(
-    props.value ||
-      (props.componentSettings.generatedNamePrefix || "Location") +
-        ` ${props.featureNumber.toLocaleString()}`
-  );
-  const [errors, setErrors] = useState((val && val.length > 0) || false);
+  const [val, setVal] = useState(props.value);
+
   useEffect(() => {
-    setErrors((val && val.length > 0) || false);
+    if (props.value === undefined) {
+      const value = `${
+        props.componentSettings.generatedNamePrefix || "Location"
+      } ${props.featureNumber.toLocaleString()}`;
+      props.onChange(value, false);
+      setVal(value);
+    } else if (props.value !== val) {
+      setVal(props.value);
+    }
+  }, [props.value]);
+
+  const [errors, setErrors] = useState(!(val && val.length > 0));
+  useEffect(() => {
+    setErrors(!(val && val.length > 0));
   }, [props.componentSettings, props.isRequired, val]);
   useEffect(() => {
     if (props.editable) {
@@ -53,22 +62,23 @@ const FeatureName: FormElementComponent<FeatureNameProps, string> = (props) => {
         style={{ height: 68 }}
       >
         <TextInput
-          error={
+          placeholder={
             props.submissionAttempted && errors
               ? t("Required", { ns: "surveys" })
               : undefined
           }
-          value={val}
+          error={props.submissionAttempted && errors ? " " : undefined}
+          value={val || ""}
           label=""
           onChange={(v) => {
-            const e = (v && v.length > 0) || false;
+            const e = !(v && v.length > 0);
             setVal(v);
             props.onChange(v, e ? true : false);
           }}
           name={`FeatureName`}
           autocomplete={"none"}
           required={true}
-          autoFocus={true}
+          autoFocus={props.autoFocus}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               props.onSubmit();
@@ -82,11 +92,18 @@ const FeatureName: FormElementComponent<FeatureNameProps, string> = (props) => {
             <>
               {props.sketchClass && (
                 <TextInput
-                  label={t("Generated Name Prefix")}
+                  label={t("Generated Name Prefix", { ns: "admin:surveys" })}
                   name="generatedNamePrefix"
-                  description={t(
-                    "A name will be generated for each new feature (e.g. Location 4) which can be changed by the user. The prefix will be joined with a localized number."
-                  )}
+                  description={
+                    <Trans
+                      ns="admin:surveys"
+                      i18nKey="FeatureNameGenerationDescription"
+                    >
+                      A name will be generated for each new feature (e.g.
+                      Location 4) which can be changed by the user. The prefix
+                      will be joined with a localized number.
+                    </Trans>
+                  }
                   value={props.componentSettings.generatedNamePrefix || ""}
                   onChange={updateComponentSetting(
                     "generatedNamePrefix",

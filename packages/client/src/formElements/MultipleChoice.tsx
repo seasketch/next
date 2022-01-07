@@ -13,7 +13,7 @@ import FormElementOptionsInput, {
   FormElementOption,
 } from "./FormElementOptionsInput";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
-import SurveyButton from "./SurveyButton";
+import SurveyInputButton from "./SurveyInputButton";
 
 export type MultipleChoiceProps = {
   multipleSelect?: boolean;
@@ -34,13 +34,13 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
         required={props.isRequired}
         editable={props.editable}
       />
-      <div className="inline-block">
+      <div className="block sm:inline-block">
         <div className="py-4 pb-6 space-y-2 flex flex-col">
           {(props.componentSettings.options || []).map(({ label, value }) => {
             const current = props.value || [];
             const selected = current.indexOf(value || label) !== -1;
             return (
-              <SurveyButton
+              <SurveyInputButton
                 key={value || label}
                 className={"w-full"}
                 label={label}
@@ -87,7 +87,7 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
             <>
               <InputBlock
                 labelType="small"
-                title={t("Multiple Select")}
+                title={t("Multiple Select", { ns: "admin:surveys" })}
                 input={
                   <Switch
                     isToggled={props.componentSettings.multipleSelect}
@@ -104,14 +104,15 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
                   if (
                     window.confirm(
                       t(
-                        "Are you sure? ComboBox's do not support multiple-select. You can always change back."
+                        "Are you sure? ComboBox's do not support multiple-select. You can always change back.",
+                        { ns: "admin:surveys" }
                       )
                     )
                   ) {
                     updateBaseSetting("typeId")("ComboBox");
                   }
                 }}
-                label={t("Change to ComboBox")}
+                label={t("Change to ComboBox", { ns: "admin:surveys" })}
               />
               <FormElementOptionsInput
                 key={props.id}

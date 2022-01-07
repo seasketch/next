@@ -213,7 +213,9 @@ CREATE TYPE public.form_element_layout AS ENUM (
     'COVER',
     'MAP_STACKED',
     'MAP_SIDEBAR_LEFT',
-    'MAP_SIDEBAR_RIGHT'
+    'MAP_SIDEBAR_RIGHT',
+    'MAP_FULLSCREEN',
+    'MAP_TOP'
 );
 
 
@@ -1023,6 +1025,7 @@ CREATE FUNCTION public._001_unnest_survey_response_sketches() RETURNS trigger
       feature_data record;
       sketch_ids int[];
       sketch_id int;
+      feature_name_element_id int;
     BEGIN
       -- loop over spatial form elements in survey
       for f in select 
@@ -1042,11 +1045,12 @@ CREATE FUNCTION public._001_unnest_survey_response_sketches() RETURNS trigger
         where
           form_element_types.is_spatial = true
       loop
+          select id into feature_name_element_id from form_elements where form_id = (select id from forms where sketch_class_id = f.sketch_class_id) and type_id = 'FeatureName';
           if NEW.data::jsonb ? f.id THEN
             sketch_ids = ARRAY[]::int[];
             set constraints sketches_response_id_fkey deferred;
-            if NEW.data::jsonb #> ARRAY[f.id,'features'::text] is not null then
-              for feature_data in select jsonb_array_elements(NEW.data::jsonb #> ARRAY[f.id,'features'::text]) as feature loop
+            if NEW.data::jsonb #> ARRAY[f.id,'collection'::text, 'features'::text] is not null then
+              for feature_data in select jsonb_array_elements(NEW.data::jsonb #> ARRAY[f.id,'collection'::text, 'features'::text]) as feature loop
                 insert into sketches (
                   response_id, 
                   form_element_id, 
@@ -1060,7 +1064,7 @@ CREATE FUNCTION public._001_unnest_survey_response_sketches() RETURNS trigger
                   f.id::int, 
                   f.sketch_class_id, 
                   NEW.user_id,
-                  feature_data.feature::jsonb #> ARRAY['properties'::text,'name'::text], 
+                  coalesce((feature_data.feature::jsonb #> ARRAY['properties'::text,feature_name_element_id::text])::text, ''::text), 
                   st_geomfromgeojson(feature_data.feature::jsonb ->> 'geometry'::text),
                   feature_data.feature::jsonb -> 'properties'::text
                 ) returning id into sketch_id;
@@ -11900,7 +11904,7 @@ COMMENT ON CONSTRAINT form_fields_form_id_fkey ON public.form_elements IS '@omit
 --
 
 ALTER TABLE ONLY public.form_logic_conditions
-    ADD CONSTRAINT form_logic_conditions_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES public.form_logic_rules(id);
+    ADD CONSTRAINT form_logic_conditions_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES public.form_logic_rules(id) ON DELETE CASCADE;
 
 
 --
@@ -12298,7 +12302,7 @@ COMMENT ON CONSTRAINT sketches_folder_id_fkey ON public.sketches IS '@omit many'
 --
 
 ALTER TABLE ONLY public.sketches
-    ADD CONSTRAINT sketches_form_element_id_fkey FOREIGN KEY (form_element_id) REFERENCES public.form_elements(id);
+    ADD CONSTRAINT sketches_form_element_id_fkey FOREIGN KEY (form_element_id) REFERENCES public.form_elements(id) ON DELETE CASCADE;
 
 
 --

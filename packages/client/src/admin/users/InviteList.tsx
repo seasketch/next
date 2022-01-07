@@ -198,7 +198,8 @@ function InviteList(props: Props) {
               if (
                 window.confirm(
                   t(
-                    `Are you sure you want to email all ${invites.length} draft invites?`
+                    `Are you sure you want to email all {{count}} draft invites?`,
+                    { count: invites.length }
                   )
                 )
               ) {

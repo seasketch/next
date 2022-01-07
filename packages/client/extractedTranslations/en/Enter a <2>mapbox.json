@@ -1,5 +1,3 @@
 {
-  "//</2> type url or the direct url to a mapbox-gl style hosted on another platform": {
-    "": "Enter a <2>mapbox://</2> type url or the direct url to a mapbox-gl style hosted on another platform."
-  }
+  "//</2> type url or the direct url to a mapbox-gl style hosted on another platform.": "Enter a <2>mapbox://</2> type url or the direct url to a mapbox-gl style hosted on another platform."
 }

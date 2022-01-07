@@ -55,7 +55,7 @@ export function getSurveyPagingState<
 
   const next = getNextFormElement(current, sortedFormElements, rules, answers);
   return {
-    isLastQuestion: next?.typeId === "ThankYou",
+    isLastQuestion: next?.typeId === "SaveScreen",
     isFirstQuestion: currentIndex === 1,
     previousFormElement: path[path.length - 2],
     nextFormElement: next,
@@ -134,6 +134,10 @@ function getNextFormElement<
   } else if (currentIndex === sortedFormElements.length - 1) {
     // On ThankYou page, survey is complete
     return null;
+  } else if (currentIndex === sortedFormElements.length - 3) {
+    // On the last question before SaveScreen page. Cannot jump since that would
+    // require going backwards
+    return nextByPosition;
   } else if (currentIndex === sortedFormElements.length - 2) {
     // On the last question before ThankYou page. Cannot jump since that would
     // require going backwards
