@@ -258,6 +258,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
               >
                 {scrollContentArea && (
                   <div
+                    dir="ltr"
                     className="sticky w-full flex justify-end z-10  pointer-events-none"
                     style={{
                       top: "calc(100% - 40px)",

@@ -44,6 +44,7 @@ export default function SurveyNavigationButton({
   }
   return (
     <div
+      dir="ltr"
       style={{
         width: "fit-content",
         height: "fit-content",
