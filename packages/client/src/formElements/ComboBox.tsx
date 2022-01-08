@@ -6,6 +6,7 @@ import {
   FormElementComponent,
   FormElementEditorPortal,
   SurveyContext,
+  useLocalizedComponentSetting,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import { useCombobox } from "downshift";
@@ -29,12 +30,17 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
   props
 ) => {
   const { t } = useTranslation("surveys");
-  const items = props.componentSettings.options || [];
+  const items: FormElementOption[] =
+    useLocalizedComponentSetting("options", props) || [];
   const [choices, setChoices] = useState<string[]>(items.map((i) => i.label));
   const [selectedOption, setSelectedOption] = useState<
     FormElementOption | undefined | null
   >();
   const context = useContext(SurveyContext);
+
+  useEffect(() => {
+    setChoices(items.map((i) => i.label));
+  }, [context?.lang]);
 
   function onChange(value: string | null | undefined) {
     if (value === null) {
