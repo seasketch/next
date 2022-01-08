@@ -42,7 +42,7 @@ var request = require("request");
 var fs = require("fs");
 var path = require("path");
 var util = require("util");
-var namespaces = require("../lang/namespaces.json");
+var namespaces = require("../src/lang/namespaces.json");
 var post = util.promisify(request.post);
 var get = util.promisify(request.get);
 var INCLUDE_EMPTY_TERMS = false;
@@ -65,7 +65,7 @@ var INCLUDE_EMPTY_TERMS = false;
                 }
                 terms = data.result.terms;
                 terms.sort(function (a, b) { return a.term.localeCompare(b.term); });
-                console.log("Including namespaces ".concat(namespaces.include.join(", ")));
+                console.log("Publishing namespaces ".concat(namespaces.include.join(", ")));
                 return [4 /*yield*/, post("https://api.poeditor.com/v2/languages/list", {
                         form: {
                             api_token: process.env.POEDITOR_API_TOKEN,
@@ -82,10 +82,14 @@ var INCLUDE_EMPTY_TERMS = false;
                 _i = 0, _b = languages.filter(function (l) { return l.code !== "en"; });
                 _g.label = 3;
             case 3:
-                if (!(_i < _b.length)) return [3 /*break*/, 7];
+                if (!(_i < _b.length)) return [3 /*break*/, 8];
                 lang = _b[_i];
+                if (!(lang.percentage === 0)) return [3 /*break*/, 4];
+                console.log("Skipping ".concat(lang.name, " (").concat(lang.percentage, "% translated)"));
+                return [3 /*break*/, 7];
+            case 4:
                 console.log("Importing ".concat(lang.name, " (").concat(lang.percentage, "% translated)"));
-                basePath = path.join(__dirname, "../lang", lang.code);
+                basePath = path.join(__dirname, "../src/lang", lang.code);
                 if (fs.existsSync(basePath)) {
                     // @ts-ignore
                     fs.rmSync(basePath, { recursive: true, force: true });
@@ -100,14 +104,14 @@ var INCLUDE_EMPTY_TERMS = false;
                             order: "terms"
                         }
                     })];
-            case 4:
+            case 5:
                 _c = _g.sent(), statusCode_1 = _c.statusCode, body_1 = _c.body;
                 data = JSON.parse(body_1);
                 if (data.response.status !== "success") {
                     throw new Error("API response was ".concat(data.response.status));
                 }
                 return [4 /*yield*/, get(data.result.url)];
-            case 5:
+            case 6:
                 translations = _g.sent();
                 translated = JSON.parse(translations.body);
                 fs.mkdirSync(basePath);
@@ -125,11 +129,11 @@ var INCLUDE_EMPTY_TERMS = false;
                         fs.writeFileSync(path.join(basePath, "".concat(namespace.replace(":", "/"), ".json")), JSON.stringify(translatedTerms, null, "  "));
                     }
                 }
-                _g.label = 6;
-            case 6:
+                _g.label = 7;
+            case 7:
                 _i++;
                 return [3 /*break*/, 3];
-            case 7: return [2 /*return*/];
+            case 8: return [2 /*return*/];
         }
     });
 }); })();

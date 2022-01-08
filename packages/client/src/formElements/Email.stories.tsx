@@ -53,7 +53,11 @@ const Template: Story = (args: any) => {
   const [value, setValue] = useState<string | undefined>(undefined);
   return (
     <SurveyContext.Provider
-      value={{ ...TestSurveyContextValue, bestEmail: args.bestEmail }}
+      value={{
+        ...TestSurveyContextValue,
+        bestEmail: args.bestEmail,
+        supportedLanguages: [],
+      }}
     >
       <SurveyAppLayout progress={0.4}>
         <Email

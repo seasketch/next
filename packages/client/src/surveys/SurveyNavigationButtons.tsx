@@ -1,12 +1,18 @@
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/outline";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  TranslateIcon,
+} from "@heroicons/react/outline";
 import { MouseEventHandler, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { SurveyContext } from "../formElements/FormElement";
 import {
   FormElementLayout,
   SurveyAppFormElementFragment,
 } from "../generated/graphql";
 import { SurveyStyleContext } from "./appearance";
+import LanguageSelector from "./LanguageSelector";
 import { SurveyPagingState } from "./paging";
 
 interface SurveyNavigationButtonProps {
@@ -31,6 +37,7 @@ export default function SurveyNavigationButton({
   hidden,
 }: SurveyNavigationButtonProps) {
   const style = useContext(SurveyStyleContext);
+  const context = useContext(SurveyContext);
   const { t } = useTranslation("surveys");
   if (hidden) {
     return null;
@@ -63,7 +70,21 @@ export default function SurveyNavigationButton({
           <ChevronUpIcon className="w-6 h-6" />
         </Link>
       )}
-
+      {(context?.supportedLanguages || []).length > 0 && (
+        <LanguageSelector
+          button={(onClick) => (
+            <button
+              className="px-3"
+              style={{
+                background: `linear-gradient(${style.secondaryColor}, ${style.secondaryColor2})`,
+              }}
+              onClick={onClick}
+            >
+              <TranslateIcon className="w-6 h-6" />
+            </button>
+          )}
+        ></LanguageSelector>
+      )}
       <Link
         title={t("Next Question")}
         onClick={onNext}

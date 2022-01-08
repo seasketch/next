@@ -42,7 +42,7 @@ var request = require("request");
 var fs = require("fs");
 var path = require("path");
 var util = require("util");
-var namespaces = require("../lang/namespaces.json");
+var namespaces = require("../src/lang/namespaces.json");
 var post = util.promisify(request.post);
 (function () { return __awaiter(void 0, void 0, void 0, function () {
     var res, data, terms, termsToAdd, termsToUpdate, _i, _a, namespace, data_1, _loop_1, key, _b, terms_1, term, updated, data_2, _c, statusCode, body, data_3, translations;
@@ -68,7 +68,7 @@ var post = util.promisify(request.post);
                 for (_i = 0, _a = namespaces.include; _i < _a.length; _i++) {
                     namespace = _a[_i];
                     data_1 = JSON.parse(fs
-                        .readFileSync(path.join(__dirname, "../lang/en/".concat(namespace.replace(":", "/"), ".json")))
+                        .readFileSync(path.join(__dirname, "../src/lang/en/".concat(namespace.replace(":", "/"), ".json")))
                         .toString());
                     _loop_1 = function (key) {
                         var existing = terms.find(function (t) { return t.term === key; });

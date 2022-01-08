@@ -44,6 +44,7 @@ import {
 } from "geojson";
 import { LngLatBoundsLike } from "mapbox-gl";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { LangDetails } from "../lang/supported";
 require("./prosemirror-body.css");
 require("./unreset.css");
 const LazyBodyEditor = lazy(() => import("./BodyEditor"));
@@ -73,6 +74,7 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
   body: any;
   isRequired: boolean;
   componentSettings: ComponentSettings;
+  alternateLanguageSettings: { [key: string]: any };
   value?: ValueType;
   editable?: boolean;
   onChange: (value: ValueType | undefined, validationErrors: boolean) => void;
@@ -113,13 +115,14 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
  * @param body ProseMirror Node/Document
  */
 export function FormElementBody({
-  body,
+  body: defaultBody,
   required,
   isInput,
   editable,
   formElementId,
   componentSettings,
   componentSettingName,
+  alternateLanguageSettings,
 }: {
   formElementId: number;
   body: any;
@@ -128,12 +131,27 @@ export function FormElementBody({
   editable?: boolean;
   componentSettings?: any;
   componentSettingName?: string;
+  alternateLanguageSettings: any;
 }) {
   const schema = isInput
     ? editorConfig.questions.schema
     : editorConfig.content.schema;
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
+  const context = useContext(SurveyContext);
+
+  let body = defaultBody;
+  if (
+    context &&
+    context.lang.code !== "EN" &&
+    alternateLanguageSettings[context.lang.code]
+  ) {
+    body = alternateLanguageSettings[context.lang.code][
+      componentSettingName || "body"
+    ] || {
+      ...defaultBody,
+    };
+  }
 
   useEffect(() => {
     if (target.current && document) {
@@ -161,6 +179,7 @@ export function FormElementBody({
             isInput={isInput}
             componentSettingName={componentSettingName}
             componentSettings={componentSettings}
+            alternateLanguageSettings={alternateLanguageSettings}
           />
         </Suspense>
       </div>
@@ -183,7 +202,9 @@ type FormElementRenderer = (
   ) => (value: any) => void,
   updateComponentSetting: (
     setting: string,
-    currentSettings: any
+    currentSettings: any,
+    language?: string,
+    alternateLanguageSettings?: any
   ) => (value: any) => void,
   updateSurveySettings: (settings: {
     showFacilitationOption?: boolean;
@@ -311,13 +332,23 @@ function FormElementEditorContainer({
 export function useUpdateFormElement(
   data?: Pick<
     FormElement,
-    "body" | "componentSettings" | "id" | "isRequired" | "typeId"
+    | "body"
+    | "componentSettings"
+    | "id"
+    | "isRequired"
+    | "typeId"
+    | "alternateLanguageSettings"
   >
 ): [
   (
     setting: "body" | "isRequired" | "exportId" | "typeId"
   ) => (value: any) => void,
-  (setting: string, currentSettings: any) => (value: any) => void,
+  (
+    setting: string,
+    currentSettings: any,
+    language?: string,
+    alternateLanguageSettings?: any
+  ) => (value: any) => void,
   MutationResult<UpdateFormElementMutation>
 ] {
   const onError = useGlobalErrorHandler();
@@ -329,7 +360,12 @@ export function useUpdateFormElement(
     variables: Partial<
       Pick<
         FormElement,
-        "body" | "componentSettings" | "isRequired" | "exportId" | "typeId"
+        | "body"
+        | "componentSettings"
+        | "isRequired"
+        | "exportId"
+        | "typeId"
+        | "alternateLanguageSettings"
       >
     >
   ) => {
@@ -359,9 +395,29 @@ export function useUpdateFormElement(
   };
   const updateComponentSetting = (
     setting: string,
-    currentSettings: FormElementProps<any>
-  ) => (value: any) =>
-    updater({ componentSettings: { ...currentSettings, [setting]: value } });
+    currentSettings: FormElementProps<any>,
+    language?: string,
+    alternateLanguageSettings?: any
+  ) => (value: any) => {
+    if (language && !alternateLanguageSettings) {
+      throw new Error(
+        `Specified language ${language} but not current alternateLanguageSettings`
+      );
+    }
+    if (!language || language === "EN") {
+      updater({ componentSettings: { ...currentSettings, [setting]: value } });
+    } else {
+      updater({
+        alternateLanguageSettings: {
+          ...alternateLanguageSettings,
+          [language]: {
+            ...alternateLanguageSettings[language],
+            [setting]: value,
+          },
+        },
+      });
+    }
+  };
   return [updateBaseSetting, updateComponentSetting, updateFormElementState];
 }
 
@@ -503,6 +559,13 @@ export const SurveyContext = createContext<{
   >;
   resetResponse?: () => Promise<void>;
   savingResponse?: boolean;
+  /**
+   * Survey's supported languages
+   * Current languge can be gotten from the useTranslation() hook
+   * */
+  supportedLanguages: string[];
+  lang: LangDetails;
+  setLanguage: (code: string) => void;
 } | null>(null);
 
 export function getLayout(
@@ -546,4 +609,26 @@ export function toFeatureCollection(
     type: "FeatureCollection",
     features,
   } as unknown) as FeatureCollection<any, UnsavedSketchProps>;
+}
+
+export function useLocalizedComponentSetting(
+  propName: string,
+  props: Pick<
+    FormElementProps<any, any>,
+    "alternateLanguageSettings" | "componentSettings"
+  >
+) {
+  const context = useContext(SurveyContext);
+  if (
+    !context ||
+    !props.alternateLanguageSettings[context.lang.code] ||
+    context.lang.code === "EN"
+  ) {
+    return props.componentSettings[propName];
+  } else {
+    return (
+      props.alternateLanguageSettings[context.lang.code][propName] ||
+      props.componentSettings[propName]
+    );
+  }
 }

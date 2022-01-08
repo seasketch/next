@@ -12,6 +12,7 @@ const makeArgs = (componentSettings: ComboBoxProps) => ({
   onSubmit: jest.fn(),
   editable: false,
   isRequired: false,
+  alternateLanguageSettings: {},
   componentSettings: {
     options: ComboBox.defaultComponentSettings?.options,
     ...componentSettings,

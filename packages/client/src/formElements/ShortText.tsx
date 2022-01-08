@@ -43,6 +43,7 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
         body={props.body}
         required={props.isRequired}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       <div
         className="w-full md:w-96 max-w-full form-element-short-text pt-1"

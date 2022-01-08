@@ -52,6 +52,7 @@ import LogicRuleEditor from "./LogicRuleEditor";
 import { components } from "../../formElements";
 import bbox from "@turf/bbox";
 import { LngLatBoundsLike, LngLatLike } from "mapbox-gl";
+import languages from "../../lang/supported";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -70,6 +71,9 @@ export default function SurveyFormEditor({
   formElementId: number | null;
 }) {
   const { t } = useTranslation();
+  const [language, setLanguage] = useState(
+    languages.find((l) => l.code === "EN")!
+  );
   const formElementEditorContainerRef = useRef<HTMLDivElement>(null);
   const onError = useGlobalErrorHandler();
   const auth0 = useAuth0<Auth0User>();
@@ -190,6 +194,7 @@ export default function SurveyFormEditor({
   function updateBaseSetting(settings: {
     showProgress?: boolean;
     showFacilitationOption?: boolean;
+    supportedLanguages?: string[];
   }) {
     updateBaseSettingsMutation({
       variables: { ...settings, id: data!.survey!.id },
@@ -206,6 +211,10 @@ export default function SurveyFormEditor({
               "showFacilitationOption" in settings
                 ? settings.showFacilitationOption!
                 : data!.survey!.showFacilitationOption,
+            supportedLanguages:
+              "supportedLanguages" in settings
+                ? settings.supportedLanguages!
+                : data!.survey!.supportedLanguages,
           },
           __typename: "UpdateSurveyPayload",
         },
@@ -444,6 +453,16 @@ export default function SurveyFormEditor({
           {route === "formElement" && data?.survey && selectedFormElement && (
             <SurveyContext.Provider
               value={{
+                lang: language,
+                setLanguage: (code: string) => {
+                  const lang = languages.find((lang) => lang.code === code);
+                  if (!lang) {
+                    throw new Error(`Unrecognized language ${code}`);
+                  }
+                  setLanguage(lang);
+                },
+                supportedLanguages:
+                  (data?.survey?.supportedLanguages as string[]) || [],
                 isAdmin: true,
                 isFacilitatedResponse: true,
                 surveySupportsFacilitation: data.survey.showFacilitationOption,
@@ -612,6 +631,44 @@ export default function SurveyFormEditor({
                       />
                     }
                   />
+                  <div className="py-4">
+                    <h4 className="block text-sm font-medium leading-5 text-gray-800">
+                      {t("Supported Languages")}
+                    </h4>
+                    <p className="text-sm text-gray-500 mb-2 mt-1">
+                      <Trans ns="admin:surveys">
+                        Choose languages in addition to English which you would
+                        like to include. You will need to provide translations
+                        for the content of your survey like questions and input
+                        labels.
+                      </Trans>
+                    </p>
+                    <div className="relative space-y-1 py-2">
+                      {languages.map((lang) => (
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-1">{lang.name}</div>
+                          <Switch
+                            className=""
+                            isToggled={
+                              (data?.survey?.supportedLanguages || []).indexOf(
+                                lang.code
+                              ) !== -1 || lang.code === "EN"
+                            }
+                            disabled={lang.code === "EN"}
+                            onClick={(toggled) => {
+                              let supportedLanguages = (
+                                data?.survey?.supportedLanguages || []
+                              ).filter((l) => l !== lang.code) as string[];
+                              if (toggled === true) {
+                                supportedLanguages.push(lang.code);
+                              }
+                              updateBaseSetting({ supportedLanguages });
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

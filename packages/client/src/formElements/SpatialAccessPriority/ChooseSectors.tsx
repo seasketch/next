@@ -29,6 +29,7 @@ export default function ChooseSectors(props: ChooseSectorsProps) {
         isInput={true}
         body={props.body}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       {!props.componentSettings.sectorOptions?.length && (
         <div className="rounded p-4 mt-4 bg-yellow-400 bg-opacity-60 text-black text-sm">

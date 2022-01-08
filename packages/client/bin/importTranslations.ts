@@ -4,7 +4,7 @@ import * as request from "request";
 import * as fs from "fs";
 import * as path from "path";
 const util = require("util");
-const namespaces = require("../lang/namespaces.json");
+const namespaces = require("../src/lang/namespaces.json");
 const post = util.promisify(request.post);
 const get = util.promisify(request.get);
 
@@ -60,48 +60,52 @@ const INCLUDE_EMPTY_TERMS = false;
   }[];
 
   for (const lang of languages.filter((l) => l.code !== "en")) {
-    console.log(`Importing ${lang.name} (${lang.percentage}% translated)`);
-    const basePath = path.join(__dirname, "../lang", lang.code);
-    if (fs.existsSync(basePath)) {
-      // @ts-ignore
-      fs.rmSync(basePath, { recursive: true, force: true });
-    }
-    const { statusCode, body } = await post(
-      `https://api.poeditor.com/v2/projects/export`,
-      {
-        form: {
-          api_token: process.env.POEDITOR_API_TOKEN,
-          id: process.env.POEDITOR_PROJECT,
-          language: lang.code,
-          type: "key_value_json",
-          filters: "translated",
-          order: "terms",
-        },
+    if (lang.percentage === 0) {
+      console.log(`Skipping ${lang.name} (${lang.percentage}% translated)`);
+    } else {
+      console.log(`Importing ${lang.name} (${lang.percentage}% translated)`);
+      const basePath = path.join(__dirname, "../src/lang", lang.code);
+      if (fs.existsSync(basePath)) {
+        // @ts-ignore
+        fs.rmSync(basePath, { recursive: true, force: true });
       }
-    );
-    data = JSON.parse(body);
-    if (data.response.status !== "success") {
-      throw new Error(`API response was ${data.response.status}`);
-    }
-    const translations = await get(data.result.url);
-    const translated = JSON.parse(translations.body);
-
-    fs.mkdirSync(basePath);
-    for (const namespace of namespaces.include) {
-      const translatedTerms: { [term: string]: string } = {};
-      for (const term of terms) {
-        if (
-          (translated[term.term] || INCLUDE_EMPTY_TERMS) &&
-          term.tags.indexOf(namespace) !== -1
-        ) {
-          translatedTerms[term.term] = translated[term.term] || "";
+      const { statusCode, body } = await post(
+        `https://api.poeditor.com/v2/projects/export`,
+        {
+          form: {
+            api_token: process.env.POEDITOR_API_TOKEN,
+            id: process.env.POEDITOR_PROJECT,
+            language: lang.code,
+            type: "key_value_json",
+            filters: "translated",
+            order: "terms",
+          },
         }
+      );
+      data = JSON.parse(body);
+      if (data.response.status !== "success") {
+        throw new Error(`API response was ${data.response.status}`);
       }
-      if (Object.keys(translatedTerms).length) {
-        fs.writeFileSync(
-          path.join(basePath, `${namespace.replace(":", "/")}.json`),
-          JSON.stringify(translatedTerms, null, "  ")
-        );
+      const translations = await get(data.result.url);
+      const translated = JSON.parse(translations.body);
+
+      fs.mkdirSync(basePath);
+      for (const namespace of namespaces.include) {
+        const translatedTerms: { [term: string]: string } = {};
+        for (const term of terms) {
+          if (
+            (translated[term.term] || INCLUDE_EMPTY_TERMS) &&
+            term.tags.indexOf(namespace) !== -1
+          ) {
+            translatedTerms[term.term] = translated[term.term] || "";
+          }
+        }
+        if (Object.keys(translatedTerms).length) {
+          fs.writeFileSync(
+            path.join(basePath, `${namespace.replace(":", "/")}.json`),
+            JSON.stringify(translatedTerms, null, "  ")
+          );
+        }
       }
     }
   }

@@ -8,12 +8,14 @@ import { Link } from "react-router-dom";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
+import LocalizableTextInput from "../surveys/LocalizableTextInput";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
   SurveyButtonFooterPortalContext,
   SurveyContext,
+  useLocalizedComponentSetting,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 
@@ -41,6 +43,8 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
     throw new Error("SurveyContext not set");
   }
 
+  const placeholder = useLocalizedComponentSetting("placeholder", props);
+
   useEffect(() => {
     if (
       (props.value === null || props.value === undefined) &&
@@ -60,6 +64,7 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
         body={props.body}
         required={props.isRequired}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       <div
         className="w-full md:w-96 max-w-full form-element-short-text pt-1 transition-all"
@@ -81,7 +86,7 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
           autocomplete="name"
           required={props.isRequired}
           autoFocus={props.autoFocus}
-          placeholder={props.componentSettings.placeholder}
+          placeholder={placeholder}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               props.onSubmit();
@@ -119,6 +124,7 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
                 editable={props.editable}
                 componentSettings={props.componentSettings}
                 componentSettingName="facilitatorBody"
+                alternateLanguageSettings={props.alternateLanguageSettings}
               />
               <div
                 className="w-full md:w-96 max-w-full form-element-short-text pt-1 transition-all"
@@ -174,13 +180,15 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
                   button on the Welcome page.
                 </Trans>
               </p>{" "}
-              <TextInput
+              <LocalizableTextInput
                 label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
-                value={props.componentSettings.placeholder || ""}
+                value={placeholder || ""}
                 onChange={updateComponentSetting(
                   "placeholder",
-                  props.componentSettings
+                  props.componentSettings,
+                  context.lang.code,
+                  props.alternateLanguageSettings
                 )}
               />
             </>

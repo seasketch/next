@@ -66,6 +66,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
     if (
       props.editable &&
       !props.componentSettings.autoSelectFirstOptionInList &&
+      items[0] &&
       props.value === (items[0].value || items[0].label)
     ) {
       onChange(null);
@@ -234,6 +235,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
         body={props.body}
         required={props.isRequired}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       {input}
       {style.isSmall && selectInput}
@@ -247,7 +249,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
                 input={
                   <Switch
                     isToggled={
-                      !!props.componentSettings.autoSelectFirstOptionInList
+                      !!props.componentSettings?.autoSelectFirstOptionInList
                     }
                     onClick={updateComponentSetting(
                       "autoSelectFirstOptionInList",

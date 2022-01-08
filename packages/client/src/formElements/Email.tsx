@@ -2,11 +2,13 @@ import { MailIcon } from "@heroicons/react/solid";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import TextInput from "../components/TextInput";
+import LocalizableTextInput from "../surveys/LocalizableTextInput";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
   SurveyContext,
+  useLocalizedComponentSetting,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 
@@ -33,6 +35,8 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
     }
   }, [context?.bestEmail]);
 
+  const placeholder = useLocalizedComponentSetting("placeholder", props);
+
   return (
     <>
       <FormElementBody
@@ -41,6 +45,7 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
         body={props.body}
         required={props.isRequired}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       <div
         className="w-full md:w-96 max-w-full form-element-short-text pt-1"
@@ -60,7 +65,7 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
           autocomplete="email"
           required={props.isRequired}
           autoFocus={props.autoFocus}
-          placeholder={props.componentSettings.placeholder}
+          placeholder={placeholder}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               props.onSubmit();
@@ -78,13 +83,15 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
                   address if available
                 </Trans>
               </p>
-              <TextInput
+              <LocalizableTextInput
                 label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
-                value={props.componentSettings.placeholder || ""}
+                value={placeholder}
                 onChange={updateComponentSetting(
                   "placeholder",
-                  props.componentSettings
+                  props.componentSettings,
+                  context?.lang.code,
+                  props.alternateLanguageSettings
                 )}
               />
             </>

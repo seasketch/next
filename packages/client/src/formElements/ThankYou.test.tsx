@@ -25,6 +25,7 @@ const makeArgs = (componentSettings: ThankYouProps) => ({
   surveyUrl: "https://example.com/a/surveys/1",
   surveySupportsFacilitation: true,
   isFacilitatedResponse: false,
+  alternateLanguageSettings: {},
 });
 
 test("Component renders with custom body", async () => {

@@ -14,6 +14,7 @@ const Statement: FormElementComponent<{}> = (props) => {
         isInput={false}
         body={props.body}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
     </div>
   );

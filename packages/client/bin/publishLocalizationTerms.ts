@@ -4,7 +4,7 @@ import * as request from "request";
 import * as fs from "fs";
 import * as path from "path";
 const util = require("util");
-const namespaces = require("../lang/namespaces.json");
+const namespaces = require("../src/lang/namespaces.json");
 
 const post = util.promisify(request.post);
 (async () => {
@@ -44,7 +44,10 @@ const post = util.promisify(request.post);
     const data = JSON.parse(
       fs
         .readFileSync(
-          path.join(__dirname, `../lang/en/${namespace.replace(":", "/")}.json`)
+          path.join(
+            __dirname,
+            `../src/lang/en/${namespace.replace(":", "/")}.json`
+          )
         )
         .toString()
     ) as {

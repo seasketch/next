@@ -574,6 +574,7 @@ const SpatialAccessPriority: FormElementComponent<
             props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) && (
             <>
               <FormElementBody
+                alternateLanguageSettings={props.alternateLanguageSettings}
                 componentSettingName={"beginBody"}
                 componentSettings={props.componentSettings}
                 required={false}
@@ -599,6 +600,7 @@ const SpatialAccessPriority: FormElementComponent<
           {props.stage === STAGES.LIST_SHAPES && (
             <>
               <FormElementBody
+                alternateLanguageSettings={props.alternateLanguageSettings}
                 required={false}
                 componentSettings={props.componentSettings}
                 componentSettingName={"listShapesBody"}

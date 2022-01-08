@@ -110,6 +110,7 @@ export default function AddFormElementButton({
                               body: C.defaultBody,
                               componentSettings:
                                 C.defaultComponentSettings || {},
+                              alternateLanguageSettings: {},
                               formId,
                               typeId: id,
                               isRequired: false,
