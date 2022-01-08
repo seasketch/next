@@ -1,15 +1,15 @@
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   adminValueInputCommonClassNames,
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  SurveyContext,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
-import { useCombobox, UseComboboxStateChangeTypes } from "downshift";
+import { useCombobox } from "downshift";
 import { SearchIcon, SelectorIcon } from "@heroicons/react/outline";
-import { SurveyStyleContext } from "../surveys/appearance";
 import FormElementOptionsInput, {
   FormElementOption,
 } from "./FormElementOptionsInput";
@@ -34,6 +34,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
   const [selectedOption, setSelectedOption] = useState<
     FormElementOption | undefined | null
   >();
+  const context = useContext(SurveyContext);
 
   function onChange(value: string | null | undefined) {
     if (value === null) {
@@ -276,10 +277,14 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
                 label={t("Change to Multiple Choice", { ns: "admin:surveys" })}
               />
               <FormElementOptionsInput
-                initialValue={props.componentSettings.options || []}
+                prop="options"
+                componentSettings={props.componentSettings}
+                alternateLanguageSettings={props.alternateLanguageSettings}
                 onChange={updateComponentSetting(
                   "options",
-                  props.componentSettings
+                  props.componentSettings,
+                  context?.lang.code,
+                  props.alternateLanguageSettings
                 )}
               />
             </>

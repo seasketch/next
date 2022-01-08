@@ -1,7 +1,7 @@
 import {
   CheckIcon,
-  ExclamationIcon,
   MapIcon,
+  PlusCircleIcon,
   ScaleIcon,
   XIcon,
 } from "@heroicons/react/outline";
@@ -35,7 +35,6 @@ import {
   ZoomToFeature,
 } from "../../draw/DigitizingActionsPopup";
 import useMapboxGLDraw, {
-  DigitizingState,
   EMPTY_FEATURE_COLLECTION,
 } from "../../draw/useMapboxGLDraw";
 import {
@@ -52,18 +51,16 @@ import {
   FormElementComponent,
   FormElementEditorPortal,
   sortFormElements,
+  SurveyContext,
   SurveyMapPortal,
 } from "../FormElement";
 import FormElementOptionsInput, {
   FormElementOption,
 } from "../FormElementOptionsInput";
 import fromMarkdown, { questionBodyFromMarkdown } from "../fromMarkdown";
-import OptionPicker from "../OptionPicker";
-import PlusCircle from "@heroicons/react/outline/PlusCircleIcon";
 import SectorNavigation from "./SectorNavigation";
 import ChooseSectors from "./ChooseSectors";
 import bbox from "@turf/bbox";
-import { XCircleIcon } from "@heroicons/react/solid";
 import DigitizingMiniMap from "../DigitizingMiniMap";
 
 export enum STAGES {
@@ -584,7 +581,7 @@ const SpatialAccessPriority: FormElementComponent<
                   props.componentSettings.beginBody ||
                   SpatialAccessPriority.defaultComponentSettings?.beginBody
                 }
-                editable={true}
+                editable={props.editable}
               />
               {style.isSmall && (
                 <SurveyButton
@@ -610,7 +607,7 @@ const SpatialAccessPriority: FormElementComponent<
                   props.componentSettings.listShapesBody ||
                   SpatialAccessPriority.defaultComponentSettings?.listShapesBody
                 }
-                editable={true}
+                editable={props.editable}
               />
               <div
                 className="my-8"
@@ -710,7 +707,7 @@ const SpatialAccessPriority: FormElementComponent<
                   buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
                   label={
                     <>
-                      <PlusCircle className="w-5 h-5 mr-2" />
+                      <PlusCircleIcon className="w-5 h-5 mr-2" />
                       {t("New Shape")}
                     </>
                   }
@@ -1076,6 +1073,7 @@ const SpatialAccessPriority: FormElementComponent<
         enableDraw={enable}
         componentSettings={props.componentSettings}
         id={props.id}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
     </>
   );
@@ -1174,12 +1172,14 @@ SpatialAccessPriority.getLayout = (
 function Admin(props: {
   id: number;
   componentSettings: SpatialAccessPriorityProps;
+  alternateLanguageSettings: { [lang: string]: { [key: string]: any } };
   map?: Map;
   bounds: BBox;
   enableDraw: () => void;
   disableDraw: () => void;
 }) {
   const { t } = useTranslation("admin:surveys");
+  const context = useContext(SurveyContext);
   return (
     <FormElementEditorPortal
       render={(
@@ -1192,10 +1192,14 @@ function Admin(props: {
           <>
             <FormElementOptionsInput
               key={props.id}
-              initialValue={props.componentSettings.sectorOptions || []}
+              prop="sectorOptions"
+              componentSettings={props.componentSettings}
+              alternateLanguageSettings={props.alternateLanguageSettings}
               onChange={updateComponentSetting(
                 "sectorOptions",
-                props.componentSettings
+                props.componentSettings,
+                context?.lang.code,
+                props.alternateLanguageSettings
               )}
               heading={t("Sector Options")}
               description={
