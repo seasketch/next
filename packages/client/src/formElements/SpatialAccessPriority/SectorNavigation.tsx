@@ -48,6 +48,7 @@ export default function SectorNavigation(props: SectorNavigationProps) {
           SpatialAccessPriority.defaultComponentSettings?.navBody
         }
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       <div className="space-y-2 py-4">
         {(props.componentSettings.sectorOptions || [])

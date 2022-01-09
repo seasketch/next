@@ -2,8 +2,9 @@ import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { formElements as editorConfig } from "../editor/config";
 import { EditorView } from "prosemirror-view";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
+  useUpdateAlternateLanguageSettingsMutation,
   useUpdateComponentSettingsMutation,
   useUpdateFormElementBodyMutation,
   useUpdateFormElementMutation,
@@ -14,23 +15,41 @@ import gql from "graphql-tag";
 import "prosemirror-menu/style/menu.css";
 import "prosemirror-view/style/prosemirror.css";
 import TooltipMenu from "../editor/TooltipMenu";
+import { SurveyContext } from "./FormElement";
+import languages from "../lang/supported";
+import EditorLanguageSelector from "../surveys/EditorLanguageSelector";
 
 export default function BodyEditor({
   formElementId,
-  body,
   isInput,
   componentSettings,
   componentSettingName,
+  body: defaultBody,
+  alternateLanguageSettings,
 }: {
   formElementId: number;
   body: Node;
   isInput: boolean;
   componentSettingName?: string;
   componentSettings?: any;
+  alternateLanguageSettings: { [key: string]: any };
 }) {
   const { schema, plugins } = isInput
     ? editorConfig.questions
     : editorConfig.content;
+
+  const context = useContext(SurveyContext);
+  const selectedLanguage = context!.lang.code;
+
+  let body = defaultBody;
+  if (
+    selectedLanguage !== "EN" &&
+    alternateLanguageSettings[selectedLanguage]
+  ) {
+    body = alternateLanguageSettings[componentSettingName || "body"] || {
+      ...defaultBody,
+    };
+  }
 
   if (componentSettings || componentSettingName) {
     if (!componentSettingName) {
@@ -52,10 +71,19 @@ export default function BodyEditor({
     updateComponentSettings,
     updateComponentSettingsState,
   ] = useUpdateComponentSettingsMutation();
+  const [
+    updateAlternateLanguageSettings,
+    updateAlternateLanguageSettingsState,
+  ] = useUpdateAlternateLanguageSettingsMutation();
   const client = useApolloClient();
   const viewRef = useRef<EditorView>();
   const root = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<EditorState>();
+  const supportedLanguages = languages.filter(
+    (lang) =>
+      (context?.supportedLanguages || []).indexOf(lang.code) !== -1 ||
+      lang.code === "EN"
+  );
 
   useEffect(() => {
     const doc = body ? Node.fromJSON(schema, body) : null;
@@ -72,7 +100,26 @@ export default function BodyEditor({
         setState(newState);
 
         if (transaction.docChanged) {
-          if (componentSettingName) {
+          if (selectedLanguage !== "EN") {
+            const propName = componentSettingName || "body";
+            client.writeFragment({
+              id: `FormElement:${formElementId}`,
+              fragment: gql`
+                fragment UpdateAlternateLanguageSettings on FormElement {
+                  alternateLanguageSettings
+                }
+              `,
+              data: {
+                alternateLanguageSettings: {
+                  ...alternateLanguageSettings,
+                  [selectedLanguage]: {
+                    ...alternateLanguageSettings[selectedLanguage],
+                    [propName]: newState.doc.toJSON(),
+                  },
+                },
+              },
+            });
+          } else if (componentSettingName) {
             client.writeFragment({
               id: `FormElement:${formElementId}`,
               fragment: gql`
@@ -108,11 +155,42 @@ export default function BodyEditor({
     return () => {
       view.destroy();
     };
-  }, [formElementId]);
+  }, [formElementId, selectedLanguage]);
 
   const save = useDebouncedFn(
     (doc: any) => {
-      if (componentSettingName) {
+      if (selectedLanguage !== "EN") {
+        const propName = componentSettingName || "body";
+        updateAlternateLanguageSettings({
+          variables: {
+            id: formElementId,
+            alternateLanguageSettings: {
+              ...alternateLanguageSettings,
+              [selectedLanguage]: {
+                ...alternateLanguageSettings[selectedLanguage],
+                [propName]: doc.toJSON(),
+              },
+            },
+          },
+          optimisticResponse: {
+            __typename: "Mutation",
+            updateFormElement: {
+              __typename: "UpdateFormElementPayload",
+              formElement: {
+                __typename: "FormElement",
+                alternateLanguageSettings: {
+                  ...alternateLanguageSettings,
+                  [selectedLanguage]: {
+                    ...alternateLanguageSettings[selectedLanguage],
+                    [propName]: doc.toJSON(),
+                  },
+                },
+                id: formElementId,
+              },
+            },
+          },
+        });
+      } else if (componentSettingName) {
         updateComponentSettings({
           variables: {
             id: formElementId,
@@ -155,7 +233,7 @@ export default function BodyEditor({
     },
     250,
     { leading: true, trailing: true },
-    [update, formElementId]
+    [update, formElementId, selectedLanguage]
   );
   return (
     <div
@@ -166,6 +244,7 @@ export default function BodyEditor({
     >
       <TooltipMenu view={viewRef.current} state={state} schema={schema} />
       <div className="prosemirror-body" ref={root}></div>
+      <EditorLanguageSelector className="text-black rounded text-xs  absolute -top-10 left-0 opacity-50 hover:opacity-100 active:opacity-100" />
     </div>
   );
 }

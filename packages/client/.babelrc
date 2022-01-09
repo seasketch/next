@@ -3,7 +3,16 @@
 {
   "presets": ["react-app"],
   "plugins": [
-    ["i18next-extract", { "nsSeparator": ":", "keySeparator": false }]
+    [
+      "i18next-extract",
+      {
+        "nsSeparator": ":",
+        "keySeparator": false,
+        "keyAsDefaultValue": ["en"],
+        "useI18nextDefaultValue": true,
+        "keyAsDefaultValueForDerivedKeys": true
+      }
+    ]
   ],
   "exclude": "src/generated/graphql.ts"
 }

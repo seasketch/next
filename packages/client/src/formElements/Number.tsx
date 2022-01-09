@@ -96,6 +96,7 @@ const Number: FormElementComponent<NumberProps, number | null> = (props) => {
         body={props.body}
         required={props.isRequired}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       <div
         className="max-w-full form-element-short-text flex flex-row h-12 w-40 overflow-hidden bg-opacity-10 text-4xl rounded-md shadow-lg mt-4 mb-4 focus:outline-white items-center"

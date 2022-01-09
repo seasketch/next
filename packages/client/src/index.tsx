@@ -1,5 +1,5 @@
 import "./wdyr";
-import React from "react";
+import React, { Suspense } from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
 import App from "./App";
@@ -18,6 +18,7 @@ import { setContext } from "@apollo/client/link/context";
 import { BrowserRouter as Router, useHistory } from "react-router-dom";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { WebSocketLink } from "@apollo/client/link/ws";
+import Spinner from "./components/Spinner";
 
 function Auth0ProviderWithRouter(props: any) {
   const history = useHistory();
@@ -127,18 +128,29 @@ function ApolloProviderWithToken(props: any) {
 
 ReactDOM.render(
   <React.StrictMode>
-    <Router>
-      <Auth0ProviderWithRouter
-        domain={process.env.REACT_APP_AUTH0_DOMAIN!}
-        clientId={process.env.REACT_APP_AUTH0_CLIENT_ID!}
-        redirectUri={`${window.location.origin}/authenticate`}
-        cacheLocation="localstorage"
-      >
-        <ApolloProviderWithToken>
-          <App />
-        </ApolloProviderWithToken>
-      </Auth0ProviderWithRouter>
-    </Router>
+    <Suspense
+      fallback={
+        <div
+          style={{ height: "100vh" }}
+          className="w-full flex min-h-full h-96 justify-center text-center align-middle items-center content-center justify-items-center place-items-center place-content-center"
+        >
+          <Spinner />
+        </div>
+      }
+    >
+      <Router>
+        <Auth0ProviderWithRouter
+          domain={process.env.REACT_APP_AUTH0_DOMAIN!}
+          clientId={process.env.REACT_APP_AUTH0_CLIENT_ID!}
+          redirectUri={`${window.location.origin}/authenticate`}
+          cacheLocation="localstorage"
+        >
+          <ApolloProviderWithToken>
+            <App />
+          </ApolloProviderWithToken>
+        </Auth0ProviderWithRouter>
+      </Router>
+    </Suspense>
   </React.StrictMode>,
   document.getElementById("root")
 );

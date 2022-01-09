@@ -16,6 +16,7 @@ const makeArgs = (componentSettings: NameProps) => ({
     ...componentSettings,
   },
   isRequired: true,
+  alternateLanguageSettings: {},
 });
 
 test("Component renders with custom body", async () => {

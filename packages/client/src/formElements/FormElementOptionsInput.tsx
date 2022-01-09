@@ -1,7 +1,9 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useContext, useEffect } from "react";
 import { useState } from "react";
-import Papa, { ParseError } from "papaparse";
+import Papa from "papaparse";
 import { Trans, useTranslation } from "react-i18next";
+import EditorLanguageSelector from "../surveys/EditorLanguageSelector";
+import { SurveyContext } from "./FormElement";
 
 export type FormElementOption = {
   value?: string;
@@ -9,43 +11,74 @@ export type FormElementOption = {
 };
 
 export default function FormElementOptionsInput({
-  initialValue,
+  prop,
+  componentSettings,
+  alternateLanguageSettings,
   onChange,
   heading,
   description,
 }: {
-  initialValue: FormElementOption[];
+  prop: string;
+  componentSettings?: { [key: string]: any };
+  alternateLanguageSettings?: { [lang: string]: { [key: string]: any } };
   onChange: (options: FormElementOption[]) => void;
   heading?: string;
   description?: ReactNode | string;
 }) {
-  const [state, setState] = useState(toText(initialValue));
-  const [errors, setErrors] = useState<string[]>([]);
+  const context = useContext(SurveyContext);
   const { t } = useTranslation("admin:surveys");
+  let initialValue: FormElementOption[] = (componentSettings || {})[prop] || [];
+  if (
+    context &&
+    context.lang.code !== "EN" &&
+    alternateLanguageSettings &&
+    alternateLanguageSettings[context.lang.code]
+  ) {
+    initialValue =
+      alternateLanguageSettings[context.lang.code][prop] || initialValue;
+  }
+
+  const [state, setState] = useState(toText(initialValue));
+  const [optionsState, setOptionsState] = useState(initialValue);
+  const [errors, setErrors] = useState<string[]>([]);
+
   useEffect(() => {
-    const result = Papa.parse(state, { skipEmptyLines: true });
-    if (
-      result.errors?.length &&
-      result.errors.filter((e) => e.type !== "Delimiter").length
-    ) {
-      setErrors(result.errors.map((e) => e.message));
-    } else {
-      const options = result.data.map((r: any) =>
-        r.length === 1 ? { label: r[0] } : { label: r[0], value: r[1] }
-      );
-      onChange(options);
-      if (options.length === 0) {
-        setErrors([t("No options specified")]);
-      } else {
-        setErrors([]);
-      }
-      if (result.meta.delimiter !== ",") {
-        setState(toText(options));
+    setState(toText(initialValue));
+  }, [context?.lang]);
+
+  let valuesSpecified = true;
+  if (optionsState.length > 0) {
+    for (const option of optionsState) {
+      if (!option.value) {
+        valuesSpecified = false;
+        break;
       }
     }
-  }, [state]);
+  }
+
+  let valuesMatch = true;
+  if (valuesSpecified && context?.supportedLanguages.length) {
+    const valuesString = (componentSettings?.options || [])
+      .map((o: FormElementOption) => o.value || "")
+      .sort()
+      .join(",");
+    for (const lang of context.supportedLanguages) {
+      if (
+        alternateLanguageSettings &&
+        alternateLanguageSettings[lang] &&
+        alternateLanguageSettings[lang][prop]
+      ) {
+        const langValuesString = alternateLanguageSettings[lang][prop]
+          .map((o: FormElementOption) => o.value || "")
+          .sort()
+          .join(",");
+        valuesMatch = valuesMatch && valuesString === langValuesString;
+      }
+    }
+  }
+
   return (
-    <div>
+    <div className="relative">
       <h3 className="text-sm font-medium text-gray-800 leading-5">
         {heading || <Trans ns="admin:surveys">Options</Trans>}
       </h3>
@@ -72,11 +105,46 @@ export default function FormElementOptionsInput({
             : "border-gray-500"
         }`}
         value={state}
-        onChange={(e) => setState(e.target.value)}
+        onChange={(e) => {
+          setState(e.target.value);
+          const { errors, options, delimiter } = fromText(e.target.value);
+          if (errors.length) {
+            setErrors(errors);
+          } else {
+            onChange(options);
+            setOptionsState(options);
+            if (options.length === 0) {
+              setErrors([t("No options specified")]);
+            } else {
+              setErrors([]);
+            }
+            if (delimiter !== ",") {
+              setState(toText(options));
+            }
+          }
+        }}
       />
+      <EditorLanguageSelector className="py-0.5 pr-8 pl-0.5 my-1" />
       {errors.map((e) => (
-        <p className="text-red-900">{e}</p>
+        <p key={e.toString()} className="text-red-900">
+          {e}
+        </p>
       ))}
+      {!valuesSpecified && (context?.supportedLanguages || []).length > 0 && (
+        <p className="text-red-900">
+          <Trans ns="admin:surveys">
+            To support multiple languages, each option must specify a label and
+            a value for all languages!
+          </Trans>
+        </p>
+      )}
+      {!valuesMatch && (context?.supportedLanguages || []).length > 0 && (
+        <p className="text-red-900">
+          <Trans ns="admin:surveys">
+            Values do not match between different translations!
+          </Trans>
+        </p>
+      )}{" "}
     </div>
   );
 }
@@ -87,4 +155,30 @@ function toText(options: FormElementOption[]): string {
       option.value ? [option.label, option.value] : [option.label]
     )
   );
+}
+
+function fromText(text: string) {
+  let options: FormElementOption[] = [];
+  let errors: string[] = [];
+  let delimiter: string | undefined = undefined;
+  const result = Papa.parse(text, { skipEmptyLines: true });
+  if (
+    result.errors?.length &&
+    result.errors.filter((e) => e.type !== "Delimiter").length
+  ) {
+    errors = result.errors.map((e) => e.message);
+  } else {
+    options = result.data.map((r: any) =>
+      r.length === 1
+        ? { label: r[0].trim() }
+        : { label: r[0].trim(), value: r[1].trim() }
+    );
+    if (options.length === 0) {
+      errors = ["No options specified"];
+    } else {
+      errors = [];
+    }
+    delimiter = result.meta.delimiter;
+  }
+  return { options, errors, delimiter };
 }

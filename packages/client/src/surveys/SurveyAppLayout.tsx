@@ -15,11 +15,15 @@ import {
   createContext,
   ReactNode,
   useCallback,
+  useContext,
   useEffect,
   useRef,
   useState,
 } from "react";
-import { SurveyMapPortalContext } from "../formElements/FormElement";
+import {
+  SurveyContext,
+  SurveyMapPortalContext,
+} from "../formElements/FormElement";
 import PracticeBanner from "./PracticeBanner";
 import SurveyHeroImage from "./SurveyHeroImage";
 
@@ -67,6 +71,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
       setMapPortal(node);
     }
   }, []);
+  const surveyContext = useContext(SurveyContext);
 
   const [layoutContext, setLayoutContext] = useState<LayoutContext>({
     mapPortal: null,
@@ -237,6 +242,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
               />
 
               <div
+                dir={surveyContext?.lang.rtl ? "rtl" : "ltr"}
                 style={{
                   gridArea: "content",
                 }}
@@ -252,6 +258,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
               >
                 {scrollContentArea && (
                   <div
+                    dir="ltr"
                     className="sticky w-full flex justify-end z-10  pointer-events-none"
                     style={{
                       top: "calc(100% - 40px)",

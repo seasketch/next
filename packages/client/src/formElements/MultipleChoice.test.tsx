@@ -12,6 +12,7 @@ const makeArgs = (componentSettings: MultipleChoiceProps) => ({
   onSubmit: jest.fn(),
   editable: false,
   isRequired: false,
+  alternateLanguageSettings: {},
   componentSettings: {
     options: MultipleChoice.defaultComponentSettings?.options,
     ...componentSettings,

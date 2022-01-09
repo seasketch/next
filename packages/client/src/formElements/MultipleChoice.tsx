@@ -1,4 +1,5 @@
 import { CheckIcon } from "@heroicons/react/outline";
+import { useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
@@ -8,6 +9,8 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  SurveyContext,
+  useLocalizedComponentSetting,
 } from "./FormElement";
 import FormElementOptionsInput, {
   FormElementOption,
@@ -24,7 +27,11 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
   props
 ) => {
   const { t } = useTranslation("surveys");
-
+  const context = useContext(SurveyContext);
+  const options = useLocalizedComponentSetting(
+    "options",
+    props
+  ) as FormElementOption[];
   return (
     <>
       <FormElementBody
@@ -33,10 +40,11 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
         body={props.body}
         required={props.isRequired}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       <div className="block sm:inline-block">
         <div className="py-4 pb-6 space-y-2 flex flex-col">
-          {(props.componentSettings.options || []).map(({ label, value }) => {
+          {(options || []).map(({ label, value }) => {
             const current = props.value || [];
             const selected = current.indexOf(value || label) !== -1;
             return (
@@ -116,10 +124,14 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
               />
               <FormElementOptionsInput
                 key={props.id}
-                initialValue={props.componentSettings.options || []}
+                prop="options"
+                componentSettings={props.componentSettings}
+                alternateLanguageSettings={props.alternateLanguageSettings}
                 onChange={updateComponentSetting(
                   "options",
-                  props.componentSettings
+                  props.componentSettings,
+                  context?.lang.code,
+                  props.alternateLanguageSettings
                 )}
               />
             </>

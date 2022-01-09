@@ -1,15 +1,19 @@
-import { useContext } from "react";
+import { TranslateIcon } from "@heroicons/react/outline";
+import { useContext, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
+import LanguageSelector from "../surveys/LanguageSelector";
+import LocalizableTextInput from "../surveys/LocalizableTextInput";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
   SurveyContext,
+  useLocalizedComponentSetting,
 } from "./FormElement";
 import fromMarkdown from "./fromMarkdown";
 
@@ -27,6 +31,11 @@ const WelcomeMessage: FormElementComponent<
   if (!context) {
     throw new Error("SurveyContext not set");
   }
+  const beginButtonText = useLocalizedComponentSetting(
+    "beginButtonText",
+    props
+  );
+
   return (
     <>
       <FormElementBody
@@ -34,16 +43,13 @@ const WelcomeMessage: FormElementComponent<
         isInput={false}
         body={props.body}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       <Button
-        autofocus
+        name="Begin Survey"
         className="mt-6 mb-10"
         onClick={() => props.onChange({ dropdownSelection: "BEGIN" }, false)}
-        label={
-          props.componentSettings.beginButtonText?.length
-            ? props.componentSettings.beginButtonText
-            : ""
-        }
+        label={beginButtonText || ""}
         primary
         backgroundColor={style.secondaryColor}
         shadowSize="shadow-lg"
@@ -90,17 +96,31 @@ const WelcomeMessage: FormElementComponent<
           }
         }}
       />
+      <LanguageSelector
+        button={(onClick) => (
+          <button
+            onClick={onClick}
+            className="border rounded border-white p-1 px-2 mx-2 border-opacity-0"
+          >
+            <TranslateIcon className="w-6 h-6 inline mr-1 " />
+            <Trans ns="surveys">Language</Trans>
+          </button>
+        )}
+      />
+
       <FormElementEditorPortal
         render={(updateBaseSetting, updateComponentSetting) => {
           return (
             <>
-              <TextInput
+              <LocalizableTextInput
                 name="beginButtonText"
                 required
-                value={props.componentSettings.beginButtonText}
+                value={beginButtonText}
                 onChange={updateComponentSetting(
                   "beginButtonText",
-                  props.componentSettings
+                  props.componentSettings,
+                  context.lang.code,
+                  props.alternateLanguageSettings
                 )}
                 label={t("Begin Button Text", { ns: "admin:surveys" })}
               />

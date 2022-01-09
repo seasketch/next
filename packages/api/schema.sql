@@ -1271,6 +1271,7 @@ CREATE TABLE public.surveys (
     show_social_media_buttons boolean DEFAULT true,
     show_progress boolean DEFAULT true NOT NULL,
     show_facilitation_option boolean DEFAULT true NOT NULL,
+    supported_languages text[] DEFAULT '{}'::text[] NOT NULL,
     CONSTRAINT surveys_name_check CHECK ((char_length(name) <= 255))
 );
 
@@ -2622,6 +2623,7 @@ CREATE TABLE public.form_elements (
     background_width integer,
     background_height integer,
     jump_to_id integer,
+    alternate_language_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
     CONSTRAINT form_fields_position_check CHECK (("position" > 0))
 );

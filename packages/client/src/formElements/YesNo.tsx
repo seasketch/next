@@ -23,6 +23,7 @@ const YesNo: FormElementComponent<YesNoProps, boolean> = (props) => {
         body={props.body}
         required={props.isRequired}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       <div className="w-full max-w-full form-element-short-text pt-1 my-4 space-x-3">
         <SurveyInputButton

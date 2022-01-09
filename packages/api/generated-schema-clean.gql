@@ -4155,6 +4155,8 @@ graphile-generated CRUD mutations.
 
 """
 type FormElement implements Node {
+  alternateLanguageSettings: JSON!
+
   """
   Optional background color to transition the form to when this element is displayed.
   
@@ -4257,6 +4259,8 @@ type FormElement implements Node {
 
 """An input for mutations affecting `FormElement`"""
 input FormElementInput {
+  alternateLanguageSettings: JSON
+
   """
   Optional background color to transition the form to when this element is displayed.
   
@@ -4350,6 +4354,8 @@ enum FormElementLayout {
 Represents an update to a `FormElement`. Fields that are set will be updated.
 """
 input FormElementPatch {
+  alternateLanguageSettings: JSON
+
   """
   Optional background color to transition the form to when this element is displayed.
   
@@ -10369,6 +10375,7 @@ type Survey implements Node {
   """
   showSocialMediaButtons: Boolean
   submittedResponseCount: Int
+  supportedLanguages: [String]!
 
   """Reads and enables pagination through a set of `SurveyInvitedGroup`."""
   surveyInvitedGroups(
@@ -10639,6 +10646,7 @@ input SurveyPatch {
   
   """
   showSocialMediaButtons: Boolean
+  supportedLanguages: [String]
 }
 
 type SurveyResponse implements Node {
