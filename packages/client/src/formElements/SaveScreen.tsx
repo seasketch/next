@@ -121,7 +121,7 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
               </Trans>
             </p>
 
-            <div className="my-4 space-x-4 flex items-center">
+            <div className="my-4 space-x-4 rtl:space-x-reverse flex items-center">
               <SurveyButton
                 label={
                   <>
@@ -149,7 +149,7 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
             title={t("Reset Survey")}
             className="text-black"
             footer={
-              <div className="space-x-2 text-right">
+              <div className="space-x-2 rtl:space-x-reverse text-right">
                 <Button
                   label={t("Cancel")}
                   onClick={() => setShowResetModal(false)}

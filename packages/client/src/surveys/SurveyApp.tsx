@@ -571,7 +571,7 @@ function SurveyApp() {
             onRequestClose={() => setPracticeModalOpen(false)}
             title={t("Practice Mode")}
             footer={
-              <div className="space-x-1 text-center md:text-right space-y-2 md:space-y-0">
+              <div className="space-x-1 rtl:space-x-reverse text-center md:text-right space-y-2 md:space-y-0">
                 <Button
                   label={
                     practice

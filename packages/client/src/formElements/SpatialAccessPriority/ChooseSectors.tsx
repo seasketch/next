@@ -2,7 +2,11 @@ import { ExclamationIcon } from "@heroicons/react/outline";
 import { Trans, useTranslation } from "react-i18next";
 import { EMPTY_FEATURE_COLLECTION } from "../../draw/useMapboxGLDraw";
 import SurveyButton from "../../surveys/SurveyButton";
-import { FormElementBody, FormElementProps } from "../FormElement";
+import {
+  FormElementBody,
+  FormElementProps,
+  useLocalizedComponentSetting,
+} from "../FormElement";
 import { FormElementOption } from "../FormElementOptionsInput";
 import OptionPicker from "../OptionPicker";
 import {
@@ -21,6 +25,11 @@ type ChooseSectorsProps = FormElementProps<
 
 export default function ChooseSectors(props: ChooseSectorsProps) {
   const { t } = useTranslation("surveys");
+
+  const options: FormElementOption[] = useLocalizedComponentSetting(
+    "sectorOptions",
+    props
+  );
   return (
     <div className="mb-5">
       <FormElementBody
@@ -31,7 +40,7 @@ export default function ChooseSectors(props: ChooseSectorsProps) {
         editable={props.editable}
         alternateLanguageSettings={props.alternateLanguageSettings}
       />
-      {!props.componentSettings.sectorOptions?.length && (
+      {!options?.length && (
         <div className="rounded p-4 mt-4 bg-yellow-400 bg-opacity-60 text-black text-sm">
           <ExclamationIcon className="w-6 h-6 inline mr-2" />
           <Trans ns="admin:surveys">
@@ -40,7 +49,7 @@ export default function ChooseSectors(props: ChooseSectorsProps) {
         </div>
       )}
       <OptionPicker
-        options={props.componentSettings.sectorOptions || []}
+        options={options || []}
         multi={true}
         onChange={(sectors) => {
           props.updateValue({
@@ -68,7 +77,7 @@ export default function ChooseSectors(props: ChooseSectorsProps) {
           if (hasAnyFeatures) {
             props.onRequestStageChange(STAGES.SECTOR_NAVIGATION);
           } else {
-            const nextSector = props.componentSettings.sectorOptions!.find(
+            const nextSector = options!.find(
               (s) => (s.value || s.label) === props.value!.sectors[0]
             );
             if (!nextSector) {

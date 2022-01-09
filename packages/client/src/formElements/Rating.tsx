@@ -40,7 +40,7 @@ const Rating: FormElementComponent<RatingProps, number> = (props) => {
         editable={props.editable}
         alternateLanguageSettings={props.alternateLanguageSettings}
       />
-      <div className="py-4 pb-6 space-x-1">
+      <div className="py-4 pb-6 space-x-1 rtl:space-x-reverse">
         {stars.map((star) => (
           <button
             key={star}

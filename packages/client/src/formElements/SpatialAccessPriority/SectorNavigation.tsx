@@ -4,7 +4,11 @@ import { useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { SurveyStyleContext } from "../../surveys/appearance";
 import SurveyButton from "../../surveys/SurveyButton";
-import { FormElementBody, FormElementProps } from "../FormElement";
+import {
+  FormElementBody,
+  FormElementProps,
+  useLocalizedComponentSetting,
+} from "../FormElement";
 import { FormElementOption } from "../FormElementOptionsInput";
 import SpatialAccessPriority, {
   SAPValueType,
@@ -22,7 +26,11 @@ type SectorNavigationProps = FormElementProps<
 export default function SectorNavigation(props: SectorNavigationProps) {
   const style = useContext(SurveyStyleContext);
   const { t } = useTranslation("surveys");
-  const nextSector = (props.componentSettings.sectorOptions || [])
+  const options: FormElementOption[] = useLocalizedComponentSetting(
+    "sectorOptions",
+    props
+  );
+  const nextSector = (options || [])
     .filter(
       (sector) =>
         (props.value?.sectors || []).indexOf(sector.value || sector.label) !==
@@ -51,7 +59,7 @@ export default function SectorNavigation(props: SectorNavigationProps) {
         alternateLanguageSettings={props.alternateLanguageSettings}
       />
       <div className="space-y-2 py-4">
-        {(props.componentSettings.sectorOptions || [])
+        {(options || [])
           .filter(
             (s) =>
               (props.value?.sectors || []).indexOf(s.value || s.label) !== -1
@@ -66,7 +74,7 @@ export default function SectorNavigation(props: SectorNavigationProps) {
                 key={sector.label}
                 className={`border rounded transition-all duration-200 active:scale-105 transform flex items-center ${
                   style.isDark ? "bg-white" : "bg-black"
-                } bg-opacity-5 hover:bg-opacity-10 hover:bg-white px-4 py-2 pr-6 text-white w-full text-left ${
+                } bg-opacity-5 hover:bg-opacity-10 hover:bg-white px-4 py-2 pr-6 text-white w-full text-left rtl:text-right ${
                   hasValue ? style.secondaryTextClass : style.textClass
                 }`}
                 onClick={() => {
@@ -111,7 +119,7 @@ export default function SectorNavigation(props: SectorNavigationProps) {
             );
           })}
       </div>
-      <div className="space-x-4 mt-2">
+      <div className="space-x-4 rtl:space-x-reverse mt-2">
         {nextSector && (
           <SurveyButton
             onClick={() => {

@@ -64,7 +64,7 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
           alternateLanguageSettings={props.alternateLanguageSettings}
         />
 
-        <div className="my-5 space-x-2 flex items-center">
+        <div className="my-5 space-x-2 rtl:space-x-reverse flex items-center">
           {props.componentSettings.shareButtons && (
             <>
               <FacebookShareButton
@@ -98,7 +98,7 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
             </>
           )}
         </div>
-        <div className="mt-10 space-x-5">
+        <div className="mt-10 space-x-5 rtl:space-x-reverse">
           {(props.componentSettings.promptToRespondAgain ||
             context?.isAdmin) && (
             <Button

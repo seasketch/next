@@ -53,6 +53,7 @@ import {
   sortFormElements,
   SurveyContext,
   SurveyMapPortal,
+  useLocalizedComponentSetting,
 } from "../FormElement";
 import FormElementOptionsInput, {
   FormElementOption,
@@ -115,6 +116,15 @@ const SpatialAccessPriority: FormElementComponent<
       ? props.componentSettings.sectorOptions[0]
       : null
   );
+
+  const localizedSectors: FormElementOption[] = useLocalizedComponentSetting(
+    "sectorOptions",
+    props
+  );
+
+  const localizedSectorHeading = sector
+    ? localizedSectors.find((s) => s.value === sector?.value)?.label
+    : "";
   const [miniMap, setMiniMap] = useState<Map | null>(null);
   const [miniMapStyle, setMiniMapStyle] = useState<Style>();
 
@@ -554,7 +564,7 @@ const SpatialAccessPriority: FormElementComponent<
               <h4
                 className={`font-bold text-xl pb-4 ${!style.isSmall && "pt-6"}`}
               >
-                {sector?.label || "$SECTOR"}
+                {localizedSectorHeading || sector?.label || "$SECTOR"}
               </h4>
             )}
           {props.stage === STAGES.CHOOSE_SECTORS && (
@@ -630,7 +640,7 @@ const SpatialAccessPriority: FormElementComponent<
                   <div className="flex-1 text-center">
                     <Trans ns="surveys">Average</Trans>
                   </div>
-                  <div className="flex-1 text-right">
+                  <div className="flex-1 text-right rtl:text-left">
                     <Trans ns="surveys">High</Trans>
                   </div>
                 </div>
@@ -638,7 +648,7 @@ const SpatialAccessPriority: FormElementComponent<
                 {filteredFeatures.features.map((feature) => (
                   <React.Fragment key={feature.id}>
                     <button
-                      className="block rounded-l w-full text-left px-4 py-2 border-opacity-50 h-full"
+                      className="block ltr:rounded-l rtl:rounded-r w-full text-left rtl:text-right px-4 py-2 border-opacity-50 h-full"
                       style={{
                         backgroundColor: colord(style.backgroundColor)
                           .darken(0.025)
@@ -670,7 +680,7 @@ const SpatialAccessPriority: FormElementComponent<
                       {nameElementId ? feature.properties[nameElementId] : ""}
                     </button>
                     <div
-                      className="h-full align-middle flex rounded-r p-2 px-4"
+                      className="h-full align-middle flex ltr:rounded-r rtl:rounded-l p-2 px-4"
                       style={{
                         // gridArea: "slider"
                         backgroundColor: colord(style.backgroundColor)
@@ -701,15 +711,15 @@ const SpatialAccessPriority: FormElementComponent<
                   </React.Fragment>
                 ))}
               </div>
-              <div className="space-y-2 sm:space-y-0 sm:space-x-1 sm:flex sm:w-full">
+              <div className="space-y-2 sm:space-y-0 sm:space-x-1 sm:rtl:space-x-reverse sm:flex sm:w-full">
                 <SurveyButton
                   className="w-full sm:w-auto block"
                   buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
                   label={
-                    <>
-                      <PlusCircleIcon className="w-5 h-5 mr-2" />
-                      {t("New Shape")}
-                    </>
+                    <span className="space-x-1 rtl:space-x-reverse flex">
+                      <PlusCircleIcon className="w-5 h-5" />
+                      <span>{t("New Shape")}</span>
+                    </span>
                   }
                   onClick={() => {
                     setResponseState({ submissionAttempted: false });
@@ -731,10 +741,10 @@ const SpatialAccessPriority: FormElementComponent<
                     className="w-full sm:w-auto block"
                     buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
                     label={
-                      <>
-                        <MapIcon className="w-5 h-5 mr-2" />
-                        {t("View Map")}
-                      </>
+                      <span className="space-x-1 rtl:space-x-reverse flex">
+                        <MapIcon className="w-5 h-5" />
+                        <span>{t("View Map")}</span>
+                      </span>
                     }
                     onClick={() =>
                       props.onRequestStageChange(STAGES.SHAPE_EDITOR)
@@ -745,10 +755,12 @@ const SpatialAccessPriority: FormElementComponent<
                   className="w-full sm:w-auto block"
                   buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
                   label={
-                    <>
-                      <CheckIcon className="w-5 h-5 mr-2" />
-                      <Trans ns="surveys">Finish Sector</Trans>
-                    </>
+                    <span className="space-x-1 rtl:space-x-reverse flex">
+                      <CheckIcon className="w-5 h-5" />
+                      <span>
+                        <Trans ns="surveys">Finish Sector</Trans>
+                      </span>
+                    </span>
                   }
                   onClick={() => {
                     props.onRequestStageChange(STAGES.SECTOR_NAVIGATION);
@@ -789,7 +801,7 @@ const SpatialAccessPriority: FormElementComponent<
                   />
                 );
               })}
-              <div className="space-x-2">
+              <div className="space-x-2 rtl:space-x-reverse">
                 {geometryEditingState?.isNew && (
                   <SurveyButton
                     secondary={true}

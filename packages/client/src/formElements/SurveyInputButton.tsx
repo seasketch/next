@@ -22,10 +22,13 @@ export default function SurveyInputButton({
     <button
       title={label}
       onClick={onClick}
-      className={`border rounded transition-all duration-200 active:scale-125 transform inline-flex items-center ${
+      className={`border rounded transition-transform duration-200 active:scale-125 transform inline-flex items-center ${
         style.isDark ? "bg-white" : "bg-black"
       } bg-opacity-5 hover:bg-opacity-10 hover:bg-white px-4 py-2 ${
-        Icon && (iconPlacement === "left" ? "pl-10 pr-6" : "pr-10")
+        Icon &&
+        (iconPlacement === "left"
+          ? "ltr:pl-10 ltr:pr-6 rtl:pr-10"
+          : "ltr:pr-10 rtl:pl-10 rtl:pr-6")
       } ${selected ? style.secondaryTextClass : style.textClass} ${className}`}
       style={
         selected
@@ -41,7 +44,9 @@ export default function SurveyInputButton({
       {Icon && (
         <Icon
           className={`w-5 h-5 absolute ${
-            iconPlacement === "left" ? "left-3" : "right-3"
+            iconPlacement === "left"
+              ? "ltr:left-3 rtl:right-3"
+              : "ltr:right-3 rtl:left-3"
           }`}
         />
       )}

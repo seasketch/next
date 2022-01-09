@@ -57,7 +57,7 @@ const SAPRange: FormElementComponent<SAPRangeProps, number> = (props) => {
         editable={props.editable}
         alternateLanguageSettings={props.alternateLanguageSettings}
       />
-      <div className="py-4 pb-6 space-x-1">
+      <div className="py-4 pb-6 space-x-1 rtl:space-x-reverse">
         <input
           className="w-full SAPRange"
           type="range"
@@ -70,7 +70,7 @@ const SAPRange: FormElementComponent<SAPRangeProps, number> = (props) => {
         <div className="flex">
           <div className="flex-1">{lowText}</div>
           <div className="flex-1 text-center">{averageText}</div>
-          <div className="flex-1 text-right">{highText}</div>
+          <div className="flex-1 rtl:text-left ltr:text-right">{highText}</div>
         </div>
       </div>
       {/* <FormElementEditorPortal
