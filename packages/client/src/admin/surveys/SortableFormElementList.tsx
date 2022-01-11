@@ -15,7 +15,10 @@ import {
 import Spinner from "../../components/Spinner";
 import { CSSProperties, useState } from "react";
 import { components } from "../../formElements";
-import { defaultFormElementIcon } from "../../formElements/FormElement";
+import {
+  defaultFormElementIcon,
+  sortFormElements,
+} from "../../formElements/FormElement";
 
 interface Props {
   items: FormElementFullDetailsFragment[];
@@ -39,7 +42,7 @@ export default function SortableFormElementList(props: Props) {
   const thankYou = props.items.find((i) => i.typeId === "ThankYou");
   const featureName = props.items.find((i) => i.typeId === "FeatureName");
   const sapRange = props.items.find((i) => i.typeId === "SAPRange");
-  const sortableFormElements = props.items.filter(
+  const sortableFormElements = sortFormElements(props.items).filter(
     (i) =>
       i.typeId !== "WelcomeMessage" &&
       i.typeId !== "ThankYou" &&
@@ -53,6 +56,7 @@ export default function SortableFormElementList(props: Props) {
       {welcome && (
         <div className="mb-2">
           <FormElementListItem
+            onReorder={props.onReorder}
             dim={props.dim}
             typeId={welcome.typeId}
             selected={props.selection === welcome.id}
@@ -71,6 +75,7 @@ export default function SortableFormElementList(props: Props) {
         <div className="mb-2">
           <FormElementListItem
             dim={props.dim}
+            onReorder={props.onReorder}
             typeId={featureName.typeId}
             selected={props.selection === featureName.id}
             element={featureName}
@@ -87,6 +92,7 @@ export default function SortableFormElementList(props: Props) {
       {sapRange && (
         <div className="mb-2">
           <FormElementListItem
+            onReorder={props.onReorder}
             dim={props.dim}
             typeId={sapRange.typeId}
             selected={props.selection === sapRange.id}
@@ -143,6 +149,7 @@ export default function SortableFormElementList(props: Props) {
                     {(provided, snapshot) => (
                       <>
                         <FormElementListItem
+                          onReorder={props.onReorder}
                           collapseSpatialItems={collapseSpatialItems}
                           dim={props.dim}
                           typeId={element.typeId}
@@ -179,6 +186,7 @@ export default function SortableFormElementList(props: Props) {
       {thankYou && (
         <div className="mt-2">
           <FormElementListItem
+            onReorder={props.onReorder}
             dim={props.dim}
             typeId={thankYou.typeId}
             selected={props.selection === thankYou.id}
@@ -211,6 +219,7 @@ function FormElementListItem({
   collapseSpatialItems,
   onSpatialSubElementClick,
   selectedId,
+  onReorder,
 }: {
   element: FormElementFullDetailsFragment;
   typeName: string;
@@ -225,6 +234,7 @@ function FormElementListItem({
   collapseSpatialItems?: boolean;
   onSpatialSubElementClick?: (id: number) => void;
   selectedId?: number;
+  onReorder?: (elementIds: number[]) => void;
 }) {
   const Component = components[typeId];
   if (!Component) {
@@ -280,6 +290,7 @@ function FormElementListItem({
                   onSpatialSubElementClick(id);
                 }
               }}
+              onReorder={onReorder}
             />
           </div>
         )}
