@@ -379,7 +379,9 @@ const SpatialAccessPriority: FormElementComponent<
 
   function onClickSave() {
     if (selfIntersects) {
-      return window.alert(t("Please fix problems with your shape first."));
+      return window.alert(
+        t("Please fix problems with your shape first.", { ns: "surveys" })
+      );
     }
     if (geometryEditingState?.isNew !== true) {
       if (style.isSmall) {
@@ -403,9 +405,11 @@ const SpatialAccessPriority: FormElementComponent<
         ...prev,
         submissionAttempted: true,
       }));
-      window.alert(t("Please fill in required fields"));
+      window.alert(t("Please fill in required fields", { ns: "surveys" }));
     } else if (!geometryEditingState?.feature || selfIntersects) {
-      return window.alert(t("Please complete your shape on the map"));
+      return window.alert(
+        t("Please complete your shape on the map", { ns: "surveys" })
+      );
     } else {
       if (!sector) {
         throw new Error("Sector not set");
@@ -439,7 +443,9 @@ const SpatialAccessPriority: FormElementComponent<
 
   function onClickDoneMobile() {
     if (selfIntersects) {
-      return window.alert(t("Please fix problems with your shape first."));
+      return window.alert(
+        t("Please fix problems with your shape first.", { ns: "surveys" })
+      );
     } else {
       props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
       setTimeout(() => {
@@ -595,7 +601,7 @@ const SpatialAccessPriority: FormElementComponent<
               />
               {style.isSmall && (
                 <SurveyButton
-                  label={t("Begin")}
+                  label={t("Begin", { ns: "surveys" })}
                   className="pt-5"
                   onClick={() =>
                     props.onRequestStageChange(STAGES.MOBILE_DRAW_FIRST_SHAPE)
@@ -718,7 +724,9 @@ const SpatialAccessPriority: FormElementComponent<
                   label={
                     <span className="space-x-1 rtl:space-x-reverse flex">
                       <PlusCircleIcon className="w-5 h-5" />
-                      <span>{t("New Shape")}</span>
+                      <span>
+                        <Trans ns="surveys">New Shape</Trans>
+                      </span>
                     </span>
                   }
                   onClick={() => {
@@ -743,7 +751,9 @@ const SpatialAccessPriority: FormElementComponent<
                     label={
                       <span className="space-x-1 rtl:space-x-reverse flex">
                         <MapIcon className="w-5 h-5" />
-                        <span>{t("View Map")}</span>
+                        <span>
+                          <Trans ns="surveys">View Map</Trans>
+                        </span>
                       </span>
                     }
                     onClick={() =>
@@ -805,7 +815,7 @@ const SpatialAccessPriority: FormElementComponent<
                 {geometryEditingState?.isNew && (
                   <SurveyButton
                     secondary={true}
-                    label={t("Cancel")}
+                    label={<Trans ns="surveys">Cancel</Trans>}
                     onClick={() => {
                       if (!geometryEditingState?.isNew) {
                         throw new Error(
@@ -815,7 +825,9 @@ const SpatialAccessPriority: FormElementComponent<
                       if (
                         !geometryEditingState.feature ||
                         window.confirm(
-                          t("Are you sure you want to delete this shape?")
+                          t("Are you sure you want to delete this shape?", {
+                            ns: "surveys",
+                          })
                         )
                       ) {
                         if (geometryEditingState.feature) {
@@ -833,17 +845,21 @@ const SpatialAccessPriority: FormElementComponent<
                   />
                 )}
                 <SurveyButton
-                  label={geometryEditingState?.isNew ? t("Save") : t("Close")}
+                  label={
+                    geometryEditingState?.isNew
+                      ? t("Save", { ns: "surveys" })
+                      : t("Close", { ns: "surveys" })
+                  }
                   onClick={onClickSave}
                 />
                 {!geometryEditingState?.isNew && style.isSmall && (
                   <>
                     <SurveyButton
-                      label={t("Edit on Map")}
+                      label={t("Edit on Map", { ns: "surveys" })}
                       onClick={onClickMapNonInteractive}
                     />
                     <SurveyButton
-                      label={t("Delete")}
+                      label={t("Delete", { ns: "surveys" })}
                       onClick={() => {
                         if (!selection?.id) {
                           throw new Error("No selection to delete");
@@ -908,7 +924,7 @@ const SpatialAccessPriority: FormElementComponent<
                 createStateButtons={
                   style.isSmall && (
                     <Button
-                      label={t("Cancel")}
+                      label={t("Cancel", { ns: "surveys" })}
                       onClick={() => {
                         if (geometryEditingState?.feature) {
                           const collection = removeFeatureFromValue(
@@ -933,7 +949,7 @@ const SpatialAccessPriority: FormElementComponent<
                   <Button
                     className="pointer-events-auto"
                     primary
-                    label={t("Done")}
+                    label={t("Done", { ns: "surveys" })}
                     onClick={style.isSmall ? onClickDoneMobile : onClickSave}
                     buttonClassName={
                       style.isSmall
@@ -947,7 +963,7 @@ const SpatialAccessPriority: FormElementComponent<
                     <>
                       <Button
                         className="pointer-events-auto"
-                        label={t("Back to List")}
+                        label={<Trans ns="surveys">Back to List</Trans>}
                         onClick={() => {
                           props.onRequestStageChange(STAGES.LIST_SHAPES);
                         }}
@@ -959,7 +975,7 @@ const SpatialAccessPriority: FormElementComponent<
                       />
                       <Button
                         className="pointer-events-auto"
-                        label={t("New Shape")}
+                        label={<Trans ns="surveys">New Shape</Trans>}
                         onClick={() => {
                           create(true);
                         }}
@@ -1046,7 +1062,11 @@ const SpatialAccessPriority: FormElementComponent<
                     }
                     isSmall={style.isSmall}
                     geometryType={props.sketchClass!.geometryType}
-                    title={!selection ? t("Focus on shapes") : undefined}
+                    title={
+                      !selection
+                        ? t("Focus on shapes", { ns: "surveys" })
+                        : undefined
+                    }
                   />
                 ) : null}
                 <BasemapControl
