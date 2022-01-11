@@ -3582,6 +3582,13 @@ export type FormElement = Node & {
   /** Reads a single `SketchClass` that is related to this `FormElement`. */
   sketchClassFk?: Maybe<SketchClass>;
   /**
+   * Subordinant forms work only in survey forms. With these, special Form Elements
+   * like SpatialAccessPriority can specify questions to be asked dependent upon
+   * answers to another question. The "parent" FormElement that an element is
+   * subordinate to is fully responsible for rendering the given elements.
+   */
+  subordinantTo?: Maybe<Scalars['Int']>;
+  /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
    * set this value based on `background_color`, though admins may wish to manually override.
@@ -3638,6 +3645,13 @@ export type FormElementInput = {
   position?: Maybe<Scalars['Int']>;
   /** Color used to style navigation controls */
   secondaryColor?: Maybe<Scalars['String']>;
+  /**
+   * Subordinant forms work only in survey forms. With these, special Form Elements
+   * like SpatialAccessPriority can specify questions to be asked dependent upon
+   * answers to another question. The "parent" FormElement that an element is
+   * subordinate to is fully responsible for rendering the given elements.
+   */
+  subordinantTo?: Maybe<Scalars['Int']>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -3704,6 +3718,13 @@ export type FormElementPatch = {
   position?: Maybe<Scalars['Int']>;
   /** Color used to style navigation controls */
   secondaryColor?: Maybe<Scalars['String']>;
+  /**
+   * Subordinant forms work only in survey forms. With these, special Form Elements
+   * like SpatialAccessPriority can specify questions to be asked dependent upon
+   * answers to another question. The "parent" FormElement that an element is
+   * subordinate to is fully responsible for rendering the given elements.
+   */
+  subordinantTo?: Maybe<Scalars['Int']>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -14173,6 +14194,17 @@ export type SurveyFormEditorDetailsQuery = (
   )> }
 );
 
+export type FormElementTypesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type FormElementTypesQuery = (
+  { __typename?: 'Query' }
+  & { formElementTypes?: Maybe<Array<(
+    { __typename?: 'FormElementType' }
+    & AddFormElementTypeDetailsFragment
+  )>> }
+);
+
 export type UpdateSurveyBaseSettingsMutationVariables = Exact<{
   id: Scalars['Int'];
   showProgress?: Maybe<Scalars['Boolean']>;
@@ -19071,6 +19103,40 @@ export function useSurveyFormEditorDetailsLazyQuery(baseOptions?: Apollo.LazyQue
 export type SurveyFormEditorDetailsQueryHookResult = ReturnType<typeof useSurveyFormEditorDetailsQuery>;
 export type SurveyFormEditorDetailsLazyQueryHookResult = ReturnType<typeof useSurveyFormEditorDetailsLazyQuery>;
 export type SurveyFormEditorDetailsQueryResult = Apollo.QueryResult<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>;
+export const FormElementTypesDocument = gql`
+    query FormElementTypes {
+  formElementTypes {
+    ...AddFormElementTypeDetails
+  }
+}
+    ${AddFormElementTypeDetailsFragmentDoc}`;
+
+/**
+ * __useFormElementTypesQuery__
+ *
+ * To run a query within a React component, call `useFormElementTypesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useFormElementTypesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useFormElementTypesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useFormElementTypesQuery(baseOptions?: Apollo.QueryHookOptions<FormElementTypesQuery, FormElementTypesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<FormElementTypesQuery, FormElementTypesQueryVariables>(FormElementTypesDocument, options);
+      }
+export function useFormElementTypesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<FormElementTypesQuery, FormElementTypesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<FormElementTypesQuery, FormElementTypesQueryVariables>(FormElementTypesDocument, options);
+        }
+export type FormElementTypesQueryHookResult = ReturnType<typeof useFormElementTypesQuery>;
+export type FormElementTypesLazyQueryHookResult = ReturnType<typeof useFormElementTypesLazyQuery>;
+export type FormElementTypesQueryResult = Apollo.QueryResult<FormElementTypesQuery, FormElementTypesQueryVariables>;
 export const UpdateSurveyBaseSettingsDocument = gql`
     mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean, $showFacilitationOption: Boolean, $supportedLanguages: [String]) {
   updateSurvey(
@@ -21088,6 +21154,7 @@ export const namedOperations = {
     Surveys: 'Surveys',
     SurveyById: 'SurveyById',
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
+    FormElementTypes: 'FormElementTypes',
     GetPhotos: 'GetPhotos',
     Survey: 'Survey',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',

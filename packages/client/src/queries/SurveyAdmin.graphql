@@ -155,6 +155,12 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
   }
 }
 
+query FormElementTypes {
+  formElementTypes {
+    ...AddFormElementTypeDetails
+  }
+}
+
 mutation UpdateSurveyBaseSettings(
   $id: Int!
   $showProgress: Boolean

@@ -376,27 +376,10 @@ export default function SurveyFormEditor({
               <h3 className="flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-blue-gray-200 border items-center">
                 <span className="flex-1">{t("Form Elements")}</span>
                 <AddFormElementButton
-                  formIsSketchClass={
-                    !!(
-                      selectedParentFormElement?.sketchClass?.form ||
-                      selectedFormElement?.sketchClass
-                    )
-                  }
+                  formIsSketchClass={false}
                   nextPosition={formElements.length + 1}
-                  types={data?.formElementTypes || []}
-                  formId={
-                    selectedParentFormElement?.sketchClass?.form
-                      ? selectedParentFormElement.sketchClass?.form?.id!
-                      : selectedFormElement?.sketchClass
-                      ? selectedFormElement.sketchClass.form!.id
-                      : formId!
-                  }
-                  heading={
-                    selectedParentFormElement?.sketchClass?.form ||
-                    selectedFormElement?.sketchClass
-                      ? t("Add to spatial input...")
-                      : t("Add to survey...")
-                  }
+                  formId={formId!}
+                  heading={t("Add to survey...")}
                   onAdd={(formElement) => history.replace(`./${formElement}`)}
                   existingTypes={formElements.map((el) => el.typeId)}
                 />

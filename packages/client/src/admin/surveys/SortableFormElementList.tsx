@@ -19,6 +19,10 @@ import {
   defaultFormElementIcon,
   sortFormElements,
 } from "../../formElements/FormElement";
+import { Trans, useTranslation } from "react-i18next";
+import Button from "../../components/Button";
+import AddFormElementButton from "./AddFormElementButton";
+import { useHistory } from "react-router-dom";
 
 interface Props {
   items: FormElementFullDetailsFragment[];
@@ -27,6 +31,7 @@ interface Props {
   onReorder?: (sortedIds: number[]) => void;
   className?: CSSProperties;
   dim: boolean;
+  onAddClick?: (formId: number) => void;
 }
 
 /**
@@ -220,6 +225,7 @@ function FormElementListItem({
   onSpatialSubElementClick,
   selectedId,
   onReorder,
+  onAddClick,
 }: {
   element: FormElementFullDetailsFragment;
   typeName: string;
@@ -235,7 +241,10 @@ function FormElementListItem({
   onSpatialSubElementClick?: (id: number) => void;
   selectedId?: number;
   onReorder?: (elementIds: number[]) => void;
+  onAddClick?: (elementId: number) => void;
 }) {
+  const { t } = useTranslation("admin:surveys");
+  const history = useHistory();
   const Component = components[typeId];
   if (!Component) {
     throw new Error(`No component implementation for ${typeId}?`);
@@ -280,19 +289,39 @@ function FormElementListItem({
       {!collapseSpatialItems &&
         element.sketchClass &&
         !!element.sketchClass?.form?.formElements?.length && (
-          <div className="px-3 py-2">
-            <SortableFormElementList
-              selection={selectedId}
-              items={element.sketchClass?.form?.formElements || []}
-              dim={dim}
-              onClick={(id) => {
-                if (onSpatialSubElementClick) {
-                  onSpatialSubElementClick(id);
-                }
-              }}
-              onReorder={onReorder}
-            />
-          </div>
+          <>
+            <div className="px-1 py-1 border-cool-gray-300 border-2 rounded m-4">
+              <h4 className="uppercase text-xs text-center text-cool-gray-400 font-semibold py-1">
+                <Trans ns="admin:surveys">Spatial Attributes</Trans>
+              </h4>
+              <SortableFormElementList
+                selection={selectedId}
+                items={element.sketchClass?.form?.formElements || []}
+                dim={dim}
+                onClick={(id) => {
+                  if (onSpatialSubElementClick) {
+                    onSpatialSubElementClick(id);
+                  }
+                }}
+                onReorder={onReorder}
+              />
+              <div className="flex justify-center pb-1 -mt-1">
+                <AddFormElementButton
+                  formIsSketchClass={true}
+                  nextPosition={
+                    (element.sketchClass?.form?.formElements?.length || 0) + 1
+                  }
+                  formId={element.sketchClass!.form!.id}
+                  heading={t("Add to spatial input...")}
+                  onAdd={(formElement) => history.replace(`./${formElement}`)}
+                  existingTypes={element.sketchClass!.form.formElements.map(
+                    (el) => el.typeId
+                  )}
+                  label={t("Add element")}
+                />
+              </div>
+            </div>
+          </>
         )}
     </div>
   );

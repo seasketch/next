@@ -7,36 +7,31 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { components } from "../../formElements";
 import { defaultFormElementIcon } from "../../formElements/FormElement";
 import {
-  AddFormElementDocument,
-  AddFormElementMutation,
-  AddFormElementTypeDetailsFragment,
   FormElementLayout,
-  FormElementDetailsFragment,
-  FormElementFullDetailsFragmentDoc,
   FormElementTextVariant,
-  FormElementType,
   useAddFormElementMutation,
+  useFormElementTypesQuery,
 } from "../../generated/graphql";
 
 interface Props {
   onAdd: (id: number) => void;
   formId: number;
   formIsSketchClass: boolean;
-  types: AddFormElementTypeDetailsFragment[];
   existingTypes: string[];
   /** Specify the highest position in the current form + 1 to add items to the end of the form */
   nextPosition: number;
   heading?: string;
+  label?: string;
 }
 
 export default function AddFormElementButton({
   onAdd,
   formId,
-  types,
   nextPosition,
   existingTypes,
   heading,
   formIsSketchClass,
+  label,
 }: Props) {
   const { t } = useTranslation("admin:surveys");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,16 +40,18 @@ export default function AddFormElementButton({
     onError,
   });
 
+  const { data } = useFormElementTypesQuery({ onError });
+
   return (
     <>
       <Button
         className=""
         small
-        label={t("Add")}
+        label={label || t("Add")}
         onClick={() => setMenuOpen(true)}
       />
       <AnimatePresence>
-        {menuOpen && (
+        {menuOpen && data?.formElementTypes && (
           <motion.div
             transition={{ duration: 0.1 }}
             initial={{ background: "rgba(0,0,0,0)" }}
@@ -74,7 +71,9 @@ export default function AddFormElementButton({
               {Object.entries(components)
                 .filter(([id, C]) => !C.templatesOnly)
                 .filter(([id, C]) => {
-                  const type = types.find((t) => t.componentName === id);
+                  const type = data.formElementTypes!.find(
+                    (t) => t.componentName === id
+                  );
                   if (
                     formIsSketchClass &&
                     (type?.isSurveysOnly || type?.isSpatial)
@@ -116,7 +115,9 @@ export default function AddFormElementButton({
                               isRequired: false,
                               position: nextPosition,
                               type: {
-                                ...types.find((t) => t.componentName === id)!,
+                                ...data.formElementTypes!.find(
+                                  (t) => t.componentName === id
+                                )!,
                               },
                               id: 9999999999,
                               exportId:

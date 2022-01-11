@@ -4245,6 +4245,14 @@ type FormElement implements Node {
   sketchClassFk: SketchClass
 
   """
+  Subordinant forms work only in survey forms. With these, special Form Elements
+  like SpatialAccessPriority can specify questions to be asked dependent upon
+  answers to another question. The "parent" FormElement that an element is
+  subordinate to is fully responsible for rendering the given elements.
+  """
+  subordinantTo: Int
+
+  """
   Indicates whether the form element should be displayed with dark or light text
   variants to match the background color. Admin interface should automatically
   set this value based on `background_color`, though admins may wish to manually override.
@@ -4327,6 +4335,14 @@ input FormElementInput {
   
   """
   secondaryColor: String
+
+  """
+  Subordinant forms work only in survey forms. With these, special Form Elements
+  like SpatialAccessPriority can specify questions to be asked dependent upon
+  answers to another question. The "parent" FormElement that an element is
+  subordinate to is fully responsible for rendering the given elements.
+  """
+  subordinantTo: Int
 
   """
   Indicates whether the form element should be displayed with dark or light text
@@ -4422,6 +4438,14 @@ input FormElementPatch {
   
   """
   secondaryColor: String
+
+  """
+  Subordinant forms work only in survey forms. With these, special Form Elements
+  like SpatialAccessPriority can specify questions to be asked dependent upon
+  answers to another question. The "parent" FormElement that an element is
+  subordinate to is fully responsible for rendering the given elements.
+  """
+  subordinantTo: Int
 
   """
   Indicates whether the form element should be displayed with dark or light text
