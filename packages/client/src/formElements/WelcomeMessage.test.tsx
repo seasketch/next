@@ -27,6 +27,7 @@ test("Component renders with custom body and button text", async () => {
           beginButtonText: "Proceed",
           disablePracticeMode: false,
         }}
+        alternateLanguageSettings={{}}
       />
     </SurveyContext.Provider>
   );
@@ -34,7 +35,7 @@ test("Component renders with custom body and button text", async () => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "Welcome to the Survey"
     );
-    expect(screen.getByRole("button")).toHaveTextContent("Proceed");
+    expect(screen.getByText("Proceed")).toBeInTheDocument();
   });
 });
 
@@ -53,12 +54,13 @@ test("Clicking button proceeds to next page of survey", async () => {
           beginButtonText: "Proceed",
           disablePracticeMode: false,
         }}
+        alternateLanguageSettings={{}}
       />
     </SurveyContext.Provider>
   );
   await waitFor(() => {
-    expect(screen.getByRole("button")).toHaveTextContent("Proceed");
-    fireEvent.click(screen.getByRole("button"));
+    expect(screen.getByText("Proceed")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Proceed"));
     expect(onChange).toBeCalled();
   });
 });

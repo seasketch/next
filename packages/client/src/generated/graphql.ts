@@ -3530,6 +3530,7 @@ export type FormCondition = {
  */
 export type FormElement = Node & {
   __typename?: 'FormElement';
+  alternateLanguageSettings: Scalars['JSON'];
   /** Optional background color to transition the form to when this element is displayed. */
   backgroundColor?: Maybe<Scalars['String']>;
   backgroundHeight?: Maybe<Scalars['Int']>;
@@ -3594,6 +3595,7 @@ export type FormElement = Node & {
 
 /** An input for mutations affecting `FormElement` */
 export type FormElementInput = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   /** Optional background color to transition the form to when this element is displayed. */
   backgroundColor?: Maybe<Scalars['String']>;
   backgroundHeight?: Maybe<Scalars['Int']>;
@@ -3659,6 +3661,7 @@ export enum FormElementLayout {
 
 /** Represents an update to a `FormElement`. Fields that are set will be updated. */
 export type FormElementPatch = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   /** Optional background color to transition the form to when this element is displayed. */
   backgroundColor?: Maybe<Scalars['String']>;
   backgroundHeight?: Maybe<Scalars['Int']>;
@@ -10236,6 +10239,7 @@ export type Survey = Node & {
    */
   showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
   submittedResponseCount?: Maybe<Scalars['Int']>;
+  supportedLanguages: Array<Maybe<Scalars['String']>>;
   /** Reads and enables pagination through a set of `SurveyInvitedGroup`. */
   surveyInvitedGroups: Array<SurveyInvitedGroup>;
   /**
@@ -10462,6 +10466,7 @@ export type SurveyPatch = {
    * survey on social media to encourage responses.
    */
   showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
+  supportedLanguages?: Maybe<Array<Maybe<Scalars['String']>>>;
 };
 
 export type SurveyResponse = Node & {
@@ -12719,6 +12724,11 @@ export type NewLayerOptionsFragment = (
   & Pick<OptionalBasemapLayer, 'options'>
 );
 
+export type UpdateAlternateLanguageSettingsFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'alternateLanguageSettings'>
+);
+
 export type UpdateComponentSettingsFragment = (
   { __typename?: 'FormElement' }
   & Pick<FormElement, 'componentSettings'>
@@ -14022,7 +14032,7 @@ export type SimpleProjectListQuery = (
 
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption'>
+  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
   & { invitedGroups?: Maybe<Array<(
     { __typename?: 'Group' }
     & Pick<Group, 'id' | 'name'>
@@ -14084,7 +14094,7 @@ export type AddFormElementTypeDetailsFragment = (
 
 export type FormElementDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
@@ -14167,6 +14177,7 @@ export type UpdateSurveyBaseSettingsMutationVariables = Exact<{
   id: Scalars['Int'];
   showProgress?: Maybe<Scalars['Boolean']>;
   showFacilitationOption?: Maybe<Scalars['Boolean']>;
+  supportedLanguages?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
 }>;
 
 
@@ -14176,7 +14187,7 @@ export type UpdateSurveyBaseSettingsMutation = (
     { __typename?: 'UpdateSurveyPayload' }
     & { survey?: Maybe<(
       { __typename?: 'Survey' }
-      & Pick<Survey, 'id' | 'showProgress' | 'showFacilitationOption'>
+      & Pick<Survey, 'id' | 'showProgress' | 'showFacilitationOption' | 'supportedLanguages'>
     )> }
   )> }
 );
@@ -14209,6 +14220,7 @@ export type UpdateFormElementMutationVariables = Exact<{
   body?: Maybe<Scalars['JSON']>;
   exportId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   jumpToId?: Maybe<Scalars['Int']>;
   typeId?: Maybe<Scalars['String']>;
 }>;
@@ -14220,7 +14232,7 @@ export type UpdateFormElementMutation = (
     { __typename?: 'UpdateFormElementPayload' }
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'isRequired' | 'body' | 'exportId' | 'componentSettings' | 'jumpToId' | 'typeId'>
+      & Pick<FormElement, 'id' | 'isRequired' | 'body' | 'exportId' | 'componentSettings' | 'alternateLanguageSettings' | 'jumpToId' | 'typeId'>
     )> }
   )> }
 );
@@ -14238,6 +14250,23 @@ export type UpdateComponentSettingsMutation = (
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
       & Pick<FormElement, 'id' | 'componentSettings'>
+    )> }
+  )> }
+);
+
+export type UpdateAlternateLanguageSettingsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateAlternateLanguageSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'alternateLanguageSettings'>
     )> }
   )> }
 );
@@ -14540,7 +14569,7 @@ export type SurveyAppRuleFragment = (
 
 export type SurveyAppFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
@@ -14552,7 +14581,7 @@ export type SurveyAppFormElementFragment = (
 
 export type SurveyAppSurveyFragment = (
   { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption'>
+  & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption' | 'supportedLanguages'>
   & { form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
@@ -15327,6 +15356,11 @@ export const NewLayerOptionsFragmentDoc = gql`
   options
 }
     `;
+export const UpdateAlternateLanguageSettingsFragmentDoc = gql`
+    fragment UpdateAlternateLanguageSettings on FormElement {
+  alternateLanguageSettings
+}
+    `;
 export const UpdateComponentSettingsFragmentDoc = gql`
     fragment UpdateComponentSettings on FormElement {
   componentSettings
@@ -15393,6 +15427,7 @@ export const SurveyListDetailsFragmentDoc = gql`
   projectId
   isTemplate
   showFacilitationOption
+  supportedLanguages
 }
     `;
 export const AddFormElementTypeDetailsFragmentDoc = gql`
@@ -15412,6 +15447,7 @@ export const FormElementDetailsFragmentDoc = gql`
     fragment FormElementDetails on FormElement {
   body
   componentSettings
+  alternateLanguageSettings
   exportId
   formId
   id
@@ -15503,6 +15539,7 @@ export const SurveyAppFormElementFragmentDoc = gql`
     fragment SurveyAppFormElement on FormElement {
   id
   componentSettings
+  alternateLanguageSettings
   body
   isRequired
   position
@@ -15542,6 +15579,7 @@ export const SurveyAppSurveyFragmentDoc = gql`
   isDisabled
   showProgress
   showFacilitationOption
+  supportedLanguages
   form {
     id
     logicRules {
@@ -19034,14 +19072,15 @@ export type SurveyFormEditorDetailsQueryHookResult = ReturnType<typeof useSurvey
 export type SurveyFormEditorDetailsLazyQueryHookResult = ReturnType<typeof useSurveyFormEditorDetailsLazyQuery>;
 export type SurveyFormEditorDetailsQueryResult = Apollo.QueryResult<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>;
 export const UpdateSurveyBaseSettingsDocument = gql`
-    mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean, $showFacilitationOption: Boolean) {
+    mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean, $showFacilitationOption: Boolean, $supportedLanguages: [String]) {
   updateSurvey(
-    input: {id: $id, patch: {showProgress: $showProgress, showFacilitationOption: $showFacilitationOption}}
+    input: {id: $id, patch: {showProgress: $showProgress, showFacilitationOption: $showFacilitationOption, supportedLanguages: $supportedLanguages}}
   ) {
     survey {
       id
       showProgress
       showFacilitationOption
+      supportedLanguages
     }
   }
 }
@@ -19064,6 +19103,7 @@ export type UpdateSurveyBaseSettingsMutationFn = Apollo.MutationFunction<UpdateS
  *      id: // value for 'id'
  *      showProgress: // value for 'showProgress'
  *      showFacilitationOption: // value for 'showFacilitationOption'
+ *      supportedLanguages: // value for 'supportedLanguages'
  *   },
  * });
  */
@@ -19124,9 +19164,9 @@ export type UpdateFormElementSketchClassMutationHookResult = ReturnType<typeof u
 export type UpdateFormElementSketchClassMutationResult = Apollo.MutationResult<UpdateFormElementSketchClassMutation>;
 export type UpdateFormElementSketchClassMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementSketchClassMutation, UpdateFormElementSketchClassMutationVariables>;
 export const UpdateFormElementDocument = gql`
-    mutation UpdateFormElement($id: Int!, $isRequired: Boolean, $body: JSON, $exportId: String, $componentSettings: JSON, $jumpToId: Int, $typeId: String) {
+    mutation UpdateFormElement($id: Int!, $isRequired: Boolean, $body: JSON, $exportId: String, $componentSettings: JSON, $alternateLanguageSettings: JSON, $jumpToId: Int, $typeId: String) {
   updateFormElement(
-    input: {id: $id, patch: {isRequired: $isRequired, body: $body, exportId: $exportId, componentSettings: $componentSettings, jumpToId: $jumpToId, typeId: $typeId}}
+    input: {id: $id, patch: {isRequired: $isRequired, body: $body, exportId: $exportId, componentSettings: $componentSettings, jumpToId: $jumpToId, typeId: $typeId, alternateLanguageSettings: $alternateLanguageSettings}}
   ) {
     formElement {
       id
@@ -19134,6 +19174,7 @@ export const UpdateFormElementDocument = gql`
       body
       exportId
       componentSettings
+      alternateLanguageSettings
       jumpToId
       typeId
     }
@@ -19160,6 +19201,7 @@ export type UpdateFormElementMutationFn = Apollo.MutationFunction<UpdateFormElem
  *      body: // value for 'body'
  *      exportId: // value for 'exportId'
  *      componentSettings: // value for 'componentSettings'
+ *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
  *      jumpToId: // value for 'jumpToId'
  *      typeId: // value for 'typeId'
  *   },
@@ -19211,6 +19253,45 @@ export function useUpdateComponentSettingsMutation(baseOptions?: Apollo.Mutation
 export type UpdateComponentSettingsMutationHookResult = ReturnType<typeof useUpdateComponentSettingsMutation>;
 export type UpdateComponentSettingsMutationResult = Apollo.MutationResult<UpdateComponentSettingsMutation>;
 export type UpdateComponentSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateComponentSettingsMutation, UpdateComponentSettingsMutationVariables>;
+export const UpdateAlternateLanguageSettingsDocument = gql`
+    mutation UpdateAlternateLanguageSettings($id: Int!, $alternateLanguageSettings: JSON) {
+  updateFormElement(
+    input: {id: $id, patch: {alternateLanguageSettings: $alternateLanguageSettings}}
+  ) {
+    formElement {
+      id
+      alternateLanguageSettings
+    }
+  }
+}
+    `;
+export type UpdateAlternateLanguageSettingsMutationFn = Apollo.MutationFunction<UpdateAlternateLanguageSettingsMutation, UpdateAlternateLanguageSettingsMutationVariables>;
+
+/**
+ * __useUpdateAlternateLanguageSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateAlternateLanguageSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateAlternateLanguageSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateAlternateLanguageSettingsMutation, { data, loading, error }] = useUpdateAlternateLanguageSettingsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
+ *   },
+ * });
+ */
+export function useUpdateAlternateLanguageSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateAlternateLanguageSettingsMutation, UpdateAlternateLanguageSettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateAlternateLanguageSettingsMutation, UpdateAlternateLanguageSettingsMutationVariables>(UpdateAlternateLanguageSettingsDocument, options);
+      }
+export type UpdateAlternateLanguageSettingsMutationHookResult = ReturnType<typeof useUpdateAlternateLanguageSettingsMutation>;
+export type UpdateAlternateLanguageSettingsMutationResult = Apollo.MutationResult<UpdateAlternateLanguageSettingsMutation>;
+export type UpdateAlternateLanguageSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateAlternateLanguageSettingsMutation, UpdateAlternateLanguageSettingsMutationVariables>;
 export const UpdateFormElementBodyDocument = gql`
     mutation UpdateFormElementBody($id: Int!, $body: JSON!) {
   updateFormElement(input: {id: $id, patch: {body: $body}}) {
@@ -21073,6 +21154,7 @@ export const namedOperations = {
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',
     UpdateFormElement: 'UpdateFormElement',
     UpdateComponentSettings: 'UpdateComponentSettings',
+    UpdateAlternateLanguageSettings: 'UpdateAlternateLanguageSettings',
     UpdateFormElementBody: 'UpdateFormElementBody',
     UpdateFormElementOrder: 'UpdateFormElementOrder',
     AddFormElement: 'AddFormElement',
@@ -21125,6 +21207,7 @@ export const namedOperations = {
     NewGroup: 'NewGroup',
     NewInviteEmail: 'NewInviteEmail',
     NewLayerOptions: 'NewLayerOptions',
+    UpdateAlternateLanguageSettings: 'UpdateAlternateLanguageSettings',
     UpdateComponentSettings: 'UpdateComponentSettings',
     UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',

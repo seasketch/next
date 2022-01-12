@@ -16,6 +16,7 @@ const makeArgs = (componentSettings: YesNoProps) => ({
   editable: false,
   isRequired: false,
   componentSettings: { ...componentSettings },
+  alternateLanguageSettings: {},
   projectName: "Project A",
   projectUrl: "https://example.com/a",
   surveyUrl: "https://example.com/a/surveys/1",

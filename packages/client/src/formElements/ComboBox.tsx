@@ -1,15 +1,16 @@
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   adminValueInputCommonClassNames,
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  SurveyContext,
+  useLocalizedComponentSetting,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
-import { useCombobox, UseComboboxStateChangeTypes } from "downshift";
+import { useCombobox } from "downshift";
 import { SearchIcon, SelectorIcon } from "@heroicons/react/outline";
-import { SurveyStyleContext } from "../surveys/appearance";
 import FormElementOptionsInput, {
   FormElementOption,
 } from "./FormElementOptionsInput";
@@ -29,11 +30,17 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
   props
 ) => {
   const { t } = useTranslation("surveys");
-  const items = props.componentSettings.options || [];
+  const items: FormElementOption[] =
+    useLocalizedComponentSetting("options", props) || [];
   const [choices, setChoices] = useState<string[]>(items.map((i) => i.label));
   const [selectedOption, setSelectedOption] = useState<
     FormElementOption | undefined | null
   >();
+  const context = useContext(SurveyContext);
+
+  useEffect(() => {
+    setChoices(items.map((i) => i.label));
+  }, [context?.lang]);
 
   function onChange(value: string | null | undefined) {
     if (value === null) {
@@ -68,6 +75,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
     if (
       props.editable &&
       !props.componentSettings.autoSelectFirstOptionInList &&
+      items[0] &&
       props.value === (items[0].value || items[0].label)
     ) {
       onChange(null);
@@ -236,6 +244,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
         body={props.body}
         required={props.isRequired}
         editable={props.editable}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       {input}
       {style.isSmall && selectInput}
@@ -249,7 +258,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
                 input={
                   <Switch
                     isToggled={
-                      !!props.componentSettings.autoSelectFirstOptionInList
+                      !!props.componentSettings?.autoSelectFirstOptionInList
                     }
                     onClick={updateComponentSetting(
                       "autoSelectFirstOptionInList",
@@ -276,10 +285,14 @@ const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
                 label={t("Change to Multiple Choice", { ns: "admin:surveys" })}
               />
               <FormElementOptionsInput
-                initialValue={props.componentSettings.options || []}
+                prop="options"
+                componentSettings={props.componentSettings}
+                alternateLanguageSettings={props.alternateLanguageSettings}
                 onChange={updateComponentSetting(
                   "options",
-                  props.componentSettings
+                  props.componentSettings,
+                  context?.lang.code,
+                  props.alternateLanguageSettings
                 )}
               />
             </>

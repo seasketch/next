@@ -32,7 +32,7 @@ export default function OptionPicker({
           return (
             <SurveyInputButton
               key={option.value || option.label}
-              className={"w-full text-left"}
+              className={"w-full text-left rtl:text-right"}
               label={option.label}
               iconPlacement={multi ? "left" : "right"}
               Icon={

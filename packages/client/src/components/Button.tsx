@@ -5,6 +5,8 @@ import { colord, extend } from "colord";
 import { ChevronDownIcon } from "@heroicons/react/outline";
 
 export interface ButtonProps {
+  /** DOM Attribute */
+  name?: string;
   /* Disables user interaction */
   disabled?: boolean;
   /* Event handler */
@@ -164,6 +166,7 @@ export default function Button(props: ButtonProps) {
         </label>
       ) : (
         <button
+          name={props.name}
           type={props.type || "button"}
           ref={props.innerRef}
           autoFocus={props.autofocus}

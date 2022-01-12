@@ -35,6 +35,7 @@ const MultiSpatialInput: FormElementComponent<
           isInput={true}
           body={props.body}
           editable={props.editable}
+          alternateLanguageSettings={props.alternateLanguageSettings}
         />
       </div>
       <FormElementEditorPortal

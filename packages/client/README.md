@@ -18,7 +18,19 @@ If you need to run locally using SSL, you'll need to setup the [environment prop
 
 ## i18n
 
-Localization is managed using [i18next](https://react.i18next.com/). Wrap _all_ strings in appropriate tags so they can be translated into multiple languages.
+Localization is managed using [i18next](https://react.i18next.com/). Wrap _all_ strings in appropriate tags so they can be translated into multiple languages. ESLint rules will flag missing tags.
+
+We're using a [public POEditor project](https://poeditor.com/join/project?hash=juloLqMZDP) to manage translations. Local npm scripts exist to publish new terms to this project and extract translations into the `client/src/lang` directory. Run `npm run translation:sync` to perform these operations. It is important to do this regularly. The CI system will build a newly updated clients, but will only include new translations if this step is performed and changes are checked in.
+
+### i18n namespaces
+
+Terms are organized into [namespaces](https://react.i18next.com/guides/multiple-translation-files), each with their own translation file. Currently only a subset of namespaces are published to the POEditor project to be translated. Originally SeaSketch Next is being launched to support ocean use surveys so we are only translating the public side of the survey functionality.
+
+To add new namespaces as new features are launched, edit `client/src/lang/namespaces.json`.
+
+### Adding new languages
+
+To add new supported languages, add required metadata to `client/src/lang/supported.ts`. You will also need to add a matching entry to the POEditor project using their GUI.
 
 ## Querying the GraphQL API
 

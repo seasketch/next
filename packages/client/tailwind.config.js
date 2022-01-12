@@ -67,11 +67,17 @@ module.exports = {
     extend: {
       scale: ["active"],
     },
+    space: ["responsive", "direction"],
+    inset: ["responsive", "direction"],
+    padding: ["responsive", "direction"],
+    textAlign: ["responsive", "direction"],
+    borderRadius: ["responsive", "direction"],
   },
   plugins: [
     require("@tailwindcss/forms"),
     require("@tailwindcss/typography"),
     require("@tailwindcss/aspect-ratio"),
+    require("tailwindcss-dir")(),
   ],
   // plugins: [require("@tailwindcss/ui")],
 };

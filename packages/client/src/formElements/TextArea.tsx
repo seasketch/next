@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
+import LocalizableTextInput from "../surveys/LocalizableTextInput";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  SurveyContext,
+  useLocalizedComponentSetting,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 
@@ -20,6 +23,8 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
   const { t } = useTranslation("surveys");
   const errors = props.isRequired && !props.value?.length;
   const showError = errors && props.submissionAttempted;
+  const context = useContext(SurveyContext);
+  const placeholder = useLocalizedComponentSetting("placeholder", props);
   return (
     <>
       <div className="flex flex-col" style={{ maxHeight: "60vh" }}>
@@ -29,6 +34,7 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
           body={props.body}
           required={props.isRequired}
           editable={props.editable}
+          alternateLanguageSettings={props.alternateLanguageSettings}
         />
         <textarea
           autoFocus={props.autoFocus}
@@ -36,11 +42,7 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
           className={`w-full rounded text-base text-black  my-4 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${
             showError ? "bg-red-50" : "bg-white"
           }`}
-          placeholder={
-            showError
-              ? t("Required field")
-              : props.componentSettings.placeholder
-          }
+          placeholder={showError ? t("Required field") : placeholder}
           style={{
             maxHeight: props.componentSettings.compact ? 120 : 400,
             height: props.componentSettings.compact ? 120 : "100vh",
@@ -73,13 +75,15 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
                   />
                 }
               />
-              <TextInput
-                label={t("Placeholder")}
+              <LocalizableTextInput
+                label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
-                value={props.componentSettings.placeholder || ""}
+                value={placeholder || ""}
                 onChange={updateComponentSetting(
                   "placeholder",
-                  props.componentSettings
+                  props.componentSettings,
+                  context?.lang.code,
+                  props.alternateLanguageSettings
                 )}
               />
             </>

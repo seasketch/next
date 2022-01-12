@@ -24,7 +24,7 @@ export default function BowtieInstructions({
       title={t("Invalid Shape")}
       onRequestClose={onRequestClose}
       footer={
-        <div className="flex justify-end space-x-1">
+        <div className="flex justify-end space-x-1 rtl:space-x-reverse">
           {onRequestReset && onRequestClose && (
             <Button
               label={t("Reset Shape")}

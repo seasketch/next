@@ -47,6 +47,7 @@ import useMobileDeviceDetector from "./useMobileDeviceDetector";
 import bbox from "@turf/bbox";
 import { LngLatBoundsLike } from "mapbox-gl";
 import SurveyNavigationButton from "./SurveyNavigationButtons";
+import languages from "../lang/supported";
 
 require("./surveys.css");
 
@@ -69,7 +70,11 @@ function SurveyApp() {
     practice?: string;
     slug: string;
   }>();
-  const { t } = useTranslation("surveys");
+  const { t, i18n } = useTranslation("surveys");
+
+  let language = languages.find((lang) => lang.code === "EN")!;
+  language = languages.find((lang) => lang.code === i18n.language) || language;
+
   const history = useHistory();
   const auth0 = useAuth0<Auth0User>();
 
@@ -274,6 +279,17 @@ function SurveyApp() {
       <>
         <SurveyContext.Provider
           value={{
+            lang: language,
+            setLanguage: (code: string) => {
+              const lang = languages.find((lang) => lang.code === code);
+              if (!lang) {
+                throw new Error(`Unrecognized language ${code}`);
+              }
+              i18n.changeLanguage(lang.code);
+            },
+
+            supportedLanguages:
+              (data.survey?.supportedLanguages as string[]) || [],
             isAdmin: !!data.me?.isAdmin,
             isFacilitatedResponse: responseState.facilitated,
             surveySupportsFacilitation: !!data.survey.showFacilitationOption,
@@ -555,7 +571,7 @@ function SurveyApp() {
             onRequestClose={() => setPracticeModalOpen(false)}
             title={t("Practice Mode")}
             footer={
-              <div className="space-x-1 text-center md:text-right space-y-2 md:space-y-0">
+              <div className="space-x-1 rtl:space-x-reverse text-center md:text-right space-y-2 md:space-y-0">
                 <Button
                   label={
                     practice

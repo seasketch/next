@@ -229,13 +229,13 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               animate={{ scale: 1 }}
               style={{ maxWidth: "90%" }}
               exit={{ scale: 0.7, opacity: 0 }}
-              className={`rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none`}
+              className={`rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none`}
             >
               <p className="text-sm select-none">{instructions}</p>
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="flex-shrink-0 tall:p-2 space-x-2 items-center flex absolute z-10 bottom-0 w-full bg-gray-200 p-1 px-2 space-x-2 justify-center">
+        <div className="flex-shrink-0 tall:p-2 space-x-2 items-center flex absolute z-10 bottom-0 w-full bg-gray-200 p-1 px-2 space-x-2 rtl:space-x-reverse justify-center">
           {buttons}
         </div>
       </>
@@ -258,7 +258,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           animate={{ scale: 1 }}
           style={{ maxWidth: "90%" }}
           // exit={{ scale: 0 }}
-          className={`rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 items-center transition-all bottom-16 absolute z-10 pointer-events-none`}
+          className={`rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center transition-all bottom-16 absolute z-10 pointer-events-none`}
         >
           {instructions && (
             <p className="text-sm select-none">{instructions}</p>

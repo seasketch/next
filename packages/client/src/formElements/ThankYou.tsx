@@ -4,6 +4,7 @@ import {
   FormElementComponent,
   FormElementEditorPortal,
   SurveyContext,
+  useLocalizedComponentSetting,
 } from "./FormElement";
 import fromMarkdown from "./fromMarkdown";
 import {
@@ -25,6 +26,7 @@ import { useContext } from "react";
 import { Link } from "react-router-dom";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 import useClipboard from "react-use-clipboard";
+import LocalizableTextInput from "../surveys/LocalizableTextInput";
 
 export interface ThankYouProps {
   promptToRespondAgain?: boolean;
@@ -46,6 +48,11 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
     // `isCopied` will go back to `false` after 2000ms.
     successDuration: 1000,
   });
+
+  const respondAgainMessage = useLocalizedComponentSetting(
+    "respondAgainMessage",
+    props
+  );
   return (
     <>
       <div className="mb-5">
@@ -54,9 +61,10 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
           isInput={false}
           body={props.body}
           editable={props.editable}
+          alternateLanguageSettings={props.alternateLanguageSettings}
         />
 
-        <div className="my-5 space-x-2 flex items-center">
+        <div className="my-5 space-x-2 rtl:space-x-reverse flex items-center">
           {props.componentSettings.shareButtons && (
             <>
               <FacebookShareButton
@@ -90,19 +98,15 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
             </>
           )}
         </div>
-        <div className="mt-10 space-x-5">
+        <div className="mt-10 space-x-5 rtl:space-x-reverse">
           {(props.componentSettings.promptToRespondAgain ||
             context?.isAdmin) && (
             <Button
               href={new URL(context!.surveyUrl).pathname}
-              label={
-                props.componentSettings.respondAgainMessage ||
-                "Submit Another Response"
-              }
+              label={respondAgainMessage || "Submit Another Response"}
               backgroundColor={style.secondaryColor}
             >
-              {props.componentSettings.respondAgainMessage ||
-                "Submit Another Response"}{" "}
+              {respondAgainMessage || "Submit Another Response"}{" "}
               {/* <RefreshIcon className="ml-2 w-4 h-4" /> */}
             </Button>
           )}
@@ -169,17 +173,16 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
                   another response.
                 </Trans>
               </p>
-              <TextInput
+              <LocalizableTextInput
                 disabled={!props.componentSettings.promptToRespondAgain}
                 label={t("Respond Again Button Text")}
                 name="respondAgainMessage"
-                value={
-                  props.componentSettings.respondAgainMessage ||
-                  "Submit Another Response"
-                }
+                value={respondAgainMessage || "Submit Another Response"}
                 onChange={updateComponentSetting(
                   "respondAgainMessage",
-                  props.componentSettings
+                  props.componentSettings,
+                  context?.lang.code,
+                  props.alternateLanguageSettings
                 )}
               />
             </>

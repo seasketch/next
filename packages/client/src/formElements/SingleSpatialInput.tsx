@@ -168,6 +168,7 @@ const SingleSpatialInput: FormElementComponent<
           isInput={true}
           body={props.body}
           editable={props.editable}
+          alternateLanguageSettings={props.alternateLanguageSettings}
         />
       </div>
       {mapPortalContext && (

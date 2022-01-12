@@ -14,6 +14,7 @@ fragment SurveyListDetails on Survey {
   projectId
   isTemplate
   showFacilitationOption
+  supportedLanguages
 }
 
 query Surveys($projectId: Int!) {
@@ -56,6 +57,7 @@ fragment AddFormElementTypeDetails on FormElementType {
 fragment FormElementDetails on FormElement {
   body
   componentSettings
+  alternateLanguageSettings
   exportId
   formId
   id
@@ -157,6 +159,7 @@ mutation UpdateSurveyBaseSettings(
   $id: Int!
   $showProgress: Boolean
   $showFacilitationOption: Boolean
+  $supportedLanguages: [String]
 ) {
   updateSurvey(
     input: {
@@ -164,6 +167,7 @@ mutation UpdateSurveyBaseSettings(
       patch: {
         showProgress: $showProgress
         showFacilitationOption: $showFacilitationOption
+        supportedLanguages: $supportedLanguages
       }
     }
   ) {
@@ -171,6 +175,7 @@ mutation UpdateSurveyBaseSettings(
       id
       showProgress
       showFacilitationOption
+      supportedLanguages
     }
   }
 }
@@ -215,6 +220,7 @@ mutation UpdateFormElement(
   $body: JSON
   $exportId: String
   $componentSettings: JSON
+  $alternateLanguageSettings: JSON
   $jumpToId: Int
   $typeId: String
 ) {
@@ -228,6 +234,7 @@ mutation UpdateFormElement(
         componentSettings: $componentSettings
         jumpToId: $jumpToId
         typeId: $typeId
+        alternateLanguageSettings: $alternateLanguageSettings
       }
     }
   ) {
@@ -237,6 +244,7 @@ mutation UpdateFormElement(
       body
       exportId
       componentSettings
+      alternateLanguageSettings
       jumpToId
       typeId
     }
@@ -250,6 +258,23 @@ mutation UpdateComponentSettings($id: Int!, $componentSettings: JSON) {
     formElement {
       id
       componentSettings
+    }
+  }
+}
+
+mutation UpdateAlternateLanguageSettings(
+  $id: Int!
+  $alternateLanguageSettings: JSON
+) {
+  updateFormElement(
+    input: {
+      id: $id
+      patch: { alternateLanguageSettings: $alternateLanguageSettings }
+    }
+  ) {
+    formElement {
+      id
+      alternateLanguageSettings
     }
   }
 }

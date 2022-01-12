@@ -1,7 +1,7 @@
 import {
   CheckIcon,
-  ExclamationIcon,
   MapIcon,
+  PlusCircleIcon,
   ScaleIcon,
   XIcon,
 } from "@heroicons/react/outline";
@@ -35,7 +35,6 @@ import {
   ZoomToFeature,
 } from "../../draw/DigitizingActionsPopup";
 import useMapboxGLDraw, {
-  DigitizingState,
   EMPTY_FEATURE_COLLECTION,
 } from "../../draw/useMapboxGLDraw";
 import {
@@ -52,18 +51,17 @@ import {
   FormElementComponent,
   FormElementEditorPortal,
   sortFormElements,
+  SurveyContext,
   SurveyMapPortal,
+  useLocalizedComponentSetting,
 } from "../FormElement";
 import FormElementOptionsInput, {
   FormElementOption,
 } from "../FormElementOptionsInput";
 import fromMarkdown, { questionBodyFromMarkdown } from "../fromMarkdown";
-import OptionPicker from "../OptionPicker";
-import PlusCircle from "@heroicons/react/outline/PlusCircleIcon";
 import SectorNavigation from "./SectorNavigation";
 import ChooseSectors from "./ChooseSectors";
 import bbox from "@turf/bbox";
-import { XCircleIcon } from "@heroicons/react/solid";
 import DigitizingMiniMap from "../DigitizingMiniMap";
 
 export enum STAGES {
@@ -118,6 +116,15 @@ const SpatialAccessPriority: FormElementComponent<
       ? props.componentSettings.sectorOptions[0]
       : null
   );
+
+  const localizedSectors: FormElementOption[] = useLocalizedComponentSetting(
+    "sectorOptions",
+    props
+  );
+
+  const localizedSectorHeading = sector
+    ? localizedSectors.find((s) => s.value === sector?.value)?.label
+    : "";
   const [miniMap, setMiniMap] = useState<Map | null>(null);
   const [miniMapStyle, setMiniMapStyle] = useState<Style>();
 
@@ -372,7 +379,9 @@ const SpatialAccessPriority: FormElementComponent<
 
   function onClickSave() {
     if (selfIntersects) {
-      return window.alert(t("Please fix problems with your shape first."));
+      return window.alert(
+        t("Please fix problems with your shape first.", { ns: "surveys" })
+      );
     }
     if (geometryEditingState?.isNew !== true) {
       if (style.isSmall) {
@@ -396,9 +405,11 @@ const SpatialAccessPriority: FormElementComponent<
         ...prev,
         submissionAttempted: true,
       }));
-      window.alert(t("Please fill in required fields"));
+      window.alert(t("Please fill in required fields", { ns: "surveys" }));
     } else if (!geometryEditingState?.feature || selfIntersects) {
-      return window.alert(t("Please complete your shape on the map"));
+      return window.alert(
+        t("Please complete your shape on the map", { ns: "surveys" })
+      );
     } else {
       if (!sector) {
         throw new Error("Sector not set");
@@ -432,7 +443,9 @@ const SpatialAccessPriority: FormElementComponent<
 
   function onClickDoneMobile() {
     if (selfIntersects) {
-      return window.alert(t("Please fix problems with your shape first."));
+      return window.alert(
+        t("Please fix problems with your shape first.", { ns: "surveys" })
+      );
     } else {
       props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
       setTimeout(() => {
@@ -557,7 +570,7 @@ const SpatialAccessPriority: FormElementComponent<
               <h4
                 className={`font-bold text-xl pb-4 ${!style.isSmall && "pt-6"}`}
               >
-                {sector?.label || "$SECTOR"}
+                {localizedSectorHeading || sector?.label || "$SECTOR"}
               </h4>
             )}
           {props.stage === STAGES.CHOOSE_SECTORS && (
@@ -574,6 +587,7 @@ const SpatialAccessPriority: FormElementComponent<
             props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) && (
             <>
               <FormElementBody
+                alternateLanguageSettings={props.alternateLanguageSettings}
                 componentSettingName={"beginBody"}
                 componentSettings={props.componentSettings}
                 required={false}
@@ -583,11 +597,11 @@ const SpatialAccessPriority: FormElementComponent<
                   props.componentSettings.beginBody ||
                   SpatialAccessPriority.defaultComponentSettings?.beginBody
                 }
-                editable={true}
+                editable={props.editable}
               />
               {style.isSmall && (
                 <SurveyButton
-                  label={t("Begin")}
+                  label={t("Begin", { ns: "surveys" })}
                   className="pt-5"
                   onClick={() =>
                     props.onRequestStageChange(STAGES.MOBILE_DRAW_FIRST_SHAPE)
@@ -599,6 +613,7 @@ const SpatialAccessPriority: FormElementComponent<
           {props.stage === STAGES.LIST_SHAPES && (
             <>
               <FormElementBody
+                alternateLanguageSettings={props.alternateLanguageSettings}
                 required={false}
                 componentSettings={props.componentSettings}
                 componentSettingName={"listShapesBody"}
@@ -608,7 +623,7 @@ const SpatialAccessPriority: FormElementComponent<
                   props.componentSettings.listShapesBody ||
                   SpatialAccessPriority.defaultComponentSettings?.listShapesBody
                 }
-                editable={true}
+                editable={props.editable}
               />
               <div
                 className="my-8"
@@ -631,7 +646,7 @@ const SpatialAccessPriority: FormElementComponent<
                   <div className="flex-1 text-center">
                     <Trans ns="surveys">Average</Trans>
                   </div>
-                  <div className="flex-1 text-right">
+                  <div className="flex-1 text-right rtl:text-left">
                     <Trans ns="surveys">High</Trans>
                   </div>
                 </div>
@@ -639,7 +654,7 @@ const SpatialAccessPriority: FormElementComponent<
                 {filteredFeatures.features.map((feature) => (
                   <React.Fragment key={feature.id}>
                     <button
-                      className="block rounded-l w-full text-left px-4 py-2 border-opacity-50 h-full"
+                      className="block ltr:rounded-l rtl:rounded-r w-full text-left rtl:text-right px-4 py-2 border-opacity-50 h-full"
                       style={{
                         backgroundColor: colord(style.backgroundColor)
                           .darken(0.025)
@@ -671,7 +686,7 @@ const SpatialAccessPriority: FormElementComponent<
                       {nameElementId ? feature.properties[nameElementId] : ""}
                     </button>
                     <div
-                      className="h-full align-middle flex rounded-r p-2 px-4"
+                      className="h-full align-middle flex ltr:rounded-r rtl:rounded-l p-2 px-4"
                       style={{
                         // gridArea: "slider"
                         backgroundColor: colord(style.backgroundColor)
@@ -702,15 +717,17 @@ const SpatialAccessPriority: FormElementComponent<
                   </React.Fragment>
                 ))}
               </div>
-              <div className="space-y-2 sm:space-y-0 sm:space-x-1 sm:flex sm:w-full">
+              <div className="space-y-2 sm:space-y-0 sm:space-x-1 sm:rtl:space-x-reverse sm:flex sm:w-full">
                 <SurveyButton
                   className="w-full sm:w-auto block"
                   buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
                   label={
-                    <>
-                      <PlusCircle className="w-5 h-5 mr-2" />
-                      {t("New Shape")}
-                    </>
+                    <span className="space-x-1 rtl:space-x-reverse flex">
+                      <PlusCircleIcon className="w-5 h-5" />
+                      <span>
+                        <Trans ns="surveys">New Shape</Trans>
+                      </span>
+                    </span>
                   }
                   onClick={() => {
                     setResponseState({ submissionAttempted: false });
@@ -732,10 +749,12 @@ const SpatialAccessPriority: FormElementComponent<
                     className="w-full sm:w-auto block"
                     buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
                     label={
-                      <>
-                        <MapIcon className="w-5 h-5 mr-2" />
-                        {t("View Map")}
-                      </>
+                      <span className="space-x-1 rtl:space-x-reverse flex">
+                        <MapIcon className="w-5 h-5" />
+                        <span>
+                          <Trans ns="surveys">View Map</Trans>
+                        </span>
+                      </span>
                     }
                     onClick={() =>
                       props.onRequestStageChange(STAGES.SHAPE_EDITOR)
@@ -746,10 +765,12 @@ const SpatialAccessPriority: FormElementComponent<
                   className="w-full sm:w-auto block"
                   buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
                   label={
-                    <>
-                      <CheckIcon className="w-5 h-5 mr-2" />
-                      <Trans ns="surveys">Finish Sector</Trans>
-                    </>
+                    <span className="space-x-1 rtl:space-x-reverse flex">
+                      <CheckIcon className="w-5 h-5" />
+                      <span>
+                        <Trans ns="surveys">Finish Sector</Trans>
+                      </span>
+                    </span>
                   }
                   onClick={() => {
                     props.onRequestStageChange(STAGES.SECTOR_NAVIGATION);
@@ -790,11 +811,11 @@ const SpatialAccessPriority: FormElementComponent<
                   />
                 );
               })}
-              <div className="space-x-2">
+              <div className="space-x-2 rtl:space-x-reverse">
                 {geometryEditingState?.isNew && (
                   <SurveyButton
                     secondary={true}
-                    label={t("Cancel")}
+                    label={<Trans ns="surveys">Cancel</Trans>}
                     onClick={() => {
                       if (!geometryEditingState?.isNew) {
                         throw new Error(
@@ -804,7 +825,9 @@ const SpatialAccessPriority: FormElementComponent<
                       if (
                         !geometryEditingState.feature ||
                         window.confirm(
-                          t("Are you sure you want to delete this shape?")
+                          t("Are you sure you want to delete this shape?", {
+                            ns: "surveys",
+                          })
                         )
                       ) {
                         if (geometryEditingState.feature) {
@@ -822,17 +845,21 @@ const SpatialAccessPriority: FormElementComponent<
                   />
                 )}
                 <SurveyButton
-                  label={geometryEditingState?.isNew ? t("Save") : t("Close")}
+                  label={
+                    geometryEditingState?.isNew
+                      ? t("Save", { ns: "surveys" })
+                      : t("Close", { ns: "surveys" })
+                  }
                   onClick={onClickSave}
                 />
                 {!geometryEditingState?.isNew && style.isSmall && (
                   <>
                     <SurveyButton
-                      label={t("Edit on Map")}
+                      label={t("Edit on Map", { ns: "surveys" })}
                       onClick={onClickMapNonInteractive}
                     />
                     <SurveyButton
-                      label={t("Delete")}
+                      label={t("Delete", { ns: "surveys" })}
                       onClick={() => {
                         if (!selection?.id) {
                           throw new Error("No selection to delete");
@@ -897,7 +924,7 @@ const SpatialAccessPriority: FormElementComponent<
                 createStateButtons={
                   style.isSmall && (
                     <Button
-                      label={t("Cancel")}
+                      label={t("Cancel", { ns: "surveys" })}
                       onClick={() => {
                         if (geometryEditingState?.feature) {
                           const collection = removeFeatureFromValue(
@@ -922,7 +949,7 @@ const SpatialAccessPriority: FormElementComponent<
                   <Button
                     className="pointer-events-auto"
                     primary
-                    label={t("Done")}
+                    label={t("Done", { ns: "surveys" })}
                     onClick={style.isSmall ? onClickDoneMobile : onClickSave}
                     buttonClassName={
                       style.isSmall
@@ -936,7 +963,7 @@ const SpatialAccessPriority: FormElementComponent<
                     <>
                       <Button
                         className="pointer-events-auto"
-                        label={t("Back to List")}
+                        label={<Trans ns="surveys">Back to List</Trans>}
                         onClick={() => {
                           props.onRequestStageChange(STAGES.LIST_SHAPES);
                         }}
@@ -948,7 +975,7 @@ const SpatialAccessPriority: FormElementComponent<
                       />
                       <Button
                         className="pointer-events-auto"
-                        label={t("New Shape")}
+                        label={<Trans ns="surveys">New Shape</Trans>}
                         onClick={() => {
                           create(true);
                         }}
@@ -1035,7 +1062,11 @@ const SpatialAccessPriority: FormElementComponent<
                     }
                     isSmall={style.isSmall}
                     geometryType={props.sketchClass!.geometryType}
-                    title={!selection ? t("Focus on shapes") : undefined}
+                    title={
+                      !selection
+                        ? t("Focus on shapes", { ns: "surveys" })
+                        : undefined
+                    }
                   />
                 ) : null}
                 <BasemapControl
@@ -1074,6 +1105,7 @@ const SpatialAccessPriority: FormElementComponent<
         enableDraw={enable}
         componentSettings={props.componentSettings}
         id={props.id}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
     </>
   );
@@ -1172,12 +1204,14 @@ SpatialAccessPriority.getLayout = (
 function Admin(props: {
   id: number;
   componentSettings: SpatialAccessPriorityProps;
+  alternateLanguageSettings: { [lang: string]: { [key: string]: any } };
   map?: Map;
   bounds: BBox;
   enableDraw: () => void;
   disableDraw: () => void;
 }) {
   const { t } = useTranslation("admin:surveys");
+  const context = useContext(SurveyContext);
   return (
     <FormElementEditorPortal
       render={(
@@ -1190,10 +1224,14 @@ function Admin(props: {
           <>
             <FormElementOptionsInput
               key={props.id}
-              initialValue={props.componentSettings.sectorOptions || []}
+              prop="sectorOptions"
+              componentSettings={props.componentSettings}
+              alternateLanguageSettings={props.alternateLanguageSettings}
               onChange={updateComponentSetting(
                 "sectorOptions",
-                props.componentSettings
+                props.componentSettings,
+                context?.lang.code,
+                props.alternateLanguageSettings
               )}
               heading={t("Sector Options")}
               description={
