@@ -1580,7 +1580,7 @@ SpatialAccessPriority.shouldDisplaySubordinateElement = function (
   componentSettings,
   value
 ) {
-  const sectors = value.sectors || [];
+  const sectors = value?.sectors || [];
   const visibilitySettings =
     componentSettings?.subordinateVisibilitySettings || {};
   for (const sector of sectors) {

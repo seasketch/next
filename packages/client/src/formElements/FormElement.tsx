@@ -527,7 +527,7 @@ export interface FormElementComponent<T, V = {}>
   shouldDisplaySubordinateElement?: (
     elementId: number,
     componentSettings: T,
-    value: V
+    value?: V
   ) => boolean;
 }
 
