@@ -330,10 +330,12 @@ export function ChoiceAdminValueInput({
   value,
   onChange,
   componentSettings,
+  optionsProp,
 }: {
   value: any;
   onChange: (value: any) => void;
-  componentSettings: { options?: FormElementOption[] };
+  componentSettings: any;
+  optionsProp?: string;
 }) {
   const { t } = useTranslation("admin:surveys");
   return (
@@ -345,7 +347,8 @@ export function ChoiceAdminValueInput({
       }}
     >
       {value === null && <option value="NULL"> </option>}
-      {componentSettings.options?.map((option) => (
+      {((componentSettings[optionsProp || "options"] ||
+        []) as FormElementOption[])?.map((option) => (
         <option key={option.label} value={option.value || option.label}>
           {option.label}
         </option>

@@ -1,4 +1,5 @@
 import { collectText } from "../admin/surveys/collectText";
+import { components } from "../formElements";
 import {
   FieldRuleOperator,
   FormLogicCondition,
@@ -30,7 +31,10 @@ export interface SurveyPagingState<T> {
  * @returns
  */
 export function getSurveyPagingState<
-  T extends Pick<SurveyAppFormElementFragment, "id" | "jumpToId" | "typeId">
+  T extends Pick<
+    SurveyAppFormElementFragment,
+    "id" | "jumpToId" | "typeId" | "componentSettings"
+  >
 >(
   currentIndex: number,
   sortedFormElements: T[],
@@ -64,7 +68,10 @@ export function getSurveyPagingState<
 }
 
 function calculatePathToElement<
-  T extends Pick<SurveyAppFormElementFragment, "id" | "jumpToId">
+  T extends Pick<
+    SurveyAppFormElementFragment,
+    "id" | "jumpToId" | "typeId" | "componentSettings" | "subordinateTo"
+  >
 >(
   currentId: number,
   sortedFormElements: T[],
@@ -91,7 +98,10 @@ function calculatePathToElement<
       if (step.id === currentId) {
         return path;
       }
-      if (sortedFormElements.indexOf(step) > currentIndex) {
+      if (
+        sortedFormElements.indexOf(step) > currentIndex &&
+        !step.subordinateTo
+      ) {
         throw new Error("Stepped past current formElement!");
       }
     }
@@ -104,7 +114,10 @@ function calculatePathToElement<
 }
 
 function getNextFormElement<
-  T extends Pick<SurveyAppFormElementFragment, "id" | "jumpToId">
+  T extends Pick<
+    SurveyAppFormElementFragment,
+    "id" | "jumpToId" | "typeId" | "componentSettings" | "subordinateTo"
+  >
 >(
   current: T,
   sortedFormElements: T[],
@@ -114,6 +127,73 @@ function getNextFormElement<
   >[],
   answers: { [formElementId: number]: any }
 ): T | null {
+  const subordinateElements = sortedFormElements.filter(
+    (el) => !!el.subordinateTo
+  );
+  sortedFormElements = sortedFormElements.filter((el) => !el.subordinateTo);
+  const originalAnswers = answers;
+  answers = { ...answers };
+  for (const el of sortedFormElements) {
+    if (answers[el.id] !== undefined) {
+      const C = components[el.typeId];
+      if (!C) {
+        throw new Error(`Could not find component ${el.typeId}`);
+      }
+      if (C.getValueForRuleEvaluation) {
+        answers[el.id] = C.getValueForRuleEvaluation(
+          answers[el.id],
+          el.componentSettings
+        );
+      }
+    }
+  }
+
+  const matchingSubordinateElements = subordinateElements
+    .filter((el) => el.subordinateTo === current.id)
+    .filter((el) =>
+      components[current.typeId].shouldDisplaySubordinateElement!(
+        el.id,
+        current.componentSettings,
+        originalAnswers[current.id]
+      )
+    );
+  // Subordinate Elements and their parents don't support rules (yet?) so we'll
+  // ignore them
+  if (matchingSubordinateElements.length) {
+    // We are currently on a question that has subordinate elements next
+    // Get the first in the list
+    return matchingSubordinateElements[0];
+  } else if (current.subordinateTo) {
+    const parent = sortedFormElements.find(
+      (el) => el.id === current.subordinateTo
+    );
+    if (!parent) {
+      throw new Error("Parent of subordinate not found");
+    }
+
+    // We are already on a subordinate element
+    // Get the subordinate's siblings
+    const siblings = subordinateElements
+      .filter((el) => el.subordinateTo === current.subordinateTo)
+      .filter((el) =>
+        components[parent.typeId].shouldDisplaySubordinateElement!(
+          el.id,
+          parent.componentSettings,
+          originalAnswers[parent.id]
+        )
+      );
+    const idx = siblings.indexOf(current);
+    if (idx === siblings.length - 1) {
+      // on the last subordinate, so go to the next question after the parent
+      const currentIndex = sortedFormElements.indexOf(parent);
+      return sortedFormElements[currentIndex + 1];
+    } else {
+      return siblings[idx + 1];
+    }
+  }
+
+  // If we get to here, not on a subordinate element or it's parent
+
   const currentIndex = sortedFormElements.indexOf(current);
   let nextByPosition = sortedFormElements[currentIndex + 1];
   let nextByJumpToId = current.jumpToId
@@ -207,17 +287,24 @@ function evaluateCondition(
 ) {
   switch (operator) {
     case FieldRuleOperator.Contains:
-      throw new Error("Not implemented");
+      if (Array.isArray(answer)) {
+        return answer.indexOf(value) !== -1;
+      } else {
+        // eslint-disable-next-line eqeqeq
+        return answer == value;
+      }
     case FieldRuleOperator.Equal:
       if (Array.isArray(answer)) {
         return answer.indexOf(value) !== -1;
       } else {
+        // eslint-disable-next-line eqeqeq
         return answer == value;
       }
     case FieldRuleOperator.GreaterThan:
       return answer > value;
     case FieldRuleOperator.IsBlank:
       return (
+        // eslint-disable-next-line eqeqeq
         answer == null || answer == undefined || answer == "" || answer == " "
       );
     case FieldRuleOperator.LessThan:
@@ -226,6 +313,7 @@ function evaluateCondition(
       if (Array.isArray(answer)) {
         return answer.indexOf(value) === -1;
       } else {
+        // eslint-disable-next-line eqeqeq
         return answer != value;
       }
     default:

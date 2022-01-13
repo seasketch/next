@@ -78,6 +78,7 @@ fragment FormElementDetails on FormElement {
   unsplashAuthorName
   backgroundWidth
   backgroundHeight
+  subordinateTo
 }
 
 fragment SketchClassDetails on SketchClass {
@@ -152,6 +153,12 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
     region {
       geojson
     }
+  }
+}
+
+query FormElementTypes {
+  formElementTypes {
+    ...AddFormElementTypeDetails
   }
 }
 
@@ -304,6 +311,7 @@ mutation AddFormElement(
   $componentType: String!
   $position: Int
   $exportId: String
+  $subordinateTo: Int
 ) {
   createFormElement(
     input: {
@@ -315,6 +323,7 @@ mutation AddFormElement(
         typeId: $componentType
         position: $position
         exportId: $exportId
+        subordinateTo: $subordinateTo
       }
     }
   ) {
@@ -516,6 +525,7 @@ mutation UpdateFormLogicRule(
       command
       jumpToId
       position
+      formElementId
     }
   }
 }
@@ -524,9 +534,13 @@ mutation UpdateLogicCondition(
   $id: Int!
   $operator: FieldRuleOperator
   $value: JSON
+  $subjectId: Int
 ) {
   updateFormLogicCondition(
-    input: { id: $id, patch: { operator: $operator, value: $value } }
+    input: {
+      id: $id
+      patch: { operator: $operator, value: $value, subjectId: $subjectId }
+    }
   ) {
     formLogicCondition {
       id
