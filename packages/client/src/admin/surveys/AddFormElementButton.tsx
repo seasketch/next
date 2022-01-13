@@ -22,6 +22,7 @@ interface Props {
   nextPosition: number;
   heading?: string;
   label?: string;
+  subordinateTo?: number;
 }
 
 export default function AddFormElementButton({
@@ -32,6 +33,7 @@ export default function AddFormElementButton({
   heading,
   formIsSketchClass,
   label,
+  subordinateTo,
 }: Props) {
   const { t } = useTranslation("admin:surveys");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -75,7 +77,7 @@ export default function AddFormElementButton({
                     (t) => t.componentName === id
                   );
                   if (
-                    formIsSketchClass &&
+                    (formIsSketchClass || subordinateTo) &&
                     (type?.isSurveysOnly || type?.isSpatial)
                   ) {
                     return false;
@@ -99,6 +101,7 @@ export default function AddFormElementButton({
                           formId: formId,
                           componentType: id,
                           exportId: C.defaultExportId,
+                          subordinateTo: subordinateTo,
                         },
                         optimisticResponse: {
                           __typename: "Mutation",
@@ -133,6 +136,7 @@ export default function AddFormElementButton({
                               unsplashAuthorUrl: null,
                               backgroundHeight: null,
                               backgroundWidth: null,
+                              subordinateTo: subordinateTo || null,
                             },
                           },
                         },

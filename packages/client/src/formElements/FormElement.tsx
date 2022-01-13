@@ -19,6 +19,7 @@ import {
   FormElement,
   FormElementDetailsFragment,
   FormElementLayout,
+  Maybe,
   Sketch,
   SketchClassDetailsFragment,
   UpdateFormElementMutation,
@@ -44,7 +45,11 @@ import {
 } from "geojson";
 import { LngLatBoundsLike } from "mapbox-gl";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
-import { LangDetails } from "../lang/supported";
+import languages, { LangDetails } from "../lang/supported";
+import set from "lodash.set";
+import deepCopy from "lodash.clonedeep";
+import { components } from ".";
+
 require("./prosemirror-body.css");
 require("./unreset.css");
 const LazyBodyEditor = lazy(() => import("./BodyEditor"));
@@ -329,6 +334,29 @@ function FormElementEditorContainer({
   );
 }
 
+interface ChildOptionsFactoryProps extends FormElementDetailsFragment {
+  child: FormElementDetailsFragment;
+}
+export function ChildOptionsFactory(props: ChildOptionsFactoryProps) {
+  const [
+    updateBaseSetting,
+    updateComponentSetting,
+    updateFormElementState,
+  ] = useUpdateFormElement(props);
+  const C = components[props.typeId];
+  if (C.ChildOptions) {
+    return (
+      <C.ChildOptions
+        child={props.child}
+        componentSettings={props.componentSettings}
+        updateComponentSetting={updateComponentSetting}
+      />
+    );
+  } else {
+    return null;
+  }
+}
+
 export function useUpdateFormElement(
   data?: Pick<
     FormElement,
@@ -404,15 +432,23 @@ export function useUpdateFormElement(
         `Specified language ${language} but not current alternateLanguageSettings`
       );
     }
+
     if (!language || language === "EN") {
-      updater({ componentSettings: { ...currentSettings, [setting]: value } });
+      const newSettings = deepCopy(currentSettings);
+      set(newSettings, setting, value);
+      // @ts-ignore
+      window.newSettings = newSettings;
+      // @ts-ignore
+      window.set = set;
+      updater({ componentSettings: newSettings });
     } else {
+      const newSettings = deepCopy(alternateLanguageSettings[language]);
+      set(newSettings, setting, value);
       updater({
         alternateLanguageSettings: {
           ...alternateLanguageSettings,
           [language]: {
-            ...alternateLanguageSettings[language],
-            [setting]: value,
+            ...newSettings,
           },
         },
       });
@@ -472,6 +508,27 @@ export interface FormElementComponent<T, V = {}>
   /** Will disable option in admin interface to delete the element. Useful for welcome message, thank you, etc that are created as part of templates */
   disableDeletion?: boolean;
   getInitialStage?: (value: V, componentSettings: T) => number;
+  ChildOptions?: FunctionComponent<{
+    componentSettings: T;
+    child: {
+      typeId: string;
+      componentSettings: any;
+      id: number;
+      subordinateTo?: Maybe<number>;
+    };
+    updateComponentSetting: (
+      setting: string,
+      currentSettings: any,
+      language?: string | undefined,
+      alternateLanguageSettings?: any
+    ) => (value: any) => void;
+  }>;
+  getValueForRuleEvaluation?: (value: V, componentSettings: T) => any;
+  shouldDisplaySubordinateElement?: (
+    elementId: number,
+    componentSettings: T,
+    value: V
+  ) => boolean;
 }
 
 export function hideNav(
@@ -515,15 +572,36 @@ export function sortFormElements<
   const Welcome = elements.find((el) => el.typeId === "WelcomeMessage");
   const ThankYou = elements.find((el) => el.typeId === "ThankYou");
   const SaveScreen = elements.find((el) => el.typeId === "SaveScreen");
+  const FeatureName = elements.find((el) => el.typeId === "FeatureName");
+  const SAPRange = elements.find((el) => el.typeId === "SAPRange");
   const bodyElements = elements.filter(
     (el) =>
       el.typeId !== "WelcomeMessage" &&
       el.typeId !== "ThankYou" &&
-      el.typeId !== "SaveScreen"
+      el.typeId !== "SaveScreen" &&
+      el.typeId !== "FeatureName" &&
+      el.typeId !== "SAPRange"
   );
   bodyElements.sort((a, b) => {
     return a.position - b.position;
   });
+  const pre: T[] = [];
+  const post: T[] = [];
+  if (Welcome) {
+    pre.push(Welcome);
+  }
+  if (FeatureName) {
+    pre.push(FeatureName);
+  }
+  if (SAPRange) {
+    pre.push(SAPRange);
+  }
+  if (SaveScreen) {
+    post.push(SaveScreen);
+  }
+  if (ThankYou) {
+    post.push(ThankYou);
+  }
   if (Welcome || ThankYou) {
     if (!Welcome) {
       throw new Error("WelcomeMessage FormElement not in Form");
@@ -534,9 +612,9 @@ export function sortFormElements<
     if (!SaveScreen) {
       throw new Error("SaveScreen FormElement is not in Form");
     }
-    return [Welcome, ...bodyElements, SaveScreen, ThankYou] as T[];
+    return [...pre, ...bodyElements, ...post] as T[];
   } else {
-    return [...bodyElements] as T[];
+    return [...pre, ...bodyElements, ...post] as T[];
   }
 }
 

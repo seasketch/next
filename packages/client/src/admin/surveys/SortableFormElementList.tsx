@@ -32,6 +32,7 @@ interface Props {
   className?: CSSProperties;
   dim: boolean;
   onAddClick?: (formId: number) => void;
+  subordinateTo?: FormElementFullDetailsFragment;
 }
 
 /**
@@ -62,6 +63,7 @@ export default function SortableFormElementList(props: Props) {
         <div className="mb-2">
           <FormElementListItem
             onReorder={props.onReorder}
+            subordinateFormElements={[]}
             dim={props.dim}
             typeId={welcome.typeId}
             selected={props.selection === welcome.id}
@@ -80,6 +82,7 @@ export default function SortableFormElementList(props: Props) {
         <div className="mb-2">
           <FormElementListItem
             dim={props.dim}
+            subordinateFormElements={[]}
             onReorder={props.onReorder}
             typeId={featureName.typeId}
             selected={props.selection === featureName.id}
@@ -97,6 +100,7 @@ export default function SortableFormElementList(props: Props) {
       {sapRange && (
         <div className="mb-2">
           <FormElementListItem
+            subordinateFormElements={[]}
             onReorder={props.onReorder}
             dim={props.dim}
             typeId={sapRange.typeId}
@@ -144,44 +148,53 @@ export default function SortableFormElementList(props: Props) {
                 ref={provided.innerRef}
                 {...provided.droppableProps}
               >
-                {sortableFormElements.map((element, i) => (
-                  <Draggable
-                    index={i}
-                    draggableId={element.id.toString()}
-                    key={element.id}
-                    isDragDisabled={element.typeId === "WelcomeMessage"}
-                  >
-                    {(provided, snapshot) => (
-                      <>
-                        <FormElementListItem
-                          onReorder={props.onReorder}
-                          collapseSpatialItems={collapseSpatialItems}
-                          dim={props.dim}
-                          typeId={element.typeId}
-                          draggable={true}
-                          provided={provided}
-                          snapshot={snapshot}
-                          key={element.id}
-                          selectedId={props.selection}
-                          selected={element.id === props.selection}
-                          element={element}
-                          typeName={element.type?.label || element.typeId}
-                          creating={element.id === 9999999999}
-                          onSpatialSubElementClick={(id) => {
-                            if (props.onClick) {
-                              props.onClick(id);
-                            }
-                          }}
-                          onClick={() => {
-                            if (props.onClick) {
-                              props.onClick(element.id);
-                            }
-                          }}
-                        />
-                      </>
-                    )}
-                  </Draggable>
-                ))}
+                {sortableFormElements
+                  .filter(
+                    (el) =>
+                      !el.subordinateTo ||
+                      el.subordinateTo === props.subordinateTo?.id
+                  )
+                  .map((element, i) => (
+                    <Draggable
+                      index={i}
+                      draggableId={element.id.toString()}
+                      key={element.id}
+                      isDragDisabled={element.typeId === "WelcomeMessage"}
+                    >
+                      {(provided, snapshot) => (
+                        <>
+                          <FormElementListItem
+                            onReorder={props.onReorder}
+                            collapseSpatialItems={collapseSpatialItems}
+                            dim={props.dim}
+                            typeId={element.typeId}
+                            subordinateFormElements={sortableFormElements.filter(
+                              (el) => el.subordinateTo === element.id
+                            )}
+                            draggable={true}
+                            provided={provided}
+                            snapshot={snapshot}
+                            key={element.id}
+                            selectedId={props.selection}
+                            selected={element.id === props.selection}
+                            element={element}
+                            typeName={element.type?.label || element.typeId}
+                            creating={element.id === 9999999999}
+                            onSpatialSubElementClick={(id) => {
+                              if (props.onClick) {
+                                props.onClick(id);
+                              }
+                            }}
+                            onClick={() => {
+                              if (props.onClick) {
+                                props.onClick(element.id);
+                              }
+                            }}
+                          />
+                        </>
+                      )}
+                    </Draggable>
+                  ))}
                 {provided.placeholder}
               </div>
             );
@@ -196,6 +209,7 @@ export default function SortableFormElementList(props: Props) {
             typeId={thankYou.typeId}
             selected={props.selection === thankYou.id}
             element={thankYou}
+            subordinateFormElements={[]}
             typeName={thankYou.type?.label || thankYou.typeId}
             onClick={() => {
               if (props.onClick) {
@@ -226,6 +240,7 @@ function FormElementListItem({
   selectedId,
   onReorder,
   onAddClick,
+  subordinateFormElements,
 }: {
   element: FormElementFullDetailsFragment;
   typeName: string;
@@ -242,6 +257,7 @@ function FormElementListItem({
   selectedId?: number;
   onReorder?: (elementIds: number[]) => void;
   onAddClick?: (elementId: number) => void;
+  subordinateFormElements: FormElementFullDetailsFragment[];
 }) {
   const { t } = useTranslation("admin:surveys");
   const history = useHistory();
@@ -288,7 +304,7 @@ function FormElementListItem({
       </div>
       {!collapseSpatialItems &&
         element.sketchClass &&
-        !!element.sketchClass?.form?.formElements?.length && (
+        element.typeId === "SpatialAccessPriorityInput" && (
           <>
             <div className="px-1 py-1 border-cool-gray-300 border-2 rounded m-4">
               <h4 className="uppercase text-xs text-center text-cool-gray-400 font-semibold py-1">
@@ -314,10 +330,41 @@ function FormElementListItem({
                   formId={element.sketchClass!.form!.id}
                   heading={t("Add to spatial input...")}
                   onAdd={(formElement) => history.replace(`./${formElement}`)}
-                  existingTypes={element.sketchClass!.form.formElements.map(
-                    (el) => el.typeId
-                  )}
+                  existingTypes={(
+                    element.sketchClass?.form?.formElements || []
+                  ).map((el) => el.typeId)}
                   label={t("Add element")}
+                />
+              </div>
+            </div>
+            <div className="px-1 py-1 border-cool-gray-300 border-2 rounded m-4">
+              <h4 className="uppercase text-xs text-center text-cool-gray-400 font-semibold py-1">
+                <Trans ns="admin:surveys">Sector-Specific Questions</Trans>
+              </h4>
+              <SortableFormElementList
+                subordinateTo={element}
+                selection={selectedId}
+                items={subordinateFormElements}
+                dim={dim}
+                onClick={(id) => {
+                  if (onSpatialSubElementClick) {
+                    onSpatialSubElementClick(id);
+                  }
+                }}
+                onReorder={onReorder}
+              />
+              <div className="flex justify-center pb-1 -mt-1">
+                <AddFormElementButton
+                  formIsSketchClass={false}
+                  nextPosition={
+                    (element.sketchClass?.form?.formElements?.length || 0) + 1
+                  }
+                  formId={element.formId}
+                  heading={t("Add to sector questions...")}
+                  onAdd={(formElement) => history.replace(`./${formElement}`)}
+                  existingTypes={subordinateFormElements.map((el) => el.typeId)}
+                  label={t("Add element")}
+                  subordinateTo={element.id}
                 />
               </div>
             </div>

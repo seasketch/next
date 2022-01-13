@@ -4245,6 +4245,15 @@ type FormElement implements Node {
   sketchClassFk: SketchClass
 
   """
+  Used for special elements like SpatialAccessPriorityInput to create a sort of
+  sub-form that the parent element controls the rendering of. Will not appear in
+  the form unless the client implementation utilizes something like
+  FormElement.shouldDisplaySubordinateElement to control visibility.
+  
+  """
+  subordinateTo: Int
+
+  """
   Indicates whether the form element should be displayed with dark or light text
   variants to match the background color. Admin interface should automatically
   set this value based on `background_color`, though admins may wish to manually override.
@@ -4327,6 +4336,15 @@ input FormElementInput {
   
   """
   secondaryColor: String
+
+  """
+  Used for special elements like SpatialAccessPriorityInput to create a sort of
+  sub-form that the parent element controls the rendering of. Will not appear in
+  the form unless the client implementation utilizes something like
+  FormElement.shouldDisplaySubordinateElement to control visibility.
+  
+  """
+  subordinateTo: Int
 
   """
   Indicates whether the form element should be displayed with dark or light text
@@ -4422,6 +4440,15 @@ input FormElementPatch {
   
   """
   secondaryColor: String
+
+  """
+  Used for special elements like SpatialAccessPriorityInput to create a sort of
+  sub-form that the parent element controls the rendering of. Will not appear in
+  the form unless the client implementation utilizes something like
+  FormElement.shouldDisplaySubordinateElement to control visibility.
+  
+  """
+  subordinateTo: Int
 
   """
   Indicates whether the form element should be displayed with dark or light text

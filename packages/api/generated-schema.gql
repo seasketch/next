@@ -4245,12 +4245,13 @@ type FormElement implements Node {
   sketchClassFk: SketchClass
 
   """
-  Subordinant forms work only in survey forms. With these, special Form Elements
-  like SpatialAccessPriority can specify questions to be asked dependent upon
-  answers to another question. The "parent" FormElement that an element is
-  subordinate to is fully responsible for rendering the given elements.
+  Used for special elements like SpatialAccessPriorityInput to create a sort of
+  sub-form that the parent element controls the rendering of. Will not appear in
+  the form unless the client implementation utilizes something like
+  FormElement.shouldDisplaySubordinateElement to control visibility.
+  
   """
-  subordinantTo: Int
+  subordinateTo: Int
 
   """
   Indicates whether the form element should be displayed with dark or light text
@@ -4337,12 +4338,13 @@ input FormElementInput {
   secondaryColor: String
 
   """
-  Subordinant forms work only in survey forms. With these, special Form Elements
-  like SpatialAccessPriority can specify questions to be asked dependent upon
-  answers to another question. The "parent" FormElement that an element is
-  subordinate to is fully responsible for rendering the given elements.
+  Used for special elements like SpatialAccessPriorityInput to create a sort of
+  sub-form that the parent element controls the rendering of. Will not appear in
+  the form unless the client implementation utilizes something like
+  FormElement.shouldDisplaySubordinateElement to control visibility.
+  
   """
-  subordinantTo: Int
+  subordinateTo: Int
 
   """
   Indicates whether the form element should be displayed with dark or light text
@@ -4440,12 +4442,13 @@ input FormElementPatch {
   secondaryColor: String
 
   """
-  Subordinant forms work only in survey forms. With these, special Form Elements
-  like SpatialAccessPriority can specify questions to be asked dependent upon
-  answers to another question. The "parent" FormElement that an element is
-  subordinate to is fully responsible for rendering the given elements.
+  Used for special elements like SpatialAccessPriorityInput to create a sort of
+  sub-form that the parent element controls the rendering of. Will not appear in
+  the form unless the client implementation utilizes something like
+  FormElement.shouldDisplaySubordinateElement to control visibility.
+  
   """
-  subordinantTo: Int
+  subordinateTo: Int
 
   """
   Indicates whether the form element should be displayed with dark or light text

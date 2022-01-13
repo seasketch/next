@@ -3582,12 +3582,12 @@ export type FormElement = Node & {
   /** Reads a single `SketchClass` that is related to this `FormElement`. */
   sketchClassFk?: Maybe<SketchClass>;
   /**
-   * Subordinant forms work only in survey forms. With these, special Form Elements
-   * like SpatialAccessPriority can specify questions to be asked dependent upon
-   * answers to another question. The "parent" FormElement that an element is
-   * subordinate to is fully responsible for rendering the given elements.
+   * Used for special elements like SpatialAccessPriorityInput to create a sort of
+   * sub-form that the parent element controls the rendering of. Will not appear in
+   * the form unless the client implementation utilizes something like
+   * FormElement.shouldDisplaySubordinateElement to control visibility.
    */
-  subordinantTo?: Maybe<Scalars['Int']>;
+  subordinateTo?: Maybe<Scalars['Int']>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -3646,12 +3646,12 @@ export type FormElementInput = {
   /** Color used to style navigation controls */
   secondaryColor?: Maybe<Scalars['String']>;
   /**
-   * Subordinant forms work only in survey forms. With these, special Form Elements
-   * like SpatialAccessPriority can specify questions to be asked dependent upon
-   * answers to another question. The "parent" FormElement that an element is
-   * subordinate to is fully responsible for rendering the given elements.
+   * Used for special elements like SpatialAccessPriorityInput to create a sort of
+   * sub-form that the parent element controls the rendering of. Will not appear in
+   * the form unless the client implementation utilizes something like
+   * FormElement.shouldDisplaySubordinateElement to control visibility.
    */
-  subordinantTo?: Maybe<Scalars['Int']>;
+  subordinateTo?: Maybe<Scalars['Int']>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -3719,12 +3719,12 @@ export type FormElementPatch = {
   /** Color used to style navigation controls */
   secondaryColor?: Maybe<Scalars['String']>;
   /**
-   * Subordinant forms work only in survey forms. With these, special Form Elements
-   * like SpatialAccessPriority can specify questions to be asked dependent upon
-   * answers to another question. The "parent" FormElement that an element is
-   * subordinate to is fully responsible for rendering the given elements.
+   * Used for special elements like SpatialAccessPriorityInput to create a sort of
+   * sub-form that the parent element controls the rendering of. Will not appear in
+   * the form unless the client implementation utilizes something like
+   * FormElement.shouldDisplaySubordinateElement to control visibility.
    */
-  subordinantTo?: Maybe<Scalars['Int']>;
+  subordinateTo?: Maybe<Scalars['Int']>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -14115,7 +14115,7 @@ export type AddFormElementTypeDetailsFragment = (
 
 export type FormElementDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
@@ -14343,6 +14343,7 @@ export type AddFormElementMutationVariables = Exact<{
   componentType: Scalars['String'];
   position?: Maybe<Scalars['Int']>;
   exportId?: Maybe<Scalars['String']>;
+  subordinateTo?: Maybe<Scalars['Int']>;
 }>;
 
 
@@ -14516,7 +14517,7 @@ export type UpdateFormLogicRuleMutation = (
     { __typename?: 'UpdateFormLogicRulePayload' }
     & { formLogicRule?: Maybe<(
       { __typename?: 'FormLogicRule' }
-      & Pick<FormLogicRule, 'id' | 'booleanOperator' | 'command' | 'jumpToId' | 'position'>
+      & Pick<FormLogicRule, 'id' | 'booleanOperator' | 'command' | 'jumpToId' | 'position' | 'formElementId'>
     )> }
   )> }
 );
@@ -14525,6 +14526,7 @@ export type UpdateLogicConditionMutationVariables = Exact<{
   id: Scalars['Int'];
   operator?: Maybe<FieldRuleOperator>;
   value?: Maybe<Scalars['JSON']>;
+  subjectId?: Maybe<Scalars['Int']>;
 }>;
 
 
@@ -14601,7 +14603,7 @@ export type SurveyAppRuleFragment = (
 
 export type SurveyAppFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
@@ -15500,6 +15502,7 @@ export const FormElementDetailsFragmentDoc = gql`
   unsplashAuthorName
   backgroundWidth
   backgroundHeight
+  subordinateTo
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
 export const LogicRuleDetailsFragmentDoc = gql`
@@ -15601,6 +15604,7 @@ export const SurveyAppFormElementFragmentDoc = gql`
   backgroundWidth
   backgroundHeight
   jumpToId
+  subordinateTo
 }
     ${SketchClassDetailsFragmentDoc}`;
 export const SurveyAppSurveyFragmentDoc = gql`
@@ -19432,9 +19436,9 @@ export type UpdateFormElementOrderMutationHookResult = ReturnType<typeof useUpda
 export type UpdateFormElementOrderMutationResult = Apollo.MutationResult<UpdateFormElementOrderMutation>;
 export type UpdateFormElementOrderMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>;
 export const AddFormElementDocument = gql`
-    mutation AddFormElement($body: JSON!, $componentSettings: JSON!, $formId: Int!, $componentType: String!, $position: Int, $exportId: String) {
+    mutation AddFormElement($body: JSON!, $componentSettings: JSON!, $formId: Int!, $componentType: String!, $position: Int, $exportId: String, $subordinateTo: Int) {
   createFormElement(
-    input: {formElement: {body: $body, componentSettings: $componentSettings, formId: $formId, isRequired: false, typeId: $componentType, position: $position, exportId: $exportId}}
+    input: {formElement: {body: $body, componentSettings: $componentSettings, formId: $formId, isRequired: false, typeId: $componentType, position: $position, exportId: $exportId, subordinateTo: $subordinateTo}}
   ) {
     formElement {
       ...FormElementFullDetails
@@ -19463,6 +19467,7 @@ export type AddFormElementMutationFn = Apollo.MutationFunction<AddFormElementMut
  *      componentType: // value for 'componentType'
  *      position: // value for 'position'
  *      exportId: // value for 'exportId'
+ *      subordinateTo: // value for 'subordinateTo'
  *   },
  * });
  */
@@ -19824,6 +19829,7 @@ export const UpdateFormLogicRuleDocument = gql`
       command
       jumpToId
       position
+      formElementId
     }
   }
 }
@@ -19858,9 +19864,9 @@ export type UpdateFormLogicRuleMutationHookResult = ReturnType<typeof useUpdateF
 export type UpdateFormLogicRuleMutationResult = Apollo.MutationResult<UpdateFormLogicRuleMutation>;
 export type UpdateFormLogicRuleMutationOptions = Apollo.BaseMutationOptions<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>;
 export const UpdateLogicConditionDocument = gql`
-    mutation UpdateLogicCondition($id: Int!, $operator: FieldRuleOperator, $value: JSON) {
+    mutation UpdateLogicCondition($id: Int!, $operator: FieldRuleOperator, $value: JSON, $subjectId: Int) {
   updateFormLogicCondition(
-    input: {id: $id, patch: {operator: $operator, value: $value}}
+    input: {id: $id, patch: {operator: $operator, value: $value, subjectId: $subjectId}}
   ) {
     formLogicCondition {
       id
@@ -19890,6 +19896,7 @@ export type UpdateLogicConditionMutationFn = Apollo.MutationFunction<UpdateLogic
  *      id: // value for 'id'
  *      operator: // value for 'operator'
  *      value: // value for 'value'
+ *      subjectId: // value for 'subjectId'
  *   },
  * });
  */

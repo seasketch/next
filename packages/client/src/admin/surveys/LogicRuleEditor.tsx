@@ -1,5 +1,6 @@
 import { PlusIcon, TrashIcon } from "@heroicons/react/outline";
 import gql from "graphql-tag";
+import React from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -129,6 +130,7 @@ export default function LogicRuleEditor({
 
   const [updateRule, updateRuleState] = useUpdateFormLogicRuleMutation({
     onError,
+    // @ts-ignore
     optimisticResponse: (data) => ({
       __typename: "Mutation",
       updateFormLogicRule: {
@@ -136,7 +138,7 @@ export default function LogicRuleEditor({
         formLogicRule: {
           __typename: "FormLogicRule",
           ...rules.find((r) => r.id === data.id)!,
-          jumpToId: data.jumpToId,
+          ...data,
         },
       },
     }),
@@ -228,6 +230,7 @@ export default function LogicRuleEditor({
         </p>
         <div className="p-2 w-full">
           <FormElementSelect
+            mode={FormElementSelectMode.DefaultNext}
             value={formElement.jumpToId!}
             onChange={(value) => {
               for (const id of selectedIds) {
@@ -249,11 +252,8 @@ export default function LogicRuleEditor({
                 });
               }
             }}
-            blankLabel={t("Default, next in list")}
             currentFormElementId={formElementId}
             formElements={formElements}
-            disableBeforeCurrentItem={false}
-            includeBlankOption={true}
           />
         </div>
       </div>
@@ -284,14 +284,12 @@ export default function LogicRuleEditor({
                   </button>
                 </h4>
                 <FormElementSelect
+                  mode={FormElementSelectMode.JumpTo}
                   formElements={formElements.filter(
                     (f) => f.formId === formElement.formId
                   )}
                   currentFormElementId={formElementId}
-                  includeBlankOption={false}
-                  disableBeforeCurrentItem={true}
                   value={rule.jumpToId!}
-                  blankLabel=""
                   onChange={(id) => {
                     updateRule({
                       variables: {
@@ -306,80 +304,82 @@ export default function LogicRuleEditor({
                 <h4 className="text-sm py-1 mt-1">{t("When")}</h4>
                 {(rule.conditions || []).map((condition) => {
                   return (
-                    <div
-                      key={condition.id}
-                      className="bg-blue-100 border-black border-opacity-10 text-sm rounded-lg overflow-hidden flex items-center w-full border h-8"
-                    >
-                      <OperatorSelect
-                        className="flex-1 text-xl"
-                        value={condition.operator}
-                        operators={
-                          (formElement.type?.supportedOperators ||
-                            []) as FieldRuleOperator[]
-                        }
-                        onChange={(op) => {
-                          updateCondition({
-                            variables: {
-                              id: condition.id,
-                              operator: op,
-                            },
-                          });
-                        }}
-                      />
-                      {condition.operator !== FieldRuleOperator.IsBlank && (
-                        <div className="flex-1 border-l border-blue-800 border-opacity-20">
-                          <AdminValueInput
-                            componentName={
-                              formElements.find(
-                                (f) => f.id === condition.subjectId
-                              )?.typeId
-                            }
-                            componentSettings={
-                              formElements.find(
-                                (f) => f.id === condition.subjectId
-                              )?.componentSettings
-                            }
-                            value={condition.value}
-                            onChange={(value) => {
-                              updateCondition({
-                                variables: {
-                                  id: condition.id,
-                                  value: value,
-                                },
-                              });
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      <button
-                        className={`h-full ${adminValueInputCommonClassNames.replace(
-                          "w-full",
-                          ""
-                        )}`}
-                        onClick={() => {
-                          if (
-                            global.confirm(
-                              rule.conditions!.length > 1
-                                ? t(
-                                    "Are you sure you want to delete this condition?"
-                                  )
-                                : t(
-                                    "Are you sure? This will delete the entire rule."
-                                  )
-                            )
-                          ) {
-                            if (rule.conditions!.length > 1) {
-                              deleteCondition(condition);
-                            } else {
-                              deleteRule(rule);
-                            }
-                          }
-                        }}
+                    <React.Fragment key={condition.id}>
+                      <div
+                        key={condition.id}
+                        className="bg-blue-100 border-black border-opacity-10 text-sm rounded-lg overflow-hidden flex items-center w-full border h-8"
                       >
-                        <TrashIcon className="w-4 h-4 mx-2 opacity-60" />
-                      </button>
-                    </div>
+                        <OperatorSelect
+                          className="flex-1 text-xl"
+                          value={condition.operator}
+                          operators={
+                            (formElement.type?.supportedOperators ||
+                              []) as FieldRuleOperator[]
+                          }
+                          onChange={(op) => {
+                            updateCondition({
+                              variables: {
+                                id: condition.id,
+                                operator: op,
+                              },
+                            });
+                          }}
+                        />
+                        {condition.operator !== FieldRuleOperator.IsBlank && (
+                          <div className="flex-1 border-l border-blue-800 border-opacity-20">
+                            <AdminValueInput
+                              componentName={
+                                formElements.find(
+                                  (f) => f.id === condition.subjectId
+                                )?.typeId
+                              }
+                              componentSettings={
+                                formElements.find(
+                                  (f) => f.id === condition.subjectId
+                                )?.componentSettings
+                              }
+                              value={condition.value}
+                              onChange={(value) => {
+                                updateCondition({
+                                  variables: {
+                                    id: condition.id,
+                                    value: value,
+                                  },
+                                });
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        <button
+                          className={`h-full ${adminValueInputCommonClassNames.replace(
+                            "w-full",
+                            ""
+                          )}`}
+                          onClick={() => {
+                            if (
+                              global.confirm(
+                                rule.conditions!.length > 1
+                                  ? t(
+                                      "Are you sure you want to delete this condition?"
+                                    )
+                                  : t(
+                                      "Are you sure? This will delete the entire rule."
+                                    )
+                              )
+                            ) {
+                              if (rule.conditions!.length > 1) {
+                                deleteCondition(condition);
+                              } else {
+                                deleteRule(rule);
+                              }
+                            }
+                          }}
+                        >
+                          <TrashIcon className="w-4 h-4 mx-2 opacity-60" />
+                        </button>
+                      </div>
+                    </React.Fragment>
                   );
                 })}
 
@@ -429,6 +429,7 @@ export default function LogicRuleEditor({
           </p>
           <div className="p-2 w-full">
             <FormElementSelect
+              mode={FormElementSelectMode.DefaultNext}
               value={formElement.jumpToId!}
               onChange={(value) => {
                 updateFormElement({
@@ -448,13 +449,10 @@ export default function LogicRuleEditor({
                   },
                 });
               }}
-              blankLabel={t("Default, next in list")}
               currentFormElementId={formElementId}
               formElements={formElements.filter(
                 (f) => f.formId === formElement.formId
               )}
-              disableBeforeCurrentItem={true}
-              includeBlankOption={true}
               endOfSubformOption={parentFormElementId || undefined}
             />
           </div>
@@ -483,24 +481,26 @@ export default function LogicRuleEditor({
   );
 }
 
+enum FormElementSelectMode {
+  JumpTo,
+  SubjectId,
+  DefaultNext,
+}
+
 function FormElementSelect({
   formElements,
   currentFormElementId,
-  disableBeforeCurrentItem,
   value,
   onChange,
-  includeBlankOption,
-  blankLabel,
   endOfSubformOption,
+  mode,
 }: {
   value: number;
   onChange: (id: number | null) => void;
   formElements: FE[];
   currentFormElementId: number;
-  disableBeforeCurrentItem: boolean;
-  includeBlankOption: boolean;
-  blankLabel: string;
   endOfSubformOption?: number;
+  mode: FormElementSelectMode;
 }) {
   const currentElement = formElements.find(
     (e) => e.id === currentFormElementId
@@ -517,18 +517,27 @@ function FormElementSelect({
         onChange(value);
       }}
     >
-      {includeBlankOption && (
-        <option value="next">{blankLabel || "Default"}</option>
+      {mode === FormElementSelectMode.DefaultNext && (
+        <option value="next">{t("Default, next in list")}</option>
       )}
       {formElements
         .filter(
-          (el) => el.id !== currentFormElementId && el.typeId !== "ThankYou"
+          (el) =>
+            (mode === FormElementSelectMode.SubjectId ||
+              el.id !== currentFormElementId) &&
+            el.typeId !== "ThankYou"
         )
         .map((el) => (
           <option
             key={el.id}
             value={el.id.toString()}
-            disabled={formElements.indexOf(el) < currentFormElementIndex}
+            disabled={
+              ((mode === FormElementSelectMode.DefaultNext ||
+                mode === FormElementSelectMode.JumpTo) &&
+                formElements.indexOf(el) < currentFormElementIndex) ||
+              (mode === FormElementSelectMode.SubjectId &&
+                formElements.indexOf(el) > currentFormElementIndex)
+            }
           >
             {collectQuestion(el.body) || collectHeaders(el.body)}
           </option>
