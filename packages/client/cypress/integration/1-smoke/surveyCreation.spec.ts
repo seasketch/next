@@ -28,7 +28,7 @@ describe ("Survey creation smoke test", () => {
       cy.wait('@currentProject').its('response').then((resp) => {
         cy.wrap(resp).then(() => {
           expect (resp.statusCode).to.eq(200)
-          cy.get('[name="Begin Survey"]')
+          cy.get('[name="Begin Survey"]', {timeout:7000} )
           //cy.contains('Begin', {timeout:10000})
         })
       })
