@@ -1,0 +1,22 @@
+{
+  "CanCompleteLine": "Clique para adicionar mais pontos, clique duas vezes para terminar",
+  "CanCompletePolygonTouch": "Toque no ponto inicial ou toque duas vezes para terminar",
+  "ContinueDrawLine": "Clique para adicionar mais pontos, clique duas vezes para terminar",
+  "ContinuePolygon": "Clique para adicionar mais pontos",
+  "ContinuePolygonTouch": "Toque para adicionar mais pontos",
+  "DragPoint": "Arraste o ponto para modificar",
+  "DragVertex": "Clique e arraste os pontos para modificar",
+  "DragVertexPolygonTouch": "Arraste os pontos para modificar",
+  "EditPolygonDesktop": "Arraste os pontos para modificar",
+  "EditPolygonTouch": "Toque em uma forma para editar",
+  "FinishPolygonDesktop": "Clique no ponto inicial ou clique duas vezes no último ponto para terminar",
+  "Invalid Shape": "Forma inválida",
+  "InvalidShapeInstructions": "Sua forma ficará vermelha se for inválida. Quando isso acontecer, certifique-se de que sua forma não se cruze, conforme indicado pelos símbolos X. Se você continuar tendo problemas, considere excluir sua forma e começar de novo.",
+  "Okay": "OK",
+  "Reset Shape": "Redefinir forma",
+  "StartLine": "Clique no mapa para iniciar uma linha",
+  "StartPoint": "Clique no mapa para colocar um ponto",
+  "StartPointTouch": "Toque no mapa para colocar um ponto",
+  "StartPolygon": "<0></0>Clique no mapa para iniciar um polígono",
+  "StartPolygonTouch": "Toque no mapa para iniciar um polígono"
+}
