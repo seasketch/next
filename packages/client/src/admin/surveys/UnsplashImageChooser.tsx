@@ -7,8 +7,7 @@ import Masonry from "react-masonry-css";
 import { SearchIcon } from "@heroicons/react/outline";
 import Spinner from "../../components/Spinner";
 // @ts-ignore
-import ColorThief from "colorthief";
-const thief = new ColorThief();
+import { default as ColorThief } from "colorthief";
 
 export default function UnsplashImageChooser({
   open,
@@ -69,6 +68,7 @@ export default function UnsplashImageChooser({
                     setProcessing(result.id);
                     const img = new Image();
                     img.addEventListener("load", () => {
+                      const thief = new ColorThief();
                       const palette = thief.getPalette(img);
                       const dominant = thief.getColor(img);
                       const colors = [dominant, ...palette].map(

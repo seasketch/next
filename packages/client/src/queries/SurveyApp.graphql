@@ -47,6 +47,7 @@ fragment SurveyAppFormElement on FormElement {
   backgroundWidth
   backgroundHeight
   jumpToId
+  subordinateTo
 }
 
 fragment SurveyAppSurvey on Survey {

@@ -2624,6 +2624,7 @@ CREATE TABLE public.form_elements (
     background_height integer,
     jump_to_id integer,
     alternate_language_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    subordinate_to integer,
     CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
     CONSTRAINT form_fields_position_check CHECK (("position" > 0))
 );
@@ -2761,6 +2762,15 @@ COMMENT ON COLUMN public.form_elements.unsplash_author_url IS '@omit create,upda
 
 COMMENT ON COLUMN public.form_elements.jump_to_id IS '
 Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`.
+';
+
+
+--
+-- Name: COLUMN form_elements.subordinate_to; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.subordinate_to IS '
+Used for special elements like SpatialAccessPriorityInput to create a sort of sub-form that the parent element controls the rendering of. Will not appear in the form unless the client implementation utilizes something like FormElement.shouldDisplaySubordinateElement to control visibility.
 ';
 
 
@@ -11876,6 +11886,14 @@ ALTER TABLE ONLY public.form_element_types
 
 ALTER TABLE ONLY public.form_elements
     ADD CONSTRAINT form_elements_jump_to_id_fkey FOREIGN KEY (jump_to_id) REFERENCES public.form_elements(id) ON DELETE SET NULL;
+
+
+--
+-- Name: form_elements form_elements_subordinate_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.form_elements
+    ADD CONSTRAINT form_elements_subordinate_to_fkey FOREIGN KEY (subordinate_to) REFERENCES public.form_elements(id) ON DELETE CASCADE;
 
 
 --

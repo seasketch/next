@@ -38,9 +38,11 @@ import useMapboxGLDraw, {
   EMPTY_FEATURE_COLLECTION,
 } from "../../draw/useMapboxGLDraw";
 import {
+  FormElementDetailsFragment,
   FormElementFullDetailsFragment,
   FormElementLayout,
   SketchGeometryType,
+  useUpdateFormElementMutation,
 } from "../../generated/graphql";
 import FormElementFactory from "../../surveys/FormElementFactory";
 import { SurveyLayoutContext } from "../../surveys/SurveyAppLayout";
@@ -54,6 +56,7 @@ import {
   SurveyContext,
   SurveyMapPortal,
   useLocalizedComponentSetting,
+  useUpdateFormElement,
 } from "../FormElement";
 import FormElementOptionsInput, {
   FormElementOption,
@@ -63,6 +66,12 @@ import SectorNavigation from "./SectorNavigation";
 import ChooseSectors from "./ChooseSectors";
 import bbox from "@turf/bbox";
 import DigitizingMiniMap from "../DigitizingMiniMap";
+import { FormEditorHeader } from "../../admin/surveys/SurveyFormEditor";
+import InputBlock from "../../components/InputBlock";
+import Switch from "../../components/Switch";
+import set from "lodash.set";
+import { collectText } from "../../admin/surveys/collectText";
+import { ChoiceAdminValueInput } from "../ComboBox";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -86,6 +95,13 @@ interface ResponseState {
   featureId?: string;
 }
 
+interface ChildVisibilitySetting {
+  /** If enabled, child will only be shown if in the list of valid sectors */
+  enabled: boolean;
+  /** Which sectors the child should be shown for, if enabled */
+  sectors: string[];
+}
+
 export type SpatialAccessPriorityProps = {
   sectorOptions?: FormElementOption[];
   beginBody?: any;
@@ -93,6 +109,15 @@ export type SpatialAccessPriorityProps = {
   listShapesBody?: any;
   startingBounds?: BBox;
   basemaps?: number[];
+  childVisibilitySettings?: { [childId: number]: ChildVisibilitySetting };
+  /**
+   * Used to control formelements with a matching subordinateTo id. If the
+   * selected sectors include those in the list, the subordinate element is
+   * shown.
+   */
+  subordinateVisibilitySettings?: {
+    [elementId: number]: string[];
+  };
 };
 type SectorFeatureProps = { sector: string; [key: string]: any };
 type FC = FeatureCollection<Polygon, SectorFeatureProps>;
@@ -391,7 +416,11 @@ const SpatialAccessPriority: FormElementComponent<
     }
     let errors = false;
     for (const element of formElements) {
-      if (element.isRequired && element.type?.isInput) {
+      if (
+        element.isRequired &&
+        element.type?.isInput &&
+        visibleInSector(element, props.componentSettings, sector)
+      ) {
         errors =
           errors ||
           responseState[element.id] === undefined ||
@@ -782,35 +811,39 @@ const SpatialAccessPriority: FormElementComponent<
           {(props.stage === STAGES.SHAPE_EDITOR ||
             props.stage === STAGES.MOBILE_EDIT_PROPERTIES) && (
             <div className="py-5 space-y-2">
-              {formElements.map((details, i) => {
-                // const Component = components[details.typeId];
-                return (
-                  <FormElementFactory
-                    key={`${details.id}`}
-                    {...details}
-                    onChange={updateResponseState(details.id)}
-                    onSubmit={() => null}
-                    isSpatial={false}
-                    onRequestStageChange={() => null}
-                    featureNumber={
-                      ((
-                        props.value?.collection.features.filter(
-                          (f) =>
-                            f.properties.sector ===
-                            (sector?.value || sector?.label)
-                        ) || []
-                      ).length || 0) + 1
-                    }
-                    stage={0}
-                    onRequestNext={() => null}
-                    onRequestPrevious={() => null}
-                    typeName={details.typeId}
-                    value={responseState[details.id]?.value}
-                    autoFocus={i === 0}
-                    submissionAttempted={responseState.submissionAttempted}
-                  />
-                );
-              })}
+              {formElements
+                .filter((el) => {
+                  return visibleInSector(el, props.componentSettings, sector);
+                })
+                .map((details, i) => {
+                  // const Component = components[details.typeId];
+                  return (
+                    <FormElementFactory
+                      key={`${details.id}`}
+                      {...details}
+                      onChange={updateResponseState(details.id)}
+                      onSubmit={() => null}
+                      isSpatial={false}
+                      onRequestStageChange={() => null}
+                      featureNumber={
+                        ((
+                          props.value?.collection.features.filter(
+                            (f) =>
+                              f.properties.sector ===
+                              (sector?.value || sector?.label)
+                          ) || []
+                        ).length || 0) + 1
+                      }
+                      stage={0}
+                      onRequestNext={() => null}
+                      onRequestPrevious={() => null}
+                      typeName={details.typeId}
+                      value={responseState[details.id]?.value}
+                      autoFocus={i === 0}
+                      submissionAttempted={responseState.submissionAttempted}
+                    />
+                  );
+                })}
               <div className="space-x-2 rtl:space-x-reverse">
                 {geometryEditingState?.isNew && (
                   <SurveyButton
@@ -1308,6 +1341,257 @@ SpatialAccessPriority.getInitialStage = (value, componentSettings) => {
   } else {
     return STAGES.CHOOSE_SECTORS;
   }
+};
+
+function ChildVisibilitySettings({
+  childVisibilitySettings,
+  updateComponentSetting,
+  componentSettings,
+  childId,
+}: {
+  childId: number;
+  childVisibilitySettings: ChildVisibilitySetting;
+  componentSettings: SpatialAccessPriorityProps;
+  updateComponentSetting: (
+    setting: string,
+
+    currentSettings: any,
+    language?: string | undefined,
+    alternateLanguageSettings?: any
+  ) => (value: any) => void;
+}) {
+  return (
+    <>
+      <FormEditorHeader className="mt-4">
+        <Trans ns="admin:surveys">Sector Logic</Trans>
+      </FormEditorHeader>
+      <div className="p-3">
+        <InputBlock
+          labelType="small"
+          title={<Trans ns="admin:surveys">Display based on sector</Trans>}
+          input={
+            <Switch
+              isToggled={childVisibilitySettings.enabled}
+              onClick={updateComponentSetting(
+                `childVisibilitySettings.${childId}.enabled`,
+                componentSettings
+              )}
+            />
+          }
+        />
+        <p className="text-gray-500 text-sm">
+          <Trans ns="admin:surveys">
+            If enabled, this field will only be presented as an option for
+            shapes representing the following sectors.
+          </Trans>
+        </p>
+        <div className="mt-4">
+          {(componentSettings.sectorOptions || []).map((s) => (
+            <InputBlock
+              key={s.label}
+              labelType="small"
+              input={
+                <Switch
+                  disabled={!childVisibilitySettings.enabled}
+                  isToggled={
+                    (childVisibilitySettings.sectors || []).indexOf(
+                      s.value || s.label
+                    ) !== -1
+                  }
+                  onClick={(toggled) => {
+                    const sectors = childVisibilitySettings.sectors || [];
+                    updateComponentSetting(
+                      `childVisibilitySettings.${childId}.sectors`,
+                      componentSettings
+                    )(
+                      toggled
+                        ? [...sectors, s.value || s.label]
+                        : sectors.filter((sec) => sec !== (s.value || s.label))
+                    );
+                  }}
+                />
+              }
+              title={
+                <span
+                  className={
+                    childVisibilitySettings.enabled ? "" : "text-gray-500"
+                  }
+                >
+                  {s.label || s.value}
+                </span>
+              }
+            />
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+type SubordinateVisibilitySetting = string[];
+
+function SubordinateVisibilitySettings({
+  visibilitySettings,
+  updateComponentSetting,
+  componentSettings,
+  childId,
+}: {
+  childId: number;
+  visibilitySettings: SubordinateVisibilitySetting;
+  componentSettings: SpatialAccessPriorityProps;
+  updateComponentSetting: (
+    setting: string,
+
+    currentSettings: any,
+    language?: string | undefined,
+    alternateLanguageSettings?: any
+  ) => (value: any) => void;
+}) {
+  return (
+    <>
+      <FormEditorHeader className="mt-4">
+        <Trans ns="admin:surveys">Sector-Specific Visibility</Trans>
+      </FormEditorHeader>
+      <div className="p-3">
+        <p className="text-gray-500 text-sm">
+          <Trans ns="admin:surveys">
+            This question will only be shown for the following sectors
+          </Trans>
+        </p>
+        <div className="mt-4">
+          {(componentSettings.sectorOptions || []).map((s) => (
+            <InputBlock
+              key={s.label}
+              labelType="small"
+              input={
+                <Switch
+                  isToggled={
+                    (visibilitySettings || []).indexOf(s.value || s.label) !==
+                    -1
+                  }
+                  onClick={(toggled) => {
+                    updateComponentSetting(
+                      `subordinateVisibilitySettings.${childId}`,
+                      componentSettings
+                    )(
+                      toggled
+                        ? [...visibilitySettings, s.value || s.label]
+                        : visibilitySettings.filter(
+                            (sec) => sec !== (s.value || s.label)
+                          )
+                    );
+                  }}
+                />
+              }
+              title={s.label || s.value}
+            />
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+SpatialAccessPriority.ChildOptions = (props) => {
+  if (
+    props.child.typeId === "FeatureName" ||
+    props.child.typeId === "SAPRange"
+  ) {
+    return null;
+  }
+
+  const childVisibilitySettings = (props.componentSettings
+    ?.childVisibilitySettings || {})[props.child.id] || {
+    enabled: false,
+    sectors: [],
+  };
+
+  const subordinateVisibilitySettings =
+    (props.componentSettings?.subordinateVisibilitySettings || {})[
+      props.child.id
+    ] || [];
+
+  if (!props.child.subordinateTo) {
+    return (
+      <ChildVisibilitySettings
+        childId={props.child.id}
+        updateComponentSetting={props.updateComponentSetting}
+        componentSettings={props.componentSettings}
+        childVisibilitySettings={childVisibilitySettings}
+      />
+    );
+  } else {
+    return (
+      <SubordinateVisibilitySettings
+        componentSettings={props.componentSettings}
+        visibilitySettings={subordinateVisibilitySettings}
+        childId={props.child.id}
+        updateComponentSetting={props.updateComponentSetting}
+      />
+    );
+  }
+};
+
+function visibleInSector(
+  el: Pick<FormElementDetailsFragment, "id">,
+  componentSettings: Pick<
+    SpatialAccessPriorityProps,
+    "childVisibilitySettings"
+  >,
+  sector?: { label: string; value?: string } | null
+) {
+  if (
+    componentSettings.childVisibilitySettings &&
+    componentSettings.childVisibilitySettings[el.id]
+  ) {
+    const childVisibilitySettings =
+      componentSettings.childVisibilitySettings[el.id];
+    if (childVisibilitySettings.enabled) {
+      if (
+        sector &&
+        (childVisibilitySettings.sectors || []).indexOf(
+          sector.value || sector.label
+        ) !== -1
+      ) {
+        return true;
+      }
+      return false;
+    } else {
+      return true;
+    }
+  } else {
+    return true;
+  }
+}
+
+SpatialAccessPriority.adminValueInput = function (props) {
+  return <ChoiceAdminValueInput {...props} optionsProp="sectorOptions" />;
+};
+
+SpatialAccessPriority.getValueForRuleEvaluation = (
+  value,
+  componentSettings
+) => {
+  return value.sectors;
+};
+
+SpatialAccessPriority.shouldDisplaySubordinateElement = function (
+  elementId,
+  componentSettings,
+  value
+) {
+  const sectors = value?.sectors || [];
+  const visibilitySettings =
+    componentSettings?.subordinateVisibilitySettings || {};
+  for (const sector of sectors) {
+    if (
+      visibilitySettings[elementId] &&
+      visibilitySettings[elementId].indexOf(sector) !== -1
+    ) {
+      return true;
+    }
+  }
+  return false;
 };
 
 export default SpatialAccessPriority;

@@ -4,7 +4,7 @@ import {
   ChevronLeftIcon,
 } from "@heroicons/react/outline";
 import { EyeIcon } from "@heroicons/react/solid";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useHistory } from "react-router-dom";
 import Button from "../../components/Button";
@@ -29,6 +29,7 @@ import FormElementFactory from "../../surveys/FormElementFactory";
 import { SurveyAppLayout } from "../../surveys/SurveyAppLayout";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
+  ChildOptionsFactory,
   FormEditorPortalContext,
   sortFormElements,
   SurveyButtonFooterPortalContext,
@@ -289,6 +290,20 @@ export default function SurveyFormEditor({
   );
   const formId = data?.survey?.form?.id;
 
+  let selectedFormElementParent:
+    | FormElementFullDetailsFragment
+    | undefined = undefined;
+  if (selectedFormElement?.formId !== formId) {
+    selectedFormElementParent = formElements.find(
+      (f) => f.sketchClass?.form?.id === selectedFormElement?.formId
+    );
+  }
+  if (selectedFormElement?.subordinateTo) {
+    selectedFormElementParent = formElements.find(
+      (f) => f.id === selectedFormElement?.subordinateTo
+    );
+  }
+
   return (
     <div className="w-screen h-screen flex flex-col">
       <ImagePreloader formElements={formElements} />
@@ -373,34 +388,17 @@ export default function SurveyFormEditor({
               </div>
             </nav>
             <nav className="mt-2 bg-cool-gray-100 flex-1">
-              <h3 className="flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-blue-gray-200 border items-center">
+              <FormEditorHeader>
                 <span className="flex-1">{t("Form Elements")}</span>
                 <AddFormElementButton
-                  formIsSketchClass={
-                    !!(
-                      selectedParentFormElement?.sketchClass?.form ||
-                      selectedFormElement?.sketchClass
-                    )
-                  }
+                  formIsSketchClass={false}
                   nextPosition={formElements.length + 1}
-                  types={data?.formElementTypes || []}
-                  formId={
-                    selectedParentFormElement?.sketchClass?.form
-                      ? selectedParentFormElement.sketchClass?.form?.id!
-                      : selectedFormElement?.sketchClass
-                      ? selectedFormElement.sketchClass.form!.id
-                      : formId!
-                  }
-                  heading={
-                    selectedParentFormElement?.sketchClass?.form ||
-                    selectedFormElement?.sketchClass
-                      ? t("Add to spatial input...")
-                      : t("Add to survey...")
-                  }
+                  formId={formId!}
+                  heading={t("Add to survey...")}
                   onAdd={(formElement) => history.replace(`./${formElement}`)}
                   existingTypes={formElements.map((el) => el.typeId)}
                 />
-              </h3>
+              </FormEditorHeader>
               <SortableFormElementList
                 dim={route === "logic"}
                 selection={
@@ -563,7 +561,7 @@ export default function SurveyFormEditor({
           } shadow overflow-y-auto`}
         >
           <>
-            <h3 className="flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-b border-blue-gray-200  items-center">
+            <FormEditorHeader>
               {(() => {
                 if (route === "basic") {
                   return t("Base Settings");
@@ -580,7 +578,7 @@ export default function SurveyFormEditor({
                   );
                 }
               })()}
-            </h3>
+            </FormEditorHeader>
             {route === "logic" && !selectedLogicFormElements.length && (
               <p className="text-sm p-2 text-gray-500">
                 <Trans ns="admin:surveys">
@@ -674,6 +672,21 @@ export default function SurveyFormEditor({
             </div>
             {route === "formElement" &&
               selectedFormElement &&
+              selectedFormElement.sketchClass?.formElementId &&
+              formElements.find(
+                (f) => f.id === selectedFormElement!.sketchClass!.formElementId
+              )?.typeId === "SpatialAccessPriority" && (
+                <>
+                  <div className="py-4">
+                    <h4 className="block text-sm font-medium leading-5 text-gray-800">
+                      {t("Sector-Specific Attributes")}
+                    </h4>
+                  </div>
+                </>
+              )}
+
+            {route === "formElement" &&
+              selectedFormElement &&
               !components[selectedFormElement.typeId].disableDeletion && (
                 <>
                   <div className="px-3 text-base">
@@ -751,9 +764,9 @@ export default function SurveyFormEditor({
             !selectedFormElement.type?.isSpatial &&
             !selectedParentFormElement && (
               <>
-                <h3 className="mt-4 flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-b border-t border-blue-gray-200  items-center">
+                <FormEditorHeader className="mt-4">
                   {t("Appearance")}
-                </h3>
+                </FormEditorHeader>
                 <UnsplashImageChooser
                   onRequestClose={() => setImageChooserOpen(false)}
                   open={imageChooserOpen}
@@ -1078,13 +1091,22 @@ export default function SurveyFormEditor({
                 )}
               </>
             )}
+          {route === "formElement" &&
+            selectedFormElement &&
+            selectedFormElementParent &&
+            components[selectedFormElementParent.typeId].ChildOptions && (
+              <ChildOptionsFactory
+                {...selectedFormElementParent}
+                child={selectedFormElement}
+              />
+            )}
           {route === "basic" &&
             auth0.user &&
             auth0.user["https://seasketch.org/superuser"] && (
               <div>
-                <h3 className="flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-b border-t border-blue-gray-200  items-center">
+                <FormEditorHeader className="mt-4">
                   <Trans ns="superuser">Superuser Settings</Trans>
-                </h3>
+                </FormEditorHeader>
                 <div className="p-3 space-y-4">
                   <InputBlock
                     labelType="small"
@@ -1215,3 +1237,15 @@ function StageSelect({
     </div>
   );
 }
+
+export const FormEditorHeader: React.FunctionComponent<{
+  className?: string;
+}> = (props) => {
+  return (
+    <h3
+      className={`flex text-sm text-black bg-cool-gray-50 p-3 py-2 border-b border-t border-blue-gray-200  items-center ${props.className}`}
+    >
+      {props.children}
+    </h3>
+  );
+};
