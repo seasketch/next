@@ -184,7 +184,7 @@ export default function Button(props: ButtonProps) {
                 setDropdownOpen(!dropdownOpen);
               }}
             >
-              <ChevronDownIcon className="w-4 h-4" />
+              <ChevronDownIcon className="w-4 h-4" id="chevron-down" />
               {dropdownOpen && (
                 <nav className="bg-white rounded shadow absolute right-0 top-full mt-2 z-10 w-content overflow-hidden">
                   {props.segmentItems.map((i, n) => (
