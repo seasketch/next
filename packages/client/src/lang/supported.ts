@@ -13,6 +13,11 @@ const languages: LangDetails[] = [
     code: "dv",
     rtl: true,
   },
+  {
+    name: "Portuguese",
+    localName: "Portuguese",
+    code: "pt",
+  },
 ];
 
 export default languages;
