@@ -304,6 +304,10 @@ const SpatialAccessPriority: FormElementComponent<
           props.onRequestStageChange(STAGES.SHAPE_EDITOR);
         }
       }
+    },
+    () => {
+      setGeometryEditingState({ isNew: false });
+      props.onRequestStageChange(STAGES.LIST_SHAPES);
     }
   );
 

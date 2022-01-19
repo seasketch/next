@@ -74,12 +74,13 @@ export default function useMapboxGLDraw(
   map: Map | null | undefined,
   geometryType: SketchGeometryType,
   initialValue: FeatureCollection<any> | null,
-  onChange: (value: Feature<any> | null) => void
+  onChange: (value: Feature<any> | null) => void,
+  onCancelNewShape?: () => void
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
   const drawMode = glDrawMode(isSmall, geometryType);
-  const [state, setState] = useState(DigitizingState.NO_SELECTION);
+  const [state, _setState] = useState(DigitizingState.NO_SELECTION);
   const [disabled, setDisabled] = useState(false);
   const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
     null
@@ -88,7 +89,13 @@ export default function useMapboxGLDraw(
   const handlerState = useRef<{
     draw?: MapboxDraw;
     onChange: (value: Feature<any> | null) => void;
-  }>({ onChange });
+    state: DigitizingState;
+  }>({ onChange, state });
+
+  function setState(state: DigitizingState) {
+    _setState(state);
+    handlerState.current.state = state;
+  }
 
   handlerState.current.onChange = onChange;
 
@@ -166,11 +173,18 @@ export default function useMapboxGLDraw(
         //   setState(DigitizingState.CREATE);
         // },
         modeChange: function (e: any) {
-          let state: DigitizingState | null = null;
+          let newState: DigitizingState | null = null;
           switch (e.mode) {
             case "simple_select":
-              // Only relevent to points
-              state = DigitizingState.NO_SELECTION;
+              // Could happen when drawing then escape key is hit
+              // or when editing
+              if (handlerState.current.state !== DigitizingState.EDITING) {
+                if (onCancelNewShape) {
+                  onCancelNewShape();
+                }
+              }
+              newState = DigitizingState.NO_SELECTION;
+
               break;
             case "direct_select":
               const selected = handlerState.current.draw?.getSelected();
@@ -179,11 +193,11 @@ export default function useMapboxGLDraw(
                 selected?.features.length &&
                 selected.features[0].geometry.type === "Polygon"
               ) {
-                state = DigitizingState.EDITING;
+                newState = DigitizingState.EDITING;
               }
               break;
             case "unfinished_feature_select":
-              state = DigitizingState.UNFINISHED;
+              newState = DigitizingState.UNFINISHED;
               break;
             // Should not need to account for draw_polygon, draw_point, etc
             // These modes are entered into via direct API calls, and thus don't
@@ -191,8 +205,8 @@ export default function useMapboxGLDraw(
             default:
               break;
           }
-          if (state) {
-            setState(state);
+          if (newState) {
+            setState(newState);
           }
         },
         selectionChange: function (e: any) {
