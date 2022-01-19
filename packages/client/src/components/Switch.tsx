@@ -3,7 +3,7 @@ import React from "react";
 export interface SwitchProps {
   isToggled?: boolean;
   disabled?: boolean;
-  onClick?: (val: boolean) => void;
+  onClick?: (val: boolean, e?: React.MouseEvent<any, MouseEvent>) => void;
   className?: string;
 }
 
@@ -14,9 +14,9 @@ export default function Switch(props: SwitchProps) {
     >
       <span
         aria-checked={props.isToggled}
-        onClick={() => {
+        onClick={(e) => {
           if (props.onClick && !props.disabled) {
-            props.onClick(!props.isToggled);
+            props.onClick(!props.isToggled, e);
           }
         }}
         onKeyDown={(e) => {

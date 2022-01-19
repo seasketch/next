@@ -8,23 +8,30 @@ import bbox from "@turf/bbox";
 import { AnimatePresence, motion } from "framer-motion";
 import { BBox, Feature, FeatureCollection } from "geojson";
 import { map } from "lodash";
-import { LngLatBoundsLike, LngLatLike, Map } from "mapbox-gl";
-import {
+import mapboxgl, { LngLatBoundsLike, LngLatLike, Map } from "mapbox-gl";
+import React, {
   Component,
   ComponentClass,
   FunctionComponent,
   useContext,
+  useEffect,
+  useMemo,
 } from "react";
 import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { Icons } from "../components/SketchGeometryTypeSelector";
-import { MapContext } from "../dataLayers/MapContextManager";
+import Switch from "../components/Switch";
+import MapContextManager, {
+  MapContext,
+  MapContextInterface,
+} from "../dataLayers/MapContextManager";
 import {
   BasemapDetailsFragment,
   SketchGeometryType,
 } from "../generated/graphql";
 import { SurveyStyleContext } from "../surveys/appearance";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { useLocalForage } from "../useLocalForage";
 
 const DigitizingActionsPopup: FunctionComponent<{
   open: boolean;
@@ -76,9 +83,9 @@ const DigitizingActionsPopup: FunctionComponent<{
 export default DigitizingActionsPopup;
 
 const Item: FunctionComponent<{
-  onClick: () => void;
+  onClick: (e: React.MouseEvent<any, MouseEvent>) => void;
   title: string;
-  Icon: FunctionComponent<{ className?: string }>;
+  Icon?: FunctionComponent<{ className?: string }>;
   disabled?: boolean;
   phoneOnly?: boolean;
   selected?: boolean;
@@ -97,7 +104,7 @@ const Item: FunctionComponent<{
           e.preventDefault();
           e.stopPropagation();
         } else {
-          onClick();
+          onClick(e);
         }
       }}
     >
@@ -192,6 +199,56 @@ export function ZoomToFeature(
         })
       }
       title={props.title || t("Focus on location")}
+    />
+  );
+}
+
+export function ShowScaleBar(
+  props: DigitizingActionItem<{
+    mapContext?: MapContextInterface;
+  }>
+) {
+  const { t } = useTranslation("surveys");
+  const show = !!props.mapContext?.manager?.scaleVisible;
+
+  return (
+    <Item
+      {...props}
+      Icon={(childProps) => (
+        <Switch
+          {...childProps}
+          className="scale-75"
+          isToggled={show}
+          onClick={(value, e) => {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+            if (props.mapContext?.manager) {
+              props.mapContext.manager.toggleScale(value);
+            }
+          }}
+        />
+      )}
+      onClick={
+        (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          if (props.mapContext?.manager) {
+            props.mapContext.manager.toggleScale(
+              !props.mapContext.manager.scaleVisible
+            );
+          }
+        }
+        // props.map.fitBounds(bbox(props.feature) as LngLatBoundsLike, {
+        //   animate: true,
+        //   padding: props.isSmall ? 50 : 100,
+        //   maxZoom: 17,
+        // })
+      }
+      title={t("Show scale bar", { ns: "surveys" })}
     />
   );
 }

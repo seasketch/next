@@ -171,6 +171,7 @@ class MapContextManager {
   arcgisVectorSourceCache: ArcGISVectorSourceCache;
   private mapIsLoaded = false;
   private mapContainer?: HTMLDivElement;
+  private scaleControl = new mapboxgl.ScaleControl();
 
   constructor(
     initialState: MapContextInterface,
@@ -328,6 +329,10 @@ class MapContextManager {
       this.getSelectedBasemap()!
     );
 
+    if (this.internalState.showScale) {
+      this.map.addControl(this.scaleControl);
+    }
+
     this.map.on("error", this.onMapError);
     this.map.on("data", this.onMapDataEvent);
     this.map.on("dataloading", this.onMapDataEvent);
@@ -355,6 +360,29 @@ class MapContextManager {
     if (!on) {
       this.force2dView();
     }
+  }
+
+  toggleScale(show: boolean) {
+    this.setState((prev) => ({
+      ...prev,
+      showScale: show,
+    }));
+
+    if (this.map) {
+      if (show) {
+        if (!this.map.hasControl(this.scaleControl)) {
+          this.map.addControl(this.scaleControl);
+        }
+      } else {
+        if (this.map.hasControl(this.scaleControl)) {
+          this.map.removeControl(this.scaleControl);
+        }
+      }
+    }
+  }
+
+  get scaleVisible() {
+    return !!this.internalState.showScale;
   }
 
   private force2dView() {
@@ -1285,6 +1313,7 @@ export interface MapContextInterface {
   basemapError?: Error;
   basemapOptionalLayerStates: { [layerName: string]: any };
   basemapOptionalLayerStatePreferences?: { [layerName: string]: any };
+  showScale?: boolean;
 }
 
 /**

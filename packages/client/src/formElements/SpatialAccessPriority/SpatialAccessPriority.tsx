@@ -32,6 +32,7 @@ import { Icons } from "../../components/SketchGeometryTypeSelector";
 import {
   BasemapControl,
   ResetView,
+  ShowScaleBar,
   ZoomToFeature,
 } from "../../draw/DigitizingActionsPopup";
 import useMapboxGLDraw, {
@@ -1102,6 +1103,7 @@ const SpatialAccessPriority: FormElementComponent<
                     }
                   />
                 ) : null}
+                <ShowScaleBar mapContext={mapContext} />
                 <BasemapControl
                   basemaps={basemaps}
                   afterChange={() => {
