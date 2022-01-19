@@ -282,32 +282,58 @@ const SpatialAccessPriority: FormElementComponent<
     props.sketchClass!.geometryType,
     filteredFeatures,
     (updatedFeature) => {
-      if (!selection || geometryEditingState?.isNew) {
-        setGeometryEditingState({
-          isNew: true,
-          feature: updatedFeature || undefined,
-        });
-      } else if (updatedFeature) {
-        updateFeatureValue(updatedFeature.id as string, {
-          geometry: updatedFeature,
-        });
-      }
-      if (
-        props.stage === STAGES.DRAWING_INTRO ||
-        props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE
-      ) {
-        if (style.isSmall) {
-          if (!selfIntersects) {
-            props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
-          }
+      // Handle deletion of all vertexes
+      if (updatedFeature?.geometry.coordinates.length === 0) {
+        if (
+          window.confirm(
+            t("This will delete your entire shape. Are you sure?", {
+              ns: "surveys",
+            })
+          )
+        ) {
+          // delete the entire shape
+          const collection = removeFeatureFromValue(updatedFeature.id!);
+          setFilteredCollection(collection);
+          props.onRequestStageChange(STAGES.LIST_SHAPES);
         } else {
-          props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+          setCollection(filteredFeatures);
+          props.onRequestStageChange(STAGES.LIST_SHAPES);
+          return;
+        }
+      } else {
+        if (!selection || geometryEditingState?.isNew) {
+          setGeometryEditingState({
+            isNew: true,
+            feature: updatedFeature || undefined,
+          });
+        } else if (updatedFeature) {
+          updateFeatureValue(updatedFeature.id as string, {
+            geometry: updatedFeature,
+          });
+        }
+        if (
+          props.stage === STAGES.DRAWING_INTRO ||
+          props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE
+        ) {
+          if (style.isSmall) {
+            if (!selfIntersects) {
+              props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
+            }
+          } else {
+            props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+          }
         }
       }
     },
     () => {
-      setGeometryEditingState({ isNew: false });
-      props.onRequestStageChange(STAGES.LIST_SHAPES);
+      if (!selection) {
+        setTimeout(() => {
+          create(true);
+        }, 50);
+      } else {
+        setGeometryEditingState({ isNew: false });
+        props.onRequestStageChange(STAGES.LIST_SHAPES);
+      }
     }
   );
 
