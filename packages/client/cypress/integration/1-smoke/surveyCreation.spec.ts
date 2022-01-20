@@ -44,6 +44,8 @@ describe ("Survey creation smoke test", () => {
     it ('Logs in the user', () => {
       cy.login('User 1')
       cy.visit('/projects')
+      cy.get('#user-menu')
+      cy.contains('Public')
     })
   })
     
