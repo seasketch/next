@@ -109,6 +109,7 @@ export default function useMapboxGLDraw(
         displayControlsDefault: true,
         controls: {},
         defaultMode: "simple_select",
+        boxSelect: false,
         modes: {
           ...MapboxDraw.modes,
           draw_line_string: DrawLineString,
