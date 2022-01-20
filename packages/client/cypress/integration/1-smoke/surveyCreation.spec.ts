@@ -1,12 +1,102 @@
 //const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
 import { ProjectAccessControlSetting, useCreateSurveyMutation } from "../../../src/generated/graphql";
+import { createSurvey } from "../../support/graphQlRequests"
+import { gql, useQuery } from '@apollo/client';
+import { isTypedArray } from "cypress/types/lodash";
+//import ReactDOM from "react-dom";
+//import React from "react";
+//
 
 //const [createSurvey, createSurveyState] = useCreateSurveyMutation({
   
 //});
 
+//export default async function CreateSurvey() {
+//  const [createSurvey] = useCreateSurveyMutation()
+//  const result = await createSurvey({
+//    variables: {
+//      projectId: project!,
+//      name: 'Test',
+//    }
+//  })
+//  console.log(result)
+//}
+//
+//
 
+//function createSurvey(project, name) {
+//  CreateSurvey(project, name)
+//}
 let project
+
+let surveyId
+
+//function makeSurvey() {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  //const [createSurveyMutation, { data, loading, error }] = useCreateSurveyMutation({
+  //  variables: {
+  //     name: 'test',
+  //     projectId: project,
+  //     templateId: 2
+  //  },
+  //});
+  ////return data
+
+
+//const getProjectName = () => {
+//  // eslint-disable-next-line react-hooks/rules-of-hooks
+//  const { data, loading, error } = useGetProjectBySlugQuery({
+//    variables: {
+//       slug: slug
+//    },
+//  });
+//  return data
+//}
+//
+//const projectData = getProjectName()
+//const projectName = projectData?.projectBySlug?.name
+//const projectId = projectData?.projectBySlug?.id
+//
+//const GET_PROJECT = gql`
+//  query GetProject {
+//    project(id: ${projectId}) {
+//      name
+//      sessionIsAdmin
+//      logoUrl
+//      creatorId
+//    }
+//  }
+//`;
+
+//mutation CreateSurvey($name: String!, $projectId: Int!, $templateId: Int) {
+//  makeSurvey(
+//    input: { projectId: $projectId, name: $name, templateId: $templateId }
+//  ) {
+//    survey {
+//      ...SurveyListDetails
+//    }
+//  }
+//}
+
+const CREATE_SURVEY = gql`
+  mutation makeSurvey {
+    makeSurvey(input: { projectId: 1441 , name: "Test"}) {
+      survey {
+      ...SurveyListDetails}
+    }
+  }
+`;
+
+//function makeSurvey() {
+//  const {data, loading, error} = useQuery(CREATE_SURVEY)
+//  return data
+//}
+
+
+//const {data, loading, error} = useQuery(GET_PROJECT)
+
+
+
 
 
 describe ("Survey creation smoke test", () => {
@@ -40,12 +130,46 @@ describe ("Survey creation smoke test", () => {
     })
   })
 
+  //makeSurvey(input: { projectId: 1441 , name: "Test"}) {
+  //  survey {
+  //  ...SurveyListDetails}
+  //}
+
+
   describe.only ('creates the survey', () => {
-    it ('Logs in the user', () => {
-      cy.login('User 1')
-      cy.visit('/projects')
-      cy.get('#user-menu')
-      cy.contains('Public')
+    it('should create the survey', () => {
+      cy.getToken("User 1").then(({ access_token }) => {
+        cy.wrap(access_token).as("token");
+        const createSurvey = `
+        mutation makeSurvey {
+            makeSurvey(input: { projectId: 1441, name: "test" }) {
+              survey {
+                projectId, 
+                name, 
+                id
+              }
+            }
+          } 
+        `;
+        cy.request({
+            log: true,
+            url: 'http://localhost:3857/graphql',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${access_token}`
+            },
+            body: {
+                query: createSurvey
+            },
+            failOnStatusCode: false
+        }).then((id) => {
+          surveyId = id
+        }).then((response) => {
+          expect (response.status).to.eq(200)
+        })
+        //cy.deleteSurvey(surveyId);
+      })
     })
   })
     
