@@ -124,13 +124,10 @@ function SurveyApp() {
       return false;
     }
     const state = responseState[formElement.current.id];
-    if (
-      !formElement.current.isRequired ||
-      (state?.value !== undefined && !state?.errors)
-    ) {
-      return true;
+    if (formElement.current.isRequired) {
+      return state?.value !== undefined && !state?.errors;
     } else {
-      return false;
+      return !state?.errors;
     }
   }
 
@@ -527,7 +524,8 @@ function SurveyApp() {
                           pagingState.isLastQuestion
                             ? t("Complete Submission")
                             : currentValue === undefined ||
-                              currentValue === null
+                              currentValue === null ||
+                              currentValue === ""
                             ? t("Skip Question")
                             : t("Next")
                         }
