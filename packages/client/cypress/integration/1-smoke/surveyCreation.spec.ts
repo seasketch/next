@@ -1,6 +1,54 @@
-const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
+//const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
+import { ProjectAccessControlSetting, useCreateSurveyMutation } from "../../../src/generated/graphql";
+
+//const [createSurvey, createSurveyState] = useCreateSurveyMutation({
+  
+//});
+
+
+let project
+
 
 describe ("Survey creation smoke test", () => {
+  describe ('A user can create a survey', () => {
+    it('Creates the project', () => {
+
+    
+      cy.getToken("User 1").then(({ access_token }) => {
+        cy.wrap(access_token).as("token");
+        cy.createProject(
+          "Maldives Survey Test",
+          "cy-maldives",
+          ProjectAccessControlSetting.Public,
+          true
+        )
+        .then((projectId) => {
+          cy.wrap(projectId).as("projectId").then(() => {
+            project = projectId
+          });
+        });
+      });
+      cy.visit('/projects')
+      
+      
+    });
+    after(() => {
+      cy.deleteProject("cy-maldives");
+    });
+    it("has the project", () => {
+      console.log(project)
+    })
+  })
+
+  describe.only ('creates the survey', () => {
+    it ('Logs in the user', () => {
+      cy.login('User 1')
+      cy.visit('/projects')
+    })
+  })
+    
+
+
   describe ("An anonymous user can visit a survey", () => {
     before(() => {
       //user is not logged in
@@ -66,6 +114,12 @@ describe ("Survey creation smoke test", () => {
 })
 
 
+//cy.createProject
+//store project Id
+//cy.createSurvey
+//project id
+//enabled
+//creator
 
 
 
