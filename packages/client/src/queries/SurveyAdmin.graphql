@@ -595,3 +595,12 @@ mutation AddCondition(
     }
   }
 }
+
+mutation UpdateSurveyDraftStatus($id: Int!, $isDisabled: Boolean!) {
+  updateSurvey(input: { id: $id, patch: { isDisabled: $isDisabled } }) {
+    survey {
+      id
+      isDisabled
+    }
+  }
+}

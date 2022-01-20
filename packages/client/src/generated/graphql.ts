@@ -14592,6 +14592,23 @@ export type AddConditionMutation = (
   )> }
 );
 
+export type UpdateSurveyDraftStatusMutationVariables = Exact<{
+  id: Scalars['Int'];
+  isDisabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateSurveyDraftStatusMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSurvey?: Maybe<(
+    { __typename?: 'UpdateSurveyPayload' }
+    & { survey?: Maybe<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id' | 'isDisabled'>
+    )> }
+  )> }
+);
+
 export type SurveyAppRuleFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
@@ -20022,6 +20039,43 @@ export function useAddConditionMutation(baseOptions?: Apollo.MutationHookOptions
 export type AddConditionMutationHookResult = ReturnType<typeof useAddConditionMutation>;
 export type AddConditionMutationResult = Apollo.MutationResult<AddConditionMutation>;
 export type AddConditionMutationOptions = Apollo.BaseMutationOptions<AddConditionMutation, AddConditionMutationVariables>;
+export const UpdateSurveyDraftStatusDocument = gql`
+    mutation UpdateSurveyDraftStatus($id: Int!, $isDisabled: Boolean!) {
+  updateSurvey(input: {id: $id, patch: {isDisabled: $isDisabled}}) {
+    survey {
+      id
+      isDisabled
+    }
+  }
+}
+    `;
+export type UpdateSurveyDraftStatusMutationFn = Apollo.MutationFunction<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>;
+
+/**
+ * __useUpdateSurveyDraftStatusMutation__
+ *
+ * To run a mutation, you first call `useUpdateSurveyDraftStatusMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSurveyDraftStatusMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSurveyDraftStatusMutation, { data, loading, error }] = useUpdateSurveyDraftStatusMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      isDisabled: // value for 'isDisabled'
+ *   },
+ * });
+ */
+export function useUpdateSurveyDraftStatusMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>(UpdateSurveyDraftStatusDocument, options);
+      }
+export type UpdateSurveyDraftStatusMutationHookResult = ReturnType<typeof useUpdateSurveyDraftStatusMutation>;
+export type UpdateSurveyDraftStatusMutationResult = Apollo.MutationResult<UpdateSurveyDraftStatusMutation>;
+export type UpdateSurveyDraftStatusMutationOptions = Apollo.BaseMutationOptions<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -21242,6 +21296,7 @@ export const namedOperations = {
     DeleteLogicCondition: 'DeleteLogicCondition',
     DeleteLogicRule: 'DeleteLogicRule',
     AddCondition: 'AddCondition',
+    UpdateSurveyDraftStatus: 'UpdateSurveyDraftStatus',
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',

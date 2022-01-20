@@ -10,6 +10,7 @@ import {
 import { Link } from "react-router-dom";
 import { useSurveyByIdQuery } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
+import SurveyDraftControl from "./SurveyDraftControl";
 
 export default function SurveyDetail({ surveyId }: { surveyId: number }) {
   const projectId = useProjectId();
@@ -47,23 +48,7 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
               {survey.name}
             </h1>
             <div className="px-4 py-1 sm:px-6 lg:px-8">
-              <a
-                onClick={(e) => {
-                  if (survey.isDisabled) {
-                    e.preventDefault();
-                    alert(
-                      t("Survey must be published before sharing this link")
-                    );
-                  }
-                }}
-                className={`text-gray-500 text-sm underline ${
-                  survey.isDisabled && "cursor-not-allowed"
-                }`}
-                href={publicUrl}
-              >
-                <LinkIcon className="mr-1 -mt-0.5 h-5 w-5 inline" />
-                {publicUrl}
-              </a>
+              {data?.survey && <SurveyDraftControl id={data.survey.id} />}
             </div>
             <div className="mt-3 flex px-4 py-1 sm:px-6 lg:px-8">
               <span className="">
