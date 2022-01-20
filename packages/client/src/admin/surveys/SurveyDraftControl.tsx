@@ -1,21 +1,26 @@
-/* eslint-disable i18next/no-literal-string */
-
+import { QrcodeIcon } from "@heroicons/react/outline";
 import { CheckCircleIcon } from "@heroicons/react/solid";
 import { useParams } from "react-router-dom";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import Modal from "../../components/Modal";
+import QRCode from "qrcode";
 import {
   useSurveyByIdQuery,
   useUpdateSurveyDraftStatusMutation,
 } from "../../generated/graphql";
+import { useEffect, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 
 export default function SurveyDraftControl({ id }: { id: number }) {
   const { slug } = useParams<{ slug: string }>();
   const onError = useGlobalErrorHandler();
+  const [qrOpen, setQROpen] = useState(false);
   const { data } = useSurveyByIdQuery({
     variables: {
       id,
     },
   });
+  const { t } = useTranslation("admin:surveys");
 
   const isDraft =
     data?.survey?.isDisabled !== undefined ? data?.survey?.isDisabled : true;
@@ -43,7 +48,13 @@ export default function SurveyDraftControl({ id }: { id: number }) {
       },
     });
   }
+  // eslint-disable-next-line i18next/no-literal-string
   const url = `${window.location.protocol}//${window.location.host}/${slug}/surveys/${id}`;
+  const [qr, setQR] = useState("");
+  useEffect(() => {
+    QRCode.toDataURL(url).then((v) => setQR(v));
+  }, [url]);
+
   return (
     <fieldset className="max-w-2xl">
       <div className="mt-4 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-4">
@@ -73,7 +84,9 @@ export default function SurveyDraftControl({ id }: { id: number }) {
                   !isDraft ? "text-gray-500" : "text-gray-900"
                 }`}
               >
-                <span className="flex-1">Draft</span>
+                <span className="flex-1">
+                  <Trans ns="admin:surveys">Draft</Trans>
+                </span>
                 <CheckCircleIcon
                   className={`ml-1 mr-1 h-5 w-5 text-primary-600 ${
                     !isDraft ? "invisible" : ""
@@ -84,8 +97,10 @@ export default function SurveyDraftControl({ id }: { id: number }) {
                 id="project-type-0-description-0"
                 className="mt-1 flex items-center text-sm text-gray-500"
               >
-                Only project administrators can access and configure this
-                survey.
+                <Trans ns="admin:surveys">
+                  Only project administrators can access and configure this
+                  survey.
+                </Trans>
               </span>
             </div>
           </div>
@@ -126,7 +141,9 @@ export default function SurveyDraftControl({ id }: { id: number }) {
                   isDraft ? "text-gray-500" : "text-gray-900"
                 }`}
               >
-                <span className="flex-1">Published</span>
+                <span className="flex-1">
+                  <Trans ns="admin:surveys">Published</Trans>
+                </span>
                 <CheckCircleIcon
                   className={`ml-1 mr-1 h-5 w-5 text-primary-600 ${
                     isDraft ? "invisible" : ""
@@ -137,18 +154,24 @@ export default function SurveyDraftControl({ id }: { id: number }) {
                 id="project-type-1-description-0"
                 className="mt-1 flex items-center text-sm text-gray-500"
               >
-                Send your potential respondents this link. Make sure your
-                project is also public.
+                <Trans ns="admin:surveys">
+                  Send your potential respondents this link. Make sure your
+                  project is also public.
+                </Trans>
               </span>
-              <a
-                className={`text-sm underline truncate my-1 ${
+              <div
+                className={`flex w-full align-middle justify-center my-2 ${
                   isDraft && "text-gray-400 pointer-events-none"
                 }`}
-                href={url}
               >
-                {url}
-              </a>
-              {/* <QRCode value={url} size={100} className="w-12" /> */}
+                <QrcodeIcon
+                  onClick={() => setQROpen(true)}
+                  className="w-5 h-5 mr-1"
+                />
+                <a className={`text-sm underline flex-1 truncate`} href={url}>
+                  {url}
+                </a>
+              </div>
             </div>
           </div>
           <div
@@ -158,7 +181,31 @@ export default function SurveyDraftControl({ id }: { id: number }) {
             aria-hidden="true"
           ></div>
         </label>
+        <Modal
+          open={qrOpen}
+          onRequestClose={() => setQROpen(false)}
+          zeroPadding={true}
+        >
+          <div className="m-2 flex flex-col justify-center align-middle">
+            <img
+              src={qr}
+              onClick={() => downloadURI(qr, "seasketch-survey-qr-code")}
+            />
+            <p className="text-sm text-center">
+              <Trans ns="admin:surveys">click to download</Trans>
+            </p>
+          </div>
+        </Modal>
       </div>
     </fieldset>
   );
+}
+
+function downloadURI(uri: string, name: string) {
+  var link = document.createElement("a");
+  link.download = name;
+  link.href = uri;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
