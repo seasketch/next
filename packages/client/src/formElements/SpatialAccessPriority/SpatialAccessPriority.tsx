@@ -36,6 +36,7 @@ import {
   ZoomToFeature,
 } from "../../draw/DigitizingActionsPopup";
 import useMapboxGLDraw, {
+  DigitizingState,
   EMPTY_FEATURE_COLLECTION,
 } from "../../draw/useMapboxGLDraw";
 import {
@@ -281,7 +282,7 @@ const SpatialAccessPriority: FormElementComponent<
     mapContext.manager?.map,
     props.sketchClass!.geometryType,
     filteredFeatures,
-    (updatedFeature) => {
+    (updatedFeature, hasKinks) => {
       // Handle deletion of all vertexes
       if (updatedFeature?.geometry.coordinates.length === 0) {
         if (
@@ -302,6 +303,12 @@ const SpatialAccessPriority: FormElementComponent<
         }
       } else {
         if (!selection || geometryEditingState?.isNew) {
+          if (hasKinks && digitizingState !== DigitizingState.UNFINISHED) {
+            // Timeout is to prevent an infinite loop. I guess because digitizingState is set late?
+            setTimeout(() => {
+              actions.setUnfinished(updatedFeature!.id as string);
+            }, 50);
+          }
           setGeometryEditingState({
             isNew: true,
             feature: updatedFeature || undefined,
@@ -312,11 +319,16 @@ const SpatialAccessPriority: FormElementComponent<
           });
         }
         if (
-          props.stage === STAGES.DRAWING_INTRO ||
-          props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE
+          (props.stage === STAGES.DRAWING_INTRO ||
+            props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) &&
+          digitizingState !== DigitizingState.UNFINISHED &&
+          digitizingState !== DigitizingState.EDITING
         ) {
           if (style.isSmall) {
-            if (!selfIntersects) {
+            if (hasKinks) {
+              // Do nothing
+              // Require explicit action to proceed to the next stage now
+            } else {
               props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
             }
           } else {
@@ -1023,7 +1035,7 @@ const SpatialAccessPriority: FormElementComponent<
                   />
                 }
                 noSelectionStateButtons={
-                  style.isSmall ? (
+                  style.isSmall && !geometryEditingState?.isNew ? (
                     <>
                       <Button
                         className="pointer-events-auto"

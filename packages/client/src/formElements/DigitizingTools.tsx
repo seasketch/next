@@ -1,7 +1,6 @@
 import {
   FunctionComponent,
   ReactNode,
-  ReactNodeArray,
   useContext,
   useRef,
   useState,
@@ -9,21 +8,15 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
 import { SketchGeometryType } from "../generated/graphql";
-import { SurveyStyleContext } from "../surveys/appearance";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   CursorClickIcon,
-  DotsCircleHorizontalIcon,
   DotsHorizontalIcon,
   TrashIcon,
 } from "@heroicons/react/outline";
-import { QuestionMarkCircleIcon } from "@heroicons/react/solid";
 import useMobileDeviceDetector from "../surveys/useMobileDeviceDetector";
 import { DigitizingState } from "../draw/useMapboxGLDraw";
-import DigitizingActionsPopup, {
-  DigitizingActionItem,
-  NextQuestion,
-} from "../draw/DigitizingActionsPopup";
+import DigitizingActionsPopup from "../draw/DigitizingActionsPopup";
 import BowtieInstructions from "../draw/BowtieInstructions";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
@@ -34,7 +27,7 @@ interface DigitizingInstructionsProps {
   onRequestDelete: () => void;
   onRequestSubmit: () => void;
   onRequestEdit: () => void;
-  onRequestFinishEditing: () => void;
+  onRequestFinishEditing: (hasKinks: boolean) => void;
   onRequestResetFeature: () => void;
   multiFeature?: boolean;
   /**
@@ -149,7 +142,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             if (selfIntersects) {
               setShowInvalidShapeModal(true);
             } else {
-              onRequestFinishEditing();
+              onRequestFinishEditing(false);
             }
           }}
           primary
@@ -164,7 +157,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
       )}
-      {selfIntersects && (
+      {selfIntersects && state === DigitizingState.UNFINISHED && (
         <Button
           onClick={() => {
             setShowInvalidShapeModal(true);
@@ -180,9 +173,11 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
       )}
-      {state === DigitizingState.CAN_COMPLETE && isMobile && (
+      {state === DigitizingState.CAN_COMPLETE && (isMobile || true) && (
         <Button
-          onClick={onRequestFinishEditing}
+          onClick={() => {
+            onRequestFinishEditing(!!selfIntersects);
+          }}
           label={t("Finish Shape")}
           primary
           className={`pointer-events-auto whitespace-nowrap ${

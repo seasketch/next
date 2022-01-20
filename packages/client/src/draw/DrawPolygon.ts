@@ -1,5 +1,6 @@
 import * as MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { LngLat } from "mapbox-gl";
+import getKinks from "@turf/kinks";
 
 // see https://github.com/mapbox/mapbox-gl-draw/blob/main/src/constants.js
 // unfortunately not exported
@@ -77,6 +78,26 @@ DrawPolygon.clickAnywhere = function (state: any, e: any) {
     e.lngLat.lng,
     e.lngLat.lat
   );
+  if (state.currentVertexPosition && state.currentVertexPosition > 1) {
+    this.checkForKinks(state);
+  }
+};
+
+DrawPolygon.checkForKinks = function (state: any) {
+  if (
+    state.polygon &&
+    state.polygon.coordinates &&
+    state.polygon.coordinates[0] &&
+    state.polygon.coordinates[0].length > 3
+  ) {
+    state.kinks = getKinks({
+      type: "Feature",
+      geometry: state.polygon,
+    });
+    this.map.fire("seasketch.kinks", {
+      hasKinks: state.kinks.features.length > 0,
+    });
+  }
 };
 
 DrawPolygon.clickOnVertex = function (state: any) {

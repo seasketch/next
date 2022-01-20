@@ -74,7 +74,7 @@ export default function useMapboxGLDraw(
   map: Map | null | undefined,
   geometryType: SketchGeometryType,
   initialValue: FeatureCollection<any> | null,
-  onChange: (value: Feature<any> | null) => void,
+  onChange: (value: Feature<any> | null, hasKinks: boolean) => void,
   onCancelNewShape?: () => void
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
@@ -88,7 +88,7 @@ export default function useMapboxGLDraw(
   const [selection, setSelection] = useState<null | Feature<any>>(null);
   const handlerState = useRef<{
     draw?: MapboxDraw;
-    onChange: (value: Feature<any> | null) => void;
+    onChange: (value: Feature<any> | null, hasKinks: boolean) => void;
     state: DigitizingState;
   }>({ onChange, state });
 
@@ -146,10 +146,11 @@ export default function useMapboxGLDraw(
 
       const handlers = {
         create: function (e: any) {
-          if (hasKinks(e.features[0])) {
+          const kinks = hasKinks(e.features[0]);
+          if (kinks) {
             setSelfIntersects(true);
           }
-          handlerState.current.onChange(e.features[0]);
+          handlerState.current.onChange(e.features[0], kinks);
         },
         update: (e: any) => {
           const mode = handlerState.current.draw?.getMode() as string;
@@ -158,7 +159,7 @@ export default function useMapboxGLDraw(
           } else {
             setState(DigitizingState.EDITING);
           }
-          handlerState.current.onChange(e.features[0]);
+          handlerState.current.onChange(e.features[0], selfIntersects);
         },
         drawingStarted: () => {
           setState(DigitizingState.STARTED);
@@ -290,15 +291,8 @@ export default function useMapboxGLDraw(
      */
     finishEditing: () => {
       if (draw) {
-        // if (
-        //   state === DigitizingState.EDITING ||
-        //   state === DigitizingState.CAN_COMPLETE
-        // ) {
         draw.changeMode("simple_select", { featureIds: [] });
         setState(DigitizingState.NO_SELECTION);
-        // } else {
-        //   throw new Error(`Cannot finish editing from state ${state}`);
-        // }
       } else {
         throw new Error("draw has not been initialized");
       }
@@ -361,6 +355,15 @@ export default function useMapboxGLDraw(
       }
       handlerState.current.draw?.changeMode("direct_select", { featureId });
       setState(DigitizingState.EDITING);
+    },
+    setUnfinished: (featureId: string) => {
+      if (handlerState.current.draw) {
+        // @ts-ignore
+        handlerState.current.draw.changeMode("unfinished_feature_select", {
+          featureId,
+        });
+        setState(DigitizingState.UNFINISHED);
+      }
     },
   };
 
