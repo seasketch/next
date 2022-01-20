@@ -445,6 +445,10 @@ const SpatialAccessPriority: FormElementComponent<
     }
   }, [mapContext.manager, basemaps]);
 
+  useEffect(() => {
+    updateMiniBasemap();
+  }, [mapContext.selectedBasemap]);
+
   function onClickSave() {
     if (selfIntersects) {
       return window.alert(
