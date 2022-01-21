@@ -125,12 +125,12 @@ const WelcomeMessage: FormElementComponent<
                 </Trans>
               }
             />
-            <h4 className="text-lg pt-1">
-              <Trans ns="admin:surveys">Administrator Tools</Trans>
-            </h4>
+
             {context.isAdmin && (
               <>
-                {/* <hr className="w-full border-b" /> */}
+                <h4 className="text-lg pt-1">
+                  <Trans ns="admin:surveys">Administrator Tools</Trans>
+                </h4>
                 <Link
                   className="flex"
                   to={`/${context.slug}/admin/surveys/${context.surveyId}`}
