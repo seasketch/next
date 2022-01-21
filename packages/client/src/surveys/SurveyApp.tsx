@@ -276,6 +276,8 @@ function SurveyApp() {
       <>
         <SurveyContext.Provider
           value={{
+            slug: slug,
+            surveyId: data.survey.id,
             lang: language,
             setLanguage: (code: string) => {
               const lang = languages.find((lang) => lang.code === code);
@@ -284,7 +286,21 @@ function SurveyApp() {
               }
               i18n.changeLanguage(lang.code);
             },
-
+            practiceMode: !!practice,
+            togglePracticeMode: (enable) => {
+              if (enable) {
+                history.replace(
+                  `/${slug}/surveys/${surveyId}/${index}/practice`
+                );
+              } else {
+                history.replace(`/${slug}/surveys/${surveyId}/${index}/`);
+              }
+            },
+            toggleFacilitation: (enable) =>
+              setResponseState((prev) => ({
+                ...prev,
+                facilitated: enable,
+              })),
             supportedLanguages:
               (data.survey?.supportedLanguages as string[]) || [],
             isAdmin: !!data.me?.isAdmin,

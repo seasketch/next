@@ -453,7 +453,12 @@ export default function SurveyFormEditor({
           {route === "formElement" && data?.survey && selectedFormElement && (
             <SurveyContext.Provider
               value={{
+                slug: slug,
+                surveyId: data.survey.id,
                 lang: language,
+                practiceMode: false,
+                togglePracticeMode: (enable: boolean) => null,
+                toggleFacilitation: (enable: boolean) => null,
                 setLanguage: (code: string) => {
                   const lang = languages.find((lang) => lang.code === code);
                   if (!lang) {

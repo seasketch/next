@@ -1,8 +1,15 @@
-import { TranslateIcon } from "@heroicons/react/outline";
-import { useContext, useEffect } from "react";
+import {
+  CogIcon,
+  PencilIcon,
+  TableIcon,
+  TranslateIcon,
+} from "@heroicons/react/outline";
+import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { Link, useParams } from "react-router-dom";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
+import Modal from "../components/Modal";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
 import LanguageSelector from "../surveys/LanguageSelector";
@@ -28,6 +35,7 @@ const WelcomeMessage: FormElementComponent<
   const { t } = useTranslation("admin:surveys");
   const style = useContext(SurveyLayoutContext).style;
   const context = useContext(SurveyContext);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   if (!context) {
     throw new Error("SurveyContext not set");
   }
@@ -45,68 +53,108 @@ const WelcomeMessage: FormElementComponent<
         editable={props.editable}
         alternateLanguageSettings={props.alternateLanguageSettings}
       />
-      <Button
-        name="Begin Survey"
-        className="mt-6 mb-10"
-        onClick={() => props.onChange({ dropdownSelection: "BEGIN" }, false)}
-        label={beginButtonText || ""}
-        primary
-        backgroundColor={style.secondaryColor}
-        shadowSize="shadow-lg"
-        segmentItems={
-          !props.editable &&
-          (context.isAdmin || !props.componentSettings.disablePracticeMode)
-            ? [
-                t("Take Survey", { ns: "surveys" }),
-                t("Practice", { ns: "surveys" }),
-                ...(context.surveySupportsFacilitation
-                  ? [t("Facilitated Response", { ns: "surveys" })]
-                  : []),
-                ...(context.isAdmin
-                  ? [t("Edit Survey"), t("View Responses")]
-                  : []),
-              ]
-            : undefined
-        }
-        onSegmentClick={(n) => {
-          switch (n) {
-            case 0:
-              props.onChange({ dropdownSelection: "BEGIN" }, false);
-              break;
-            case 1:
-              props.onChange({ dropdownSelection: "PRACTICE" }, false);
-              break;
-            case 2:
-              if (context.surveySupportsFacilitation) {
-                props.onChange({ dropdownSelection: "FACILITATED" }, false);
-              } else {
-                props.onChange({ dropdownSelection: "EDIT" }, false);
-              }
-              break;
-            case 3:
-              if (context.surveySupportsFacilitation) {
-                props.onChange({ dropdownSelection: "EDIT" }, false);
-              } else {
-                props.onChange({ dropdownSelection: "RESPONSES" }, false);
-              }
-              break;
-            case 4:
-              props.onChange({ dropdownSelection: "RESPONSES" }, false);
-              break;
-          }
-        }}
-      />
-      <LanguageSelector
-        button={(onClick) => (
+      <div className="w-full flex align-middle mt-6 mb-10">
+        <Button
+          name="Begin Survey"
+          buttonClassName="md:px-8 px-6"
+          onClick={() => props.onChange({ dropdownSelection: "BEGIN" }, false)}
+          label={beginButtonText || ""}
+          primary
+          backgroundColor={style.secondaryColor}
+          shadowSize="shadow-lg"
+        />
+        <LanguageSelector
+          button={(onClick) => (
+            <button
+              onClick={onClick}
+              className="border rounded border-white p-1 px-2 ml-2 border-opacity-0"
+            >
+              <TranslateIcon className="w-6 h-6 inline mr-1 " />
+              <Trans ns="surveys">Language</Trans>
+            </button>
+          )}
+        />
+        <div className="sm:flex-1 sm:items-end sm:relative">
           <button
-            onClick={onClick}
-            className="border rounded border-white p-1 px-2 mx-2 border-opacity-0"
+            onClick={() => setSettingsModalOpen(true)}
+            className="border rounded border-white p-1 px-2 mr-2 border-opacity-0 sm:right-0 sm:absolute"
           >
-            <TranslateIcon className="w-6 h-6 inline mr-1 " />
-            <Trans ns="surveys">Language</Trans>
+            <CogIcon className={`w-6 h-6 inline mr-1 ${style.textClass}`} />
+            <Trans ns="surveys">Settings</Trans>
           </button>
-        )}
-      />
+        </div>
+        <Modal
+          className="text-black"
+          // title={t("Survey Settings", { ns: "surveys" })}
+          open={settingsModalOpen}
+          onRequestClose={() => setSettingsModalOpen(false)}
+        >
+          <div className="text-black sm:max-w-lg space-y-4">
+            <h3 className="text-lg mb-2">
+              {t("Survey Settings", { ns: "surveys" })}
+            </h3>
+            {context.surveySupportsFacilitation && (
+              <InputBlock
+                input={
+                  <Switch
+                    isToggled={context.isFacilitatedResponse}
+                    onClick={(enable) => context.toggleFacilitation(enable)}
+                  />
+                }
+                title={t("Facilitated Response", { ns: "surveys" })}
+                description={
+                  <Trans ns="surveys">
+                    If enabled, the survey will prompt for both a respondent
+                    name and the name of the facilitator.
+                  </Trans>
+                }
+              />
+            )}
+            <InputBlock
+              input={
+                <Switch
+                  isToggled={context.practiceMode}
+                  onClick={(enable) => context.togglePracticeMode(enable)}
+                />
+              }
+              title={t("Practice Mode", { ns: "surveys" })}
+              description={
+                <Trans ns="surveys">
+                  Practice responses are stored seperately in the database and
+                  not counted in analyses.
+                </Trans>
+              }
+            />
+            <h4 className="text-lg pt-1">
+              <Trans ns="admin:surveys">Administrator Tools</Trans>
+            </h4>
+            {context.isAdmin && (
+              <>
+                {/* <hr className="w-full border-b" /> */}
+                <Link
+                  className="flex"
+                  to={`/${context.slug}/admin/surveys/${context.surveyId}`}
+                >
+                  <span className="flex-1">
+                    <Trans ns="admin:surveys">View responses</Trans>
+                  </span>
+                  <TableIcon className="w-5 h-5" />
+                </Link>
+                <Link
+                  className="flex"
+                  to={`/${context.slug}/survey-editor/${context.surveyId}`}
+                >
+                  <span className="flex-1">
+                    <Trans ns="admin:surveys">Edit this survey</Trans>
+                  </span>
+                  <PencilIcon className="w-5 h-5" />
+                </Link>
+              </>
+            )}
+            <span></span>
+          </div>
+        </Modal>
+      </div>
 
       <FormElementEditorPortal
         render={(updateBaseSetting, updateComponentSetting) => {

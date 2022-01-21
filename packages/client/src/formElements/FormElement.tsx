@@ -619,6 +619,8 @@ export function sortFormElements<
 }
 
 export const SurveyContext = createContext<{
+  surveyId: number;
+  slug: string;
   isAdmin: boolean;
   projectName: string;
   projectUrl: string;
@@ -644,6 +646,9 @@ export const SurveyContext = createContext<{
   supportedLanguages: string[];
   lang: LangDetails;
   setLanguage: (code: string) => void;
+  practiceMode: boolean;
+  togglePracticeMode: (enable: boolean) => void;
+  toggleFacilitation: (enable: boolean) => void;
 } | null>(null);
 
 export function getLayout(
