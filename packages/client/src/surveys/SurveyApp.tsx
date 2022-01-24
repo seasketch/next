@@ -455,39 +455,11 @@ function SurveyApp() {
                     submissionAttempted={!!state?.submissionAttempted}
                     onChange={(value, errors) => {
                       if (formElement.current?.typeId === "WelcomeMessage") {
-                        switch (
-                          (value as { dropdownSelection?: string })
-                            .dropdownSelection
-                        ) {
-                          case "BEGIN":
-                            setResponseState((prev) => ({
-                              submitted: false,
-                              facilitated: false,
-                            }));
-                            history.push(`/${slug}/surveys/${surveyId}/1`);
-                            break;
-                          case "FACILITATED":
-                            setResponseState((prev) => ({
-                              submitted: false,
-                              facilitated: true,
-                            }));
-                            history.push(`/${slug}/surveys/${surveyId}/1`);
-                            break;
-                          case "PRACTICE":
-                            history.push(
-                              `/${slug}/surveys/${surveyId}/1/practice`
-                            );
-                            setResponseState((prev) => ({
-                              submitted: false,
-                              facilitated: false,
-                            }));
-                            break;
-                          case "EDIT":
-                            history.push(`/${slug}/survey-editor/${surveyId}`);
-                            break;
-                          case "RESPONSES":
-                            history.push(`/${slug}/admin/surveys/${surveyId}`);
-                        }
+                        setResponseState((prev) => ({
+                          submitted: false,
+                          facilitated: !!responseState.facilitated,
+                        }));
+                        history.push(`/${slug}/surveys/${surveyId}/1`);
                       } else {
                         updateState(formElement.current!, {
                           value,
