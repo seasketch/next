@@ -73,6 +73,7 @@ const WelcomeMessage: FormElementComponent<
               <Trans ns="surveys">Language</Trans>
             </button>
           )}
+          options={context.supportedLanguages}
         />
         <div className="sm:flex-1 sm:items-end sm:relative">
           <button
