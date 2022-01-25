@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { Switch, Route, Redirect } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
@@ -12,6 +12,8 @@ import GlobalErrorHandler, {
   GlobalErrorHandlerContext,
 } from "./components/GlobalErrorHandler";
 import { HeadProvider, Meta } from "react-head";
+import { useAuth0 } from "@auth0/auth0-react";
+import * as Sentry from "@sentry/react";
 
 const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
 const LazyProjectAdmin = React.lazy(() => import("./admin/AdminApp"));
@@ -22,8 +24,17 @@ const LazySurveyFormEditor = React.lazy(
 );
 
 function App() {
+  const { user } = useAuth0();
   const { t } = useTranslation(["homepage"]);
   const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      Sentry.setUser({ email: user.email, id: user.sub });
+    } else {
+      Sentry.configureScope((scope) => scope.setUser(null));
+    }
+  }, [user]);
   return (
     <div className="App">
       <HeadProvider>

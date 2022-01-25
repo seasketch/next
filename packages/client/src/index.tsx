@@ -15,10 +15,33 @@ import {
 } from "@apollo/client";
 import { createUploadLink } from "apollo-upload-client";
 import { setContext } from "@apollo/client/link/context";
-import { BrowserRouter as Router, useHistory } from "react-router-dom";
+import { Router, useHistory } from "react-router-dom";
 import { getMainDefinition } from "@apollo/client/utilities";
 import { WebSocketLink } from "@apollo/client/link/ws";
 import Spinner from "./components/Spinner";
+import * as Sentry from "@sentry/react";
+import { Integrations } from "@sentry/tracing";
+import { createBrowserHistory } from "history";
+
+const history = createBrowserHistory();
+
+if (process.env.REACT_APP_SENTRY_DSN && process.env.REACT_APP_BUILD) {
+  Sentry.init({
+    dsn: process.env.REACT_APP_SENTRY_DSN,
+    release: process.env.REACT_APP_BUILD || "dev",
+    environment: process.env.REACT_APP_BUILD ? "production" : "development",
+    integrations: [
+      new Integrations.BrowserTracing({
+        routingInstrumentation: Sentry.reactRouterV5Instrumentation(history),
+      }),
+    ],
+
+    // Set tracesSampleRate to 1.0 to capture 100%
+    // of transactions for performance monitoring.
+    // We recommend adjusting this value in production
+    tracesSampleRate: 1.0,
+  });
+}
 
 function Auth0ProviderWithRouter(props: any) {
   const history = useHistory();
@@ -138,7 +161,7 @@ ReactDOM.render(
         </div>
       }
     >
-      <Router>
+      <Router history={history}>
         <Auth0ProviderWithRouter
           domain={process.env.REACT_APP_AUTH0_DOMAIN!}
           clientId={process.env.REACT_APP_AUTH0_CLIENT_ID!}
