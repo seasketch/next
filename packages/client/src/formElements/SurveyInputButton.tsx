@@ -9,6 +9,7 @@ export default function SurveyInputButton({
   selected,
   className,
   iconPlacement,
+  disabled,
 }: {
   label: string;
   Icon?: FunctionComponent<{ className?: string }>;
@@ -16,20 +17,24 @@ export default function SurveyInputButton({
   selected: boolean;
   className?: string;
   iconPlacement?: "right" | "left";
+  disabled?: boolean;
 }) {
   const style = useContext(SurveyLayoutContext).style;
   return (
     <button
+      disabled={disabled}
       title={label}
       onClick={onClick}
-      className={`border rounded transition-transform duration-200 active:scale-125 transform inline-flex items-center ${
+      className={`border rounded transition-transform duration-200 transform inline-flex items-center ${
         style.isDark ? "bg-white" : "bg-black"
       } bg-opacity-5 hover:bg-opacity-10 hover:bg-white px-4 py-2 ${
         Icon &&
         (iconPlacement === "left"
           ? "ltr:pl-10 ltr:pr-6 rtl:pr-10"
           : "ltr:pr-10 rtl:pl-10 rtl:pr-6")
-      } ${selected ? style.secondaryTextClass : style.textClass} ${className}`}
+      } ${selected ? style.secondaryTextClass : style.textClass} ${className} ${
+        disabled ? "opacity-50" : "active:scale-125"
+      }`}
       style={
         selected
           ? {

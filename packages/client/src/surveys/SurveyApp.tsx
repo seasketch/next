@@ -467,7 +467,8 @@ function SurveyApp() {
                         }).then(() => {
                           if (
                             advancesAutomatically(formElement.current!) &&
-                            value !== undefined
+                            value !== undefined &&
+                            !errors
                           ) {
                             setTimeout(() => {
                               setAutoAdvance(true);

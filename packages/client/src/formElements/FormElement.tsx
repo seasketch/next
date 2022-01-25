@@ -467,6 +467,7 @@ export interface FormElementComponent<T, V = {}>
   defaultBody: any;
   /* Can be useful for certain fields like `email` */
   defaultExportId?: string;
+  defaultIsRequired?: boolean;
   defaultComponentSettings?: T;
   /** For components like WelcomeMessage that shouldn't be a user option */
   templatesOnly?: boolean;
