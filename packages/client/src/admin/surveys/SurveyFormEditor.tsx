@@ -53,7 +53,7 @@ import LogicRuleEditor from "./LogicRuleEditor";
 import { components } from "../../formElements";
 import bbox from "@turf/bbox";
 import { LngLatBoundsLike, LngLatLike } from "mapbox-gl";
-import languages from "../../lang/supported";
+import languages, { LangDetails } from "../../lang/supported";
 import i18n from "../../i18n";
 
 extend([a11yPlugin]);
@@ -73,9 +73,13 @@ export default function SurveyFormEditor({
   formElementId: number | null;
 }) {
   const { t, i18n } = useTranslation();
-  const [language, setLanguage] = useState(
-    languages.find((l) => l.code === (i18n.language || "EN"))!
-  );
+  let lang: LangDetails = languages.find(
+    (l) => l.code === (i18n.language || "EN")
+  )!;
+  if (!lang) {
+    lang = languages.find((l) => l.code === "EN")!;
+  }
+  const [language, setLanguage] = useState(lang);
 
   const formElementEditorContainerRef = useRef<HTMLDivElement>(null);
   const onError = useGlobalErrorHandler();

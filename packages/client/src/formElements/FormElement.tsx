@@ -152,10 +152,10 @@ export function FormElementBody({
   let body = defaultBody;
   if (
     context &&
-    context.lang.code !== "EN" &&
-    alternateLanguageSettings[context.lang.code]
+    context?.lang?.code !== "EN" &&
+    alternateLanguageSettings[context?.lang?.code]
   ) {
-    body = alternateLanguageSettings[context.lang.code][
+    body = alternateLanguageSettings[context?.lang?.code][
       componentSettingName || "body"
     ] || {
       ...defaultBody,
@@ -718,9 +718,9 @@ export function useLocalizedComponentSetting(
 ) {
   const context = useContext(SurveyContext);
   if (
-    !context ||
+    !context?.lang ||
     !props.alternateLanguageSettings[context.lang.code] ||
-    context.lang.code === "EN"
+    context?.lang?.code === "EN"
   ) {
     return props.componentSettings[propName];
   } else {
