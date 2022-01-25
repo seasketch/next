@@ -312,6 +312,7 @@ mutation AddFormElement(
   $position: Int
   $exportId: String
   $subordinateTo: Int
+  $isRequired: Boolean!
 ) {
   createFormElement(
     input: {
@@ -319,7 +320,7 @@ mutation AddFormElement(
         body: $body
         componentSettings: $componentSettings
         formId: $formId
-        isRequired: false
+        isRequired: $isRequired
         typeId: $componentType
         position: $position
         exportId: $exportId
@@ -602,5 +603,20 @@ mutation UpdateSurveyDraftStatus($id: Int!, $isDisabled: Boolean!) {
       id
       isDisabled
     }
+  }
+}
+
+mutation UploadConsentDoc(
+  $document: Upload!
+  $formElementId: Int!
+  $version: Int!
+) {
+  uploadConsentDocument(
+    document: $document
+    formElementId: $formElementId
+    version: $version
+  ) {
+    id
+    componentSettings
   }
 }

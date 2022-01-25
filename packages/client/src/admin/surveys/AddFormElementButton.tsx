@@ -102,6 +102,7 @@ export default function AddFormElementButton({
                           componentType: id,
                           exportId: C.defaultExportId,
                           subordinateTo: subordinateTo,
+                          isRequired: C.defaultIsRequired || false,
                         },
                         optimisticResponse: {
                           __typename: "Mutation",
@@ -115,7 +116,7 @@ export default function AddFormElementButton({
                               alternateLanguageSettings: {},
                               formId,
                               typeId: id,
-                              isRequired: false,
+                              isRequired: C.defaultIsRequired || false,
                               position: nextPosition,
                               type: {
                                 ...data.formElementTypes!.find(

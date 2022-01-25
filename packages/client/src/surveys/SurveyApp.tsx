@@ -188,7 +188,7 @@ function SurveyApp() {
     updateState(formElement.current!, {
       submissionAttempted: true,
     });
-    if (canAdvance()) {
+    if (canAdvance() || e?.force) {
       if (pagingState?.isLastQuestion) {
         setFormElement((prev) => ({ ...prev, exiting: prev.current }));
         window.scrollTo(0, 0);
@@ -453,7 +453,7 @@ function SurveyApp() {
                     {...formElement.current}
                     typeName={formElement.current.typeId}
                     submissionAttempted={!!state?.submissionAttempted}
-                    onChange={(value, errors) => {
+                    onChange={(value, errors, advanceAutomatically) => {
                       if (formElement.current?.typeId === "WelcomeMessage") {
                         setResponseState((prev) => ({
                           submitted: false,
@@ -465,10 +465,7 @@ function SurveyApp() {
                           value,
                           errors,
                         }).then(() => {
-                          if (
-                            advancesAutomatically(formElement.current!) &&
-                            value !== undefined
-                          ) {
+                          if (advanceAutomatically) {
                             setTimeout(() => {
                               setAutoAdvance(true);
                             }, 500);
@@ -479,7 +476,7 @@ function SurveyApp() {
                     onSubmit={handleAdvance}
                     editable={false}
                     value={state?.value}
-                    onRequestNext={handleAdvance}
+                    onRequestNext={() => handleAdvance({ force: true })}
                     onRequestPrevious={() => {
                       setBackwards(true);
                       const url = `/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(

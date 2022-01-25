@@ -17,6 +17,7 @@ import FeatureName from "./FeatureName";
 import SpatialAccessPriority from "./SpatialAccessPriority/SpatialAccessPriority";
 import SAPRange from "./SAPRange";
 import SaveScreen from "./SaveScreen";
+import Consent from "./Consent";
 
 export const components: {
   /** componentName must match form_elements db table */
@@ -26,6 +27,7 @@ export const components: {
 components["WelcomeMessage"] = WelcomeMessage;
 components["Name"] = Name;
 components["Email"] = Email;
+components["Consent"] = Consent;
 components["MultipleChoice"] = MultipleChoice;
 components["ShortText"] = ShortText;
 components["TextArea"] = TextArea;

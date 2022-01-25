@@ -21,6 +21,7 @@ import BuildPlugin from "./plugins/buildPlugin";
 import ExportIdPlugin from "./plugins/exportIdPlugin";
 import UnsplashPlugin from "./plugins/unsplashPlugin";
 import { PostGraphileOptions } from "postgraphile";
+import ConsentDocumentPlugin from "./plugins/consentDocumentPlugin";
 const pluginHook = makePluginHook([PgPubsub]);
 
 export default function graphileOptions(): PostGraphileOptions {
@@ -49,10 +50,11 @@ export default function graphileOptions(): PostGraphileOptions {
       orderTopicsByDateAndStickyPlugin,
       ProjectInviteStateSubscriptionPlugin,
       BuildPlugin,
-      reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
-      extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
       SpritesPlugin,
       UnsplashPlugin,
+      ConsentDocumentPlugin,
+      // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
+      // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],
     graphileBuildOptions: {
       pgOmitListSuffix: true,

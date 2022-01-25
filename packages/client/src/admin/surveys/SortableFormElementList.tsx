@@ -50,20 +50,22 @@ export default function SortableFormElementList(props: Props) {
   const featureName = props.items.find((i) => i.typeId === "FeatureName");
   const sapRange = props.items.find((i) => i.typeId === "SAPRange");
   const saveScreen = props.items.find((i) => i.typeId === "SaveScreen");
+  const consent = props.items.find((i) => i.typeId === "Consent");
   const sortableFormElements = sortFormElements(props.items).filter(
     (i) =>
       i.typeId !== "WelcomeMessage" &&
       i.typeId !== "ThankYou" &&
       i.typeId !== "FeatureName" &&
       i.typeId !== "SAPRange" &&
-      i.typeId !== "SaveScreen"
+      i.typeId !== "SaveScreen" &&
+      i.typeId !== "Consent"
   );
 
   if (!props.items.length) {
     return null;
   }
 
-  const startItems = [welcome].filter(
+  const startItems = [welcome, consent].filter(
     (el) => !!el
   ) as FormElementFullDetailsFragment[];
   const finishItems = [saveScreen, thankYou].filter(
@@ -78,7 +80,7 @@ export default function SortableFormElementList(props: Props) {
 
   return (
     <div className={`pb-4 pt-1 ${props.className}`}>
-      <div className="mb-2">
+      <div className="mb-2 space-y-2">
         {startItems.map((el) => (
           <FormElementListItem
             key={el.id}

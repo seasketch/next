@@ -43,7 +43,7 @@ test("selecting an option", async () => {
     );
   });
   fireEvent.click(screen.getByText("Option C"));
-  expect(args.onChange).toBeCalledWith(["C"], false);
+  expect(args.onChange).toBeCalledWith(["C"], false, true);
 });
 
 test("multipleSelect: selecting multiple options", async () => {
