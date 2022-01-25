@@ -2,6 +2,8 @@
 
 The SeaSketch Next client application is built using [create-react-app](https://create-react-app.dev/). It's architecture is typical of a single-page-app and uses the [SeaSketch Next GraphQL API](https://github.com/seasketch/next/tree/master/packages/api) for data persistence.
 
+[![Client](https://img.shields.io/endpoint?url=https://dashboard.cypress.io/badge/detailed/jo53du/master&style=flat&logo=cypress)](https://dashboard.cypress.io/projects/jo53du/runs)
+
 ## Installing
 
 ```sh
