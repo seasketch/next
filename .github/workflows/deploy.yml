@@ -3,12 +3,12 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: "Force deployment of all services, regardless of changes?"
+        description: "Force deployment of all services, regardless of changes"
         required: true
         type: boolean
         default: false
       environment:
-        description: "Environment. Always production for now"
+        description: "Environment"
         required: true
         default: "production"
         type: choice
