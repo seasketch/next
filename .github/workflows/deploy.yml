@@ -256,3 +256,4 @@ jobs:
         with:
           environment: production
           version: ${{ needs.detect_changes.outputs.build_label }}
+          sourcemaps: packages/client/build/static/js/
