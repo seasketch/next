@@ -80,7 +80,7 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
                     if (selected) {
                       props.onChange(undefined, false);
                     } else {
-                      props.onChange([value || label], false);
+                      props.onChange([value || label], false, true);
                     }
                   }
                 }}

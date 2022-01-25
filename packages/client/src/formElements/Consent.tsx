@@ -2,6 +2,7 @@ import {
   CheckIcon,
   DocumentIcon,
   DocumentTextIcon,
+  ExclamationIcon,
   XIcon,
 } from "@heroicons/react/outline";
 import { DocumentReportIcon } from "@heroicons/react/solid";
@@ -36,6 +37,7 @@ export type ConsentProps = {
   presentation?: ConsentPresentation;
   agreeText?: string;
   disagreeText?: string;
+  signaturePlaceholder?: string;
 };
 
 export type ConsentValue = {
@@ -66,6 +68,10 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
   const agreeText = useLocalizedComponentSetting("agreeText", props);
   const disagreeText = useLocalizedComponentSetting("disagreeText", props);
   const documentLabel = useLocalizedComponentSetting("documentLabel", props);
+  const signaturePlaceholder = useLocalizedComponentSetting(
+    "signaturePlaceholder",
+    props
+  );
   const sig = props.value?.signature || "";
   function setSig(value: string) {
     const newValue = {
@@ -117,9 +123,12 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
             }}
           />
         ) : (
-          <Trans ns="surveys">
-            Component is misconfigured. Document url required.
-          </Trans>
+          <div className="border-dashed border-2 rounded border-red-600 text-white bg-gray-800 p-2">
+            <ExclamationIcon className="w-10 h-10 inline-block mr-2 text-gray-500" />
+            <Trans ns="surveys">
+              Component is misconfigured. Document url required.
+            </Trans>
+          </div>
         )}
         {props.componentSettings.presentation === "signature" && (
           <div className="max-w-lg">
@@ -147,6 +156,7 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
                 name=""
                 autocomplete="name"
                 onChange={setSig}
+                placeholder={signaturePlaceholder || ""}
               />
             </div>
           </div>
@@ -214,10 +224,8 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
                   consented: true,
                   presentation: props.componentSettings!.presentation!,
                 };
-                props.onChange(
-                  newValue,
-                  validate(props.componentSettings, newValue)
-                );
+                const errors = validate(props.componentSettings, newValue);
+                props.onChange(newValue, errors, !errors);
               }
             }}
           />
@@ -250,28 +258,45 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
                   </select>
                 }
               />
-              <LocalizableTextInput
-                label={t("Agree button label", { ns: "admin:surveys" })}
-                name="agreeText"
-                value={agreeText}
-                onChange={updateComponentSetting(
-                  "agreeText",
-                  props.componentSettings,
-                  context?.lang.code,
-                  props.alternateLanguageSettings
-                )}
-              />
-              <LocalizableTextInput
-                label={t("Disagree button label", { ns: "admin:surveys" })}
-                name="disagreeText"
-                value={disagreeText}
-                onChange={updateComponentSetting(
-                  "disagreeText",
-                  props.componentSettings,
-                  context?.lang.code,
-                  props.alternateLanguageSettings
-                )}
-              />
+              {props.componentSettings.presentation === "signature" && (
+                <LocalizableTextInput
+                  label={t("Signature placeholder", { ns: "admin:surveys" })}
+                  name="signaturePlaceholder"
+                  value={signaturePlaceholder}
+                  onChange={updateComponentSetting(
+                    "signaturePlaceholder",
+                    props.componentSettings,
+                    context?.lang.code,
+                    props.alternateLanguageSettings
+                  )}
+                />
+              )}
+              {props.componentSettings.presentation === "yesno" && (
+                <>
+                  <LocalizableTextInput
+                    label={t("Agree button label", { ns: "admin:surveys" })}
+                    name="agreeText"
+                    value={agreeText}
+                    onChange={updateComponentSetting(
+                      "agreeText",
+                      props.componentSettings,
+                      context?.lang.code,
+                      props.alternateLanguageSettings
+                    )}
+                  />
+                  <LocalizableTextInput
+                    label={t("Disagree button label", { ns: "admin:surveys" })}
+                    name="disagreeText"
+                    value={disagreeText}
+                    onChange={updateComponentSetting(
+                      "disagreeText",
+                      props.componentSettings,
+                      context?.lang.code,
+                      props.alternateLanguageSettings
+                    )}
+                  />
+                </>
+              )}
               <LocalizableTextInput
                 label={t("Document Label", { ns: "admin:surveys" })}
                 name="documentLabel"
@@ -333,6 +358,7 @@ Consent.defaultComponentSettings = {
   presentation: "yesno",
   documentVersion: 0,
   requireDocClick: false,
+  signaturePlaceholder: "Enter your full name",
 };
 
 Consent.defaultExportId = "consent";
@@ -450,7 +476,7 @@ function UploadableConsentDocument({
                   >
                     upload a new version
                   </button>
-                  . SeaSketch will record the exact version your users agree to.
+                  . SeaSketch will record the exact version each user agrees to.
                 </Trans>
               </div>
             )}
