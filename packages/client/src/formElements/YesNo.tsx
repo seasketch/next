@@ -30,13 +30,13 @@ const YesNo: FormElementComponent<YesNoProps, boolean> = (props) => {
           label={t("Yes")}
           Icon={CheckIcon}
           selected={props.value === true}
-          onClick={() => props.onChange(true, false)}
+          onClick={() => props.onChange(true, false, true)}
         />
         <SurveyInputButton
           label={t("No")}
           Icon={XIcon}
           selected={props.value === false}
-          onClick={() => props.onChange(false, false)}
+          onClick={() => props.onChange(false, false, true)}
         />
       </div>
       {/* <FormElementEditorPortal
