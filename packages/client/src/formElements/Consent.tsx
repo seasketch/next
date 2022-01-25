@@ -382,7 +382,8 @@ Consent.icon = () => (
       role="img"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
-      className="transform scale-75"
+      className="transform scale-75 text-white"
+      style={{ width: 80, height: 80 }}
     >
       <path
         fill="currentColor"
