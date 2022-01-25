@@ -5,11 +5,15 @@ on:
       force:
         description: "Force deployment of all services, regardless of changes?"
         required: true
-        default: "false"
+        type: boolean
+        default: false
       environment:
         description: "Environment. Always production for now"
         required: true
         default: "production"
+        type: choice
+        options:
+          - production
 jobs:
   detect_changes:
     name: Determine service updates
@@ -72,7 +76,7 @@ jobs:
               - 'packages/!(api|client|infra)/**'
   run_migrations:
     name: Run DB Migrations
-    if: github.event.inputs.force == 'true' || needs.detect_changes.outputs.migrations == 'true'
+    if: github.event.inputs.force == true || needs.detect_changes.outputs.migrations == 'true'
     concurrency: ${{github.event.inputs.environment }}_db_migrations
     timeout-minutes: 5
     runs-on: ubuntu-latest
@@ -98,7 +102,7 @@ jobs:
   deploy_server:
     runs-on: ubuntu-latest
     name: Deploy Server
-    if: always() && needs.run_migrations.result != 'failure' && (github.event.inputs.force == 'true' || needs.detect_changes.outputs.api == 'true')
+    if: always() && needs.run_migrations.result != 'failure' && (github.event.inputs.force == true || needs.detect_changes.outputs.api == 'true')
     concurrency: ${{github.event.inputs.environment }}_server
     timeout-minutes: 12
     environment:
@@ -156,7 +160,7 @@ jobs:
     name: Deploy Client
     runs-on: ubuntu-latest
     timeout-minutes: 8
-    if: github.event.inputs.force == 'true' || needs.detect_changes.outputs.client == 'true'
+    if: github.event.inputs.force == true || needs.detect_changes.outputs.client == 'true'
     concurrency: ${{github.event.inputs.environment }}_client
     environment:
       name: ${{github.event.inputs.environment}}_client
