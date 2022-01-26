@@ -59,6 +59,7 @@
   "Link to project": "Link to project",
   "List options as <2>label,value </2>each on a new line. Use quotes to escape commas. Values are not required but will keep data consistent if text changes are needed. Copying data from Google Sheets can help manage longer lists.": "List options as <2>label,value </2>each on a new line. Use quotes to escape commas. Values are not required but will keep data consistent if text changes are needed. Copying data from Google Sheets can help manage longer lists.",
   "List sector options below to collect data related to different ocean uses. If no sectors are provided then the sectors question will be skipped and only a single set of shapes will be collected.": "List sector options below to collect data related to different ocean uses. If no sectors are provided then the sectors question will be skipped and only a single set of shapes will be collected.",
+  "Matrix": "Matrix",
   "Max Length": "Max Length",
   "Maximum": "Maximum",
   "Message shown at end of survey.": "Message shown at end of survey.",
