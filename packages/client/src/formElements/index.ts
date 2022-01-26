@@ -18,6 +18,7 @@ import SpatialAccessPriority from "./SpatialAccessPriority/SpatialAccessPriority
 import SAPRange from "./SAPRange";
 import SaveScreen from "./SaveScreen";
 import Consent from "./Consent";
+import Matrix from "./Matrix";
 
 export const components: {
   /** componentName must match form_elements db table */
@@ -36,6 +37,7 @@ components["Rating"] = Rating;
 components["Statement"] = Statement;
 components["YesNo"] = YesNo;
 components["ComboBox"] = ComboBox;
+components["Matrix"] = Matrix;
 components["ThankYou"] = ThankYou;
 components["SingleSpatialInput"] = SingleSpatialInput;
 components["MultiSpatialInput"] = MultiSpatialInput;
