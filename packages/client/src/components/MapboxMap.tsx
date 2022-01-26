@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useContext } from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { motion, AnimatePresence } from "framer-motion";
 import "mapbox-gl/dist/mapbox-gl.css";
+import Spinner from "./Spinner";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -15,6 +16,7 @@ export interface OverlayMapProps {
   /** Defaults to true */
   interactive?: boolean;
   onClickNonInteractive?: () => void;
+  lazyLoadReady?: boolean;
 }
 
 mapboxgl.prewarm();
@@ -23,6 +25,7 @@ export default function MapboxMap(props: OverlayMapProps) {
   const [map, setMap] = useState<Map>();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapContext = useContext(MapContext);
+  const [showSpinner, setShowSpinner] = useState(true);
 
   const interactive =
     props.interactive === undefined ? true : props.interactive;
@@ -32,7 +35,8 @@ export default function MapboxMap(props: OverlayMapProps) {
       !map &&
       mapContainer.current &&
       mapContext.manager &&
-      mapContext.ready
+      mapContext.ready &&
+      (props.lazyLoadReady === undefined || props.lazyLoadReady === true)
     ) {
       let cancelled = false;
       const container = mapContainer.current;
@@ -45,6 +49,7 @@ export default function MapboxMap(props: OverlayMapProps) {
               map.addControl(new mapboxgl.NavigationControl(), "top-left");
             }
             map.on("load", () => {
+              setShowSpinner(false);
               if (!cancelled) {
                 map.resize();
                 if (props.onLoad) {
@@ -70,6 +75,7 @@ export default function MapboxMap(props: OverlayMapProps) {
     mapContext.selectedBasemap,
     mapContainer.current,
     mapContext.ready,
+    props.lazyLoadReady,
   ]);
 
   return (
@@ -80,6 +86,10 @@ export default function MapboxMap(props: OverlayMapProps) {
       ref={mapContainer}
       onClick={!interactive ? props.onClickNonInteractive : undefined}
     >
+      {showSpinner && (
+        <Spinner className="absolute top-1/2 left-1/2 -ml-5 -mt-5" large />
+      )}
+
       <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">
         <AnimatePresence>
           {mapContext.bannerMessages?.length ? (

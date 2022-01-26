@@ -137,6 +137,7 @@ const SpatialAccessPriority: FormElementComponent<
     bounds: props.componentSettings.startingBounds,
     filterBasemapIds: props.componentSettings.basemaps,
   });
+  const [animating, setAnimating] = useState(false);
   const style = context.style;
   const [sector, setSector] = useState<FormElementOption | null>(
     props.componentSettings.sectorOptions
@@ -579,6 +580,7 @@ const SpatialAccessPriority: FormElementComponent<
         initial={false}
         exitBeforeEnter={true}
         presenceAffectsLayout={false}
+
         // onExitComplete={() => {
         //   setBackwards(false);
         //   setFormElement((prev) => ({
@@ -588,6 +590,8 @@ const SpatialAccessPriority: FormElementComponent<
         // }}
       >
         <motion.div
+          onAnimationStart={() => setAnimating(true)}
+          onAnimationComplete={() => setAnimating(false)}
           custom={{
             direction: context.navigatingBackwards,
             stage: props.stage,
@@ -1166,6 +1170,16 @@ const SpatialAccessPriority: FormElementComponent<
               hideDrawControls
               className="w-full h-full absolute top-0 bottom-0"
               initOptions={mapInitOptions}
+              lazyLoadReady={
+                !animating &&
+                (style.isSmall
+                  ? props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE ||
+                    props.stage === STAGES.MOBILE_EDIT_PROPERTIES ||
+                    props.stage === STAGES.MOBILE_MAP_FEATURES ||
+                    props.stage === STAGES.SHAPE_EDITOR
+                  : props.stage !== STAGES.CHOOSE_SECTORS &&
+                    props.stage !== STAGES.SECTOR_NAVIGATION)
+              }
             />
             {miniMapStyle && mapContext.manager?.map && (
               <DigitizingMiniMap
