@@ -459,7 +459,13 @@ function SurveyApp() {
                           submitted: false,
                           facilitated: !!responseState.facilitated,
                         }));
-                        history.push(`/${slug}/surveys/${surveyId}/1`);
+                        if (practice) {
+                          history.push(
+                            `/${slug}/surveys/${surveyId}/1/practice`
+                          );
+                        } else {
+                          history.push(`/${slug}/surveys/${surveyId}/1`);
+                        }
                       } else {
                         updateState(formElement.current!, {
                           value,
