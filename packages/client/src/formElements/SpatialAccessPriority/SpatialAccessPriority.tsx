@@ -74,6 +74,7 @@ import Switch from "../../components/Switch";
 import set from "lodash.set";
 import { collectText } from "../../admin/surveys/collectText";
 import { ChoiceAdminValueInput } from "../ComboBox";
+import useDebounce from "../../useDebounce";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -138,6 +139,7 @@ const SpatialAccessPriority: FormElementComponent<
     filterBasemapIds: props.componentSettings.basemaps,
   });
   const [animating, setAnimating] = useState(false);
+  const debouncedAnimating = useDebounce(animating, 10);
   const style = context.style;
   const [sector, setSector] = useState<FormElementOption | null>(
     props.componentSettings.sectorOptions
@@ -1172,6 +1174,7 @@ const SpatialAccessPriority: FormElementComponent<
               initOptions={mapInitOptions}
               lazyLoadReady={
                 !animating &&
+                !debouncedAnimating &&
                 (style.isSmall
                   ? props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE ||
                     props.stage === STAGES.MOBILE_EDIT_PROPERTIES ||
