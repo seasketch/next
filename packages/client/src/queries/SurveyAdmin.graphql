@@ -620,3 +620,30 @@ mutation UploadConsentDoc(
     componentSettings
   }
 }
+
+query SurveyResponses($surveyId: Int!) {
+  survey(id: $surveyId) {
+    form {
+      formElements {
+        ...FormElementDetails
+      }
+    }
+    id
+    practiceResponseCount
+    submittedResponseCount
+    surveyResponsesConnection {
+      nodes {
+        id
+        bypassedDuplicateSubmissionControl
+        updatedAt
+        userId
+        createdAt
+        data
+        isDuplicateEntry
+        isDuplicateIp
+        isPractice
+        isUnrecognizedUserAgent
+      }
+    }
+  }
+}

@@ -13488,6 +13488,32 @@ export type UploadConsentDocMutation = (
   ) }
 );
 
+export type SurveyResponsesQueryVariables = Exact<{
+  surveyId: Scalars['Int'];
+}>;
+
+
+export type SurveyResponsesQuery = (
+  { __typename?: 'Query' }
+  & { survey?: Maybe<(
+    { __typename?: 'Survey' }
+    & Pick<Survey, 'id' | 'practiceResponseCount' | 'submittedResponseCount'>
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & FormElementDetailsFragment
+      )>> }
+    )>, surveyResponsesConnection: (
+      { __typename?: 'SurveyResponsesConnection' }
+      & { nodes: Array<(
+        { __typename?: 'SurveyResponse' }
+        & Pick<SurveyResponse, 'id' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
+      )> }
+    ) }
+  )> }
+);
+
 export type SurveyAppRuleFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
@@ -18996,6 +19022,62 @@ export function useUploadConsentDocMutation(baseOptions?: Apollo.MutationHookOpt
 export type UploadConsentDocMutationHookResult = ReturnType<typeof useUploadConsentDocMutation>;
 export type UploadConsentDocMutationResult = Apollo.MutationResult<UploadConsentDocMutation>;
 export type UploadConsentDocMutationOptions = Apollo.BaseMutationOptions<UploadConsentDocMutation, UploadConsentDocMutationVariables>;
+export const SurveyResponsesDocument = gql`
+    query SurveyResponses($surveyId: Int!) {
+  survey(id: $surveyId) {
+    form {
+      formElements {
+        ...FormElementDetails
+      }
+    }
+    id
+    practiceResponseCount
+    submittedResponseCount
+    surveyResponsesConnection {
+      nodes {
+        id
+        bypassedDuplicateSubmissionControl
+        updatedAt
+        userId
+        createdAt
+        data
+        isDuplicateEntry
+        isDuplicateIp
+        isPractice
+        isUnrecognizedUserAgent
+      }
+    }
+  }
+}
+    ${FormElementDetailsFragmentDoc}`;
+
+/**
+ * __useSurveyResponsesQuery__
+ *
+ * To run a query within a React component, call `useSurveyResponsesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveyResponsesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveyResponsesQuery({
+ *   variables: {
+ *      surveyId: // value for 'surveyId'
+ *   },
+ * });
+ */
+export function useSurveyResponsesQuery(baseOptions: Apollo.QueryHookOptions<SurveyResponsesQuery, SurveyResponsesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveyResponsesQuery, SurveyResponsesQueryVariables>(SurveyResponsesDocument, options);
+      }
+export function useSurveyResponsesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveyResponsesQuery, SurveyResponsesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveyResponsesQuery, SurveyResponsesQueryVariables>(SurveyResponsesDocument, options);
+        }
+export type SurveyResponsesQueryHookResult = ReturnType<typeof useSurveyResponsesQuery>;
+export type SurveyResponsesLazyQueryHookResult = ReturnType<typeof useSurveyResponsesLazyQuery>;
+export type SurveyResponsesQueryResult = Apollo.QueryResult<SurveyResponsesQuery, SurveyResponsesQueryVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -20136,6 +20218,7 @@ export const namedOperations = {
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
     FormElementTypes: 'FormElementTypes',
     GetPhotos: 'GetPhotos',
+    SurveyResponses: 'SurveyResponses',
     Survey: 'Survey',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     UserAdminCounts: 'UserAdminCounts',

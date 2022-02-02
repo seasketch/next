@@ -26,7 +26,9 @@ export type ComboBoxProps = {
   autoSelectFirstOptionInList?: boolean;
 };
 
-const ComboBox: FormElementComponent<ComboBoxProps, string | null> = (
+export type ComboBoxValue = string | null;
+
+const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
   props
 ) => {
   const { t } = useTranslation("surveys");
