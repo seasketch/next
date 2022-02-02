@@ -9,6 +9,7 @@ import {
   useBlockLayout,
   useFlexLayout,
   useResizeColumns,
+  Row,
 } from "react-table";
 import { ChevronDownIcon, UploadIcon } from "@heroicons/react/outline";
 import DownloadIcon from "../../components/DownloadIcon";
@@ -62,10 +63,14 @@ export default function ResponseGrid(props: Props) {
           columns.push(...cols);
         });
       return [
-        { Header: "id", accessor: "id" },
+        { Header: "id", accessor: "id", width: 65 },
         {
           Header: "created",
           accessor: "createdAt",
+          sortDescFirst: true,
+          sortType: (a: Row, b: Row) =>
+            new Date(a.values.createdAt).getTime() -
+            new Date(b.values.createdAt).getTime(),
         },
         ...columns.map((accessor) => ({
           Header: accessor,
