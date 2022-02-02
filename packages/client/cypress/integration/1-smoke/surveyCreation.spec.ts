@@ -1,109 +1,12 @@
 //const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
 import { ProjectAccessControlSetting, useCreateSurveyMutation } from "../../../src/generated/graphql";
-import { createSurvey } from "../../support/graphQlRequests"
-import { gql, useQuery } from '@apollo/client';
-import { isTypedArray } from "cypress/types/lodash";
-//import ReactDOM from "react-dom";
-//import React from "react";
-//
 
-//const [createSurvey, createSurveyState] = useCreateSurveyMutation({
-  
-//});
-
-//export default async function CreateSurvey() {
-//  const [createSurvey] = useCreateSurveyMutation()
-//  const result = await createSurvey({
-//    variables: {
-//      projectId: project!,
-//      name: 'Test',
-//    }
-//  })
-//  console.log(result)
-//}
-//
-//
-
-//function createSurvey(project, name) {
-//  CreateSurvey(project, name)
-//}
-let project
-
-let surveyId
-
-//function makeSurvey() {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  //const [createSurveyMutation, { data, loading, error }] = useCreateSurveyMutation({
-  //  variables: {
-  //     name: 'test',
-  //     projectId: project,
-  //     templateId: 2
-  //  },
-  //});
-  ////return data
-
-
-//const getProjectName = () => {
-//  // eslint-disable-next-line react-hooks/rules-of-hooks
-//  const { data, loading, error } = useGetProjectBySlugQuery({
-//    variables: {
-//       slug: slug
-//    },
-//  });
-//  return data
-//}
-//
-//const projectData = getProjectName()
-//const projectName = projectData?.projectBySlug?.name
-//const projectId = projectData?.projectBySlug?.id
-//
-//const GET_PROJECT = gql`
-//  query GetProject {
-//    project(id: ${projectId}) {
-//      name
-//      sessionIsAdmin
-//      logoUrl
-//      creatorId
-//    }
-//  }
-//`;
-
-//mutation CreateSurvey($name: String!, $projectId: Int!, $templateId: Int) {
-//  makeSurvey(
-//    input: { projectId: $projectId, name: $name, templateId: $templateId }
-//  ) {
-//    survey {
-//      ...SurveyListDetails
-//    }
-//  }
-//}
-
-const CREATE_SURVEY = gql`
-  mutation makeSurvey {
-    makeSurvey(input: { projectId: 1441 , name: "Test"}) {
-      survey {
-      ...SurveyListDetails}
-    }
-  }
-`;
-
-//function makeSurvey() {
-//  const {data, loading, error} = useQuery(CREATE_SURVEY)
-//  return data
-//}
-
-
-//const {data, loading, error} = useQuery(GET_PROJECT)
-
-
-
-
+let surveyId: any
+let authToken: any
 
 describe ("Survey creation smoke test", () => {
   describe ('A user can create a survey', () => {
     it('Creates the project', () => {
-
-    
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
         cy.createProject(
@@ -114,7 +17,7 @@ describe ("Survey creation smoke test", () => {
         )
         .then((projectId) => {
           cy.wrap(projectId).as("projectId").then(() => {
-            project = projectId
+            ///project = projectId
           });
         });
       });
@@ -126,55 +29,66 @@ describe ("Survey creation smoke test", () => {
       cy.deleteProject("cy-maldives");
     });
     it("has the project", () => {
-      console.log(project)
+      //console.log(project)
     })
   })
 
-  //makeSurvey(input: { projectId: 1441 , name: "Test"}) {
-  //  survey {
-  //  ...SurveyListDetails}
-  //}
-
-
-  describe.only ('creates the survey', () => {
-    it('should create the survey', () => {
-      cy.getToken("User 1").then(({ access_token }) => {
-        cy.wrap(access_token).as("token");
-        const createSurvey = `
-        mutation makeSurvey {
-            makeSurvey(input: { projectId: 1441, name: "test" }) {
-              survey {
-                projectId, 
-                name, 
-                id
-              }
-            }
-          } 
-        `;
-        cy.request({
-            log: true,
-            url: 'http://localhost:3857/graphql',
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${access_token}`
-            },
-            body: {
-                query: createSurvey
-            },
-            failOnStatusCode: false
-        }).then((id) => {
-          surveyId = id
-        }).then((response) => {
-          expect (response.status).to.eq(200)
-        })
-        //cy.deleteSurvey(surveyId);
+  describe.only ('Creates and deletes survey', () => {
+    
+    beforeEach(() => {
+      //cy.intercept("http://localhost:3857/graphql").as('request')
+      cy.intercept("http://localhost:3857/graphql", (req) => {
+        if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
+          req.alias = "createProjectRequest"
+        } else if ((req.body.operationName) && (req.body.operationName == "CypressCreateSurvey")) {
+          req.alias = "createSurveyRequest"
+        }
       })
+      cy.getToken("User 1").then(({ access_token }) => {
+        console.log(access_token)
+        cy.wrap(access_token).as("token");
+        cy.createProject(
+          "Maldives Spatial Planning Test",
+          "cy-maldives",
+          ProjectAccessControlSetting.Public,
+          true
+        )
+        .then((projectId) => {
+          cy.wrap(projectId).as("projectId").then(() => {
+            cy.createSurvey(
+              "Maldives Ocean Use Survey Test", 
+              projectId, 
+              access_token
+            ).then((resp) => {
+              cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
+            })
+          });
+        });
+      });
+    })
+    afterEach(() => {
+      cy.deleteProject("cy-maldives")
+      cy.get("@token").then((token) => {
+        authToken = token
+      })
+      cy.get('@surveyId').then((id) => {
+        surveyId = id
+        cy.deleteSurvey(surveyId, authToken)
+      })
+    })
+    it ("Creates the project", () => {
+      cy.wait('@createProjectRequest')
+        .its('response.body.data.createProject.project')
+        .should('have.property', 'id')
+      //cy.contains("Maldives Spatial Planning Test")
+    })
+    it ("Creates the survey", () => {
+      cy.wait("@createSurveyRequest")
+        .its('response.body.data.makeSurvey.survey')
+        .should('have.property', 'id')
     })
   })
     
-
-
   describe ("An anonymous user can visit a survey", () => {
     before(() => {
       //user is not logged in
@@ -182,16 +96,7 @@ describe ("Survey creation smoke test", () => {
       //console.log(window.localStorage.length)
       //expect (window.localStorage).to.eq()
     })
-    
-    //beforeEach (() => {
-      //cy.intercept("http://localhost:3857/graphql").as('request')
-      //cy.intercept("http://localhost:3857/graphql", ((req) => {
-      //  //console.log(req.body)
-      //  if (req.body.operationName && req.body.operationName === "CurrentProjectMetadata") {
-      //    req.alias = "currentProject"
-      //  }
-      //}))
-    //})
+   
     it ('Can visit the survey', () => {
       
       cy.visit('/maldivestest/surveys/11/0')
