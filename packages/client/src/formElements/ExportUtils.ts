@@ -124,7 +124,11 @@ registerComponent<MultipleChoiceProps, MultipleChoiceValue>(
   },
   (settings, exportId, answer) => {
     return {
-      [exportId]: settings.multipleSelect ? answer : answer[0],
+      [exportId]: settings.multipleSelect
+        ? answer
+        : Array.isArray(answer)
+        ? answer[0]
+        : undefined,
     };
   }
 );
@@ -136,7 +140,7 @@ registerComponent<ComboBoxProps, ComboBoxValue>(
   },
   (settings, exportId, answer) => {
     return {
-      [exportId]: answer ? answer[0] : undefined,
+      [exportId]: Array.isArray(answer) ? answer[0] : undefined,
     };
   }
 );
