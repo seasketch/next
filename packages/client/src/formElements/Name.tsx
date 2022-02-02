@@ -24,7 +24,7 @@ export type NameProps = {
   facilitatorBody?: any;
 };
 
-type NameType = { name: string; facilitator?: string };
+export type NameType = { name: string; facilitator?: string };
 
 /**
  * Name text input with validation. Automatically populates from profile

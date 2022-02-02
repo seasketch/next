@@ -312,6 +312,7 @@ mutation AddFormElement(
   $position: Int
   $exportId: String
   $subordinateTo: Int
+  $isRequired: Boolean!
 ) {
   createFormElement(
     input: {
@@ -319,7 +320,7 @@ mutation AddFormElement(
         body: $body
         componentSettings: $componentSettings
         formId: $formId
-        isRequired: false
+        isRequired: $isRequired
         typeId: $componentType
         position: $position
         exportId: $exportId
@@ -592,6 +593,57 @@ mutation AddCondition(
       ruleId
       subjectId
       value
+    }
+  }
+}
+
+mutation UpdateSurveyDraftStatus($id: Int!, $isDisabled: Boolean!) {
+  updateSurvey(input: { id: $id, patch: { isDisabled: $isDisabled } }) {
+    survey {
+      id
+      isDisabled
+    }
+  }
+}
+
+mutation UploadConsentDoc(
+  $document: Upload!
+  $formElementId: Int!
+  $version: Int!
+) {
+  uploadConsentDocument(
+    document: $document
+    formElementId: $formElementId
+    version: $version
+  ) {
+    id
+    componentSettings
+  }
+}
+
+query SurveyResponses($surveyId: Int!) {
+  survey(id: $surveyId) {
+    form {
+      formElements {
+        ...FormElementDetails
+      }
+    }
+    id
+    practiceResponseCount
+    submittedResponseCount
+    surveyResponsesConnection {
+      nodes {
+        id
+        bypassedDuplicateSubmissionControl
+        updatedAt
+        userId
+        createdAt
+        data
+        isDuplicateEntry
+        isDuplicateIp
+        isPractice
+        isUnrecognizedUserAgent
+      }
     }
   }
 }

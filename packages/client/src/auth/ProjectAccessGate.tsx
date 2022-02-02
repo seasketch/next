@@ -96,7 +96,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
       </div>
     );
   } else if ((status as ProjectAccessStatus) === ProjectAccessStatus.Granted) {
-    if (!props.admin || data?.me?.isAdmin) {
+    if (!props.admin || data?.currentProject?.sessionIsAdmin) {
       return <div>{props.children}</div>;
     } else {
       icon = lockedIcon;

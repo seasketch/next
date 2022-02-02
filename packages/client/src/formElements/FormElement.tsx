@@ -82,7 +82,11 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
   alternateLanguageSettings: { [key: string]: any };
   value?: ValueType;
   editable?: boolean;
-  onChange: (value: ValueType | undefined, validationErrors: boolean) => void;
+  onChange: (
+    value: ValueType | undefined,
+    validationErrors: boolean,
+    advanceAutomatically?: boolean
+  ) => void;
   /**
    * Set to true by SurveyApp if user attempts to proceed. Useful for showing validation messages only
    * after the user has finished their input
@@ -148,10 +152,10 @@ export function FormElementBody({
   let body = defaultBody;
   if (
     context &&
-    context.lang.code !== "EN" &&
-    alternateLanguageSettings[context.lang.code]
+    context?.lang?.code !== "EN" &&
+    alternateLanguageSettings[context?.lang?.code]
   ) {
-    body = alternateLanguageSettings[context.lang.code][
+    body = alternateLanguageSettings[context?.lang?.code][
       componentSettingName || "body"
     ] || {
       ...defaultBody,
@@ -467,9 +471,15 @@ export interface FormElementComponent<T, V = {}>
   defaultBody: any;
   /* Can be useful for certain fields like `email` */
   defaultExportId?: string;
+  defaultIsRequired?: boolean;
   defaultComponentSettings?: T;
   /** For components like WelcomeMessage that shouldn't be a user option */
   templatesOnly?: boolean;
+  /**
+   * When set to true, Next/Skip buttons are not displayed and the component is
+   * responsible for indicating when to advance using the third argument of
+   * props.onChange
+   * */
   advanceAutomatically?: boolean | ((componentSettings: T) => boolean);
   icon: FunctionComponent<{
     componentSettings: T;
@@ -574,13 +584,15 @@ export function sortFormElements<
   const SaveScreen = elements.find((el) => el.typeId === "SaveScreen");
   const FeatureName = elements.find((el) => el.typeId === "FeatureName");
   const SAPRange = elements.find((el) => el.typeId === "SAPRange");
+  const Consent = elements.find((el) => el.typeId === "Consent");
   const bodyElements = elements.filter(
     (el) =>
       el.typeId !== "WelcomeMessage" &&
       el.typeId !== "ThankYou" &&
       el.typeId !== "SaveScreen" &&
       el.typeId !== "FeatureName" &&
-      el.typeId !== "SAPRange"
+      el.typeId !== "SAPRange" &&
+      el.typeId !== "Consent"
   );
   bodyElements.sort((a, b) => {
     return a.position - b.position;
@@ -589,6 +601,9 @@ export function sortFormElements<
   const post: T[] = [];
   if (Welcome) {
     pre.push(Welcome);
+  }
+  if (Consent) {
+    pre.push(Consent);
   }
   if (FeatureName) {
     pre.push(FeatureName);
@@ -619,6 +634,8 @@ export function sortFormElements<
 }
 
 export const SurveyContext = createContext<{
+  surveyId: number;
+  slug: string;
   isAdmin: boolean;
   projectName: string;
   projectUrl: string;
@@ -644,6 +661,9 @@ export const SurveyContext = createContext<{
   supportedLanguages: string[];
   lang: LangDetails;
   setLanguage: (code: string) => void;
+  practiceMode: boolean;
+  togglePracticeMode: (enable: boolean) => void;
+  toggleFacilitation: (enable: boolean) => void;
 } | null>(null);
 
 export function getLayout(
@@ -698,9 +718,9 @@ export function useLocalizedComponentSetting(
 ) {
   const context = useContext(SurveyContext);
   if (
-    !context ||
+    !context?.lang ||
     !props.alternateLanguageSettings[context.lang.code] ||
-    context.lang.code === "EN"
+    context?.lang?.code === "EN"
   ) {
     return props.componentSettings[propName];
   } else {

@@ -74,12 +74,13 @@ export default function useMapboxGLDraw(
   map: Map | null | undefined,
   geometryType: SketchGeometryType,
   initialValue: FeatureCollection<any> | null,
-  onChange: (value: Feature<any> | null) => void
+  onChange: (value: Feature<any> | null, hasKinks: boolean) => void,
+  onCancelNewShape?: () => void
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
   const drawMode = glDrawMode(isSmall, geometryType);
-  const [state, setState] = useState(DigitizingState.NO_SELECTION);
+  const [state, _setState] = useState(DigitizingState.NO_SELECTION);
   const [disabled, setDisabled] = useState(false);
   const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
     null
@@ -87,8 +88,14 @@ export default function useMapboxGLDraw(
   const [selection, setSelection] = useState<null | Feature<any>>(null);
   const handlerState = useRef<{
     draw?: MapboxDraw;
-    onChange: (value: Feature<any> | null) => void;
-  }>({ onChange });
+    onChange: (value: Feature<any> | null, hasKinks: boolean) => void;
+    state: DigitizingState;
+  }>({ onChange, state });
+
+  function setState(state: DigitizingState) {
+    _setState(state);
+    handlerState.current.state = state;
+  }
 
   handlerState.current.onChange = onChange;
 
@@ -102,6 +109,7 @@ export default function useMapboxGLDraw(
         displayControlsDefault: true,
         controls: {},
         defaultMode: "simple_select",
+        boxSelect: false,
         modes: {
           ...MapboxDraw.modes,
           draw_line_string: DrawLineString,
@@ -139,10 +147,11 @@ export default function useMapboxGLDraw(
 
       const handlers = {
         create: function (e: any) {
-          if (hasKinks(e.features[0])) {
+          const kinks = hasKinks(e.features[0]);
+          if (kinks) {
             setSelfIntersects(true);
           }
-          handlerState.current.onChange(e.features[0]);
+          handlerState.current.onChange(e.features[0], kinks);
         },
         update: (e: any) => {
           const mode = handlerState.current.draw?.getMode() as string;
@@ -151,7 +160,7 @@ export default function useMapboxGLDraw(
           } else {
             setState(DigitizingState.EDITING);
           }
-          handlerState.current.onChange(e.features[0]);
+          handlerState.current.onChange(e.features[0], selfIntersects);
         },
         drawingStarted: () => {
           setState(DigitizingState.STARTED);
@@ -166,11 +175,18 @@ export default function useMapboxGLDraw(
         //   setState(DigitizingState.CREATE);
         // },
         modeChange: function (e: any) {
-          let state: DigitizingState | null = null;
+          let newState: DigitizingState | null = null;
           switch (e.mode) {
             case "simple_select":
-              // Only relevent to points
-              state = DigitizingState.NO_SELECTION;
+              // Could happen when drawing then escape key is hit
+              // or when editing
+              if (handlerState.current.state !== DigitizingState.EDITING) {
+                if (onCancelNewShape) {
+                  onCancelNewShape();
+                }
+              }
+              newState = DigitizingState.NO_SELECTION;
+
               break;
             case "direct_select":
               const selected = handlerState.current.draw?.getSelected();
@@ -179,11 +195,11 @@ export default function useMapboxGLDraw(
                 selected?.features.length &&
                 selected.features[0].geometry.type === "Polygon"
               ) {
-                state = DigitizingState.EDITING;
+                newState = DigitizingState.EDITING;
               }
               break;
             case "unfinished_feature_select":
-              state = DigitizingState.UNFINISHED;
+              newState = DigitizingState.UNFINISHED;
               break;
             // Should not need to account for draw_polygon, draw_point, etc
             // These modes are entered into via direct API calls, and thus don't
@@ -191,8 +207,8 @@ export default function useMapboxGLDraw(
             default:
               break;
           }
-          if (state) {
-            setState(state);
+          if (newState) {
+            setState(newState);
           }
         },
         selectionChange: function (e: any) {
@@ -276,15 +292,8 @@ export default function useMapboxGLDraw(
      */
     finishEditing: () => {
       if (draw) {
-        // if (
-        //   state === DigitizingState.EDITING ||
-        //   state === DigitizingState.CAN_COMPLETE
-        // ) {
         draw.changeMode("simple_select", { featureIds: [] });
         setState(DigitizingState.NO_SELECTION);
-        // } else {
-        //   throw new Error(`Cannot finish editing from state ${state}`);
-        // }
       } else {
         throw new Error("draw has not been initialized");
       }
@@ -347,6 +356,15 @@ export default function useMapboxGLDraw(
       }
       handlerState.current.draw?.changeMode("direct_select", { featureId });
       setState(DigitizingState.EDITING);
+    },
+    setUnfinished: (featureId: string) => {
+      if (handlerState.current.draw) {
+        // @ts-ignore
+        handlerState.current.draw.changeMode("unfinished_feature_select", {
+          featureId,
+        });
+        setState(DigitizingState.UNFINISHED);
+      }
     },
   };
 

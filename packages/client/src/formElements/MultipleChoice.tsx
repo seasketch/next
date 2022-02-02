@@ -23,9 +23,12 @@ export type MultipleChoiceProps = {
   options?: FormElementOption[];
 };
 
-const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
-  props
-) => {
+export type MultipleChoiceValue = string[];
+
+const MultipleChoice: FormElementComponent<
+  MultipleChoiceProps,
+  MultipleChoiceValue
+> = (props) => {
   const { t } = useTranslation("surveys");
   const context = useContext(SurveyContext);
   const options = useLocalizedComponentSetting(
@@ -80,7 +83,7 @@ const MultipleChoice: FormElementComponent<MultipleChoiceProps, string[]> = (
                     if (selected) {
                       props.onChange(undefined, false);
                     } else {
-                      props.onChange([value || label], false);
+                      props.onChange([value || label], false, true);
                     }
                   }
                 }}

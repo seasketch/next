@@ -10,6 +10,7 @@ export interface InputBlockProps {
   /* defaults to "large" */
   labelType?: "large" | "small";
   flexDirection?: "column" | "row";
+  description?: string | ReactNode;
 }
 
 const InputBlock: FunctionComponent<InputBlockProps> = ({
@@ -20,6 +21,7 @@ const InputBlock: FunctionComponent<InputBlockProps> = ({
   mutationStatus,
   labelType,
   flexDirection,
+  description,
 }) => {
   labelType = labelType || "large";
   return (
@@ -50,6 +52,7 @@ const InputBlock: FunctionComponent<InputBlockProps> = ({
         </div>
         <div className="text-right flex items-center">{input}</div>
       </div>
+      {description && <p className="text-gray-500 text-sm">{description}</p>}
     </div>
   );
 };

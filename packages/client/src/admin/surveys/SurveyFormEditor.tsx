@@ -53,7 +53,8 @@ import LogicRuleEditor from "./LogicRuleEditor";
 import { components } from "../../formElements";
 import bbox from "@turf/bbox";
 import { LngLatBoundsLike, LngLatLike } from "mapbox-gl";
-import languages from "../../lang/supported";
+import languages, { LangDetails } from "../../lang/supported";
+import i18n from "../../i18n";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -71,10 +72,15 @@ export default function SurveyFormEditor({
   route: "basic" | "logic" | "formElement";
   formElementId: number | null;
 }) {
-  const { t } = useTranslation();
-  const [language, setLanguage] = useState(
-    languages.find((l) => l.code === "EN")!
-  );
+  const { t, i18n } = useTranslation();
+  let lang: LangDetails = languages.find(
+    (l) => l.code === (i18n.language || "EN")
+  )!;
+  if (!lang) {
+    lang = languages.find((l) => l.code === "EN")!;
+  }
+  const [language, setLanguage] = useState(lang);
+
   const formElementEditorContainerRef = useRef<HTMLDivElement>(null);
   const onError = useGlobalErrorHandler();
   const auth0 = useAuth0<Auth0User>();
@@ -451,13 +457,19 @@ export default function SurveyFormEditor({
           {route === "formElement" && data?.survey && selectedFormElement && (
             <SurveyContext.Provider
               value={{
+                slug: slug,
+                surveyId: data.survey.id,
                 lang: language,
+                practiceMode: false,
+                togglePracticeMode: (enable: boolean) => null,
+                toggleFacilitation: (enable: boolean) => null,
                 setLanguage: (code: string) => {
                   const lang = languages.find((lang) => lang.code === code);
                   if (!lang) {
                     throw new Error(`Unrecognized language ${code}`);
                   }
                   setLanguage(lang);
+                  i18n.changeLanguage(lang.code);
                 },
                 supportedLanguages:
                   (data?.survey?.supportedLanguages as string[]) || [],

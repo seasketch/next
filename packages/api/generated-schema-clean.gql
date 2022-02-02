@@ -22,13 +22,7 @@ type Acl implements Node {
   forumIdRead: Int
   forumIdWrite: Int
 
-  """
-  
-  If set and `type` is GROUP, the resource will only be available to these groups.
-  
-  Use `addGroupToAcl()`/`removeGroupFromAcl()` mutations to edit these permissions.
-  
-  """
+  """Reads and enables pagination through a set of `Group`."""
   groups(
     """Only read the first `n` values of the set."""
     first: Int
@@ -1228,16 +1222,10 @@ input CreateProjectInvitesInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-
-  """List of group **names** (not ids)"""
   groupNames: [String]
   makeAdmin: Boolean
   projectId: Int
-
-  """List of emails (required) and fullnames"""
   projectInviteOptions: [ProjectInviteOptionInput]
-
-  """If set to true, emails will be QUEUED for sending immediately"""
   sendEmailNow: Boolean
 }
 
@@ -3974,43 +3962,12 @@ enum EmailNotificationPreferencesOrderBy {
 }
 
 enum EmailStatus {
-  """
-  Emails may be bounced due to a full inbox, misconfigured mail server, or other
-  reasons. See [AWS SES documentation](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/monitor-using-event-publishing.html#event-publishing-terminology).
-  """
   BOUNCED
-
-  """
-  User has reported SeaSketch as sending Spam in this or another project.
-  SeaSketch will no longer send emails to this user in any project.
-  """
   COMPLAINT
-
-  """Delivered to the user's mail server"""
   DELIVERED
-
-  """
-  SeaSketch application error when sending invite emails. Refer to email status
-  """
   ERROR
-
-  """
-  Admin has sent the invite, but the mail delivery subsystem has not yet sent the invite
-  """
   QUEUED
-
-  """
-  Invite email has been sent but not yet delivered to the user's mail server
-  """
   SENT
-
-  """
-  
-  The user has unsubscribed from all emails originating from SeaSketch.
-  
-  If this happens SeaSketch will not be able to send any invitations to the user.
-      
-  """
   UNSUBSCRIBED
 }
 
@@ -4046,15 +4003,10 @@ type EnableForumPostingPayload {
 }
 
 enum FieldRuleOperator {
-  """String contains value"""
   CONTAINS
   EQUAL
   GREATER_THAN
-
-  """Empty string input or no choice selection"""
   IS_BLANK
-
-  """Predicate field value is less than specified value"""
   LESS_THAN
   NOT_EQUAL
 }
@@ -4074,7 +4026,10 @@ as an option when creating new forms.
 
 """
 type Form implements Node {
-  """List of all FormElements in this form."""
+  """
+  Lists FormElements in order for rendering
+  
+  """
   formElements(
     """Only read the first `n` values of the set."""
     first: Int
@@ -4757,13 +4712,8 @@ enum FormsOrderBy {
 
 """Indicates which features should use the form as a template"""
 enum FormTemplateType {
-  """Template should only be listed for *SketchClasses*."""
   SKETCHES
-
-  """Template should only be listed for *Surveys*."""
   SURVEYS
-
-  """Template should be an option for both types."""
   SURVEYS_AND_SKETCHES
 }
 
@@ -5211,7 +5161,7 @@ type Group implements Node {
   id: Int!
   memberCount: Int
 
-  """Listing of all users who have been assigned to this group."""
+  """Reads and enables pagination through a set of `User`."""
   members(
     direction: SortByDirection
 
@@ -5510,92 +5460,18 @@ Invite status is derived from feedback notifications coming from the AWS SES
 email service and token expiration date. See the inviteEmails relation for more details.
 """
 enum InviteStatus {
-  """
-  Emails may be bounced due to a full inbox, misconfigured mail server, or other
-  reasons. See [AWS SES documentation](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/monitor-using-event-publishing.html#event-publishing-terminology).
-  """
   BOUNCED
-
-  """
-  User has reported SeaSketch as sending Spam in this or another project.
-  SeaSketch will no longer send emails to this user in any project.
-  """
   COMPLAINT
-
-  """
-  
-  #### Project Invites
-  User has accepted the invite.
-  
-  #### Survey Invites
-  User has responded to the survey.
-  """
   CONFIRMED
-
-  """Delivered to the user's mail server"""
   DELIVERED
-
-  """
-  SeaSketch application error when sending invite emails. Refer to email status
-  """
   ERROR
-
-  """
-  
-  #### Project Invites    
-  Admin has sent the invite, but the mail delivery subsystem has not yet sent the invite.
-  
-  #### Survey Invites
-  Invite has been created but email has not yet been sent. Emails will be sent
-  automatically by a periodic backend process (approx every 20 seconds).
-  
-  """
   QUEUED
-
-  """
-  Invite email has been sent but not yet delivered to the user's mail server
-  """
   SENT
-
-  """
-  Project invites have this status when a survey invite is queued for sending in
-  this project. Users can be invited to a survey + have an un-sent project
-  invite that they can confirm using `confirmProjectInviteWithSurveyToken()`.
-  This way users do not need to simultaneously be sent both a project and survey invite.
-  """
   SURVEY_INVITE_QUEUED
-
-  """
-  Survey invite for this project and email has already been sent. See InviteStatus.SURVEY_INVITE_QUEUED for more details.
-  """
   SURVEY_INVITE_SENT
-
-  """
-  
-  For **project invites**, Invite JSON Web Tokens are set to expire in 14
-  (admins) or 60 days. **Survey invites** expire after 60 days for invite_only
-  surveys, and after 2 years for public surveys. Invites should be resent if
-  still necessary
-  """
   TOKEN_EXPIRED
-
-  """Unused enum value."""
   UNCONFIRMED
-
-  """
-  **Project Invites only**. Invites may be created but not sent immediately.
-  This way admins can collaboratively update a project invite list before
-  mass-sending invites when a project is first published.
-  """
   UNSENT
-
-  """
-  
-  The user has unsubscribed from all emails originating from SeaSketch.
-  
-  If this happens SeaSketch will not be able to send any invitations to the user.
-  
-  """
   UNSUBSCRIBED
 }
 
@@ -6324,9 +6200,7 @@ type Mutation {
     input: DeleteOptionalBasemapLayerByNodeIdInput!
   ): DeleteOptionalBasemapLayerPayload
 
-  """
-  Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting.
-  """
+  """Deletes a single `Post` using a unique key."""
   deletePost(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -6533,9 +6407,7 @@ type Mutation {
     input: DeleteTableOfContentsBranchInput!
   ): DeleteTableOfContentsBranchPayload
 
-  """
-  Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting.
-  """
+  """Deletes a single `Topic` using a unique key."""
   deleteTopic(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -7412,6 +7284,9 @@ type Mutation {
     """
     input: UpdateZIndexesInput!
   ): UpdateZIndexesPayload
+
+  """Use to upload pdf documents for use with the Consent FormElement"""
+  uploadConsentDocument(document: Upload!, formElementId: Int!, version: Int!): FormElement!
 }
 
 """An object with a globally unique `ID`."""
@@ -7564,28 +7439,9 @@ enum ParticipantSortBy {
 }
 
 enum ParticipationStatus {
-  """
-  User has not joined or participated in the project before. This status would
-  only be accessible to a logged in user themselves, never in the admin listing of users.
-  """
   NONE
-
-  """
-  While the user has joined the project, they haven't shared (or later
-  un-shared) their profile. Admins will not be able to see any info about them
-  so they cannot be added to groups. Users cannot use any of the discussion or
-  sharing features without publishing their profile.
-  """
   PARTICIPANT_HIDDEN_PROFILE
-
-  """
-  With a shared profile, this user can now take actions like participating in discussion forums.
-  """
   PARTICIPANT_SHARED_PROFILE
-
-  """
-  For invite-only projects, this user has requested access to the project and needs approval from an admin.
-  """
   PENDING_APPROVAL
 }
 
@@ -7741,7 +7597,7 @@ type Project implements Node {
   accessControl: ProjectAccessControlSetting!
   adminCount: Int
 
-  """Listing of all users who have admin access."""
+  """Reads and enables pagination through a set of `User`."""
   admins(
     """Only read the first `n` values of the set."""
     first: Int
@@ -7845,11 +7701,7 @@ type Project implements Node {
     offset: Int
   ): [TableOfContentsItem!]
 
-  """
-  
-  List of all discussion forums the current user has access to.
-      
-  """
+  """Reads and enables pagination through a set of `Forum`."""
   forums(
     """
     A condition to be used in determining which values should be returned by the collection.
@@ -7866,13 +7718,7 @@ type Project implements Node {
     orderBy: [ForumsOrderBy!]
   ): [Forum!]!
 
-  """
-  
-  Listing of current user groups.
-  
-  Group membership can be updated using the `addUserToGroup`/`removeUserFromGroup` mutations
-      
-  """
+  """Reads and enables pagination through a set of `Group`."""
   groups(
     """Only read the first `n` values of the set."""
     first: Int
@@ -8059,17 +7905,9 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [SurveyTokenInfo!]
-
-  """Participation status for the currently logged-in session"""
   sessionParticipationStatus: ParticipationStatus
 
-  """
-  
-  List of all the SketchClasses that can be used in digitizing spatial data. 
-  Accessible to all users, though access control settings may limit which users
-  can access some SketchClasses.
-      
-  """
+  """Reads and enables pagination through a set of `SketchClass`."""
   sketchClasses(
     """
     A condition to be used in determining which values should be returned by the collection.
@@ -8109,7 +7947,7 @@ type Project implements Node {
   ): [Sprite!]!
   supportEmail: String!
 
-  """Listing of all Surveys accessible to the current user."""
+  """Reads and enables pagination through a set of `Survey`."""
   surveys(
     """
     A condition to be used in determining which values should be returned by the collection.
@@ -8178,23 +8016,8 @@ type Project implements Node {
 }
 
 enum ProjectAccessControlSetting {
-  """Only project administrators will be able to access the project."""
   ADMINS_ONLY
-
-  """
-  
-  Only users who have been invited to join the project can participate. Admins
-  can send email invitations with a special link to signup.
-  
-  Other users may request access, in which case admins can approve those access requests if appropriate.
-      
-  """
   INVITE_ONLY
-
-  """
-  Anyone can join and use a public project, though access to particular
-  datasets, sketch classes, and forums may be restricted via access control lists.
-  """
   PUBLIC
 }
 
@@ -8251,13 +8074,7 @@ type ProjectInvite implements Node {
   """Specified by admin when invite was created."""
   fullname: String
 
-  """
-  
-  Groups to be assigned to the user once the invite is confirmed. Existing
-  invite group membership can be updated using the crud operations on
-  ProjectInviteGroup types.
-      
-  """
+  """Reads and enables pagination through a set of `Group`."""
   groups(
     """Only read the first `n` values of the set."""
     first: Int
@@ -8267,7 +8084,7 @@ type ProjectInvite implements Node {
   ): [Group!]
   id: Int!
 
-  """Listing of all emails related to this invite."""
+  """Reads and enables pagination through a set of `InviteEmail`."""
   inviteEmails(
     """
     A condition to be used in determining which values should be returned by the collection.
@@ -8323,10 +8140,6 @@ type ProjectInvite implements Node {
     """The method to use when ordering `ProjectInviteGroup`."""
     orderBy: [ProjectInviteGroupsOrderBy!] = [NATURAL]
   ): ProjectInviteGroupsConnection!
-
-  """
-  Status derived from the state of invite emails as well as token expiration
-  """
   status: InviteStatus
 
   """Is set upon invite acceptance."""
@@ -8652,19 +8465,7 @@ type PublishTableOfContentsPayload {
   tableOfContentsItems: [TableOfContentsItem!]
 }
 
-"""
-
-Most relevant root-level queries are listed first, which concern getting 
-the currently logged-in user (`me`) and project (`currentProject`). 
-There are also cross-project resources such as form templates and of 
-course the project listing connection. Most queries when working from a project
-should be performed using fields on the `Project` type.
-
-Postgraphile also automatically generates a variety of accessor queries 
-for each database table. These are unlikely to be needed often but may possibly 
-be utilized by sophisticated GraphQL clients in the future to update caches.
-    
-"""
+"""The root query type which gives access points into the data universe."""
 type Query implements Node {
   acl(id: Int!): Acl
   aclByBasemapId(basemapId: Int!): Acl
@@ -9046,18 +8847,7 @@ type Query implements Node {
     orderBy: [ProjectInviteGroupsOrderBy!] = [NATURAL]
   ): ProjectInviteGroupsConnection
 
-  """
-  
-  The projectsConnection exposes all SeaSketch projects the current session has 
-  access to. For a superuser, this would be all of them (that aren't deleted). 
-  For a project administrator, they have access to all public projects and those 
-  that they administer. For everyone else, they see all public projects and any 
-  `invite-only` projects that they are approved members of.
-  
-  The projectsConnection exposes a fully-featured Relay compatible connection so 
-  that an efficient listing can be made of the hundreds of SeaSketch Projects.
-      
-  """
+  """Reads and enables pagination through a set of `Project`."""
   projectsConnection(
     """Read all values in the set after (below) this cursor."""
     after: Cursor
@@ -9158,14 +8948,6 @@ type Query implements Node {
     nodeId: ID!
   ): Sprite
   spriteImageBySpriteIdAndPixelRatio(pixelRatio: Int!, spriteId: Int!): SpriteImage
-
-  """
-  Note that when requesting a survey and related resources (project, forms &
-  fields) from an invite link when anonymous, the `x-ss-survey-invite-token`
-  header will need to be set in order to gain access to protected resources. For
-  more details [see the
-  wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)
-  """
   survey(id: Int!): Survey
 
   """Reads a single `Survey` using its globally unique `ID`."""
@@ -9234,16 +9016,7 @@ type Query implements Node {
     nodeId: ID!
   ): TableOfContentsItem
 
-  """
-  
-  Template forms can be created by SeaSketch superusers for use in **any** 
-  project. For example, there could be a template for a human-uses survey that
-  project administrators can copy and use as a starting point for customization.
-  
-  SeaSketch superusers can create template Forms using the `createFormTemplateFromSketchClass` 
-  and `createFormTemplateFromSurvey` mutations.
-      
-  """
+  """Reads and enables pagination through a set of `Form`."""
   templateForms(
     """Only read the first `n` values of the set."""
     first: Int
@@ -9788,12 +9561,7 @@ Sketch Classes act as a schema for sketches drawn by users.
 
 """
 type SketchClass implements Node {
-  """
-  Access control lists can be used by admins to control who can digitize
-  sketches of this class. All users will have access to SketchClass schemas in
-  order to render information posted to forums, but they will only be able to
-  digitize or edit these sketches if they are on the access control list.
-  """
+  """Reads a single `Acl` that is related to this `SketchClass`."""
   acl: Acl
 
   """
@@ -9817,7 +9585,7 @@ type SketchClass implements Node {
   """
   canDigitize: Boolean
 
-  """Form schema used to collect attributes on these sketches."""
+  """Reads a single `Form` that is related to this `SketchClass`."""
   form: Form
 
   """Reads a single `FormElement` that is related to this `SketchClass`."""
@@ -9889,9 +9657,7 @@ type SketchClass implements Node {
   """Number of sketches created with this sketch class"""
   sketchCount: BigInt
 
-  """
-  If listed for a Collection, only valid child sketch classes can be added as children.
-  """
+  """Reads and enables pagination through a set of `SketchClass`."""
   validChildren(
     """Only read the first `n` values of the set."""
     first: Int
@@ -10081,15 +9847,7 @@ enum SketchFoldersOrderBy {
 }
 
 enum SketchGeometryType {
-  """
-  Users will choose one (or more) features from a feature collection. For example, a choice of grid cells or marxan zones.
-  """
   CHOOSE_FEATURE
-
-  """
-  Sketch itself will have no geometry, but can be associated with a number of
-  child sketches. Can be represented as a GeoJSON FeatureCollection.
-  """
   COLLECTION
   LINESTRING
   POINT
@@ -10353,13 +10111,7 @@ type Survey implements Node {
   geofence: GeographyPolygon
   id: Int!
 
-  """
-  
-  Listing of groups whose users should be invited to participate in the survey.
-  
-  Use `updateSurveyInvitedGroups()` mutation to modify.
-  
-  """
+  """Reads and enables pagination through a set of `Group`."""
   invitedGroups(
     """Only read the first `n` values of the set."""
     first: Int
@@ -10421,10 +10173,7 @@ type Survey implements Node {
     orderBy: [SurveyInvitedGroupsOrderBy!]
   ): [SurveyInvitedGroup!]!
 
-  """
-  All related survey invites. Survey invites will be automatically created for
-  users in the groups specified by `surveyInvitedGroups`.
-  """
+  """Reads and enables pagination through a set of `SurveyInvite`."""
   surveyInvites(
     """
     A condition to be used in determining which values should be returned by the collection.
@@ -10441,11 +10190,7 @@ type Survey implements Node {
     orderBy: [SurveyInvitesOrderBy!]
   ): [SurveyInvite!]!
 
-  """
-  Responses related to this survey. End-users will have access to their own
-  submitted or draft responses. Administrators will have access to their own,
-  plus all submitted responses.
-  """
+  """Reads and enables pagination through a set of `SurveyResponse`."""
   surveyResponsesConnection(
     """Read all values in the set after (below) this cursor."""
     after: Cursor
@@ -10475,12 +10220,8 @@ type Survey implements Node {
   ): SurveyResponsesConnection!
 }
 
-"""Controls who has access to respond to a survey"""
 enum SurveyAccessType {
-  """Only users part of an invited group or email invitation can respond"""
   INVITE_ONLY
-
-  """Anyone can respond"""
   PUBLIC
 }
 
@@ -10825,13 +10566,8 @@ enum SurveysOrderBy {
 }
 
 type SurveyTokenInfo {
-  """ID of related project"""
   projectId: Int
-
-  """ID of related survey"""
   surveyId: Int
-
-  """Signed token that can be used for accessing the survey"""
   token: String
 }
 
@@ -11147,7 +10883,8 @@ type Topic implements Node {
   authorId: Int!
 
   """
-  User Profile of the author. If a user has not shared their profile the post contents will be hidden.
+  User Profile of the author. If a user has not shared their profile the first post contents will be hidden.
+  
   """
   authorProfile: Profile
   createdAt: Datetime!
@@ -13181,8 +12918,7 @@ type User implements Node {
   canonicalEmail: String
 
   """
-  Email notification preferences can be read and set by the current user session.
-      These settings cannot be accessed by other users or SeaSketch project admins.
+  Reads a single `EmailNotificationPreference` that is related to this `User`.
   """
   emailNotificationPreference: EmailNotificationPreference
 
@@ -13253,15 +12989,7 @@ type User implements Node {
   onboarded: Datetime
   participationStatus(projectId: Int): ParticipationStatus
 
-  """
-  
-  Access the user's profile. This feature is only accessible to project admins if
-  the user has chosen to share their profile with the project.
-  
-  User profiles cannot be accessed directly en-mass by end-users. Rather, Survey 
-  `Posts` and other shared content will have accessor methods to get at this 
-  information, but again, only if the profile has been shared.
-  """
+  """Reads a single `Profile` that is related to this `User`."""
   profile: Profile
 }
 

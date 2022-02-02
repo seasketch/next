@@ -44,46 +44,64 @@ interface Props {
  * @returns
  */
 export default function SortableFormElementList(props: Props) {
+  const [collapseSpatialItems, setCollapseSpatialItems] = useState(false);
   const welcome = props.items.find((i) => i.typeId === "WelcomeMessage");
   const thankYou = props.items.find((i) => i.typeId === "ThankYou");
   const featureName = props.items.find((i) => i.typeId === "FeatureName");
   const sapRange = props.items.find((i) => i.typeId === "SAPRange");
+  const saveScreen = props.items.find((i) => i.typeId === "SaveScreen");
+  const consent = props.items.find((i) => i.typeId === "Consent");
   const sortableFormElements = sortFormElements(props.items).filter(
     (i) =>
       i.typeId !== "WelcomeMessage" &&
       i.typeId !== "ThankYou" &&
       i.typeId !== "FeatureName" &&
-      i.typeId !== "SAPRange"
+      i.typeId !== "SAPRange" &&
+      i.typeId !== "SaveScreen" &&
+      i.typeId !== "Consent"
   );
-  const [collapseSpatialItems, setCollapseSpatialItems] = useState(false);
+
+  if (!props.items.length) {
+    return null;
+  }
+
+  const startItems = [welcome, consent].filter(
+    (el) => !!el
+  ) as FormElementFullDetailsFragment[];
+  const finishItems = [saveScreen, thankYou].filter(
+    (el) => !!el
+  ) as FormElementFullDetailsFragment[];
+
+  const allSortedFormElements = [
+    ...startItems,
+    ...sortableFormElements,
+    ...finishItems,
+  ];
 
   return (
     <div className={`pb-4 pt-1 ${props.className}`}>
-      {welcome && (
-        <div className="mb-2">
+      <div className="mb-2 space-y-2">
+        {startItems.map((el) => (
           <FormElementListItem
-            onReorder={props.onReorder}
-            subordinateFormElements={[]}
+            key={el.id}
             dim={props.dim}
-            typeId={welcome.typeId}
-            selected={props.selection === welcome.id}
-            element={welcome}
-            typeName={welcome.type?.label || welcome.typeId}
+            typeId={el.typeId}
+            selected={props.selection === el.id}
+            element={el}
+            typeName={el.type?.label || el.typeId}
             onClick={() => {
               if (props.onClick) {
-                props.onClick(welcome.id);
+                props.onClick(el.id);
               }
             }}
             draggable={false}
           />
-        </div>
-      )}
+        ))}
+      </div>
       {featureName && (
         <div className="mb-2">
           <FormElementListItem
             dim={props.dim}
-            subordinateFormElements={[]}
-            onReorder={props.onReorder}
             typeId={featureName.typeId}
             selected={props.selection === featureName.id}
             element={featureName}
@@ -100,8 +118,6 @@ export default function SortableFormElementList(props: Props) {
       {sapRange && (
         <div className="mb-2">
           <FormElementListItem
-            subordinateFormElements={[]}
-            onReorder={props.onReorder}
             dim={props.dim}
             typeId={sapRange.typeId}
             selected={props.selection === sapRange.id}
@@ -121,17 +137,33 @@ export default function SortableFormElementList(props: Props) {
           setCollapseSpatialItems(true);
         }}
         onDragEnd={(result) => {
+          const inSubordinateForm = props.subordinateTo;
           setCollapseSpatialItems(false);
           if (!result.destination) {
             return;
           } else {
             let sorted = reorder(
-              sortableFormElements,
+              sortableFormElements.filter((el) =>
+                inSubordinateForm
+                  ? el.subordinateTo === props.subordinateTo!.id
+                  : !el.subordinateTo
+              ),
               result.source.index,
               result.destination.index
             );
-            if (welcome) {
-              sorted = [welcome, ...sorted];
+            if (!inSubordinateForm) {
+              const finalSorted = [...startItems];
+              for (const item of sorted) {
+                finalSorted.push(item);
+                const subordinateItems = sortableFormElements.filter(
+                  (el) => el.subordinateTo === item.id
+                );
+                if (subordinateItems.length) {
+                  finalSorted.push(...subordinateItems);
+                }
+              }
+              // sorted = [...startItems, ...sorted, ...finishItems];
+              sorted = [...finalSorted, ...finishItems];
             }
             if (props.onReorder) {
               props.onReorder(sorted.map((i) => i.id));
@@ -168,9 +200,7 @@ export default function SortableFormElementList(props: Props) {
                             collapseSpatialItems={collapseSpatialItems}
                             dim={props.dim}
                             typeId={element.typeId}
-                            subordinateFormElements={sortableFormElements.filter(
-                              (el) => el.subordinateTo === element.id
-                            )}
+                            formElements={allSortedFormElements}
                             draggable={true}
                             provided={provided}
                             snapshot={snapshot}
@@ -201,25 +231,23 @@ export default function SortableFormElementList(props: Props) {
           }}
         </Droppable>
       </DragDropContext>
-      {thankYou && (
-        <div className="mt-2">
+      {finishItems.map((el) => (
+        <div key={el.id} className="my-2">
           <FormElementListItem
-            onReorder={props.onReorder}
             dim={props.dim}
-            typeId={thankYou.typeId}
-            selected={props.selection === thankYou.id}
-            element={thankYou}
-            subordinateFormElements={[]}
-            typeName={thankYou.type?.label || thankYou.typeId}
+            typeId={el.typeId}
+            selected={props.selection === el.id}
+            element={el}
+            typeName={el.type?.label || el.typeId}
             onClick={() => {
               if (props.onClick) {
-                props.onClick(thankYou.id);
+                props.onClick(el.id);
               }
             }}
             draggable={false}
           />
         </div>
-      )}
+      ))}
     </div>
   );
 }
@@ -240,7 +268,7 @@ function FormElementListItem({
   selectedId,
   onReorder,
   onAddClick,
-  subordinateFormElements,
+  formElements,
 }: {
   element: FormElementFullDetailsFragment;
   typeName: string;
@@ -255,9 +283,9 @@ function FormElementListItem({
   collapseSpatialItems?: boolean;
   onSpatialSubElementClick?: (id: number) => void;
   selectedId?: number;
-  onReorder?: (elementIds: number[]) => void;
+  onReorder?: (elements: number[]) => void;
   onAddClick?: (elementId: number) => void;
-  subordinateFormElements: FormElementFullDetailsFragment[];
+  formElements?: FormElementFullDetailsFragment[];
 }) {
   const { t } = useTranslation("admin:surveys");
   const history = useHistory();
@@ -266,6 +294,20 @@ function FormElementListItem({
     throw new Error(`No component implementation for ${typeId}?`);
   }
   const Icon = Component.icon;
+  if (element.sketchClass && !onReorder) {
+    throw new Error(
+      "onReorder not specified for FormElement with a sketchclass"
+    );
+  }
+  const subordinateFormElements = (formElements || []).filter(
+    (el) => el.subordinateTo === element.id
+  );
+  if (subordinateFormElements.length && !onReorder) {
+    throw new Error(
+      "onReorder not specified for FormElement with subordinate elements"
+    );
+  }
+
   return (
     <div
       ref={provided?.innerRef}
@@ -351,7 +393,31 @@ function FormElementListItem({
                     onSpatialSubElementClick(id);
                   }
                 }}
-                onReorder={onReorder}
+                onReorder={(sortedIds) => {
+                  if (!formElements) {
+                    throw new Error(
+                      "formElements prop not set for sector-specific questions"
+                    );
+                  }
+                  const parent = element;
+                  const parentIndex = formElements.indexOf(element);
+                  // For nested, subordinate elements, this sorting logic gets pretty complicated
+                  const beforeParent = formElements
+                    .slice(0, parentIndex)
+                    .map((el) => el.id);
+                  const afterParent = formElements
+                    .slice(parentIndex + 1)
+                    .map((el) => el.id);
+                  sortedIds = [
+                    ...beforeParent,
+                    parent.id,
+                    ...sortedIds,
+                    ...afterParent,
+                  ];
+                  if (onReorder) {
+                    onReorder(sortedIds);
+                  }
+                }}
               />
               <div className="flex justify-center pb-1 -mt-1">
                 <AddFormElementButton

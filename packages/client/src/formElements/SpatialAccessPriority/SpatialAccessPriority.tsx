@@ -32,9 +32,11 @@ import { Icons } from "../../components/SketchGeometryTypeSelector";
 import {
   BasemapControl,
   ResetView,
+  ShowScaleBar,
   ZoomToFeature,
 } from "../../draw/DigitizingActionsPopup";
 import useMapboxGLDraw, {
+  DigitizingState,
   EMPTY_FEATURE_COLLECTION,
 } from "../../draw/useMapboxGLDraw";
 import {
@@ -72,6 +74,7 @@ import Switch from "../../components/Switch";
 import set from "lodash.set";
 import { collectText } from "../../admin/surveys/collectText";
 import { ChoiceAdminValueInput } from "../ComboBox";
+import useDebounce from "../../useDebounce";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -135,6 +138,8 @@ const SpatialAccessPriority: FormElementComponent<
     bounds: props.componentSettings.startingBounds,
     filterBasemapIds: props.componentSettings.basemaps,
   });
+  const [animating, setAnimating] = useState(false);
+  const debouncedAnimating = useDebounce(animating, 10);
   const style = context.style;
   const [sector, setSector] = useState<FormElementOption | null>(
     props.componentSettings.sectorOptions
@@ -280,28 +285,69 @@ const SpatialAccessPriority: FormElementComponent<
     mapContext.manager?.map,
     props.sketchClass!.geometryType,
     filteredFeatures,
-    (updatedFeature) => {
-      if (!selection || geometryEditingState?.isNew) {
-        setGeometryEditingState({
-          isNew: true,
-          feature: updatedFeature || undefined,
-        });
-      } else if (updatedFeature) {
-        updateFeatureValue(updatedFeature.id as string, {
-          geometry: updatedFeature,
-        });
-      }
-      if (
-        props.stage === STAGES.DRAWING_INTRO ||
-        props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE
-      ) {
-        if (style.isSmall) {
-          if (!selfIntersects) {
-            props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
-          }
+    (updatedFeature, hasKinks) => {
+      // Handle deletion of all vertexes
+      if (updatedFeature?.geometry.coordinates.length === 0) {
+        if (
+          window.confirm(
+            t("This will delete your entire shape. Are you sure?", {
+              ns: "surveys",
+            })
+          )
+        ) {
+          // delete the entire shape
+          const collection = removeFeatureFromValue(updatedFeature.id!);
+          setFilteredCollection(collection);
+          props.onRequestStageChange(STAGES.LIST_SHAPES);
         } else {
-          props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+          setCollection(filteredFeatures);
+          props.onRequestStageChange(STAGES.LIST_SHAPES);
+          return;
         }
+      } else {
+        if (!selection || geometryEditingState?.isNew) {
+          if (hasKinks && digitizingState !== DigitizingState.UNFINISHED) {
+            // Timeout is to prevent an infinite loop. I guess because digitizingState is set late?
+            setTimeout(() => {
+              actions.setUnfinished(updatedFeature!.id as string);
+            }, 50);
+          }
+          setGeometryEditingState({
+            isNew: true,
+            feature: updatedFeature || undefined,
+          });
+        } else if (updatedFeature) {
+          updateFeatureValue(updatedFeature.id as string, {
+            geometry: updatedFeature,
+          });
+        }
+        if (
+          (props.stage === STAGES.DRAWING_INTRO ||
+            props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) &&
+          digitizingState !== DigitizingState.UNFINISHED &&
+          digitizingState !== DigitizingState.EDITING
+        ) {
+          if (style.isSmall) {
+            if (hasKinks) {
+              // Do nothing
+              // Require explicit action to proceed to the next stage now
+            } else {
+              props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
+            }
+          } else {
+            props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+          }
+        }
+      }
+    },
+    () => {
+      if (!selection) {
+        setTimeout(() => {
+          create(true);
+        }, 50);
+      } else {
+        setGeometryEditingState({ isNew: false });
+        props.onRequestStageChange(STAGES.LIST_SHAPES);
       }
     }
   );
@@ -401,6 +447,10 @@ const SpatialAccessPriority: FormElementComponent<
         .then((style) => setMiniMapStyle(style.style));
     }
   }, [mapContext.manager, basemaps]);
+
+  useEffect(() => {
+    updateMiniBasemap();
+  }, [mapContext.selectedBasemap]);
 
   function onClickSave() {
     if (selfIntersects) {
@@ -532,6 +582,7 @@ const SpatialAccessPriority: FormElementComponent<
         initial={false}
         exitBeforeEnter={true}
         presenceAffectsLayout={false}
+
         // onExitComplete={() => {
         //   setBackwards(false);
         //   setFormElement((prev) => ({
@@ -541,6 +592,8 @@ const SpatialAccessPriority: FormElementComponent<
         // }}
       >
         <motion.div
+          onAnimationStart={() => setAnimating(true)}
+          onAnimationComplete={() => setAnimating(false)}
           custom={{
             direction: context.navigatingBackwards,
             stage: props.stage,
@@ -992,7 +1045,7 @@ const SpatialAccessPriority: FormElementComponent<
                   />
                 }
                 noSelectionStateButtons={
-                  style.isSmall ? (
+                  style.isSmall && !geometryEditingState?.isNew ? (
                     <>
                       <Button
                         className="pointer-events-auto"
@@ -1102,6 +1155,7 @@ const SpatialAccessPriority: FormElementComponent<
                     }
                   />
                 ) : null}
+                <ShowScaleBar mapContext={mapContext} />
                 <BasemapControl
                   basemaps={basemaps}
                   afterChange={() => {
@@ -1118,6 +1172,17 @@ const SpatialAccessPriority: FormElementComponent<
               hideDrawControls
               className="w-full h-full absolute top-0 bottom-0"
               initOptions={mapInitOptions}
+              lazyLoadReady={
+                !animating &&
+                !debouncedAnimating &&
+                (style.isSmall
+                  ? props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE ||
+                    props.stage === STAGES.MOBILE_EDIT_PROPERTIES ||
+                    props.stage === STAGES.MOBILE_MAP_FEATURES ||
+                    props.stage === STAGES.SHAPE_EDITOR
+                  : props.stage !== STAGES.CHOOSE_SECTORS &&
+                    props.stage !== STAGES.SECTOR_NAVIGATION)
+              }
             />
             {miniMapStyle && mapContext.manager?.map && (
               <DigitizingMiniMap

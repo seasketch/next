@@ -73,6 +73,7 @@ export default function SurveyNavigationButton({
       )}
       {(context?.supportedLanguages || []).length > 0 && (
         <LanguageSelector
+          options={context?.supportedLanguages}
           button={(onClick) => (
             <button
               className="px-3"

@@ -12,4 +12,9 @@ export const TestSurveyContextValue = {
   supportedLanguages: [],
   lang: languages.find((lang) => lang.code === "EN")!,
   setLanguage: (code: string) => null,
+  practiceMode: false,
+  togglePracticeMode: (enabled: boolean) => {},
+  toggleFacilitation: (enabled: boolean) => {},
+  surveyId: 0,
+  slug: "",
 };

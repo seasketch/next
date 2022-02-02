@@ -61,11 +61,7 @@ export type Acl = Node & {
   basemapId?: Maybe<Scalars['Int']>;
   forumIdRead?: Maybe<Scalars['Int']>;
   forumIdWrite?: Maybe<Scalars['Int']>;
-  /**
-   * If set and `type` is GROUP, the resource will only be available to these groups.
-   *
-   * Use `addGroupToAcl()`/`removeGroupFromAcl()` mutations to edit these permissions.
-   */
+  /** Reads and enables pagination through a set of `Group`. */
   groups?: Maybe<Array<Group>>;
   id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -1081,13 +1077,10 @@ export type CreateProjectInvitesInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** List of group **names** (not ids) */
   groupNames?: Maybe<Array<Maybe<Scalars['String']>>>;
   makeAdmin?: Maybe<Scalars['Boolean']>;
   projectId?: Maybe<Scalars['Int']>;
-  /** List of emails (required) and fullnames */
   projectInviteOptions?: Maybe<Array<Maybe<ProjectInviteOptionInput>>>;
-  /** If set to true, emails will be QUEUED for sending immediately */
   sendEmailNow?: Maybe<Scalars['Boolean']>;
 };
 
@@ -3358,29 +3351,12 @@ export enum EmailNotificationPreferencesOrderBy {
 }
 
 export enum EmailStatus {
-  /**
-   * Emails may be bounced due to a full inbox, misconfigured mail server, or other
-   * reasons. See [AWS SES documentation](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/monitor-using-event-publishing.html#event-publishing-terminology).
-   */
   Bounced = 'BOUNCED',
-  /**
-   * User has reported SeaSketch as sending Spam in this or another project.
-   * SeaSketch will no longer send emails to this user in any project.
-   */
   Complaint = 'COMPLAINT',
-  /** Delivered to the user's mail server */
   Delivered = 'DELIVERED',
-  /** SeaSketch application error when sending invite emails. Refer to email status */
   Error = 'ERROR',
-  /** Admin has sent the invite, but the mail delivery subsystem has not yet sent the invite */
   Queued = 'QUEUED',
-  /** Invite email has been sent but not yet delivered to the user's mail server */
   Sent = 'SENT',
-  /**
-   * The user has unsubscribed from all emails originating from SeaSketch.
-   *
-   * If this happens SeaSketch will not be able to send any invitations to the user.
-   */
   Unsubscribed = 'UNSUBSCRIBED'
 }
 
@@ -3414,13 +3390,10 @@ export type EnableForumPostingPayload = {
 };
 
 export enum FieldRuleOperator {
-  /** String contains value */
   Contains = 'CONTAINS',
   Equal = 'EQUAL',
   GreaterThan = 'GREATER_THAN',
-  /** Empty string input or no choice selection */
   IsBlank = 'IS_BLANK',
-  /** Predicate field value is less than specified value */
   LessThan = 'LESS_THAN',
   NotEqual = 'NOT_EQUAL'
 }
@@ -3440,7 +3413,7 @@ export enum FieldRuleOperator {
  */
 export type Form = Node & {
   __typename?: 'Form';
-  /** List of all FormElements in this form. */
+  /** Lists FormElements in order for rendering */
   formElements?: Maybe<Array<FormElement>>;
   id: Scalars['Int'];
   /**
@@ -3965,11 +3938,8 @@ export type FormPatch = {
 
 /** Indicates which features should use the form as a template */
 export enum FormTemplateType {
-  /** Template should only be listed for *SketchClasses*. */
   Sketches = 'SKETCHES',
-  /** Template should only be listed for *Surveys*. */
   Surveys = 'SURVEYS',
-  /** Template should be an option for both types. */
   SurveysAndSketches = 'SURVEYS_AND_SKETCHES'
 }
 
@@ -4442,7 +4412,7 @@ export type Group = Node & {
   __typename?: 'Group';
   id: Scalars['Int'];
   memberCount?: Maybe<Scalars['Int']>;
-  /** Listing of all users who have been assigned to this group. */
+  /** Reads and enables pagination through a set of `User`. */
   members?: Maybe<Array<User>>;
   /** Label for the group. */
   name: Scalars['String'];
@@ -4671,68 +4641,18 @@ export type InviteStat = {
  * email service and token expiration date. See the inviteEmails relation for more details.
  */
 export enum InviteStatus {
-  /**
-   * Emails may be bounced due to a full inbox, misconfigured mail server, or other
-   * reasons. See [AWS SES documentation](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/monitor-using-event-publishing.html#event-publishing-terminology).
-   */
   Bounced = 'BOUNCED',
-  /**
-   * User has reported SeaSketch as sending Spam in this or another project.
-   * SeaSketch will no longer send emails to this user in any project.
-   */
   Complaint = 'COMPLAINT',
-  /**
-   * #### Project Invites
-   * User has accepted the invite.
-   *
-   * #### Survey Invites
-   * User has responded to the survey.
-   */
   Confirmed = 'CONFIRMED',
-  /** Delivered to the user's mail server */
   Delivered = 'DELIVERED',
-  /** SeaSketch application error when sending invite emails. Refer to email status */
   Error = 'ERROR',
-  /**
-   * #### Project Invites
-   * Admin has sent the invite, but the mail delivery subsystem has not yet sent the invite.
-   *
-   * #### Survey Invites
-   * Invite has been created but email has not yet been sent. Emails will be sent
-   * automatically by a periodic backend process (approx every 20 seconds).
-   */
   Queued = 'QUEUED',
-  /** Invite email has been sent but not yet delivered to the user's mail server */
   Sent = 'SENT',
-  /**
-   * Project invites have this status when a survey invite is queued for sending in
-   * this project. Users can be invited to a survey + have an un-sent project
-   * invite that they can confirm using `confirmProjectInviteWithSurveyToken()`.
-   * This way users do not need to simultaneously be sent both a project and survey invite.
-   */
   SurveyInviteQueued = 'SURVEY_INVITE_QUEUED',
-  /** Survey invite for this project and email has already been sent. See InviteStatus.SURVEY_INVITE_QUEUED for more details. */
   SurveyInviteSent = 'SURVEY_INVITE_SENT',
-  /**
-   * For **project invites**, Invite JSON Web Tokens are set to expire in 14
-   * (admins) or 60 days. **Survey invites** expire after 60 days for invite_only
-   * surveys, and after 2 years for public surveys. Invites should be resent if
-   * still necessary
-   */
   TokenExpired = 'TOKEN_EXPIRED',
-  /** Unused enum value. */
   Unconfirmed = 'UNCONFIRMED',
-  /**
-   * **Project Invites only**. Invites may be created but not sent immediately.
-   * This way admins can collaboratively update a project invite list before
-   * mass-sending invites when a project is first published.
-   */
   Unsent = 'UNSENT',
-  /**
-   * The user has unsubscribed from all emails originating from SeaSketch.
-   *
-   * If this happens SeaSketch will not be able to send any invitations to the user.
-   */
   Unsubscribed = 'UNSUBSCRIBED'
 }
 
@@ -5066,7 +4986,7 @@ export type Mutation = {
   deleteOptionalBasemapLayer?: Maybe<DeleteOptionalBasemapLayerPayload>;
   /** Deletes a single `OptionalBasemapLayer` using its globally unique id. */
   deleteOptionalBasemapLayerByNodeId?: Maybe<DeleteOptionalBasemapLayerPayload>;
-  /** Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting. */
+  /** Deletes a single `Post` using a unique key. */
   deletePost?: Maybe<DeletePostPayload>;
   /** Deletes a single `Post` using its globally unique id. */
   deletePostByNodeId?: Maybe<DeletePostPayload>;
@@ -5123,7 +5043,7 @@ export type Mutation = {
    * (if no other layers reference the source).
    */
   deleteTableOfContentsBranch?: Maybe<DeleteTableOfContentsBranchPayload>;
-  /** Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting. */
+  /** Deletes a single `Topic` using a unique key. */
   deleteTopic?: Maybe<DeleteTopicPayload>;
   /** Deletes a single `Topic` using its globally unique id. */
   deleteTopicByNodeId?: Maybe<DeleteTopicPayload>;
@@ -5373,6 +5293,8 @@ export type Mutation = {
   /** Updates a single `Topic` using its globally unique id and a patch. */
   updateTopicByNodeId?: Maybe<UpdateTopicPayload>;
   updateZIndexes?: Maybe<UpdateZIndexesPayload>;
+  /** Use to upload pdf documents for use with the Consent FormElement */
+  uploadConsentDocument: FormElement;
 };
 
 
@@ -6485,6 +6407,14 @@ export type MutationUpdateZIndexesArgs = {
   input: UpdateZIndexesInput;
 };
 
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUploadConsentDocumentArgs = {
+  document: Scalars['Upload'];
+  formElementId: Scalars['Int'];
+  version: Scalars['Int'];
+};
+
 /** An object with a globally unique `ID`. */
 export type Node = {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -6609,21 +6539,9 @@ export enum ParticipantSortBy {
 }
 
 export enum ParticipationStatus {
-  /**
-   * User has not joined or participated in the project before. This status would
-   * only be accessible to a logged in user themselves, never in the admin listing of users.
-   */
   None = 'NONE',
-  /**
-   * While the user has joined the project, they haven't shared (or later
-   * un-shared) their profile. Admins will not be able to see any info about them
-   * so they cannot be added to groups. Users cannot use any of the discussion or
-   * sharing features without publishing their profile.
-   */
   ParticipantHiddenProfile = 'PARTICIPANT_HIDDEN_PROFILE',
-  /** With a shared profile, this user can now take actions like participating in discussion forums. */
   ParticipantSharedProfile = 'PARTICIPANT_SHARED_PROFILE',
-  /** For invite-only projects, this user has requested access to the project and needs approval from an admin. */
   PendingApproval = 'PENDING_APPROVAL'
 }
 
@@ -6756,7 +6674,7 @@ export type Project = Node & {
   /** Admins can control whether a project is public, invite-only, or admins-only. */
   accessControl: ProjectAccessControlSetting;
   adminCount?: Maybe<Scalars['Int']>;
-  /** Listing of all users who have admin access. */
+  /** Reads and enables pagination through a set of `User`. */
   admins?: Maybe<Array<User>>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemaps?: Maybe<Array<Basemap>>;
@@ -6790,13 +6708,9 @@ export type Project = Node & {
    * then use the `publishTableOfContents` mutation when it is ready for end-users.
    */
   draftTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
-  /** List of all discussion forums the current user has access to. */
+  /** Reads and enables pagination through a set of `Forum`. */
   forums: Array<Forum>;
-  /**
-   * Listing of current user groups.
-   *
-   * Group membership can be updated using the `addUserToGroup`/`removeUserFromGroup` mutations
-   */
+  /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
   id: Scalars['Int'];
   /**
@@ -6883,20 +6797,15 @@ export type Project = Node & {
    * wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites).
    */
   sessionOutstandingSurveyInvites?: Maybe<Array<SurveyTokenInfo>>;
-  /** Participation status for the currently logged-in session */
   sessionParticipationStatus?: Maybe<ParticipationStatus>;
-  /**
-   * List of all the SketchClasses that can be used in digitizing spatial data.
-   * Accessible to all users, though access control settings may limit which users
-   * can access some SketchClasses.
-   */
+  /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites: Array<Sprite>;
   supportEmail: Scalars['String'];
-  /** Listing of all Surveys accessible to the current user. */
+  /** Reads and enables pagination through a set of `Survey`. */
   surveys: Array<Survey>;
   /** Public layer list. Cannot be edited directly. */
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
@@ -7150,19 +7059,8 @@ export type ProjectUsersBannedFromForumsArgs = {
 };
 
 export enum ProjectAccessControlSetting {
-  /** Only project administrators will be able to access the project. */
   AdminsOnly = 'ADMINS_ONLY',
-  /**
-   * Only users who have been invited to join the project can participate. Admins
-   * can send email invitations with a special link to signup.
-   *
-   * Other users may request access, in which case admins can approve those access requests if appropriate.
-   */
   InviteOnly = 'INVITE_ONLY',
-  /**
-   * Anyone can join and use a public project, though access to particular
-   * datasets, sketch classes, and forums may be restricted via access control lists.
-   */
   Public = 'PUBLIC'
 }
 
@@ -7210,14 +7108,10 @@ export type ProjectInvite = Node & {
   email: Scalars['Email'];
   /** Specified by admin when invite was created. */
   fullname?: Maybe<Scalars['String']>;
-  /**
-   * Groups to be assigned to the user once the invite is confirmed. Existing
-   * invite group membership can be updated using the crud operations on
-   * ProjectInviteGroup types.
-   */
+  /** Reads and enables pagination through a set of `Group`. */
   groups?: Maybe<Array<Group>>;
   id: Scalars['Int'];
-  /** Listing of all emails related to this invite. */
+  /** Reads and enables pagination through a set of `InviteEmail`. */
   inviteEmails: Array<InviteEmail>;
   /** User will be made an admin of the project if true. They will not be given special access until their email is verified. */
   makeAdmin: Scalars['Boolean'];
@@ -7226,7 +7120,6 @@ export type ProjectInvite = Node & {
   projectId: Scalars['Int'];
   /** Reads and enables pagination through a set of `ProjectInviteGroup`. */
   projectInviteGroupsByInviteIdConnection: ProjectInviteGroupsConnection;
-  /** Status derived from the state of invite emails as well as token expiration */
   status?: Maybe<InviteStatus>;
   /** Is set upon invite acceptance. */
   userId?: Maybe<Scalars['Int']>;
@@ -7572,17 +7465,7 @@ export type PublishTableOfContentsPayload = {
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type Query = Node & {
   __typename?: 'Query';
   acl?: Maybe<Acl>;
@@ -7693,16 +7576,7 @@ export type Query = Node & {
   projectInviteGroupByInviteIdAndGroupId?: Maybe<ProjectInviteGroup>;
   /** Reads and enables pagination through a set of `ProjectInviteGroup`. */
   projectInviteGroupsConnection?: Maybe<ProjectInviteGroupsConnection>;
-  /**
-   * The projectsConnection exposes all SeaSketch projects the current session has
-   * access to. For a superuser, this would be all of them (that aren't deleted).
-   * For a project administrator, they have access to all public projects and those
-   * that they administer. For everyone else, they see all public projects and any
-   * `invite-only` projects that they are approved members of.
-   *
-   * The projectsConnection exposes a fully-featured Relay compatible connection so
-   * that an efficient listing can be made of the hundreds of SeaSketch Projects.
-   */
+  /** Reads and enables pagination through a set of `Project`. */
   projectsConnection?: Maybe<ProjectsConnection>;
   projectsSharedBasemapByBasemapIdAndProjectId?: Maybe<ProjectsSharedBasemap>;
   /** Reads and enables pagination through a set of `ProjectsSharedBasemap`. */
@@ -7729,13 +7603,6 @@ export type Query = Node & {
   /** Reads a single `Sprite` using its globally unique `ID`. */
   spriteByNodeId?: Maybe<Sprite>;
   spriteImageBySpriteIdAndPixelRatio?: Maybe<SpriteImage>;
-  /**
-   * Note that when requesting a survey and related resources (project, forms &
-   * fields) from an invite link when anonymous, the `x-ss-survey-invite-token`
-   * header will need to be set in order to gain access to protected resources. For
-   * more details [see the
-   * wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)
-   */
   survey?: Maybe<Survey>;
   /** Reads a single `Survey` using its globally unique `ID`. */
   surveyByNodeId?: Maybe<Survey>;
@@ -7754,14 +7621,7 @@ export type Query = Node & {
   tableOfContentsItemByDataLayerId?: Maybe<TableOfContentsItem>;
   /** Reads a single `TableOfContentsItem` using its globally unique `ID`. */
   tableOfContentsItemByNodeId?: Maybe<TableOfContentsItem>;
-  /**
-   * Template forms can be created by SeaSketch superusers for use in **any**
-   * project. For example, there could be a template for a human-uses survey that
-   * project administrators can copy and use as a starting point for customization.
-   *
-   * SeaSketch superusers can create template Forms using the `createFormTemplateFromSketchClass`
-   * and `createFormTemplateFromSurvey` mutations.
-   */
+  /** Reads and enables pagination through a set of `Form`. */
   templateForms?: Maybe<Array<Form>>;
   topic?: Maybe<Topic>;
   /** Reads a single `Topic` using its globally unique `ID`. */
@@ -7791,129 +7651,49 @@ export type Query = Node & {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryAclArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryAclByBasemapIdArgs = {
   basemapId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryAclByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryAclBySketchClassIdArgs = {
   sketchClassId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryAclByTableOfContentsItemIdArgs = {
   tableOfContentsItemId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryBasemapArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryBasemapByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryBasemapsConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -7925,161 +7705,61 @@ export type QueryBasemapsConnectionArgs = {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryCommunityGuidelineArgs = {
   projectId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryCommunityGuidelineByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryDataLayerArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryDataLayerByInteractivitySettingsIdArgs = {
   interactivitySettingsId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryDataLayerByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryDataSourceArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryDataSourceByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryDataSourcesBucketArgs = {
   url: Scalars['String'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryDataSourcesBucketByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryDataSourcesBucketsConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -8091,33 +7771,13 @@ export type QueryDataSourcesBucketsConnectionArgs = {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryEmailNotificationPreferenceByUserIdArgs = {
   userId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryEmailNotificationPreferencesConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -8129,177 +7789,67 @@ export type QueryEmailNotificationPreferencesConnectionArgs = {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryExtractSpriteIdsArgs = {
   t?: Maybe<Scalars['String']>;
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormBySketchClassIdArgs = {
   sketchClassId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormBySurveyIdArgs = {
   surveyId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormElementArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormElementByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormElementTypeArgs = {
   componentName: Scalars['String'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormElementTypeByLabelArgs = {
   label: Scalars['String'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormElementTypeByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormElementTypesArgs = {
   condition?: Maybe<FormElementTypeCondition>;
   first?: Maybe<Scalars['Int']>;
@@ -8308,322 +7858,122 @@ export type QueryFormElementTypesArgs = {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormLogicConditionArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormLogicConditionByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormLogicRuleArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryFormLogicRuleByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryForumArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryForumByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryGetUnsplashPhotosArgs = {
   query: Scalars['String'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryGroupArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryGroupByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryGroupByProjectIdAndNameArgs = {
   name: Scalars['String'];
   projectId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryInteractivitySettingArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryInteractivitySettingByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryInviteEmailArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryInviteEmailByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryNodeArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryOptionalBasemapLayerArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryOptionalBasemapLayerByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryPostArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryPostByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryPostsConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -8635,147 +7985,57 @@ export type QueryPostsConnectionArgs = {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProfileByUserIdArgs = {
   userId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectBySlugArgs = {
   slug: Scalars['String'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteByEmailAndProjectIdArgs = {
   email: Scalars['Email'];
   projectId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteGroupByInviteIdAndGroupIdArgs = {
   groupId: Scalars['Int'];
   inviteId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteGroupsConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -8787,17 +8047,7 @@ export type QueryProjectInviteGroupsConnectionArgs = {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectsConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -8809,34 +8059,14 @@ export type QueryProjectsConnectionArgs = {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
   basemapId: Scalars['Int'];
   projectId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectsSharedBasemapsConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -8848,357 +8078,137 @@ export type QueryProjectsSharedBasemapsConnectionArgs = {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySessionIsBannedFromPostingArgs = {
   pid?: Maybe<Scalars['Int']>;
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySketchArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySketchByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySketchClassArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySketchClassByFormElementIdArgs = {
   formElementId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySketchClassByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySketchFolderArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySketchFolderByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySpriteArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySpriteByMd5AndProjectIdArgs = {
   md5: Scalars['String'];
   projectId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySpriteByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySpriteImageBySpriteIdAndPixelRatioArgs = {
   pixelRatio: Scalars['Int'];
   spriteId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySurveyArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySurveyByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySurveyInviteArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySurveyInviteByEmailArgs = {
   email: Scalars['Email'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySurveyInviteByEmailAndSurveyIdArgs = {
   email: Scalars['Email'];
   surveyId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySurveyInviteByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySurveyInvitedGroupBySurveyIdAndGroupIdArgs = {
   groupId: Scalars['Int'];
   surveyId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySurveyResponseArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySurveyResponseByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QuerySurveyResponsesConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -9210,114 +8220,44 @@ export type QuerySurveyResponsesConnectionArgs = {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryTableOfContentsItemArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryTableOfContentsItemByDataLayerIdArgs = {
   dataLayerId: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryTableOfContentsItemByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryTemplateFormsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryTopicArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryTopicByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryTopicsConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -9329,65 +8269,25 @@ export type QueryTopicsConnectionArgs = {
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryUserArgs = {
   id: Scalars['Int'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryUserByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryVerifyProjectInviteArgs = {
   token: Scalars['String'];
 };
 
 
-/**
- * Most relevant root-level queries are listed first, which concern getting
- * the currently logged-in user (`me`) and project (`currentProject`).
- * There are also cross-project resources such as form templates and of
- * course the project listing connection. Most queries when working from a project
- * should be performed using fields on the `Project` type.
- *
- * Postgraphile also automatically generates a variety of accessor queries
- * for each database table. These are unlikely to be needed often but may possibly
- * be utilized by sophisticated GraphQL clients in the future to update caches.
- */
+/** The root query type which gives access points into the data universe. */
 export type QueryVerifySurveyInviteArgs = {
   token: Scalars['String'];
 };
@@ -9810,12 +8710,7 @@ export type Sketch = Node & {
 /** Sketch Classes act as a schema for sketches drawn by users. */
 export type SketchClass = Node & {
   __typename?: 'SketchClass';
-  /**
-   * Access control lists can be used by admins to control who can digitize
-   * sketches of this class. All users will have access to SketchClass schemas in
-   * order to render information posted to forums, but they will only be able to
-   * digitize or edit these sketches if they are on the access control list.
-   */
+  /** Reads a single `Acl` that is related to this `SketchClass`. */
   acl?: Maybe<Acl>;
   /**
    * If set to true, a geometry_type of POLYGON would allow for both POLYGONs and
@@ -9835,7 +8730,7 @@ export type SketchClass = Node & {
    * sketch classes can only be digitized by admins.
    */
   canDigitize?: Maybe<Scalars['Boolean']>;
-  /** Form schema used to collect attributes on these sketches. */
+  /** Reads a single `Form` that is related to this `SketchClass`. */
   form?: Maybe<Form>;
   /** Reads a single `FormElement` that is related to this `SketchClass`. */
   formElement?: Maybe<FormElement>;
@@ -9876,7 +8771,7 @@ export type SketchClass = Node & {
   projectId: Scalars['Int'];
   /** Number of sketches created with this sketch class */
   sketchCount?: Maybe<Scalars['BigInt']>;
-  /** If listed for a Collection, only valid child sketch classes can be added as children. */
+  /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
 };
 
@@ -10029,12 +8924,7 @@ export enum SketchFoldersOrderBy {
 }
 
 export enum SketchGeometryType {
-  /** Users will choose one (or more) features from a feature collection. For example, a choice of grid cells or marxan zones. */
   ChooseFeature = 'CHOOSE_FEATURE',
-  /**
-   * Sketch itself will have no geometry, but can be associated with a number of
-   * child sketches. Can be represented as a GeoJSON FeatureCollection.
-   */
   Collection = 'COLLECTION',
   Linestring = 'LINESTRING',
   Point = 'POINT',
@@ -10228,11 +9118,7 @@ export type Survey = Node & {
   /** If set, responses that originate from an IP address outside this fence will be flagged. */
   geofence?: Maybe<GeographyPolygon>;
   id: Scalars['Int'];
-  /**
-   * Listing of groups whose users should be invited to participate in the survey.
-   *
-   * Use `updateSurveyInvitedGroups()` mutation to modify.
-   */
+  /** Reads and enables pagination through a set of `Group`. */
   invitedGroups?: Maybe<Array<Group>>;
   /**
    * Disabled surveys will not be accessible to non-admins. Invite email sending will
@@ -10263,16 +9149,9 @@ export type Survey = Node & {
   supportedLanguages: Array<Maybe<Scalars['String']>>;
   /** Reads and enables pagination through a set of `SurveyInvitedGroup`. */
   surveyInvitedGroups: Array<SurveyInvitedGroup>;
-  /**
-   * All related survey invites. Survey invites will be automatically created for
-   * users in the groups specified by `surveyInvitedGroups`.
-   */
+  /** Reads and enables pagination through a set of `SurveyInvite`. */
   surveyInvites: Array<SurveyInvite>;
-  /**
-   * Responses related to this survey. End-users will have access to their own
-   * submitted or draft responses. Administrators will have access to their own,
-   * plus all submitted responses.
-   */
+  /** Reads and enables pagination through a set of `SurveyResponse`. */
   surveyResponsesConnection: SurveyResponsesConnection;
 };
 
@@ -10320,11 +9199,8 @@ export type SurveySurveyResponsesConnectionArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
 
-/** Controls who has access to respond to a survey */
 export enum SurveyAccessType {
-  /** Only users part of an invited group or email invitation can respond */
   InviteOnly = 'INVITE_ONLY',
-  /** Anyone can respond */
   Public = 'PUBLIC'
 }
 
@@ -10596,11 +9472,8 @@ export enum SurveyResponsesOrderBy {
 
 export type SurveyTokenInfo = {
   __typename?: 'SurveyTokenInfo';
-  /** ID of related project */
   projectId?: Maybe<Scalars['Int']>;
-  /** ID of related survey */
   surveyId?: Maybe<Scalars['Int']>;
-  /** Signed token that can be used for accessing the survey */
   token?: Maybe<Scalars['String']>;
 };
 
@@ -10847,7 +9720,7 @@ export type ToggleForumPostingBanPayload = {
 export type Topic = Node & {
   __typename?: 'Topic';
   authorId: Scalars['Int'];
-  /** User Profile of the author. If a user has not shared their profile the post contents will be hidden. */
+  /** User Profile of the author. If a user has not shared their profile the first post contents will be hidden. */
   authorProfile?: Maybe<Profile>;
   createdAt: Scalars['Datetime'];
   /** Reads a single `Forum` that is related to this `Topic`. */
@@ -12477,10 +11350,7 @@ export type User = Node & {
    * privileges until this email has been confirmed.
    */
   canonicalEmail?: Maybe<Scalars['String']>;
-  /**
-   * Email notification preferences can be read and set by the current user session.
-   *     These settings cannot be accessed by other users or SeaSketch project admins.
-   */
+  /** Reads a single `EmailNotificationPreference` that is related to this `User`. */
   emailNotificationPreference?: Maybe<EmailNotificationPreference>;
   /**
    * Reads and enables pagination through a set of `EmailNotificationPreference`.
@@ -12504,14 +11374,7 @@ export type User = Node & {
    */
   onboarded?: Maybe<Scalars['Datetime']>;
   participationStatus?: Maybe<ParticipationStatus>;
-  /**
-   * Access the user's profile. This feature is only accessible to project admins if
-   * the user has chosen to share their profile with the project.
-   *
-   * User profiles cannot be accessed directly en-mass by end-users. Rather, Survey
-   * `Posts` and other shared content will have accessor methods to get at this
-   * information, but again, only if the profile has been shared.
-   */
+  /** Reads a single `Profile` that is related to this `User`. */
   profile?: Maybe<Profile>;
 };
 
@@ -13465,7 +12328,7 @@ export type CurrentProjectMetadataQuery = (
     & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail'>
   )>, me?: Maybe<(
     { __typename?: 'User' }
-    & Pick<User, 'id' | 'isAdmin'>
+    & Pick<User, 'id'>
     & { profile?: Maybe<(
       { __typename?: 'Profile' }
       & Pick<Profile, 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
@@ -14344,6 +13207,7 @@ export type AddFormElementMutationVariables = Exact<{
   position?: Maybe<Scalars['Int']>;
   exportId?: Maybe<Scalars['String']>;
   subordinateTo?: Maybe<Scalars['Int']>;
+  isRequired: Scalars['Boolean'];
 }>;
 
 
@@ -14589,6 +13453,64 @@ export type AddConditionMutation = (
       { __typename?: 'FormLogicCondition' }
       & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
     )> }
+  )> }
+);
+
+export type UpdateSurveyDraftStatusMutationVariables = Exact<{
+  id: Scalars['Int'];
+  isDisabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateSurveyDraftStatusMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSurvey?: Maybe<(
+    { __typename?: 'UpdateSurveyPayload' }
+    & { survey?: Maybe<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id' | 'isDisabled'>
+    )> }
+  )> }
+);
+
+export type UploadConsentDocMutationVariables = Exact<{
+  document: Scalars['Upload'];
+  formElementId: Scalars['Int'];
+  version: Scalars['Int'];
+}>;
+
+
+export type UploadConsentDocMutation = (
+  { __typename?: 'Mutation' }
+  & { uploadConsentDocument: (
+    { __typename?: 'FormElement' }
+    & Pick<FormElement, 'id' | 'componentSettings'>
+  ) }
+);
+
+export type SurveyResponsesQueryVariables = Exact<{
+  surveyId: Scalars['Int'];
+}>;
+
+
+export type SurveyResponsesQuery = (
+  { __typename?: 'Query' }
+  & { survey?: Maybe<(
+    { __typename?: 'Survey' }
+    & Pick<Survey, 'id' | 'practiceResponseCount' | 'submittedResponseCount'>
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & FormElementDetailsFragment
+      )>> }
+    )>, surveyResponsesConnection: (
+      { __typename?: 'SurveyResponsesConnection' }
+      & { nodes: Array<(
+        { __typename?: 'SurveyResponse' }
+        & Pick<SurveyResponse, 'id' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
+      )> }
+    ) }
   )> }
 );
 
@@ -17440,7 +16362,6 @@ export const CurrentProjectMetadataDocument = gql`
       bio
       affiliations
     }
-    isAdmin
   }
 }
     `;
@@ -19436,9 +18357,9 @@ export type UpdateFormElementOrderMutationHookResult = ReturnType<typeof useUpda
 export type UpdateFormElementOrderMutationResult = Apollo.MutationResult<UpdateFormElementOrderMutation>;
 export type UpdateFormElementOrderMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>;
 export const AddFormElementDocument = gql`
-    mutation AddFormElement($body: JSON!, $componentSettings: JSON!, $formId: Int!, $componentType: String!, $position: Int, $exportId: String, $subordinateTo: Int) {
+    mutation AddFormElement($body: JSON!, $componentSettings: JSON!, $formId: Int!, $componentType: String!, $position: Int, $exportId: String, $subordinateTo: Int, $isRequired: Boolean!) {
   createFormElement(
-    input: {formElement: {body: $body, componentSettings: $componentSettings, formId: $formId, isRequired: false, typeId: $componentType, position: $position, exportId: $exportId, subordinateTo: $subordinateTo}}
+    input: {formElement: {body: $body, componentSettings: $componentSettings, formId: $formId, isRequired: $isRequired, typeId: $componentType, position: $position, exportId: $exportId, subordinateTo: $subordinateTo}}
   ) {
     formElement {
       ...FormElementFullDetails
@@ -19468,6 +18389,7 @@ export type AddFormElementMutationFn = Apollo.MutationFunction<AddFormElementMut
  *      position: // value for 'position'
  *      exportId: // value for 'exportId'
  *      subordinateTo: // value for 'subordinateTo'
+ *      isRequired: // value for 'isRequired'
  *   },
  * });
  */
@@ -20023,6 +18945,139 @@ export function useAddConditionMutation(baseOptions?: Apollo.MutationHookOptions
 export type AddConditionMutationHookResult = ReturnType<typeof useAddConditionMutation>;
 export type AddConditionMutationResult = Apollo.MutationResult<AddConditionMutation>;
 export type AddConditionMutationOptions = Apollo.BaseMutationOptions<AddConditionMutation, AddConditionMutationVariables>;
+export const UpdateSurveyDraftStatusDocument = gql`
+    mutation UpdateSurveyDraftStatus($id: Int!, $isDisabled: Boolean!) {
+  updateSurvey(input: {id: $id, patch: {isDisabled: $isDisabled}}) {
+    survey {
+      id
+      isDisabled
+    }
+  }
+}
+    `;
+export type UpdateSurveyDraftStatusMutationFn = Apollo.MutationFunction<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>;
+
+/**
+ * __useUpdateSurveyDraftStatusMutation__
+ *
+ * To run a mutation, you first call `useUpdateSurveyDraftStatusMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSurveyDraftStatusMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSurveyDraftStatusMutation, { data, loading, error }] = useUpdateSurveyDraftStatusMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      isDisabled: // value for 'isDisabled'
+ *   },
+ * });
+ */
+export function useUpdateSurveyDraftStatusMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>(UpdateSurveyDraftStatusDocument, options);
+      }
+export type UpdateSurveyDraftStatusMutationHookResult = ReturnType<typeof useUpdateSurveyDraftStatusMutation>;
+export type UpdateSurveyDraftStatusMutationResult = Apollo.MutationResult<UpdateSurveyDraftStatusMutation>;
+export type UpdateSurveyDraftStatusMutationOptions = Apollo.BaseMutationOptions<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>;
+export const UploadConsentDocDocument = gql`
+    mutation UploadConsentDoc($document: Upload!, $formElementId: Int!, $version: Int!) {
+  uploadConsentDocument(
+    document: $document
+    formElementId: $formElementId
+    version: $version
+  ) {
+    id
+    componentSettings
+  }
+}
+    `;
+export type UploadConsentDocMutationFn = Apollo.MutationFunction<UploadConsentDocMutation, UploadConsentDocMutationVariables>;
+
+/**
+ * __useUploadConsentDocMutation__
+ *
+ * To run a mutation, you first call `useUploadConsentDocMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUploadConsentDocMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [uploadConsentDocMutation, { data, loading, error }] = useUploadConsentDocMutation({
+ *   variables: {
+ *      document: // value for 'document'
+ *      formElementId: // value for 'formElementId'
+ *      version: // value for 'version'
+ *   },
+ * });
+ */
+export function useUploadConsentDocMutation(baseOptions?: Apollo.MutationHookOptions<UploadConsentDocMutation, UploadConsentDocMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UploadConsentDocMutation, UploadConsentDocMutationVariables>(UploadConsentDocDocument, options);
+      }
+export type UploadConsentDocMutationHookResult = ReturnType<typeof useUploadConsentDocMutation>;
+export type UploadConsentDocMutationResult = Apollo.MutationResult<UploadConsentDocMutation>;
+export type UploadConsentDocMutationOptions = Apollo.BaseMutationOptions<UploadConsentDocMutation, UploadConsentDocMutationVariables>;
+export const SurveyResponsesDocument = gql`
+    query SurveyResponses($surveyId: Int!) {
+  survey(id: $surveyId) {
+    form {
+      formElements {
+        ...FormElementDetails
+      }
+    }
+    id
+    practiceResponseCount
+    submittedResponseCount
+    surveyResponsesConnection {
+      nodes {
+        id
+        bypassedDuplicateSubmissionControl
+        updatedAt
+        userId
+        createdAt
+        data
+        isDuplicateEntry
+        isDuplicateIp
+        isPractice
+        isUnrecognizedUserAgent
+      }
+    }
+  }
+}
+    ${FormElementDetailsFragmentDoc}`;
+
+/**
+ * __useSurveyResponsesQuery__
+ *
+ * To run a query within a React component, call `useSurveyResponsesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveyResponsesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveyResponsesQuery({
+ *   variables: {
+ *      surveyId: // value for 'surveyId'
+ *   },
+ * });
+ */
+export function useSurveyResponsesQuery(baseOptions: Apollo.QueryHookOptions<SurveyResponsesQuery, SurveyResponsesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveyResponsesQuery, SurveyResponsesQueryVariables>(SurveyResponsesDocument, options);
+      }
+export function useSurveyResponsesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveyResponsesQuery, SurveyResponsesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveyResponsesQuery, SurveyResponsesQueryVariables>(SurveyResponsesDocument, options);
+        }
+export type SurveyResponsesQueryHookResult = ReturnType<typeof useSurveyResponsesQuery>;
+export type SurveyResponsesLazyQueryHookResult = ReturnType<typeof useSurveyResponsesLazyQuery>;
+export type SurveyResponsesQueryResult = Apollo.QueryResult<SurveyResponsesQuery, SurveyResponsesQueryVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -21163,6 +20218,7 @@ export const namedOperations = {
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
     FormElementTypes: 'FormElementTypes',
     GetPhotos: 'GetPhotos',
+    SurveyResponses: 'SurveyResponses',
     Survey: 'Survey',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     UserAdminCounts: 'UserAdminCounts',
@@ -21243,6 +20299,8 @@ export const namedOperations = {
     DeleteLogicCondition: 'DeleteLogicCondition',
     DeleteLogicRule: 'DeleteLogicRule',
     AddCondition: 'AddCondition',
+    UpdateSurveyDraftStatus: 'UpdateSurveyDraftStatus',
+    UploadConsentDoc: 'UploadConsentDoc',
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',

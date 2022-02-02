@@ -124,13 +124,10 @@ function SurveyApp() {
       return false;
     }
     const state = responseState[formElement.current.id];
-    if (
-      !formElement.current.isRequired ||
-      (state?.value !== undefined && !state?.errors)
-    ) {
-      return true;
+    if (formElement.current.isRequired) {
+      return state?.value !== undefined && !state?.errors;
     } else {
-      return false;
+      return !state?.errors;
     }
   }
 
@@ -191,7 +188,7 @@ function SurveyApp() {
     updateState(formElement.current!, {
       submissionAttempted: true,
     });
-    if (canAdvance()) {
+    if (canAdvance() || e?.force) {
       if (pagingState?.isLastQuestion) {
         setFormElement((prev) => ({ ...prev, exiting: prev.current }));
         window.scrollTo(0, 0);
@@ -279,6 +276,8 @@ function SurveyApp() {
       <>
         <SurveyContext.Provider
           value={{
+            slug: slug,
+            surveyId: data.survey.id,
             lang: language,
             setLanguage: (code: string) => {
               const lang = languages.find((lang) => lang.code === code);
@@ -287,7 +286,21 @@ function SurveyApp() {
               }
               i18n.changeLanguage(lang.code);
             },
-
+            practiceMode: !!practice,
+            togglePracticeMode: (enable) => {
+              if (enable) {
+                history.replace(
+                  `/${slug}/surveys/${surveyId}/${index}/practice`
+                );
+              } else {
+                history.replace(`/${slug}/surveys/${surveyId}/${index}/`);
+              }
+            },
+            toggleFacilitation: (enable) =>
+              setResponseState((prev) => ({
+                ...prev,
+                facilitated: enable,
+              })),
             supportedLanguages:
               (data.survey?.supportedLanguages as string[]) || [],
             isAdmin: !!data.me?.isAdmin,
@@ -440,50 +453,25 @@ function SurveyApp() {
                     {...formElement.current}
                     typeName={formElement.current.typeId}
                     submissionAttempted={!!state?.submissionAttempted}
-                    onChange={(value, errors) => {
+                    onChange={(value, errors, advanceAutomatically) => {
                       if (formElement.current?.typeId === "WelcomeMessage") {
-                        switch (
-                          (value as { dropdownSelection?: string })
-                            .dropdownSelection
-                        ) {
-                          case "BEGIN":
-                            setResponseState((prev) => ({
-                              submitted: false,
-                              facilitated: false,
-                            }));
-                            history.push(`/${slug}/surveys/${surveyId}/1`);
-                            break;
-                          case "FACILITATED":
-                            setResponseState((prev) => ({
-                              submitted: false,
-                              facilitated: true,
-                            }));
-                            history.push(`/${slug}/surveys/${surveyId}/1`);
-                            break;
-                          case "PRACTICE":
-                            history.push(
-                              `/${slug}/surveys/${surveyId}/1/practice`
-                            );
-                            setResponseState((prev) => ({
-                              submitted: false,
-                              facilitated: false,
-                            }));
-                            break;
-                          case "EDIT":
-                            history.push(`/${slug}/survey-editor/${surveyId}`);
-                            break;
-                          case "RESPONSES":
-                            history.push(`/${slug}/admin/surveys/${surveyId}`);
+                        setResponseState((prev) => ({
+                          submitted: false,
+                          facilitated: !!responseState.facilitated,
+                        }));
+                        if (practice) {
+                          history.push(
+                            `/${slug}/surveys/${surveyId}/1/practice`
+                          );
+                        } else {
+                          history.push(`/${slug}/surveys/${surveyId}/1`);
                         }
                       } else {
                         updateState(formElement.current!, {
                           value,
                           errors,
                         }).then(() => {
-                          if (
-                            advancesAutomatically(formElement.current!) &&
-                            value !== undefined
-                          ) {
+                          if (advanceAutomatically) {
                             setTimeout(() => {
                               setAutoAdvance(true);
                             }, 500);
@@ -494,7 +482,7 @@ function SurveyApp() {
                     onSubmit={handleAdvance}
                     editable={false}
                     value={state?.value}
-                    onRequestNext={handleAdvance}
+                    onRequestNext={() => handleAdvance({ force: true })}
                     onRequestPrevious={() => {
                       setBackwards(true);
                       const url = `/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(
@@ -527,7 +515,8 @@ function SurveyApp() {
                           pagingState.isLastQuestion
                             ? t("Complete Submission")
                             : currentValue === undefined ||
-                              currentValue === null
+                              currentValue === null ||
+                              currentValue === ""
                             ? t("Skip Question")
                             : t("Next")
                         }

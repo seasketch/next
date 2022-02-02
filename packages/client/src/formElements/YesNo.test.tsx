@@ -43,7 +43,7 @@ test("Clicking yes", async () => {
   expect(screen.getByText("Yes")).toBeInTheDocument();
   const yes = screen.getByText("Yes");
   fireEvent.click(yes);
-  expect(args.onChange).toBeCalledWith(true, false);
+  expect(args.onChange).toBeCalledWith(true, false, true);
 });
 
 test("Clicking no", async () => {
@@ -57,5 +57,5 @@ test("Clicking no", async () => {
   expect(screen.getByText("No")).toBeInTheDocument();
   const no = screen.getByText("No");
   fireEvent.click(no);
-  expect(args.onChange).toBeCalledWith(false, false);
+  expect(args.onChange).toBeCalledWith(false, false, true);
 });

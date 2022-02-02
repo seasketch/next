@@ -30,6 +30,5 @@ query CurrentProjectMetadata {
       bio
       affiliations
     }
-    isAdmin
   }
 }

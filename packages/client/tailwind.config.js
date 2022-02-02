@@ -66,6 +66,7 @@ module.exports = {
   variants: {
     extend: {
       scale: ["active"],
+      padding: ["hover"],
     },
     space: ["responsive", "direction"],
     inset: ["responsive", "direction"],
