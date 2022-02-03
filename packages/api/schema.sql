@@ -4597,6 +4597,41 @@ COMMENT ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" in
 
 
 --
+-- Name: export_spatial_responses(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.export_spatial_responses(fid integer) RETURNS json
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      output json;
+    begin
+    if (true or session_is_admin(project_id_from_field_id(fid))) then
+        SELECT json_build_object(
+          'type', 'FeatureCollection',
+          'features', json_agg(jsonb_build_object(
+    'type',       'Feature',
+    'id',         id,
+    'geometry',   ST_AsGeoJSON(coalesce(geom, user_geom))::jsonb,
+    'properties', sketches.properties::jsonb || to_jsonb(json_build_object('response_id', sketches.response_id, 'name', sketches.name))
+    ))
+        ) FROM sketches where form_element_id = fid into output;
+        return output;
+    else 
+      raise exception 'Not authorized';
+    end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION export_spatial_responses(fid integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.export_spatial_responses(fid integer) IS '@omit';
+
+
+--
 -- Name: form_elements_sketch_class(public.form_elements); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15716,6 +15751,14 @@ REVOKE ALL ON FUNCTION public.encrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.equals(geom1 public.geometry, geom2 public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION export_spatial_responses(fid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.export_spatial_responses(fid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.export_spatial_responses(fid integer) TO seasketch_user;
 
 
 --

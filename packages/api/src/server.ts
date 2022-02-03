@@ -19,6 +19,7 @@ import cors from "cors";
 import https from "https";
 import fs from "fs";
 import graphileOptions from "./graphileOptions";
+import { getFeatureCollection } from "./exportSurvey";
 
 const app = express();
 
@@ -135,6 +136,33 @@ run({
     : 1000,
   taskDirectory: path.join(__dirname, "..", "tasks"),
 });
+
+app.use(
+  "/export-survey/:id/spatial/:element_id/:format",
+  async function (req, res, next) {
+    let { id, element_id, format } = req.params;
+    if (!id || !element_id || !format) {
+      throw new Error(
+        "Invalid request. id, element_id and format parameters required"
+      );
+    }
+    const collection = await getFeatureCollection(
+      parseInt(req.params.id),
+      parseInt(req.params.element_id),
+      pool
+    );
+
+    if (format === "geojson") {
+      res.header({ "Content-Type": "application/json" });
+      res.send(JSON.stringify(collection));
+    } else {
+      throw new Error(
+        `Format was ${format}. Only GeoJSON is currently supported`
+      );
+    }
+    // next()
+  }
+);
 
 app.use(
   postgraphile(pool, "public", {
