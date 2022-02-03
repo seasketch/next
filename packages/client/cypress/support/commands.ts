@@ -364,13 +364,15 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
           updateSurvey(input: { 
             id: $id 
             patch: {
-              isDisabled: false
+              isDisabled: false, 
+              accessType: PUBLIC
             }
           }) 
           {
             survey {
               id,
-              isDisabled, 
+              isDisabled,
+              accessType, 
               project {
                 slug
               }

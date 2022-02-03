@@ -60,7 +60,7 @@ describe.only ('Creates and deletes survey', () => {
       .its('response.body.data.makeSurvey.survey')
       .should('have.property', 'id')
   })
-  it ("Updates the survey", () => {
+  it ("Updates the survey's isDisabled and accessType fields", () => {
     cy.get("@surveyId").then((id) => {
       console.log(id)
       surveyId = id
@@ -68,8 +68,10 @@ describe.only ('Creates and deletes survey', () => {
         authToken = token
         cy.updateSurvey(surveyId, authToken).then((resp) => {
           expect (resp.updateSurvey.survey.isDisabled).to.equal(false)
+          expect (resp.updateSurvey.survey.accessType).to.equal('PUBLIC')
         })
       })
+      //cy.visit(`/cymaldives/admin/surveys/${surveyId}`)
     })
   })
 })
