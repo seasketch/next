@@ -13514,6 +13514,26 @@ export type SurveyResponsesQuery = (
   )> }
 );
 
+export type SurveyMapDetailsQueryVariables = Exact<{
+  surveyId: Scalars['Int'];
+}>;
+
+
+export type SurveyMapDetailsQuery = (
+  { __typename?: 'Query' }
+  & { survey?: Maybe<(
+    { __typename?: 'Survey' }
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id'>
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & FormElementDetailsFragment
+      )>> }
+    )> }
+  )> }
+);
+
 export type SurveyAppRuleFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
@@ -19078,6 +19098,46 @@ export function useSurveyResponsesLazyQuery(baseOptions?: Apollo.LazyQueryHookOp
 export type SurveyResponsesQueryHookResult = ReturnType<typeof useSurveyResponsesQuery>;
 export type SurveyResponsesLazyQueryHookResult = ReturnType<typeof useSurveyResponsesLazyQuery>;
 export type SurveyResponsesQueryResult = Apollo.QueryResult<SurveyResponsesQuery, SurveyResponsesQueryVariables>;
+export const SurveyMapDetailsDocument = gql`
+    query SurveyMapDetails($surveyId: Int!) {
+  survey(id: $surveyId) {
+    form {
+      formElements {
+        ...FormElementDetails
+      }
+      id
+    }
+  }
+}
+    ${FormElementDetailsFragmentDoc}`;
+
+/**
+ * __useSurveyMapDetailsQuery__
+ *
+ * To run a query within a React component, call `useSurveyMapDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveyMapDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveyMapDetailsQuery({
+ *   variables: {
+ *      surveyId: // value for 'surveyId'
+ *   },
+ * });
+ */
+export function useSurveyMapDetailsQuery(baseOptions: Apollo.QueryHookOptions<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>(SurveyMapDetailsDocument, options);
+      }
+export function useSurveyMapDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>(SurveyMapDetailsDocument, options);
+        }
+export type SurveyMapDetailsQueryHookResult = ReturnType<typeof useSurveyMapDetailsQuery>;
+export type SurveyMapDetailsLazyQueryHookResult = ReturnType<typeof useSurveyMapDetailsLazyQuery>;
+export type SurveyMapDetailsQueryResult = Apollo.QueryResult<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -20219,6 +20279,7 @@ export const namedOperations = {
     FormElementTypes: 'FormElementTypes',
     GetPhotos: 'GetPhotos',
     SurveyResponses: 'SurveyResponses',
+    SurveyMapDetails: 'SurveyMapDetails',
     Survey: 'Survey',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     UserAdminCounts: 'UserAdminCounts',

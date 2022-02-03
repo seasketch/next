@@ -50,7 +50,7 @@ export default function ExportResponsesModal({
         </Trans>
       </p>
       {spatialFormElements.map((element) => (
-        <div>
+        <div key={element.id}>
           <a
             className="text-primary-500 underline"
             download={

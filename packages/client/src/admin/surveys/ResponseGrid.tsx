@@ -171,32 +171,26 @@ export default function ResponseGrid(props: Props) {
 
   return (
     <div
-      className={`${props.className} px-4 py-4 sm:px-6 lg:px-8 overflow-hidden flex flex-col`}
+      className={`${props.className} px-0 py-4 pt-0 overflow-hidden flex flex-col`}
     >
-      <h2 className="text-xl">{t("Survey Responses")}</h2>
       <FakeTabs
         onClickExport={() => setShowExportModal(true)}
         tabs={[
           {
-            name: "All",
+            name: "Survey Responses",
             count: survey?.submittedResponseCount || 0,
             href: "#",
             current: true,
           },
           {
-            name: "For Review",
-            count: 0,
-            href: "#",
-            current: false,
-          },
-          {
-            name: "Practice",
+            name: "Practice Responses",
             count: survey?.practiceResponseCount || 0,
             href: "#",
             current: false,
           },
           {
-            name: "Map",
+            name: "Archived",
+            count: 0,
             href: "#",
             current: false,
           },
@@ -341,7 +335,7 @@ function FakeTabs({
       </div>
       <div className="hidden sm:block">
         <div className="border-b border-gray-200">
-          <nav className="mt-2 -mb-px flex space-x-8" aria-label="Tabs">
+          <nav className="mt-2 -mb-px flex space-x-2" aria-label="Tabs">
             {tabs.map((tab) => (
               <a
                 key={tab.name}
@@ -351,7 +345,7 @@ function FakeTabs({
                     ? "border-primary-500 text-primary-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200"
                 },
-                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                  whitespace-nowrap py-4 border-b-2 font-medium text-sm px-3`}
               >
                 {tab.name}
                 {tab.count ? (

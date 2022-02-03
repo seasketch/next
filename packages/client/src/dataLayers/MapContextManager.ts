@@ -608,7 +608,7 @@ class MapContextManager {
       }
     }
     for (const id of layerIds) {
-      if (layerIds.indexOf(id) === -1) {
+      if (!this.visibleLayers[id]) {
         this.showLayerId(id);
       }
     }

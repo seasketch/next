@@ -647,3 +647,14 @@ query SurveyResponses($surveyId: Int!) {
     }
   }
 }
+
+query SurveyMapDetails($surveyId: Int!) {
+  survey(id: $surveyId) {
+    form {
+      formElements {
+        ...FormElementDetails
+      }
+      id
+    }
+  }
+}

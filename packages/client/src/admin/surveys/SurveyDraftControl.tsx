@@ -155,8 +155,7 @@ export default function SurveyDraftControl({ id }: { id: number }) {
                 className="mt-1 flex items-center text-sm text-gray-500"
               >
                 <Trans ns="admin:surveys">
-                  Send your potential respondents this link. Make sure your
-                  project is also public.
+                  Send your potential respondents this link.
                 </Trans>
               </span>
               <div
