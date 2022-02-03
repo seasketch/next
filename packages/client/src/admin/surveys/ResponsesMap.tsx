@@ -13,6 +13,7 @@ import {
   SurveyListDetailsFragment,
   useSurveyMapDetailsQuery,
 } from "../../generated/graphql";
+import MiniBasemapSelector from "../data/MiniBasemapSelector";
 import useMapEssentials from "./useMapEssentials";
 
 export default function ResponsesMap({ surveyId }: { surveyId: number }) {
@@ -88,10 +89,11 @@ export default function ResponsesMap({ surveyId }: { surveyId: number }) {
 
   return (
     <MapContext.Provider value={essentials.mapContext}>
+      <MiniBasemapSelector basemaps={essentials.basemaps} />
       <MapboxMap className="w-full h-full" />
       {spatialQuestions && (
         <select
-          className="absolute top-0 left-0 text-sm rounded mt-1 ml-1"
+          className="absolute top-0 right-0 text-sm rounded mt-1 mr-1"
           value={selectedQuestion}
         >
           {spatialQuestions.map((el) => (
