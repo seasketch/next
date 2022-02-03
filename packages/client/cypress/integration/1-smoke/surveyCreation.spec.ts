@@ -4,143 +4,73 @@ import { ProjectAccessControlSetting, useCreateSurveyMutation } from "../../../s
 let surveyId: any
 let authToken: any
 
-describe ("Survey creation smoke test", () => {
-  describe ('A user can create a survey', () => {
-    it('Creates the project', () => {
-      cy.getToken("User 1").then(({ access_token }) => {
-        cy.wrap(access_token).as("token");
-        cy.createProject(
-          "Maldives Survey Test",
-          "cy-maldives",
-          ProjectAccessControlSetting.Public,
-          true
-        )
-        .then((projectId) => {
-          cy.wrap(projectId).as("projectId").then(() => {
-            ///project = projectId
-          });
-        });
-      });
-      cy.visit('/projects')
-      
-      
-    });
-    after(() => {
-      cy.deleteProject("cy-maldives");
-    });
-    it("has the project", () => {
-      //console.log(project)
-    })
-  })
 
-  describe.only ('Creates and deletes survey', () => {
+describe.only ('Creates and deletes survey', () => {
     
-    beforeEach(() => {
+  beforeEach(() => {
       //cy.intercept("http://localhost:3857/graphql").as('request')
-      cy.intercept("http://localhost:3857/graphql", (req) => {
-        if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
-          req.alias = "createProjectRequest"
-        } else if ((req.body.operationName) && (req.body.operationName == "CypressCreateSurvey")) {
-          req.alias = "createSurveyRequest"
-        }
-      })
-      cy.getToken("User 1").then(({ access_token }) => {
-        console.log(access_token)
-        cy.wrap(access_token).as("token");
-        cy.createProject(
-          "Maldives Spatial Planning Test",
-          "cy-maldives",
-          ProjectAccessControlSetting.Public,
-          true
-        )
-        .then((projectId) => {
-          cy.wrap(projectId).as("projectId").then(() => {
-            cy.createSurvey(
-              "Maldives Ocean Use Survey Test", 
-              projectId, 
-              access_token
-            ).then((resp) => {
-              cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
-            })
-          });
+    cy.intercept("http://localhost:3857/graphql", (req) => {
+      if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
+        req.alias = "createProjectRequest"
+      } else if ((req.body.operationName) && (req.body.operationName == "CypressCreateSurvey")) {
+        req.alias = "createSurveyRequest"
+      }
+    })
+    cy.getToken("User 1").then(({ access_token }) => {
+      console.log(access_token)
+      cy.wrap(access_token).as("token");
+      cy.createProject(
+        "Maldives Spatial Planning Test",
+        "cy-maldives",
+        ProjectAccessControlSetting.Public,
+        true
+      )
+      .then((projectId) => {
+        cy.wrap(projectId).as("projectId").then(() => {
+          cy.createSurvey(
+            "Maldives Ocean Use Survey Test", 
+            projectId, 
+            access_token
+          ).then((resp) => {
+            cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
+          })
         });
       });
+    });
+  })
+  afterEach(() => {
+    cy.deleteProject("cy-maldives")
+    //delete the survey
+    cy.get("@token").then((token) => {
+      authToken = token
     })
-    afterEach(() => {
-      cy.deleteProject("cy-maldives")
-      cy.get("@token").then((token) => {
-        authToken = token
-      })
-      cy.get('@surveyId').then((id) => {
-        surveyId = id
-        cy.deleteSurvey(surveyId, authToken)
-      })
-    })
-    it ("Creates the project", () => {
-      cy.wait('@createProjectRequest')
-        .its('response.body.data.createProject.project')
-        .should('have.property', 'id')
-      //cy.contains("Maldives Spatial Planning Test")
-    })
-    it ("Creates the survey", () => {
-      cy.wait("@createSurveyRequest")
-        .its('response.body.data.makeSurvey.survey')
-        .should('have.property', 'id')
+    cy.get('@surveyId').then((id) => {
+      surveyId = id
+      cy.deleteSurvey(surveyId, authToken)
     })
   })
-    
-  describe ("An anonymous user can visit a survey", () => {
-    before(() => {
-      //user is not logged in
-      expect (window.localStorage.length).to.eq(0)
-      //console.log(window.localStorage.length)
-      //expect (window.localStorage).to.eq()
+  it ("Creates the project", () => {
+    cy.wait('@createProjectRequest')
+      .its('response.body.data.createProject.project')
+      .should('have.property', 'id')
+    //cy.contains("Maldives Spatial Planning Test")
+  })
+  it ("Creates the survey", () => {
+    cy.wait("@createSurveyRequest")
+      .its('response.body.data.makeSurvey.survey')
+      .should('have.property', 'id')
+  })
+  it ("Updates the survey", () => {
+    cy.get("@surveyId").then((id) => {
+      console.log(id)
+      surveyId = id
+      cy.get('@token').then((token) => {
+        authToken = token
+        cy.updateSurvey(surveyId, authToken).then((resp) => {
+          expect (resp.updateSurvey.survey.isDisabled).to.equal(false)
+        })
+      })
     })
-   
-    it ('Can visit the survey', () => {
-      
-      cy.visit('/maldivestest/surveys/11/0')
-      cy.get('[name="Begin Survey"]', {timeout:10000} )
-      
-    })
-    it("Doesn't have dropdown with options", () => {
-      cy.get('#chevron-down').should('not.exist')
-      //cy.get('#chevron-down').click()
-    })
-    it("Allows the user to move to name input page", () => {
-      cy.get('[name="Begin Survey"]').click()
-      cy.contains("What is your name?")
-    })
-    it("Does not allow user to advance without inputting name", () => {
-      cy.get('input').should('be.empty')
-      cy.get('[title="Next Question"]')
-        .should('have.class', 'pointer-events-none')
-    })
-    it('Allows user to input name and move to next page', () => {
-      cy.get('input').type('User One')
-      cy.contains('Next').click()
-      cy.contains('What is your email address?')
-    })
-    //it ('Displays the survey start page', () => {
-    //  cy.get('[name="Begin Survey"]', {timeout:10000} )
-    //  //cy.visit('/maldivestest/surveys/11/0/practice')
-    //  //cy.wait('@request')
-    //  //cy.wait('@request').its('response').then((resp) => {
-    //  //  console.log(resp)
-    //  //  //cy.wrap(resp).then(() => {
-    //  //  //  expect (resp.statusCode).to.eq(200)
-    //  //  //  cy.get('[name="Begin Survey"]', {timeout:10000} )
-    //  //  //  //cy.contains('Begin', {timeout:10000})
-    //  //  //})
-    //  //})
-//
-    //  //cy.contains('Begin')
-    //})
-
-    //it ('User can visit project admin', () => {
-    //  cy.visit('/maldivestest/admin')
-    //})
-
   })
 })
 

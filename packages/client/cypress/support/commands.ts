@@ -87,7 +87,12 @@ declare global {
 
       deleteSurvey(
         surveyId: number,
-        authToken: string
+        token: string
+      )
+
+      updateSurvey(
+        surveyId: number,
+        token: string
       )
       
     }
@@ -319,11 +324,11 @@ Cypress.Commands.add("createSurvey", (name: string, projectId: number, token: st
   })
 })
  
-Cypress.Commands.add("deleteSurvey", (id, token) => {
+Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
   const deleteSurvey = 
     `
       mutation deleteSurvey {
-          deleteSurvey (input: { id: ${id} })  {
+          deleteSurvey (input: { id: ${surveyId} })  {
             survey {
               name
             }
@@ -343,9 +348,117 @@ Cypress.Commands.add("deleteSurvey", (id, token) => {
         },
         failOnStatusCode: false
       })
-      cy.log(`Deleted survey with id of ${id}.`)
+      cy.log(`Deleted survey with id of ${surveyId}.`)
   });
 
+  Cypress.Commands.add("updateSurvey", (id: number, token: string) => {
+    if (!token) {
+      throw new Error(
+        "No token set. Use cy.wrap(token.access_token).as('token') to set a project owner."
+      );
+    }
+    return cy
+    .mutation(
+      gql`
+        mutation CypressUpdateSurvey($id: Int!) {
+          updateSurvey(input: { 
+            id: $id 
+            patch: {
+              isDisabled: false
+            }
+          }) 
+          {
+            survey {
+              id,
+              isDisabled, 
+              project {
+                slug
+              }
+            }
+          }
+        }
+      `,
+    { id },
+    (token as any)
+  )
+  .then((data) => {
+    Cypress.log(data);
+    return data
+    })
+  })
+
+  
+
+  //Cypress.Commands.add("updateSurvey", (surveyId, token) => {
+  //  const updateSurvey = 
+  //    `
+  //      mutation updateSurvey {
+  //          updateSurvey (input: { 
+  //            id: ${surveyId},
+  //            patch: {
+  //              isDisabled: false
+  //            } 
+  //            })  {
+  //            survey {
+  //              name,
+  //              isDisabled
+  //            }
+  //          }
+  //      }
+  //    `;
+  //    cy.request({
+  //        log: true,
+  //        url: 'http://localhost:3857/graphql',
+  //        method: 'POST',
+  //        headers: {
+  //            'Content-Type': 'application/json',
+  //            'Authorization': `Bearer ${token}`
+  //        },
+  //        body: {
+  //            query: updateSurvey
+  //        },
+  //        failOnStatusCode: false
+  //      })
+  //      cy.log(`Deleted survey with id of ${surveyId}.`)
+  //  });
+////Cypress.Commands.add('updateSurvey', (surveyId, isEnabled) => {
+//  return cy.get("@token").then((token) => {
+//    if (!token) {
+//      throw new Error(
+//        "No token set. Use cy.wrap(token.access_token).as('token') to set a project owner."
+//      );
+//    }
+//  return cy
+//    .mutation(
+//      gql`
+//        mutation CypressUpdateSurvey(
+//          $id: Int!
+//          $isEnabled: Boolean
+//        ) {
+//          updateSurvey(
+//            input: {
+//              id: $id
+//              patch: {
+//                isEnabled: $isEnabled
+//              }
+//            }
+//        ) {
+//          survey {
+//            id,
+//            isEnabled,
+//            name
+//          }
+//        }
+//      }
+//    `,
+//  {
+//    id: surveyId,
+//    isEnabled: isEnabled
+//  },
+//    (token as unknown) as string
+//  )
+//})
+//})
   //Cypress.Commands.add("deleteSurvey", (surveyId: number, authToken: string) => {
   //  cy.exec(`cypress/support/deleteSurvey.js ${surveyId}`, {failOnNonZeroExit: false}).then((out) => {
   //    cy.log(out.stdout);
