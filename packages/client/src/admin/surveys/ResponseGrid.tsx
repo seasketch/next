@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { getAnswers, getColumnNames } from "../../formElements/ExportUtils";
 import { sortFormElements } from "../../formElements/FormElement";
@@ -14,6 +14,7 @@ import {
 import { ChevronDownIcon, UploadIcon } from "@heroicons/react/outline";
 import DownloadIcon from "../../components/DownloadIcon";
 import Papa from "papaparse";
+import ExportResponsesModal from "./ExportResponsesModal";
 
 interface Props {
   surveyId: number;
@@ -39,6 +40,7 @@ function valueFormatter(accessor: string) {
 
 export default function ResponseGrid(props: Props) {
   const { t } = useTranslation("admin:surveys");
+  const [showExportModal, setShowExportModal] = useState(false);
   const { data, loading, error } = useSurveyResponsesQuery({
     variables: {
       surveyId: props.surveyId,
@@ -173,7 +175,7 @@ export default function ResponseGrid(props: Props) {
     >
       <h2 className="text-xl">{t("Survey Responses")}</h2>
       <FakeTabs
-        exportData={exportData}
+        onClickExport={() => setShowExportModal(true)}
         tabs={[
           {
             name: "All",
@@ -297,15 +299,24 @@ export default function ResponseGrid(props: Props) {
           </div>
         </div>
       </div>
+      <ExportResponsesModal
+        dataForExport={exportData}
+        open={showExportModal}
+        onRequestClose={() => setShowExportModal(false)}
+        spatialFormElements={(data.survey?.form?.formElements || [])?.filter(
+          (el) => el.type?.isSpatial
+        )}
+        surveyId={props.surveyId}
+      />
     </div>
   );
 }
 function FakeTabs({
   tabs,
-  exportData,
+  onClickExport,
 }: {
   tabs: { current: boolean; name: string; href: string; count?: number }[];
-  exportData: string;
+  onClickExport: () => void;
 }) {
   return (
     <>
@@ -359,13 +370,7 @@ function FakeTabs({
             ))}
             <button
               className="text-gray-500 px-1 py-4 text-sm font-medium border-b-2 border-transparent"
-              onClick={(e) => {
-                download(
-                  exportData,
-                  "responses.csv",
-                  "text/csv;encoding:utf-8"
-                );
-              }}
+              onClick={onClickExport}
             >
               <Trans ns="admin:surveys">Export</Trans>
               <DownloadIcon className="w-4 h-4 mx-2 -mt-0.5" />
@@ -376,34 +381,3 @@ function FakeTabs({
     </>
   );
 }
-
-var download = function (content: string, fileName: string, mimeType: string) {
-  var a = document.createElement("a");
-  mimeType = mimeType || "application/octet-stream";
-
-  // @ts-ignore
-  if (navigator.msSaveBlob) {
-    // IE10
-    // @ts-ignore
-    navigator.msSaveBlob(
-      new Blob([content], {
-        type: mimeType,
-      }),
-      fileName
-    );
-  } else if (URL && "download" in a) {
-    //html5 A[download]
-    a.href = URL.createObjectURL(
-      new Blob([content], {
-        type: mimeType,
-      })
-    );
-    a.setAttribute("download", fileName);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  } else {
-    window.location.href =
-      "data:application/octet-stream," + encodeURIComponent(content); // only this mime type is supported
-  }
-};

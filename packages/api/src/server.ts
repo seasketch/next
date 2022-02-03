@@ -154,6 +154,11 @@ app.use(
 
     if (format === "geojson") {
       res.header({ "Content-Type": "application/json" });
+      res.header({
+        "Content-Disposition": `attachment; filename="${
+          req.query.filename || `${req.params.element_id}.geojson.json`
+        }"`,
+      });
       res.send(JSON.stringify(collection));
     } else {
       throw new Error(
