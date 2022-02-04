@@ -987,7 +987,7 @@ describe("Handling of sketches", () => {
           })}, false, true, false, false)`
         );
         expect(response.user_id).toBe(adminId);
-        expect(response.data[elementId].length).toBe(2);
+        expect(response.data[elementId].collection.length).toBe(2);
         const sketches = await conn.many(
           sql`select * from sketches where response_id = ${response.id}`
         );
