@@ -167,9 +167,21 @@ registerComponent<SpatialAccessPriorityProps, SAPValueType>(
     return [`${exportId}_sectors`, `${exportId}_feature_ids`];
   },
   (settings, exportId, answer) => {
-    return {
-      [`${exportId}_sectors`]: answer.sectors,
-      [`${exportId}_feature_ids`]: answer.collection || [],
-    };
+    if (Array.isArray(answer)) {
+      // Bug in (very) early rollout stored the wrong data structure internally
+      // so selected sectors were lost.
+      // https://github.com/seasketch/next/commit/3a69e33b14dd444b240edc24aa95d754099e2c25
+      return {
+        [`${exportId}_sectors`]: [
+          "Unknown -- https://github.com/seasketch/next/commit/3a69e33b14dd444b240edc24aa95d754099e2c25",
+        ],
+        [`${exportId}_feature_ids`]: answer,
+      };
+    } else {
+      return {
+        [`${exportId}_sectors`]: answer.sectors,
+        [`${exportId}_feature_ids`]: answer.collection || [],
+      };
+    }
   }
 );
