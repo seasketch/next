@@ -137,7 +137,7 @@ export default function ResponseGrid(props: Props) {
     () => ({
       minWidth: 30,
       width: 175,
-      maxWidth: 400,
+      maxWidth: 800,
     }),
     []
   );
