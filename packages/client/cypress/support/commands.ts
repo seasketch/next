@@ -310,7 +310,16 @@ Cypress.Commands.add("createSurvey", (name: string, projectId: number, token: st
         makeSurvey(input: { name: $name, projectId: $projectId }) {
           survey {
             id,
-            name
+            name,
+            form {
+              id, 
+              templateType, 
+              formElements {
+                type {
+                  componentName
+                }
+              }
+            }
           }
         }
       }
@@ -385,6 +394,7 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
   )
   .then((data) => {
     Cypress.log(data);
+    console.log(data)
     return data
     })
   })
