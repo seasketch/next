@@ -28,7 +28,7 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
   const survey = data?.survey;
   return (
     <div className="flex flex-col min-h-full max-h-full">
-      <div className="pb-5">
+      <div className="">
         <nav
           className="flex items-start px-4 py-3 sm:px-6 lg:px-8"
           aria-label="Breadcrumb"

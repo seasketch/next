@@ -140,7 +140,7 @@ registerComponent<ComboBoxProps, ComboBoxValue>(
   },
   (settings, exportId, answer) => {
     return {
-      [exportId]: Array.isArray(answer) ? answer[0] : undefined,
+      [exportId]: Array.isArray(answer) ? answer[0] : answer || undefined,
     };
   }
 );
@@ -169,9 +169,7 @@ registerComponent<SpatialAccessPriorityProps, SAPValueType>(
   (settings, exportId, answer) => {
     return {
       [`${exportId}_sectors`]: answer.sectors,
-      [`${exportId}_feature_ids`]: (answer.collection?.features || []).map(
-        (f) => f.id
-      ),
+      [`${exportId}_feature_ids`]: answer.collection || [],
     };
   }
 );

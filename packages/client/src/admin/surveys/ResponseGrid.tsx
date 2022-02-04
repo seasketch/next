@@ -29,7 +29,7 @@ function valueFormatter(accessor: string) {
     } else if (value === false) {
       return "False";
     } else if (Array.isArray(value)) {
-      return value.map((v) => valueFormatter(accessor)(v)).join(", ");
+      return value.map((v) => v.toString()).join(", ");
     } else if (value === undefined || value === null) {
       return "";
     } else {
