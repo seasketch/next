@@ -126,21 +126,7 @@ describe("Survey creation smoke test", () => {
     })
     it("Can visit the survey", () => {
       cy.contains('Begin', {timeout: 30000})
-      //cy.wait("@createSurveyRequest")
-      //  .its('response.body.data.makeSurvey.survey')
-      //  .should('have.property', 'id')
-      //cy.get('@surveyId').then((id) => {
-      //  surveyId = id
-      //  cy.get('@token').then((token) => {
-      //    authToken = token
-      //    cy.updateSurvey(surveyId, authToken).then((resp) => {
-      //      expect (resp.updateSurvey.survey.isDisabled).to.equal(false)
-      //      expect (resp.updateSurvey.survey.accessType).to.equal('PUBLIC')
-      //    })
-      //  })
-      //  cy.visit(`${slug}/surveys/${surveyId}`, {timeout: 30000})
-      //  //cy.contains('Begin')
-      //})
+     
     })
   })
 })

@@ -394,7 +394,6 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
   )
   .then((data) => {
     Cypress.log(data);
-    console.log(data)
     return data
     })
   })
