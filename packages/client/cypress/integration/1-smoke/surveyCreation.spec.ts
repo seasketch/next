@@ -1,9 +1,11 @@
 //const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
 import { ProjectAccessControlSetting, useCreateSurveyMutation } from "../../../src/generated/graphql";
 
+
 let surveyId: any
 let authToken: any
 let formId: any
+
 
 function generateSlug() { 
   const result = Math.random().toString(36).substring(2,7);
@@ -23,7 +25,6 @@ describe("Survey creation smoke test", () => {
         }
       })
       cy.getToken("User 1").then(({ access_token }) => {
-        console.log(access_token)
         cy.wrap(access_token).as("token");
         cy.createProject(
           `Maldives Spatial Planning Test - ${slug}`,
@@ -38,7 +39,6 @@ describe("Survey creation smoke test", () => {
               projectId, 
               access_token
             ).then((resp) => {
-              console.log(resp)
               cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
               cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
             })
@@ -49,15 +49,6 @@ describe("Survey creation smoke test", () => {
     afterEach(() => {
       cy.deleteProject(`${slug}`)
     })
-      //delete the survey
-      //cy.get("@token").then((token) => {
-    //    authToken = token
-    //  })
-    //  cy.get('@surveyId').then((id) => {
-    //    surveyId = id
-    //    cy.deleteSurvey(surveyId, authToken)
-    //  })
-    //})
     it ("Creates the project", () => {
       cy.wait('@createProjectRequest')
         .its('response.body.data.createProject.project')
@@ -69,9 +60,8 @@ describe("Survey creation smoke test", () => {
         .its('response.body.data.makeSurvey.survey')
         .should('have.property', 'id')
     })
-    it ("Updates the survey's isDisabled and accessType fields", () => {
+    it ("Updates the survey's isDisabled field", () => {
       cy.get("@surveyId").then((id) => {
-        console.log(id)
         surveyId = id
         cy.get('@token').then((token) => {
           authToken = token
@@ -82,9 +72,15 @@ describe("Survey creation smoke test", () => {
         })
       })
     })
+    it ("Can get form elements from fixture", () => {
+      cy.updateSurveyForm(3, "sadlfjasdfl").then((resp) => {
+        let element = resp[0]
+        expect (element).to.have.property('typeId')
+      })
+    })
   })
-  describe.only("User survey flow", () => {
-    before(() => {
+  describe("User survey flow", () => {
+    beforeEach(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
         if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
           req.alias = "createProjectRequest"
@@ -93,7 +89,6 @@ describe("Survey creation smoke test", () => {
         }
       })
       cy.getToken("User 1").then(({ access_token }) => {
-        console.log(access_token)
         cy.wrap(access_token).as("token");
         cy.createProject(
           `Maldives Spatial Planning Test - ${slug}`,
@@ -109,10 +104,9 @@ describe("Survey creation smoke test", () => {
               access_token
             ).then((resp) => {
               let id = resp.makeSurvey.survey.id
-              console.log(access_token)
               cy.updateSurvey(id, access_token)
               //cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
-              cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
+              cy.wrap(id).as('surveyId')
             })
           });
         });
@@ -121,12 +115,11 @@ describe("Survey creation smoke test", () => {
         })
       });
     })
-    after(() => {
+    afterEach(() => {
       cy.deleteProject(`${slug}`)
     })
     it("Can visit the survey", () => {
-      cy.contains('Begin', {timeout: 30000})
-     
+      cy.contains('Begin', {timeout: 30000}).click()
     })
   })
 })

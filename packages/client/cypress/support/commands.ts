@@ -6,6 +6,7 @@ import { ProjectAccessControlSetting } from "../../src/generated/graphql";
 
 const jwt = require("jsonwebtoken");
 const users = require("../fixtures/users.json");
+const formElements = require("../fixtures/formElements.json")
 
 const AUTH0_CLIENT_ID = Cypress.env("auth0_client_id");
 const AUTH0_CLIENT_SECRET = Cypress.env("auth0_client_secret");
@@ -92,6 +93,15 @@ declare global {
 
       updateSurvey(
         surveyId: number,
+        token: string
+      )
+
+      getSurvey(
+        surveyId: number
+      )
+
+      updateSurveyForm(
+        formId: number,
         token: string
       )
       
@@ -318,6 +328,8 @@ Cypress.Commands.add("createSurvey", (name: string, projectId: number, token: st
                 type {
                   componentName
                 }
+                body,
+                typeId
               }
             }
           }
@@ -360,7 +372,7 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
       cy.log(`Deleted survey with id of ${surveyId}.`)
   });
 
-  Cypress.Commands.add("updateSurvey", (id: number, token: string) => {
+  Cypress.Commands.add("updateSurvey", (surveyId: number, token: string) => {
     if (!token) {
       throw new Error(
         "No token set. Use cy.wrap(token.access_token).as('token') to set a project owner."
@@ -369,9 +381,9 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
     return cy
     .mutation(
       gql`
-        mutation CypressUpdateSurvey($id: Int!) {
+        mutation CypressUpdateSurvey($surveyId: Int!) {
           updateSurvey(input: { 
-            id: $id 
+            id: $surveyId 
             patch: {
               isDisabled: false, 
               accessType: PUBLIC
@@ -389,7 +401,7 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
           }
         }
       `,
-    { id },
+    { surveyId },
     (token as any)
   )
   .then((data) => {
@@ -398,80 +410,68 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
     })
   })
 
-  
-
-  //Cypress.Commands.add("updateSurvey", (surveyId, token) => {
-  //  const updateSurvey = 
-  //    `
-  //      mutation updateSurvey {
-  //          updateSurvey (input: { 
-  //            id: ${surveyId},
-  //            patch: {
-  //              isDisabled: false
-  //            } 
-  //            })  {
-  //            survey {
-  //              name,
-  //              isDisabled
+  //Cypress.Commands.add("getSurvey", (surveyId: number) => {
+  //  return cy
+  //  .query(
+  //    gql`
+  //      query CypressGetSurvey($surveyId: Int!) {
+  //        survey (id: $surveyId) {
+  //          name
+  //          form {
+  //            formElements {
+  //              typeId,
+  //              body
   //            }
   //          }
+  //        }
   //      }
-  //    `;
-  //    cy.request({
-  //        log: true,
-  //        url: 'http://localhost:3857/graphql',
-  //        method: 'POST',
-  //        headers: {
-  //            'Content-Type': 'application/json',
-  //            'Authorization': `Bearer ${token}`
-  //        },
-  //        body: {
-  //            query: updateSurvey
-  //        },
-  //        failOnStatusCode: false
-  //      })
-  //      cy.log(`Deleted survey with id of ${surveyId}.`)
-  //  });
-////Cypress.Commands.add('updateSurvey', (surveyId, isEnabled) => {
-//  return cy.get("@token").then((token) => {
-//    if (!token) {
-//      throw new Error(
-//        "No token set. Use cy.wrap(token.access_token).as('token') to set a project owner."
-//      );
-//    }
-//  return cy
-//    .mutation(
-//      gql`
-//        mutation CypressUpdateSurvey(
-//          $id: Int!
-//          $isEnabled: Boolean
-//        ) {
-//          updateSurvey(
-//            input: {
-//              id: $id
-//              patch: {
-//                isEnabled: $isEnabled
-//              }
-//            }
-//        ) {
-//          survey {
-//            id,
-//            isEnabled,
-//            name
-//          }
-//        }
-//      }
-//    `,
-//  {
-//    id: surveyId,
-//    isEnabled: isEnabled
-//  },
-//    (token as unknown) as string
-//  )
-//})
-//})
-  //Cypress.Commands.add("deleteSurvey", (surveyId: number, authToken: string) => {
-  //  cy.exec(`cypress/support/deleteSurvey.js ${surveyId}`, {failOnNonZeroExit: false}).then((out) => {
-  //    cy.log(out.stdout);
-  //  });
-  //});
+  //    `,
+  //  { surveyId }
+  //)
+  //.then((data) => {
+  //  Cypress.log(data);
+  //  return data
+  //  })
+  //})
+
+  Cypress.Commands.add("updateSurveyForm", (formId: number, token: string) => {
+    let form = formElements["Maldives"]["data"]["survey"]["form"]["formElements"]
+    return form
+    //console.log(form)
+    //if (!token) {
+    //  throw new Error(
+    //    "No token set. Use cy.wrap(token.access_token).as('token') to set a project owner."
+    //  );
+    //}
+    //return cy
+    //.mutation(
+    //  gql`
+    //    mutation CypressUpdateSurveyForm($id: Int!) {
+    //      updateSurvey(input: { 
+    //        id: $id 
+    //        patch: {
+    //          isDisabled: false, 
+    //          accessType: PUBLIC
+    //        }
+    //      }) 
+    //      {
+    //        survey {
+    //          id,
+    //          isDisabled,
+    //          accessType, 
+    //          project {
+    //            slug
+    //          }
+    //        }
+    //      }
+    //    }
+    //  `,
+    //{ formId },
+    //(token as any)
+  //)//
+  //.then((data) => {
+  //  Cypress.log(data);
+  //  return data
+  //  })
+  })
+
