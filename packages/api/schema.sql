@@ -8691,6 +8691,17 @@ COMMENT ON FUNCTION public.survey_invites_status(invite public.survey_invites) I
 
 
 --
+-- Name: survey_responses_account_email(public.survey_responses); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.survey_responses_account_email(r public.survey_responses) RETURNS text
+    LANGUAGE sql STABLE
+    AS $$
+    select canonical_email from users where id = r.user_id; 
+  $$;
+
+
+--
 -- Name: survey_validation_info(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -21751,6 +21762,14 @@ GRANT ALL ON FUNCTION public.survey_invite_was_used(invite_id integer) TO anon;
 
 REVOKE ALL ON FUNCTION public.survey_invites_status(invite public.survey_invites) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.survey_invites_status(invite public.survey_invites) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION survey_responses_account_email(r public.survey_responses); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.survey_responses_account_email(r public.survey_responses) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.survey_responses_account_email(r public.survey_responses) TO seasketch_user;
 
 
 --
