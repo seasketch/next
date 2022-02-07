@@ -4153,6 +4153,7 @@ type FormElement implements Node {
   """Form this field belongs to."""
   formId: Int!
   id: Int!
+  isInput: Boolean
 
   """Users must provide input for these fields before submission."""
   isRequired: Boolean!

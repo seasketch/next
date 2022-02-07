@@ -4632,6 +4632,17 @@ COMMENT ON FUNCTION public.export_spatial_responses(fid integer) IS '@omit';
 
 
 --
+-- Name: form_elements_is_input(public.form_elements); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.form_elements_is_input(el public.form_elements) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+    select is_input from form_element_types where form_element_types.component_name = el.type_id;
+  $$;
+
+
+--
 -- Name: form_elements_sketch_class(public.form_elements); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9348,7 +9359,7 @@ CREATE FUNCTION public.users_is_admin(u public.users) RETURNS boolean
     declare
       "isAdmin" boolean;
     begin
-      select coalesce(is_admin, false) into "isAdmin" from project_participants where user_id = u.id and project_id = current_setting('session.project_id', true)::int and session_is_admin(current_setting('session.project_id', true)::int);
+      select coalesce(is_admin, session_is_superuser(), false) into "isAdmin" from project_participants where user_id = u.id and project_id = current_setting('session.project_id', true)::int and session_is_admin(current_setting('session.project_id', true)::int);
       return coalesce("isAdmin", false);
     end;
   $$;
@@ -15766,6 +15777,14 @@ GRANT ALL ON FUNCTION public.export_spatial_responses(fid integer) TO seasketch_
 --
 
 REVOKE ALL ON FUNCTION public.find_srid(character varying, character varying, character varying) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION form_elements_is_input(el public.form_elements); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.form_elements_is_input(el public.form_elements) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.form_elements_is_input(el public.form_elements) TO anon;
 
 
 --
