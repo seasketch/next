@@ -1,6 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { getAnswers, getColumnNames } from "../../formElements/ExportUtils";
+import {
+  getAnswers,
+  getColumnNames,
+  getRowsForExport,
+} from "../../formElements/ExportUtils";
 import { sortFormElements } from "../../formElements/FormElement";
 import { useSurveyResponsesQuery } from "../../generated/graphql";
 import {
@@ -10,6 +14,8 @@ import {
   useFlexLayout,
   useResizeColumns,
   Row,
+  Column,
+  useGlobalFilter,
 } from "react-table";
 import { ChevronDownIcon, UploadIcon } from "@heroicons/react/outline";
 import DownloadIcon from "../../components/DownloadIcon";
@@ -38,6 +44,24 @@ function valueFormatter(accessor: string) {
   };
 }
 
+type TabName = "responses" | "practice" | "archived";
+
+function filterRows(
+  rows: Row<{ is_practice: boolean; is_archived: boolean }>[],
+  selectedTab: TabName
+) {
+  if (selectedTab === "responses") {
+    const filtered = rows.filter((r) => !r.original.is_practice);
+    return filtered;
+  } else if (selectedTab === "practice") {
+    return rows.filter((r) => r.original.is_practice);
+  } else if (selectedTab === "archived") {
+    return rows.filter((r) => !!r.original.is_archived);
+  } else {
+    throw new Error("Unknown selectedTab");
+  }
+}
+
 export default function ResponseGrid(props: Props) {
   const { t } = useTranslation("admin:surveys");
   const [showExportModal, setShowExportModal] = useState(false);
@@ -47,8 +71,16 @@ export default function ResponseGrid(props: Props) {
     },
   });
   const survey = data?.survey;
+  const [tab, setTab] = useState("responses");
 
-  const columns = useMemo(() => {
+  const [rowData, exportColumnNames] = useMemo(() => {
+    return getRowsForExport(
+      survey?.surveyResponsesConnection.nodes || [],
+      survey?.form?.formElements || []
+    );
+  }, [survey?.surveyResponsesConnection.nodes]);
+
+  const columns = useMemo<Column[]>(() => {
     if (survey) {
       let columns: string[] = [];
       const formElements = survey?.form?.formElements
@@ -65,69 +97,46 @@ export default function ResponseGrid(props: Props) {
           columns.push(...cols);
         });
       return [
-        { Header: "id", accessor: "id", width: 65 },
         {
-          Header: "created",
-          accessor: "createdAt",
+          Header: "id",
+          accessor: "id",
+        },
+        {
+          Header: "created_at_utc",
+          accessor: "created_at_utc",
           sortDescFirst: true,
           sortType: (a: Row, b: Row) =>
-            new Date(a.values.createdAt).getTime() -
-            new Date(b.values.createdAt).getTime(),
+            new Date(a.values.created_at_utc).getTime() -
+            new Date(b.values.created_at_utc).getTime(),
         },
-        ...columns.map((accessor) => ({
-          Header: accessor,
-          accessor: valueFormatter(accessor),
-        })),
+        {
+          Header: "updated_at_utc",
+          accessor: "updated_at_utc",
+          sortDescFirst: true,
+          sortType: (a: Row, b: Row) =>
+            new Date(a.values.updated_at_utc).getTime() -
+            new Date(b.values.updated_at_utc).getTime(),
+        },
+        ...exportColumnNames
+          .filter(
+            (c) =>
+              c !== "created_at_utc" && c !== "updated_at_utc" && c !== "id"
+          )
+          .map((h) => ({ Header: h, accessor: valueFormatter(h) })),
       ];
     } else {
       return [];
     }
-  }, [survey]);
-
-  const rowData = useMemo(() => {
-    const formElements = survey?.form?.formElements
-      ? sortFormElements(survey.form.formElements)
-      : [];
-    if (survey?.surveyResponsesConnection.nodes) {
-      let rows: any[] = [];
-      for (const response of [...survey?.surveyResponsesConnection.nodes].sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )) {
-        let rowData: { [column: string]: any } = {};
-        for (const element of formElements) {
-          const answer = response.data[element.id];
-          if (answer !== undefined) {
-            rowData = {
-              ...rowData,
-              ...getAnswers(
-                element.typeId,
-                element.exportId!,
-                element.componentSettings,
-                answer
-              ),
-            };
-          }
-        }
-        rows.push({
-          id: response.id,
-          createdAt: new Date(response.createdAt).toLocaleString([], {
-            // @ts-ignore
-            timeStyle: "short",
-            dateStyle: "medium",
-          }),
-          ...rowData,
-        });
-      }
-      return rows;
-    } else {
-      return [];
-    }
-  }, [survey?.surveyResponsesConnection.nodes]);
+  }, [survey, exportColumnNames]);
 
   const exportData = useMemo(() => {
     if (rowData.length && columns.length) {
-      return Papa.unparse(rowData, { columns: columns.map((c) => c.Header) });
+      return Papa.unparse(
+        rowData.filter((r) => !r.is_practice),
+        {
+          columns: exportColumnNames,
+        }
+      );
     } else {
       return "";
     }
@@ -142,23 +151,29 @@ export default function ResponseGrid(props: Props) {
     []
   );
 
+  const globalFilter = useMemo(() => {
+    return (rows: any[], columnIds: any, selectedTab: TabName) => {
+      // @ts-ignore
+      return filterRows(rows, selectedTab) as Row[];
+    };
+  }, []);
+
   const tableInstance = useTable(
     {
       columns,
       data: rowData,
       defaultColumn,
       initialState: {
-        sortBy: [{ id: "createdAt", desc: true }],
+        sortBy: [{ id: "created_at_utc", desc: true }],
+        globalFilter: tab,
       },
+      globalFilter,
     },
+    useGlobalFilter,
     useSortBy,
     useFlexLayout,
     useResizeColumns
   );
-
-  if (!data) {
-    return null;
-  }
 
   const {
     getTableProps,
@@ -167,7 +182,16 @@ export default function ResponseGrid(props: Props) {
     rows,
     prepareRow,
     resetResizing,
+    setGlobalFilter,
   } = tableInstance;
+
+  useEffect(() => {
+    setGlobalFilter(tab);
+  }, [tab]);
+
+  if (!data) {
+    return null;
+  }
 
   return (
     <div
@@ -175,24 +199,28 @@ export default function ResponseGrid(props: Props) {
     >
       <FakeTabs
         onClickExport={() => setShowExportModal(true)}
+        onChange={(value) => setTab(value)}
         tabs={[
           {
+            id: "responses",
             name: "Survey Responses",
             count: survey?.submittedResponseCount || 0,
             href: "#",
-            current: true,
+            current: tab === "responses",
           },
           {
+            id: "practice",
             name: "Practice Responses",
             count: survey?.practiceResponseCount || 0,
             href: "#",
-            current: false,
+            current: tab === "practice",
           },
           {
+            id: "archived",
             name: "Archived",
             count: 0,
             href: "#",
-            current: false,
+            current: tab === "archived",
           },
         ]}
       />
@@ -308,9 +336,17 @@ export default function ResponseGrid(props: Props) {
 function FakeTabs({
   tabs,
   onClickExport,
+  onChange,
 }: {
-  tabs: { current: boolean; name: string; href: string; count?: number }[];
+  tabs: {
+    current: boolean;
+    name: string;
+    href: string;
+    count?: number;
+    id: string;
+  }[];
   onClickExport: () => void;
+  onChange: (value: string) => void;
 }) {
   return (
     <>
@@ -327,9 +363,12 @@ function FakeTabs({
           name="tabs"
           className="mt-4 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
           defaultValue={tabs.find((tab) => tab.current)!.name}
+          onChange={(e) => onChange(e.target.value)}
         >
           {tabs.map((tab) => (
-            <option key={tab.name}>{tab.name}</option>
+            <option value={tab.id} key={tab.name}>
+              {tab.name}
+            </option>
           ))}
         </select>
       </div>
@@ -340,6 +379,7 @@ function FakeTabs({
               <a
                 key={tab.name}
                 href={tab.href}
+                onClick={() => onChange(tab.id)}
                 className={`${
                   tab.current
                     ? "border-primary-500 text-primary-600"

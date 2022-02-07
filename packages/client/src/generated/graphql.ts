@@ -3530,6 +3530,7 @@ export type FormElement = Node & {
   /** Form this field belongs to. */
   formId: Scalars['Int'];
   id: Scalars['Int'];
+  isInput?: Maybe<Scalars['Boolean']>;
   /** Users must provide input for these fields before submission. */
   isRequired: Scalars['Boolean'];
   /**
@@ -9368,6 +9369,7 @@ export type SurveyPatch = {
 
 export type SurveyResponse = Node & {
   __typename?: 'SurveyResponse';
+  accountEmail?: Maybe<Scalars['String']>;
   /**
    * Should be set by the client on submission and tracked by cookies or
    * localStorage. Surveys that permit only a single entry enable users to bypass
@@ -12978,7 +12980,7 @@ export type AddFormElementTypeDetailsFragment = (
 
 export type FormElementDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
@@ -13508,7 +13510,7 @@ export type SurveyResponsesQuery = (
       { __typename?: 'SurveyResponsesConnection' }
       & { nodes: Array<(
         { __typename?: 'SurveyResponse' }
-        & Pick<SurveyResponse, 'id' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
+        & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
       )> }
     ) }
   )> }
@@ -14433,6 +14435,7 @@ export const FormElementDetailsFragmentDoc = gql`
   type {
     ...AddFormElementTypeDetails
   }
+  isInput
   typeId
   backgroundColor
   secondaryColor
@@ -19056,8 +19059,10 @@ export const SurveyResponsesDocument = gql`
     surveyResponsesConnection {
       nodes {
         id
+        surveyId
         bypassedDuplicateSubmissionControl
         updatedAt
+        accountEmail
         userId
         createdAt
         data

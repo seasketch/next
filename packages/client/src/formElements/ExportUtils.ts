@@ -8,6 +8,11 @@ import {
   SAPValueType,
   SpatialAccessPriorityProps,
 } from "./SpatialAccessPriority/SpatialAccessPriority";
+import {
+  FormElementDetailsFragment,
+  SurveyResponse,
+} from "../generated/graphql";
+import { sortFormElements } from "./FormElement";
 
 /**
  * Returns the column names that should appear in survey data export for a given
@@ -59,6 +64,92 @@ export function getAnswers(
   } else {
     return { [exportId]: answer };
   }
+}
+
+type ExportRow = { [key: string]: string | boolean | number | null } & {
+  id: number;
+  survey_id: number;
+  created_at_utc: string;
+  updated_at_utc: string | null;
+  is_practice: boolean;
+  is_duplicate_ip: boolean;
+  is_logged_in: boolean;
+  account_email: string | null;
+};
+
+export function getRowsForExport(
+  responses: Pick<
+    SurveyResponse,
+    | "id"
+    | "surveyId"
+    | "createdAt"
+    | "updatedAt"
+    | "isPractice"
+    | "isDuplicateIp"
+    | "userId"
+    | "data"
+    | "accountEmail"
+  >[],
+  formElements: Pick<
+    FormElementDetailsFragment,
+    "typeId" | "componentSettings" | "exportId" | "position" | "id" | "isInput"
+  >[]
+): [ExportRow[], string[]] {
+  const sortedElements = sortFormElements(formElements);
+  const rows: ExportRow[] = [];
+  const columns = [
+    "id",
+    "survey_id",
+    "created_at_utc",
+    "updated_at_utc",
+    "is_practice",
+    "is_duplicate_ip",
+    "is_logged_in",
+    "account_email",
+  ];
+  for (const element of sortedElements) {
+    if (element.isInput) {
+      columns.push(
+        ...getColumnNames(
+          element.typeId,
+          element.exportId!,
+          element.componentSettings
+        )
+      );
+    }
+  }
+  for (const response of responses) {
+    // meta columns
+    const row: ExportRow = {
+      id: response.id,
+      survey_id: response.surveyId,
+      created_at_utc: new Date(response.createdAt).toISOString(),
+      is_practice: response.isPractice,
+      updated_at_utc: response.updatedAt
+        ? new Date(response.updatedAt).toISOString()
+        : null,
+      is_duplicate_ip: response.isDuplicateIp,
+      is_logged_in: !!response.userId,
+      account_email: response.accountEmail || null,
+    };
+    // answer data
+    for (const element of sortedElements) {
+      const answer = response.data[element.id];
+      if (answer !== undefined) {
+        const columnData = getAnswers(
+          element.typeId,
+          element.exportId!,
+          element.componentSettings,
+          answer
+        );
+        for (const col in columnData) {
+          row[col] = columnData[col];
+        }
+      }
+    }
+    rows.push(row);
+  }
+  return [rows, columns];
 }
 
 type ColumnsFunction<T = any> = (

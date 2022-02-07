@@ -10419,6 +10419,8 @@ input SurveyPatch {
 }
 
 type SurveyResponse implements Node {
+  accountEmail: String
+
   """
   Should be set by the client on submission and tracked by cookies or
   localStorage. Surveys that permit only a single entry enable users to bypass

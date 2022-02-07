@@ -67,6 +67,7 @@ fragment FormElementDetails on FormElement {
   type {
     ...AddFormElementTypeDetails
   }
+  isInput
   typeId
   backgroundColor
   secondaryColor
@@ -634,8 +635,10 @@ query SurveyResponses($surveyId: Int!) {
     surveyResponsesConnection {
       nodes {
         id
+        surveyId
         bypassedDuplicateSubmissionControl
         updatedAt
+        accountEmail
         userId
         createdAt
         data
