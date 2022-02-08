@@ -82,7 +82,7 @@ registerComponent<SpatialAccessPriorityProps, SAPValueType>({
   name: "SpatialAccessPriorityInput",
   fname: "SpatialAccessPriority/SpatialAccessPriority",
   getColumns: (componentSettings, exportId) => {
-    return [`${exportId}_sectors`, `${exportId}_feature_ids`];
+    return [`${exportId}_sectors`];
   },
   getAnswers: (settings, exportId, answer) => {
     if (Array.isArray(answer)) {
@@ -93,12 +93,10 @@ registerComponent<SpatialAccessPriorityProps, SAPValueType>({
         [`${exportId}_sectors`]: [
           "Unknown -- https://github.com/seasketch/next/commit/3a69e33b14dd444b240edc24aa95d754099e2c25",
         ],
-        [`${exportId}_feature_ids`]: answer,
       };
     } else {
       return {
         [`${exportId}_sectors`]: answer.sectors,
-        [`${exportId}_feature_ids`]: answer.collection || [],
       };
     }
   },
