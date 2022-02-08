@@ -47,6 +47,7 @@
     "@graphile/pg-pubsub": "^4.11.0",
     "@types/bytes": "^3.1.0",
     "@types/cors": "^2.8.10",
+    "@types/geojson": "^7946.0.8",
     "@types/graphql-upload": "^8.0.4",
     "@types/mustache": "^4.1.1",
     "@types/redis": "^2.8.25",

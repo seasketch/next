@@ -54,12 +54,12 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
-  sortFormElements,
   SurveyContext,
   SurveyMapPortal,
   useLocalizedComponentSetting,
   useUpdateFormElement,
 } from "../FormElement";
+import { sortFormElements } from "../sortFormElements";
 import FormElementOptionsInput, {
   FormElementOption,
 } from "../FormElementOptionsInput";

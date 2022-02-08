@@ -193,7 +193,8 @@
     "lint": "NODE_ENV=production npx eslint . --quiet",
     "deploy": "bin/deploy.sh",
     "cypress": "CYPRESS_BASE_URL=${REACT_APP_PUBLIC_URL} cypress open",
-    "cypress:run": "CYPRESS_BASE_URL=${REACT_APP_PUBLIC_URL} cypress run"
+    "cypress:run": "CYPRESS_BASE_URL=${REACT_APP_PUBLIC_URL} cypress run",
+    "generate-api-helpers": "esbuild --platform=node --outfile=../api/src/ExportUtils.js --bundle src/formElements/ExportUtils.ts && cp src/formElements/ExportUtils.d.ts ../api/src/ && cp ../api/src/ExportUtils.js ../api/dist/src/ExportUtils.js"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -232,6 +233,7 @@
     "babel-eslint": "^10.1.0",
     "chokidar-cli": "^2.1.0",
     "cypress": "^9.1.0",
+    "esbuild": "^0.14.20",
     "eslint": "^7.19.0",
     "eslint-config-react-app": "^6.0.0",
     "eslint-plugin-flowtype": "^5.2.0",

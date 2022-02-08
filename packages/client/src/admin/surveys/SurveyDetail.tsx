@@ -12,7 +12,6 @@ import { useSurveyByIdQuery } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import SurveyDraftControl from "./SurveyDraftControl";
 import { useMemo } from "react";
-import { getColumnNames } from "../../formElements/ExportUtils";
 import ResponseGrid from "./ResponseGrid";
 import ResponsesMap from "./ResponsesMap";
 

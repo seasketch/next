@@ -4613,7 +4613,7 @@ CREATE FUNCTION public.export_spatial_responses(fid integer) RETURNS json
     'type',       'Feature',
     'id',         id,
     'geometry',   ST_AsGeoJSON(coalesce(geom, user_geom))::jsonb,
-    'properties', sketches.properties::jsonb || to_jsonb(json_build_object('response_id', sketches.response_id, 'name', sketches.name))
+    'properties', sketches.properties::jsonb || to_jsonb(json_build_object('response_id', sketches.response_id, 'name', sketches.name, 'area_sq_meters', round(st_area(coalesce(sketches.geom, sketches.user_geom)::geography))))
     ))
         ) FROM sketches where form_element_id = fid into output;
         return output;

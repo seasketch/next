@@ -12,42 +12,9 @@ import {
   FormElementDetailsFragment,
   SurveyResponse,
 } from "../generated/graphql";
-import { sortFormElements } from "./FormElement";
-
-/**
- * Returns the column names that should appear in survey data export for a given
- * form element configuration. All arguments are derived from columns in the
- * form_elements table. Usually, this will be a single column with a name
- * matching the export_id. In some more complex FormElement types, also inlcuded
- * will be multiple generated columns.
- *
- * For example, even the simple Name field can include a facilitator option. So,
- * for the name field with a an exportId of `name`, the exported columns would
- * be:
- *
- * [
- *    # Name given for respondent
- *    'name',
- *    # Facilitator's name if given
- *    'name_facilitator'
- * ]
- *
- * @param componentName
- * @param exportId
- * @param componentSettings
- * @returns
- */
-export function getColumnNames(
-  componentName: string,
-  exportId: string,
-  componentSettings: any
-): string[] {
-  if (componentName in components) {
-    return components[componentName].getColumns(componentSettings, exportId);
-  } else {
-    return [exportId];
-  }
-}
+import { sortFormElements } from "./sortFormElements";
+import { FeatureCollection, GeoJsonProperties, Geometry } from "geojson";
+// import { ExportRow } from "./ExportUtils.d.ts";
 
 export function getAnswers(
   componentName: string,
@@ -77,7 +44,12 @@ type ExportRow = { [key: string]: string | boolean | number | null } & {
   account_email: string | null;
 };
 
-export function getRowsForExport(
+type FormElement = Pick<
+  FormElementDetailsFragment,
+  "typeId" | "componentSettings" | "exportId" | "position" | "id" | "isInput"
+>;
+
+export function getDataForExport(
   responses: Pick<
     SurveyResponse,
     | "id"
@@ -90,11 +62,8 @@ export function getRowsForExport(
     | "data"
     | "accountEmail"
   >[],
-  formElements: Pick<
-    FormElementDetailsFragment,
-    "typeId" | "componentSettings" | "exportId" | "position" | "id" | "isInput"
-  >[]
-): [ExportRow[], string[]] {
+  formElements: FormElement[]
+): { rows: ExportRow[]; columns: string[] } {
   const sortedElements = sortFormElements(formElements);
   const rows: ExportRow[] = [];
   const columns = [
@@ -109,13 +78,16 @@ export function getRowsForExport(
   ];
   for (const element of sortedElements) {
     if (element.isInput) {
-      columns.push(
-        ...getColumnNames(
-          element.typeId,
-          element.exportId!,
-          element.componentSettings
-        )
-      );
+      if (element.typeId in components) {
+        columns.push(
+          ...components[element.typeId].getColumns(
+            element.componentSettings,
+            element.exportId!
+          )
+        );
+      } else {
+        columns.push(element.exportId!);
+      }
     }
   }
   for (const response of responses) {
@@ -133,23 +105,54 @@ export function getRowsForExport(
       account_email: response.accountEmail || null,
     };
     // answer data
-    for (const element of sortedElements) {
-      const answer = response.data[element.id];
-      if (answer !== undefined) {
-        const columnData = getAnswers(
-          element.typeId,
-          element.exportId!,
-          element.componentSettings,
-          answer
-        );
-        for (const col in columnData) {
-          row[col] = columnData[col];
-        }
+    const answers = getAnswersAsProperties(sortedElements, response.data);
+    rows.push({ ...row, ...answers });
+  }
+  return { rows, columns };
+}
+
+function getAnswersAsProperties(
+  sortedElements: FormElement[],
+  data: { [elementId: number]: any }
+) {
+  const answers: { [columnName: string]: number | string | null } = {};
+  for (const element of sortedElements) {
+    const answer = data[element.id];
+    if (answer !== undefined) {
+      const columnData = getAnswers(
+        element.typeId,
+        element.exportId!,
+        element.componentSettings,
+        answer
+      );
+      for (const col in columnData) {
+        answers[col] = columnData[col];
       }
     }
-    rows.push(row);
   }
-  return [rows, columns];
+  return answers;
+}
+
+export function normalizeSpatialProperties(
+  surveyId: number,
+  collection: FeatureCollection<
+    Geometry,
+    { [key: string]: any } & { response_id: number }
+  >,
+  formElements: FormElement[]
+) {
+  const sortedElements = sortFormElements(formElements);
+  for (const feature of collection.features) {
+    feature.properties = {
+      survey_id: surveyId,
+      response_id: feature.properties.response_id,
+      ...getAnswersAsProperties(sortedElements, feature.properties),
+      ...(feature.properties.area_sq_meters
+        ? { area_sq_meters: feature.properties.area_sq_meters }
+        : {}),
+    };
+  }
+  return collection;
 }
 
 type ColumnsFunction<T = any> = (

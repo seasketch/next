@@ -1,11 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import {
-  getAnswers,
-  getColumnNames,
-  getRowsForExport,
-} from "../../formElements/ExportUtils";
-import { sortFormElements } from "../../formElements/FormElement";
+import { getAnswers, getDataForExport } from "../../formElements/ExportUtils";
+import { sortFormElements } from "../../formElements/sortFormElements";
 import { useSurveyResponsesQuery } from "../../generated/graphql";
 import {
   useTable,
@@ -73,8 +69,8 @@ export default function ResponseGrid(props: Props) {
   const survey = data?.survey;
   const [tab, setTab] = useState("responses");
 
-  const [rowData, exportColumnNames] = useMemo(() => {
-    return getRowsForExport(
+  const { rows: rowData, columns: exportColumnNames } = useMemo(() => {
+    return getDataForExport(
       survey?.surveyResponsesConnection.nodes || [],
       survey?.form?.formElements || []
     );
@@ -83,19 +79,6 @@ export default function ResponseGrid(props: Props) {
   const columns = useMemo<Column[]>(() => {
     if (survey) {
       let columns: string[] = [];
-      const formElements = survey?.form?.formElements
-        ? sortFormElements(survey.form.formElements)
-        : [];
-      (survey.form?.formElements || [])
-        .filter((el) => el.type?.isInput)
-        .forEach((el) => {
-          const cols = getColumnNames(
-            el.typeId,
-            el.exportId!,
-            el.componentSettings
-          );
-          columns.push(...cols);
-        });
       return [
         {
           Header: "id",
