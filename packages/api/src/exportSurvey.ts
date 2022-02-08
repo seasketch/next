@@ -1,8 +1,6 @@
 import { DBClient } from "./dbClient";
-import { getDataForExport, normalizeSpatialProperties } from "./ExportUtils";
+import { normalizeSpatialProperties } from "./ExportUtils";
 import { createExportId } from "./plugins/exportIdPlugin";
-
-// createExportId
 
 export async function getFeatureCollection(
   surveyId: number,
