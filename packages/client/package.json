@@ -194,7 +194,7 @@
     "deploy": "bin/deploy.sh",
     "cypress": "CYPRESS_BASE_URL=${REACT_APP_PUBLIC_URL} cypress open",
     "cypress:run": "CYPRESS_BASE_URL=${REACT_APP_PUBLIC_URL} cypress run",
-    "generate-api-helpers": "esbuild --platform=node --outfile=../api/src/ExportUtils.js --bundle src/formElements/ExportUtils.ts && cp src/formElements/ExportUtils.d.ts ../api/src/ && cp ../api/src/ExportUtils.js ../api/dist/src/ExportUtils.js"
+    "generate-api-helpers": "esbuild --platform=node --outfile=../api/src/ExportUtils.js --bundle src/formElements/ExportUtils.ts && cp src/formElements/ExportUtils.d.ts ../api/src/"
   },
   "eslintConfig": {
     "extends": "react-app"
