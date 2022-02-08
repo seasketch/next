@@ -13505,6 +13505,9 @@ export type SurveyResponsesQuery = (
       & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
         & FormElementDetailsFragment
+      )>>, logicRules?: Maybe<Array<(
+        { __typename?: 'FormLogicRule' }
+        & SurveyAppRuleFragment
       )>> }
     )>, surveyResponsesConnection: (
       { __typename?: 'SurveyResponsesConnection' }
@@ -13547,7 +13550,7 @@ export type SurveyAppRuleFragment = (
 
 export type SurveyAppFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
@@ -14522,6 +14525,7 @@ export const SurveyAppFormElementFragmentDoc = gql`
   alternateLanguageSettings
   body
   isRequired
+  isInput
   position
   typeId
   formId
@@ -19052,6 +19056,9 @@ export const SurveyResponsesDocument = gql`
       formElements {
         ...FormElementDetails
       }
+      logicRules {
+        ...SurveyAppRule
+      }
     }
     id
     practiceResponseCount
@@ -19074,7 +19081,8 @@ export const SurveyResponsesDocument = gql`
     }
   }
 }
-    ${FormElementDetailsFragmentDoc}`;
+    ${FormElementDetailsFragmentDoc}
+${SurveyAppRuleFragmentDoc}`;
 
 /**
  * __useSurveyResponsesQuery__

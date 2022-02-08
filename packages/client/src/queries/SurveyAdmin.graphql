@@ -628,6 +628,9 @@ query SurveyResponses($surveyId: Int!) {
       formElements {
         ...FormElementDetails
       }
+      logicRules {
+        ...SurveyAppRule
+      }
     }
     id
     practiceResponseCount

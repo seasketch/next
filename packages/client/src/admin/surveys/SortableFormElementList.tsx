@@ -15,9 +15,7 @@ import {
 import Spinner from "../../components/Spinner";
 import { CSSProperties, useState } from "react";
 import { components } from "../../formElements";
-import {
-  defaultFormElementIcon,
-} from "../../formElements/FormElement";
+import { defaultFormElementIcon } from "../../formElements/FormElement";
 import { sortFormElements } from "../../formElements/sortFormElements";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";

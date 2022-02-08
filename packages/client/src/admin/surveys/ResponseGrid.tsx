@@ -72,7 +72,8 @@ export default function ResponseGrid(props: Props) {
   const { rows: rowData, columns: exportColumnNames } = useMemo(() => {
     return getDataForExport(
       survey?.surveyResponsesConnection.nodes || [],
-      survey?.form?.formElements || []
+      survey?.form?.formElements || [],
+      data?.survey?.form?.logicRules || []
     );
   }, [survey?.surveyResponsesConnection.nodes]);
 

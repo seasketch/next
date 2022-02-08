@@ -1633,30 +1633,4 @@ SpatialAccessPriority.adminValueInput = function (props) {
   return <ChoiceAdminValueInput {...props} optionsProp="sectorOptions" />;
 };
 
-SpatialAccessPriority.getValueForRuleEvaluation = (
-  value,
-  componentSettings
-) => {
-  return value.sectors;
-};
-
-SpatialAccessPriority.shouldDisplaySubordinateElement = function (
-  elementId,
-  componentSettings,
-  value
-) {
-  const sectors = value?.sectors || [];
-  const visibilitySettings =
-    componentSettings?.subordinateVisibilitySettings || {};
-  for (const sector of sectors) {
-    if (
-      visibilitySettings[elementId] &&
-      visibilitySettings[elementId].indexOf(sector) !== -1
-    ) {
-      return true;
-    }
-  }
-  return false;
-};
-
 export default SpatialAccessPriority;
