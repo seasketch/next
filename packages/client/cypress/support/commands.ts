@@ -3,6 +3,7 @@ import { DocumentNode } from "graphql";
 import { gql } from "@apollo/client";
 import { request } from "graphql-request";
 import { ProjectAccessControlSetting } from "../../src/generated/graphql";
+import { data } from "cypress/types/jquery";
 
 const jwt = require("jsonwebtoken");
 const users = require("../fixtures/users.json");
@@ -15,6 +16,13 @@ const AUTH0_SCOPE = Cypress.env("auth0_scope");
 const AUTH0_DOMAIN = Cypress.env("auth0_domain");
 
 const loginCounts = {};
+
+interface FixtureForm {
+  data: object,
+  form: object,
+  formElements: object
+
+}
 
 declare global {
   namespace Cypress {
@@ -100,8 +108,9 @@ declare global {
         surveyId: number
       )
 
-      updateSurveyForm(
+      createFormElements(
         formId: number,
+        surveyAlias: string,
         token: string
       )
       
@@ -302,7 +311,7 @@ Cypress.Commands.add(
 );
 
 Cypress.Commands.add("deleteProject", (slug: string) => {
-  cy.exec(`cypress/support/deleteProject.js ${slug}`).then((out) => {
+  cy.exec(`cypress/support/deleteProject.js ${slug}`, {failOnNonZeroExit: false}).then((out) => {
     cy.log(out.stdout);
   });
 });
@@ -349,11 +358,11 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
   const deleteSurvey = 
     `
       mutation deleteSurvey {
-          deleteSurvey (input: { id: ${surveyId} })  {
+          deleteSurvey (input: { id: ${surveyId} }) {
             survey {
-              name
+              id
             }
-          }
+          }  
       }
     `;
     cy.request({
@@ -379,99 +388,81 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
       );
     }
     return cy
-    .mutation(
-      gql`
-        mutation CypressUpdateSurvey($surveyId: Int!) {
-          updateSurvey(input: { 
-            id: $surveyId 
-            patch: {
-              isDisabled: false, 
-              accessType: PUBLIC
-            }
-          }) 
-          {
-            survey {
-              id,
-              isDisabled,
-              accessType, 
-              project {
-                slug
+      .mutation(
+        gql`
+          mutation CypressUpdateSurvey($surveyId: Int!) {
+            updateSurvey(input: { 
+              id: $surveyId 
+              patch: {
+                isDisabled: false, 
+                accessType: PUBLIC
+              }
+            }) 
+            {
+              survey {
+                id,
+                isDisabled,
+                accessType, 
+                project {
+                  slug
+                }
               }
             }
           }
-        }
-      `,
-    { surveyId },
-    (token as any)
-  )
-  .then((data) => {
-    Cypress.log(data);
-    return data
+        `,
+      { surveyId },
+      (token as any)
+    )
+    .then((data) => {
+      Cypress.log(data);
+      return data
     })
   })
 
-  //Cypress.Commands.add("getSurvey", (surveyId: number) => {
-  //  return cy
-  //  .query(
-  //    gql`
-  //      query CypressGetSurvey($surveyId: Int!) {
-  //        survey (id: $surveyId) {
-  //          name
-  //          form {
-  //            formElements {
-  //              typeId,
-  //              body
-  //            }
-  //          }
-  //        }
-  //      }
-  //    `,
-  //  { surveyId }
-  //)
-  //.then((data) => {
-  //  Cypress.log(data);
-  //  return data
-  //  })
-  //})
+  Cypress.Commands.add("createFormElements", (formId: number, surveyAlias: string, token: string, ) => {
+    //check for token too
+    let elements = formElements[surveyAlias].data.form.formElements
+    elements.map(t => t.formId = formId)
+    if (!surveyAlias) {
+      throw new Error(`Unrecognized alias "${surveyAlias}"`);
+    }
+    else {
+      elements.forEach((e) => {
+      return cy
+      .mutation(
+        gql`
+          mutation CypressCreateFormElement($formElement: FormElementInput!) {
+            createFormElement(input: {formElement: $formElement} )
+            {
+              formElement {
+                formId
+              }
+              query {
+                form (id: ${formId}) {
+                  formElements {
+                    typeId, 
+                    id
+                  }
+                }
+              }
+              
+            }
+          }
+        `,
+      { "formElement": {
+        "formId": e.formId,
+        "typeId": e.typeId,
+        "body": e.body,
+      } },
+      (token as any)
+    )}
+  )}
 
-  Cypress.Commands.add("updateSurveyForm", (formId: number, token: string) => {
-    let form = formElements["Maldives"]["data"]["survey"]["form"]["formElements"]
-    return form
-    //console.log(form)
-    //if (!token) {
-    //  throw new Error(
-    //    "No token set. Use cy.wrap(token.access_token).as('token') to set a project owner."
-    //  );
-    //}
-    //return cy
-    //.mutation(
-    //  gql`
-    //    mutation CypressUpdateSurveyForm($id: Int!) {
-    //      updateSurvey(input: { 
-    //        id: $id 
-    //        patch: {
-    //          isDisabled: false, 
-    //          accessType: PUBLIC
-    //        }
-    //      }) 
-    //      {
-    //        survey {
-    //          id,
-    //          isDisabled,
-    //          accessType, 
-    //          project {
-    //            slug
-    //          }
-    //        }
-    //      }
-    //    }
-    //  `,
-    //{ formId },
-    //(token as any)
-  //)//
-  //.then((data) => {
-  //  Cypress.log(data);
-  //  return data
-  //  })
-  })
+})
 
+//TO DO:
+//add rest of form attributes
+//delete default formElements
+//Create form first and then attach to survey?
+//Add consent file before or???
+//Scaffold plan for tests; organize

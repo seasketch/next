@@ -73,10 +73,23 @@ describe("Survey creation smoke test", () => {
       })
     })
     it ("Can get form elements from fixture", () => {
-      cy.updateSurveyForm(3, "sadlfjasdfl").then((resp) => {
-        let element = resp[0]
-        expect (element).to.have.property('typeId')
+      //Pass form id and token
+      //cy.updateSurveyForm(3, "sadlfjasdfl").then((resp) => {
+      //  let element = resp[0]
+      //  expect (element).to.have.property('typeId')
+      //})
+    })
+    it ("Can update survey form with form elements", () => {
+      cy.get("@formId").then((formId) => {
+        console.log(formId)
       })
+      //cy.addFormElements(3, "sadlfjasdfl").then((resp) => {
+      //  console.log(resp)
+      //})
+      cy.get("@surveyId").then((id) => {
+        console.log(id)
+      })
+      
     })
   })
   describe("User survey flow", () => {
@@ -122,17 +135,79 @@ describe("Survey creation smoke test", () => {
       cy.contains('Begin', {timeout: 30000}).click()
     })
   })
+  describe.only ('Updates the form', () => {
+    beforeEach(() => {
+      cy.intercept("http://localhost:3857/graphql", (req) => {
+        if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
+          req.alias = "createProjectRequest"
+        } else if ((req.body.operationName) && (req.body.operationName == "CypressCreateSurvey")) {
+          req.alias = "createSurveyRequest"
+        }
+      })
+      cy.getToken("User 1").then(({ access_token }) => {
+        cy.wrap(access_token).as("token");
+        cy.createProject(
+          `Maldives Spatial Planning Test - ${slug}`,
+          slug,
+          ProjectAccessControlSetting.Public,
+          true
+        )
+        .then((projectId) => {
+          cy.wrap(projectId).as("projectId").then(() => {
+            cy.createSurvey(
+              `Maldives Ocean Use Survey Test - ${slug}`, 
+              projectId, 
+              access_token
+            ).then((resp) => {
+              console.log(resp)
+              cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
+              console.log(resp.makeSurvey.survey.form.id)
+              cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
+              cy.updateSurvey(resp.makeSurvey.survey.id, access_token).then((resp) => {
+                console.log(resp)
+              })
+            })
+          });
+        });
+      });
+    })
+    afterEach(() => {
+      cy.get('@surveyId').then((id) => {
+        surveyId = id
+        cy.get('@token').then((token) => {
+          authToken = token
+          cy.deleteSurvey(surveyId, authToken).then(() => {
+          })
+        })
+      })
+      cy.deleteProject(`${slug}`) 
+    })
+
+    it("Updates the form with form elements", () => {
+      cy.get('@formId').then((id) => {
+        formId = id
+        cy.get("@token").then((token) => {
+          authToken = token
+          //args are formId, formElements fixture alias, token
+          cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+            expect (resp.createFormElement.query.form.formElements.length).to.equal(40)
+          })
+        })
+      })
+      
+      
+      
+      
+    })
+  })
 })
 
 
-//cy.createProject
-//store project Id
-//cy.createSurvey
-//project id
-//enabled
-//creator
-
-
+//Refactor
+//Consolidate
+//Move command tests to command tests folder
+//Conditional checks
+//Before vs beforeEach; after vs afterEach
 
 
 
