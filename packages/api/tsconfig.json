@@ -62,7 +62,8 @@
 
     /* Advanced Options */
     "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */,
-    "allowJs": true
+    "allowJs": true,
+    "checkJs": false
   },
   "include": ["**/*", "src/ExportUtils.js"],
   "exclude": ["node_modules", "**/*.spec.ts", "dist"]

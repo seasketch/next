@@ -5,16 +5,9 @@ import {
   SurveyResponse,
 } from "../generated/graphql";
 import { sortFormElements } from "./sortFormElements";
-import { FeatureCollection, Geometry } from "geojson";
+import { Feature, FeatureCollection, Geometry } from "geojson";
 import { componentExportHelpers } from ".";
-import {
-  getSurveyPagingState,
-  getUnskippedInputElementsForCompletedResponse,
-} from "../surveys/paging";
-
-export function getPath() {
-  getSurveyPagingState(1, [], [], {});
-}
+import { getUnskippedInputElementsForCompletedResponse } from "../surveys/paging";
 
 export function getAnswers(
   componentName: string,
@@ -138,20 +131,41 @@ export function normalizeSpatialProperties(
   surveyId: number,
   collection: FeatureCollection<
     Geometry,
-    { [key: string]: any } & { response_id: number }
+    { [key: string]: any } & { response_id: number; response_data: any }
   >,
   formElements: FormElement[]
 ) {
   const sortedElements = sortFormElements(formElements);
+  const features: Feature[] = [];
   for (const feature of collection.features) {
-    feature.properties = {
+    const responseData = feature.properties.response_data;
+    const newProperties = {
       survey_id: surveyId,
       response_id: feature.properties.response_id,
       ...getAnswersAsProperties(sortedElements, feature.properties),
       ...(feature.properties.area_sq_meters
         ? { area_sq_meters: feature.properties.area_sq_meters }
         : {}),
+      ...(responseData.sectors ? { sector: feature.properties.sector } : {}),
     };
+    if (
+      !responseData ||
+      !responseData.sectors ||
+      responseData.sectors.indexOf(feature.properties.sector) !== -1
+    ) {
+      features.push({
+        ...feature,
+        properties: newProperties,
+      });
+    } else {
+      // SpatialAccessPriority field. Need to filter shapes to only selected
+      // sectors. User might otherwise draw shapes for a bunch of sectors, but
+      // then limit their selection later.
+    }
   }
-  return collection;
+
+  return {
+    ...collection,
+    features,
+  };
 }
