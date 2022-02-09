@@ -31,11 +31,11 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   ChildOptionsFactory,
   FormEditorPortalContext,
-  sortFormElements,
   SurveyButtonFooterPortalContext,
   SurveyContext,
   useUpdateFormElement,
 } from "../../formElements/FormElement";
+import { sortFormElements } from "../../formElements/sortFormElements";
 import TextInput from "../../components/TextInput";
 import { useAuth0 } from "@auth0/auth0-react";
 import UnsplashImageChooser from "./UnsplashImageChooser";

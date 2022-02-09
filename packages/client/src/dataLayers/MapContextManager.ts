@@ -8,6 +8,7 @@ import mapboxgl, {
   CameraOptions,
   LngLatBoundsLike,
   MapboxOptions,
+  AnySourceImpl,
 } from "mapbox-gl";
 import {
   createContext,
@@ -608,7 +609,7 @@ class MapContextManager {
       }
     }
     for (const id of layerIds) {
-      if (layerIds.indexOf(id) === -1) {
+      if (!this.visibleLayers[id]) {
         this.showLayerId(id);
       }
     }
@@ -693,7 +694,15 @@ class MapContextManager {
        * will trigger a repaint of the entire style. This seems to be a bug with mapbox-gl
        * because other source types do not have this problem
        */
-      const existingSource = this.map?.getSource("terrain-source");
+      let existingSource: AnySourceImpl | null = null;
+      try {
+        existingSource = this.map?.getSource("terrain-source") || null;
+      } catch (e) {
+        // Do nothing. Sometimes the map will be set but calling getSource will
+        // throw an error from deep in the mapbox-gl code.
+        // Attempts to fix bug reported by sentry:
+        // https://sentry.io/organizations/wwwseasketchorg/issues/2988858003/events/4f007357f24245989c1bc267d04f485c
+      }
       if (
         existingSource &&
         existingSource.type === "raster-dem" &&

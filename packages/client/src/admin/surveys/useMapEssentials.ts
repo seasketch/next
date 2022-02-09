@@ -43,11 +43,9 @@ export default function useMapEssentials({
   useEffect(() => {
     if (mapContext?.manager && data?.currentProject?.basemaps?.length) {
       let basemaps: BasemapDetailsFragment[] = [];
-      if (filterBasemapIds?.length) {
-        basemaps = data.currentProject.basemaps.filter(
-          (b) => filterBasemapIds!.indexOf(b.id) !== -1
-        );
-      }
+      basemaps = data.currentProject.basemaps.filter(
+        (b) => !filterBasemapIds || filterBasemapIds.indexOf(b.id) !== -1
+      );
       if (!basemaps.length) {
         basemaps = [data.currentProject.basemaps[0]];
       }

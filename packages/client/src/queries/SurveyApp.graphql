@@ -20,6 +20,7 @@ fragment SurveyAppFormElement on FormElement {
   alternateLanguageSettings
   body
   isRequired
+  isInput
   position
   typeId
   formId

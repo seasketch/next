@@ -28,10 +28,10 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { Auth0User } from "../auth/Auth0User";
 import {
   hideNav,
-  sortFormElements,
   SurveyButtonFooterPortalContext,
   SurveyContext,
 } from "../formElements/FormElement";
+import { sortFormElements } from "../formElements/sortFormElements";
 import { components } from "../formElements";
 import { getSurveyPagingState, SurveyPagingState } from "./paging";
 import {

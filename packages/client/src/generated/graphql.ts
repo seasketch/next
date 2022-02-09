@@ -3530,6 +3530,7 @@ export type FormElement = Node & {
   /** Form this field belongs to. */
   formId: Scalars['Int'];
   id: Scalars['Int'];
+  isInput?: Maybe<Scalars['Boolean']>;
   /** Users must provide input for these fields before submission. */
   isRequired: Scalars['Boolean'];
   /**
@@ -9368,6 +9369,7 @@ export type SurveyPatch = {
 
 export type SurveyResponse = Node & {
   __typename?: 'SurveyResponse';
+  accountEmail?: Maybe<Scalars['String']>;
   /**
    * Should be set by the client on submission and tracked by cookies or
    * localStorage. Surveys that permit only a single entry enable users to bypass
@@ -12978,7 +12980,7 @@ export type AddFormElementTypeDetailsFragment = (
 
 export type FormElementDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
@@ -13503,14 +13505,37 @@ export type SurveyResponsesQuery = (
       & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
         & FormElementDetailsFragment
+      )>>, logicRules?: Maybe<Array<(
+        { __typename?: 'FormLogicRule' }
+        & SurveyAppRuleFragment
       )>> }
     )>, surveyResponsesConnection: (
       { __typename?: 'SurveyResponsesConnection' }
       & { nodes: Array<(
         { __typename?: 'SurveyResponse' }
-        & Pick<SurveyResponse, 'id' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
+        & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
       )> }
     ) }
+  )> }
+);
+
+export type SurveyMapDetailsQueryVariables = Exact<{
+  surveyId: Scalars['Int'];
+}>;
+
+
+export type SurveyMapDetailsQuery = (
+  { __typename?: 'Query' }
+  & { survey?: Maybe<(
+    { __typename?: 'Survey' }
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id'>
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & FormElementDetailsFragment
+      )>> }
+    )> }
   )> }
 );
 
@@ -13525,7 +13550,7 @@ export type SurveyAppRuleFragment = (
 
 export type SurveyAppFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
@@ -14413,6 +14438,7 @@ export const FormElementDetailsFragmentDoc = gql`
   type {
     ...AddFormElementTypeDetails
   }
+  isInput
   typeId
   backgroundColor
   secondaryColor
@@ -14499,6 +14525,7 @@ export const SurveyAppFormElementFragmentDoc = gql`
   alternateLanguageSettings
   body
   isRequired
+  isInput
   position
   typeId
   formId
@@ -19029,6 +19056,9 @@ export const SurveyResponsesDocument = gql`
       formElements {
         ...FormElementDetails
       }
+      logicRules {
+        ...SurveyAppRule
+      }
     }
     id
     practiceResponseCount
@@ -19036,8 +19066,10 @@ export const SurveyResponsesDocument = gql`
     surveyResponsesConnection {
       nodes {
         id
+        surveyId
         bypassedDuplicateSubmissionControl
         updatedAt
+        accountEmail
         userId
         createdAt
         data
@@ -19049,7 +19081,8 @@ export const SurveyResponsesDocument = gql`
     }
   }
 }
-    ${FormElementDetailsFragmentDoc}`;
+    ${FormElementDetailsFragmentDoc}
+${SurveyAppRuleFragmentDoc}`;
 
 /**
  * __useSurveyResponsesQuery__
@@ -19078,6 +19111,46 @@ export function useSurveyResponsesLazyQuery(baseOptions?: Apollo.LazyQueryHookOp
 export type SurveyResponsesQueryHookResult = ReturnType<typeof useSurveyResponsesQuery>;
 export type SurveyResponsesLazyQueryHookResult = ReturnType<typeof useSurveyResponsesLazyQuery>;
 export type SurveyResponsesQueryResult = Apollo.QueryResult<SurveyResponsesQuery, SurveyResponsesQueryVariables>;
+export const SurveyMapDetailsDocument = gql`
+    query SurveyMapDetails($surveyId: Int!) {
+  survey(id: $surveyId) {
+    form {
+      formElements {
+        ...FormElementDetails
+      }
+      id
+    }
+  }
+}
+    ${FormElementDetailsFragmentDoc}`;
+
+/**
+ * __useSurveyMapDetailsQuery__
+ *
+ * To run a query within a React component, call `useSurveyMapDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveyMapDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveyMapDetailsQuery({
+ *   variables: {
+ *      surveyId: // value for 'surveyId'
+ *   },
+ * });
+ */
+export function useSurveyMapDetailsQuery(baseOptions: Apollo.QueryHookOptions<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>(SurveyMapDetailsDocument, options);
+      }
+export function useSurveyMapDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>(SurveyMapDetailsDocument, options);
+        }
+export type SurveyMapDetailsQueryHookResult = ReturnType<typeof useSurveyMapDetailsQuery>;
+export type SurveyMapDetailsLazyQueryHookResult = ReturnType<typeof useSurveyMapDetailsLazyQuery>;
+export type SurveyMapDetailsQueryResult = Apollo.QueryResult<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -20219,6 +20292,7 @@ export const namedOperations = {
     FormElementTypes: 'FormElementTypes',
     GetPhotos: 'GetPhotos',
     SurveyResponses: 'SurveyResponses',
+    SurveyMapDetails: 'SurveyMapDetails',
     Survey: 'Survey',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     UserAdminCounts: 'UserAdminCounts',

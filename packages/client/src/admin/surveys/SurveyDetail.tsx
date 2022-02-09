@@ -12,8 +12,8 @@ import { useSurveyByIdQuery } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import SurveyDraftControl from "./SurveyDraftControl";
 import { useMemo } from "react";
-import { getColumnNames } from "../../formElements/ExportUtils";
 import ResponseGrid from "./ResponseGrid";
+import ResponsesMap from "./ResponsesMap";
 
 export default function SurveyDetail({ surveyId }: { surveyId: number }) {
   const projectId = useProjectId();
@@ -27,7 +27,7 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
   const survey = data?.survey;
   return (
     <div className="flex flex-col min-h-full max-h-full">
-      <div className="pb-5">
+      <div className="">
         <nav
           className="flex items-start px-4 py-3 sm:px-6 lg:px-8"
           aria-label="Breadcrumb"
@@ -47,35 +47,25 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
           <>
             <h1 className="text-gray-900 text-3xl font-bold px-4 py-1 sm:px-6 lg:px-8">
               {survey.name}
+              <Button
+                className="ml-4"
+                href={`../../survey-editor/${data.survey?.id}`}
+                label={
+                  <>
+                    <PencilIcon className="-ml-1 mr-2 h-5 w-5 text-gray-400" />
+                    {t("Edit Form")}
+                  </>
+                }
+              />
             </h1>
             <div className="px-4 py-1 sm:px-6 lg:px-8">
               {data?.survey && <SurveyDraftControl id={data.survey.id} />}
             </div>
-            <div className="mt-3 flex px-4 py-1 sm:px-6 lg:px-8">
-              <span className="">
-                {/* <button
-                type="button"
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-purple-500"
-              >
-                <PencilIcon
-                  className="-ml-1 mr-2 h-5 w-5 text-gray-400"
-                  aria-hidden="true"
-                />
-                {t("Edit Form")}
-              </button> */}
-                <Button
-                  href={`../../survey-editor/${data.survey?.id}`}
-                  label={
-                    <>
-                      <PencilIcon className="-ml-1 mr-2 h-5 w-5 text-gray-400" />
-                      {t("Edit Form")}
-                    </>
-                  }
-                />
-              </span>
-            </div>
           </>
         )}
+      </div>
+      <div className="h-72 flex-shrink-0 relative">
+        <ResponsesMap surveyId={surveyId} />
       </div>
       <ResponseGrid className="flex-1 bg-white" surveyId={surveyId} />
       {!survey && <Spinner />}

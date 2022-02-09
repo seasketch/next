@@ -3,14 +3,16 @@ import { ClientBasemap, MapContext } from "../../dataLayers/MapContextManager";
 
 export default function MiniBasemapSelector({
   basemaps,
+  className,
 }: {
   basemaps: ClientBasemap[];
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const mapContext = useContext(MapContext);
   const selected = mapContext.manager?.getSelectedBasemap();
   return (
-    <div className="absolute left-2 top-2 z-10">
+    <div className={`absolute left-2 top-2 z-50 ${className}`}>
       {selected && !open && (
         <button
           className="border-primary-500 rounded border-2 shadow-md m-2"
@@ -24,9 +26,10 @@ export default function MiniBasemapSelector({
         </button>
       )}
       {open && (
-        <div className="max-w-lg">
+        <div className="max-w-lg z-50">
           {basemaps.map((b) => (
             <button
+              key={b.id}
               onClick={() => {
                 mapContext.manager?.setSelectedBasemap(b.id.toString());
                 setOpen(false);

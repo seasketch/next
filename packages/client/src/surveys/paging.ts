@@ -1,10 +1,7 @@
-import { collectText } from "../admin/surveys/collectText";
-import { components } from "../formElements";
+import { componentExportHelpers } from "../formElements";
 import {
   FieldRuleOperator,
-  FormLogicCondition,
   FormLogicOperator,
-  FormLogicRuleConditionsArgs,
   SurveyAppFormElementFragment,
   SurveyAppRuleFragment,
 } from "../generated/graphql";
@@ -65,6 +62,32 @@ export function getSurveyPagingState<
     nextFormElement: next,
     sortedFormElements,
   };
+}
+
+export function getUnskippedInputElementsForCompletedResponse<
+  T extends Pick<
+    SurveyAppFormElementFragment,
+    "id" | "jumpToId" | "typeId" | "componentSettings" | "isInput"
+  >
+>(
+  sortedFormElements: T[],
+  rules: Pick<
+    SurveyAppRuleFragment,
+    "booleanOperator" | "conditions" | "jumpToId" | "position" | "formElementId"
+  >[],
+  answers: { [formElementId: number]: any }
+) {
+  const ThankYou = sortedFormElements.find((el) => el.typeId === "ThankYou");
+  if (!ThankYou) {
+    throw new Error(`Could not find ThankYou element`);
+  }
+  const path = calculatePathToElement(
+    ThankYou.id,
+    sortedFormElements,
+    rules,
+    answers
+  );
+  return path.filter((el) => el.isInput);
 }
 
 function calculatePathToElement<
@@ -135,23 +158,21 @@ function getNextFormElement<
   answers = { ...answers };
   for (const el of sortedFormElements) {
     if (answers[el.id] !== undefined) {
-      const C = components[el.typeId];
+      const C = componentExportHelpers[el.typeId];
       if (!C) {
         throw new Error(`Could not find component ${el.typeId}`);
       }
-      if (C.getValueForRuleEvaluation) {
-        answers[el.id] = C.getValueForRuleEvaluation(
-          answers[el.id],
-          el.componentSettings
-        );
-      }
+      answers[el.id] = C.getValueForRuleEvaluation(
+        answers[el.id],
+        el.componentSettings
+      );
     }
   }
 
   const matchingSubordinateElements = subordinateElements
     .filter((el) => el.subordinateTo === current.id)
     .filter((el) =>
-      components[current.typeId].shouldDisplaySubordinateElement!(
+      componentExportHelpers[current.typeId].shouldDisplaySubordinateElement!(
         el.id,
         current.componentSettings,
         originalAnswers[current.id]
@@ -176,7 +197,7 @@ function getNextFormElement<
     const siblings = subordinateElements
       .filter((el) => el.subordinateTo === current.subordinateTo)
       .filter((el) =>
-        components[parent.typeId].shouldDisplaySubordinateElement!(
+        componentExportHelpers[parent.typeId].shouldDisplaySubordinateElement!(
           el.id,
           parent.componentSettings,
           originalAnswers[parent.id]

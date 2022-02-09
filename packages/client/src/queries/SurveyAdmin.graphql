@@ -67,6 +67,7 @@ fragment FormElementDetails on FormElement {
   type {
     ...AddFormElementTypeDetails
   }
+  isInput
   typeId
   backgroundColor
   secondaryColor
@@ -627,6 +628,9 @@ query SurveyResponses($surveyId: Int!) {
       formElements {
         ...FormElementDetails
       }
+      logicRules {
+        ...SurveyAppRule
+      }
     }
     id
     practiceResponseCount
@@ -634,8 +638,10 @@ query SurveyResponses($surveyId: Int!) {
     surveyResponsesConnection {
       nodes {
         id
+        surveyId
         bypassedDuplicateSubmissionControl
         updatedAt
+        accountEmail
         userId
         createdAt
         data
@@ -644,6 +650,17 @@ query SurveyResponses($surveyId: Int!) {
         isPractice
         isUnrecognizedUserAgent
       }
+    }
+  }
+}
+
+query SurveyMapDetails($surveyId: Int!) {
+  survey(id: $surveyId) {
+    form {
+      formElements {
+        ...FormElementDetails
+      }
+      id
     }
   }
 }

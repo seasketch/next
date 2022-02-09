@@ -1064,13 +1064,13 @@ CREATE FUNCTION public._001_unnest_survey_response_sketches() RETURNS trigger
                   f.id::int, 
                   f.sketch_class_id, 
                   NEW.user_id,
-                  coalesce((feature_data.feature::jsonb #> ARRAY['properties'::text,feature_name_element_id::text])::text, ''::text), 
+                  coalesce((feature_data.feature::jsonb #>> ARRAY['properties'::text,feature_name_element_id::text])::text, ''::text), 
                   st_geomfromgeojson(feature_data.feature::jsonb ->> 'geometry'::text),
                   feature_data.feature::jsonb -> 'properties'::text
                 ) returning id into sketch_id;
                 sketch_ids = sketch_ids || sketch_id;
               end loop;
-              NEW.data = jsonb_set(NEW.data, ARRAY[f.id], to_json(sketch_ids)::jsonb);
+              NEW.data = jsonb_set(NEW.data, ARRAY[f.id, 'collection'], to_json(sketch_ids)::jsonb);
             else
               raise exception 'Embedded sketches must be a FeatureCollection';
             end if;
@@ -4594,6 +4594,66 @@ CREATE FUNCTION public.enable_forum_posting("userId" integer, "projectId" intege
 --
 
 COMMENT ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" integer) IS 'Re-enable discussion forum posting for a user that was previously banned.';
+
+
+--
+-- Name: export_spatial_responses(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.export_spatial_responses(fid integer) RETURNS json
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      output json;
+    begin
+    if (true or session_is_admin(project_id_from_field_id(fid))) then
+        SELECT json_build_object(
+          'type', 'FeatureCollection',
+          'features', json_agg(jsonb_build_object(
+            'type',       'Feature',
+            'id',         sketches.id,
+            'geometry',   ST_AsGeoJSON(coalesce(geom, user_geom))::jsonb,
+            'properties', 
+              sketches.properties::jsonb || 
+              to_jsonb(
+                json_build_object(
+                  'response_id', sketches.response_id, 
+                  'name', sketches.name, 
+                  'area_sq_meters', round(st_area(coalesce(sketches.geom, sketches.user_geom)::geography)),
+                  'response_data', survey_responses.data::json->fid::text
+                )
+              )
+          ))
+        ) 
+        FROM sketches
+        INNER JOIN survey_responses
+        ON survey_responses.id = sketches.response_id
+        where form_element_id = fid 
+        into output;
+        return output;
+    else 
+      raise exception 'Not authorized';
+    end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION export_spatial_responses(fid integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.export_spatial_responses(fid integer) IS '@omit';
+
+
+--
+-- Name: form_elements_is_input(public.form_elements); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.form_elements_is_input(el public.form_elements) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+    select is_input from form_element_types where form_element_types.component_name = el.type_id;
+  $$;
 
 
 --
@@ -8645,6 +8705,17 @@ COMMENT ON FUNCTION public.survey_invites_status(invite public.survey_invites) I
 
 
 --
+-- Name: survey_responses_account_email(public.survey_responses); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.survey_responses_account_email(r public.survey_responses) RETURNS text
+    LANGUAGE sql STABLE
+    AS $$
+    select canonical_email from users where id = r.user_id; 
+  $$;
+
+
+--
 -- Name: survey_validation_info(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9313,7 +9384,7 @@ CREATE FUNCTION public.users_is_admin(u public.users) RETURNS boolean
     declare
       "isAdmin" boolean;
     begin
-      select coalesce(is_admin, false) into "isAdmin" from project_participants where user_id = u.id and project_id = current_setting('session.project_id', true)::int and session_is_admin(current_setting('session.project_id', true)::int);
+      select coalesce(is_admin, session_is_superuser(), false) into "isAdmin" from project_participants where user_id = u.id and project_id = current_setting('session.project_id', true)::int and session_is_admin(current_setting('session.project_id', true)::int);
       return coalesce("isAdmin", false);
     end;
   $$;
@@ -15719,10 +15790,26 @@ REVOKE ALL ON FUNCTION public.equals(geom1 public.geometry, geom2 public.geometr
 
 
 --
+-- Name: FUNCTION export_spatial_responses(fid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.export_spatial_responses(fid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.export_spatial_responses(fid integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION find_srid(character varying, character varying, character varying); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.find_srid(character varying, character varying, character varying) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION form_elements_is_input(el public.form_elements); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.form_elements_is_input(el public.form_elements) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.form_elements_is_input(el public.form_elements) TO anon;
 
 
 --
@@ -21689,6 +21776,14 @@ GRANT ALL ON FUNCTION public.survey_invite_was_used(invite_id integer) TO anon;
 
 REVOKE ALL ON FUNCTION public.survey_invites_status(invite public.survey_invites) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.survey_invites_status(invite public.survey_invites) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION survey_responses_account_email(r public.survey_responses); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.survey_responses_account_email(r public.survey_responses) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.survey_responses_account_email(r public.survey_responses) TO seasketch_user;
 
 
 --

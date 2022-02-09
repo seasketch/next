@@ -1,4 +1,4 @@
-import { Schema, Node, DOMSerializer } from "prosemirror-model";
+import { Node, DOMSerializer } from "prosemirror-model";
 import {
   Component,
   createContext,
@@ -11,8 +11,6 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { schema as baseSchema } from "prosemirror-schema-basic";
-import { addListNodes } from "prosemirror-schema-list";
 import { createPortal } from "react-dom";
 import {
   CreateResponseMutation,
@@ -31,21 +29,13 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { FetchResult, MutationResult } from "@apollo/client";
 import { formElements as editorConfig } from "../editor/config";
 import Spinner from "../components/Spinner";
-import { Trans } from "react-i18next";
 import {
   MapContext,
   MapContextInterface,
 } from "../dataLayers/MapContextManager";
-import {
-  BBox,
-  Feature,
-  FeatureCollection,
-  GeoJsonProperties,
-  Geometry,
-} from "geojson";
-import { LngLatBoundsLike } from "mapbox-gl";
+import { BBox, Feature, FeatureCollection } from "geojson";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
-import languages, { LangDetails } from "../lang/supported";
+import { LangDetails } from "../lang/supported";
 import set from "lodash.set";
 import deepCopy from "lodash.clonedeep";
 import { components } from ".";
@@ -533,12 +523,6 @@ export interface FormElementComponent<T, V = {}>
       alternateLanguageSettings?: any
     ) => (value: any) => void;
   }>;
-  getValueForRuleEvaluation?: (value: V, componentSettings: T) => any;
-  shouldDisplaySubordinateElement?: (
-    elementId: number,
-    componentSettings: T,
-    value?: V
-  ) => boolean;
 }
 
 export function hideNav(
@@ -569,69 +553,6 @@ export const defaultFormElementIcon = (
     <span>D</span>
   </div>
 );
-
-export function sortFormElements<
-  T extends {
-    position: number;
-    typeId: string;
-  }
->(elements: T[]) {
-  if (elements.length === 0) {
-    return [];
-  }
-  const Welcome = elements.find((el) => el.typeId === "WelcomeMessage");
-  const ThankYou = elements.find((el) => el.typeId === "ThankYou");
-  const SaveScreen = elements.find((el) => el.typeId === "SaveScreen");
-  const FeatureName = elements.find((el) => el.typeId === "FeatureName");
-  const SAPRange = elements.find((el) => el.typeId === "SAPRange");
-  const Consent = elements.find((el) => el.typeId === "Consent");
-  const bodyElements = elements.filter(
-    (el) =>
-      el.typeId !== "WelcomeMessage" &&
-      el.typeId !== "ThankYou" &&
-      el.typeId !== "SaveScreen" &&
-      el.typeId !== "FeatureName" &&
-      el.typeId !== "SAPRange" &&
-      el.typeId !== "Consent"
-  );
-  bodyElements.sort((a, b) => {
-    return a.position - b.position;
-  });
-  const pre: T[] = [];
-  const post: T[] = [];
-  if (Welcome) {
-    pre.push(Welcome);
-  }
-  if (Consent) {
-    pre.push(Consent);
-  }
-  if (FeatureName) {
-    pre.push(FeatureName);
-  }
-  if (SAPRange) {
-    pre.push(SAPRange);
-  }
-  if (SaveScreen) {
-    post.push(SaveScreen);
-  }
-  if (ThankYou) {
-    post.push(ThankYou);
-  }
-  if (Welcome || ThankYou) {
-    if (!Welcome) {
-      throw new Error("WelcomeMessage FormElement not in Form");
-    }
-    if (!ThankYou) {
-      throw new Error("ThankYou FormElement not in Form");
-    }
-    if (!SaveScreen) {
-      throw new Error("SaveScreen FormElement is not in Form");
-    }
-    return [...pre, ...bodyElements, ...post] as T[];
-  } else {
-    return [...pre, ...bodyElements, ...post] as T[];
-  }
-}
 
 export const SurveyContext = createContext<{
   surveyId: number;

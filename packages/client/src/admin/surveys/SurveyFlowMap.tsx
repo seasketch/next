@@ -24,10 +24,8 @@ import ReactFlow, {
 } from "react-flow-renderer";
 import dagre from "dagre";
 import { collectHeaders, collectQuestion, collectText } from "./collectText";
-import {
-  defaultFormElementIcon,
-  sortFormElements,
-} from "../../formElements/FormElement";
+import { defaultFormElementIcon } from "../../formElements/FormElement";
+import { sortFormElements } from "../../formElements/sortFormElements";
 import { FunctionComponent, memo, useMemo } from "react";
 import { OPERATOR_LABELS } from "./LogicRuleEditor";
 import { Trans } from "react-i18next";
