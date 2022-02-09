@@ -44,5 +44,12 @@ export async function getFeatureCollection(
       element.exportId
     );
   }
-  return normalizeSpatialProperties(surveyId, collection, formElements);
+  if (!collection || !collection.features || !collection.features.length) {
+    return {
+      type: "FeatureCollection",
+      features: [],
+    };
+  } else {
+    return normalizeSpatialProperties(surveyId, collection, formElements);
+  }
 }
