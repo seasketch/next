@@ -1,5 +1,5 @@
 //const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
-import { ProjectAccessControlSetting, useCreateSurveyMutation } from "../../../src/generated/graphql";
+import { ProjectAccessControlSetting } from "../../../src/generated/graphql";
 
 
 let surveyId: any
@@ -15,7 +15,7 @@ function generateSlug() {
 const slug = generateSlug()
 
 describe("Survey creation smoke test", () => {
-  describe ('Creates survey', () => {
+  describe ('Survey creation Cypress commands', () => {
     beforeEach(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
         if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
@@ -40,6 +40,7 @@ describe("Survey creation smoke test", () => {
               access_token
             ).then((resp) => {
               cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
+              cy.wrap(resp.makeSurvey.survey.form.formElements).as('formElements')
               cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
             })
           });
@@ -72,70 +73,32 @@ describe("Survey creation smoke test", () => {
         })
       })
     })
-    it ("Can get form elements from fixture", () => {
-      //Pass form id and token
-      //cy.updateSurveyForm(3, "sadlfjasdfl").then((resp) => {
-      //  let element = resp[0]
-      //  expect (element).to.have.property('typeId')
-      //})
-    })
-    it ("Can update survey form with form elements", () => {
-      cy.get("@formId").then((formId) => {
-        console.log(formId)
-      })
-      //cy.addFormElements(3, "sadlfjasdfl").then((resp) => {
-      //  console.log(resp)
-      //})
-      cy.get("@surveyId").then((id) => {
-        console.log(id)
-      })
-      
-    })
-  })
-  describe("User survey flow", () => {
-    beforeEach(() => {
-      cy.intercept("http://localhost:3857/graphql", (req) => {
-        if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
-          req.alias = "createProjectRequest"
-        } else if ((req.body.operationName) && (req.body.operationName == "CypressCreateSurvey")) {
-          req.alias = "createSurveyRequest"
-        }
-      })
-      cy.getToken("User 1").then(({ access_token }) => {
-        cy.wrap(access_token).as("token");
-        cy.createProject(
-          `Maldives Spatial Planning Test - ${slug}`,
-          slug,
-          ProjectAccessControlSetting.Public,
-          true
-        )
-        .then((projectId) => {
-          cy.wrap(projectId).as("projectId").then(() => {
-            cy.createSurvey(
-              `Maldives Ocean Use Survey Test - ${slug}`, 
-              projectId, 
-              access_token
-            ).then((resp) => {
-              let id = resp.makeSurvey.survey.id
-              cy.updateSurvey(id, access_token)
-              //cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
-              cy.wrap(id).as('surveyId')
-            })
-          });
-        });
-        cy.get('@surveyId').then((id) => {
-          cy.visit(`${slug}/surveys/${id}`)
+    it ("Can delete default form elements not required by survey", () => {
+     cy.get('@formId').then((id) => {
+       formId = id
+        cy.get('@token').then((token) => {
+          authToken = token
+          cy.deleteFormElements(formId, authToken).then((resp) => {
+            console.log(resp)
+            expect (resp.deleteFormElement.query.form.formElements.length).to.be.lt(5)
+          })
         })
-      });
+      })
     })
-    afterEach(() => {
-      cy.deleteProject(`${slug}`)
-    })
-    it("Can visit the survey", () => {
-      cy.contains('Begin', {timeout: 30000}).click()
+    it ("Can update form with form elements", () => {
+      cy.get('@formId').then((id) => {
+        formId = id 
+        cy.get("@token").then((token) => {
+          authToken = token
+          cy.deleteFormElements(formId, authToken)
+          cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+            expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
+          })
+        })
+      })
     })
   })
-  describe.only ('Updates the form', () => {
+  describe.only ('User survey flow', () => {
     beforeEach(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
         if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
@@ -159,9 +122,8 @@ describe("Survey creation smoke test", () => {
               projectId, 
               access_token
             ).then((resp) => {
-              console.log(resp)
               cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
-              console.log(resp.makeSurvey.survey.form.id)
+              cy.wrap(resp.makeSurvey.survey.form.formElements).as('formElements')
               cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
               cy.updateSurvey(resp.makeSurvey.survey.id, access_token).then((resp) => {
                 console.log(resp)
@@ -183,21 +145,30 @@ describe("Survey creation smoke test", () => {
       cy.deleteProject(`${slug}`) 
     })
 
-    it("Updates the form with form elements", () => {
+    it("Can visit the survey", () => {
+      cy.get('@formElements').then((el) => {
+        console.log(el)
+        console.log(el.length)
+      })
       cy.get('@formId').then((id) => {
-        formId = id
+        formId = id 
         cy.get("@token").then((token) => {
           authToken = token
+          cy.deleteFormElements(formId, authToken)
           //args are formId, formElements fixture alias, token
           cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
-            expect (resp.createFormElement.query.form.formElements.length).to.equal(40)
+            console.log(resp)
           })
+          //  expect (resp.createFormElement.query.form.formElements.length).to.equal(40)
+          //})
         })
       })
-      
-      
-      
-      
+      cy.get("@surveyId").then((id) => {
+        cy.visit(`${slug}/surveys/${id}`)
+        cy.contains('Begin', {timeout: 30000})
+        //cy.contains("Skip Question").click()
+        //cy.contains("Skip Question").click()
+      })
     })
   })
 })

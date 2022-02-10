@@ -1,11 +1,11 @@
-{ 
+{
   "Maldives": {
     "data": {
       "form": {
         "formElements": [
           {
-            "formId": 15,
             "id": 51,
+            "formId": 15,
             "isRequired": false,
             "exportId": "welcome_ocean_users!we_are_inter",
             "position": 1,
@@ -125,24 +125,13 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "WelcomeMessage",
-              "label": "Welcome Message",
-              "isInput": false,
-              "isSurveysOnly": true,
-              "isHidden": true,
-              "isSingleUseOnly": true,
-              "isRequiredForSurveys": true,
-              "supportedOperators": [],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": false,
+            "sketchClass": null
           },
           {
+            "id": 5902,
             "formId": 15,
-            "id": 72,
             "isRequired": true,
             "exportId": "name",
             "position": 2,
@@ -201,26 +190,13 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "Name",
-              "label": "Name",
-              "isInput": true,
-              "isSurveysOnly": true,
-              "isHidden": false,
-              "isSingleUseOnly": true,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 73,
+            "formId": 15,
             "isRequired": false,
             "exportId": "email",
             "position": 3,
@@ -254,94 +230,101 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "Email",
-              "label": "Email",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": true,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 74,
+            "formId": 15,
             "isRequired": true,
             "exportId": "which_atoll_do_you_reside_on",
             "position": 4,
             "componentSettings": {
               "options": [
                 {
-                  "label": "HA"
+                  "label": "HA",
+                  "value": "HA"
                 },
                 {
-                  "label": "HDh"
+                  "label": "HDh",
+                  "value": "HDh"
                 },
                 {
-                  "label": "Sh"
+                  "label": "Sh",
+                  "value": "Sh"
                 },
                 {
-                  "label": "N"
+                  "label": "N",
+                  "value": "N"
                 },
                 {
-                  "label": "R"
+                  "label": "R",
+                  "value": "R"
                 },
                 {
-                  "label": "B"
+                  "label": "B",
+                  "value": "B"
                 },
                 {
-                  "label": "Lh"
+                  "label": "Lh",
+                  "value": "Lh"
                 },
                 {
-                  "label": "K"
+                  "label": "K",
+                  "value": "K"
                 },
                 {
-                  "label": "AA"
+                  "label": "AA",
+                  "value": "AA"
                 },
                 {
-                  "label": "ADh"
+                  "label": "ADh",
+                  "value": "ADh"
                 },
                 {
-                  "label": "V"
+                  "label": "V",
+                  "value": "V"
                 },
                 {
-                  "label": "M"
+                  "label": "M",
+                  "value": "M"
                 },
                 {
-                  "label": "F"
+                  "label": "F",
+                  "value": "F"
                 },
                 {
-                  "label": "Dh"
+                  "label": "Dh",
+                  "value": "Dh"
                 },
                 {
-                  "label": "Th"
+                  "label": "Th",
+                  "value": "Th"
                 },
                 {
-                  "label": "L"
+                  "label": "L",
+                  "value": "L"
                 },
                 {
-                  "label": "GA"
+                  "label": "GA",
+                  "value": "GA"
                 },
                 {
-                  "label": "GDh"
+                  "label": "GDh",
+                  "value": "GDh"
                 },
                 {
-                  "label": "Gn"
+                  "label": "Gn",
+                  "value": "Gn"
                 },
                 {
-                  "label": "Addu"
+                  "label": "Addu City",
+                  "value": "Addu City"
                 }
               ]
             },
-            "typeId": "ComboBox",
+            "typeId": "MultipleChoice",
             "body": {
               "type": "doc",
               "content": [
@@ -369,80 +352,81 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "ComboBox",
-              "label": "Combo Box",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 75,
+            "formId": 15,
             "isRequired": true,
             "exportId": "which_island_of_ha_atoll_do_you_",
             "position": 5,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Thuraakunu"
+                  "label": "Thuraakunu",
+                  "value": "Thuraakunu"
                 },
                 {
-                  "label": "Uligamu"
+                  "label": "Uligamu",
+                  "value": "Uligamu"
                 },
                 {
-                  "label": "Mulhadhoo"
+                  "label": "Mulhadhoo",
+                  "value": "Mulhadhoo"
                 },
                 {
-                  "label": "Hoarafushi"
+                  "label": "Hoarafushi",
+                  "value": "Hoarafushi"
                 },
                 {
-                  "label": "Ihavandhoo"
+                  "label": "Ihavandhoo",
+                  "value": "Ihavandhoo"
                 },
                 {
-                  "label": "Kelaa"
+                  "label": "Kelaa",
+                  "value": "Kelaa"
                 },
                 {
-                  "label": "Vashafaru"
+                  "label": "Vashafaru",
+                  "value": "Vashafaru"
                 },
                 {
-                  "label": "Dhidhdhoo"
+                  "label": "Dhidhdhoo",
+                  "value": "Dhidhdhoo"
                 },
                 {
-                  "label": "Filladhoo"
+                  "label": "Filladhoo",
+                  "value": "Filladhoo"
                 },
                 {
-                  "label": "Maarandhoo"
+                  "label": "Maarandhoo",
+                  "value": "Maarandhoo"
                 },
                 {
-                  "label": "Thakandhoo"
+                  "label": "Thakandhoo",
+                  "value": "Thakandhoo"
                 },
                 {
-                  "label": "Utheemu"
+                  "label": "Utheemu",
+                  "value": "Utheemu"
                 },
                 {
-                  "label": "Muraidhoo"
+                  "label": "Muraidhoo",
+                  "value": "Muraidhoo"
                 },
                 {
-                  "label": "Baarah"
+                  "label": "Baarah",
+                  "value": "Baarah"
                 },
                 {
-                  "label": "Manafaru"
+                  "label": "Manafaru",
+                  "value": "Manafaru"
                 },
                 {
-                  "label": "Dhonakulhi"
+                  "label": "Dhonakulhi",
+                  "value": "Dhonakulhi"
                 }
               ]
             },
@@ -474,83 +458,85 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 76,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_hdh_do_you_resid",
             "position": 6,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Faridhoo"
+                  "label": "Faridhoo",
+                  "value": "Faridhoo"
                 },
                 {
-                  "label": "Hanimaadhoo"
+                  "label": "Hanimaadhoo",
+                  "value": "Hanimaadhoo"
                 },
                 {
-                  "label": "Finey"
+                  "label": "Finey",
+                  "value": "Finey"
                 },
                 {
-                  "label": "Naivaadhoo"
+                  "label": "Naivaadhoo",
+                  "value": "Naivaadhoo"
                 },
                 {
-                  "label": "Hirimaradhoo"
+                  "label": "Hirimaradhoo",
+                  "value": "Hirimaradhoo"
                 },
                 {
-                  "label": "Nolhivaranfaru"
+                  "label": "Nolhivaranfaru",
+                  "value": "Nolhivaranfaru"
                 },
                 {
-                  "label": "Nellaidhoo"
+                  "label": "Nellaidhoo",
+                  "value": "Nellaidhoo"
                 },
                 {
-                  "label": "Nolhivaramu"
+                  "label": "Nolhivaramu",
+                  "value": "Nolhivaramu"
                 },
                 {
-                  "label": "Kurnibi"
+                  "label": "Kurnibi",
+                  "value": "Kurnibi"
                 },
                 {
-                  "label": "Kulhudhuffushi"
+                  "label": "Kulhudhuffushi",
+                  "value": "Kulhudhuffushi"
                 },
                 {
-                  "label": "Kumundhoo"
+                  "label": "Kumundhoo",
+                  "value": "Kumundhoo"
                 },
                 {
-                  "label": "Neykurendhoo"
+                  "label": "Neykurendhoo",
+                  "value": "Neykurendhoo"
                 },
                 {
-                  "label": "Vaikaradhoo"
+                  "label": "Vaikaradhoo",
+                  "value": "Vaikaradhoo"
                 },
                 {
-                  "label": "Makunudhoo"
+                  "label": "Makunudhoo",
+                  "value": "Makunudhoo"
                 },
                 {
-                  "label": "Hon"
+                  "label": "Hon'daidhoo",
+                  "value": "Hon'daidhoo"
                 },
                 {
-                  "label": "Bodunaagoshi"
+                  "label": "Bodunaagoshi",
+                  "value": "Bodunaagoshi"
                 },
                 {
-                  "label": "Hondaafushi"
+                  "label": "Hondaafushi",
+                  "value": "Hondaafushi"
                 }
               ]
             },
@@ -582,80 +568,81 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 77,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_sh_do_you_reside",
             "position": 7,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Kanditheemu"
+                  "label": "Kanditheemu",
+                  "value": "Kanditheemu"
                 },
                 {
-                  "label": "Noomaraa"
+                  "label": "Noomaraa",
+                  "value": "Noomaraa"
                 },
                 {
-                  "label": "Goidhoo"
+                  "label": "Goidhoo",
+                  "value": "Goidhoo"
                 },
                 {
-                  "label": "Feydhoo"
+                  "label": "Feydhoo",
+                  "value": "Feydhoo"
                 },
                 {
-                  "label": "Feevah"
+                  "label": "Feevah",
+                  "value": "Feevah"
                 },
                 {
-                  "label": "Billeffahi"
+                  "label": "Billeffahi",
+                  "value": "Billeffahi"
                 },
                 {
-                  "label": "Foakaidhoo"
+                  "label": "Foakaidhoo",
+                  "value": "Foakaidhoo"
                 },
                 {
-                  "label": "Narudhoo"
+                  "label": "Narudhoo",
+                  "value": "Narudhoo"
                 },
                 {
-                  "label": "Maroshi"
+                  "label": "Maroshi",
+                  "value": "Maroshi"
                 },
                 {
-                  "label": "Lhaimagu"
+                  "label": "Lhaimagu",
+                  "value": "Lhaimagu"
                 },
                 {
-                  "label": "Komandhoo"
+                  "label": "Komandhoo",
+                  "value": "Komandhoo"
                 },
                 {
-                  "label": "Maaun"
+                  "label": "Maaun'goodhoo",
+                  "value": "Maaun'goodhoo"
                 },
                 {
-                  "label": "Funadhoo"
+                  "label": "Funadhoo",
+                  "value": "Funadhoo"
                 },
                 {
-                  "label": "Milandhoo"
+                  "label": "Milandhoo",
+                  "value": "Milandhoo"
                 },
                 {
-                  "label": "Gaakoshibee"
+                  "label": "Gaakoshibee",
+                  "value": "Gaakoshibee"
                 },
                 {
-                  "label": "Vagaru"
+                  "label": "Vagaru",
+                  "value": "Vagaru"
                 }
               ]
             },
@@ -687,95 +674,101 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 78,
-            "isRequired": false,
-            "exportId": "which_island_of_n_do_you_reside_",
+            "formId": 15,
+            "isRequired": true,
+            "exportId": "which_island_of_n_atoll_do_you_r",
             "position": 8,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Hen"
+                  "label": "Hen'badhoo",
+                  "value": "Hen'badhoo"
                 },
                 {
-                  "label": "Ken"
+                  "label": "Ken'dhikulhudhoo",
+                  "value": "Ken'dhikulhudhoo"
                 },
                 {
-                  "label": "Maalhendhoo"
+                  "label": "Maalhendhoo",
+                  "value": "Maalhendhoo"
                 },
                 {
-                  "label": "Kudafari"
+                  "label": "Kudafari",
+                  "value": "Kudafari"
                 },
                 {
-                  "label": "Landhoo"
+                  "label": "Landhoo",
+                  "value": "Landhoo"
                 },
                 {
-                  "label": "Maafaru"
+                  "label": "Maafaru",
+                  "value": "Maafaru"
                 },
                 {
-                  "label": "Lhohi"
+                  "label": "Lhohi",
+                  "value": "Lhohi"
                 },
                 {
-                  "label": "Miladhoo"
+                  "label": "Miladhoo",
+                  "value": "Miladhoo"
                 },
                 {
-                  "label": "Magoodhoo"
+                  "label": "Magoodhoo",
+                  "value": "Magoodhoo"
                 },
                 {
-                  "label": "Manadhoo"
+                  "label": "Manadhoo",
+                  "value": "Manadhoo"
                 },
                 {
-                  "label": "Holhudhoo"
+                  "label": "Holhudhoo",
+                  "value": "Holhudhoo"
                 },
                 {
-                  "label": "Fodhdhoo"
+                  "label": "Fodhdhoo",
+                  "value": "Fodhdhoo"
                 },
                 {
-                  "label": "Velidhoo"
+                  "label": "Velidhoo",
+                  "value": "Velidhoo"
                 },
                 {
-                  "label": "Fushivelaavaru"
+                  "label": "Fushivelaavaru",
+                  "value": "Fushivelaavaru"
                 },
                 {
-                  "label": "Kudafunafaru"
+                  "label": "Kudafunafaru",
+                  "value": "Kudafunafaru"
                 },
                 {
-                  "label": "Kuredhivaru"
+                  "label": "Kuredhivaru",
+                  "value": "Kuredhivaru"
                 },
                 {
-                  "label": "Medhafushi"
+                  "label": "Medhafushi",
+                  "value": "Medhafushi"
                 },
                 {
-                  "label": "Medhufaru"
+                  "label": "Medhufaru",
+                  "value": "Medhufaru"
                 },
                 {
-                  "label": "Orivaru"
+                  "label": "Orivaru",
+                  "value": "Orivaru"
                 },
                 {
-                  "label": "Randheli"
+                  "label": "Randheli",
+                  "value": "Randheli"
                 },
                 {
-                  "label": "Maavelaavaru"
+                  "label": "Maavelaavaru",
+                  "value": "Maavelaavaru"
                 }
               ]
             },
@@ -787,7 +780,7 @@
                   "type": "question",
                   "content": [
                     {
-                      "text": "Which island of N do you reside on?",
+                      "text": "Which island of N atoll do you reside on?",
                       "type": "text"
                     }
                   ]
@@ -807,116 +800,129 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 79,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_r_atoll_do_you_r",
             "position": 9,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Alifushi"
+                  "label": "Alifushi",
+                  "value": "Alifushi"
                 },
                 {
-                  "label": "Vaadhoo"
+                  "label": "Vaadhoo",
+                  "value": "Vaadhoo"
                 },
                 {
-                  "label": "Rasgetheemu"
+                  "label": "Rasgetheemu",
+                  "value": "Rasgetheemu"
                 },
                 {
-                  "label": "An"
+                  "label": "An'golhitheemu",
+                  "value": "An'golhitheemu"
                 },
                 {
-                  "label": "Un"
+                  "label": "Un'goofaaru",
+                  "value": "Un'goofaaru"
                 },
                 {
-                  "label": "Dhuvaafaru"
+                  "label": "Dhuvaafaru",
+                  "value": "Dhuvaafaru"
                 },
                 {
-                  "label": "Maakurathu"
+                  "label": "Maakurathu",
+                  "value": "Maakurathu"
                 },
                 {
-                  "label": "Rasmaadhoo"
+                  "label": "Rasmaadhoo",
+                  "value": "Rasmaadhoo"
                 },
                 {
-                  "label": "Innamaadhoo"
+                  "label": "Innamaadhoo",
+                  "value": "Innamaadhoo"
                 },
                 {
-                  "label": "Maduvvari"
+                  "label": "Maduvvari",
+                  "value": "Maduvvari"
                 },
                 {
-                  "label": "In"
+                  "label": "In'guraidhoo",
+                  "value": "In'guraidhoo"
                 },
                 {
-                  "label": "Fainu"
+                  "label": "Fainu",
+                  "value": "Fainu"
                 },
                 {
-                  "label": "Meedhoo"
+                  "label": "Meedhoo",
+                  "value": "Meedhoo"
                 },
                 {
-                  "label": "Kinolhas"
+                  "label": "Kinolhas",
+                  "value": "Kinolhas"
                 },
                 {
-                  "label": "Hulhudhuffaaru"
+                  "label": "Hulhudhuffaaru",
+                  "value": "Hulhudhuffaaru"
                 },
                 {
-                  "label": "Aarah"
+                  "label": "Aarah",
+                  "value": "Aarah"
                 },
                 {
-                  "label": "Dhigali"
+                  "label": "Dhigali",
+                  "value": "Dhigali"
                 },
                 {
-                  "label": "Faarufushi"
+                  "label": "Faarufushi",
+                  "value": "Faarufushi"
                 },
                 {
-                  "label": "Fasmendhoo"
+                  "label": "Fasmendhoo",
+                  "value": "Fasmendhoo"
                 },
                 {
-                  "label": "Filaidhoo"
+                  "label": "Filaidhoo",
+                  "value": "Filaidhoo"
                 },
                 {
-                  "label": "Furaveri"
+                  "label": "Furaveri",
+                  "value": "Furaveri"
                 },
                 {
-                  "label": "Huruvalhi"
+                  "label": "Huruvalhi",
+                  "value": "Huruvalhi"
                 },
                 {
-                  "label": "Kottefaru"
+                  "label": "Kottefaru",
+                  "value": "Kottefaru"
                 },
                 {
-                  "label": "Kudafushi"
+                  "label": "Kudafushi",
+                  "value": "Kudafushi"
                 },
                 {
-                  "label": "Maamunagau"
+                  "label": "Maamunagau",
+                  "value": "Maamunagau"
                 },
                 {
-                  "label": "Meedhupparu"
+                  "label": "Meedhupparu",
+                  "value": "Meedhupparu"
                 },
                 {
-                  "label": "Muravandhoo"
+                  "label": "Muravandhoo",
+                  "value": "Muravandhoo"
                 },
                 {
-                  "label": "Uthurumaafaru"
+                  "label": "Uthurumaafaru",
+                  "value": "Uthurumaafaru"
                 }
               ]
             },
@@ -948,125 +954,141 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "ComboBox",
-              "label": "Combo Box",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 80,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_b_atoll_do_you_r",
             "position": 10,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Kudarikilu"
+                  "label": "Kudarikilu",
+                  "value": "Kudarikilu"
                 },
                 {
-                  "label": "Kamadhoo"
+                  "label": "Kamadhoo",
+                  "value": "Kamadhoo"
                 },
                 {
-                  "label": "Kendhoo"
+                  "label": "Kendhoo",
+                  "value": "Kendhoo"
                 },
                 {
-                  "label": "Kihaadhoo"
+                  "label": "Kihaadhoo",
+                  "value": "Kihaadhoo"
                 },
                 {
-                  "label": "Dhonfanu"
+                  "label": "Dhonfanu",
+                  "value": "Dhonfanu"
                 },
                 {
-                  "label": "Daravandhoo"
+                  "label": "Daravandhoo",
+                  "value": "Daravandhoo"
                 },
                 {
-                  "label": "Maalhos"
+                  "label": "Maalhos",
+                  "value": "Maalhos"
                 },
                 {
-                  "label": "Eydhafushi"
+                  "label": "Eydhafushi",
+                  "value": "Eydhafushi"
                 },
                 {
-                  "label": "Thulhaadhoo"
+                  "label": "Thulhaadhoo",
+                  "value": "Thulhaadhoo"
                 },
                 {
-                  "label": "Hithaadhoo"
+                  "label": "Hithaadhoo",
+                  "value": "Hithaadhoo"
                 },
                 {
-                  "label": "Fulhadhoo"
+                  "label": "Fulhadhoo",
+                  "value": "Fulhadhoo"
                 },
                 {
-                  "label": "Fehendhoo"
+                  "label": "Fehendhoo",
+                  "value": "Fehendhoo"
                 },
                 {
-                  "label": "Goidhoo"
+                  "label": "Goidhoo",
+                  "value": "Goidhoo"
                 },
                 {
-                  "label": "Dhigufaru"
+                  "label": "Dhigufaru",
+                  "value": "Dhigufaru"
                 },
                 {
-                  "label": "Dhigufaruvinagandu"
+                  "label": "Dhigufaruvinagandu",
+                  "value": "Dhigufaruvinagandu"
                 },
                 {
-                  "label": "Dhunikolhu"
+                  "label": "Dhunikolhu",
+                  "value": "Dhunikolhu"
                 },
                 {
-                  "label": "Fonimagoodhoo"
+                  "label": "Fonimagoodhoo",
+                  "value": "Fonimagoodhoo"
                 },
                 {
-                  "label": "Hirundhoo"
+                  "label": "Hirundhoo",
+                  "value": "Hirundhoo"
                 },
                 {
-                  "label": "Horubadhoo"
+                  "label": "Horubadhoo",
+                  "value": "Horubadhoo"
                 },
                 {
-                  "label": "Kanufushi"
+                  "label": "Kanufushi",
+                  "value": "Kanufushi"
                 },
                 {
-                  "label": "Kihaadhuffaru"
+                  "label": "Kihaadhuffaru",
+                  "value": "Kihaadhuffaru"
                 },
                 {
-                  "label": "Kihavah"
+                  "label": "Kihavah Huravalhi",
+                  "value": "Kihavah Huravalhi"
                 },
                 {
-                  "label": "Kunfunadhoo"
+                  "label": "Kunfunadhoo",
+                  "value": "Kunfunadhoo"
                 },
                 {
-                  "label": "Landaa"
+                  "label": "Landaa Giraavaru",
+                  "value": "Landaa Giraavaru"
                 },
                 {
-                  "label": "Milaidhoo"
+                  "label": "Milaidhoo",
+                  "value": "Milaidhoo"
                 },
                 {
-                  "label": "Miriandhoo"
+                  "label": "Miriandhoo",
+                  "value": "Miriandhoo"
                 },
                 {
-                  "label": "Mudhdhoo"
+                  "label": "Mudhdhoo",
+                  "value": "Mudhdhoo"
                 },
                 {
-                  "label": "Thiladhoo"
+                  "label": "Thiladhoo",
+                  "value": "Thiladhoo"
                 },
                 {
-                  "label": "Vakkaru"
+                  "label": "Vakkaru",
+                  "value": "Vakkaru"
                 },
                 {
-                  "label": "Voavah"
+                  "label": "Voavah",
+                  "value": "Voavah"
                 },
                 {
-                  "label": "Finolhas"
+                  "label": "Finolhas (Finolhu)",
+                  "value": "Finolhas (Finolhu)"
                 }
               ]
             },
@@ -1098,74 +1120,73 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "ComboBox",
-              "label": "Combo Box",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 81,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_lh_atoll_do_you_",
             "position": 11,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Hinnavaru"
+                  "label": "Hinnavaru",
+                  "value": "Hinnavaru"
                 },
                 {
-                  "label": "Naifaru"
+                  "label": "Naifaru",
+                  "value": "Naifaru"
                 },
                 {
-                  "label": "Kurendhoo"
+                  "label": "Kurendhoo",
+                  "value": "Kurendhoo"
                 },
                 {
-                  "label": "Olhuvelifushi"
+                  "label": "Olhuvelifushi",
+                  "value": "Olhuvelifushi"
                 },
                 {
-                  "label": "Fushifaru"
+                  "label": "Fushifaru",
+                  "value": "Fushifaru"
                 },
                 {
-                  "label": "Huravalhi"
+                  "label": "Huravalhi",
+                  "value": "Huravalhi"
                 },
                 {
-                  "label": "Innahuraa"
+                  "label": "Innahuraa",
+                  "value": "Innahuraa"
                 },
                 {
-                  "label": "Kanifushi"
+                  "label": "Kanifushi",
+                  "value": "Kanifushi"
                 },
                 {
-                  "label": "Kanuhuraa"
+                  "label": "Kanuhuraa",
+                  "value": "Kanuhuraa"
                 },
                 {
-                  "label": "Komandoo"
+                  "label": "Komandoo",
+                  "value": "Komandoo"
                 },
                 {
-                  "label": "Kudadhoo"
+                  "label": "Kudadhoo",
+                  "value": "Kudadhoo"
                 },
                 {
-                  "label": "Kuredu"
+                  "label": "Kuredu",
+                  "value": "Kuredu"
                 },
                 {
-                  "label": "Madhiriguraidhu"
+                  "label": "Madhiriguraidhu",
+                  "value": "Madhiriguraidhu"
                 },
                 {
-                  "label": "Ookolhu"
+                  "label": "އޫކޮޅުފިނޮޅު",
+                  "value": "Ookolhu Finolhu"
                 }
               ]
             },
@@ -1197,95 +1218,101 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 82,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_aa_atoll_do_you_",
             "position": 12,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Thoddoo"
+                  "label": "Thoddoo",
+                  "value": "Thoddoo"
                 },
                 {
-                  "label": "Rasdhoo"
+                  "label": "Rasdhoo",
+                  "value": "Rasdhoo"
                 },
                 {
-                  "label": "Ukulhas"
+                  "label": "Ukulhas",
+                  "value": "Ukulhas"
                 },
                 {
-                  "label": "Mathiveri"
+                  "label": "Mathiveri",
+                  "value": "Mathiveri"
                 },
                 {
-                  "label": "Bodufolhudhoo"
+                  "label": "Bodufolhudhoo",
+                  "value": "Bodufolhudhoo"
                 },
                 {
-                  "label": "Feridhoo"
+                  "label": "Feridhoo",
+                  "value": "Feridhoo"
                 },
                 {
-                  "label": "Maalhos"
+                  "label": "Maalhos",
+                  "value": "Maalhos"
                 },
                 {
-                  "label": "Himandhoo"
+                  "label": "Himandhoo",
+                  "value": "Himandhoo"
                 },
                 {
-                  "label": "Bathala"
+                  "label": "Bathala",
+                  "value": "Bathala"
                 },
                 {
-                  "label": "Ellaidhoo"
+                  "label": "Ellaidhoo",
+                  "value": "Ellaidhoo"
                 },
                 {
-                  "label": "Fesdhoo"
+                  "label": "Fesdhoo",
+                  "value": "Fesdhoo"
                 },
                 {
-                  "label": "Gangehi"
+                  "label": "Gangehi",
+                  "value": "Gangehi"
                 },
                 {
-                  "label": "Halaveli"
+                  "label": "Halaveli",
+                  "value": "Halaveli"
                 },
                 {
-                  "label": "Kandholhudhoo"
+                  "label": "Kandholhudhoo",
+                  "value": "Kandholhudhoo"
                 },
                 {
-                  "label": "Kudafolhudhoo"
+                  "label": "Kudafolhudhoo",
+                  "value": "Kudafolhudhoo"
                 },
                 {
-                  "label": "Kuramathi"
+                  "label": "Kuramathi",
+                  "value": "Kuramathi"
                 },
                 {
-                  "label": "Maayafushi"
+                  "label": "Maayafushi",
+                  "value": "Maayafushi"
                 },
                 {
-                  "label": "Velidhoo"
+                  "label": "Velidhoo",
+                  "value": "Velidhoo"
                 },
                 {
-                  "label": "Veligan"
+                  "label": "Veligan'du",
+                  "value": "Veligan'du"
                 },
                 {
-                  "label": "Maadoogali"
+                  "label": "Maadoogali",
+                  "value": "Maadoogali"
                 },
                 {
-                  "label": "Mushimasgali"
+                  "label": "Mushimasgali",
+                  "value": "Mushimasgali"
                 }
               ]
             },
@@ -1317,116 +1344,129 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 84,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_adh_atoll_do_you",
             "position": 13,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Hangn"
+                  "label": "Hangn'aameedhoo",
+                  "value": "Hangn'aameedhoo"
                 },
                 {
-                  "label": "Omadhoo"
+                  "label": "Omadhoo",
+                  "value": "Omadhoo"
                 },
                 {
-                  "label": "Kun"
+                  "label": "Kun'burudhoo",
+                  "value": "Kun'burudhoo"
                 },
                 {
-                  "label": "Mahibadhoo"
+                  "label": "Mahibadhoo",
+                  "value": "Mahibadhoo"
                 },
                 {
-                  "label": "Mandhoo"
+                  "label": "Mandhoo",
+                  "value": "Mandhoo"
                 },
                 {
-                  "label": "Dhn"
+                  "label": "Dhn'agethi",
+                  "value": "Dhn'agethi"
                 },
                 {
-                  "label": "Dhigurah"
+                  "label": "Dhigurah",
+                  "value": "Dhigurah"
                 },
                 {
-                  "label": "Fenfushi"
+                  "label": "Fenfushi",
+                  "value": "Fenfushi"
                 },
                 {
-                  "label": "Dhidhdhoo"
+                  "label": "Dhidhdhoo",
+                  "value": "Dhidhdhoo"
                 },
                 {
-                  "label": "Maamigili"
+                  "label": "Maamigili",
+                  "value": "Maamigili"
                 },
                 {
-                  "label": "Angagaau"
+                  "label": "Angagaau",
+                  "value": "Angagaau"
                 },
                 {
-                  "label": "Athurugau"
+                  "label": "Athurugau",
+                  "value": "Athurugau"
                 },
                 {
-                  "label": "Dhidhdhoofinolhu"
+                  "label": "Dhidhdhoofinolhu",
+                  "value": "Dhidhdhoofinolhu"
                 },
                 {
-                  "label": "Dhiffushi"
+                  "label": "Dhiffushi",
+                  "value": "Dhiffushi"
                 },
                 {
-                  "label": "Innafushi"
+                  "label": "Innafushi",
+                  "value": "Innafushi"
                 },
                 {
-                  "label": "Huvahendhoo"
+                  "label": "Huvahendhoo",
+                  "value": "Huvahendhoo"
                 },
                 {
-                  "label": "Kudarah"
+                  "label": "Kudarah",
+                  "value": "Kudarah"
                 },
                 {
-                  "label": "Machchafushi"
+                  "label": "Machchafushi",
+                  "value": "Machchafushi"
                 },
                 {
-                  "label": "Maafushivaru"
+                  "label": "Maafushivaru",
+                  "value": "Maafushivaru"
                 },
                 {
-                  "label": "Mirihi"
+                  "label": "Mirihi",
+                  "value": "Mirihi"
                 },
                 {
-                  "label": "Moofushi"
+                  "label": "Moofushi",
+                  "value": "Moofushi"
                 },
                 {
-                  "label": "Nalaguraidhoo"
+                  "label": "Nalaguraidhoo",
+                  "value": "Nalaguraidhoo"
                 },
                 {
-                  "label": "Rangalifinolhu"
+                  "label": "Rangalifinolhu",
+                  "value": "Rangalifinolhu"
                 },
                 {
-                  "label": "Theluveliga"
+                  "label": "Theluveliga",
+                  "value": "Theluveliga"
                 },
                 {
-                  "label": "Thundufushi"
+                  "label": "Thundufushi",
+                  "value": "Thundufushi"
                 },
                 {
-                  "label": "Vakarufalhi"
+                  "label": "Vakarufalhi",
+                  "value": "Vakarufalhi"
                 },
                 {
-                  "label": "Villingilivaru"
+                  "label": "Villingilivaru",
+                  "value": "Villingilivaru"
                 },
                 {
-                  "label": "Vilamendhoo"
+                  "label": "Vilamendhoo",
+                  "value": "Vilamendhoo"
                 }
               ]
             },
@@ -1458,56 +1498,49 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "ComboBox",
-              "label": "Combo Box",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 85,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_v_atoll_do_you_r",
             "position": 14,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Fulidhoo"
+                  "label": "Fulidhoo",
+                  "value": "Fulidhoo"
                 },
                 {
-                  "label": "Thinadhoo"
+                  "label": "Thinadhoo",
+                  "value": "Thinadhoo"
                 },
                 {
-                  "label": "Felidhoo"
+                  "label": "Felidhoo",
+                  "value": "Felidhoo"
                 },
                 {
-                  "label": "Keyodhoo"
+                  "label": "Keyodhoo",
+                  "value": "Keyodhoo"
                 },
                 {
-                  "label": "Rakeedhoo"
+                  "label": "Rakeedhoo",
+                  "value": "Rakeedhoo"
                 },
                 {
-                  "label": "Aarah"
+                  "label": "Aarah (Velifushi)",
+                  "value": "Aarah (Velifushi)"
                 },
                 {
-                  "label": "Alimatha"
+                  "label": "Alimatha",
+                  "value": "Alimatha"
                 },
                 {
-                  "label": "Dhiggiri"
+                  "label": "Dhiggiri",
+                  "value": "Dhiggiri"
                 }
               ]
             },
@@ -1539,62 +1572,57 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 83,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_m_atoll_do_you_r",
             "position": 15,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Raiymandhoo"
+                  "label": "Raiymandhoo",
+                  "value": "Raiymandhoo"
                 },
                 {
-                  "label": "Veyvah"
+                  "label": "Veyvah",
+                  "value": "Veyvah"
                 },
                 {
-                  "label": "Mulah"
+                  "label": "Mulah",
+                  "value": "Mulah"
                 },
                 {
-                  "label": "Muli"
+                  "label": "Muli",
+                  "value": "Muli"
                 },
                 {
-                  "label": "Naalaafushi"
+                  "label": "Naalaafushi",
+                  "value": "Naalaafushi"
                 },
                 {
-                  "label": "Kolhufushi"
+                  "label": "Kolhufushi",
+                  "value": "Kolhufushi"
                 },
                 {
-                  "label": "Dhiggaru"
+                  "label": "Dhiggaru",
+                  "value": "Dhiggaru"
                 },
                 {
-                  "label": "Maduvvari"
+                  "label": "Maduvvari",
+                  "value": "Maduvvari"
                 },
                 {
-                  "label": "Hakuraahuraa"
+                  "label": "Hakuraahuraa",
+                  "value": "Hakuraahuraa"
                 },
                 {
-                  "label": "Medhufushi"
+                  "label": "Medhufushi",
+                  "value": "Medhufushi"
                 }
               ]
             },
@@ -1626,50 +1654,41 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 86,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_f_atoll_do_you_r",
             "position": 16,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Feeali"
+                  "label": "Feeali",
+                  "value": "Feeali"
                 },
                 {
-                  "label": "Biledhhdhoo"
+                  "label": "Biledhhdhoo",
+                  "value": "Biledhhdhoo"
                 },
                 {
-                  "label": "Magoodhoo"
+                  "label": "Magoodhoo",
+                  "value": "Magoodhoo"
                 },
                 {
-                  "label": "Dharan"
+                  "label": "Dharan'boodhoo",
+                  "value": "Dharan'boodhoo"
                 },
                 {
-                  "label": "Nilandhoo"
+                  "label": "Nilandhoo",
+                  "value": "Nilandhoo"
                 },
                 {
-                  "label": "Filitheyo"
+                  "label": "Filitheyo",
+                  "value": "Filitheyo"
                 }
               ]
             },
@@ -1701,80 +1720,81 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 87,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_dh_atoll_do_you_",
             "position": 17,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Meedhoo"
+                  "label": "Meedhoo",
+                  "value": "Meedhoo"
                 },
                 {
-                  "label": "Ban"
+                  "label": "Ban'didhoo",
+                  "value": "Ban'didhoo"
                 },
                 {
-                  "label": "Rin"
+                  "label": "Rin'budhoo",
+                  "value": "Rin'budhoo"
                 },
                 {
-                  "label": "Hulhudeli"
+                  "label": "Hulhudeli",
+                  "value": "Hulhudeli"
                 },
                 {
-                  "label": "Maaen"
+                  "label": "Maaen'boodhoo",
+                  "value": "Maaen'boodhoo"
                 },
                 {
-                  "label": "Kudahuvadhoo"
+                  "label": "Kudahuvadhoo",
+                  "value": "Kudahuvadhoo"
                 },
                 {
-                  "label": "Aluvifushi"
+                  "label": "Aluvifushi",
+                  "value": "Aluvifushi"
                 },
                 {
-                  "label": "Dhoores"
+                  "label": "Dhoores",
+                  "value": "Dhoores"
                 },
                 {
-                  "label": "Embudhufushi"
+                  "label": "Embudhufushi and Olhuveli",
+                  "value": "Embudhufushi and Olhuveli"
                 },
                 {
-                  "label": "Kadinma"
+                  "label": "Kadinma",
+                  "value": "Kadinma"
                 },
                 {
-                  "label": "Kedhigan"
+                  "label": "Kedhigan'du",
+                  "value": "Kedhigan'du"
                 },
                 {
-                  "label": "Maafushi"
+                  "label": "Maafushi and Kedhigandu",
+                  "value": "Maafushi and Kedhigandu"
                 },
                 {
-                  "label": "Maagau"
+                  "label": "Maagau",
+                  "value": "Maagau"
                 },
                 {
-                  "label": "Meedhuffushi"
+                  "label": "Meedhuffushi",
+                  "value": "Meedhuffushi"
                 },
                 {
-                  "label": "Velavaru"
+                  "label": "Velavaru",
+                  "value": "Velavaru"
                 },
                 {
-                  "label": "Vommuli"
+                  "label": "Vommuli",
+                  "value": "Vommuli"
                 }
               ]
             },
@@ -1806,74 +1826,73 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 88,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_th_atoll_do_you_",
             "position": 18,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Buruni"
+                  "label": "Buruni",
+                  "value": "Buruni"
                 },
                 {
-                  "label": "Vilufushi"
+                  "label": "Vilufushi",
+                  "value": "Vilufushi"
                 },
                 {
-                  "label": "Madifushi"
+                  "label": "Madifushi",
+                  "value": "Madifushi"
                 },
                 {
-                  "label": "Dhiyamigili"
+                  "label": "Dhiyamigili",
+                  "value": "Dhiyamigili"
                 },
                 {
-                  "label": "Guraidhoo"
+                  "label": "Guraidhoo",
+                  "value": "Guraidhoo"
                 },
                 {
-                  "label": "Kan"
+                  "label": "Kan'doodhoo",
+                  "value": "Kan'doodhoo"
                 },
                 {
-                  "label": "Vandhoo"
+                  "label": "Vandhoo",
+                  "value": "Vandhoo"
                 },
                 {
-                  "label": "Hirilandhoo"
+                  "label": "Hirilandhoo",
+                  "value": "Hirilandhoo"
                 },
                 {
-                  "label": "Gaadhiffushi"
+                  "label": "Gaadhiffushi",
+                  "value": "Gaadhiffushi"
                 },
                 {
-                  "label": "Thimarafushi"
+                  "label": "Thimarafushi",
+                  "value": "Thimarafushi"
                 },
                 {
-                  "label": "Veymandoo"
+                  "label": "Veymandoo",
+                  "value": "Veymandoo"
                 },
                 {
-                  "label": "Kinbidhoo"
+                  "label": "Kinbidhoo",
+                  "value": "Kinbidhoo"
                 },
                 {
-                  "label": "Omadhoo"
+                  "label": "Omadhoo",
+                  "value": "Omadhoo"
                 },
                 {
-                  "label": "Male"
+                  "label": "Male'fushi",
+                  "value": "Male'fushi"
                 }
               ]
             },
@@ -1905,74 +1924,73 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 89,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_l_atoll_do_you_r",
             "position": 19,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Ishdhoo"
+                  "label": "Ishdhoo",
+                  "value": "Ishdhoo"
                 },
                 {
-                  "label": "Dhan"
+                  "label": "Dhan'bidhoo",
+                  "value": "Dhan'bidhoo"
                 },
                 {
-                  "label": "Maabaidhoo"
+                  "label": "Maabaidhoo",
+                  "value": "Maabaidhoo"
                 },
                 {
-                  "label": "Mundoo"
+                  "label": "Mundoo",
+                  "value": "Mundoo"
                 },
                 {
-                  "label": "Gamu"
+                  "label": "Gamu (Gan)",
+                  "value": "Gamu (Gan)"
                 },
                 {
-                  "label": "Maavah"
+                  "label": "Maavah",
+                  "value": "Maavah"
                 },
                 {
-                  "label": "Fonadhoo"
+                  "label": "Fonadhoo",
+                  "value": "Fonadhoo"
                 },
                 {
-                  "label": "Gaadhoo"
+                  "label": "Gaadhoo",
+                  "value": "Gaadhoo"
                 },
                 {
-                  "label": "Maamendhoo"
+                  "label": "Maamendhoo",
+                  "value": "Maamendhoo"
                 },
                 {
-                  "label": "Hithadhoo"
+                  "label": "Hithadhoo",
+                  "value": "Hithadhoo"
                 },
                 {
-                  "label": "Kunahandhoo"
+                  "label": "Kunahandhoo",
+                  "value": "Kunahandhoo"
                 },
                 {
-                  "label": "Kalaidhoo"
+                  "label": "Kalaidhoo",
+                  "value": "Kalaidhoo"
                 },
                 {
-                  "label": "Kudafares"
+                  "label": "Kudafares and Fares",
+                  "value": "Kudafares and Fares"
                 },
                 {
-                  "label": "Olhuveli"
+                  "label": "Olhuveli",
+                  "value": "Olhuveli"
                 }
               ]
             },
@@ -2004,77 +2022,77 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 90,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_ga_atoll_do_you_",
             "position": 20,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Kolamaafushi"
+                  "label": "Kolamaafushi",
+                  "value": "Kolamaafushi"
                 },
                 {
-                  "label": "Viligili"
+                  "label": "Viligili",
+                  "value": "Viligili"
                 },
                 {
-                  "label": "Maamendhoo"
+                  "label": "Maamendhoo",
+                  "value": "Maamendhoo"
                 },
                 {
-                  "label": "Nilandhoo"
+                  "label": "Nilandhoo",
+                  "value": "Nilandhoo"
                 },
                 {
-                  "label": "Dhaandhoo"
+                  "label": "Dhaandhoo",
+                  "value": "Dhaandhoo"
                 },
                 {
-                  "label": "Devvadhoo"
+                  "label": "Devvadhoo",
+                  "value": "Devvadhoo"
                 },
                 {
-                  "label": "Kodey"
+                  "label": "Kodey",
+                  "value": "Kodey"
                 },
                 {
-                  "label": "Gemanafushi"
+                  "label": "Gemanafushi",
+                  "value": "Gemanafushi"
                 },
                 {
-                  "label": "Kandhuhulhudhoo"
+                  "label": "Kandhuhulhudhoo",
+                  "value": "Kandhuhulhudhoo"
                 },
                 {
-                  "label": "Dhigurah"
+                  "label": "Dhigurah",
+                  "value": "Dhigurah"
                 },
                 {
-                  "label": "Falhumaafushi"
+                  "label": "Falhumaafushi",
+                  "value": "Falhumaafushi"
                 },
                 {
-                  "label": "Funamauddua"
+                  "label": "Funamauddua",
+                  "value": "Funamauddua"
                 },
                 {
-                  "label": "Hadahaa"
+                  "label": "Hadahaa",
+                  "value": "Hadahaa"
                 },
                 {
-                  "label": "Maamutaa"
+                  "label": "Maamutaa",
+                  "value": "Maamutaa"
                 },
                 {
-                  "label": "Meradhoo"
+                  "label": "Meradhoo",
+                  "value": "Meradhoo"
                 }
               ]
             },
@@ -2106,74 +2124,73 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 91,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_gdh_atoll_do_you",
             "position": 21,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Madaveli"
+                  "label": "Madaveli",
+                  "value": "Madaveli"
                 },
                 {
-                  "label": "Hoadhedhdhoo"
+                  "label": "Hoadhedhdhoo",
+                  "value": "Hoadhedhdhoo"
                 },
                 {
-                  "label": "Nadallaa"
+                  "label": "Nadallaa",
+                  "value": "Nadallaa"
                 },
                 {
-                  "label": "Gadhdhoo"
+                  "label": "Gadhdhoo",
+                  "value": "Gadhdhoo"
                 },
                 {
-                  "label": "Rathafandhoo"
+                  "label": "Rathafandhoo",
+                  "value": "Rathafandhoo"
                 },
                 {
-                  "label": "Vaadhoo"
+                  "label": "Vaadhoo",
+                  "value": "Vaadhoo"
                 },
                 {
-                  "label": "Fiyoari"
+                  "label": "Fiyoari",
+                  "value": "Fiyoari"
                 },
                 {
-                  "label": "Faresmaathoda"
+                  "label": "Faresmaathoda",
+                  "value": "Faresmaathoda"
                 },
                 {
-                  "label": "Maathodaa"
+                  "label": "(Maathodaa)",
+                  "value": "(Maathodaa)"
                 },
                 {
-                  "label": "Fares"
+                  "label": "(Fares)",
+                  "value": "(Fares)"
                 },
                 {
-                  "label": "Thinadhoo"
+                  "label": "Thinadhoo",
+                  "value": "Thinadhoo"
                 },
                 {
-                  "label": "Konotta"
+                  "label": "Konotta",
+                  "value": "Konotta"
                 },
                 {
-                  "label": "Havodda"
+                  "label": "Havodda",
+                  "value": "Havodda"
                 },
                 {
-                  "label": "Magudhdhuvaa"
+                  "label": "Magudhdhuvaa",
+                  "value": "Magudhdhuvaa"
                 }
               ]
             },
@@ -2205,65 +2222,61 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 92,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_of_s_(addu_city)_do",
             "position": 22,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Meedhoo"
+                  "label": "Meedhoo",
+                  "value": "Meedhoo"
                 },
                 {
-                  "label": "Hithadhoo"
+                  "label": "Hithadhoo",
+                  "value": "Hithadhoo"
                 },
                 {
-                  "label": "Maradhoo"
+                  "label": "Maradhoo",
+                  "value": "Maradhoo"
                 },
                 {
-                  "label": "Feydhoo"
+                  "label": "Feydhoo",
+                  "value": "Feydhoo"
                 },
                 {
-                  "label": "Maradhoofeydhoo"
+                  "label": "Maradhoofeydhoo",
+                  "value": "Maradhoofeydhoo"
                 },
                 {
-                  "label": "Hulhudhoo"
+                  "label": "Hulhudhoo",
+                  "value": "Hulhudhoo"
                 },
                 {
-                  "label": "Gan"
+                  "label": "Gan",
+                  "value": "Gan"
                 },
                 {
-                  "label": "Herethere"
+                  "label": "Herethere",
+                  "value": "Herethere"
                 },
                 {
-                  "label": "Ismehelaahera"
+                  "label": "Ismehelaahera",
+                  "value": "Ismehelaahera"
                 },
                 {
-                  "label": "Kedevaahera"
+                  "label": "Kedevaahera",
+                  "value": "Kedevaahera"
                 },
                 {
-                  "label": "Villingili"
+                  "label": "Villingili",
+                  "value": "Villingili"
                 }
               ]
             },
@@ -2295,200 +2308,285 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 93,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "which_island_in_greater_male'_ci",
             "position": 23,
             "componentSettings": {
               "options": [
                 {
-                  "label": "Kaashidhoo"
+                  "label": "Kaashidhoo",
+                  "value": "Kaashidhoo"
                 },
                 {
-                  "label": "Gaafaru"
+                  "label": "Gaafaru",
+                  "value": "Gaafaru"
                 },
                 {
-                  "label": "Dhiffushi"
+                  "label": "Dhiffushi",
+                  "value": "Dhiffushi"
                 },
                 {
-                  "label": "Thulusdhoo"
+                  "label": "Thulusdhoo",
+                  "value": "Thulusdhoo"
                 },
                 {
-                  "label": "Huraa"
+                  "label": "Huraa",
+                  "value": "Huraa"
                 },
                 {
-                  "label": "Himmafushi"
+                  "label": "Himmafushi",
+                  "value": "Himmafushi"
                 },
                 {
-                  "label": "Gulhi"
+                  "label": "Gulhi",
+                  "value": "Gulhi"
                 },
                 {
-                  "label": "Maafushi"
+                  "label": "Maafushi",
+                  "value": "Maafushi"
                 },
                 {
-                  "label": "Guraidhoo"
+                  "label": "Guraidhoo",
+                  "value": "Guraidhoo"
                 },
                 {
-                  "label": "Akirifushi"
+                  "label": "Akirifushi",
+                  "value": "Akirifushi"
                 },
                 {
-                  "label": "Baros"
+                  "label": "Baros",
+                  "value": "Baros"
                 },
                 {
-                  "label": "Biyaadhoo"
+                  "label": "Biyaadhoo",
+                  "value": "Biyaadhoo"
                 },
                 {
-                  "label": "Bodufinolhu"
+                  "label": "Boduban'dos",
+                  "value": "Boduban'dos"
                 },
                 {
-                  "label": "Boduhithi"
+                  "label": "Bodufinolhu",
+                  "value": "Bodufinolhu"
                 },
                 {
-                  "label": "Bolifushi"
+                  "label": "Boduhithi",
+                  "value": "Boduhithi"
                 },
                 {
-                  "label": "Dhigufinolhu"
+                  "label": "Bolifushi",
+                  "value": "Bolifushi"
                 },
                 {
-                  "label": "Eriyadhoo"
+                  "label": "Dhigufinolhu",
+                  "value": "Dhigufinolhu"
                 },
                 {
-                  "label": "Fihaalhohi"
+                  "label": "En'boodhoo",
+                  "value": "En'boodhoo"
                 },
                 {
-                  "label": "Furanafushi"
+                  "label": "En'boodhoofinolhu",
+                  "value": "En'boodhoofinolhu"
                 },
                 {
-                  "label": "Gasfinolhu"
+                  "label": "Eriyadhoo",
+                  "value": "Eriyadhoo"
                 },
                 {
-                  "label": "Giraavaru"
+                  "label": "Fihaalhohi",
+                  "value": "Fihaalhohi"
                 },
                 {
-                  "label": "Helengeli"
+                  "label": "Furanafushi",
+                  "value": "Furanafushi"
                 },
                 {
-                  "label": "Hembadhu"
+                  "label": "Gaagan'du",
+                  "value": "Gaagan'du"
                 },
                 {
-                  "label": "Hulhule"
+                  "label": "Gasfinolhu",
+                  "value": "Gasfinolhu"
                 },
                 {
-                  "label": "Ihuru"
+                  "label": "Giraavaru",
+                  "value": "Giraavaru"
                 },
                 {
-                  "label": "Ithaafushi"
+                  "label": "Helengeli",
+                  "value": "Helengeli"
                 },
                 {
-                  "label": "Kagi"
+                  "label": "Hembadhu",
+                  "value": "Hembadhu"
                 },
                 {
-                  "label": "Kandoomafushi"
+                  "label": "Hulhule",
+                  "value": "Hulhule"
                 },
                 {
-                  "label": "Kanifinolhu"
+                  "label": "Ihuru",
+                  "value": "Ihuru"
                 },
                 {
-                  "label": "Kodhipparu"
+                  "label": "Ithaafushi",
+                  "value": "Ithaafushi"
                 },
                 {
-                  "label": "Kuda"
+                  "label": "Kagi",
+                  "value": "Kagi"
                 },
                 {
-                  "label": "Lankanfinolhu"
+                  "label": "Kandoomafushi",
+                  "value": "Kandoomafushi"
                 },
                 {
-                  "label": "Lankanfushi"
+                  "label": "Kanifinolhu",
+                  "value": "Kanifinolhu"
                 },
                 {
-                  "label": "Lhohifushi"
+                  "label": "ކަނނުއޮތްހުރާ",
+                  "value": "Kanuoiy Huraa"
                 },
                 {
-                  "label": "Maadhoo"
+                  "label": "Kodhipparu",
+                  "value": "Kodhipparu"
                 },
                 {
-                  "label": "Madivaru"
+                  "label": "Kuda Bandos",
+                  "value": "Kuda Bandos"
                 },
                 {
-                  "label": "Mahaana"
+                  "label": "ކުޑަހުރާ",
+                  "value": "Kuda Huraa"
                 },
                 {
-                  "label": "Makunudhoo"
+                  "label": "Lankanfinolhu",
+                  "value": "Lankanfinolhu"
                 },
                 {
-                  "label": "Makunufushi"
+                  "label": "Lankanfushi",
+                  "value": "Lankanfushi"
                 },
                 {
-                  "label": "Medhufinolhu"
+                  "label": "Lhohifushi",
+                  "value": "Lhohifushi"
                 },
                 {
-                  "label": "Meerufenfushi"
+                  "label": "Maadhoo",
+                  "value": "Maadhoo"
                 },
                 {
-                  "label": "Nakatchafushi"
+                  "label": "Madivaru",
+                  "value": "Madivaru"
                 },
                 {
-                  "label": "Olhahali"
+                  "label": "Mahaana elhi Huraa",
+                  "value": "Mahaana elhi Huraa"
                 },
                 {
-                  "label": "Olhuveli"
+                  "label": "Makunudhoo",
+                  "value": "Makunudhoo"
                 },
                 {
-                  "label": "Rannalhi"
+                  "label": "Makunufushi",
+                  "value": "Makunufushi"
                 },
                 {
-                  "label": "Rasfari"
+                  "label": "Medhufinolhu",
+                  "value": "Medhufinolhu"
                 },
                 {
-                  "label": "The"
+                  "label": "Meerufenfushi",
+                  "value": "Meerufenfushi"
                 },
                 {
-                  "label": "Thulhaagiri"
+                  "label": "Nakatchafushi",
+                  "value": "Nakatchafushi"
                 },
                 {
-                  "label": "Vabboahuraa"
+                  "label": "Olhahali",
+                  "value": "Olhahali"
                 },
                 {
-                  "label": "Vabbinfaru"
+                  "label": "Olhuveli",
+                  "value": "Olhuveli"
                 },
                 {
-                  "label": "Vaadhoo"
+                  "label": "Rannalhi",
+                  "value": "Rannalhi"
                 },
                 {
-                  "label": "Velassaru"
+                  "label": "Rasfari",
+                  "value": "Rasfari"
                 },
                 {
-                  "label": "Vihamanaafushi"
+                  "label": "The Crossroads Maldives",
+                  "value": "The Crossroads Maldives"
                 },
                 {
-                  "label": "Ziyaaraiyfushi"
+                  "label": "Thulhaagiri",
+                  "value": "Thulhaagiri"
                 },
                 {
-                  "label": "Hulhumale"
+                  "label": "Thun'bafushi",
+                  "value": "Thun'bafushi"
                 },
                 {
-                  "label": "Vilingili"
+                  "label": "Vabboahuraa",
+                  "value": "Vabboahuraa"
+                },
+                {
+                  "label": "Vabbinfaru",
+                  "value": "Vabbinfaru"
+                },
+                {
+                  "label": "Vaadhoo",
+                  "value": "Vaadhoo"
+                },
+                {
+                  "label": "Velassaru",
+                  "value": "Velassaru"
+                },
+                {
+                  "label": "Veligan'du Huraa",
+                  "value": "Veligan'du Huraa"
+                },
+                {
+                  "label": "Vihamanaafushi",
+                  "value": "Vihamanaafushi"
+                },
+                {
+                  "label": "Ziyaaraiyfushi",
+                  "value": "Ziyaaraiyfushi"
+                },
+                {
+                  "label": "Male'",
+                  "value": "Male'"
+                },
+                {
+                  "label": "Hulhumale",
+                  "value": "Hulhumale"
+                },
+                {
+                  "label": "Vilingili",
+                  "value": "Vilingili"
+                },
+                {
+                  "label": "Rah Falhu Huraa",
+                  "value": "Rah Falhu Huraa"
+                },
+                {
+                  "label": "Kuda Vilingili",
+                  "value": "Kuda Vilingili"
                 }
               ]
             },
@@ -2520,31 +2618,16 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "ComboBox",
-              "label": "Combo Box",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 112,
-            "isRequired": false,
+            "formId": 15,
+            "isRequired": true,
             "exportId": "what_sectors_do_you_representfor",
-            "position": 25,
+            "position": 24,
             "componentSettings": {
               "navBody": {
                 "type": "doc",
@@ -2714,85 +2797,49 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "SpatialAccessPriorityInput",
-              "label": "Spatial Access Priority",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [],
-              "allowedLayouts": [
-                "MAP_SIDEBAR_LEFT",
-                "MAP_SIDEBAR_RIGHT"
-              ],
-              "isSpatial": true,
-              "sketchClassTemplateId": 4,
-              "isRequiredForSketchClasses": false
-            }
-          },
-          {
-            "formId": 15,
-            "id": 98,
-            "isRequired": true,
-            "exportId": "are_you_willing_to_answer_a_few_",
-            "position": 26,
-            "componentSettings": {},
-            "typeId": "YesNo",
-            "body": {
-              "type": "doc",
-              "content": [
-                {
-                  "type": "question",
-                  "content": [
-                    {
-                      "text": "Are you willing to answer a few additional questions about who you are?",
-                      "type": "text"
-                    }
-                  ]
-                }
-              ]
+            "sketchClassFk": {
+              "id": 8,
+              "nodeId": "WyJza2V0Y2hfY2xhc3NlcyIsOF0=",
+              "projectId": 1441,
+              "name": "generated-form-element-112",
+              "geometryType": "POLYGON",
+              "allowMulti": false,
+              "isArchived": false,
+              "geoprocessingProjectUrl": null,
+              "geoprocessingClientUrl": null,
+              "geoprocessingClientName": null,
+              "mapboxGlStyle": null,
+              "formElementId": 112,
+              "project": {
+                "id": 1441
+              },
+              "formElement": {
+                "id": 112
+              },
+              "acl": {
+                "id": 8
+              },
+              "form": {
+                "id": 25
+              },
+              "canDigitize": true,
+              "sketchCount": "0",
+              "validChildren": []
             },
-            "backgroundColor": null,
-            "secondaryColor": null,
-            "textVariant": "DYNAMIC",
-            "backgroundImage": null,
-            "layout": null,
-            "backgroundPalette": null,
-            "unsplashAuthorName": null,
-            "unsplashAuthorUrl": null,
-            "backgroundWidth": null,
-            "backgroundHeight": null,
-            "jumpToId": 106,
-            "alternateLanguageSettings": {},
-            "subordinateTo": null,
-            "type": {
-              "componentName": "YesNo",
-              "label": "Yes/No",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
+            "isInput": true,
+            "sketchClass": {
+              "id": 8
             }
           },
           {
+            "id": 5912,
             "formId": 15,
-            "id": 99,
-            "isRequired": false,
-            "exportId": "your_age",
-            "position": 27,
+            "isRequired": true,
+            "exportId": "num_of_ppl",
+            "position": 25,
             "componentSettings": {
-              "defaultValue": 0
+              "max": 70,
+              "defaultValue": 1
             },
             "typeId": "Number",
             "body": {
@@ -2802,302 +2849,7 @@
                   "type": "question",
                   "content": [
                     {
-                      "text": "Your age",
-                      "type": "text"
-                    }
-                  ]
-                }
-              ]
-            },
-            "backgroundColor": null,
-            "secondaryColor": null,
-            "textVariant": "DYNAMIC",
-            "backgroundImage": null,
-            "layout": null,
-            "backgroundPalette": null,
-            "unsplashAuthorName": null,
-            "unsplashAuthorUrl": null,
-            "backgroundWidth": null,
-            "backgroundHeight": null,
-            "jumpToId": null,
-            "alternateLanguageSettings": {},
-            "subordinateTo": null,
-            "type": {
-              "componentName": "Number",
-              "label": "Number",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "GREATER_THAN",
-                "LESS_THAN",
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
-          },
-          {
-            "formId": 15,
-            "id": 100,
-            "isRequired": false,
-            "exportId": "gender",
-            "position": 28,
-            "componentSettings": {
-              "options": [
-                {
-                  "label": "Male "
-                },
-                {
-                  "label": "Female"
-                },
-                {
-                  "label": "Rather not say"
-                }
-              ]
-            },
-            "typeId": "MultipleChoice",
-            "body": {
-              "type": "doc",
-              "content": [
-                {
-                  "type": "question",
-                  "content": [
-                    {
-                      "text": "Gender",
-                      "type": "text"
-                    }
-                  ]
-                }
-              ]
-            },
-            "backgroundColor": null,
-            "secondaryColor": null,
-            "textVariant": "DYNAMIC",
-            "backgroundImage": null,
-            "layout": null,
-            "backgroundPalette": null,
-            "unsplashAuthorName": null,
-            "unsplashAuthorUrl": null,
-            "backgroundWidth": null,
-            "backgroundHeight": null,
-            "jumpToId": 101,
-            "alternateLanguageSettings": {},
-            "subordinateTo": null,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
-          },
-          {
-            "formId": 15,
-            "id": 101,
-            "isRequired": false,
-            "exportId": "general_comments",
-            "position": 29,
-            "componentSettings": {
-              "compact": true
-            },
-            "typeId": "TextArea",
-            "body": {
-              "type": "doc",
-              "content": [
-                {
-                  "type": "question",
-                  "content": [
-                    {
-                      "text": "General comments",
-                      "type": "text"
-                    }
-                  ]
-                }
-              ]
-            },
-            "backgroundColor": null,
-            "secondaryColor": null,
-            "textVariant": "DYNAMIC",
-            "backgroundImage": null,
-            "layout": null,
-            "backgroundPalette": null,
-            "unsplashAuthorName": null,
-            "unsplashAuthorUrl": null,
-            "backgroundWidth": null,
-            "backgroundHeight": null,
-            "jumpToId": null,
-            "alternateLanguageSettings": {},
-            "subordinateTo": null,
-            "type": {
-              "componentName": "TextArea",
-              "label": "Text Area",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
-          },
-          {
-            "formId": 15,
-            "id": 120,
-            "isRequired": false,
-            "exportId": "if_you_are_responding_for_a_fish",
-            "position": 30,
-            "componentSettings": {
-              "options": [
-                {
-                  "label": "HA - Dhonakulhi",
-                  "value": "HA - Dhonakulhi"
-                },
-                {
-                  "label": "HDh - Hon'daidhoo",
-                  "value": "HDh - Hon'daidhoo"
-                },
-                {
-                  "label": "HDh - Theefaridhoo",
-                  "value": "HDh - Theefaridhoo"
-                },
-                {
-                  "label": "HDh - Vaikaramuraidhoo",
-                  "value": "HDh - Vaikaramuraidhoo"
-                },
-                {
-                  "label": "Sh - Kakaaeriyadhoo",
-                  "value": "Sh - Kakaaeriyadhoo"
-                },
-                {
-                  "label": "Sh - Madidhoo",
-                  "value": "Sh - Madidhoo"
-                },
-                {
-                  "label": "Sh - Madikuredhdhoo",
-                  "value": "Sh - Madikuredhdhoo"
-                },
-                {
-                  "label": "Sh - Nalandhoo",
-                  "value": "Sh - Nalandhoo"
-                },
-                {
-                  "label": "N - Bomasdhoo",
-                  "value": "N - Bomasdhoo"
-                },
-                {
-                  "label": "N - Than'burudhoo",
-                  "value": "N - Than'burudhoo"
-                },
-                {
-                  "label": "Lh - Felivaru",
-                  "value": "Lh - Felivaru"
-                },
-                {
-                  "label": "K  - Gulhifalhu",
-                  "value": "K  - Gulhifalhu"
-                },
-                {
-                  "label": "K  - Kan'duoiygiri",
-                  "value": "K  - Kan'duoiygiri"
-                },
-                {
-                  "label": "K  - Maniyafushi",
-                  "value": "K  - Maniyafushi"
-                },
-                {
-                  "label": "K  - Gaagan'du",
-                  "value": "K  - Gaagan'du"
-                },
-                {
-                  "label": "K  - Kagi",
-                  "value": "K  - Kagi"
-                },
-                {
-                  "label": "K  - Rasfari",
-                  "value": "K  - Rasfari"
-                },
-                {
-                  "label": "K  - Thun'bafushi",
-                  "value": "K  - Thun'bafushi"
-                },
-                {
-                  "label": "K  - Vabboahuraa",
-                  "value": "K  - Vabboahuraa"
-                },
-                {
-                  "label": "M - Thuvaru",
-                  "value": "M - Thuvaru"
-                },
-                {
-                  "label": "F - Himithi",
-                  "value": "F - Himithi"
-                },
-                {
-                  "label": "Dh - Maadheli",
-                  "value": "Dh - Maadheli"
-                },
-                {
-                  "label": "Dh - Uhdhoo",
-                  "value": "Dh - Uhdhoo"
-                },
-                {
-                  "label": "Th - Kanimeedhoo",
-                  "value": "Th - Kanimeedhoo"
-                },
-                {
-                  "label": "L - Maandhoo",
-                  "value": "L - Maandhoo"
-                },
-                {
-                  "label": "GA - Kooddoo",
-                  "value": "GA - Kooddoo"
-                },
-                {
-                  "label": "GDh - Hoothodeyaa",
-                  "value": "GDh - Hoothodeyaa"
-                },
-                {
-                  "label": "GDh - Keramihthaa",
-                  "value": "GDh - Keramihthaa"
-                },
-                {
-                  "label": "GDh - Kodahutigalaa",
-                  "value": "GDh - Kodahutigalaa"
-                }
-              ]
-            },
-            "typeId": "MultipleChoice",
-            "body": {
-              "type": "doc",
-              "content": [
-                {
-                  "type": "question",
-                  "content": [
-                    {
-                      "text": "If you are responding for a fish processing company or other industry that is located on an industrial island, please select the island below",
+                      "text": "Please indicate how many people are reflected in this response",
                       "type": "text"
                     }
                   ]
@@ -3117,31 +2869,16 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": 112,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 121,
+            "formId": 15,
             "isRequired": false,
-            "exportId": "are_you_a_part-time_or_full-time",
-            "position": 31,
+            "exportId": "part-time",
+            "position": 26,
             "componentSettings": {
               "options": [
                 {
@@ -3182,31 +2919,16 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": 112,
-            "type": {
-              "componentName": "MultipleChoice",
-              "label": "Multiple Choice",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "EQUAL",
-                "NOT_EQUAL",
-                "CONTAINS"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 122,
+            "formId": 15,
             "isRequired": false,
-            "exportId": "please_provide_the_name_or_the_n",
-            "position": 32,
+            "exportId": "vessel",
+            "position": 28,
             "componentSettings": {},
             "typeId": "ShortText",
             "body": {
@@ -3236,29 +2958,193 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": 112,
-            "type": {
-              "componentName": "ShortText",
-              "label": "Short Text",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": false,
-              "isSingleUseOnly": false,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [
-                "IS_BLANK"
-              ],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           },
           {
+            "id": 98,
             "formId": 15,
+            "isRequired": true,
+            "exportId": "willing",
+            "position": 30,
+            "componentSettings": {},
+            "typeId": "YesNo",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "Are you willing to answer a few additional questions about who you are?",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "unsplashAuthorUrl": null,
+            "backgroundWidth": null,
+            "backgroundHeight": null,
+            "jumpToId": 106,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
+          },
+          {
+            "id": 99,
+            "formId": 15,
+            "isRequired": false,
+            "exportId": "your_age",
+            "position": 31,
+            "componentSettings": {
+              "max": 120,
+              "min": 0,
+              "defaultValue": 1
+            },
+            "typeId": "Number",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "Your age",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "unsplashAuthorUrl": null,
+            "backgroundWidth": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
+          },
+          {
+            "id": 100,
+            "formId": 15,
+            "isRequired": false,
+            "exportId": "gender",
+            "position": 32,
+            "componentSettings": {
+              "options": [
+                {
+                  "label": "Female",
+                  "value": "Female"
+                },
+                {
+                  "label": "Male",
+                  "value": "Male"
+                },
+                {
+                  "label": "Rather not say",
+                  "value": "NS"
+                }
+              ]
+            },
+            "typeId": "MultipleChoice",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "Gender",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "unsplashAuthorUrl": null,
+            "backgroundWidth": null,
+            "backgroundHeight": null,
+            "jumpToId": 101,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
+          },
+          {
+            "id": 101,
+            "formId": 15,
+            "isRequired": false,
+            "exportId": "general_comments",
+            "position": 33,
+            "componentSettings": {
+              "compact": true
+            },
+            "typeId": "TextArea",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "General comments",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "unsplashAuthorUrl": null,
+            "backgroundWidth": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
+          },
+          {
             "id": 106,
+            "formId": 15,
             "isRequired": false,
             "exportId": "save_screen",
-            "position": 33,
+            "position": 34,
             "componentSettings": {},
             "typeId": "SaveScreen",
             "body": {
@@ -3289,28 +3175,20 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "SaveScreen",
-              "label": "Save Screen",
-              "isInput": false,
-              "isSurveysOnly": false,
-              "isHidden": true,
-              "isSingleUseOnly": true,
-              "isRequiredForSurveys": true,
-              "supportedOperators": [],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": false,
+            "sketchClass": null
           },
           {
-            "formId": 15,
             "id": 53,
+            "formId": 15,
             "isRequired": false,
-            "exportId": "thank_you_for_respondinguse_this",
-            "position": 34,
-            "componentSettings": {},
+            "exportId": "thank_you_for_respondingyour_par",
+            "position": 35,
+            "componentSettings": {
+              "shareButtons": true,
+              "promptToRespondAgain": true
+            },
             "typeId": "ThankYou",
             "body": {
               "type": "doc",
@@ -3331,21 +3209,21 @@
                   "type": "paragraph",
                   "content": [
                     {
-                      "text": "Use this page to show a ",
+                      "text": "Your participation in testing our new survey tool is greatly appreciated. Please send any feedback you might have to ",
                       "type": "text"
                     },
                     {
-                      "text": "customized",
+                      "text": "support@seasketch.org",
                       "type": "text",
                       "marks": [
                         {
-                          "type": "em"
+                          "type": "link",
+                          "attrs": {
+                            "href": "mailto:support@seasketch.org",
+                            "title": null
+                          }
                         }
                       ]
-                    },
-                    {
-                      "text": " message when users finish the survey.",
-                      "type": "text"
                     }
                   ]
                 }
@@ -3364,37 +3242,31 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "type": {
-              "componentName": "ThankYou",
-              "label": "Thank You",
-              "isInput": false,
-              "isSurveysOnly": true,
-              "isHidden": true,
-              "isSingleUseOnly": true,
-              "isRequiredForSurveys": true,
-              "supportedOperators": [],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "sketchClassFk": null,
+            "isInput": false,
+            "sketchClass": null
           },
           {
+            "id": 5913,
             "formId": 15,
-            "id": 3090,
             "isRequired": false,
-            "exportId": "form_element_3090",
-            "position": 35,
+            "exportId": "guesthouse_name",
+            "position": 29,
             "componentSettings": {},
-            "typeId": "WelcomeMessage",
+            "typeId": "ShortText",
             "body": {
-              "content": {
-                "type": "heading",
-                "attrs": {
-                  "level": 1
-                },
-                "content": {}
-              }
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "If you are representing a guesthouse, please provide the name of your establishment:",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
             },
             "backgroundColor": null,
             "secondaryColor": null,
@@ -3408,66 +3280,10 @@
             "backgroundHeight": null,
             "jumpToId": null,
             "alternateLanguageSettings": {},
-            "subordinateTo": null,
-            "type": {
-              "componentName": "WelcomeMessage",
-              "label": "Welcome Message",
-              "isInput": false,
-              "isSurveysOnly": true,
-              "isHidden": true,
-              "isSingleUseOnly": true,
-              "isRequiredForSurveys": true,
-              "supportedOperators": [],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
-          },
-          {
-            "formId": 15,
-            "id": 3091,
-            "isRequired": false,
-            "exportId": "form_element_3091",
-            "position": 36,
-            "componentSettings": {},
-            "typeId": "WelcomeMessage",
-            "body": {
-              "content": {
-                "type": "heading",
-                "attrs": {
-                  "level": 1
-                },
-                "content": {}
-              }
-            },
-            "backgroundColor": null,
-            "secondaryColor": null,
-            "textVariant": "DYNAMIC",
-            "backgroundImage": null,
-            "layout": null,
-            "backgroundPalette": null,
-            "unsplashAuthorName": null,
-            "unsplashAuthorUrl": null,
-            "backgroundWidth": null,
-            "backgroundHeight": null,
-            "jumpToId": null,
-            "alternateLanguageSettings": {},
-            "subordinateTo": null,
-            "type": {
-              "componentName": "WelcomeMessage",
-              "label": "Welcome Message",
-              "isInput": false,
-              "isSurveysOnly": true,
-              "isHidden": true,
-              "isSingleUseOnly": true,
-              "isRequiredForSurveys": true,
-              "supportedOperators": [],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            }
+            "subordinateTo": 112,
+            "sketchClassFk": null,
+            "isInput": true,
+            "sketchClass": null
           }
         ]
       }

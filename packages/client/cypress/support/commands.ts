@@ -113,6 +113,11 @@ declare global {
         surveyAlias: string,
         token: string
       )
+
+      deleteFormElements(
+        formId: number,
+        token: string
+      )
       
     }
   } 
@@ -334,6 +339,7 @@ Cypress.Commands.add("createSurvey", (name: string, projectId: number, token: st
               id, 
               templateType, 
               formElements {
+                id,
                 type {
                   componentName
                 }
@@ -419,46 +425,114 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
     })
   })
 
-  Cypress.Commands.add("createFormElements", (formId: number, surveyAlias: string, token: string, ) => {
-    //check for token too
-    let elements = formElements[surveyAlias].data.form.formElements
+  Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
+    if (!formId) {
+      throw new Error("Please check your form id.");
+    } else if (!token) {
+      throw new Error("Please check your token.");
+    }
+    else {
+      return cy
+      .query(
+        gql`
+          query CypressGetForm($formId: Int!) {
+            form (id: $formId) {
+              formElements {
+                id, 
+                typeId,
+                type { 
+                  isRequiredForSurveys
+                }
+              }
+            }
+          }
+        `,
+      { formId },
+      (token as any)
+      )
+      .then((data) => {
+        if (!data || !data.form.formElements) {
+          throw new Error ("No form elements found.")
+        }
+        else {
+          const elementsToDelete = data.form.formElements.filter(obj => {
+            return obj.type.isRequiredForSurveys === false
+          })
+            elementsToDelete.forEach((formElement) => {
+            return cy
+              .mutation(
+                gql`
+                  mutation CypressDeleteFormElements($formElementId: Int!) {
+                    deleteFormElement (input: {id: $formElementId}) {
+                      query {
+                        form (id: ${formId}) {
+                          formElements {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                `,
+              { formElementId: formElement.id },
+              (token as any)
+            ).then((data) => {
+              Cypress.log(data);
+              return data
+            })
+          })
+        }
+      })
+    }
+  })
+
+  Cypress.Commands.add("createFormElements", (formId: number, surveyAlias: string, token: string) => {
+    const elements = formElements[surveyAlias].data.form.formElements
+    console.log(elements.length)
     elements.map(t => t.formId = formId)
     if (!surveyAlias) {
       throw new Error(`Unrecognized alias "${surveyAlias}"`);
     }
     else {
       elements.forEach((e) => {
-      return cy
-      .mutation(
-        gql`
-          mutation CypressCreateFormElement($formElement: FormElementInput!) {
-            createFormElement(input: {formElement: $formElement} )
-            {
-              formElement {
-                formId
-              }
-              query {
-                form (id: ${formId}) {
-                  formElements {
-                    typeId, 
-                    id
+          return cy
+          .mutation(
+            gql`
+              mutation CypressCreateFormElement($formElement: FormElementInput!) {
+                createFormElement(input: {formElement: $formElement} )
+                {
+                  formElement {
+                    formId, 
+                    body
                   }
+                  query {
+                    form (id: ${formId}) {
+                      formElements {
+                        typeId, 
+                        id, 
+                        body
+                      }
+                    }
+                  }
+
                 }
               }
-              
-            }
-          }
-        `,
-      { "formElement": {
-        "formId": e.formId,
-        "typeId": e.typeId,
-        "body": e.body,
-      } },
-      (token as any)
-    )}
-  )}
-
-})
+            `,
+          { "formElement": {
+            "formId": e.formId,
+            "typeId": e.typeId,
+            "body": e.body,
+          } },
+          (token as any)
+          )
+          .then((data) => {
+            Cypress.log(data);
+            return data
+          })
+        })
+      }
+    })
+ 
 
 //TO DO:
 //add rest of form attributes
