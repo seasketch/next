@@ -64,9 +64,11 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
           </>
         )}
       </div>
-      <div className="h-72 flex-shrink-0 relative">
-        <ResponsesMap surveyId={surveyId} />
-      </div>
+      {data?.survey?.isSpatial && (
+        <div className="h-72 flex-shrink-0 relative">
+          <ResponsesMap surveyId={surveyId} />
+        </div>
+      )}
       <ResponseGrid className="flex-1 bg-white" surveyId={surveyId} />
       {!survey && <Spinner />}
     </div>

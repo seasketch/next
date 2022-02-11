@@ -39,6 +39,7 @@ mutation CreateSurvey($name: String!, $projectId: Int!, $templateId: Int) {
 query SurveyById($id: Int!) {
   survey(id: $id) {
     ...SurveyListDetails
+    isSpatial
   }
 }
 
@@ -622,6 +623,21 @@ mutation UploadConsentDoc(
   }
 }
 
+fragment SurveyResponse on SurveyResponse {
+  id
+  surveyId
+  bypassedDuplicateSubmissionControl
+  updatedAt
+  accountEmail
+  userId
+  createdAt
+  data
+  isDuplicateEntry
+  isDuplicateIp
+  isPractice
+  isUnrecognizedUserAgent
+}
+
 query SurveyResponses($surveyId: Int!) {
   survey(id: $surveyId) {
     form {
@@ -637,18 +653,7 @@ query SurveyResponses($surveyId: Int!) {
     submittedResponseCount
     surveyResponsesConnection {
       nodes {
-        id
-        surveyId
-        bypassedDuplicateSubmissionControl
-        updatedAt
-        accountEmail
-        userId
-        createdAt
-        data
-        isDuplicateEntry
-        isDuplicateIp
-        isPractice
-        isUnrecognizedUserAgent
+        ...SurveyResponse
       }
     }
   }

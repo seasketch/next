@@ -17,30 +17,14 @@ import { ChevronDownIcon, UploadIcon } from "@heroicons/react/outline";
 import DownloadIcon from "../../components/DownloadIcon";
 import Papa from "papaparse";
 import ExportResponsesModal from "./ExportResponsesModal";
+import ResponsesAsExported from "./ResponsesAsExported";
 
 interface Props {
   surveyId: number;
   className?: string;
 }
 
-function valueFormatter(accessor: string) {
-  return (row: any): string => {
-    const value = row[accessor];
-    if (value === true) {
-      return "True";
-    } else if (value === false) {
-      return "False";
-    } else if (Array.isArray(value)) {
-      return value.map((v) => v.toString()).join(", ");
-    } else if (value === undefined || value === null) {
-      return "";
-    } else {
-      return value.toString();
-    }
-  };
-}
-
-type TabName = "responses" | "practice" | "archived";
+type TabName = "responses" | "practice" | "archived" | "export";
 
 function filterRows(
   rows: Row<{ is_practice: boolean; is_archived: boolean }>[],
@@ -53,10 +37,14 @@ function filterRows(
     return rows.filter((r) => r.original.is_practice);
   } else if (selectedTab === "archived") {
     return rows.filter((r) => !!r.original.is_archived);
+  } else if (selectedTab === "export") {
+    return rows;
   } else {
     throw new Error("Unknown selectedTab");
   }
 }
+
+type NameColumn = { name: string | null; email: string | null };
 
 export default function ResponseGrid(props: Props) {
   const { t } = useTranslation("admin:surveys");
@@ -69,62 +57,152 @@ export default function ResponseGrid(props: Props) {
   const survey = data?.survey;
   const [tab, setTab] = useState("responses");
 
-  const { rows: rowData, columns: exportColumnNames } = useMemo(() => {
-    return getDataForExport(
-      survey?.surveyResponsesConnection.nodes || [],
-      survey?.form?.formElements || [],
-      data?.survey?.form?.logicRules || []
-    );
+  const rowData = useMemo(() => {
+    return survey?.surveyResponsesConnection.nodes || [];
   }, [survey?.surveyResponsesConnection.nodes]);
 
-  const columns = useMemo<Column[]>(() => {
-    if (survey) {
-      let columns: string[] = [];
-      return [
-        {
-          Header: "id",
-          accessor: "id",
+  const columns = useMemo(() => {
+    const NameElement = (data?.survey?.form?.formElements || []).find(
+      (el) => el.typeId === "Name"
+    );
+    const EmailElement = (data?.survey?.form?.formElements || []).find(
+      (el) => el.typeId === "Email"
+    );
+    return [
+      // {
+      //   Header: "id",
+      //   accessor: "id",
+      //   width: 100,
+      // },
+      {
+        Header: "created",
+        accessor: (row: any) => new Date(row.createdAt).toLocaleString(),
+        sortDescFirst: true,
+        sortType: (a: Row<any>, b: Row<any>) => {
+          return (
+            new Date(a.original.createdAt).getTime() -
+            new Date(b.original.createdAt).getTime()
+          );
         },
-        {
-          Header: "created_at_utc",
-          accessor: "created_at_utc",
-          sortDescFirst: true,
-          sortType: (a: Row, b: Row) =>
-            new Date(a.values.created_at_utc).getTime() -
-            new Date(b.values.created_at_utc).getTime(),
-        },
-        {
-          Header: "updated_at_utc",
-          accessor: "updated_at_utc",
-          sortDescFirst: true,
-          sortType: (a: Row, b: Row) =>
-            new Date(a.values.updated_at_utc).getTime() -
-            new Date(b.values.updated_at_utc).getTime(),
-        },
-        ...exportColumnNames
-          .filter(
-            (c) =>
-              c !== "created_at_utc" && c !== "updated_at_utc" && c !== "id"
-          )
-          .map((h) => ({ Header: h, accessor: valueFormatter(h) })),
-      ];
-    } else {
-      return [];
-    }
-  }, [survey, exportColumnNames]);
+        width: 180,
+      },
+      ...(NameElement
+        ? [
+            {
+              Header: "respondent",
+              sortType: (a: Row<any>, b: Row<any>) => {
+                return (
+                  a.values.respondent.name || a.values.respondent.email
+                ).localeCompare(
+                  b.values.respondent.name || b.values.respondent.email
+                );
+              },
+              accessor: (row: any) => {
+                const { name } = row.data[NameElement.id];
+                const email = EmailElement ? row.data[EmailElement.id] : null;
+                return {
+                  name,
+                  email,
+                };
+              },
+              Cell: ({ value }: { value: NameColumn }) => {
+                if (value.name) {
+                  if (value.email) {
+                    return (
+                      <a
+                        className="text-primary-500 underline"
+                        href={`mailto:${value.email}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {value.name}
+                      </a>
+                    );
+                  }
+                } else if (value.email) {
+                  return (
+                    <a
+                      className="text-primary-500 underline"
+                      href={`mailto:${value.email}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {value.email}
+                    </a>
+                  );
+                } else {
+                  return "Unknown";
+                }
+                return value.name ? value.name : "Unknown";
+              },
+            },
+            {
+              Header: "facilitator",
+              accessor: (row: any) => {
+                const data = row.data[NameElement.id];
+                return data.facilitator || null;
+              },
+              Cell: ({ value }: { value: string | null }) => {
+                return value ? value : "None";
+              },
+            },
+          ]
+        : []),
+      ...(EmailElement && !NameElement
+        ? [
+            {
+              Header: "email",
+              accessor: (row: any) => row.data[EmailElement.id],
+              Cell: ({ value }: { value: string | null }) => value || "Unknown",
+            },
+          ]
+        : []),
+    ];
+  }, [data?.survey]);
 
-  const exportData = useMemo(() => {
-    if (rowData.length && columns.length) {
-      return Papa.unparse(
-        rowData.filter((r) => !r.is_practice),
-        {
-          columns: exportColumnNames,
-        }
-      );
-    } else {
-      return "";
-    }
-  }, [rowData, columns]);
+  // const { rows: rowData, columns: exportColumnNames } = useMemo(() => {
+  //   return getDataForExport(
+  //     survey?.surveyResponsesConnection.nodes || [],
+  //     survey?.form?.formElements || [],
+  //     data?.survey?.form?.logicRules || []
+  //   );
+  // }, [survey?.surveyResponsesConnection.nodes]);
+
+  // const columns = useMemo<Column[]>(() => {
+  //   if (survey) {
+  //     let columns: string[] = [];
+  //     return [
+  //       {
+  //         Header: "id",
+  //         accessor: "id",
+  //       },
+  //       {
+  //         Header: "created_at_utc",
+  //         accessor: "created_at_utc",
+  //         sortDescFirst: true,
+  //         sortType: (a: Row, b: Row) =>
+  //           new Date(a.values.created_at_utc).getTime() -
+  //           new Date(b.values.created_at_utc).getTime(),
+  //       },
+  //       {
+  //         Header: "updated_at_utc",
+  //         accessor: "updated_at_utc",
+  //         sortDescFirst: true,
+  //         sortType: (a: Row, b: Row) =>
+  //           new Date(a.values.updated_at_utc).getTime() -
+  //           new Date(b.values.updated_at_utc).getTime(),
+  //       },
+  //       ...exportColumnNames
+  //         .filter(
+  //           (c) =>
+  //             c !== "created_at_utc" && c !== "updated_at_utc" && c !== "id"
+  //         )
+  //         .map((h) => ({ Header: h, accessor: valueFormatter(h) })),
+  //     ];
+  //   } else {
+  //     return [];
+  //   }
+  // }, [survey, exportColumnNames]);
 
   const defaultColumn = useMemo(
     () => ({
@@ -148,7 +226,7 @@ export default function ResponseGrid(props: Props) {
       data: rowData,
       defaultColumn,
       initialState: {
-        sortBy: [{ id: "created_at_utc", desc: true }],
+        sortBy: [{ id: "created", desc: true }],
         globalFilter: tab,
       },
       globalFilter,
@@ -179,7 +257,7 @@ export default function ResponseGrid(props: Props) {
 
   return (
     <div
-      className={`${props.className} px-0 py-4 pt-0 overflow-hidden flex flex-col`}
+      className={`${props.className} px-0 pt-0 overflow-hidden flex flex-col`}
     >
       <FakeTabs
         onClickExport={() => setShowExportModal(true)}
@@ -206,107 +284,124 @@ export default function ResponseGrid(props: Props) {
             href: "#",
             current: tab === "archived",
           },
+          {
+            id: "export",
+            name: "As Exported",
+            count: 0,
+            href: "#",
+            current: tab === "export",
+          },
         ]}
       />
       <div className="overflow-x-auto text-sm flex-1 overflow-y-auto">
-        <div
-          {...getTableProps()}
-          className="border-collapse border-2 border-t-0 inline-block"
-        >
-          <div className="bg-gray-50 ">
-            {
-              // Loop over the header rows
-              headerGroups.map((headerGroup) => (
-                // Apply the header row props
-                <div {...headerGroup.getHeaderGroupProps()}>
-                  {
-                    // Loop over the headers in each row
-                    headerGroup.headers.map((column) => (
-                      // Apply the header cell props
-                      <div
-                        {...column.getHeaderProps()}
-                        {...column.getHeaderProps()}
-                        className="select-none group font-semibold inline-block truncate overflow-hidden text-gray-500 text-left border border-gray-200 whitespace-nowrap cursor-pointer hover:border-gray-300 relative"
-                      >
-                        <div
-                          className="py-2 px-2 truncate"
-                          {...column.getSortByToggleProps()}
-                        >
-                          <span className="text-gray-400 text-xs mr-1">
-                            {column.isSorted
-                              ? column.isSortedDesc
-                                ? " ▼"
-                                : " ▲"
-                              : ""}
-                          </span>
-                          {
-                            // Render the header
-                            column.render("Header")
-                          }
-                        </div>
-                        <div
-                          {...column.getResizerProps()}
-                          className={`w-1 bg-gray-50 inline-block h-full absolute right-0 top-0 ${
-                            column.isResizing ? "isResizing" : ""
-                          }`}
-                        />
-                        {/* <div
-                          className="border-gray-500 border w-content absolute px-0.5 text-xs bg-white rounded right-2 top-1/2 -mt-1.5 opacity-0 group-hover:opacity-100"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                          }}
-                        >
-                          <ChevronDownIcon className="w-3 h-3 text-gray-500" />
-                        </div> */}
-                      </div>
-                    ))
-                  }
-                </div>
-              ))
-            }
-          </div>
-          {/* Apply the table body props */}
-          <div {...getTableBodyProps()} className="inline-block">
-            {
-              // Loop over the table rows
-              rows.map((row) => {
-                // Prepare the row for display
-                prepareRow(row);
-                return (
-                  // Apply the row props
-                  <div
-                    {...row.getRowProps()}
-                    className={`inline-block ${
-                      row.index % 2 ? "bg-gray-50" : "bg-white"
-                    }`}
-                  >
+        {tab === "export" ? (
+          <ResponsesAsExported
+            rules={data.survey?.form?.logicRules || []}
+            formElements={data.survey?.form?.formElements || []}
+            responses={data.survey?.surveyResponsesConnection.nodes || []}
+          />
+        ) : (
+          <div
+            {...getTableProps()}
+            className="border-collapse border-2 border-t-0 inline-block"
+          >
+            <div className="bg-gray-50 ">
+              {
+                // Loop over the header rows
+                headerGroups.map((headerGroup) => (
+                  // Apply the header row props
+                  <div {...headerGroup.getHeaderGroupProps()}>
                     {
-                      // Loop over the rows cells
-                      row.cells.map((cell) => {
-                        // Apply the cell props
-                        return (
+                      // Loop over the headers in each row
+                      headerGroup.headers.map((column) => (
+                        // Apply the header cell props
+                        <div
+                          {...column.getHeaderProps()}
+                          {...column.getHeaderProps()}
+                          className="select-none group font-semibold inline-block truncate overflow-hidden text-gray-500 text-left border border-gray-200 whitespace-nowrap cursor-pointer hover:border-gray-300 relative"
+                        >
                           <div
-                            className="inline-block whitespace-nowrap px-2 py-1 border border-gray-200 truncate"
-                            {...cell.getCellProps()}
+                            className="py-2 px-2 truncate"
+                            {...column.getSortByToggleProps()}
                           >
+                            <span className="text-gray-400 text-xs mr-1">
+                              {column.isSorted
+                                ? column.isSortedDesc
+                                  ? " ▼"
+                                  : " ▲"
+                                : ""}
+                            </span>
                             {
-                              // Render the cell contents
-                              cell.render("Cell")
+                              // Render the header
+                              column.render("Header")
                             }
                           </div>
-                        );
-                      })
+                          <div
+                            {...column.getResizerProps()}
+                            className={`w-1 bg-gray-50 inline-block h-full absolute right-0 top-0 ${
+                              column.isResizing ? "isResizing" : ""
+                            }`}
+                          />
+                        </div>
+                      ))
                     }
                   </div>
-                );
-              })
-            }
+                ))
+              }
+            </div>
+            <div {...getTableBodyProps()} className="inline-block">
+              {
+                // Loop over the table rows
+                rows.map((row) => {
+                  // Prepare the row for display
+                  prepareRow(row);
+                  return (
+                    // Apply the row props
+                    <div
+                      {...row.getRowProps()}
+                      className={`inline-block ${
+                        row.index % 2 ? "bg-gray-50" : "bg-white"
+                      }`}
+                    >
+                      {
+                        // Loop over the rows cells
+                        row.cells.map((cell) => {
+                          // Apply the cell props
+                          return (
+                            <div
+                              className="inline-block whitespace-nowrap px-2 py-1 border border-gray-200 truncate"
+                              {...cell.getCellProps()}
+                            >
+                              {
+                                // Render the cell contents
+                                cell.render("Cell")
+                              }
+                            </div>
+                          );
+                        })
+                      }
+                    </div>
+                  );
+                })
+              }
+            </div>
           </div>
-        </div>
+        )}
       </div>
       <ExportResponsesModal
-        dataForExport={exportData}
+        onRequestData={() => {
+          const { rows, columns } = getDataForExport(
+            survey?.surveyResponsesConnection.nodes || [],
+            survey?.form?.formElements || [],
+            data?.survey?.form?.logicRules || []
+          );
+          return Papa.unparse(
+            rows.filter((r) => !r.is_practice),
+            {
+              columns,
+            }
+          );
+        }}
         open={showExportModal}
         onRequestClose={() => setShowExportModal(false)}
         spatialFormElements={(data.survey?.form?.formElements || [])?.filter(

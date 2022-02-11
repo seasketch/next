@@ -8764,6 +8764,17 @@ COMMENT ON FUNCTION public.surveys_invited_groups(survey public.surveys) IS '
 
 
 --
+-- Name: surveys_is_spatial(public.surveys); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.surveys_is_spatial(s public.surveys) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+    select count(id) > 0 from form_elements inner join form_element_types on form_element_types.component_name = form_elements.type_id where form_id = (select id from forms where survey_id = s.id) and form_element_types.is_spatial = true
+  $$;
+
+
+--
 -- Name: surveys_is_template(public.surveys); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -13750,13 +13761,6 @@ REVOKE ALL ON FUNCTION public.spheroid_out(public.spheroid) FROM PUBLIC;
 
 
 --
--- Name: FUNCTION gen_random_uuid(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.gen_random_uuid() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION add_job(identifier text, payload json, queue_name text, run_at timestamp with time zone, max_attempts integer, job_key text, priority integer, flags text[], job_key_mode text); Type: ACL; Schema: graphile_worker; Owner: -
 --
 
@@ -14583,20 +14587,6 @@ REVOKE ALL ON FUNCTION public.after_response_submission() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.approve_participant("projectId" integer, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.approve_participant("projectId" integer, "userId" integer) TO seasketch_user;
-
-
---
--- Name: FUNCTION armor(bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.armor(bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION armor(bytea, text[], text[]); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.armor(bytea, text[], text[]) FROM PUBLIC;
 
 
 --
@@ -15560,13 +15550,6 @@ GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message
 
 
 --
--- Name: FUNCTION crypt(text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.crypt(text, text) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION current_project(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15638,27 +15621,6 @@ GRANT ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) TO anon;
 
 
 --
--- Name: FUNCTION dearmor(text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.dearmor(text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION decrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.decrypt(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION decrypt_iv(bytea, bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.decrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION delete_project(project_id integer, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15672,20 +15634,6 @@ GRANT ALL ON FUNCTION public.delete_project(project_id integer, OUT project publ
 
 REVOKE ALL ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) TO seasketch_user;
-
-
---
--- Name: FUNCTION digest(bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.digest(bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION digest(text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.digest(text, text) FROM PUBLIC;
 
 
 --
@@ -15766,20 +15714,6 @@ GRANT ALL ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" 
 --
 
 REVOKE ALL ON FUNCTION public.enablelongtransactions() FROM PUBLIC;
-
-
---
--- Name: FUNCTION encrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.encrypt(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION encrypt_iv(bytea, bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.encrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
 
 
 --
@@ -15865,27 +15799,6 @@ GRANT ALL ON FUNCTION public.forms_form_elements(f public.forms) TO anon;
 
 REVOKE ALL ON FUNCTION public.forms_logic_rules(form public.forms) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.forms_logic_rules(form public.forms) TO anon;
-
-
---
--- Name: FUNCTION gen_random_bytes(integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.gen_random_bytes(integer) FROM PUBLIC;
-
-
---
--- Name: FUNCTION gen_salt(text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.gen_salt(text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION gen_salt(text, integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.gen_salt(text, integer) FROM PUBLIC;
 
 
 --
@@ -16726,20 +16639,6 @@ GRANT ALL ON FUNCTION public.has_session() TO anon;
 
 
 --
--- Name: FUNCTION hmac(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.hmac(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION hmac(text, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION index(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17487,146 +17386,6 @@ REVOKE ALL ON FUNCTION public.pgis_geometry_polygonize_finalfn(internal) FROM PU
 --
 
 REVOKE ALL ON FUNCTION public.pgis_geometry_union_finalfn(internal) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_armor_headers(text, OUT key text, OUT value text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_armor_headers(text, OUT key text, OUT value text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_key_id(bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_key_id(bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt(bytea, bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt(bytea, bytea, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_encrypt(text, bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_encrypt(text, bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_encrypt(text, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_encrypt(text, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_encrypt_bytea(bytea, bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_encrypt_bytea(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_decrypt(bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_decrypt(bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_decrypt(bytea, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_decrypt(bytea, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_decrypt_bytea(bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_decrypt_bytea(bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_decrypt_bytea(bytea, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_decrypt_bytea(bytea, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_encrypt(text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_encrypt(text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_encrypt(text, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_encrypt(text, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_encrypt_bytea(bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_encrypt_bytea(bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_encrypt_bytea(bytea, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_encrypt_bytea(bytea, text, text) FROM PUBLIC;
 
 
 --
@@ -21800,6 +21559,14 @@ GRANT ALL ON FUNCTION public.survey_validation_info(survey_id integer) TO anon;
 
 REVOKE ALL ON FUNCTION public.surveys_invited_groups(survey public.surveys) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.surveys_invited_groups(survey public.surveys) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION surveys_is_spatial(s public.surveys); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.surveys_is_spatial(s public.surveys) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.surveys_is_spatial(s public.surveys) TO anon;
 
 
 --

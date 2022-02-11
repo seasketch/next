@@ -9126,6 +9126,7 @@ export type Survey = Node & {
    * be paused.
    */
   isDisabled: Scalars['Boolean'];
+  isSpatial?: Maybe<Scalars['Boolean']>;
   isTemplate?: Maybe<Scalars['Boolean']>;
   /**
    * If set, there can only be one response with matching contact information. The
@@ -12969,6 +12970,7 @@ export type SurveyByIdQuery = (
   { __typename?: 'Query' }
   & { survey?: Maybe<(
     { __typename?: 'Survey' }
+    & Pick<Survey, 'isSpatial'>
     & SurveyListDetailsFragment
   )> }
 );
@@ -13490,6 +13492,11 @@ export type UploadConsentDocMutation = (
   ) }
 );
 
+export type SurveyResponseFragment = (
+  { __typename?: 'SurveyResponse' }
+  & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
+);
+
 export type SurveyResponsesQueryVariables = Exact<{
   surveyId: Scalars['Int'];
 }>;
@@ -13513,7 +13520,7 @@ export type SurveyResponsesQuery = (
       { __typename?: 'SurveyResponsesConnection' }
       & { nodes: Array<(
         { __typename?: 'SurveyResponse' }
-        & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
+        & SurveyResponseFragment
       )> }
     ) }
   )> }
@@ -14501,6 +14508,22 @@ export const FormElementFullDetailsFragmentDoc = gql`
 }
     ${FormElementDetailsFragmentDoc}
 ${SketchClassDetailsFragmentDoc}`;
+export const SurveyResponseFragmentDoc = gql`
+    fragment SurveyResponse on SurveyResponse {
+  id
+  surveyId
+  bypassedDuplicateSubmissionControl
+  updatedAt
+  accountEmail
+  userId
+  createdAt
+  data
+  isDuplicateEntry
+  isDuplicateIp
+  isPractice
+  isUnrecognizedUserAgent
+}
+    `;
 export const SurveyAppRuleFragmentDoc = gql`
     fragment SurveyAppRule on FormLogicRule {
   booleanOperator
@@ -17959,6 +17982,7 @@ export const SurveyByIdDocument = gql`
     query SurveyById($id: Int!) {
   survey(id: $id) {
     ...SurveyListDetails
+    isSpatial
   }
 }
     ${SurveyListDetailsFragmentDoc}`;
@@ -19065,24 +19089,14 @@ export const SurveyResponsesDocument = gql`
     submittedResponseCount
     surveyResponsesConnection {
       nodes {
-        id
-        surveyId
-        bypassedDuplicateSubmissionControl
-        updatedAt
-        accountEmail
-        userId
-        createdAt
-        data
-        isDuplicateEntry
-        isDuplicateIp
-        isPractice
-        isUnrecognizedUserAgent
+        ...SurveyResponse
       }
     }
   }
 }
     ${FormElementDetailsFragmentDoc}
-${SurveyAppRuleFragmentDoc}`;
+${SurveyAppRuleFragmentDoc}
+${SurveyResponseFragmentDoc}`;
 
 /**
  * __useSurveyResponsesQuery__
@@ -20423,6 +20437,7 @@ export const namedOperations = {
     SketchClassDetails: 'SketchClassDetails',
     FormElementFullDetails: 'FormElementFullDetails',
     LogicRuleDetails: 'LogicRuleDetails',
+    SurveyResponse: 'SurveyResponse',
     SurveyAppRule: 'SurveyAppRule',
     SurveyAppFormElement: 'SurveyAppFormElement',
     SurveyAppSurvey: 'SurveyAppSurvey',

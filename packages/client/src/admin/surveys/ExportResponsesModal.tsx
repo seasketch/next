@@ -7,13 +7,13 @@ export default function ExportResponsesModal({
   open,
   spatialFormElements,
   onRequestClose,
-  dataForExport,
+  onRequestData,
 }: {
   open: boolean;
   surveyId: number;
   spatialFormElements: FormElementDetailsFragment[];
   onRequestClose?: () => void;
-  dataForExport: string;
+  onRequestData: () => string;
 }) {
   const { t } = useTranslation("admin:surveys");
   return (
@@ -33,7 +33,10 @@ export default function ExportResponsesModal({
       <p>
         <button
           className="text-primary-500 underline"
-          onClick={() => download(dataForExport, "responses.csv", "text/csv")}
+          onClick={() => {
+            const dataForExport = onRequestData();
+            download(dataForExport, "responses.csv", "text/csv");
+          }}
         >
           {
             // eslint-disable-next-line i18next/no-literal-string
