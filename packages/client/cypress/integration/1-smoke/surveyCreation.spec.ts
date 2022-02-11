@@ -1,5 +1,6 @@
 //const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
 import { ProjectAccessControlSetting } from "../../../src/generated/graphql";
+import "cypress-localstorage-commands"
 
 
 let surveyId: any
@@ -99,7 +100,11 @@ describe("Survey creation smoke test", () => {
     })
   })
   describe.only ('User survey flow', () => {
-    beforeEach(() => {
+   // beforeEach(() => {
+   //   cy.saveLocalStorage()
+   //   cy.restoreLocalStorage()
+   // })
+    before(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
         if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
           req.alias = "createProjectRequest"
@@ -109,6 +114,7 @@ describe("Survey creation smoke test", () => {
       })
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
+        cy.setLocalStorage("token", access_token)
         cy.createProject(
           `Maldives Spatial Planning Test - ${slug}`,
           slug,
@@ -122,53 +128,46 @@ describe("Survey creation smoke test", () => {
               projectId, 
               access_token
             ).then((resp) => {
+              cy.setLocalStorage("surveyId", resp.makeSurvey.survey.id)
+              cy.saveLocalStorage()
               cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
               cy.wrap(resp.makeSurvey.survey.form.formElements).as('formElements')
               cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
               cy.updateSurvey(resp.makeSurvey.survey.id, access_token).then((resp) => {
                 console.log(resp)
               })
+              cy.get('@formId').then((id) => {
+                formId = id
+                cy.deleteFormElements(formId, access_token).then((resp) => {
+                  console.log(resp)
+                  cy.createFormElements(formId, "Maldives", access_token)
+                })
+              })
             })
           });
         });
+        cy.get("@surveyId").then((id) => {
+        cy.visit(`${slug}/surveys/${id}`)
+        })
       });
     })
-    afterEach(() => {
-      cy.get('@surveyId').then((id) => {
+    after(() => {
+      cy.restoreLocalStorage()
+      cy.getLocalStorage("surveyId").then((id) => {
         surveyId = id
-        cy.get('@token').then((token) => {
-          authToken = token
-          cy.deleteSurvey(surveyId, authToken).then(() => {
-          })
+        cy.getLocalStorage("token").then((token) => {
+          cy.deleteSurvey(surveyId, token)
         })
       })
       cy.deleteProject(`${slug}`) 
     })
-
     it("Can visit the survey", () => {
-      cy.get('@formElements').then((el) => {
-        console.log(el)
-        console.log(el.length)
-      })
-      cy.get('@formId').then((id) => {
-        formId = id 
-        cy.get("@token").then((token) => {
-          authToken = token
-          cy.deleteFormElements(formId, authToken)
-          //args are formId, formElements fixture alias, token
-          cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
-            console.log(resp)
-          })
-          //  expect (resp.createFormElement.query.form.formElements.length).to.equal(40)
-          //})
-        })
-      })
-      cy.get("@surveyId").then((id) => {
-        cy.visit(`${slug}/surveys/${id}`)
-        cy.contains('Begin', {timeout: 30000})
-        //cy.contains("Skip Question").click()
-        //cy.contains("Skip Question").click()
-      })
+       cy.contains('Begin', {timeout: 30000}).click()
+       //cy.saveLocalStorage()
+    })
+    it("Can input name and submit", () => {
+      cy.contains("What is your name?")
+      cy.contains('Skip Question').click()
     })
   })
 })

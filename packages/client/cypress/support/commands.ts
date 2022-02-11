@@ -4,6 +4,7 @@ import { gql } from "@apollo/client";
 import { request } from "graphql-request";
 import { ProjectAccessControlSetting } from "../../src/generated/graphql";
 import { data } from "cypress/types/jquery";
+import "cypress-localstorage-commands"
 
 const jwt = require("jsonwebtoken");
 const users = require("../fixtures/users.json");
