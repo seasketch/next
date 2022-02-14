@@ -537,7 +537,7 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
               "textVariant": e.textVariant,
               "layout": e.layout,
               "alternateLanguageSettings": e.alternateLanguageSettings,
-              "subordinateTo": e.subordinateTo
+              //"subordinateTo": e.subordinateTo
             } },
           (token as any)
           )
