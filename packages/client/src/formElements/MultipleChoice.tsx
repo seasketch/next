@@ -1,6 +1,8 @@
 import { CheckIcon } from "@heroicons/react/outline";
 import { useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
+import Badge from "../components/Badge";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
@@ -176,5 +178,17 @@ MultipleChoice.icon = () => (
 );
 
 MultipleChoice.adminValueInput = ChoiceAdminValueInput;
+
+MultipleChoice.ResponseGridCell = function ({ value, componentSettings }) {
+  return (
+    <div className="space-x-1">
+      {(componentSettings.options || [])
+        .filter((o) => value.indexOf(o.value || o.label) !== -1)
+        .map((option) => (
+          <Badge variant="green">{option.label}</Badge>
+        ))}
+    </div>
+  );
+};
 
 export default MultipleChoice;

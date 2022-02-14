@@ -3521,6 +3521,7 @@ export type FormElement = Node & {
   body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings: Scalars['JSON'];
+  createdAt: Scalars['Datetime'];
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
@@ -3562,6 +3563,8 @@ export type FormElement = Node & {
    * FormElement.shouldDisplaySubordinateElement to control visibility.
    */
   subordinateTo?: Maybe<Scalars['Int']>;
+  /** Reads and enables pagination through a set of `SurveyConsentDocument`. */
+  surveyConsentDocumentsConnection: SurveyConsentDocumentsConnection;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -3572,6 +3575,26 @@ export type FormElement = Node & {
   typeId: Scalars['String'];
   unsplashAuthorName?: Maybe<Scalars['String']>;
   unsplashAuthorUrl?: Maybe<Scalars['String']>;
+};
+
+
+/**
+ * *FormElements* represent input fields or read-only content in a form. Records contain fields to support
+ * generic functionality like body, position, and isRequired. They
+ * also have a JSON `componentSettings` field that can have custom data to support
+ * a particular input type, indicated by the `type` field.
+ *
+ * Project administrators have full control over managing form elements through
+ * graphile-generated CRUD mutations.
+ */
+export type FormElementSurveyConsentDocumentsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SurveyConsentDocumentCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SurveyConsentDocumentsOrderBy>>;
 };
 
 /** An input for mutations affecting `FormElement` */
@@ -3592,6 +3615,7 @@ export type FormElementInput = {
   body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
@@ -3665,6 +3689,7 @@ export type FormElementPatch = {
   body?: Maybe<Scalars['JSON']>;
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
@@ -7607,6 +7632,12 @@ export type Query = Node & {
   survey?: Maybe<Survey>;
   /** Reads a single `Survey` using its globally unique `ID`. */
   surveyByNodeId?: Maybe<Survey>;
+  surveyConsentDocument?: Maybe<SurveyConsentDocument>;
+  surveyConsentDocumentByFormElementIdAndVersion?: Maybe<SurveyConsentDocument>;
+  /** Reads a single `SurveyConsentDocument` using its globally unique `ID`. */
+  surveyConsentDocumentByNodeId?: Maybe<SurveyConsentDocument>;
+  /** Reads and enables pagination through a set of `SurveyConsentDocument`. */
+  surveyConsentDocumentsConnection?: Maybe<SurveyConsentDocumentsConnection>;
   surveyInvite?: Maybe<SurveyInvite>;
   surveyInviteByEmail?: Maybe<SurveyInvite>;
   surveyInviteByEmailAndSurveyId?: Maybe<SurveyInvite>;
@@ -8162,6 +8193,37 @@ export type QuerySurveyArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySurveyConsentDocumentArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySurveyConsentDocumentByFormElementIdAndVersionArgs = {
+  formElementId: Scalars['Int'];
+  version: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySurveyConsentDocumentByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySurveyConsentDocumentsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SurveyConsentDocumentCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SurveyConsentDocumentsOrderBy>>;
 };
 
 
@@ -9213,6 +9275,63 @@ export type SurveyCondition = {
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
 };
+
+export type SurveyConsentDocument = Node & {
+  __typename?: 'SurveyConsentDocument';
+  createdAt: Scalars['Datetime'];
+  /** Reads a single `FormElement` that is related to this `SurveyConsentDocument`. */
+  formElement?: Maybe<FormElement>;
+  formElementId: Scalars['Int'];
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  url: Scalars['String'];
+  version: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `SurveyConsentDocument` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type SurveyConsentDocumentCondition = {
+  /** Checks for equality with the object’s `formElementId` field. */
+  formElementId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `SurveyConsentDocument` values. */
+export type SurveyConsentDocumentsConnection = {
+  __typename?: 'SurveyConsentDocumentsConnection';
+  /** A list of edges which contains the `SurveyConsentDocument` and cursor to aid in pagination. */
+  edges: Array<SurveyConsentDocumentsEdge>;
+  /** A list of `SurveyConsentDocument` objects. */
+  nodes: Array<SurveyConsentDocument>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `SurveyConsentDocument` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `SurveyConsentDocument` edge in the connection. */
+export type SurveyConsentDocumentsEdge = {
+  __typename?: 'SurveyConsentDocumentsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `SurveyConsentDocument` at the end of the edge. */
+  node: SurveyConsentDocument;
+};
+
+/** Methods to use when ordering `SurveyConsentDocument`. */
+export enum SurveyConsentDocumentsOrderBy {
+  FormElementIdAsc = 'FORM_ELEMENT_ID_ASC',
+  FormElementIdDesc = 'FORM_ELEMENT_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
 
 export type SurveyInvite = Node & {
   __typename?: 'SurveyInvite';
@@ -13497,6 +13616,18 @@ export type SurveyResponseFragment = (
   & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
 );
 
+export type FormElementExtendedDetailsFragment = (
+  { __typename?: 'FormElement' }
+  & { surveyConsentDocumentsConnection: (
+    { __typename?: 'SurveyConsentDocumentsConnection' }
+    & { nodes: Array<(
+      { __typename?: 'SurveyConsentDocument' }
+      & Pick<SurveyConsentDocument, 'url' | 'version'>
+    )> }
+  ) }
+  & FormElementDetailsFragment
+);
+
 export type SurveyResponsesQueryVariables = Exact<{
   surveyId: Scalars['Int'];
 }>;
@@ -13511,7 +13642,7 @@ export type SurveyResponsesQuery = (
       { __typename?: 'Form' }
       & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
-        & FormElementDetailsFragment
+        & FormElementExtendedDetailsFragment
       )>>, logicRules?: Maybe<Array<(
         { __typename?: 'FormLogicRule' }
         & SurveyAppRuleFragment
@@ -14524,6 +14655,17 @@ export const SurveyResponseFragmentDoc = gql`
   isUnrecognizedUserAgent
 }
     `;
+export const FormElementExtendedDetailsFragmentDoc = gql`
+    fragment FormElementExtendedDetails on FormElement {
+  ...FormElementDetails
+  surveyConsentDocumentsConnection {
+    nodes {
+      url
+      version
+    }
+  }
+}
+    ${FormElementDetailsFragmentDoc}`;
 export const SurveyAppRuleFragmentDoc = gql`
     fragment SurveyAppRule on FormLogicRule {
   booleanOperator
@@ -19078,7 +19220,7 @@ export const SurveyResponsesDocument = gql`
   survey(id: $surveyId) {
     form {
       formElements {
-        ...FormElementDetails
+        ...FormElementExtendedDetails
       }
       logicRules {
         ...SurveyAppRule
@@ -19094,7 +19236,7 @@ export const SurveyResponsesDocument = gql`
     }
   }
 }
-    ${FormElementDetailsFragmentDoc}
+    ${FormElementExtendedDetailsFragmentDoc}
 ${SurveyAppRuleFragmentDoc}
 ${SurveyResponseFragmentDoc}`;
 
@@ -20438,6 +20580,7 @@ export const namedOperations = {
     FormElementFullDetails: 'FormElementFullDetails',
     LogicRuleDetails: 'LogicRuleDetails',
     SurveyResponse: 'SurveyResponse',
+    FormElementExtendedDetails: 'FormElementExtendedDetails',
     SurveyAppRule: 'SurveyAppRule',
     SurveyAppFormElement: 'SurveyAppFormElement',
     SurveyAppSurvey: 'SurveyAppSurvey',

@@ -523,6 +523,13 @@ export interface FormElementComponent<T, V = {}>
       alternateLanguageSettings?: any
     ) => (value: any) => void;
   }>;
+  ResponseGridCell?: FunctionComponent<{
+    value: V;
+    componentSettings: T;
+    // updateValue: (
+    //   value: V,
+    // ) => void;
+  }>;
 }
 
 export function hideNav(

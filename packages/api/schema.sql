@@ -2625,6 +2625,7 @@ CREATE TABLE public.form_elements (
     jump_to_id integer,
     alternate_language_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     subordinate_to integer,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
     CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
     CONSTRAINT form_fields_position_check CHECK (("position" > 0))
 );
@@ -10284,7 +10285,8 @@ CREATE TABLE public.survey_consent_documents (
     id integer NOT NULL,
     form_element_id integer NOT NULL,
     version integer NOT NULL,
-    url text NOT NULL
+    url text NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
 
@@ -13281,6 +13283,19 @@ ALTER TABLE public.sprites ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY sprites_read ON public.sprites FOR SELECT USING (true);
+
+
+--
+-- Name: survey_consent_documents; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.survey_consent_documents ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: survey_consent_documents survey_consent_documents_admin_access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY survey_consent_documents_admin_access ON public.survey_consent_documents USING (public.session_is_admin(public.project_id_from_field_id(form_element_id)));
 
 
 --
@@ -22196,6 +22211,13 @@ GRANT ALL ON TABLE public.projects_shared_basemaps TO seasketch_user;
 --
 
 GRANT SELECT ON TABLE public.sprite_images TO anon;
+
+
+--
+-- Name: TABLE survey_consent_documents; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.survey_consent_documents TO seasketch_user;
 
 
 --

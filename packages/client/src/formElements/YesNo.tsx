@@ -1,5 +1,6 @@
 import { CheckIcon, XIcon } from "@heroicons/react/outline";
 import { Trans, useTranslation } from "react-i18next";
+import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import {
   adminValueInputCommonClassNames,
   FormElementBody,
@@ -89,5 +90,26 @@ function AdminValueInput({
 }
 
 YesNo.adminValueInput = AdminValueInput;
+
+YesNo.ResponseGridCell = function ({ value, componentSettings }) {
+  if (value === undefined || value === null) {
+    return <SkippedQuestion />;
+  }
+  if (value) {
+    return (
+      <span>
+        <Trans ns="admin:surveys">Yes</Trans>{" "}
+        <CheckIcon className="w-4 h-4 inline text-green-700" />
+      </span>
+    );
+  } else {
+    return (
+      <span>
+        <Trans ns="admin:surveys">No</Trans>{" "}
+        <XIcon className="w-4 h-4 inline text-red-700" />
+      </span>
+    );
+  }
+};
 
 export default YesNo;

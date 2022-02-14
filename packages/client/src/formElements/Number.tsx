@@ -12,6 +12,7 @@ import { MinusIcon, PlusIcon } from "@heroicons/react/outline";
 import NumberInput from "../components/NumberInput";
 import InputBlock from "../components/InputBlock";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 require("./Number.css");
 
 export type NumberProps = {
@@ -312,6 +313,14 @@ Number.adminValueInput = function ({
       onChange={(e) => onChange(parseInt(e.target.value))}
     />
   );
+};
+
+Number.ResponseGridCell = function ({ value, componentSettings }) {
+  if (value === null) {
+    return <SkippedQuestion />;
+  } else {
+    return <span className="font-mono lining-nums">{value.toString()}</span>;
+  }
 };
 
 export default Number;

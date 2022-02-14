@@ -638,11 +638,21 @@ fragment SurveyResponse on SurveyResponse {
   isUnrecognizedUserAgent
 }
 
+fragment FormElementExtendedDetails on FormElement {
+  ...FormElementDetails
+  surveyConsentDocumentsConnection {
+    nodes {
+      url
+      version
+    }
+  }
+}
+
 query SurveyResponses($surveyId: Int!) {
   survey(id: $surveyId) {
     form {
       formElements {
-        ...FormElementDetails
+        ...FormElementExtendedDetails
       }
       logicRules {
         ...SurveyAppRule

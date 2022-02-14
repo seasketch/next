@@ -18,10 +18,21 @@ import DownloadIcon from "../../components/DownloadIcon";
 import Papa from "papaparse";
 import ExportResponsesModal from "./ExportResponsesModal";
 import ResponsesAsExported from "./ResponsesAsExported";
+import { ConsentValue } from "../../formElements/Consent";
+import sortBy from "lodash.sortby";
+import { components } from "../../formElements";
 
 interface Props {
   surveyId: number;
   className?: string;
+}
+
+export function SkippedQuestion() {
+  return (
+    <span className="italic text-gray-500">
+      <Trans ns="admin:surveys">skipped</Trans>
+    </span>
+  );
 }
 
 type TabName = "responses" | "practice" | "archived" | "export";
@@ -68,6 +79,16 @@ export default function ResponseGrid(props: Props) {
     const EmailElement = (data?.survey?.form?.formElements || []).find(
       (el) => el.typeId === "Email"
     );
+    const ConsentElement = (data?.survey?.form?.formElements || []).find(
+      (el) => el.typeId === "Consent"
+    );
+    const questions = (data?.survey?.form?.formElements || []).filter(
+      (el) =>
+        el.isInput &&
+        el.typeId !== "Name" &&
+        el.typeId !== "Email" &&
+        el.typeId !== "Consent"
+    );
     return [
       // {
       //   Header: "id",
@@ -85,6 +106,15 @@ export default function ResponseGrid(props: Props) {
           );
         },
         width: 180,
+      },
+      {
+        Header: "last updated",
+        accessor: (row: any) =>
+          row.updatedAt ? new Date(row.updatedAt).toLocaleString() : "Never",
+        sortDescFirst: true,
+        sortType: (a: Row<any>, b: Row<any>) => {
+          return a.values.updated.localeCompare(b.values.updated);
+        },
       },
       ...(NameElement
         ? [
@@ -157,52 +187,95 @@ export default function ResponseGrid(props: Props) {
             },
           ]
         : []),
+      {
+        Header: "account",
+        accessor: (row: any) => row.accountEmail,
+        Cell: ({ value }: { value: string | null }) =>
+          value ? (
+            <a
+              className="text-primary-500 underline"
+              href={`mailto:${value}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {value}
+            </a>
+          ) : (
+            "Anonymous"
+          ),
+      },
+      ...(ConsentElement
+        ? [
+            {
+              Header: "consent",
+              accessor: (row: any) => row.data[ConsentElement.id],
+              Cell: ({ value }: { value: ConsentValue }) => {
+                const url = ConsentElement.surveyConsentDocumentsConnection.nodes.find(
+                  (doc) => doc.version === value.docVersion
+                )?.url;
+                return value?.consented ? (
+                  <span>
+                    {value.clickedDoc ? (
+                      <Trans ns="admin:surveys">Clicked</Trans>
+                    ) : (
+                      <Trans ns="admin:surveys">Agreed to</Trans>
+                    )}{" "}
+                    <a
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary-500 underline"
+                      href={url}
+                    >
+                      {
+                        // eslint-disable-next-line i18next/no-literal-string
+                        "v"
+                      }
+                      {value.docVersion}
+                    </a>
+                    {value.clickedDoc && (
+                      <Trans ns="admin:surveys">, agreed</Trans>
+                    )}
+                  </span>
+                ) : (
+                  "No"
+                );
+              },
+              sortType: (a: Row<any>, b: Row<any>) => {
+                const sorted = sortBy(
+                  [a, b],
+                  [
+                    // "original.consented",
+                    "original.clickedDoc",
+                    "original.docVersion",
+                  ]
+                );
+                return sorted.indexOf(b) - sorted.indexOf(a);
+              },
+            },
+          ]
+        : []),
+      ...questions.map((formElement) => ({
+        Header: formElement.exportId!,
+        accessor: (row: any) => row.data[formElement.id],
+        Cell: ({ value }: { value: any }) => {
+          const C = components[formElement.typeId];
+          if (value === undefined) {
+            return <SkippedQuestion />;
+          }
+          if (C.ResponseGridCell) {
+            return (
+              <C.ResponseGridCell
+                value={value}
+                componentSettings={formElement.componentSettings}
+              />
+            );
+          } else {
+            return value.toString();
+          }
+        },
+      })),
     ];
   }, [data?.survey]);
-
-  // const { rows: rowData, columns: exportColumnNames } = useMemo(() => {
-  //   return getDataForExport(
-  //     survey?.surveyResponsesConnection.nodes || [],
-  //     survey?.form?.formElements || [],
-  //     data?.survey?.form?.logicRules || []
-  //   );
-  // }, [survey?.surveyResponsesConnection.nodes]);
-
-  // const columns = useMemo<Column[]>(() => {
-  //   if (survey) {
-  //     let columns: string[] = [];
-  //     return [
-  //       {
-  //         Header: "id",
-  //         accessor: "id",
-  //       },
-  //       {
-  //         Header: "created_at_utc",
-  //         accessor: "created_at_utc",
-  //         sortDescFirst: true,
-  //         sortType: (a: Row, b: Row) =>
-  //           new Date(a.values.created_at_utc).getTime() -
-  //           new Date(b.values.created_at_utc).getTime(),
-  //       },
-  //       {
-  //         Header: "updated_at_utc",
-  //         accessor: "updated_at_utc",
-  //         sortDescFirst: true,
-  //         sortType: (a: Row, b: Row) =>
-  //           new Date(a.values.updated_at_utc).getTime() -
-  //           new Date(b.values.updated_at_utc).getTime(),
-  //       },
-  //       ...exportColumnNames
-  //         .filter(
-  //           (c) =>
-  //             c !== "created_at_utc" && c !== "updated_at_utc" && c !== "id"
-  //         )
-  //         .map((h) => ({ Header: h, accessor: valueFormatter(h) })),
-  //     ];
-  //   } else {
-  //     return [];
-  //   }
-  // }, [survey, exportColumnNames]);
 
   const defaultColumn = useMemo(
     () => ({

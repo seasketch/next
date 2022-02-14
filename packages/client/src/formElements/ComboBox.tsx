@@ -19,6 +19,8 @@ import Switch from "../components/Switch";
 import { XIcon } from "@heroicons/react/outline";
 import Button from "../components/Button";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
+import Badge from "../components/Badge";
 
 export type ComboBoxProps = {
   options?: FormElementOption[];
@@ -360,5 +362,20 @@ export function ChoiceAdminValueInput({
 }
 
 ComboBox.adminValueInput = ChoiceAdminValueInput;
+
+ComboBox.ResponseGridCell = function ({ value, componentSettings }) {
+  if (value === null) {
+    return <SkippedQuestion />;
+  }
+  return (
+    <div className="space-x-1">
+      {(componentSettings.options || [])
+        .filter((o) => value.indexOf(o.value || o.label) !== -1)
+        .map((option) => (
+          <Badge>{option.label}</Badge>
+        ))}
+    </div>
+  );
+};
 
 export default ComboBox;
