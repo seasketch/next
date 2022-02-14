@@ -129,7 +129,7 @@ export default function ResponseGrid(props: Props) {
               },
               accessor: (row: any) => {
                 const data = row.data[NameElement.id];
-                if (data && data.name) {
+                if (data?.name) {
                   const { name } = data;
                   const email = EmailElement ? row.data[EmailElement.id] : null;
                   return {
@@ -178,7 +178,7 @@ export default function ResponseGrid(props: Props) {
               Header: "facilitator",
               accessor: (row: any) => {
                 const data = row.data[NameElement.id];
-                return data.facilitator || null;
+                return data?.facilitator || null;
               },
               Cell: ({ value }: { value: string | null }) => {
                 return value ? value : "None";
