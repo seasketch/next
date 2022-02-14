@@ -267,7 +267,7 @@ export default function ResponseGrid(props: Props) {
         accessor: (row: any) => row.data[formElement.id],
         Cell: ({ value }: { value: any }) => {
           const C = components[formElement.typeId];
-          if (value === undefined) {
+          if (value === undefined || value === null) {
             return <SkippedQuestion />;
           }
           if (C.ResponseGridCell) {
