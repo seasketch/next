@@ -370,7 +370,7 @@ ComboBox.ResponseGridCell = function ({ value, componentSettings }) {
   return (
     <div className="space-x-1">
       {(componentSettings.options || [])
-        .filter((o) => value.indexOf(o.value || o.label) !== -1)
+        .filter((o) => value === (o.value || o.label))
         .map((option) => (
           <Badge>{option.label}</Badge>
         ))}
