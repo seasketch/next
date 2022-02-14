@@ -389,14 +389,14 @@ export default function ResponseGrid(props: Props) {
         )}
       </div>
       <ExportResponsesModal
-        onRequestData={() => {
+        onRequestData={(includePractice) => {
           const { rows, columns } = getDataForExport(
             survey?.surveyResponsesConnection.nodes || [],
             survey?.form?.formElements || [],
             data?.survey?.form?.logicRules || []
           );
           return Papa.unparse(
-            rows.filter((r) => !r.is_practice),
+            rows.filter((r) => !r.is_practice || includePractice),
             {
               columns,
             }
