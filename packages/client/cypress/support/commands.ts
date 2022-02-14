@@ -536,8 +536,6 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
               "secondaryColor": e.secondaryColor,
               "textVariant": e.textVariant,
               "layout": e.layout,
-              "backgroundPalette": e.backgroundPalette,
-              "jumpToId": e.jumpToId,
               "alternateLanguageSettings": e.alternateLanguageSettings,
               "subordinateTo": e.subordinateTo
             } },
