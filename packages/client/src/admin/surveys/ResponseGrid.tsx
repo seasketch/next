@@ -128,14 +128,22 @@ export default function ResponseGrid(props: Props) {
                 );
               },
               accessor: (row: any) => {
-                const { name } = row.data[NameElement.id];
-                const email = EmailElement ? row.data[EmailElement.id] : null;
-                return {
-                  name,
-                  email,
-                };
+                const data = row.data[NameElement.id];
+                if (data && data.name) {
+                  const { name } = data;
+                  const email = EmailElement ? row.data[EmailElement.id] : null;
+                  return {
+                    name,
+                    email,
+                  };
+                } else {
+                  return null;
+                }
               },
               Cell: ({ value }: { value: NameColumn }) => {
+                if (value === null) {
+                  return <SkippedQuestion />;
+                }
                 if (value.name) {
                   if (value.email) {
                     return (
