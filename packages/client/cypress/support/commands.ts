@@ -489,7 +489,12 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
 
   Cypress.Commands.add("createFormElements", (formId: number, surveyAlias: string, token: string) => {
     const elements = formElements[surveyAlias].data.form.formElements
-    console.log(elements.length)
+    //console.log(elements.length)
+    //Object.keys(elements).forEach((e) => {
+    //  Object.keys(e).forEach((f) => {
+    //    console.log(f)
+    //  })
+    //})
     elements.map(t => t.formId = formId)
     if (!surveyAlias) {
       throw new Error(`Unrecognized alias "${surveyAlias}"`);
@@ -519,11 +524,23 @@ Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
                 }
               }
             `,
-          { "formElement": {
-            "formId": e.formId,
-            "typeId": e.typeId,
-            "body": e.body,
-          } },
+            { "formElement": {
+              "formId": e.formId,
+              "isRequired": e.isRequired,
+              "exportId": e.exportId,
+              "position": e.position,
+              "componentSettings": e.componentSettings,
+              "typeId": e.typeId,
+              "body": e.body,
+              "backgroundColor": e.backgroundColor,
+              "secondaryColor": e.secondaryColor,
+              "textVariant": e.textVariant,
+              "layout": e.layout,
+              "backgroundPalette": e.backgroundPalette,
+              "jumpToId": e.jumpToId,
+              "alternateLanguageSettings": e.alternateLanguageSettings,
+              "subordinateTo": e.subordinateTo
+            } },
           (token as any)
           )
           .then((data) => {

@@ -140,7 +140,9 @@ describe("Survey creation smoke test", () => {
                 formId = id
                 cy.deleteFormElements(formId, access_token).then((resp) => {
                   console.log(resp)
-                  cy.createFormElements(formId, "Maldives", access_token)
+                  cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
+                    console.log(resp)
+                  })
                 })
               })
             })
@@ -163,11 +165,13 @@ describe("Survey creation smoke test", () => {
     })
     it("Can visit the survey", () => {
        cy.contains('Begin', {timeout: 30000}).click()
-       //cy.saveLocalStorage()
     })
-    it("Can input name and submit", () => {
+    it("Cannot progress until name is provided", () => {
       cy.contains("What is your name?")
-      cy.contains('Skip Question').click()
+        .get('[title = "Next Question"]')
+        .should('have.class', "pointer-events-none")
+        .get("input").type("Test User 1") 
+        .get("button").contains("Next").click()
     })
   })
 })
