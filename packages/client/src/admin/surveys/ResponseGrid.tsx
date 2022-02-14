@@ -218,6 +218,13 @@ export default function ResponseGrid(props: Props) {
               Header: "consent",
               accessor: (row: any) => row.data[ConsentElement.id],
               Cell: ({ value }: { value: ConsentValue }) => {
+                if (value === undefined || value === null) {
+                  return (
+                    <span className="text-grey-500 italic">
+                      <Trans ns="admin:surveys">None</Trans>
+                    </span>
+                  );
+                }
                 const url = ConsentElement.surveyConsentDocumentsConnection.nodes.find(
                   (doc) => doc.version === value.docVersion
                 )?.url;
