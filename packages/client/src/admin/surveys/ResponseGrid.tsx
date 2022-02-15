@@ -302,6 +302,10 @@ export default function ResponseGrid(props: Props) {
     []
   );
 
+  if (data?.survey?.form?.logicRules?.length === 0) {
+    throw new Error("foo");
+  }
+
   const globalFilter = useMemo(() => {
     return (rows: any[], columnIds: any, selectedTab: TabName) => {
       // @ts-ignore
