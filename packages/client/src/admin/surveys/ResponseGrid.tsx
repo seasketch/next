@@ -21,6 +21,7 @@ import ResponsesAsExported from "./ResponsesAsExported";
 import { ConsentValue } from "../../formElements/Consent";
 import sortBy from "lodash.sortby";
 import { components } from "../../formElements";
+import { ErrorBoundary } from "@sentry/react";
 
 interface Props {
   surveyId: number;
@@ -300,6 +301,10 @@ export default function ResponseGrid(props: Props) {
     }),
     []
   );
+
+  if (data?.survey?.form?.logicRules?.length === 0) {
+    throw new Error("foo");
+  }
 
   const globalFilter = useMemo(() => {
     return (rows: any[], columnIds: any, selectedTab: TabName) => {
