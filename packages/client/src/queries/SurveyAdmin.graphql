@@ -636,6 +636,8 @@ fragment SurveyResponse on SurveyResponse {
   isDuplicateIp
   isPractice
   isUnrecognizedUserAgent
+  archived
+  lastUpdatedByEmail
 }
 
 fragment FormElementExtendedDetails on FormElement {
@@ -660,6 +662,7 @@ query SurveyResponses($surveyId: Int!) {
     }
     id
     practiceResponseCount
+    archivedResponseCount
     submittedResponseCount
     surveyResponsesConnection {
       nodes {
@@ -676,6 +679,40 @@ query SurveyMapDetails($surveyId: Int!) {
         ...FormElementDetails
       }
       id
+    }
+  }
+}
+
+mutation toggleResponsesPractice($ids: [Int], $isPractice: Boolean) {
+  toggleResponsesPractice(input: { ids: $ids, isPractice: $isPractice }) {
+    surveyResponses {
+      id
+      isPractice
+      archived
+      lastUpdatedByEmail
+      survey {
+        id
+        practiceResponseCount
+        archivedResponseCount
+        submittedResponseCount
+      }
+    }
+  }
+}
+
+mutation archiveResponses($ids: [Int], $makeArchived: Boolean) {
+  archiveResponses(input: { ids: $ids, makeArchived: $makeArchived }) {
+    surveyResponses {
+      id
+      isPractice
+      archived
+      lastUpdatedByEmail
+      survey {
+        id
+        practiceResponseCount
+        archivedResponseCount
+        submittedResponseCount
+      }
     }
   }
 }

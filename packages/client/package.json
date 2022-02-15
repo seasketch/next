@@ -7,6 +7,7 @@
     "@auth0/auth0-react": "^1.0.0",
     "@braintree/sanitize-url": "^5.0.0",
     "@graphql-codegen/named-operations-object": "^2.2.0",
+    "@headlessui/react": "^1.4.3",
     "@heroicons/react": "^1.0.1",
     "@mapbox/mapbox-gl-draw": "seasketch/mapbox-gl-draw",
     "@mapbox/mapbox-gl-draw-static-mode": "^1.0.1",

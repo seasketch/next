@@ -1643,7 +1643,9 @@ SpatialAccessPriority.ResponseGridCell = function ({
       {(componentSettings.sectorOptions || [])
         .filter((o) => (value.sectors || []).indexOf(o.value || o.label) !== -1)
         .map((option) => (
-          <Badge variant="error">{option.label}</Badge>
+          <Badge key={option.value || option.label} variant="error">
+            {option.label}
+          </Badge>
         ))}
     </div>
   );

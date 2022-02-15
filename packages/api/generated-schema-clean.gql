@@ -168,6 +168,32 @@ type ApproveParticipantPayload {
   query: Query
 }
 
+"""All input for the `archiveResponses` mutation."""
+input ArchiveResponsesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  ids: [Int]
+  makeArchived: Boolean
+}
+
+"""The output of our `archiveResponses` mutation."""
+type ArchiveResponsesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  surveyResponses: [SurveyResponse!]
+}
+
 type Basemap implements Node {
   """Reads a single `Acl` that is related to this `Basemap`."""
   acl: Acl
@@ -5595,6 +5621,65 @@ type MakeResponseDraftPayload {
   ): SurveyResponsesEdge
 }
 
+"""All input for the `makeResponsesNotPractice` mutation."""
+input MakeResponsesNotPracticeInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  ids: [Int]
+}
+
+"""The output of our `makeResponsesNotPractice` mutation."""
+type MakeResponsesNotPracticePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  surveyResponses: [SurveyResponse!]
+}
+
+"""All input for the `makeResponsesPractice` mutation."""
+input MakeResponsesPracticeInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  ids: [Int]
+}
+
+"""The output of our `makeResponsesPractice` mutation."""
+type MakeResponsesPracticePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyResponse`."""
+  survey: Survey
+  surveyResponse: SurveyResponse
+
+  """An edge for our `SurveyResponse`. May be used by Relay 1."""
+  surveyResponseEdge(
+    """The method to use when ordering `SurveyResponse`."""
+    orderBy: [SurveyResponsesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyResponsesEdge
+}
+
 """All input for the `makeSketchClass` mutation."""
 input MakeSketchClassInput {
   """
@@ -5733,6 +5818,12 @@ type Mutation {
     """
     input: ApproveParticipantInput!
   ): ApproveParticipantPayload
+  archiveResponses(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ArchiveResponsesInput!
+  ): ArchiveResponsesPayload
   clearFormElementStyle(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -6544,6 +6635,18 @@ type Mutation {
     """
     input: MakeResponseDraftInput!
   ): MakeResponseDraftPayload
+  makeResponsesNotPractice(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: MakeResponsesNotPracticeInput!
+  ): MakeResponsesNotPracticePayload
+  makeResponsesPractice(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: MakeResponsesPracticeInput!
+  ): MakeResponsesPracticePayload
   makeSketchClass(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -6759,6 +6862,12 @@ type Mutation {
     """
     input: ToggleForumPostingBanInput!
   ): ToggleForumPostingBanPayload
+  toggleResponsesPractice(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ToggleResponsesPracticeInput!
+  ): ToggleResponsesPracticePayload
 
   """Updates a single `Acl` using a unique key and a patch."""
   updateAcl(
@@ -10144,6 +10253,7 @@ type Survey implements Node {
   
   """
   accessType: SurveyAccessType!
+  archivedResponseCount: Int
 
   """Reads a single `Form` that is related to this `Survey`."""
   form: Form
@@ -10561,6 +10671,7 @@ input SurveyPatch {
 
 type SurveyResponse implements Node {
   accountEmail: String
+  archived: Boolean!
 
   """
   Should be set by the client on submission and tracked by cookies or
@@ -10605,6 +10716,8 @@ type SurveyResponse implements Node {
   
   """
   isUnrecognizedUserAgent: Boolean!
+  lastUpdatedByEmail: String
+  lastUpdatedById: Int
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
@@ -10650,13 +10763,68 @@ input SurveyResponseCondition {
 Represents an update to a `SurveyResponse`. Fields that are set will be updated.
 """
 input SurveyResponsePatch {
+  archived: Boolean
+
+  """
+  Should be set by the client on submission and tracked by cookies or
+  localStorage. Surveys that permit only a single entry enable users to bypass
+  the limit for legitimate purposes, like entering responses on a shared computer.
+  
+  """
+  bypassedDuplicateSubmissionControl: Boolean
+  createdAt: Datetime
+
   """JSON representation of responses, keyed by the form field export_id"""
   data: JSON
+  id: Int
 
   """
   Users may save their responses for later editing before submission. After submission they can no longer edit them.
   """
   isDraft: Boolean
+
+  """
+  Duplicate entries are detected by matching contact-information field values.
+  
+  """
+  isDuplicateEntry: Boolean
+
+  """
+  Detected by comparing ip hashes from previous entries. IP hashes are not tied
+  to particular responses, so only the second and subsequent entries are flagged.
+  
+  """
+  isDuplicateIp: Boolean
+
+  """
+  If true, a logged-in user entered information on behalf of another person, so userId is not as relevant.
+  """
+  isFacilitated: Boolean
+  isPractice: Boolean
+
+  """
+  Unusual or missing user-agent headers on submissions are flagged. May indicate
+  scripting but does not necessarily imply malicious intent.
+  
+  """
+  isUnrecognizedUserAgent: Boolean
+  lastUpdatedById: Int
+
+  """
+  Checked on SUBMISSION, so adding or changing a survey geofence after responses
+  have been submitted will not update values. GPS coordinates and IP addresses
+  are not stored for privacy purposes.
+  
+  """
+  outsideGeofence: Boolean
+  surveyId: Int
+  updatedAt: Datetime
+
+  """
+  User account that submitted the survey. Note that if isFacilitated is set, the
+  account may not be who is represented by the response content.
+  """
+  userId: Int
 }
 
 """A connection to a list of `SurveyResponse` values."""
@@ -11021,6 +11189,32 @@ type ToggleForumPostingBanPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+"""All input for the `toggleResponsesPractice` mutation."""
+input ToggleResponsesPracticeInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  ids: [Int]
+  isPractice: Boolean
+}
+
+"""The output of our `toggleResponsesPractice` mutation."""
+type ToggleResponsesPracticePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  surveyResponses: [SurveyResponse!]
 }
 
 type Topic implements Node {

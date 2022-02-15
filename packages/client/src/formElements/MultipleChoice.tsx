@@ -185,7 +185,9 @@ MultipleChoice.ResponseGridCell = function ({ value, componentSettings }) {
       {(componentSettings.options || [])
         .filter((o) => value.indexOf(o.value || o.label) !== -1)
         .map((option) => (
-          <Badge variant="green">{option.label}</Badge>
+          <Badge key={option.value || option.label} variant="green">
+            {option.label}
+          </Badge>
         ))}
     </div>
   );

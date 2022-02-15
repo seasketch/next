@@ -197,6 +197,30 @@ export type ApproveParticipantPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `archiveResponses` mutation. */
+export type ArchiveResponsesInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  makeArchived?: Maybe<Scalars['Boolean']>;
+};
+
+/** The output of our `archiveResponses` mutation. */
+export type ArchiveResponsesPayload = {
+  __typename?: 'ArchiveResponsesPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  surveyResponses?: Maybe<Array<SurveyResponse>>;
+};
+
 export type Basemap = Node & {
   __typename?: 'Basemap';
   /** Reads a single `Acl` that is related to this `Basemap`. */
@@ -4760,6 +4784,29 @@ export type MakeResponseDraftPayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
 
+/** All input for the `makeResponsesNotPractice` mutation. */
+export type MakeResponsesNotPracticeInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `makeResponsesNotPractice` mutation. */
+export type MakeResponsesNotPracticePayload = {
+  __typename?: 'MakeResponsesNotPracticePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  surveyResponses?: Maybe<Array<SurveyResponse>>;
+};
+
 /** All input for the `makeSketchClass` mutation. */
 export type MakeSketchClassInput = {
   /**
@@ -4859,6 +4906,7 @@ export type Mutation = {
   addValidChildSketchClass?: Maybe<AddValidChildSketchClassPayload>;
   /** For invite_only projects. Approve access request by a user. Must be an administrator of the project. */
   approveParticipant?: Maybe<ApproveParticipantPayload>;
+  archiveResponses?: Maybe<ArchiveResponsesPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
   confirmOnboarded?: Maybe<ConfirmOnboardedPayload>;
@@ -5109,6 +5157,7 @@ export type Mutation = {
    * resubmitted by the respondant.
    */
   makeResponseDraft?: Maybe<MakeResponseDraftPayload>;
+  makeResponsesNotPractice?: Maybe<MakeResponsesNotPracticePayload>;
   makeSketchClass?: Maybe<MakeSketchClassPayload>;
   makeSurvey?: Maybe<MakeSurveyPayload>;
   /**
@@ -5184,6 +5233,7 @@ export type Mutation = {
   toggleAdminAccess?: Maybe<ToggleAdminAccessPayload>;
   /** Ban a user from posting in the discussion forum */
   toggleForumPostingBan?: Maybe<ToggleForumPostingBanPayload>;
+  toggleResponsesPractice?: Maybe<ToggleResponsesPracticePayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAcl?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
@@ -5355,6 +5405,12 @@ export type MutationAddValidChildSketchClassArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationApproveParticipantArgs = {
   input: ApproveParticipantInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationArchiveResponsesArgs = {
+  input: ArchiveResponsesInput;
 };
 
 
@@ -5910,6 +5966,12 @@ export type MutationMakeResponseDraftArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationMakeResponsesNotPracticeArgs = {
+  input: MakeResponsesNotPracticeInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationMakeSketchClassArgs = {
   input: MakeSketchClassInput;
 };
@@ -6041,6 +6103,12 @@ export type MutationToggleAdminAccessArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationToggleForumPostingBanArgs = {
   input: ToggleForumPostingBanInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationToggleResponsesPracticeArgs = {
+  input: ToggleResponsesPracticeInput;
 };
 
 
@@ -9171,6 +9239,7 @@ export type Survey = Node & {
   __typename?: 'Survey';
   /** PUBLIC or INVITE_ONLY */
   accessType: SurveyAccessType;
+  archivedResponseCount?: Maybe<Scalars['Int']>;
   /** Reads a single `Form` that is related to this `Survey`. */
   form?: Maybe<Form>;
   /**
@@ -9490,6 +9559,7 @@ export type SurveyPatch = {
 export type SurveyResponse = Node & {
   __typename?: 'SurveyResponse';
   accountEmail?: Maybe<Scalars['String']>;
+  archived: Scalars['Boolean'];
   /**
    * Should be set by the client on submission and tracked by cookies or
    * localStorage. Surveys that permit only a single entry enable users to bypass
@@ -9517,6 +9587,8 @@ export type SurveyResponse = Node & {
    * scripting but does not necessarily imply malicious intent.
    */
   isUnrecognizedUserAgent: Scalars['Boolean'];
+  lastUpdatedByEmail?: Maybe<Scalars['String']>;
+  lastUpdatedById?: Maybe<Scalars['Int']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -9551,10 +9623,48 @@ export type SurveyResponseCondition = {
 
 /** Represents an update to a `SurveyResponse`. Fields that are set will be updated. */
 export type SurveyResponsePatch = {
+  archived?: Maybe<Scalars['Boolean']>;
+  /**
+   * Should be set by the client on submission and tracked by cookies or
+   * localStorage. Surveys that permit only a single entry enable users to bypass
+   * the limit for legitimate purposes, like entering responses on a shared computer.
+   */
+  bypassedDuplicateSubmissionControl?: Maybe<Scalars['Boolean']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
   /** JSON representation of responses, keyed by the form field export_id */
   data?: Maybe<Scalars['JSON']>;
+  id?: Maybe<Scalars['Int']>;
   /** Users may save their responses for later editing before submission. After submission they can no longer edit them. */
   isDraft?: Maybe<Scalars['Boolean']>;
+  /** Duplicate entries are detected by matching contact-information field values. */
+  isDuplicateEntry?: Maybe<Scalars['Boolean']>;
+  /**
+   * Detected by comparing ip hashes from previous entries. IP hashes are not tied
+   * to particular responses, so only the second and subsequent entries are flagged.
+   */
+  isDuplicateIp?: Maybe<Scalars['Boolean']>;
+  /** If true, a logged-in user entered information on behalf of another person, so userId is not as relevant. */
+  isFacilitated?: Maybe<Scalars['Boolean']>;
+  isPractice?: Maybe<Scalars['Boolean']>;
+  /**
+   * Unusual or missing user-agent headers on submissions are flagged. May indicate
+   * scripting but does not necessarily imply malicious intent.
+   */
+  isUnrecognizedUserAgent?: Maybe<Scalars['Boolean']>;
+  lastUpdatedById?: Maybe<Scalars['Int']>;
+  /**
+   * Checked on SUBMISSION, so adding or changing a survey geofence after responses
+   * have been submitted will not update values. GPS coordinates and IP addresses
+   * are not stored for privacy purposes.
+   */
+  outsideGeofence?: Maybe<Scalars['Boolean']>;
+  surveyId?: Maybe<Scalars['Int']>;
+  updatedAt?: Maybe<Scalars['Datetime']>;
+  /**
+   * User account that submitted the survey. Note that if isFacilitated is set, the
+   * account may not be who is represented by the response content.
+   */
+  userId?: Maybe<Scalars['Int']>;
 };
 
 /** A connection to a list of `SurveyResponse` values. */
@@ -9837,6 +9947,30 @@ export type ToggleForumPostingBanPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `toggleResponsesPractice` mutation. */
+export type ToggleResponsesPracticeInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  isPractice?: Maybe<Scalars['Boolean']>;
+};
+
+/** The output of our `toggleResponsesPractice` mutation. */
+export type ToggleResponsesPracticePayload = {
+  __typename?: 'ToggleResponsesPracticePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  surveyResponses?: Maybe<Array<SurveyResponse>>;
 };
 
 export type Topic = Node & {
@@ -13613,7 +13747,7 @@ export type UploadConsentDocMutation = (
 
 export type SurveyResponseFragment = (
   { __typename?: 'SurveyResponse' }
-  & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
+  & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent' | 'archived' | 'lastUpdatedByEmail'>
 );
 
 export type FormElementExtendedDetailsFragment = (
@@ -13637,7 +13771,7 @@ export type SurveyResponsesQuery = (
   { __typename?: 'Query' }
   & { survey?: Maybe<(
     { __typename?: 'Survey' }
-    & Pick<Survey, 'id' | 'practiceResponseCount' | 'submittedResponseCount'>
+    & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
     & { form?: Maybe<(
       { __typename?: 'Form' }
       & { formElements?: Maybe<Array<(
@@ -13674,6 +13808,48 @@ export type SurveyMapDetailsQuery = (
         & FormElementDetailsFragment
       )>> }
     )> }
+  )> }
+);
+
+export type ToggleResponsesPracticeMutationVariables = Exact<{
+  ids?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+  isPractice?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type ToggleResponsesPracticeMutation = (
+  { __typename?: 'Mutation' }
+  & { toggleResponsesPractice?: Maybe<(
+    { __typename?: 'ToggleResponsesPracticePayload' }
+    & { surveyResponses?: Maybe<Array<(
+      { __typename?: 'SurveyResponse' }
+      & Pick<SurveyResponse, 'id' | 'isPractice' | 'archived' | 'lastUpdatedByEmail'>
+      & { survey?: Maybe<(
+        { __typename?: 'Survey' }
+        & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
+      )> }
+    )>> }
+  )> }
+);
+
+export type ArchiveResponsesMutationVariables = Exact<{
+  ids?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+  makeArchived?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type ArchiveResponsesMutation = (
+  { __typename?: 'Mutation' }
+  & { archiveResponses?: Maybe<(
+    { __typename?: 'ArchiveResponsesPayload' }
+    & { surveyResponses?: Maybe<Array<(
+      { __typename?: 'SurveyResponse' }
+      & Pick<SurveyResponse, 'id' | 'isPractice' | 'archived' | 'lastUpdatedByEmail'>
+      & { survey?: Maybe<(
+        { __typename?: 'Survey' }
+        & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
+      )> }
+    )>> }
   )> }
 );
 
@@ -14653,6 +14829,8 @@ export const SurveyResponseFragmentDoc = gql`
   isDuplicateIp
   isPractice
   isUnrecognizedUserAgent
+  archived
+  lastUpdatedByEmail
 }
     `;
 export const FormElementExtendedDetailsFragmentDoc = gql`
@@ -19228,6 +19406,7 @@ export const SurveyResponsesDocument = gql`
     }
     id
     practiceResponseCount
+    archivedResponseCount
     submittedResponseCount
     surveyResponsesConnection {
       nodes {
@@ -19307,6 +19486,96 @@ export function useSurveyMapDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookO
 export type SurveyMapDetailsQueryHookResult = ReturnType<typeof useSurveyMapDetailsQuery>;
 export type SurveyMapDetailsLazyQueryHookResult = ReturnType<typeof useSurveyMapDetailsLazyQuery>;
 export type SurveyMapDetailsQueryResult = Apollo.QueryResult<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>;
+export const ToggleResponsesPracticeDocument = gql`
+    mutation toggleResponsesPractice($ids: [Int], $isPractice: Boolean) {
+  toggleResponsesPractice(input: {ids: $ids, isPractice: $isPractice}) {
+    surveyResponses {
+      id
+      isPractice
+      archived
+      lastUpdatedByEmail
+      survey {
+        id
+        practiceResponseCount
+        archivedResponseCount
+        submittedResponseCount
+      }
+    }
+  }
+}
+    `;
+export type ToggleResponsesPracticeMutationFn = Apollo.MutationFunction<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>;
+
+/**
+ * __useToggleResponsesPracticeMutation__
+ *
+ * To run a mutation, you first call `useToggleResponsesPracticeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useToggleResponsesPracticeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [toggleResponsesPracticeMutation, { data, loading, error }] = useToggleResponsesPracticeMutation({
+ *   variables: {
+ *      ids: // value for 'ids'
+ *      isPractice: // value for 'isPractice'
+ *   },
+ * });
+ */
+export function useToggleResponsesPracticeMutation(baseOptions?: Apollo.MutationHookOptions<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>(ToggleResponsesPracticeDocument, options);
+      }
+export type ToggleResponsesPracticeMutationHookResult = ReturnType<typeof useToggleResponsesPracticeMutation>;
+export type ToggleResponsesPracticeMutationResult = Apollo.MutationResult<ToggleResponsesPracticeMutation>;
+export type ToggleResponsesPracticeMutationOptions = Apollo.BaseMutationOptions<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>;
+export const ArchiveResponsesDocument = gql`
+    mutation archiveResponses($ids: [Int], $makeArchived: Boolean) {
+  archiveResponses(input: {ids: $ids, makeArchived: $makeArchived}) {
+    surveyResponses {
+      id
+      isPractice
+      archived
+      lastUpdatedByEmail
+      survey {
+        id
+        practiceResponseCount
+        archivedResponseCount
+        submittedResponseCount
+      }
+    }
+  }
+}
+    `;
+export type ArchiveResponsesMutationFn = Apollo.MutationFunction<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>;
+
+/**
+ * __useArchiveResponsesMutation__
+ *
+ * To run a mutation, you first call `useArchiveResponsesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useArchiveResponsesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [archiveResponsesMutation, { data, loading, error }] = useArchiveResponsesMutation({
+ *   variables: {
+ *      ids: // value for 'ids'
+ *      makeArchived: // value for 'makeArchived'
+ *   },
+ * });
+ */
+export function useArchiveResponsesMutation(baseOptions?: Apollo.MutationHookOptions<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>(ArchiveResponsesDocument, options);
+      }
+export type ArchiveResponsesMutationHookResult = ReturnType<typeof useArchiveResponsesMutation>;
+export type ArchiveResponsesMutationResult = Apollo.MutationResult<ArchiveResponsesMutation>;
+export type ArchiveResponsesMutationOptions = Apollo.BaseMutationOptions<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -20531,6 +20800,8 @@ export const namedOperations = {
     AddCondition: 'AddCondition',
     UpdateSurveyDraftStatus: 'UpdateSurveyDraftStatus',
     UploadConsentDoc: 'UploadConsentDoc',
+    toggleResponsesPractice: 'toggleResponsesPractice',
+    archiveResponses: 'archiveResponses',
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',

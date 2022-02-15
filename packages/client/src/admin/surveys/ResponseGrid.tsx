@@ -2,7 +2,11 @@ import { useMemo, useState, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { getAnswers, getDataForExport } from "../../formElements/ExportUtils";
 import { sortFormElements } from "../../formElements/sortFormElements";
-import { useSurveyResponsesQuery } from "../../generated/graphql";
+import {
+  useToggleResponsesPracticeMutation,
+  useSurveyResponsesQuery,
+  useArchiveResponsesMutation,
+} from "../../generated/graphql";
 import {
   useTable,
   useSortBy,
@@ -12,6 +16,8 @@ import {
   Row,
   Column,
   useGlobalFilter,
+  useRowSelect,
+  usePagination,
 } from "react-table";
 import { ChevronDownIcon, UploadIcon } from "@heroicons/react/outline";
 import DownloadIcon from "../../components/DownloadIcon";
@@ -22,6 +28,12 @@ import { ConsentValue } from "../../formElements/Consent";
 import sortBy from "lodash.sortby";
 import { components } from "../../formElements";
 import { ErrorBoundary } from "@sentry/react";
+import React from "react";
+import DropdownButton, {
+  DropdownOption,
+} from "../../components/DropdownButton";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import Spinner from "../../components/Spinner";
 
 interface Props {
   surveyId: number;
@@ -36,19 +48,45 @@ export function SkippedQuestion() {
   );
 }
 
+const IndeterminateCheckbox = React.forwardRef<
+  unknown,
+  { indeterminate: boolean }
+>(({ indeterminate, ...rest }, ref) => {
+  const defaultRef = React.useRef();
+  const resolvedRef = ref || defaultRef;
+
+  React.useEffect(() => {
+    // @ts-ignore
+    resolvedRef.current.indeterminate = indeterminate;
+  }, [resolvedRef, indeterminate]);
+
+  return (
+    <>
+      <input
+        type="checkbox"
+        // @ts-ignore
+        ref={resolvedRef}
+        {...rest}
+        // @ts-ignore
+        className={`focus:ring-primary-500 text-primary-600 border-gray-300 rounded relative -right-0.5 ${rest.className}`}
+      />
+    </>
+  );
+});
+
 type TabName = "responses" | "practice" | "archived" | "export";
 
 function filterRows(
-  rows: Row<{ is_practice: boolean; is_archived: boolean }>[],
+  rows: Row<{ isPractice: boolean; archived: boolean }>[],
   selectedTab: TabName
 ) {
+  // return rows;
   if (selectedTab === "responses") {
-    const filtered = rows.filter((r) => !r.original.is_practice);
-    return filtered;
+    return rows.filter((r) => !r.original.isPractice && !r.original.archived);
   } else if (selectedTab === "practice") {
-    return rows.filter((r) => r.original.is_practice);
+    return rows.filter((r) => r.original.isPractice && !r.original.archived);
   } else if (selectedTab === "archived") {
-    return rows.filter((r) => !!r.original.is_archived);
+    return rows.filter((r) => !!r.original.archived);
   } else if (selectedTab === "export") {
     return rows;
   } else {
@@ -61,17 +99,31 @@ type NameColumn = { name: string | null; email: string | null };
 export default function ResponseGrid(props: Props) {
   const { t } = useTranslation("admin:surveys");
   const [showExportModal, setShowExportModal] = useState(false);
-  const { data, loading, error } = useSurveyResponsesQuery({
+  const { data } = useSurveyResponsesQuery({
     variables: {
       surveyId: props.surveyId,
     },
   });
   const survey = data?.survey;
   const [tab, setTab] = useState("responses");
+  const onError = useGlobalErrorHandler();
+  const [
+    togglePractice,
+    togglePracticeState,
+  ] = useToggleResponsesPracticeMutation({ onError });
+  const [
+    archiveResponses,
+    archiveResponsesState,
+  ] = useArchiveResponsesMutation({ onError });
 
   const rowData = useMemo(() => {
     return survey?.surveyResponsesConnection.nodes || [];
-  }, [survey?.surveyResponsesConnection.nodes]);
+  }, [
+    survey?.surveyResponsesConnection.nodes,
+    survey?.archivedResponseCount,
+    survey?.practiceResponseCount,
+    survey?.submittedResponseCount,
+  ]);
 
   const columns = useMemo(() => {
     const NameElement = (data?.survey?.form?.formElements || []).find(
@@ -92,10 +144,32 @@ export default function ResponseGrid(props: Props) {
     );
     return [
       // {
-      //   Header: "id",
-      //   accessor: "id",
-      //   width: 100,
+      //   Header: "",
+      //   width: 40,
+      //   id: "select-all",
+      //   Cell: ({ row }: { row: Row<any> }) => {
+      //     return (
+      //       <div className="flex align-middle justify-center items-center">
+      //         {/* @ts-ignore */}
+      //         <IndeterminateCheckbox {...row.getToggleRowSelectedProps()} />
+      //         {/* <input
+      //           {...row.getToggleRowSelectedProps()}
+      //           // onClick={() => {
+      //           //   toggleRowSelected(row.id);
+      //           // }}
+      //           type="checkbox"
+      //           className="focus:ring-primary-500 text-primary-600 border-gray-300 rounded relative -right-0.5"
+      //           // checked={row.isSelected}
+      //         /> */}
+      //       </div>
+      //     );
+      //   },
       // },
+      {
+        Header: "id",
+        accessor: "id",
+        width: 50,
+      },
       {
         Header: "created",
         accessor: (row: any) => new Date(row.createdAt).toLocaleString(),
@@ -113,8 +187,34 @@ export default function ResponseGrid(props: Props) {
         accessor: (row: any) =>
           row.updatedAt ? new Date(row.updatedAt).toLocaleString() : "Never",
         sortDescFirst: true,
+        Cell: ({ row }: { row: Row<any> }) => {
+          const { updatedAt, lastUpdatedByEmail } = row.original;
+          if (lastUpdatedByEmail) {
+            return (
+              <div>
+                <span title={updatedAt}>
+                  {new Date(updatedAt).toLocaleDateString()}
+                </span>
+                {/*eslint-disable-next-line i18next/no-literal-string*/}
+                {" by "}
+                {lastUpdatedByEmail}
+              </div>
+            );
+          } else if (updatedAt) {
+            return (
+              <span title={updatedAt}>
+                {new Date(updatedAt).toLocaleDateString()}
+              </span>
+            );
+          } else {
+            return "";
+          }
+        },
         sortType: (a: Row<any>, b: Row<any>) => {
-          return a.values.updated.localeCompare(b.values.updated);
+          return (
+            new Date(a.original.updatedAt).getTime() -
+            new Date(b.original.updatedAt).getTime()
+          );
         },
       },
       ...(NameElement
@@ -302,28 +402,73 @@ export default function ResponseGrid(props: Props) {
     []
   );
 
+  const getRowId = useMemo(() => (row: any) => row.id, []);
+
   const globalFilter = useMemo(() => {
-    return (rows: any[], columnIds: any, selectedTab: TabName) => {
-      // @ts-ignore
-      return filterRows(rows, selectedTab) as Row[];
+    return (
+      rows: Row<{ isPractice: boolean; archived: boolean }>[],
+      columnIds: any,
+      selectedTab: TabName
+    ) => {
+      return filterRows(rows, selectedTab) as Row<any>[];
     };
-  }, []);
+  }, [survey?.surveyResponsesConnection.nodes]);
 
   const tableInstance = useTable(
     {
+      // @ts-ignore
       columns,
       data: rowData,
       defaultColumn,
+      getRowId,
       initialState: {
         sortBy: [{ id: "created", desc: true }],
         globalFilter: tab,
+        // @ts-ignore
+        selectedRowIds: [],
       },
       globalFilter,
     },
     useGlobalFilter,
     useSortBy,
     useFlexLayout,
-    useResizeColumns
+    useResizeColumns,
+    usePagination,
+    useRowSelect,
+    (hooks: any) => {
+      hooks.visibleColumns.push((columns: any) => [
+        // Let's make a column for selection
+        {
+          width: 40,
+          id: "selection",
+          // The header can use the table's getToggleAllRowsSelectedProps method
+          // to render a checkbox
+          Header: ({
+            getToggleAllPageRowsSelectedProps,
+          }: {
+            getToggleAllPageRowsSelectedProps: any;
+          }) => (
+            <IndeterminateCheckbox
+              className="-ml-1"
+              {...getToggleAllPageRowsSelectedProps()}
+            />
+          ),
+          // The cell can use the individual row's getToggleRowSelectedProps method
+          // to the render a checkbox
+          Cell: ({
+            row,
+          }: {
+            row: { getToggleRowSelectedProps: () => any };
+          }) => (
+            <div>
+              {/* @ts-ignore */}
+              <IndeterminateCheckbox {...row.getToggleRowSelectedProps()} />
+            </div>
+          ),
+        },
+        ...columns,
+      ]);
+    }
   );
 
   const {
@@ -332,8 +477,9 @@ export default function ResponseGrid(props: Props) {
     headerGroups,
     rows,
     prepareRow,
-    resetResizing,
     setGlobalFilter,
+    selectedFlatRows,
+    state: { selectedRowIds },
   } = tableInstance;
 
   useEffect(() => {
@@ -349,6 +495,40 @@ export default function ResponseGrid(props: Props) {
       className={`${props.className} px-0 pt-0 overflow-hidden flex flex-col`}
     >
       <FakeTabs
+        mutating={togglePracticeState.loading || archiveResponsesState.loading}
+        disableDropdownButton={selectedFlatRows.length === 0}
+        dropdownOptions={[
+          ...(tab !== "export" && tab !== "archived"
+            ? [
+                {
+                  label: tab === "practice" ? "Responses" : "Practice",
+                  onClick: () => {
+                    togglePractice({
+                      variables: {
+                        ids: selectedFlatRows.map((r) => parseInt(r.id)),
+                        isPractice: tab !== "practice",
+                      },
+                    });
+                  },
+                },
+              ]
+            : []),
+          ...(tab !== "export"
+            ? [
+                {
+                  label: tab === "archived" ? "Responses" : "Archived",
+                  onClick: () => {
+                    archiveResponses({
+                      variables: {
+                        ids: selectedFlatRows.map((r) => parseInt(r.id)),
+                        makeArchived: tab !== "archived",
+                      },
+                    });
+                  },
+                },
+              ]
+            : []),
+        ]}
         onClickExport={() => setShowExportModal(true)}
         onChange={(value) => setTab(value)}
         tabs={[
@@ -369,7 +549,7 @@ export default function ResponseGrid(props: Props) {
           {
             id: "archived",
             name: "Archived",
-            count: 0,
+            count: data.survey?.archivedResponseCount || 0,
             href: "#",
             current: tab === "archived",
           },
@@ -394,7 +574,7 @@ export default function ResponseGrid(props: Props) {
             {...getTableProps()}
             className="border-collapse border-2 border-t-0 inline-block"
           >
-            <div className="bg-gray-50 ">
+            <div className="bg-gray-50">
               {
                 // Loop over the header rows
                 headerGroups.map((headerGroup) => (
@@ -458,7 +638,11 @@ export default function ResponseGrid(props: Props) {
                           // Apply the cell props
                           return (
                             <div
-                              className="inline-block whitespace-nowrap px-2 py-1 border border-gray-200 truncate"
+                              className={`whitespace-nowrap px-2 py-1 inline-flex align-middle border truncate ${
+                                row.isSelected
+                                  ? "border-blue-500 border-opacity-30 bg-blue-300 bg-opacity-5"
+                                  : "border-gray-200"
+                              }`}
                               {...cell.getCellProps()}
                             >
                               {
@@ -485,7 +669,9 @@ export default function ResponseGrid(props: Props) {
             data?.survey?.form?.logicRules || []
           );
           return Papa.unparse(
-            rows.filter((r) => !r.is_practice || includePractice),
+            rows.filter(
+              (r) => (!r.is_practice || includePractice) && !r.archived
+            ),
             {
               columns,
             }
@@ -505,6 +691,9 @@ function FakeTabs({
   tabs,
   onClickExport,
   onChange,
+  disableDropdownButton,
+  dropdownOptions,
+  mutating,
 }: {
   tabs: {
     current: boolean;
@@ -515,7 +704,11 @@ function FakeTabs({
   }[];
   onClickExport: () => void;
   onChange: (value: string) => void;
+  disableDropdownButton: boolean;
+  dropdownOptions: DropdownOption[];
+  mutating: boolean;
 }) {
+  const { t } = useTranslation("admin:surveys");
   return (
     <>
       <div className="sm:hidden">
@@ -542,7 +735,10 @@ function FakeTabs({
       </div>
       <div className="hidden sm:block">
         <div className="border-b border-gray-200">
-          <nav className="mt-2 -mb-px flex space-x-2" aria-label="Tabs">
+          <nav
+            className="mt-2 -mb-px flex space-x-2 items-center"
+            aria-label="Tabs"
+          >
             {tabs.map((tab) => (
               <a
                 key={tab.name}
@@ -577,6 +773,13 @@ function FakeTabs({
               <Trans ns="admin:surveys">Export</Trans>
               <DownloadIcon className="w-4 h-4 mx-2 -mt-0.5" />
             </button>
+            <DropdownButton
+              className="-mt-1"
+              disabled={disableDropdownButton || mutating}
+              label={t("Move to")}
+              options={dropdownOptions}
+            />
+            {mutating && <Spinner className="pl-2" />}
           </nav>
         </div>
       </div>
