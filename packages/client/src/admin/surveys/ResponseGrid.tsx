@@ -21,6 +21,7 @@ import ResponsesAsExported from "./ResponsesAsExported";
 import { ConsentValue } from "../../formElements/Consent";
 import sortBy from "lodash.sortby";
 import { components } from "../../formElements";
+import { ErrorBoundary } from "@sentry/react";
 
 interface Props {
   surveyId: number;
