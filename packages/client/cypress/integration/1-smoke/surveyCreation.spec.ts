@@ -16,13 +16,16 @@ function generateSlug() {
 const slug = generateSlug()
 
 describe("Survey creation smoke test", () => {
-  describe ('Survey creation Cypress commands', () => {
+  describe.only ('Survey creation Cypress commands', () => {
     beforeEach(() => {
+      //slug = generateSlug()
       cy.intercept("http://localhost:3857/graphql", (req) => {
-        if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
+        if ((req.body.operationName) && (req.body.operationName === "CypressCreateProject")) {
           req.alias = "createProjectRequest"
-        } else if ((req.body.operationName) && (req.body.operationName == "CypressCreateSurvey")) {
+        } else if ((req.body.operationName) && (req.body.operationName === "CypressCreateSurvey")) {
           req.alias = "createSurveyRequest"
+        } else if ((req.body.operationName) && (req.body.operationName === "CypressCreateFormElement")) {
+          req.alias = "createFormElementRequest"
         }
       })
       cy.getToken("User 1").then(({ access_token }) => {
@@ -34,16 +37,15 @@ describe("Survey creation smoke test", () => {
           true
         )
         .then((projectId) => {
-          cy.wrap(projectId).as("projectId").then(() => {
-            cy.createSurvey(
-              `Maldives Ocean Use Survey Test - ${slug}`, 
-              projectId, 
-              access_token
-            ).then((resp) => {
-              cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
-              cy.wrap(resp.makeSurvey.survey.form.formElements).as('formElements')
-              cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
-            })
+          cy.wrap(projectId).as("projectId")
+          cy.createSurvey(
+            `Maldives Ocean Use Survey Test - ${slug}`, 
+            projectId, 
+            access_token
+          ).then((resp) => {
+            cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
+            cy.wrap(resp.makeSurvey.survey.form.formElements).as('formElements')
+            cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
           });
         });
       });
@@ -68,8 +70,19 @@ describe("Survey creation smoke test", () => {
         cy.get('@token').then((token) => {
           authToken = token
           cy.updateSurvey(surveyId, authToken).then((resp) => {
-            expect (resp.updateSurvey.survey.isDisabled).to.equal(false)
-            expect (resp.updateSurvey.survey.accessType).to.equal('PUBLIC')
+            expect (resp.updateSurvey.survey.isDisabled).to.eql(false)
+            expect (resp.updateSurvey.survey.accessType).to.eql('PUBLIC')
+          })
+        })
+      })
+    })
+    it ("Can delete the survey", () => {
+      cy.get("@surveyId").then((id) => {
+        surveyId = id
+        cy.get('@token').then((token) => {
+          authToken = token
+          cy.deleteSurvey(surveyId, authToken).then((resp) => {
+            expect (resp.deleteSurvey.survey.id).to.eql(surveyId)
           })
         })
       })
@@ -80,30 +93,47 @@ describe("Survey creation smoke test", () => {
         cy.get('@token').then((token) => {
           authToken = token
           cy.deleteFormElements(formId, authToken).then((resp) => {
-            console.log(resp)
             expect (resp.deleteFormElement.query.form.formElements.length).to.be.lt(5)
           })
         })
       })
     })
     it ("Can update form with form elements", () => {
+    //  cy.wait("@createSurveyRequest")
+    //  cy.wait("@createProjectRequest")
+    //  cy.wait("@createFormElementRequest")
       cy.get('@formId').then((id) => {
         formId = id 
         cy.get("@token").then((token) => {
           authToken = token
-          cy.deleteFormElements(formId, authToken)
           cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
             expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
+          })
+          cy.get('@surveyId').then((id) => {
+            surveyId = id
+            cy.deleteSurvey(surveyId, authToken)
           })
         })
       })
     })
+    //it ("Can update form with form logic", () => {
+    //  cy.wait("@createSurveyRequest")
+    //  cy.get('@formId').then((id) => {
+    //    formId = id 
+    //    cy.get("@token").then((token) => {
+    //      authToken = token
+    //      cy.deleteFormElements(formId, authToken)
+    //      cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+    //        expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
+    //        cy.createFormLogic("Maldives", 1, 2, "sal;kfjsadlkf")
+    //      })
+    //    })
+    //  })
+
+      
+    //})
   })
-  describe.only ('User survey flow', () => {
-   // beforeEach(() => {
-   //   cy.saveLocalStorage()
-   //   cy.restoreLocalStorage()
-   // })
+  describe ('User survey flow', () => {
     before(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
         if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
@@ -173,6 +203,10 @@ describe("Survey creation smoke test", () => {
         .get("input").type("Test User 1") 
         .get("button").contains("Next").click()
     })
+    it("Can input email address or can skip question", () => {
+
+      cy.get("input")
+    })
   })
 })
 
@@ -182,6 +216,11 @@ describe("Survey creation smoke test", () => {
 //Move command tests to command tests folder
 //Conditional checks
 //Before vs beforeEach; after vs afterEach
+//Why is the formId alias not found in afterEach action?
+//Why is the createFormElement request alias not found in cy.wait?
+//Change slug to same slug across commands tests
+//Delete form request - needed for delete project in after each, but not working
+//; projects are persisting to database after "can update form with elements"
 
 
 

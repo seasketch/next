@@ -9,6 +9,7 @@ import "cypress-localstorage-commands"
 const jwt = require("jsonwebtoken");
 const users = require("../fixtures/users.json");
 const formElements = require("../fixtures/formElements.json")
+const formLogicRules = require("../fixtures/formLogicRules.json")
 
 const AUTH0_CLIENT_ID = Cypress.env("auth0_client_id");
 const AUTH0_CLIENT_SECRET = Cypress.env("auth0_client_secret");
@@ -18,12 +19,6 @@ const AUTH0_DOMAIN = Cypress.env("auth0_domain");
 
 const loginCounts = {};
 
-interface FixtureForm {
-  data: object,
-  form: object,
-  formElements: object
-
-}
 
 declare global {
   namespace Cypress {
@@ -93,21 +88,21 @@ declare global {
         name: string, 
         projectId: number,
         token: string
-      )//: Chainable <number>;
+      );
 
-      deleteSurvey(
-        surveyId: number,
-        token: string
-      )
+      getSurvey(
+        surveyId: number
+      );
 
       updateSurvey(
         surveyId: number,
         token: string
-      )
+      );
 
-      getSurvey(
-        surveyId: number
-      )
+      deleteSurvey(
+        surveyId: number,
+        token: string
+      );
 
       createFormElements(
         formId: number,
@@ -119,7 +114,18 @@ declare global {
         formId: number,
         token: string
       )
-      
+
+      deleteForm(
+        formId: number, 
+        token: string
+      )
+
+      createFormLogic(
+        fixtureAlias: string,
+        oldId: number, 
+        newId: number, 
+        token: string
+      ) 
     }
   } 
 }
@@ -336,6 +342,9 @@ Cypress.Commands.add("createSurvey", (name: string, projectId: number, token: st
           survey {
             id,
             name,
+            project {
+              slug
+            }
             form {
               id, 
               templateType, 
@@ -354,200 +363,297 @@ Cypress.Commands.add("createSurvey", (name: string, projectId: number, token: st
     `,
   { name, projectId },
   (token as any)
-)
-.then((data) => {
-  Cypress.log(data);
-  return data
+  ).then((data) => {
+    Cypress.log(data);
+    return data
+  })
+})
+
+Cypress.Commands.add("updateSurvey", (surveyId: number, token: string) => {
+  if (!token) {
+    throw new Error(
+      "No token set. Use cy.wrap(token.access_token).as('token') to set a project owner."
+    );
+  }
+  return cy
+    .mutation(
+      gql`
+        mutation CypressUpdateSurvey($surveyId: Int!) {
+          updateSurvey(input: { 
+            id: $surveyId 
+            patch: {
+              isDisabled: false, 
+              accessType: PUBLIC
+            }
+          }) 
+          {
+            survey {
+              id,
+              isDisabled,
+              accessType, 
+              project {
+                slug
+              }
+            }
+          }
+        }
+      `,
+    { surveyId },
+    (token as any)
+  )
+  .then((data) => {
+    Cypress.log(data);
+    return data
   })
 })
  
-Cypress.Commands.add("deleteSurvey", (surveyId, token) => {
-  const deleteSurvey = 
-    `
-      mutation deleteSurvey {
-          deleteSurvey (input: { id: ${surveyId} }) {
-            survey {
-              id
-            }
-          }  
-      }
-    `;
-    cy.request({
-        log: true,
-        url: 'http://localhost:3857/graphql',
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: {
-            query: deleteSurvey
-        },
-        failOnStatusCode: false
-      })
-      cy.log(`Deleted survey with id of ${surveyId}.`)
-  });
-
-  Cypress.Commands.add("updateSurvey", (surveyId: number, token: string) => {
-    if (!token) {
-      throw new Error(
-        "No token set. Use cy.wrap(token.access_token).as('token') to set a project owner."
-      );
-    }
+Cypress.Commands.add("deleteSurvey", (surveyId: number, token: string) => {
+  if (!surveyId) {
+    throw new Error("Please check your survey id.");
+  }
+  else {
     return cy
       .mutation(
         gql`
-          mutation CypressUpdateSurvey($surveyId: Int!) {
-            updateSurvey(input: { 
-              id: $surveyId 
-              patch: {
-                isDisabled: false, 
-                accessType: PUBLIC
-              }
-            }) 
-            {
+          mutation CypressDeleteSurvey($surveyId: Int!) {
+            deleteSurvey (input: {id: $surveyId}) {
               survey {
-                id,
-                isDisabled,
-                accessType, 
-                project {
-                  slug
-                }
+                id
               }
             }
           }
         `,
-      { surveyId },
+      { surveyId }, 
       (token as any)
-    )
-    .then((data) => {
+    ).then((data) => {
       Cypress.log(data);
       return data
     })
-  })
+  }
+})
 
-  Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
-    if (!formId) {
-      throw new Error("Please check your form id.");
-    } else if (!token) {
-      throw new Error("Please check your token.");
-    }
-    else {
-      return cy
-      .query(
+Cypress.Commands.add("deleteForm", (formId: number, token: string) => {
+  if (!formId) {
+    throw new Error("Please check your form id.");
+  }
+  else {
+    return cy
+      .mutation(
         gql`
-          query CypressGetForm($formId: Int!) {
-            form (id: $formId) {
-              formElements {
-                id, 
-                typeId,
-                type { 
-                  isRequiredForSurveys
+          mutation CypressDeleteForm($formId: Int!) {
+            deleteForm (input: {id: $formId}) {
+              form {
+                id
+                survey {
+                  project {
+                    slug
+                  }
                 }
               }
             }
           }
         `,
-      { formId },
+      { formId }, 
       (token as any)
-      )
-      .then((data) => {
-        if (!data || !data.form.formElements) {
-          throw new Error ("No form elements found.")
+    ).then((data) => {
+      Cypress.log(data);
+      return data
+    })
+  }
+})
+
+Cypress.Commands.add("createFormElements", (formId: number, surveyAlias: string, token: string) => {
+  const elements = formElements[surveyAlias].data.form.formElements
+  elements.map(t => t.formId = formId)
+  if (!surveyAlias) {
+    throw new Error(`Unrecognized alias "${surveyAlias}"`);
+  }
+  else {
+    elements.forEach((e) => {
+      return cy
+      .mutation(
+        gql`
+          mutation CypressCreateFormElement($formElement: FormElementInput!) {
+            createFormElement(input: {formElement: $formElement} )
+            {
+              formElement {
+                formId, 
+                body
+              }
+              query {
+                form (id: ${formId}) {
+                  logicRules {
+                    formElementId,
+                    booleanOperator,
+                    command
+                  }
+                  formElements {
+                    typeId, 
+                    id, 
+                    body
+                  }
+                  survey {
+                    project {
+                      id,
+                      slug
+                    }
+                  }
+                }
+              }
+            }
+          }
+        `,
+        { "formElement": {
+          "formId": e.formId,
+          "isRequired": e.isRequired,
+          "exportId": e.exportId,
+          "position": e.position,
+          "componentSettings": e.componentSettings,
+          "typeId": e.typeId,
+          "body": e.body,
+          "backgroundColor": e.backgroundColor,
+          "secondaryColor": e.secondaryColor,
+          "textVariant": e.textVariant,
+          "layout": e.layout,
+          "alternateLanguageSettings": e.alternateLanguageSettings,
+          //"subordinateTo": e.subordinateTo
         }
-        else {
-          const elementsToDelete = data.form.formElements.filter(obj => {
-            return obj.type.isRequiredForSurveys === false
-          })
-            elementsToDelete.forEach((formElement) => {
-            return cy
-              .mutation(
-                gql`
-                  mutation CypressDeleteFormElements($formElementId: Int!) {
-                    deleteFormElement (input: {id: $formElementId}) {
-                      query {
-                        form (id: ${formId}) {
-                          formElements {
-                            id
-                          }
+      },
+      (token as any)
+      ).then((data) => {
+        Cypress.log(data);
+        return data
+      })
+    })
+  }
+})
+  
+
+Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
+  if (!formId) {
+    throw new Error("Please check your form id.");
+  } else if (!token) {
+    throw new Error("Please check your token.");
+  }
+  else {
+    return cy
+    .query(
+      gql`
+        query CypressGetForm($formId: Int!) {
+          form (id: $formId) {
+            formElements {
+              id, 
+              typeId,
+              type { 
+                isRequiredForSurveys
+              }
+            }
+          }
+        }
+      `,
+    { formId },
+    (token as any)
+    )
+    .then((data) => {
+      if (!data || !data.form.formElements) {
+        throw new Error ("No form elements found.")
+      }
+      else {
+        const elementsToDelete = data.form.formElements.filter(obj => {
+          return obj.type.isRequiredForSurveys === false
+        })
+          elementsToDelete.forEach((formElement) => {
+          return cy
+            .mutation(
+              gql`
+                mutation CypressDeleteFormElements($formElementId: Int!) {
+                  deleteFormElement (input: {id: $formElementId}) {
+                    query {
+                      form (id: ${formId}) {
+                        formElements {
+                          id
                         }
                       }
                     }
                   }
-                `,
-              { formElementId: formElement.id },
-              (token as any)
-            ).then((data) => {
-              Cypress.log(data);
-              return data
-            })
-          })
-        }
-      })
-    }
-  })
-
-  Cypress.Commands.add("createFormElements", (formId: number, surveyAlias: string, token: string) => {
-    const elements = formElements[surveyAlias].data.form.formElements
-    //console.log(elements.length)
-    //Object.keys(elements).forEach((e) => {
-    //  Object.keys(e).forEach((f) => {
-    //    console.log(f)
-    //  })
-    //})
-    elements.map(t => t.formId = formId)
-    if (!surveyAlias) {
-      throw new Error(`Unrecognized alias "${surveyAlias}"`);
-    }
-    else {
-      elements.forEach((e) => {
-          return cy
-          .mutation(
-            gql`
-              mutation CypressCreateFormElement($formElement: FormElementInput!) {
-                createFormElement(input: {formElement: $formElement} )
-                {
-                  formElement {
-                    formId, 
-                    body
-                  }
-                  query {
-                    form (id: ${formId}) {
-                      formElements {
-                        typeId, 
-                        id, 
-                        body
-                      }
-                    }
-                  }
-
                 }
-              }
-            `,
-            { "formElement": {
-              "formId": e.formId,
-              "isRequired": e.isRequired,
-              "exportId": e.exportId,
-              "position": e.position,
-              "componentSettings": e.componentSettings,
-              "typeId": e.typeId,
-              "body": e.body,
-              "backgroundColor": e.backgroundColor,
-              "secondaryColor": e.secondaryColor,
-              "textVariant": e.textVariant,
-              "layout": e.layout,
-              "alternateLanguageSettings": e.alternateLanguageSettings,
-              //"subordinateTo": e.subordinateTo
-            } },
-          (token as any)
-          )
-          .then((data) => {
+              `,
+            { formElementId: formElement.id },
+            (token as any)
+          ).then((data) => {
             Cypress.log(data);
             return data
           })
         })
       }
     })
+  }
+})
+
+  //Cypress.Commands.add("deleteForm", (formId: number, token:string) => {
+  //  const deleteForm = 
+  //    `
+  //      mutation deleteForm {
+  //          deleteForm (input: { id: ${formId} }) {
+  //            form {
+  //              id
+  //            }
+  //          }  
+  //      }
+  //    `;
+  //    cy.request({
+  //        log: true,
+  //        url: 'http://localhost:3857/graphql',
+  //        method: 'POST',
+  //        headers: {
+  //            'Content-Type': 'application/json',
+  //            'Authorization': `Bearer ${token}`
+  //        },
+  //        body: {
+  //            query: deleteForm
+  //        },
+  //        failOnStatusCode: false
+  //      })
+  //      cy.log(`Deleted form with id of ${formId}.`)
+  //    })
+//
+Cypress.Commands.add("deleteForm", (formId: number, token: string) => {
+  if (!formId) {
+    throw new Error("Please check your form id.");
+  }
+  else {
+    return cy
+      .mutation(
+        gql`
+          mutation CypressDeleteForm($formId: Int!) {
+            deleteForm (input: {id: $formId}) {
+              form {
+                id
+                survey {
+                  project {
+                    slug
+                  }
+                }
+              }
+            }
+          }
+        `,
+      { formId }, 
+      (token as any)
+    ).then((data) => {
+      Cypress.log(data);
+      return data
+    })
+  }
+})
+
+  
+
+Cypress.Commands.add("createFormLogic", (fixtureAlias:string, oldId: number, newId: number, token: string) => {
+  const formLogic = formLogicRules[fixtureAlias]
+  console.log(formLogic)
+})
+  
  
 
 //TO DO:
