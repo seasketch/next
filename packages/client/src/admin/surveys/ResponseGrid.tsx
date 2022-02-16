@@ -48,6 +48,18 @@ export function SkippedQuestion() {
   );
 }
 
+function normalizeRespondent(
+  respondent: string | { name?: string; email?: string } | null | undefined
+) {
+  if (typeof respondent === "string") {
+    return respondent;
+  } else if (respondent === null || respondent === undefined) {
+    return "";
+  } else {
+    return respondent.name || respondent.email || "";
+  }
+}
+
 const IndeterminateCheckbox = React.forwardRef<
   unknown,
   { indeterminate: boolean }
@@ -222,10 +234,8 @@ export default function ResponseGrid(props: Props) {
             {
               Header: "respondent",
               sortType: (a: Row<any>, b: Row<any>) => {
-                return (
-                  a.values.respondent.name || a.values.respondent.email
-                ).localeCompare(
-                  b.values.respondent.name || b.values.respondent.email
+                return normalizeRespondent(a.values.respondent).localeCompare(
+                  normalizeRespondent(b.values.respondent)
                 );
               },
               accessor: (row: any) => {
