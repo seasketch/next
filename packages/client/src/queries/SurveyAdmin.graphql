@@ -717,18 +717,8 @@ mutation archiveResponses($ids: [Int], $makeArchived: Boolean) {
   }
 }
 
-mutation modifyAnswers(
-  $responseIds: [Int]!
-  $formElementId: Int!
-  $answer: JSON
-) {
-  modifySurveyAnswers(
-    input: {
-      responseIds: $responseIds
-      formElementId: $formElementId
-      answer: $answer
-    }
-  ) {
+mutation modifyAnswers($responseIds: [Int]!, $answers: JSON) {
+  modifySurveyAnswers(input: { responseIds: $responseIds, answers: $answers }) {
     surveyResponses {
       id
       data

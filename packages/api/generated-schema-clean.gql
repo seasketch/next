@@ -5778,14 +5778,13 @@ type MarkTopicAsReadPayload {
 
 """All input for the `modifySurveyAnswers` mutation."""
 input ModifySurveyAnswersInput {
-  answer: JSON
+  answers: JSON
 
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-  formElementId: Int
   responseIds: [Int]
 }
 

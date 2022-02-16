@@ -4897,13 +4897,12 @@ export type MarkTopicAsReadPayload = {
 
 /** All input for the `modifySurveyAnswers` mutation. */
 export type ModifySurveyAnswersInput = {
-  answer?: Maybe<Scalars['JSON']>;
+  answers?: Maybe<Scalars['JSON']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  formElementId?: Maybe<Scalars['Int']>;
   responseIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
 };
 
@@ -13853,8 +13852,7 @@ export type ArchiveResponsesMutation = (
 
 export type ModifyAnswersMutationVariables = Exact<{
   responseIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
-  formElementId: Scalars['Int'];
-  answer?: Maybe<Scalars['JSON']>;
+  answers?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -19593,10 +19591,8 @@ export type ArchiveResponsesMutationHookResult = ReturnType<typeof useArchiveRes
 export type ArchiveResponsesMutationResult = Apollo.MutationResult<ArchiveResponsesMutation>;
 export type ArchiveResponsesMutationOptions = Apollo.BaseMutationOptions<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>;
 export const ModifyAnswersDocument = gql`
-    mutation modifyAnswers($responseIds: [Int]!, $formElementId: Int!, $answer: JSON) {
-  modifySurveyAnswers(
-    input: {responseIds: $responseIds, formElementId: $formElementId, answer: $answer}
-  ) {
+    mutation modifyAnswers($responseIds: [Int]!, $answers: JSON) {
+  modifySurveyAnswers(input: {responseIds: $responseIds, answers: $answers}) {
     surveyResponses {
       id
       data
@@ -19622,8 +19618,7 @@ export type ModifyAnswersMutationFn = Apollo.MutationFunction<ModifyAnswersMutat
  * const [modifyAnswersMutation, { data, loading, error }] = useModifyAnswersMutation({
  *   variables: {
  *      responseIds: // value for 'responseIds'
- *      formElementId: // value for 'formElementId'
- *      answer: // value for 'answer'
+ *      answers: // value for 'answers'
  *   },
  * });
  */

@@ -5388,31 +5388,40 @@ COMMENT ON FUNCTION public.me() IS 'Access the current session''s User. The user
 
 
 --
--- Name: modify_survey_answers(integer[], integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: modify_survey_answers(integer[], jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.modify_survey_answers(response_ids integer[], form_element_id integer, answer jsonb) RETURNS SETOF public.survey_responses
+CREATE FUNCTION public.modify_survey_answers(response_ids integer[], answers jsonb) RETURNS SETOF public.survey_responses
     LANGUAGE sql
     AS $$
-    with t as (
-      -- Any generic query which returns rowid and corresponding calculated values
+    update 
+      survey_responses 
+    set data = data || answers - (
       select 
-        form_elements.id as id,
-        form_element_types.allow_admin_updates and form_element_types.is_input as allow_updates
+        array_agg(form_elements.id::text)
       from form_elements
       inner join
         form_element_types
       on
         form_element_types.component_name = form_elements.type_id
       where
-        form_elements.id = form_element_id
+        (
+          form_element_types.allow_admin_updates = false or 
+          form_element_types.is_input = false
+        ) and
+        form_elements.form_id = (
+          select 
+            id 
+          from 
+            forms 
+          where 
+            forms.survey_id = (
+              select survey_id from survey_responses where survey_responses.id = any(response_ids) limit 1
+            )
+          limit 1
+        )
     )
-    update 
-      survey_responses 
-    set data = jsonb_set(data, ARRAY[form_element_id::text], answer, true)
-    from t
-    where survey_responses.id = any(response_ids) and 
-    t.allow_updates = true
+    where survey_responses.id = any(response_ids)
     returning survey_responses.*;
   $$;
 
@@ -17259,11 +17268,11 @@ GRANT ALL ON FUNCTION public.me() TO anon;
 
 
 --
--- Name: FUNCTION modify_survey_answers(response_ids integer[], form_element_id integer, answer jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION modify_survey_answers(response_ids integer[], answers jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], form_element_id integer, answer jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], form_element_id integer, answer jsonb) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], answers jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], answers jsonb) TO seasketch_user;
 
 
 --

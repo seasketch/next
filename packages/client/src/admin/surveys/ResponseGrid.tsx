@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { getAnswers, getDataForExport } from "../../formElements/ExportUtils";
 import { sortFormElements } from "../../formElements/sortFormElements";
@@ -38,6 +38,7 @@ import Spinner from "../../components/Spinner";
 import EditableResponseCell, {
   CellEditorComponent,
   CellEditorContext,
+  EditorsList,
 } from "./EditableResponseCell";
 
 interface Props {
@@ -88,6 +89,81 @@ const FacilitatorEditor: CellEditorComponent<
       onChange={(e) =>
         setVal((prev) => ({ ...prev, facilitator: e.target.value }))
       }
+      className={`p-1 block w-full h-full rounded m-0 ${
+        disabled && "opacity-50 pointer-events-none"
+      }`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          onRequestSave();
+          e.preventDefault();
+          e.stopPropagation();
+        } else if (e.key === "Escape") {
+          onRequestCancel();
+        }
+      }}
+    />
+  );
+};
+
+const RespondentEditor: CellEditorComponent<
+  | {
+      name?: string;
+      facilitator?: string;
+    }
+  | null
+  | undefined
+> = ({ value, disabled, onChange, onRequestSave, onRequestCancel }) => {
+  const [val, setVal] = useState(value);
+
+  useEffect(() => {
+    onChange(val);
+  }, [val]);
+
+  return (
+    <input
+      disabled={disabled}
+      autoFocus
+      placeholder="name"
+      type="text"
+      value={val?.name || ""}
+      onChange={(e) => setVal((prev) => ({ ...prev, name: e.target.value }))}
+      className={`p-1 block w-full h-full rounded m-0 ${
+        disabled && "opacity-50 pointer-events-none"
+      }`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          onRequestSave();
+          e.preventDefault();
+          e.stopPropagation();
+        } else if (e.key === "Escape") {
+          onRequestCancel();
+        }
+      }}
+    />
+  );
+};
+
+const EmailEditor: CellEditorComponent<string | null | undefined> = ({
+  value,
+  disabled,
+  onChange,
+  onRequestSave,
+  onRequestCancel,
+}) => {
+  const [val, setVal] = useState(value);
+
+  useEffect(() => {
+    onChange(val);
+  }, [val]);
+
+  return (
+    <input
+      placeholder="email"
+      disabled={disabled}
+      autoFocus
+      type="text"
+      value={val || ""}
+      onChange={(e) => setVal((prev) => e.target.value)}
       className={`p-1 block w-full h-full rounded m-0 ${
         disabled && "opacity-50 pointer-events-none"
       }`}
@@ -171,9 +247,7 @@ export default function ResponseGrid(props: Props) {
     archiveResponses,
     archiveResponsesState,
   ] = useArchiveResponsesMutation({ onError });
-  const [modifyAnswers, modifyAnwersState] = useModifyAnswersMutation({
-    onError,
-  });
+  const [modifyAnswers, modifyAnwersState] = useModifyAnswersMutation({});
   const [editingCell, setEditingCell] = useState(false);
 
   const rowData = useMemo(() => {
@@ -202,13 +276,12 @@ export default function ResponseGrid(props: Props) {
         el.typeId !== "Email" &&
         el.typeId !== "Consent"
     );
-    const valueUpdater = (rowIds: number[], formElementId: number) => (
-      value: any
-    ) => {
+    const valueUpdater = (rowId: number) => (value: any) => {
       const variables = {
-        responseIds: rowIds,
-        formElementId,
-        answer: value,
+        responseIds: [rowId],
+        answers: {
+          ...value,
+        },
       };
       return modifyAnswers({
         variables,
@@ -289,13 +362,13 @@ export default function ResponseGrid(props: Props) {
                   return null;
                 }
               },
-              Cell: ({ value }: { value: NameColumn }) => {
+              Cell: ({ value, row }: { value: NameColumn; row: Row<any> }) => {
+                let cellContents: ReactNode = "Unknown";
                 if (value === null) {
-                  return <SkippedQuestion />;
-                }
-                if (value.name) {
+                  <SkippedQuestion />;
+                } else if (value.name) {
                   if (value.email) {
-                    return (
+                    cellContents = (
                       <a
                         className="text-primary-500 underline"
                         href={`mailto:${value.email}`}
@@ -305,9 +378,11 @@ export default function ResponseGrid(props: Props) {
                         {value.name}
                       </a>
                     );
+                  } else {
+                    cellContents = value.name;
                   }
                 } else if (value.email) {
-                  return (
+                  cellContents = (
                     <a
                       className="text-primary-500 underline"
                       href={`mailto:${value.email}`}
@@ -317,10 +392,23 @@ export default function ResponseGrid(props: Props) {
                       {value.email}
                     </a>
                   );
-                } else {
-                  return "Unknown";
                 }
-                return value.name ? value.name : "Unknown";
+                const editors: EditorsList = [
+                  [NameElement.id, RespondentEditor],
+                ];
+                if (EmailElement) {
+                  editors.push([EmailElement.id, EmailEditor]);
+                }
+                return (
+                  <EditableResponseCell
+                    data={row.original.data}
+                    editors={editors}
+                    updateValue={valueUpdater(parseInt(row.id))}
+                    onStateChange={setEditingCell}
+                  >
+                    {cellContents}
+                  </EditableResponseCell>
+                );
               },
             },
             {
@@ -338,12 +426,9 @@ export default function ResponseGrid(props: Props) {
               }) => {
                 return (
                   <EditableResponseCell
-                    value={row.original.data[NameElement.id]}
-                    editor={FacilitatorEditor}
-                    updateValue={valueUpdater(
-                      [parseInt(row.id)],
-                      NameElement.id
-                    )}
+                    data={row.original.data}
+                    editors={[[NameElement.id, FacilitatorEditor]]}
+                    updateValue={valueUpdater(parseInt(row.id))}
                     onStateChange={setEditingCell}
                   >
                     {value ? (
@@ -456,7 +541,7 @@ export default function ResponseGrid(props: Props) {
                 value={value}
                 componentSettings={formElement.componentSettings}
                 editable={false}
-                updateValue={valueUpdater([parseInt(row.id)], formElement.id)}
+                updateValue={valueUpdater(parseInt(row.id))}
               />
             );
           } else {
