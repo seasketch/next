@@ -6,6 +6,7 @@ import {
   useToggleResponsesPracticeMutation,
   useSurveyResponsesQuery,
   useArchiveResponsesMutation,
+  useModifyAnswersMutation,
 } from "../../generated/graphql";
 import {
   useTable,
@@ -34,6 +35,10 @@ import DropdownButton, {
 } from "../../components/DropdownButton";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Spinner from "../../components/Spinner";
+import EditableResponseCell, {
+  CellEditorComponent,
+  CellEditorContext,
+} from "./EditableResponseCell";
 
 interface Props {
   surveyId: number;
@@ -59,6 +64,45 @@ function normalizeRespondent(
     return respondent.name || respondent.email || "";
   }
 }
+
+const FacilitatorEditor: CellEditorComponent<
+  | {
+      name?: string;
+      facilitator?: string;
+    }
+  | null
+  | undefined
+> = ({ value, disabled, onChange, onRequestSave, onRequestCancel }) => {
+  const [val, setVal] = useState(value);
+
+  useEffect(() => {
+    onChange(val);
+  }, [val]);
+
+  return (
+    <input
+      disabled={disabled}
+      autoFocus
+      type="text"
+      value={val?.facilitator || ""}
+      onChange={(e) =>
+        setVal((prev) => ({ ...prev, facilitator: e.target.value }))
+      }
+      className={`p-1 block w-full h-full rounded m-0 ${
+        disabled && "opacity-50 pointer-events-none"
+      }`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          onRequestSave();
+          e.preventDefault();
+          e.stopPropagation();
+        } else if (e.key === "Escape") {
+          onRequestCancel();
+        }
+      }}
+    />
+  );
+};
 
 const IndeterminateCheckbox = React.forwardRef<
   unknown,
@@ -127,6 +171,10 @@ export default function ResponseGrid(props: Props) {
     archiveResponses,
     archiveResponsesState,
   ] = useArchiveResponsesMutation({ onError });
+  const [modifyAnswers, modifyAnwersState] = useModifyAnswersMutation({
+    onError,
+  });
+  const [editingCell, setEditingCell] = useState(false);
 
   const rowData = useMemo(() => {
     return survey?.surveyResponsesConnection.nodes || [];
@@ -154,29 +202,19 @@ export default function ResponseGrid(props: Props) {
         el.typeId !== "Email" &&
         el.typeId !== "Consent"
     );
+    const valueUpdater = (rowIds: number[], formElementId: number) => (
+      value: any
+    ) => {
+      const variables = {
+        responseIds: rowIds,
+        formElementId,
+        answer: value,
+      };
+      return modifyAnswers({
+        variables,
+      });
+    };
     return [
-      // {
-      //   Header: "",
-      //   width: 40,
-      //   id: "select-all",
-      //   Cell: ({ row }: { row: Row<any> }) => {
-      //     return (
-      //       <div className="flex align-middle justify-center items-center">
-      //         {/* @ts-ignore */}
-      //         <IndeterminateCheckbox {...row.getToggleRowSelectedProps()} />
-      //         {/* <input
-      //           {...row.getToggleRowSelectedProps()}
-      //           // onClick={() => {
-      //           //   toggleRowSelected(row.id);
-      //           // }}
-      //           type="checkbox"
-      //           className="focus:ring-primary-500 text-primary-600 border-gray-300 rounded relative -right-0.5"
-      //           // checked={row.isSelected}
-      //         /> */}
-      //       </div>
-      //     );
-      //   },
-      // },
       {
         Header: "id",
         accessor: "id",
@@ -291,8 +329,32 @@ export default function ResponseGrid(props: Props) {
                 const data = row.data[NameElement.id];
                 return data?.facilitator || null;
               },
-              Cell: ({ value }: { value: string | null }) => {
-                return value ? value : "None";
+              Cell: ({
+                value,
+                row,
+              }: {
+                value: string | null;
+                row: Row<any>;
+              }) => {
+                return (
+                  <EditableResponseCell
+                    value={row.original.data[NameElement.id]}
+                    editor={FacilitatorEditor}
+                    updateValue={valueUpdater(
+                      [parseInt(row.id)],
+                      NameElement.id
+                    )}
+                    onStateChange={setEditingCell}
+                  >
+                    {value ? (
+                      value
+                    ) : (
+                      <span className="text-gray-500 italic">
+                        <Trans ns="admin:surveys">None</Trans>
+                      </span>
+                    )}
+                  </EditableResponseCell>
+                );
               },
             },
           ]
@@ -383,7 +445,7 @@ export default function ResponseGrid(props: Props) {
       ...questions.map((formElement) => ({
         Header: formElement.exportId!,
         accessor: (row: any) => row.data[formElement.id],
-        Cell: ({ value }: { value: any }) => {
+        Cell: ({ value, row }: { value: any; row: Row<any> }) => {
           const C = components[formElement.typeId];
           if (value === undefined || value === null) {
             return <SkippedQuestion />;
@@ -393,6 +455,8 @@ export default function ResponseGrid(props: Props) {
               <C.ResponseGridCell
                 value={value}
                 componentSettings={formElement.componentSettings}
+                editable={false}
+                updateValue={valueUpdater([parseInt(row.id)], formElement.id)}
               />
             );
           } else {
@@ -580,95 +644,97 @@ export default function ResponseGrid(props: Props) {
             responses={data.survey?.surveyResponsesConnection.nodes || []}
           />
         ) : (
-          <div
-            {...getTableProps()}
-            className="border-collapse border-2 border-t-0 inline-block"
-          >
-            <div className="bg-gray-50">
-              {
-                // Loop over the header rows
-                headerGroups.map((headerGroup) => (
-                  // Apply the header row props
-                  <div {...headerGroup.getHeaderGroupProps()}>
-                    {
-                      // Loop over the headers in each row
-                      headerGroup.headers.map((column) => (
-                        // Apply the header cell props
-                        <div
-                          {...column.getHeaderProps()}
-                          {...column.getHeaderProps()}
-                          className="select-none group font-semibold inline-block truncate overflow-hidden text-gray-500 text-left border border-gray-200 whitespace-nowrap cursor-pointer hover:border-gray-300 relative"
-                        >
-                          <div
-                            className="py-2 px-2 truncate"
-                            {...column.getSortByToggleProps()}
-                          >
-                            <span className="text-gray-400 text-xs mr-1">
-                              {column.isSorted
-                                ? column.isSortedDesc
-                                  ? " ▼"
-                                  : " ▲"
-                                : ""}
-                            </span>
-                            {
-                              // Render the header
-                              column.render("Header")
-                            }
-                          </div>
-                          <div
-                            {...column.getResizerProps()}
-                            className={`w-1 bg-gray-50 inline-block h-full absolute right-0 top-0 ${
-                              column.isResizing ? "isResizing" : ""
-                            }`}
-                          />
-                        </div>
-                      ))
-                    }
-                  </div>
-                ))
-              }
-            </div>
-            <div {...getTableBodyProps()} className="inline-block">
-              {
-                // Loop over the table rows
-                rows.map((row) => {
-                  // Prepare the row for display
-                  prepareRow(row);
-                  return (
-                    // Apply the row props
-                    <div
-                      {...row.getRowProps()}
-                      className={`inline-block ${
-                        row.index % 2 ? "bg-gray-50" : "bg-white"
-                      }`}
-                    >
+          <CellEditorContext.Provider value={{ editing: editingCell }}>
+            <div
+              {...getTableProps()}
+              className="border-collapse border-2 border-t-0 inline-block"
+            >
+              <div className="bg-gray-50">
+                {
+                  // Loop over the header rows
+                  headerGroups.map((headerGroup) => (
+                    // Apply the header row props
+                    <div {...headerGroup.getHeaderGroupProps()}>
                       {
-                        // Loop over the rows cells
-                        row.cells.map((cell) => {
-                          // Apply the cell props
-                          return (
+                        // Loop over the headers in each row
+                        headerGroup.headers.map((column) => (
+                          // Apply the header cell props
+                          <div
+                            {...column.getHeaderProps()}
+                            {...column.getHeaderProps()}
+                            className="select-none group font-semibold inline-block truncate overflow-hidden text-gray-500 text-left border border-gray-200 whitespace-nowrap cursor-pointer hover:border-gray-300 relative"
+                          >
                             <div
-                              className={`whitespace-nowrap px-2 py-1 inline-flex align-middle border truncate ${
-                                row.isSelected
-                                  ? "border-blue-500 border-opacity-30 bg-blue-300 bg-opacity-5"
-                                  : "border-gray-200"
-                              }`}
-                              {...cell.getCellProps()}
+                              className="py-2 px-2 truncate"
+                              {...column.getSortByToggleProps()}
                             >
+                              <span className="text-gray-400 text-xs mr-1">
+                                {column.isSorted
+                                  ? column.isSortedDesc
+                                    ? " ▼"
+                                    : " ▲"
+                                  : ""}
+                              </span>
                               {
-                                // Render the cell contents
-                                cell.render("Cell")
+                                // Render the header
+                                column.render("Header")
                               }
                             </div>
-                          );
-                        })
+                            <div
+                              {...column.getResizerProps()}
+                              className={`w-1 bg-gray-50 inline-block h-full absolute right-0 top-0 ${
+                                column.isResizing ? "isResizing" : ""
+                              }`}
+                            />
+                          </div>
+                        ))
                       }
                     </div>
-                  );
-                })
-              }
+                  ))
+                }
+              </div>
+              <div {...getTableBodyProps()} className="inline-block">
+                {
+                  // Loop over the table rows
+                  rows.map((row) => {
+                    // Prepare the row for display
+                    prepareRow(row);
+                    return (
+                      // Apply the row props
+                      <div
+                        {...row.getRowProps()}
+                        className={`inline-block ${
+                          row.index % 2 ? "bg-gray-50" : "bg-white"
+                        }`}
+                      >
+                        {
+                          // Loop over the rows cells
+                          row.cells.map((cell) => {
+                            // Apply the cell props
+                            return (
+                              <div
+                                className={`whitespace-nowrap px-2 py-1 inline-flex align-middle border truncate ${
+                                  row.isSelected
+                                    ? "border-blue-500 border-opacity-30 bg-blue-300 bg-opacity-5"
+                                    : "border-gray-200"
+                                }`}
+                                {...cell.getCellProps()}
+                              >
+                                {
+                                  // Render the cell contents
+                                  cell.render("Cell")
+                                }
+                              </div>
+                            );
+                          })
+                        }
+                      </div>
+                    );
+                  })
+                }
+              </div>
             </div>
-          </div>
+          </CellEditorContext.Provider>
         )}
       </div>
       <ExportResponsesModal

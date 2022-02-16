@@ -526,9 +526,8 @@ export interface FormElementComponent<T, V = {}>
   ResponseGridCell?: FunctionComponent<{
     value: V;
     componentSettings: T;
-    // updateValue: (
-    //   value: V,
-    // ) => void;
+    editable: boolean;
+    updateValue: (value: V) => void;
   }>;
 }
 

@@ -4708,7 +4708,8 @@ CREATE TABLE public.form_element_types (
     allowed_layouts public.form_element_layout[],
     is_spatial boolean DEFAULT false NOT NULL,
     sketch_class_template_id integer,
-    is_required_for_sketch_classes boolean DEFAULT false NOT NULL
+    is_required_for_sketch_classes boolean DEFAULT false NOT NULL,
+    allow_admin_updates boolean DEFAULT true NOT NULL
 );
 
 
@@ -5384,6 +5385,36 @@ $$;
 --
 
 COMMENT ON FUNCTION public.me() IS 'Access the current session''s User. The user is determined by the access token embedded in the `Authorization` header.';
+
+
+--
+-- Name: modify_survey_answers(integer[], integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.modify_survey_answers(response_ids integer[], form_element_id integer, answer jsonb) RETURNS SETOF public.survey_responses
+    LANGUAGE sql
+    AS $$
+    with t as (
+      -- Any generic query which returns rowid and corresponding calculated values
+      select 
+        form_elements.id as id,
+        form_element_types.allow_admin_updates and form_element_types.is_input as allow_updates
+      from form_elements
+      inner join
+        form_element_types
+      on
+        form_element_types.component_name = form_elements.type_id
+      where
+        form_elements.id = form_element_id
+    )
+    update 
+      survey_responses 
+    set data = jsonb_set(data, ARRAY[form_element_id::text], answer, true)
+    from t
+    where survey_responses.id = any(response_ids) and 
+    t.allow_updates = true
+    returning survey_responses.*;
+  $$;
 
 
 --
@@ -14700,7 +14731,7 @@ GRANT ALL ON FUNCTION public.approve_participant("projectId" integer, "userId" i
 -- Name: TABLE survey_responses; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT,DELETE,UPDATE ON TABLE public.survey_responses TO seasketch_user;
+GRANT SELECT,DELETE ON TABLE public.survey_responses TO seasketch_user;
 
 
 --
@@ -14715,6 +14746,27 @@ GRANT UPDATE(data) ON TABLE public.survey_responses TO seasketch_user;
 --
 
 GRANT UPDATE(is_draft) ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: COLUMN survey_responses.updated_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(updated_at) ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: COLUMN survey_responses.is_practice; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_practice) ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: COLUMN survey_responses.archived; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(archived) ON TABLE public.survey_responses TO seasketch_user;
 
 
 --
@@ -17204,6 +17256,14 @@ GRANT ALL ON FUNCTION public.mark_topic_as_read("topicId" integer) TO seasketch_
 
 REVOKE ALL ON FUNCTION public.me() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.me() TO anon;
+
+
+--
+-- Name: FUNCTION modify_survey_answers(response_ids integer[], form_element_id integer, answer jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], form_element_id integer, answer jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], form_element_id integer, answer jsonb) TO seasketch_user;
 
 
 --

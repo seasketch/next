@@ -3766,6 +3766,7 @@ export enum FormElementTextVariant {
 /** Identifies the type of element in a form, including metadata about that element type. */
 export type FormElementType = Node & {
   __typename?: 'FormElementType';
+  allowAdminUpdates: Scalars['Boolean'];
   allowedLayouts?: Maybe<Array<Maybe<FormElementLayout>>>;
   componentName: Scalars['String'];
   isHidden: Scalars['Boolean'];
@@ -4894,6 +4895,31 @@ export type MarkTopicAsReadPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `modifySurveyAnswers` mutation. */
+export type ModifySurveyAnswersInput = {
+  answer?: Maybe<Scalars['JSON']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formElementId?: Maybe<Scalars['Int']>;
+  responseIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `modifySurveyAnswers` mutation. */
+export type ModifySurveyAnswersPayload = {
+  __typename?: 'ModifySurveyAnswersPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  surveyResponses?: Maybe<Array<SurveyResponse>>;
+};
+
 /** The root mutation type which contains root level fields which mutate data. */
 export type Mutation = {
   __typename?: 'Mutation';
@@ -5166,6 +5192,7 @@ export type Mutation = {
    * and whenever new posts are shown.
    */
   markTopicAsRead?: Maybe<MarkTopicAsReadPayload>;
+  modifySurveyAnswers?: Maybe<ModifySurveyAnswersPayload>;
   /**
    * Copies all table of contents items, related layers, sources, and access
    * control lists to create a new table of contents that will be displayed to project users.
@@ -5986,6 +6013,12 @@ export type MutationMakeSurveyArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMarkTopicAsReadArgs = {
   input: MarkTopicAsReadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationModifySurveyAnswersArgs = {
+  input: ModifySurveyAnswersInput;
 };
 
 
@@ -9624,47 +9657,12 @@ export type SurveyResponseCondition = {
 /** Represents an update to a `SurveyResponse`. Fields that are set will be updated. */
 export type SurveyResponsePatch = {
   archived?: Maybe<Scalars['Boolean']>;
-  /**
-   * Should be set by the client on submission and tracked by cookies or
-   * localStorage. Surveys that permit only a single entry enable users to bypass
-   * the limit for legitimate purposes, like entering responses on a shared computer.
-   */
-  bypassedDuplicateSubmissionControl?: Maybe<Scalars['Boolean']>;
-  createdAt?: Maybe<Scalars['Datetime']>;
   /** JSON representation of responses, keyed by the form field export_id */
   data?: Maybe<Scalars['JSON']>;
-  id?: Maybe<Scalars['Int']>;
   /** Users may save their responses for later editing before submission. After submission they can no longer edit them. */
   isDraft?: Maybe<Scalars['Boolean']>;
-  /** Duplicate entries are detected by matching contact-information field values. */
-  isDuplicateEntry?: Maybe<Scalars['Boolean']>;
-  /**
-   * Detected by comparing ip hashes from previous entries. IP hashes are not tied
-   * to particular responses, so only the second and subsequent entries are flagged.
-   */
-  isDuplicateIp?: Maybe<Scalars['Boolean']>;
-  /** If true, a logged-in user entered information on behalf of another person, so userId is not as relevant. */
-  isFacilitated?: Maybe<Scalars['Boolean']>;
   isPractice?: Maybe<Scalars['Boolean']>;
-  /**
-   * Unusual or missing user-agent headers on submissions are flagged. May indicate
-   * scripting but does not necessarily imply malicious intent.
-   */
-  isUnrecognizedUserAgent?: Maybe<Scalars['Boolean']>;
-  lastUpdatedById?: Maybe<Scalars['Int']>;
-  /**
-   * Checked on SUBMISSION, so adding or changing a survey geofence after responses
-   * have been submitted will not update values. GPS coordinates and IP addresses
-   * are not stored for privacy purposes.
-   */
-  outsideGeofence?: Maybe<Scalars['Boolean']>;
-  surveyId?: Maybe<Scalars['Int']>;
   updatedAt?: Maybe<Scalars['Datetime']>;
-  /**
-   * User account that submitted the survey. Note that if isFacilitated is set, the
-   * account may not be who is represented by the response content.
-   */
-  userId?: Maybe<Scalars['Int']>;
 };
 
 /** A connection to a list of `SurveyResponse` values. */
@@ -13849,6 +13847,24 @@ export type ArchiveResponsesMutation = (
         { __typename?: 'Survey' }
         & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
       )> }
+    )>> }
+  )> }
+);
+
+export type ModifyAnswersMutationVariables = Exact<{
+  responseIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  formElementId: Scalars['Int'];
+  answer?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type ModifyAnswersMutation = (
+  { __typename?: 'Mutation' }
+  & { modifySurveyAnswers?: Maybe<(
+    { __typename?: 'ModifySurveyAnswersPayload' }
+    & { surveyResponses?: Maybe<Array<(
+      { __typename?: 'SurveyResponse' }
+      & Pick<SurveyResponse, 'id' | 'data' | 'updatedAt' | 'lastUpdatedByEmail'>
     )>> }
   )> }
 );
@@ -19576,6 +19592,48 @@ export function useArchiveResponsesMutation(baseOptions?: Apollo.MutationHookOpt
 export type ArchiveResponsesMutationHookResult = ReturnType<typeof useArchiveResponsesMutation>;
 export type ArchiveResponsesMutationResult = Apollo.MutationResult<ArchiveResponsesMutation>;
 export type ArchiveResponsesMutationOptions = Apollo.BaseMutationOptions<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>;
+export const ModifyAnswersDocument = gql`
+    mutation modifyAnswers($responseIds: [Int]!, $formElementId: Int!, $answer: JSON) {
+  modifySurveyAnswers(
+    input: {responseIds: $responseIds, formElementId: $formElementId, answer: $answer}
+  ) {
+    surveyResponses {
+      id
+      data
+      updatedAt
+      lastUpdatedByEmail
+    }
+  }
+}
+    `;
+export type ModifyAnswersMutationFn = Apollo.MutationFunction<ModifyAnswersMutation, ModifyAnswersMutationVariables>;
+
+/**
+ * __useModifyAnswersMutation__
+ *
+ * To run a mutation, you first call `useModifyAnswersMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useModifyAnswersMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [modifyAnswersMutation, { data, loading, error }] = useModifyAnswersMutation({
+ *   variables: {
+ *      responseIds: // value for 'responseIds'
+ *      formElementId: // value for 'formElementId'
+ *      answer: // value for 'answer'
+ *   },
+ * });
+ */
+export function useModifyAnswersMutation(baseOptions?: Apollo.MutationHookOptions<ModifyAnswersMutation, ModifyAnswersMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ModifyAnswersMutation, ModifyAnswersMutationVariables>(ModifyAnswersDocument, options);
+      }
+export type ModifyAnswersMutationHookResult = ReturnType<typeof useModifyAnswersMutation>;
+export type ModifyAnswersMutationResult = Apollo.MutationResult<ModifyAnswersMutation>;
+export type ModifyAnswersMutationOptions = Apollo.BaseMutationOptions<ModifyAnswersMutation, ModifyAnswersMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -20802,6 +20860,7 @@ export const namedOperations = {
     UploadConsentDoc: 'UploadConsentDoc',
     toggleResponsesPractice: 'toggleResponsesPractice',
     archiveResponses: 'archiveResponses',
+    modifyAnswers: 'modifyAnswers',
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',

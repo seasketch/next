@@ -1,0 +1,119 @@
+import { CheckIcon, SaveIcon, XIcon } from "@heroicons/react/outline";
+import { PencilIcon } from "@heroicons/react/solid";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import Spinner from "../../components/Spinner";
+
+export const CellEditorContext = createContext<{ editing: boolean }>({
+  editing: false,
+});
+
+export type CellEditorComponent<ValueType = any> = React.FunctionComponent<{
+  value: ValueType;
+  disabled: boolean;
+  onChange: (value: ValueType) => void;
+  onRequestSave: () => void;
+  onRequestCancel: () => void;
+}>;
+
+interface EditableResponseCellProps {
+  value: any;
+  editor: CellEditorComponent;
+  updateValue: (value: any) => Promise<any>;
+  onStateChange?: (editing: boolean) => void;
+}
+
+const EditableResponseCell: React.FunctionComponent<EditableResponseCellProps> = (
+  props
+) => {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editedValue, setEditedValue] = useState(props.value);
+  const context = useContext(CellEditorContext);
+
+  useEffect(() => {
+    if (props.onStateChange) {
+      props.onStateChange(editing);
+    }
+  }, [editing]);
+
+  const save = () => {
+    if (!saving) {
+      setSaving(true);
+      props
+        .updateValue(editedValue)
+        .then(() => {
+          setEditing(false);
+        })
+        .catch((e) => {
+          setSaving(false);
+        });
+    }
+  };
+
+  const cancel = () => setEditing(false);
+
+  if (editing) {
+    // eslint-disable-next-line i18next/no-literal-string
+    return (
+      <div className="flex w-full">
+        <div className="flex-1">
+          <props.editor
+            value={props.value}
+            disabled={saving}
+            onChange={setEditedValue}
+            onRequestSave={save}
+            onRequestCancel={cancel}
+          />
+        </div>
+        <div className="h-full flex align-middle items-center flex-none space-x-1 mx-1">
+          <button
+            title="Save"
+            className={`p-1 ${
+              saving ? "pointer-events-none" : "border rounded-full"
+            }`}
+            onClick={save}
+          >
+            {saving ? (
+              <Spinner className="w-4 h-4 p-0" />
+            ) : (
+              <CheckIcon className="w-4 h-4 text-green-800" />
+            )}
+          </button>
+          <button
+            disabled={saving}
+            title="Cancel"
+            className={`p-1 border rounded-full filter ${
+              saving ? "opacity-5 saturate-0 pointer-events-none" : ""
+            }`}
+            onClick={cancel}
+          >
+            <XIcon className="w-4 h-4 text-red-800" />
+          </button>
+        </div>
+      </div>
+    );
+  } else {
+    return (
+      <div className="relative w-full group">
+        <button
+          disabled={context.editing}
+          className="text-gray-500 w-6 h-6 flex align-middle justify-center items-center p-1 absolute right-0 -top-0.5 group-hover:opacity-100 opacity-0 "
+          onClick={() => {
+            setEditing(true);
+          }}
+        >
+          <PencilIcon className=" w-4 h-4 p-0 inline" />
+        </button>
+        {props.children}
+      </div>
+    );
+  }
+};
+
+export default EditableResponseCell;

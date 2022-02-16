@@ -716,3 +716,24 @@ mutation archiveResponses($ids: [Int], $makeArchived: Boolean) {
     }
   }
 }
+
+mutation modifyAnswers(
+  $responseIds: [Int]!
+  $formElementId: Int!
+  $answer: JSON
+) {
+  modifySurveyAnswers(
+    input: {
+      responseIds: $responseIds
+      formElementId: $formElementId
+      answer: $answer
+    }
+  ) {
+    surveyResponses {
+      id
+      data
+      updatedAt
+      lastUpdatedByEmail
+    }
+  }
+}
