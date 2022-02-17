@@ -4808,6 +4808,39 @@ export type MakeResponsesNotPracticePayload = {
   surveyResponses?: Maybe<Array<SurveyResponse>>;
 };
 
+/** All input for the `makeResponsesPractice` mutation. */
+export type MakeResponsesPracticeInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `makeResponsesPractice` mutation. */
+export type MakeResponsesPracticePayload = {
+  __typename?: 'MakeResponsesPracticePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `Survey` that is related to this `SurveyResponse`. */
+  survey?: Maybe<Survey>;
+  surveyResponse?: Maybe<SurveyResponse>;
+  /** An edge for our `SurveyResponse`. May be used by Relay 1. */
+  surveyResponseEdge?: Maybe<SurveyResponsesEdge>;
+};
+
+
+/** The output of our `makeResponsesPractice` mutation. */
+export type MakeResponsesPracticePayloadSurveyResponseEdgeArgs = {
+  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+};
+
 /** All input for the `makeSketchClass` mutation. */
 export type MakeSketchClassInput = {
   /**
@@ -5183,6 +5216,7 @@ export type Mutation = {
    */
   makeResponseDraft?: Maybe<MakeResponseDraftPayload>;
   makeResponsesNotPractice?: Maybe<MakeResponsesNotPracticePayload>;
+  makeResponsesPractice?: Maybe<MakeResponsesPracticePayload>;
   makeSketchClass?: Maybe<MakeSketchClassPayload>;
   makeSurvey?: Maybe<MakeSurveyPayload>;
   /**
@@ -5994,6 +6028,12 @@ export type MutationMakeResponseDraftArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMakeResponsesNotPracticeArgs = {
   input: MakeResponsesNotPracticeInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationMakeResponsesPracticeArgs = {
+  input: MakeResponsesPracticeInput;
 };
 
 

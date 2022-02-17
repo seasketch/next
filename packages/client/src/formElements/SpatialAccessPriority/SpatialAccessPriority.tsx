@@ -1641,7 +1641,10 @@ SpatialAccessPriority.ResponseGridCell = function ({
   return (
     <div className="space-x-1">
       {(componentSettings.sectorOptions || [])
-        .filter((o) => (value.sectors || []).indexOf(o.value || o.label) !== -1)
+        .filter(
+          (o) =>
+            ((value || {}).sectors || []).indexOf(o.value || o.label) !== -1
+        )
         .map((option) => (
           <Badge key={option.value || option.label} variant="error">
             {option.label}

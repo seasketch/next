@@ -13,6 +13,9 @@ import NumberInput from "../components/NumberInput";
 import InputBlock from "../components/InputBlock";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
+import EditableResponseCell, {
+  CellEditorComponent,
+} from "../admin/surveys/EditableResponseCell";
 require("./Number.css");
 
 export type NumberProps = {
@@ -315,12 +318,57 @@ Number.adminValueInput = function ({
   );
 };
 
-Number.ResponseGridCell = function ({ value, componentSettings }) {
-  if (value === null) {
-    return <SkippedQuestion />;
-  } else {
-    return <span className="font-mono lining-nums">{value.toString()}</span>;
-  }
+Number.ResponseGridCell = function ({
+  value,
+  componentSettings,
+  elementId,
+  updateValue,
+}) {
+  return (
+    <EditableResponseCell
+      elementId={elementId}
+      value={value}
+      updateValue={updateValue}
+      editor={NumberCellEditor}
+      componentSettings={componentSettings}
+    >
+      {value === null || value === undefined ? (
+        <SkippedQuestion />
+      ) : (
+        <span className="font-mono lining-nums">{value.toString()}</span>
+      )}
+    </EditableResponseCell>
+  );
+};
+
+export const NumberCellEditor: CellEditorComponent<
+  number | undefined | null,
+  NumberProps
+> = ({
+  value,
+  disabled,
+  onChange,
+  onRequestSave,
+  onRequestCancel,
+  componentSettings,
+}) => {
+  const [val, setVal] = useState(value);
+
+  useEffect(() => {
+    onChange(val);
+  }, [val]);
+
+  return (
+    <input
+      className="p-1 text-sm w-full rounded"
+      type="number"
+      min={componentSettings.min}
+      max={componentSettings.max}
+      defaultValue={componentSettings.defaultValue}
+      value={val || ""}
+      onChange={(e) => setVal(parseInt(e.target.value))}
+    />
+  );
 };
 
 export default Number;

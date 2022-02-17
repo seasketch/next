@@ -524,10 +524,11 @@ export interface FormElementComponent<T, V = {}>
     ) => (value: any) => void;
   }>;
   ResponseGridCell?: FunctionComponent<{
-    value: V;
+    value?: V | null;
     componentSettings: T;
     editable: boolean;
-    updateValue: (value: V) => void;
+    updateValue: (value: V) => Promise<any>;
+    elementId: number;
   }>;
 }
 

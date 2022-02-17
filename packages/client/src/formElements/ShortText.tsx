@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import EditableResponseCell, {
+  CellEditorComponent,
+} from "../admin/surveys/EditableResponseCell";
+import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import InputBlock from "../components/InputBlock";
 import NumberInput from "../components/NumberInput";
 import Switch from "../components/Switch";
@@ -182,5 +186,61 @@ ShortText.icon = () => (
     <span className="text-2xl">T</span>
   </div>
 );
+
+ShortText.ResponseGridCell = ({
+  value,
+  componentSettings,
+  editable,
+  updateValue,
+  elementId,
+}) => {
+  return (
+    <EditableResponseCell
+      updateValue={updateValue}
+      value={value}
+      editor={TextCellEditor}
+      elementId={elementId}
+      componentSettings={componentSettings}
+    >
+      {value ? value : <SkippedQuestion />}
+    </EditableResponseCell>
+  );
+};
+
+export const TextCellEditor: CellEditorComponent<string | null | undefined> = ({
+  value,
+  disabled,
+  onChange,
+  onRequestSave,
+  onRequestCancel,
+}) => {
+  const [val, setVal] = useState(value);
+
+  useEffect(() => {
+    onChange(val);
+  }, [val]);
+
+  return (
+    <input
+      disabled={disabled}
+      autoFocus
+      type="text"
+      value={val || ""}
+      onChange={(e) => setVal(e.target.value)}
+      className={`p-1 block w-full h-full rounded m-0 text-sm ${
+        disabled && "opacity-50 pointer-events-none"
+      }`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          onRequestSave();
+          e.preventDefault();
+          e.stopPropagation();
+        } else if (e.key === "Escape") {
+          onRequestCancel();
+        }
+      }}
+    />
+  );
+};
 
 export default ShortText;

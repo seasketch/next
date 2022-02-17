@@ -401,6 +401,7 @@ export default function ResponseGrid(props: Props) {
                 }
                 return (
                   <EditableResponseCell
+                    componentSettings={NameElement.componentSettings}
                     data={row.original.data}
                     editors={editors}
                     updateValue={valueUpdater(parseInt(row.id))}
@@ -426,6 +427,7 @@ export default function ResponseGrid(props: Props) {
               }) => {
                 return (
                   <EditableResponseCell
+                    componentSettings={NameElement.componentSettings}
                     data={row.original.data}
                     editors={[[NameElement.id, FacilitatorEditor]]}
                     updateValue={valueUpdater(parseInt(row.id))}
@@ -532,12 +534,10 @@ export default function ResponseGrid(props: Props) {
         accessor: (row: any) => row.data[formElement.id],
         Cell: ({ value, row }: { value: any; row: Row<any> }) => {
           const C = components[formElement.typeId];
-          if (value === undefined || value === null) {
-            return <SkippedQuestion />;
-          }
           if (C.ResponseGridCell) {
             return (
               <C.ResponseGridCell
+                elementId={formElement.id}
                 value={value}
                 componentSettings={formElement.componentSettings}
                 editable={false}
@@ -545,6 +545,9 @@ export default function ResponseGrid(props: Props) {
               />
             );
           } else {
+            if (value === undefined || value === null) {
+              return <SkippedQuestion />;
+            }
             return value.toString();
           }
         },

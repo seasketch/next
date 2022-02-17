@@ -14,12 +14,16 @@ export const CellEditorContext = createContext<{ editing: boolean }>({
   editing: false,
 });
 
-export type CellEditorComponent<ValueType = any> = React.FunctionComponent<{
+export type CellEditorComponent<
+  ValueType = any,
+  ComponentSettingsType = any
+> = React.FunctionComponent<{
   value: ValueType;
   disabled: boolean;
   onChange: (value: ValueType) => void;
   onRequestSave: () => void;
   onRequestCancel: () => void;
+  componentSettings: ComponentSettingsType;
 }>;
 
 export type EditorsList = [
@@ -31,11 +35,27 @@ interface EditableResponseCellProps {
   editors: EditorsList;
   updateValue: (value: any) => Promise<any>;
   onStateChange?: (editing: boolean) => void;
+  componentSettings: any;
 }
 
-const EditableResponseCell: React.FunctionComponent<EditableResponseCellProps> = (
-  props
-) => {
+interface SimpleEditableResponseCellProps {
+  elementId: number;
+  value: any;
+  editor: CellEditorComponent;
+  updateValue: (value: any) => Promise<any>;
+  onStateChange?: (editing: boolean) => void;
+  componentSettings: any;
+}
+
+function isSimple(
+  props: SimpleEditableResponseCellProps | EditableResponseCellProps
+): props is SimpleEditableResponseCellProps {
+  return (props as SimpleEditableResponseCellProps).editor !== undefined;
+}
+
+const EditableResponseCell: React.FunctionComponent<
+  EditableResponseCellProps | SimpleEditableResponseCellProps
+> = (props) => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedValues, setEditedValues] = useState({});
@@ -70,25 +90,44 @@ const EditableResponseCell: React.FunctionComponent<EditableResponseCellProps> =
     // eslint-disable-next-line i18next/no-literal-string
     return (
       <div className="flex w-full">
-        {props.editors.map(([id, Editor]) => {
-          return (
-            <div className="flex-1">
-              <Editor
-                key={id}
-                value={props.data[id]}
-                disabled={saving}
-                onChange={(value) =>
-                  setEditedValues((prev) => ({
-                    ...prev,
-                    [id]: value,
-                  }))
-                }
-                onRequestSave={save}
-                onRequestCancel={cancel}
-              />
-            </div>
-          );
-        })}
+        {isSimple(props) && (
+          <div className="flex-1">
+            <props.editor
+              componentSettings={props.componentSettings}
+              value={props.value}
+              onChange={(val) => {
+                setEditedValues((prev) => ({
+                  ...prev,
+                  [props.elementId]: val,
+                }));
+              }}
+              disabled={saving}
+              onRequestCancel={cancel}
+              onRequestSave={save}
+            />
+          </div>
+        )}
+        {!isSimple(props) &&
+          props.editors.map(([id, Editor]) => {
+            return (
+              <div className="flex-1">
+                <Editor
+                  componentSettings={props.componentSettings}
+                  key={id}
+                  value={props.data[id]}
+                  disabled={saving}
+                  onChange={(value) =>
+                    setEditedValues((prev) => ({
+                      ...prev,
+                      [id]: value,
+                    }))
+                  }
+                  onRequestSave={save}
+                  onRequestCancel={cancel}
+                />
+              </div>
+            );
+          })}
         <div className="h-full flex align-middle items-center flex-none space-x-1 mx-1">
           <button
             title="Save"

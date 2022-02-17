@@ -21,6 +21,10 @@ import Button from "../components/Button";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import Badge from "../components/Badge";
+import EditableResponseCell, {
+  CellEditorComponent,
+} from "../admin/surveys/EditableResponseCell";
+import { MultipleChoiceProps, MultipleChoiceValue } from "./MultipleChoice";
 
 export type ComboBoxProps = {
   options?: FormElementOption[];
@@ -363,18 +367,76 @@ export function ChoiceAdminValueInput({
 
 ComboBox.adminValueInput = ChoiceAdminValueInput;
 
-ComboBox.ResponseGridCell = function ({ value, componentSettings }) {
-  if (value === null) {
-    return <SkippedQuestion />;
-  }
+ComboBox.ResponseGridCell = function ({
+  value,
+  componentSettings,
+  elementId,
+  updateValue,
+}) {
   return (
-    <div className="space-x-1">
-      {(componentSettings.options || [])
-        .filter((o) => value === (o.value || o.label))
-        .map((option) => (
-          <Badge>{option.label}</Badge>
-        ))}
-    </div>
+    <EditableResponseCell
+      elementId={elementId}
+      value={value}
+      updateValue={updateValue}
+      editor={SingleSelectCellEditor}
+      componentSettings={componentSettings}
+    >
+      {value === null || value === undefined ? (
+        <SkippedQuestion />
+      ) : (
+        <div className="space-x-1">
+          {(componentSettings.options || [])
+            .filter((o) => value === (o.value || o.label))
+            .map((option) => (
+              <Badge key={option.label}>{option.label}</Badge>
+            ))}
+        </div>
+      )}
+    </EditableResponseCell>
+  );
+};
+
+export const SingleSelectCellEditor: CellEditorComponent<
+  ComboBoxValue | MultipleChoiceValue | undefined,
+  ComboBoxProps & MultipleChoiceProps
+> = ({
+  value,
+  disabled,
+  onChange,
+  onRequestSave,
+  onRequestCancel,
+  componentSettings,
+}) => {
+  const [val, setVal] = useState(value);
+
+  useEffect(() => {
+    onChange(val);
+  }, [val]);
+
+  return (
+    <select
+      className="p-0 px-1 rounded  text-sm w-full"
+      value={val || ""}
+      onChange={(e) => {
+        if (componentSettings.multipleSelect) {
+          const selected: string[] = [];
+          var options = e.target.options;
+          for (var i = 0, l = options.length; i < l; i++) {
+            if (options[i].selected) {
+              selected.push(options[i].value);
+            }
+          }
+          setVal(selected);
+        } else {
+          setVal(e.target.value);
+        }
+      }}
+      multiple={componentSettings.multipleSelect}
+    >
+      {(componentSettings.options || []).map((option) => (
+        <option value={option.value || option.label}>{option.label}</option>
+      ))}
+    </select>
   );
 };
 
