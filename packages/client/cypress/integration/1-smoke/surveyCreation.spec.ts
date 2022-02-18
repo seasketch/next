@@ -112,7 +112,7 @@ describe("Survey creation smoke test", () => {
         })
       })
     })
-    it ("Can update form with form logic", () => {
+    it ("Can update form with logic rules", () => {
       cy.wait("@createSurveyRequest")
       cy.get('@formId').then((id) => {
         formId = id 
@@ -132,9 +132,7 @@ describe("Survey creation smoke test", () => {
                     formElements[i].typeId === "MultipleChoice" && 
                     formElements[i].body.content[0].content[0].text === "Which Atoll do you reside on?"
                     ){
-                    console.log(formElements[i])
                     baseId = formElements[i].id
-                    console.log(baseId)
                     break
                   }
                 } 
@@ -144,12 +142,15 @@ describe("Survey creation smoke test", () => {
                   ids.push(baseId++)
                 }
               }
-              ids.push((baseId + 25) && (baseId + 26))
               return ids
             }
             let newIds = getIds(baseId)
+            newIds.push(newIds[19] + 6)
+            newIds.push(newIds[20] + 1)
             expect (newIds.length).to.eq(22)
-            cy.addFormLogic("Maldives", newIds, authToken)
+            cy.addFormLogic(formId, "Maldives", newIds, authToken).then((resp) => {
+              expect (resp.createFormLogicRule.query.form.logicRules.length).to.eq(21)
+            })
           })
           cy.get('@surveyId').then((id) => {
             surveyId = id

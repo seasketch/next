@@ -121,6 +121,7 @@ declare global {
       )
 
       addFormLogic(
+        formId: number,
         fixtureAlias: string,
         newIds: object, 
         token: string
@@ -516,8 +517,8 @@ Cypress.Commands.add("createFormElements", (formId: number, fixtureAlias: string
           "layout": e.layout,
           "alternateLanguageSettings": e.alternateLanguageSettings,
           //"subordinateTo": e.subordinateTo
-        }
-      },
+          }
+        },
       (token as any)
       ).then((data) => {
         Cypress.log(data);
@@ -648,18 +649,71 @@ Cypress.Commands.add("deleteForm", (formId: number, token: string) => {
 
 
 
-Cypress.Commands.add("addFormLogic", (fixtureAlias:string, newIds: object, token:string) => {
+Cypress.Commands.add("addFormLogic", (formId:number, fixtureAlias:string, newIds: object, token:string) => {
   const formLogic = formLogicRules[fixtureAlias].data.form.logicRules
-  console.log(formLogic)
-  let oldIds = []
-  oldIds.push(formLogic[0].formElementId)
-  formLogic.forEach(t => {
-    oldIds.push(t.jumpToId)
+  formLogic.sort((a, b) => {
+    if (a.jumpToId > b.jumpToId) return 1; 
+    if (a.jumpToId < b.jumpToId) return -1; 
+    else return 0
   })
-  console.log(oldIds)
-  console.log(newIds)
-  console.log(token)
+
+  for (let i=0; i< formLogic.length-2; i++) {
+    formLogic[i].jumpToId = newIds[i+1]
+  }
+
+  formLogic.map(t => {
+    if (t.formElementId === 74 && t.conditions[0].subjectId === 74) {
+      t.formElementId = t.conditions[0].subjectId = newIds[0]
+    } else if (t.formElementId === 98 && t.conditions[0].subjectId === 98) {
+      t.formElementId = t.conditions[0].subjectId = newIds[20]
+      t.jumpToId = newIds[21]
+    } else if (t.formElementId === 99 && t.conditions[0].subjectId === 99) {
+      t.formElementId = t.conditions[0].subjectId = newIds[21]
+      t.jumpToId = newIds[21] + 1
+    }
+  })
+  
+  formLogic.forEach((f) => {
+    return cy
+      .mutation(
+        gql`
+          mutation CypressCreateFormLogicRule($formLogicRule: FormLogicRuleInput!) {
+            createFormLogicRule(input: {formLogicRule: $formLogicRule} )
+            {
+              formLogicRule {
+                id
+              }
+              query {
+                form (id: ${formId}) {
+                  logicRules {
+                    formElementId,
+                    booleanOperator,
+                    jumpToId,
+                    command,
+                    position
+                  }
+                }
+              }
+            }
+          }
+        `,
+        { "formLogicRule": {
+            "formElementId": f.formElementId,
+            "booleanOperator": f.booleanOperator,
+            "command": f.command,
+            "jumpToId": f.jumpToId,
+            "position": f.position
+          }
+        },
+        (token as any),
+      ).then((data) => {
+        Cypress.log(data);
+        return data
+    })
+  })
 })
+
+
   
  
 
