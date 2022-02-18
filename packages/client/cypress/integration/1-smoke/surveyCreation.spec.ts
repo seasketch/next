@@ -57,7 +57,6 @@ describe("Survey creation smoke test", () => {
       cy.wait('@createProjectRequest')
         .its('response.body.data.createProject.project')
         .should('have.property', 'id')
-      //cy.contains("Maldives Spatial Planning Test")
     })
     it ("Creates the survey", () => {
       cy.wait("@createSurveyRequest")
@@ -99,9 +98,6 @@ describe("Survey creation smoke test", () => {
       })
     })
     it ("Can update form with form elements", () => {
-    //  cy.wait("@createSurveyRequest")
-    //  cy.wait("@createProjectRequest")
-    //  cy.wait("@createFormElementRequest")
       cy.get('@formId').then((id) => {
         formId = id 
         cy.get("@token").then((token) => {
@@ -116,22 +112,55 @@ describe("Survey creation smoke test", () => {
         })
       })
     })
-    //it ("Can update form with form logic", () => {
-    //  cy.wait("@createSurveyRequest")
-    //  cy.get('@formId').then((id) => {
-    //    formId = id 
-    //    cy.get("@token").then((token) => {
-    //      authToken = token
-    //      cy.deleteFormElements(formId, authToken)
-    //      cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
-    //        expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
-    //        cy.createFormLogic("Maldives", 1, 2, "sal;kfjsadlkf")
-    //      })
-    //    })
-    //  })
-
+    it ("Can update form with form logic", () => {
+      cy.wait("@createSurveyRequest")
+      cy.get('@formId').then((id) => {
+        formId = id 
+        cy.get("@token").then((token) => {
+          authToken = token
+          cy.deleteFormElements(formId, authToken)
+          cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+            const formElements = resp.createFormElement.query.form.formElements
+            expect (formElements.length).to.be.gt(3)
+            let baseId = 0
+            let ids = []
+            function getIds(baseId) {
+              if (baseId === 0) {
+                for(let i=0; i<formElements.length; i++) {
+                  if (
+                    formElements[i].typeId && 
+                    formElements[i].typeId === "MultipleChoice" && 
+                    formElements[i].body.content[0].content[0].text === "Which Atoll do you reside on?"
+                    ){
+                    console.log(formElements[i])
+                    baseId = formElements[i].id
+                    console.log(baseId)
+                    break
+                  }
+                } 
+                getIds(baseId)
+              } else {
+                for(let i=0; i < 20; i++) {
+                  ids.push(baseId++)
+                }
+              }
+              ids.push((baseId + 25) && (baseId + 26))
+              return ids
+            }
+            let newIds = getIds(baseId)
+            expect (newIds.length).to.eq(22)
+            cy.addFormLogic("Maldives", newIds, authToken)
+          })
+          cy.get('@surveyId').then((id) => {
+            surveyId = id
+            cy.deleteSurvey(surveyId, authToken)
+          })
+          
+        })
+      })
       
-    //})
+
+    })
   })
   describe ('User survey flow', () => {
     before(() => {

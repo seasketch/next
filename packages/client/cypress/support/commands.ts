@@ -120,10 +120,9 @@ declare global {
         token: string
       )
 
-      createFormLogic(
+      addFormLogic(
         fixtureAlias: string,
-        oldId: number, 
-        newId: number, 
+        newIds: object, 
         token: string
       ) 
     }
@@ -462,11 +461,11 @@ Cypress.Commands.add("deleteForm", (formId: number, token: string) => {
   }
 })
 
-Cypress.Commands.add("createFormElements", (formId: number, surveyAlias: string, token: string) => {
-  const elements = formElements[surveyAlias].data.form.formElements
+Cypress.Commands.add("createFormElements", (formId: number, fixtureAlias: string, token: string) => {
+  const elements = formElements[fixtureAlias].data.form.formElements
   elements.map(t => t.formId = formId)
-  if (!surveyAlias) {
-    throw new Error(`Unrecognized alias "${surveyAlias}"`);
+  if (!fixtureAlias) {
+    throw new Error(`Unrecognized alias "${fixtureAlias}"`);
   }
   else {
     elements.forEach((e) => {
@@ -647,18 +646,23 @@ Cypress.Commands.add("deleteForm", (formId: number, token: string) => {
   }
 })
 
-  
 
-Cypress.Commands.add("createFormLogic", (fixtureAlias:string, oldId: number, newId: number, token: string) => {
-  const formLogic = formLogicRules[fixtureAlias]
+
+Cypress.Commands.add("addFormLogic", (fixtureAlias:string, newIds: object, token:string) => {
+  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules
   console.log(formLogic)
+  let oldIds = []
+  oldIds.push(formLogic[0].formElementId)
+  formLogic.forEach(t => {
+    oldIds.push(t.jumpToId)
+  })
+  console.log(oldIds)
+  console.log(newIds)
+  console.log(token)
 })
   
  
 
 //TO DO:
 //add rest of form attributes
-//delete default formElements
-//Create form first and then attach to survey?
-//Add consent file before or???
-//Scaffold plan for tests; organize
+
