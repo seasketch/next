@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import InputBlock from "../../components/InputBlock";
 import Modal from "../../components/Modal";
+import Switch from "../../components/Switch";
 import { FormElementDetailsFragment } from "../../generated/graphql";
 
 export default function ExportResponsesModal({
@@ -7,15 +10,16 @@ export default function ExportResponsesModal({
   open,
   spatialFormElements,
   onRequestClose,
-  dataForExport,
+  onRequestData,
 }: {
   open: boolean;
   surveyId: number;
   spatialFormElements: FormElementDetailsFragment[];
   onRequestClose?: () => void;
-  dataForExport: string;
+  onRequestData: (includePractice: boolean) => string;
 }) {
   const { t } = useTranslation("admin:surveys");
+  const [includePractice, setIncludePractice] = useState(false);
   return (
     <Modal
       open={open}
@@ -33,7 +37,10 @@ export default function ExportResponsesModal({
       <p>
         <button
           className="text-primary-500 underline"
-          onClick={() => download(dataForExport, "responses.csv", "text/csv")}
+          onClick={() => {
+            const dataForExport = onRequestData(includePractice);
+            download(dataForExport, "responses.csv", "text/csv");
+          }}
         >
           {
             // eslint-disable-next-line i18next/no-literal-string
@@ -41,6 +48,13 @@ export default function ExportResponsesModal({
           }
         </button>
       </p>
+      <InputBlock
+        className="mt-3"
+        title={t("Include Practice Responses")}
+        input={
+          <Switch isToggled={includePractice} onClick={setIncludePractice} />
+        }
+      />
       <h4 className="text-lg py-1 mt-2">
         <Trans ns="admin:surveys">Spatial Data</Trans>
       </h4>

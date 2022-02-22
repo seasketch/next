@@ -75,6 +75,7 @@ import set from "lodash.set";
 import { collectText } from "../../admin/surveys/collectText";
 import { ChoiceAdminValueInput } from "../ComboBox";
 import useDebounce from "../../useDebounce";
+import Badge from "../../components/Badge";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -1631,6 +1632,26 @@ function visibleInSector(
 
 SpatialAccessPriority.adminValueInput = function (props) {
   return <ChoiceAdminValueInput {...props} optionsProp="sectorOptions" />;
+};
+
+SpatialAccessPriority.ResponseGridCell = function ({
+  value,
+  componentSettings,
+}) {
+  return (
+    <div className="space-x-1">
+      {(componentSettings.sectorOptions || [])
+        .filter(
+          (o) =>
+            ((value || {}).sectors || []).indexOf(o.value || o.label) !== -1
+        )
+        .map((option) => (
+          <Badge key={option.value || option.label} variant="error">
+            {option.label}
+          </Badge>
+        ))}
+    </div>
+  );
 };
 
 export default SpatialAccessPriority;

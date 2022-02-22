@@ -14,6 +14,8 @@ import SurveyDraftControl from "./SurveyDraftControl";
 import { useMemo } from "react";
 import ResponseGrid from "./ResponseGrid";
 import ResponsesMap from "./ResponsesMap";
+import { ErrorBoundary } from "@sentry/react";
+import ErrorBoundaryFallback from "../../components/ErrorBoundaryFallback";
 
 export default function SurveyDetail({ surveyId }: { surveyId: number }) {
   const projectId = useProjectId();
@@ -64,10 +66,18 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
           </>
         )}
       </div>
-      <div className="h-72 flex-shrink-0 relative">
-        <ResponsesMap surveyId={surveyId} />
-      </div>
-      <ResponseGrid className="flex-1 bg-white" surveyId={surveyId} />
+      {data?.survey?.isSpatial && (
+        <div className="h-72 flex-shrink-0 relative">
+          <ResponsesMap surveyId={surveyId} />
+        </div>
+      )}
+      <ErrorBoundary
+        fallback={
+          <ErrorBoundaryFallback title={t("Failed to render responses grid")} />
+        }
+      >
+        <ResponseGrid className="flex-1 bg-white" surveyId={surveyId} />
+      </ErrorBoundary>
       {!survey && <Spinner />}
     </div>
   );
