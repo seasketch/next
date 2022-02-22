@@ -22,7 +22,13 @@ import ExportIdPlugin from "./plugins/exportIdPlugin";
 import UnsplashPlugin from "./plugins/unsplashPlugin";
 import { PostGraphileOptions } from "postgraphile";
 import ConsentDocumentPlugin from "./plugins/consentDocumentPlugin";
-const pluginHook = makePluginHook([PgPubsub]);
+import { Request } from "express";
+import { PostGraphilePlugin } from "postgraphile";
+import * as Sentry from "@sentry/node";
+import { print as printGraphql } from "graphql";
+import SentryPlugin from "./plugins/sentryPlugin";
+
+const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
 export default function graphileOptions(): PostGraphileOptions {
   return {
