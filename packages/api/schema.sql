@@ -1027,55 +1027,57 @@ CREATE FUNCTION public._001_unnest_survey_response_sketches() RETURNS trigger
       sketch_id int;
       feature_name_element_id int;
     BEGIN
-      -- loop over spatial form elements in survey
-      for f in select 
-          form_elements.id::text as id,
-          is_spatial,
-          sketch_classes.id as sketch_class_id
-        from 
-          form_elements 
-        inner join
-          form_element_types
-        on 
-          form_element_types.component_name = form_elements.type_id
-        inner join 
-          sketch_classes
-        on
-          sketch_classes.form_element_id = form_elements.id
-        where
-          form_element_types.is_spatial = true
-      loop
-          select id into feature_name_element_id from form_elements where form_id = (select id from forms where sketch_class_id = f.sketch_class_id) and type_id = 'FeatureName';
-          if NEW.data::jsonb ? f.id THEN
-            sketch_ids = ARRAY[]::int[];
-            set constraints sketches_response_id_fkey deferred;
-            if NEW.data::jsonb #> ARRAY[f.id,'collection'::text, 'features'::text] is not null then
-              for feature_data in select jsonb_array_elements(NEW.data::jsonb #> ARRAY[f.id,'collection'::text, 'features'::text]) as feature loop
-                insert into sketches (
-                  response_id, 
-                  form_element_id, 
-                  sketch_class_id, 
-                  user_id,
-                  name, 
-                  user_geom, 
-                  properties
-                ) values (
-                  NEW.id, 
-                  f.id::int, 
-                  f.sketch_class_id, 
-                  NEW.user_id,
-                  coalesce((feature_data.feature::jsonb #>> ARRAY['properties'::text,feature_name_element_id::text])::text, ''::text), 
-                  st_geomfromgeojson(feature_data.feature::jsonb ->> 'geometry'::text),
-                  feature_data.feature::jsonb -> 'properties'::text
-                ) returning id into sketch_id;
-                sketch_ids = sketch_ids || sketch_id;
-              end loop;
-              NEW.data = jsonb_set(NEW.data, ARRAY[f.id, 'collection'], to_json(sketch_ids)::jsonb);
-            else
-              raise exception 'Embedded sketches must be a FeatureCollection';
+      if  (TG_OP = 'INSERT') then
+        -- loop over spatial form elements in survey
+        for f in select 
+            form_elements.id::text as id,
+            is_spatial,
+            sketch_classes.id as sketch_class_id
+          from 
+            form_elements 
+          inner join
+            form_element_types
+          on 
+            form_element_types.component_name = form_elements.type_id
+          inner join 
+            sketch_classes
+          on
+            sketch_classes.form_element_id = form_elements.id
+          where
+            form_element_types.is_spatial = true
+        loop
+            select id into feature_name_element_id from form_elements where form_id = (select id from forms where sketch_class_id = f.sketch_class_id) and type_id = 'FeatureName';
+            if NEW.data::jsonb ? f.id THEN
+              sketch_ids = ARRAY[]::int[];
+              set constraints sketches_response_id_fkey deferred;
+              if NEW.data::jsonb #> ARRAY[f.id,'collection'::text, 'features'::text] is not null then
+                for feature_data in select jsonb_array_elements(NEW.data::jsonb #> ARRAY[f.id,'collection'::text, 'features'::text]) as feature loop
+                  insert into sketches (
+                    response_id, 
+                    form_element_id, 
+                    sketch_class_id, 
+                    user_id,
+                    name, 
+                    user_geom, 
+                    properties
+                  ) values (
+                    NEW.id, 
+                    f.id::int, 
+                    f.sketch_class_id, 
+                    NEW.user_id,
+                    coalesce((feature_data.feature::jsonb #>> ARRAY['properties'::text,feature_name_element_id::text])::text, ''::text), 
+                    st_geomfromgeojson(feature_data.feature::jsonb ->> 'geometry'::text),
+                    feature_data.feature::jsonb -> 'properties'::text
+                  ) returning id into sketch_id;
+                  sketch_ids = sketch_ids || sketch_id;
+                end loop;
+                NEW.data = jsonb_set(NEW.data, ARRAY[f.id, 'collection'], to_json(sketch_ids)::jsonb);
+              else
+                raise exception 'Embedded sketches must be a FeatureCollection';
+              end if;
             end if;
-          end if;
-      end loop;
+        end loop;
+      end if;
       RETURN NEW;
     END;
   $$;
@@ -1865,6 +1867,126 @@ COMMENT ON FUNCTION public.approve_participant("projectId" integer, "userId" int
 
 
 --
+-- Name: survey_responses; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.survey_responses (
+    id integer NOT NULL,
+    survey_id integer NOT NULL,
+    user_id integer,
+    data jsonb DEFAULT '{}'::jsonb NOT NULL,
+    is_draft boolean DEFAULT false NOT NULL,
+    is_duplicate_ip boolean DEFAULT false NOT NULL,
+    is_duplicate_entry boolean DEFAULT false NOT NULL,
+    is_unrecognized_user_agent boolean DEFAULT false NOT NULL,
+    bypassed_duplicate_submission_control boolean DEFAULT false NOT NULL,
+    outside_geofence boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp with time zone,
+    is_facilitated boolean DEFAULT false NOT NULL,
+    is_practice boolean DEFAULT false NOT NULL,
+    archived boolean DEFAULT false NOT NULL,
+    last_updated_by_id integer,
+    CONSTRAINT survey_responses_data_check CHECK ((char_length((data)::text) < 10000))
+);
+
+
+--
+-- Name: TABLE survey_responses; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.survey_responses IS '@omit create';
+
+
+--
+-- Name: COLUMN survey_responses.user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.user_id IS 'User account that submitted the survey. Note that if isFacilitated is set, the account may not be who is represented by the response content.';
+
+
+--
+-- Name: COLUMN survey_responses.data; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.data IS 'JSON representation of responses, keyed by the form field export_id';
+
+
+--
+-- Name: COLUMN survey_responses.is_draft; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.is_draft IS 'Users may save their responses for later editing before submission. After submission they can no longer edit them.';
+
+
+--
+-- Name: COLUMN survey_responses.is_duplicate_ip; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.is_duplicate_ip IS '
+@omit create
+Detected by comparing ip hashes from previous entries. IP hashes are not tied to particular responses, so only the second and subsequent entries are flagged.
+';
+
+
+--
+-- Name: COLUMN survey_responses.is_duplicate_entry; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.is_duplicate_entry IS '
+@omit create
+Duplicate entries are detected by matching contact-information field values.
+';
+
+
+--
+-- Name: COLUMN survey_responses.is_unrecognized_user_agent; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.is_unrecognized_user_agent IS '
+@omit create
+Unusual or missing user-agent headers on submissions are flagged. May indicate scripting but does not necessarily imply malicious intent.
+';
+
+
+--
+-- Name: COLUMN survey_responses.bypassed_duplicate_submission_control; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.bypassed_duplicate_submission_control IS '
+Should be set by the client on submission and tracked by cookies or localStorage. Surveys that permit only a single entry enable users to bypass the limit for legitimate purposes, like entering responses on a shared computer.
+';
+
+
+--
+-- Name: COLUMN survey_responses.outside_geofence; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.outside_geofence IS '
+@omit create
+Checked on SUBMISSION, so adding or changing a survey geofence after responses have been submitted will not update values. GPS coordinates and IP addresses are not stored for privacy purposes.
+';
+
+
+--
+-- Name: COLUMN survey_responses.is_facilitated; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.is_facilitated IS 'If true, a logged-in user entered information on behalf of another person, so userId is not as relevant.';
+
+
+--
+-- Name: archive_responses(integer[], boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.archive_responses(ids integer[], "makeArchived" boolean) RETURNS SETOF public.survey_responses
+    LANGUAGE sql
+    AS $$
+    update survey_responses set archived = "makeArchived" where id = any(ids) returning survey_responses.*;
+$$;
+
+
+--
 -- Name: auto_create_profile(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2261,17 +2383,17 @@ CREATE FUNCTION public.before_response_update() RETURNS trigger
     if OLD.user_id != NEW.user_id then
       raise exception 'Cannot change userid';
     end if;
-    if it_me(OLD.user_id) then
+    if it_me(OLD.user_id) and not session_is_admin((select project_id from surveys where surveys.id = OLD.survey_id)) then
       if OLD.is_draft = false then
         raise exception 'Cannot edit submitted responses. Contact an admin and ask them to put your response into draft mode';
       end if;
     else
       if not session_is_admin((select project_id from surveys where surveys.id = OLD.survey_id)) then
         raise exception 'Must be a project administrator';
-      else
-        if OLD.is_draft != false or NEW.is_draft != true then
-          raise exception 'Admins can only put responses back into draft mode';
-        end if;
+      -- else
+      --   if OLD.is_draft != false or NEW.is_draft != true then
+      --     raise exception 'Admins can only put responses back into draft mode';
+      --   end if;
       end if;
     end if;
     return NEW;
@@ -2625,6 +2747,7 @@ CREATE TABLE public.form_elements (
     jump_to_id integer,
     alternate_language_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     subordinate_to integer,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
     CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
     CONSTRAINT form_fields_position_check CHECK (("position" > 0))
 );
@@ -3940,113 +4063,6 @@ Initializes a new FormLogicRule with a single condition and command=JUMP.
 
 
 --
--- Name: survey_responses; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.survey_responses (
-    id integer NOT NULL,
-    survey_id integer NOT NULL,
-    user_id integer,
-    data jsonb DEFAULT '{}'::jsonb NOT NULL,
-    is_draft boolean DEFAULT false NOT NULL,
-    is_duplicate_ip boolean DEFAULT false NOT NULL,
-    is_duplicate_entry boolean DEFAULT false NOT NULL,
-    is_unrecognized_user_agent boolean DEFAULT false NOT NULL,
-    bypassed_duplicate_submission_control boolean DEFAULT false NOT NULL,
-    outside_geofence boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp with time zone,
-    is_facilitated boolean DEFAULT false NOT NULL,
-    is_practice boolean DEFAULT false NOT NULL,
-    CONSTRAINT survey_responses_data_check CHECK ((char_length((data)::text) < 10000))
-);
-
-
---
--- Name: TABLE survey_responses; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.survey_responses IS '@omit create';
-
-
---
--- Name: COLUMN survey_responses.user_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.user_id IS 'User account that submitted the survey. Note that if isFacilitated is set, the account may not be who is represented by the response content.';
-
-
---
--- Name: COLUMN survey_responses.data; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.data IS 'JSON representation of responses, keyed by the form field export_id';
-
-
---
--- Name: COLUMN survey_responses.is_draft; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.is_draft IS 'Users may save their responses for later editing before submission. After submission they can no longer edit them.';
-
-
---
--- Name: COLUMN survey_responses.is_duplicate_ip; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.is_duplicate_ip IS '
-@omit create
-Detected by comparing ip hashes from previous entries. IP hashes are not tied to particular responses, so only the second and subsequent entries are flagged.
-';
-
-
---
--- Name: COLUMN survey_responses.is_duplicate_entry; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.is_duplicate_entry IS '
-@omit create
-Duplicate entries are detected by matching contact-information field values.
-';
-
-
---
--- Name: COLUMN survey_responses.is_unrecognized_user_agent; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.is_unrecognized_user_agent IS '
-@omit create
-Unusual or missing user-agent headers on submissions are flagged. May indicate scripting but does not necessarily imply malicious intent.
-';
-
-
---
--- Name: COLUMN survey_responses.bypassed_duplicate_submission_control; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.bypassed_duplicate_submission_control IS '
-Should be set by the client on submission and tracked by cookies or localStorage. Surveys that permit only a single entry enable users to bypass the limit for legitimate purposes, like entering responses on a shared computer.
-';
-
-
---
--- Name: COLUMN survey_responses.outside_geofence; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.outside_geofence IS '
-@omit create
-Checked on SUBMISSION, so adding or changing a survey geofence after responses have been submitted will not update values. GPS coordinates and IP addresses are not stored for privacy purposes.
-';
-
-
---
--- Name: COLUMN survey_responses.is_facilitated; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_responses.is_facilitated IS 'If true, a logged-in user entered information on behalf of another person, so userId is not as relevant.';
-
-
---
 -- Name: create_survey_response(integer, json, boolean, boolean, boolean, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4692,7 +4708,8 @@ CREATE TABLE public.form_element_types (
     allowed_layouts public.form_element_layout[],
     is_spatial boolean DEFAULT false NOT NULL,
     sketch_class_template_id integer,
-    is_required_for_sketch_classes boolean DEFAULT false NOT NULL
+    is_required_for_sketch_classes boolean DEFAULT false NOT NULL,
+    allow_admin_updates boolean DEFAULT true NOT NULL
 );
 
 
@@ -5292,6 +5309,17 @@ resubmitted by the respondant.
 
 
 --
+-- Name: make_responses_not_practice(integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.make_responses_not_practice(ids integer[]) RETURNS SETOF public.survey_responses
+    LANGUAGE sql
+    AS $$
+    update survey_responses set is_practice = false where id = any(ids) returning survey_responses.*;
+$$;
+
+
+--
 -- Name: make_sketch_class(text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5357,6 +5385,45 @@ $$;
 --
 
 COMMENT ON FUNCTION public.me() IS 'Access the current session''s User. The user is determined by the access token embedded in the `Authorization` header.';
+
+
+--
+-- Name: modify_survey_answers(integer[], jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.modify_survey_answers(response_ids integer[], answers jsonb) RETURNS SETOF public.survey_responses
+    LANGUAGE sql
+    AS $$
+    update 
+      survey_responses 
+    set data = data || answers - (
+      select 
+        array_agg(form_elements.id::text)
+      from form_elements
+      inner join
+        form_element_types
+      on
+        form_element_types.component_name = form_elements.type_id
+      where
+        (
+          form_element_types.allow_admin_updates = false or 
+          form_element_types.is_input = false
+        ) and
+        form_elements.form_id = (
+          select 
+            id 
+          from 
+            forms 
+          where 
+            forms.survey_id = (
+              select survey_id from survey_responses where survey_responses.id = any(response_ids) limit 1
+            )
+          limit 1
+        )
+    )
+    where survey_responses.id = any(response_ids)
+    returning survey_responses.*;
+  $$;
 
 
 --
@@ -8317,6 +8384,20 @@ Admins can use this function to hide the contents of a message. Message will sti
 
 
 --
+-- Name: set_survey_response_last_updated_by(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_survey_response_last_updated_by() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  BEGIN
+    NEW.last_updated_by_id = nullif(current_setting('session.user_id', TRUE), '')::integer;
+    RETURN NEW;
+  END
+$$;
+
+
+--
 -- Name: set_topic_locked(integer, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8716,6 +8797,17 @@ CREATE FUNCTION public.survey_responses_account_email(r public.survey_responses)
 
 
 --
+-- Name: survey_responses_last_updated_by_email(public.survey_responses); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.survey_responses_last_updated_by_email(r public.survey_responses) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select canonical_email from users where users.id = r.last_updated_by_id;
+$$;
+
+
+--
 -- Name: survey_validation_info(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8731,6 +8823,17 @@ CREATE FUNCTION public.survey_validation_info(survey_id integer) RETURNS public.
 --
 
 COMMENT ON FUNCTION public.survey_validation_info(survey_id integer) IS '@omit';
+
+
+--
+-- Name: surveys_archived_response_count(public.surveys); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.surveys_archived_response_count(survey public.surveys) RETURNS integer
+    LANGUAGE sql STABLE
+    AS $$
+    select count(*)::int from survey_responses where survey_id = survey.id and is_draft = false and archived = true;
+$$;
 
 
 --
@@ -8764,6 +8867,17 @@ COMMENT ON FUNCTION public.surveys_invited_groups(survey public.surveys) IS '
 
 
 --
+-- Name: surveys_is_spatial(public.surveys); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.surveys_is_spatial(s public.surveys) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+    select count(id) > 0 from form_elements inner join form_element_types on form_element_types.component_name = form_elements.type_id where form_id = (select id from forms where survey_id = s.id) and form_element_types.is_spatial = true
+  $$;
+
+
+--
 -- Name: surveys_is_template(public.surveys); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8781,7 +8895,7 @@ CREATE FUNCTION public.surveys_is_template(survey public.surveys) RETURNS boolea
 CREATE FUNCTION public.surveys_practice_response_count(survey public.surveys) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(*)::int from survey_responses where survey_id = survey.id and is_draft = false and is_practice = true;
+    select count(*)::int from survey_responses where survey_id = survey.id and is_draft = false and is_practice = true and archived = false;
 $$;
 
 
@@ -8792,7 +8906,7 @@ $$;
 CREATE FUNCTION public.surveys_submitted_response_count(survey public.surveys) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(*)::int from survey_responses where survey_id = survey.id and is_draft = false and is_practice = false;
+    select count(*)::int from survey_responses where survey_id = survey.id and is_draft = false and is_practice = false and archived = false;
 $$;
 
 
@@ -8872,6 +8986,17 @@ CREATE FUNCTION public.toggle_forum_posting_ban("userId" integer, "projectId" in
 --
 
 COMMENT ON FUNCTION public.toggle_forum_posting_ban("userId" integer, "projectId" integer) IS 'Ban a user from posting in the discussion forum';
+
+
+--
+-- Name: toggle_responses_practice(integer[], boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.toggle_responses_practice(ids integer[], "isPractice" boolean) RETURNS SETOF public.survey_responses
+    LANGUAGE sql
+    AS $$
+    update survey_responses set is_practice = "isPractice" where id = any(ids) returning survey_responses.*;
+$$;
 
 
 --
@@ -10273,7 +10398,8 @@ CREATE TABLE public.survey_consent_documents (
     id integer NOT NULL,
     form_element_id integer NOT NULL,
     version integer NOT NULL,
-    url text NOT NULL
+    url text NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
 
@@ -11589,6 +11715,13 @@ CREATE TRIGGER _001_unnest_survey_response_sketches_trigger BEFORE INSERT OR UPD
 
 
 --
+-- Name: survey_responses _002_set_survey_response_last_updated_by; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER _002_set_survey_response_last_updated_by BEFORE UPDATE ON public.survey_responses FOR EACH ROW EXECUTE FUNCTION public.set_survey_response_last_updated_by();
+
+
+--
 -- Name: invite_emails _500_gql_insert_or_update_or_delete_project_invite_email; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -12581,6 +12714,14 @@ ALTER TABLE ONLY public.survey_response_network_addresses
 
 
 --
+-- Name: survey_responses survey_responses_last_updated_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.survey_responses
+    ADD CONSTRAINT survey_responses_last_updated_by_id_fkey FOREIGN KEY (last_updated_by_id) REFERENCES public.users(id);
+
+
+--
 -- Name: survey_responses survey_responses_survey_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13273,6 +13414,19 @@ CREATE POLICY sprites_read ON public.sprites FOR SELECT USING (true);
 
 
 --
+-- Name: survey_consent_documents; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.survey_consent_documents ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: survey_consent_documents survey_consent_documents_admin_access; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY survey_consent_documents_admin_access ON public.survey_consent_documents USING (public.session_is_admin(public.project_id_from_field_id(form_element_id)));
+
+
+--
 -- Name: survey_invited_groups; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13341,7 +13495,11 @@ CREATE POLICY survey_responses_select ON public.survey_responses FOR SELECT TO s
 -- Name: survey_responses survey_responses_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY survey_responses_update ON public.survey_responses FOR UPDATE TO seasketch_user USING (public.it_me(user_id)) WITH CHECK (public.it_me(user_id));
+CREATE POLICY survey_responses_update ON public.survey_responses FOR UPDATE TO seasketch_user USING ((public.it_me(user_id) OR public.session_is_admin(( SELECT surveys.project_id
+   FROM public.surveys
+  WHERE (surveys.id = survey_responses.survey_id))))) WITH CHECK ((public.it_me(user_id) OR public.session_is_admin(( SELECT surveys.project_id
+   FROM public.surveys
+  WHERE (surveys.id = survey_responses.survey_id)))));
 
 
 --
@@ -13747,13 +13905,6 @@ REVOKE ALL ON FUNCTION public.spheroid_in(cstring) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.spheroid_out(public.spheroid) FROM PUBLIC;
-
-
---
--- Name: FUNCTION gen_random_uuid(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.gen_random_uuid() FROM PUBLIC;
 
 
 --
@@ -14586,17 +14737,53 @@ GRANT ALL ON FUNCTION public.approve_participant("projectId" integer, "userId" i
 
 
 --
--- Name: FUNCTION armor(bytea); Type: ACL; Schema: public; Owner: -
+-- Name: TABLE survey_responses; Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.armor(bytea) FROM PUBLIC;
+GRANT SELECT,DELETE ON TABLE public.survey_responses TO seasketch_user;
 
 
 --
--- Name: FUNCTION armor(bytea, text[], text[]); Type: ACL; Schema: public; Owner: -
+-- Name: COLUMN survey_responses.data; Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.armor(bytea, text[], text[]) FROM PUBLIC;
+GRANT UPDATE(data) ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: COLUMN survey_responses.is_draft; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_draft) ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: COLUMN survey_responses.updated_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(updated_at) ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: COLUMN survey_responses.is_practice; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_practice) ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: COLUMN survey_responses.archived; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(archived) ON TABLE public.survey_responses TO seasketch_user;
+
+
+--
+-- Name: FUNCTION archive_responses(ids integer[], "makeArchived" boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boolean) TO seasketch_user;
 
 
 --
@@ -15487,27 +15674,6 @@ GRANT ALL ON FUNCTION public.create_survey_jump_rule("formElementId" integer, "j
 
 
 --
--- Name: TABLE survey_responses; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,DELETE ON TABLE public.survey_responses TO seasketch_user;
-
-
---
--- Name: COLUMN survey_responses.data; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(data) ON TABLE public.survey_responses TO seasketch_user;
-
-
---
--- Name: COLUMN survey_responses.is_draft; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(is_draft) ON TABLE public.survey_responses TO seasketch_user;
-
-
---
 -- Name: FUNCTION create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15557,13 +15723,6 @@ GRANT UPDATE(locked) ON TABLE public.topics TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb) TO seasketch_user;
-
-
---
--- Name: FUNCTION crypt(text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.crypt(text, text) FROM PUBLIC;
 
 
 --
@@ -15638,27 +15797,6 @@ GRANT ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) TO anon;
 
 
 --
--- Name: FUNCTION dearmor(text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.dearmor(text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION decrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.decrypt(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION decrypt_iv(bytea, bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.decrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION delete_project(project_id integer, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15672,20 +15810,6 @@ GRANT ALL ON FUNCTION public.delete_project(project_id integer, OUT project publ
 
 REVOKE ALL ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) TO seasketch_user;
-
-
---
--- Name: FUNCTION digest(bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.digest(bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION digest(text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.digest(text, text) FROM PUBLIC;
 
 
 --
@@ -15766,20 +15890,6 @@ GRANT ALL ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" 
 --
 
 REVOKE ALL ON FUNCTION public.enablelongtransactions() FROM PUBLIC;
-
-
---
--- Name: FUNCTION encrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.encrypt(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION encrypt_iv(bytea, bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.encrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
 
 
 --
@@ -15865,27 +15975,6 @@ GRANT ALL ON FUNCTION public.forms_form_elements(f public.forms) TO anon;
 
 REVOKE ALL ON FUNCTION public.forms_logic_rules(form public.forms) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.forms_logic_rules(form public.forms) TO anon;
-
-
---
--- Name: FUNCTION gen_random_bytes(integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.gen_random_bytes(integer) FROM PUBLIC;
-
-
---
--- Name: FUNCTION gen_salt(text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.gen_salt(text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION gen_salt(text, integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.gen_salt(text, integer) FROM PUBLIC;
 
 
 --
@@ -16726,20 +16815,6 @@ GRANT ALL ON FUNCTION public.has_session() TO anon;
 
 
 --
--- Name: FUNCTION hmac(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.hmac(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION hmac(text, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION index(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17153,6 +17228,14 @@ GRANT ALL ON FUNCTION public.make_response_draft("responseId" integer) TO seaske
 
 
 --
+-- Name: FUNCTION make_responses_not_practice(ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.make_responses_not_practice(ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.make_responses_not_practice(ids integer[]) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION make_sketch_class(name text, project_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17182,6 +17265,14 @@ GRANT ALL ON FUNCTION public.mark_topic_as_read("topicId" integer) TO seasketch_
 
 REVOKE ALL ON FUNCTION public.me() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.me() TO anon;
+
+
+--
+-- Name: FUNCTION modify_survey_answers(response_ids integer[], answers jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], answers jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], answers jsonb) TO seasketch_user;
 
 
 --
@@ -17487,146 +17578,6 @@ REVOKE ALL ON FUNCTION public.pgis_geometry_polygonize_finalfn(internal) FROM PU
 --
 
 REVOKE ALL ON FUNCTION public.pgis_geometry_union_finalfn(internal) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_armor_headers(text, OUT key text, OUT value text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_armor_headers(text, OUT key text, OUT value text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_key_id(bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_key_id(bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt(bytea, bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt(bytea, bytea, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_encrypt(text, bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_encrypt(text, bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_encrypt(text, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_encrypt(text, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_encrypt_bytea(bytea, bytea); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_pub_encrypt_bytea(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_decrypt(bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_decrypt(bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_decrypt(bytea, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_decrypt(bytea, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_decrypt_bytea(bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_decrypt_bytea(bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_decrypt_bytea(bytea, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_decrypt_bytea(bytea, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_encrypt(text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_encrypt(text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_encrypt(text, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_encrypt(text, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_encrypt_bytea(bytea, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_encrypt_bytea(bytea, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION pgp_sym_encrypt_bytea(bytea, text, text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.pgp_sym_encrypt_bytea(bytea, text, text) FROM PUBLIC;
 
 
 --
@@ -18828,6 +18779,13 @@ GRANT ALL ON FUNCTION public.set_forum_order("forumIds" integer[]) TO seasketch_
 
 REVOKE ALL ON FUNCTION public.set_post_hidden_by_moderator("postId" integer, value boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.set_post_hidden_by_moderator("postId" integer, value boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION set_survey_response_last_updated_by(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_survey_response_last_updated_by() FROM PUBLIC;
 
 
 --
@@ -21787,6 +21745,14 @@ GRANT ALL ON FUNCTION public.survey_responses_account_email(r public.survey_resp
 
 
 --
+-- Name: FUNCTION survey_responses_last_updated_by_email(r public.survey_responses); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.survey_responses_last_updated_by_email(r public.survey_responses) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.survey_responses_last_updated_by_email(r public.survey_responses) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION survey_validation_info(survey_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21795,11 +21761,27 @@ GRANT ALL ON FUNCTION public.survey_validation_info(survey_id integer) TO anon;
 
 
 --
+-- Name: FUNCTION surveys_archived_response_count(survey public.surveys); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.surveys_archived_response_count(survey public.surveys) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.surveys_archived_response_count(survey public.surveys) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION surveys_invited_groups(survey public.surveys); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.surveys_invited_groups(survey public.surveys) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.surveys_invited_groups(survey public.surveys) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION surveys_is_spatial(s public.surveys); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.surveys_is_spatial(s public.surveys) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.surveys_is_spatial(s public.surveys) TO anon;
 
 
 --
@@ -21912,6 +21894,14 @@ GRANT ALL ON FUNCTION public.toggle_admin_access("projectId" integer, "userId" i
 
 REVOKE ALL ON FUNCTION public.toggle_forum_posting_ban("userId" integer, "projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.toggle_forum_posting_ban("userId" integer, "projectId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION toggle_responses_practice(ids integer[], "isPractice" boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.toggle_responses_practice(ids integer[], "isPractice" boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.toggle_responses_practice(ids integer[], "isPractice" boolean) TO seasketch_user;
 
 
 --
@@ -22429,6 +22419,13 @@ GRANT ALL ON TABLE public.projects_shared_basemaps TO seasketch_user;
 --
 
 GRANT SELECT ON TABLE public.sprite_images TO anon;
+
+
+--
+-- Name: TABLE survey_consent_documents; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.survey_consent_documents TO seasketch_user;
 
 
 --
