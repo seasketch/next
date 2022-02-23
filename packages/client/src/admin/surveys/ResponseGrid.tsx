@@ -19,6 +19,7 @@ import {
   useGlobalFilter,
   useRowSelect,
   usePagination,
+  Cell,
 } from "react-table";
 import { ChevronDownIcon, UploadIcon } from "@heroicons/react/outline";
 import DownloadIcon from "../../components/DownloadIcon";
@@ -28,7 +29,6 @@ import ResponsesAsExported from "./ResponsesAsExported";
 import { ConsentValue } from "../../formElements/Consent";
 import sortBy from "lodash.sortby";
 import { components } from "../../formElements";
-import { ErrorBoundary } from "@sentry/react";
 import React from "react";
 import DropdownButton, {
   DropdownOption,
@@ -40,6 +40,8 @@ import EditableResponseCell, {
   CellEditorContext,
   EditorsList,
 } from "./EditableResponseCell";
+import { areEqual, FixedSizeList } from "react-window";
+import AutoSizer from "react-virtualized-auto-sizer";
 
 interface Props {
   surveyId: number;
@@ -564,6 +566,14 @@ export default function ResponseGrid(props: Props) {
     []
   );
 
+  const getItemKey = useMemo(
+    () =>
+      function itemKeyFn(index: number, data: any) {
+        return rowData[index].id;
+      },
+    [rowData]
+  );
+
   const getRowId = useMemo(() => (row: any) => row.id, []);
 
   const globalFilter = useMemo(() => {
@@ -606,13 +616,13 @@ export default function ResponseGrid(props: Props) {
           // The header can use the table's getToggleAllRowsSelectedProps method
           // to render a checkbox
           Header: ({
-            getToggleAllPageRowsSelectedProps,
+            getToggleAllRowsSelectedProps,
           }: {
-            getToggleAllPageRowsSelectedProps: any;
+            getToggleAllRowsSelectedProps: any;
           }) => (
             <IndeterminateCheckbox
               className="-ml-1"
-              {...getToggleAllPageRowsSelectedProps()}
+              {...getToggleAllRowsSelectedProps()}
             />
           ),
           // The cell can use the individual row's getToggleRowSelectedProps method
@@ -641,12 +651,66 @@ export default function ResponseGrid(props: Props) {
     prepareRow,
     setGlobalFilter,
     selectedFlatRows,
+    totalColumnsWidth,
     state: { selectedRowIds },
   } = tableInstance;
 
   useEffect(() => {
     setGlobalFilter(tab);
   }, [tab]);
+
+  const RenderCellContents = React.memo(
+    ({ cell, isSelected }: { cell: Cell<any, any>; isSelected: boolean }) => {
+      return (
+        <div
+          className={`whitespace-nowrap px-2 py-1 inline-flex align-middle border truncate ${
+            isSelected
+              ? "border-blue-500 border-opacity-30 bg-blue-300 bg-opacity-5"
+              : "border-gray-200"
+          }`}
+          {...cell.getCellProps()}
+        >
+          {
+            // Render the cell contents
+            cell.render("Cell")
+          }
+        </div>
+      );
+    },
+    (prev, next) => {
+      return (
+        false &&
+        prev.isSelected === next.isSelected &&
+        areEqual(prev.cell.getCellProps(), next.cell.getCellProps())
+      );
+    }
+  );
+
+  const RenderRow = React.useCallback(
+    function RenderRow({ index, style }) {
+      const row = rows[index];
+      prepareRow(row);
+      return (
+        <div
+          {...row.getRowProps({ style })}
+          className={`inline-block ${
+            row.index % 2 ? "bg-gray-50" : "bg-white"
+          }`}
+        >
+          {
+            // Loop over the rows cells
+            row.cells.map((cell) => {
+              // Apply the cell props
+              return (
+                <RenderCellContents cell={cell} isSelected={row.isSelected} />
+              );
+            })
+          }
+        </div>
+      );
+    },
+    [prepareRow, rows, selectedRowIds]
+  );
 
   if (!data) {
     return null;
@@ -724,7 +788,7 @@ export default function ResponseGrid(props: Props) {
           },
         ]}
       />
-      <div className="overflow-x-auto text-sm flex-1 overflow-y-auto">
+      <div className="overflow-x-auto text-sm flex-1">
         {tab === "export" ? (
           <ResponsesAsExported
             rules={data.survey?.form?.logicRules || []}
@@ -733,95 +797,71 @@ export default function ResponseGrid(props: Props) {
           />
         ) : (
           <CellEditorContext.Provider value={{ editing: editingCell }}>
-            <div
-              {...getTableProps()}
-              className="border-collapse border-2 border-t-0 inline-block"
-            >
-              <div className="bg-gray-50">
-                {
-                  // Loop over the header rows
-                  headerGroups.map((headerGroup) => (
-                    // Apply the header row props
-                    <div {...headerGroup.getHeaderGroupProps()}>
-                      {
-                        // Loop over the headers in each row
-                        headerGroup.headers.map((column) => (
-                          // Apply the header cell props
-                          <div
-                            {...column.getHeaderProps()}
-                            {...column.getHeaderProps()}
-                            className="select-none group font-semibold inline-block truncate overflow-hidden text-gray-500 text-left border border-gray-200 whitespace-nowrap cursor-pointer hover:border-gray-300 relative"
-                          >
-                            <div
-                              className="py-2 px-2 truncate"
-                              {...column.getSortByToggleProps()}
-                            >
-                              <span className="text-gray-400 text-xs mr-1">
-                                {column.isSorted
-                                  ? column.isSortedDesc
-                                    ? " ▼"
-                                    : " ▲"
-                                  : ""}
-                              </span>
-                              {
-                                // Render the header
-                                column.render("Header")
-                              }
-                            </div>
-                            <div
-                              {...column.getResizerProps()}
-                              className={`w-1 bg-gray-50 inline-block h-full absolute right-0 top-0 ${
-                                column.isResizing ? "isResizing" : ""
-                              }`}
-                            />
-                          </div>
-                        ))
-                      }
-                    </div>
-                  ))
-                }
-              </div>
-              <div {...getTableBodyProps()} className="inline-block">
-                {
-                  // Loop over the table rows
-                  rows.map((row) => {
-                    // Prepare the row for display
-                    prepareRow(row);
-                    return (
-                      // Apply the row props
-                      <div
-                        {...row.getRowProps()}
-                        className={`inline-block ${
-                          row.index % 2 ? "bg-gray-50" : "bg-white"
-                        }`}
-                      >
-                        {
-                          // Loop over the rows cells
-                          row.cells.map((cell) => {
-                            // Apply the cell props
-                            return (
+            <AutoSizer disableWidth={true}>
+              {({ height }) => (
+                <div
+                  {...getTableProps()}
+                  className="border-collapse border-2 border-t-0 inline-block"
+                  style={{ height }}
+                >
+                  <div className="bg-gray-50">
+                    {
+                      // Loop over the header rows
+                      headerGroups.map((headerGroup) => (
+                        // Apply the header row props
+                        <div {...headerGroup.getHeaderGroupProps()}>
+                          {
+                            // Loop over the headers in each row
+                            headerGroup.headers.map((column) => (
+                              // Apply the header cell props
                               <div
-                                className={`whitespace-nowrap px-2 py-1 inline-flex align-middle border truncate ${
-                                  row.isSelected
-                                    ? "border-blue-500 border-opacity-30 bg-blue-300 bg-opacity-5"
-                                    : "border-gray-200"
-                                }`}
-                                {...cell.getCellProps()}
+                                {...column.getHeaderProps()}
+                                {...column.getHeaderProps()}
+                                className="select-none group font-semibold inline-block truncate overflow-hidden text-gray-500 text-left border border-gray-200 whitespace-nowrap cursor-pointer hover:border-gray-300 relative"
                               >
-                                {
-                                  // Render the cell contents
-                                  cell.render("Cell")
-                                }
+                                <div
+                                  className="py-2 px-2 truncate"
+                                  {...column.getSortByToggleProps()}
+                                >
+                                  <span className="text-gray-400 text-xs mr-1">
+                                    {column.isSorted
+                                      ? column.isSortedDesc
+                                        ? " ▼"
+                                        : " ▲"
+                                      : ""}
+                                  </span>
+                                  {
+                                    // Render the header
+                                    column.render("Header")
+                                  }
+                                </div>
+                                <div
+                                  {...column.getResizerProps()}
+                                  className={`w-1 bg-gray-50 inline-block h-full absolute right-0 top-0 ${
+                                    column.isResizing ? "isResizing" : ""
+                                  }`}
+                                />
                               </div>
-                            );
-                          })
-                        }
-                      </div>
-                    );
-                  })
-                }
-              </div>
-            </div>
+                            ))
+                          }
+                        </div>
+                      ))
+                    }
+                  </div>
+                  <div {...getTableBodyProps()} className="block">
+                    <FixedSizeList
+                      height={height - 38}
+                      itemCount={rows.length}
+                      itemSize={35}
+                      width={totalColumnsWidth}
+                      itemKey={getItemKey}
+                    >
+                      {RenderRow}
+                    </FixedSizeList>
+                  </div>
+                </div>
+              )}
+            </AutoSizer>
           </CellEditorContext.Provider>
         )}
       </div>
