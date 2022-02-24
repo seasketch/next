@@ -683,6 +683,38 @@ type ConfirmProjectInviteWithVerifiedEmailPayload {
   query: Query
 }
 
+"""All input for the `copyAppearance` mutation."""
+input CopyAppearanceInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  copyFromId: Int
+  formElementId: Int
+}
+
+"""The output of our `copyAppearance` mutation."""
+type CopyAppearancePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  formElement: FormElement
+
+  """An edge for our `FormElement`. May be used by Relay 1."""
+  formElementEdge(
+    """The method to use when ordering `FormElement`."""
+    orderBy: [FormElementsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormElementsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the create `Basemap` mutation."""
 input CreateBasemapInput {
   """The `Basemap` to be created by this mutation."""
@@ -4200,6 +4232,27 @@ type FormElement implements Node {
   layout: FormElementLayout
 
   """
+  IDs for basemaps that should be included in the map view if a map layout is selected
+  """
+  mapBasemaps: [Int]
+
+  """
+  If using a map-based layout, can be used to set the default starting point of the map
+  
+  See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+  ```json
+  {
+    "center": [-73.5804, 45.53483],
+    "pitch": 60,
+    "bearing": -60,
+    "zoom": 10
+  }
+  ```
+  
+  """
+  mapCameraOptions: JSON
+
+  """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
@@ -4337,6 +4390,27 @@ input FormElementInput {
   layout: FormElementLayout
 
   """
+  IDs for basemaps that should be included in the map view if a map layout is selected
+  """
+  mapBasemaps: [Int]
+
+  """
+  If using a map-based layout, can be used to set the default starting point of the map
+  
+  See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+  ```json
+  {
+    "center": [-73.5804, 45.53483],
+    "pitch": 60,
+    "bearing": -60,
+    "zoom": 10
+  }
+  ```
+  
+  """
+  mapCameraOptions: JSON
+
+  """
   Determines order of field display. Clients should display fields in ascending 
   order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
   update.
@@ -4442,6 +4516,27 @@ input FormElementPatch {
   layout: FormElementLayout
 
   """
+  IDs for basemaps that should be included in the map view if a map layout is selected
+  """
+  mapBasemaps: [Int]
+
+  """
+  If using a map-based layout, can be used to set the default starting point of the map
+  
+  See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+  ```json
+  {
+    "center": [-73.5804, 45.53483],
+    "pitch": 60,
+    "bearing": -60,
+    "zoom": 10
+  }
+  ```
+  
+  """
+  mapCameraOptions: JSON
+
+  """
   Determines order of field display. Clients should display fields in ascending 
   order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
   update.
@@ -4520,6 +4615,13 @@ type FormElementType implements Node {
 
   """These elements can only be added to a form once."""
   isSingleUseOnly: Boolean!
+
+  """
+  Indicates if the element type is a spatial data input. Components that
+  implement these types are expected to render their own map (in contrast with
+  elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which
+  expect the SurveyApp component to render a map for them.
+  """
   isSpatial: Boolean!
 
   """
@@ -5882,6 +5984,18 @@ type Mutation {
     """
     input: ConfirmProjectInviteWithVerifiedEmailInput!
   ): ConfirmProjectInviteWithVerifiedEmailPayload
+
+  """
+  Copies appearance settings like layout and background_image from one form
+  element to another. Useful when initializing custom appearance on an element
+  from the defaults set by a previous question.
+  """
+  copyAppearance(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CopyAppearanceInput!
+  ): CopyAppearancePayload
 
   """Creates a single `Basemap`."""
   createBasemap(

@@ -81,6 +81,8 @@ fragment FormElementDetails on FormElement {
   backgroundWidth
   backgroundHeight
   subordinateTo
+  mapBasemaps
+  mapCameraOptions
 }
 
 fragment SketchClassDetails on SketchClass {
@@ -471,6 +473,7 @@ mutation clearFormElementStyle($id: Int!) {
       unsplashAuthorUrl
       textVariant
       secondaryColor
+      layout
     }
   }
 }
@@ -724,6 +727,42 @@ mutation modifyAnswers($responseIds: [Int]!, $answers: JSON) {
       data
       updatedAt
       lastUpdatedByEmail
+    }
+  }
+}
+
+mutation copyAppearance($id: Int!, $copyFrom: Int!) {
+  copyAppearance(input: { formElementId: $id, copyFromId: $copyFrom }) {
+    formElement {
+      id
+      backgroundImage
+      backgroundColor
+      secondaryColor
+      backgroundPalette
+      unsplashAuthorName
+      unsplashAuthorUrl
+      backgroundHeight
+      backgroundWidth
+      layout
+      textVariant
+    }
+  }
+}
+
+mutation updateFormElementBasemaps(
+  $id: Int!
+  $mapBasemaps: [Int]
+  $mapCameraOptions: JSON
+) {
+  updateFormElement(
+    input: {
+      id: $id
+      patch: { mapBasemaps: $mapBasemaps, mapCameraOptions: $mapCameraOptions }
+    }
+  ) {
+    formElement {
+      id
+      mapBasemaps
     }
   }
 }

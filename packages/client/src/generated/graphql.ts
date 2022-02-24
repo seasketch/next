@@ -591,6 +591,38 @@ export type ConfirmProjectInviteWithVerifiedEmailPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `copyAppearance` mutation. */
+export type CopyAppearanceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  copyFromId?: Maybe<Scalars['Int']>;
+  formElementId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `copyAppearance` mutation. */
+export type CopyAppearancePayload = {
+  __typename?: 'CopyAppearancePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formElement?: Maybe<FormElement>;
+  /** An edge for our `FormElement`. May be used by Relay 1. */
+  formElementEdge?: Maybe<FormElementsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `copyAppearance` mutation. */
+export type CopyAppearancePayloadFormElementEdgeArgs = {
+  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+};
+
 /** All input for the create `Basemap` mutation. */
 export type CreateBasemapInput = {
   /** The `Basemap` to be created by this mutation. */
@@ -3566,6 +3598,22 @@ export type FormElement = Node & {
   jumpToId?: Maybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
   layout?: Maybe<FormElementLayout>;
+  /** IDs for basemaps that should be included in the map view if a map layout is selected */
+  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * If using a map-based layout, can be used to set the default starting point of the map
+   *
+   * See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+   * ```json
+   * {
+   *   "center": [-73.5804, 45.53483],
+   *   "pitch": 60,
+   *   "bearing": -60,
+   *   "zoom": 10
+   * }
+   * ```
+   */
+  mapCameraOptions?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -3659,6 +3707,22 @@ export type FormElementInput = {
   jumpToId?: Maybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
   layout?: Maybe<FormElementLayout>;
+  /** IDs for basemaps that should be included in the map view if a map layout is selected */
+  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * If using a map-based layout, can be used to set the default starting point of the map
+   *
+   * See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+   * ```json
+   * {
+   *   "center": [-73.5804, 45.53483],
+   *   "pitch": 60,
+   *   "bearing": -60,
+   *   "zoom": 10
+   * }
+   * ```
+   */
+  mapCameraOptions?: Maybe<Scalars['JSON']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
@@ -3733,6 +3797,22 @@ export type FormElementPatch = {
   jumpToId?: Maybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
   layout?: Maybe<FormElementLayout>;
+  /** IDs for basemaps that should be included in the map view if a map layout is selected */
+  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * If using a map-based layout, can be used to set the default starting point of the map
+   *
+   * See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+   * ```json
+   * {
+   *   "center": [-73.5804, 45.53483],
+   *   "pitch": 60,
+   *   "bearing": -60,
+   *   "zoom": 10
+   * }
+   * ```
+   */
+  mapCameraOptions?: Maybe<Scalars['JSON']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
@@ -3779,6 +3859,12 @@ export type FormElementType = Node & {
   isRequiredForSurveys: Scalars['Boolean'];
   /** These elements can only be added to a form once. */
   isSingleUseOnly: Scalars['Boolean'];
+  /**
+   * Indicates if the element type is a spatial data input. Components that
+   * implement these types are expected to render their own map (in contrast with
+   * elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which
+   * expect the SurveyApp component to render a map for them.
+   */
   isSpatial: Scalars['Boolean'];
   /** If true, the element type should only be added to forms related to a survey. */
   isSurveysOnly: Scalars['Boolean'];
@@ -4964,6 +5050,12 @@ export type Mutation = {
    * wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
    */
   confirmProjectInviteWithVerifiedEmail?: Maybe<ConfirmProjectInviteWithVerifiedEmailPayload>;
+  /**
+   * Copies appearance settings like layout and background_image from one form
+   * element to another. Useful when initializing custom appearance on an element
+   * from the defaults set by a previous question.
+   */
+  copyAppearance?: Maybe<CopyAppearancePayload>;
   /** Creates a single `Basemap`. */
   createBasemap?: Maybe<CreateBasemapPayload>;
   /** Creates a single `CommunityGuideline`. */
@@ -5467,6 +5559,12 @@ export type MutationConfirmProjectInviteWithSurveyTokenArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationConfirmProjectInviteWithVerifiedEmailArgs = {
   input: ConfirmProjectInviteWithVerifiedEmailInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCopyAppearanceArgs = {
+  input: CopyAppearanceInput;
 };
 
 
@@ -13232,7 +13330,7 @@ export type AddFormElementTypeDetailsFragment = (
 
 export type FormElementDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
@@ -13594,7 +13692,7 @@ export type ClearFormElementStyleMutation = (
     { __typename?: 'ClearFormElementStylePayload' }
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'backgroundColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'textVariant' | 'secondaryColor'>
+      & Pick<FormElement, 'id' | 'backgroundColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'textVariant' | 'secondaryColor' | 'layout'>
     )> }
   )> }
 );
@@ -13867,6 +13965,41 @@ export type ModifyAnswersMutation = (
   )> }
 );
 
+export type CopyAppearanceMutationVariables = Exact<{
+  id: Scalars['Int'];
+  copyFrom: Scalars['Int'];
+}>;
+
+
+export type CopyAppearanceMutation = (
+  { __typename?: 'Mutation' }
+  & { copyAppearance?: Maybe<(
+    { __typename?: 'CopyAppearancePayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'backgroundImage' | 'backgroundColor' | 'secondaryColor' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundHeight' | 'backgroundWidth' | 'layout' | 'textVariant'>
+    )> }
+  )> }
+);
+
+export type UpdateFormElementBasemapsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+  mapCameraOptions?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateFormElementBasemapsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'mapBasemaps'>
+    )> }
+  )> }
+);
+
 export type SurveyAppRuleFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
@@ -13878,7 +14011,7 @@ export type SurveyAppRuleFragment = (
 
 export type SurveyAppFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
@@ -14779,6 +14912,8 @@ export const FormElementDetailsFragmentDoc = gql`
   backgroundWidth
   backgroundHeight
   subordinateTo
+  mapBasemaps
+  mapCameraOptions
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
 export const LogicRuleDetailsFragmentDoc = gql`
@@ -14911,6 +15046,8 @@ export const SurveyAppFormElementFragmentDoc = gql`
   backgroundHeight
   jumpToId
   subordinateTo
+  mapBasemaps
+  mapCameraOptions
 }
     ${SketchClassDetailsFragmentDoc}`;
 export const SurveyAppSurveyFragmentDoc = gql`
@@ -19044,6 +19181,7 @@ export const ClearFormElementStyleDocument = gql`
       unsplashAuthorUrl
       textVariant
       secondaryColor
+      layout
     }
   }
 }
@@ -19629,6 +19767,92 @@ export function useModifyAnswersMutation(baseOptions?: Apollo.MutationHookOption
 export type ModifyAnswersMutationHookResult = ReturnType<typeof useModifyAnswersMutation>;
 export type ModifyAnswersMutationResult = Apollo.MutationResult<ModifyAnswersMutation>;
 export type ModifyAnswersMutationOptions = Apollo.BaseMutationOptions<ModifyAnswersMutation, ModifyAnswersMutationVariables>;
+export const CopyAppearanceDocument = gql`
+    mutation copyAppearance($id: Int!, $copyFrom: Int!) {
+  copyAppearance(input: {formElementId: $id, copyFromId: $copyFrom}) {
+    formElement {
+      id
+      backgroundImage
+      backgroundColor
+      secondaryColor
+      backgroundPalette
+      unsplashAuthorName
+      unsplashAuthorUrl
+      backgroundHeight
+      backgroundWidth
+      layout
+      textVariant
+    }
+  }
+}
+    `;
+export type CopyAppearanceMutationFn = Apollo.MutationFunction<CopyAppearanceMutation, CopyAppearanceMutationVariables>;
+
+/**
+ * __useCopyAppearanceMutation__
+ *
+ * To run a mutation, you first call `useCopyAppearanceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCopyAppearanceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [copyAppearanceMutation, { data, loading, error }] = useCopyAppearanceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      copyFrom: // value for 'copyFrom'
+ *   },
+ * });
+ */
+export function useCopyAppearanceMutation(baseOptions?: Apollo.MutationHookOptions<CopyAppearanceMutation, CopyAppearanceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CopyAppearanceMutation, CopyAppearanceMutationVariables>(CopyAppearanceDocument, options);
+      }
+export type CopyAppearanceMutationHookResult = ReturnType<typeof useCopyAppearanceMutation>;
+export type CopyAppearanceMutationResult = Apollo.MutationResult<CopyAppearanceMutation>;
+export type CopyAppearanceMutationOptions = Apollo.BaseMutationOptions<CopyAppearanceMutation, CopyAppearanceMutationVariables>;
+export const UpdateFormElementBasemapsDocument = gql`
+    mutation updateFormElementBasemaps($id: Int!, $mapBasemaps: [Int], $mapCameraOptions: JSON) {
+  updateFormElement(
+    input: {id: $id, patch: {mapBasemaps: $mapBasemaps, mapCameraOptions: $mapCameraOptions}}
+  ) {
+    formElement {
+      id
+      mapBasemaps
+    }
+  }
+}
+    `;
+export type UpdateFormElementBasemapsMutationFn = Apollo.MutationFunction<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>;
+
+/**
+ * __useUpdateFormElementBasemapsMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormElementBasemapsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormElementBasemapsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormElementBasemapsMutation, { data, loading, error }] = useUpdateFormElementBasemapsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      mapBasemaps: // value for 'mapBasemaps'
+ *      mapCameraOptions: // value for 'mapCameraOptions'
+ *   },
+ * });
+ */
+export function useUpdateFormElementBasemapsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>(UpdateFormElementBasemapsDocument, options);
+      }
+export type UpdateFormElementBasemapsMutationHookResult = ReturnType<typeof useUpdateFormElementBasemapsMutation>;
+export type UpdateFormElementBasemapsMutationResult = Apollo.MutationResult<UpdateFormElementBasemapsMutation>;
+export type UpdateFormElementBasemapsMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -20856,6 +21080,8 @@ export const namedOperations = {
     toggleResponsesPractice: 'toggleResponsesPractice',
     archiveResponses: 'archiveResponses',
     modifyAnswers: 'modifyAnswers',
+    copyAppearance: 'copyAppearance',
+    updateFormElementBasemaps: 'updateFormElementBasemaps',
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',

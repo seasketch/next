@@ -3145,6 +3145,53 @@ More details on how to handle invites can be found [on the wiki](https://github.
 
 
 --
+-- Name: copy_appearance(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_appearance(form_element_id integer, copy_from_id integer) RETURNS public.form_elements
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      return_value form_elements;
+    begin
+      if true or session_is_admin((project_id_for_form_id((select form_id from form_elements where id = form_element_id)))) then
+        update 
+          form_elements dst
+        set background_image = f.background_image,
+        background_color = f.background_color,
+        secondary_color = f.secondary_color,
+        background_palette = f.background_palette,
+        unsplash_author_name = f.unsplash_author_name,
+        unsplash_author_url = f.unsplash_author_url,
+        background_height = f.background_height,
+        background_width = f.background_width,
+        layout = f.layout,
+        text_variant = f.text_variant
+        from
+          form_elements f
+        where
+          f.id = copy_from_id and
+          dst.id = form_element_id
+        returning
+          *
+        into return_value;
+        
+        return return_value;      
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION copy_appearance(form_element_id integer, copy_from_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id integer) IS 'Copies appearance settings like layout and background_image from one form element to another. Useful when initializing custom appearance on an element from the defaults set by a previous question.';
+
+
+--
 -- Name: create_basemap_acl(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4749,6 +4796,13 @@ COMMENT ON COLUMN public.form_element_types.is_surveys_only IS 'If true, the ele
 --
 
 COMMENT ON COLUMN public.form_element_types.is_single_use_only IS 'These elements can only be added to a form once.';
+
+
+--
+-- Name: COLUMN form_element_types.is_spatial; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_element_types.is_spatial IS 'Indicates if the element type is a spatial data input. Components that implement these types are expected to render their own map (in contrast with elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which expect the SurveyApp component to render a map for them.';
 
 
 --
@@ -15366,6 +15420,14 @@ REVOKE ALL ON FUNCTION public.contains_2d(public.box2df, public.geometry) FROM P
 --
 
 REVOKE ALL ON FUNCTION public.contains_2d(public.geometry, public.box2df) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION copy_appearance(form_element_id integer, copy_from_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id integer) TO seasketch_user;
 
 
 --

@@ -48,6 +48,7 @@ import bbox from "@turf/bbox";
 import { LngLatBoundsLike } from "mapbox-gl";
 import SurveyNavigationButton from "./SurveyNavigationButtons";
 import languages from "../lang/supported";
+import SurveyContextualMap from "./SurveyContextualMap";
 
 require("./surveys.css");
 
@@ -554,6 +555,17 @@ function SurveyApp() {
                 }}
               />
             )} */}
+            {(style.layout === FormElementLayout.MapSidebarLeft ||
+              style.layout === FormElementLayout.MapSidebarRight) &&
+              !formElement.current.type?.isSpatial && (
+                <SurveyContextualMap
+                  basemaps={
+                    (formElement.current?.mapBasemaps as
+                      | number[]
+                      | undefined) || []
+                  }
+                />
+              )}
           </SurveyAppLayout>
           <Modal
             open={practiceModalOpen}

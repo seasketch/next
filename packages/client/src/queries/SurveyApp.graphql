@@ -49,6 +49,8 @@ fragment SurveyAppFormElement on FormElement {
   backgroundHeight
   jumpToId
   subordinateTo
+  mapBasemaps
+  mapCameraOptions
 }
 
 fragment SurveyAppSurvey on Survey {

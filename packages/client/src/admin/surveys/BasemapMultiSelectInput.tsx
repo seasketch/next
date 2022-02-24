@@ -57,7 +57,7 @@ export default function BasemapMultiSelectInput({
       </p>
       <div className="relative space-y-1 py-2">
         {(data?.projectBySlug?.basemaps || []).map((basemap, i) => (
-          <div className="flex items-center space-x-2">
+          <div key={basemap.id} className="flex items-center space-x-2">
             <img src={basemap.thumbnail} className="w-8 h-8 rounded shadow" />
             <div className="flex-1">{basemap.name}</div>
             <Switch
@@ -69,7 +69,7 @@ export default function BasemapMultiSelectInput({
             />
           </div>
         ))}
-        <p className="h-10 py-2 text-gray-500 italic">
+        <p className="h-6 py-2 text-gray-500 italic text-xs">
           {value?.length === 0 && (
             <Trans ns="admin:surveys">
               If none are selected, the first basemap in the list will be used.

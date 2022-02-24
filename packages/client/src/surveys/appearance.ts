@@ -4,6 +4,7 @@ import {
   FormElementLayout,
   FormElementDetailsFragment,
   Maybe,
+  FormElementFullDetailsFragment,
 } from "../generated/graphql";
 import { colord, extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
@@ -19,6 +20,7 @@ export type FormElementStyleProps = Pick<
   | "layout"
   | "textVariant"
   | "secondaryColor"
+  | "backgroundPalette"
 > & { type?: { isSpatial: boolean } | null };
 export type ComputedFormElementStyle = {
   backgroundColor: string;
@@ -33,6 +35,7 @@ export type ComputedFormElementStyle = {
   isSmall: boolean;
   unsplashAuthorName?: string;
   unsplashAuthorUrl?: string;
+  backgroundPalette?: string[];
 };
 
 export const defaultStyle = {
@@ -76,38 +79,19 @@ export function useCurrentStyle(
     return defaultStyle;
   }
   const index = formElements.indexOf(current) || 0;
-  let style: FormElementStyleProps = formElements[0];
-  if (formElements[0].unsplashAuthorName) {
-    unsplashAuthorName = formElements[0].unsplashAuthorName!;
-    unsplashAuthorUrl = formElements[0].unsplashAuthorUrl!;
-  }
 
-  for (var i = 1; i <= index; i++) {
-    if (formElements[i] && formElements[i].backgroundImage) {
-      style = {
-        backgroundColor:
-          formElements[i].backgroundColor ||
-          style.backgroundColor ||
-          defaultStyle.backgroundColor,
-        secondaryColor:
-          formElements[i].secondaryColor ||
-          style.secondaryColor ||
-          defaultStyle.secondaryColor,
-        textVariant:
-          formElements[i].textVariant ||
-          style.textVariant ||
-          defaultStyle.textVariant,
-        layout: formElements[i].layout || style.layout || defaultStyle.layout,
-        backgroundImage:
-          formElements[i].backgroundImage ||
-          style.backgroundImage ||
-          defaultStyle.backgroundImage,
-      };
-      if (formElements[i].unsplashAuthorName) {
-        unsplashAuthorName = formElements[i].unsplashAuthorName!;
-        unsplashAuthorUrl = formElements[i].unsplashAuthorUrl!;
-      }
-    }
+  const previouslyStyledElement = getPreviouslyStyledElement(
+    formElements,
+    index
+  );
+
+  let style: FormElementStyleProps = {
+    ...defaultStyle,
+    ...(index === 0 ? current : previouslyStyledElement),
+  };
+
+  if (current.layout || current.backgroundImage) {
+    style = { ...current };
   }
 
   const prevLayout = style.layout;
@@ -197,3 +181,13 @@ export function surveyBackground(
 }
 
 export const SurveyStyleContext = createContext(defaultStyle);
+
+export function getPreviouslyStyledElement(
+  sortedFormElements: FormElementFullDetailsFragment[],
+  index: number
+) {
+  return sortedFormElements
+    .slice(0, index)
+    .reverse()
+    .find((f) => f.layout || f.backgroundImage);
+}

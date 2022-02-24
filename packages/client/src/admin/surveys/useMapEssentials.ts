@@ -1,6 +1,6 @@
 import bbox from "@turf/bbox";
 import { BBox } from "geojson";
-import { LngLatBoundsLike, Map } from "mapbox-gl";
+import { CameraOptions, LngLatBoundsLike, Map } from "mapbox-gl";
 import { useEffect, useState } from "react";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useMapContext } from "../../dataLayers/MapContextManager";
@@ -23,11 +23,14 @@ export const defaultStartingBounds = [
 export default function useMapEssentials({
   bounds,
   filterBasemapIds,
+  cameraOptions,
 }: {
   /** Starting bounds of the map. If not provided will default to project region */
   bounds?: BBox;
   /** Limit basemaps to those with the provided IDs */
   filterBasemapIds?: number[];
+  /** Will take priority over bounds if set */
+  cameraOptions?: CameraOptions;
 }) {
   const onError = useGlobalErrorHandler();
   const { data } = useGetBasemapsAndRegionQuery({ onError });
