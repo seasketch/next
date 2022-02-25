@@ -583,8 +583,6 @@ Cypress.Commands.add("updateFormElements", (elementsToUpdate: object, fixtureAli
                 }
               }
             }
-            
-
           }
         }
       `,
