@@ -366,7 +366,8 @@ Cypress.Commands.add("createSurvey", (name: string, projectId: number, token: st
               formElements {
                 id,
                 type {
-                  componentName
+                  componentName, 
+                  isRequiredForSurveys
                 }
                 body,
                 typeId
@@ -649,6 +650,7 @@ Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
       }
       else {
         const elementsToDelete = data.form.formElements.filter(obj => {
+          console.log(data.form.formElements)
           return obj.type.isRequiredForSurveys === false
         })
           elementsToDelete.forEach((formElement) => {

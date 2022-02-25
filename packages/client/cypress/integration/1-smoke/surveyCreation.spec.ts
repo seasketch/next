@@ -2,7 +2,6 @@
 import { ProjectAccessControlSetting } from "../../../src/generated/graphql";
 import "cypress-localstorage-commands"
 
-
 let surveyId: any
 let authToken: any
 let formId: any
@@ -58,11 +57,11 @@ describe("Survey creation smoke test", () => {
     //    .its('response.body.data.createProject.project')
     //    .should('have.property', 'id')
     //})
-    //it ("Creates the survey", () => {
-    //  cy.wait("@createSurveyRequest")
-    //    .its('response.body.data.makeSurvey.survey')
-    //    .should('have.property', 'id')
-    //})
+    it ("Creates the survey", () => {
+      cy.wait("@createSurveyRequest")
+        .its('response.body.data.makeSurvey.survey.form.formElements.length')
+        .should('eq', 5)
+    })
     //it ("Updates the survey's isDisabled field", () => {
     //  cy.get("@surveyId").then((id) => {
     //    surveyId = id
@@ -98,26 +97,26 @@ describe("Survey creation smoke test", () => {
     //    })
     //  })
     //})
-    it ("Can update default form elements required by survey", () => {
-      cy.get('@formId').then((id) => {
-        formId = id
-         cy.get('@token').then((token) => {
-           authToken = token
-           cy.deleteFormElements(formId, authToken).then((resp) => {
-             const elementsToUpdate = []
-             resp.deleteFormElement.query.form.formElements.forEach(t => {
-               elementsToUpdate.push(t)
-             })
-             console.log(elementsToUpdate)
-             expect (elementsToUpdate.length).to.eq(2)
-             //cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId).then((resp) => {
-             //  //expect (resp.updateFormElement.query.form.formElements.length).to.eq(2)
-             //  //expect (resp.updateFormElement.query.form.formElements[0].body.content[0].content[0].text).to.eq("Welcome Ocean Users!")
-             //})
-           })
-         })
-       })
-    })
+    //it ("Can update default form elements required by survey", () => {
+    //  cy.get('@formId').then((id) => {
+    //    formId = id
+    //     cy.get('@token').then((token) => {
+    //       authToken = token
+    //       cy.deleteFormElements(formId, authToken).then((resp) => {
+    //         const elementsToUpdate = []
+    //         resp.deleteFormElement.query.form.formElements.forEach(t => {
+    //           elementsToUpdate.push(t)
+    //         })
+    //         console.log(elementsToUpdate)
+    //         expect (elementsToUpdate.length).to.eq(2)
+    //         //cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId).then((resp) => {
+    //         //  //expect (resp.updateFormElement.query.form.formElements.length).to.eq(2)
+    //         //  //expect (resp.updateFormElement.query.form.formElements[0].body.content[0].content[0].text).to.eq("Welcome Ocean Users!")
+    //         //})
+    //       })
+    //     })
+    //   })
+    //})
     //it ("Can update form with form elements", () => {
     //  cy.get('@formId').then((id) => {
     //    formId = id 
