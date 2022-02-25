@@ -125,9 +125,21 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": false,
-            "sketchClass": null
+            "type": {
+              "componentName": "WelcomeMessage",
+              "label": "Welcome Message",
+              "isInput": false,
+              "isSurveysOnly": true,
+              "isHidden": true,
+              "isSingleUseOnly": true,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 5902,
@@ -190,9 +202,23 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "Name",
+              "label": "Name",
+              "isInput": true,
+              "isSurveysOnly": true,
+              "isHidden": false,
+              "isSingleUseOnly": true,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 73,
@@ -230,9 +256,23 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "Email",
+              "label": "Email",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": true,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 74,
@@ -352,9 +392,25 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 75,
@@ -458,9 +514,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 76,
@@ -568,9 +640,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 77,
@@ -674,9 +762,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 78,
@@ -800,9 +904,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 79,
@@ -954,9 +1074,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "ComboBox",
+              "label": "Combo Box",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 80,
@@ -1120,9 +1256,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "ComboBox",
+              "label": "Combo Box",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 81,
@@ -1218,9 +1370,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 82,
@@ -1344,9 +1512,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 84,
@@ -1498,9 +1682,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "ComboBox",
+              "label": "Combo Box",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 85,
@@ -1572,9 +1772,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 83,
@@ -1654,9 +1870,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 86,
@@ -1720,9 +1952,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 87,
@@ -1826,9 +2074,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 88,
@@ -1924,9 +2188,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 89,
@@ -2022,9 +2302,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 90,
@@ -2124,9 +2420,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 91,
@@ -2222,9 +2534,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 92,
@@ -2308,9 +2636,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 93,
@@ -2618,9 +2962,25 @@
             "jumpToId": 112,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "ComboBox",
+              "label": "Combo Box",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 112,
@@ -2797,38 +3157,23 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": {
-              "id": 8,
-              "nodeId": "WyJza2V0Y2hfY2xhc3NlcyIsOF0=",
-              "projectId": 1441,
-              "name": "generated-form-element-112",
-              "geometryType": "POLYGON",
-              "allowMulti": false,
-              "isArchived": false,
-              "geoprocessingProjectUrl": null,
-              "geoprocessingClientUrl": null,
-              "geoprocessingClientName": null,
-              "mapboxGlStyle": null,
-              "formElementId": 112,
-              "project": {
-                "id": 1441
-              },
-              "formElement": {
-                "id": 112
-              },
-              "acl": {
-                "id": 8
-              },
-              "form": {
-                "id": 25
-              },
-              "canDigitize": true,
-              "sketchCount": "0",
-              "validChildren": []
-            },
             "isInput": true,
-            "sketchClass": {
-              "id": 8
+            "type": {
+              "componentName": "SpatialAccessPriorityInput",
+              "label": "Spatial Access Priority",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [],
+              "allowedLayouts": [
+                "MAP_SIDEBAR_LEFT",
+                "MAP_SIDEBAR_RIGHT"
+              ],
+              "isSpatial": true,
+              "sketchClassTemplateId": 4,
+              "isRequiredForSketchClasses": false
             }
           },
           {
@@ -2869,9 +3214,27 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": 112,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "Number",
+              "label": "Number",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "GREATER_THAN",
+                "LESS_THAN",
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 121,
@@ -2919,9 +3282,25 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": 112,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 122,
@@ -2958,16 +3337,30 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": 112,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "ShortText",
+              "label": "Short Text",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 98,
             "formId": 15,
             "isRequired": true,
             "exportId": "willing",
-            "position": 30,
+            "position": 29,
             "componentSettings": {},
             "typeId": "YesNo",
             "body": {
@@ -2997,16 +3390,31 @@
             "jumpToId": 106,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "YesNo",
+              "label": "Yes/No",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 99,
             "formId": 15,
             "isRequired": false,
             "exportId": "your_age",
-            "position": 31,
+            "position": 30,
             "componentSettings": {
               "max": 120,
               "min": 0,
@@ -3040,16 +3448,34 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "Number",
+              "label": "Number",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "GREATER_THAN",
+                "LESS_THAN",
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 100,
             "formId": 15,
             "isRequired": false,
             "exportId": "gender",
-            "position": 32,
+            "position": 31,
             "componentSettings": {
               "options": [
                 {
@@ -3094,16 +3520,32 @@
             "jumpToId": 101,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 101,
             "formId": 15,
             "isRequired": false,
             "exportId": "general_comments",
-            "position": 33,
+            "position": 32,
             "componentSettings": {
               "compact": true
             },
@@ -3135,16 +3577,30 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "TextArea",
+              "label": "Text Area",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 106,
             "formId": 15,
             "isRequired": false,
             "exportId": "save_screen",
-            "position": 34,
+            "position": 33,
             "componentSettings": {},
             "typeId": "SaveScreen",
             "body": {
@@ -3175,16 +3631,28 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": false,
-            "sketchClass": null
+            "type": {
+              "componentName": "SaveScreen",
+              "label": "Save Screen",
+              "isInput": false,
+              "isSurveysOnly": false,
+              "isHidden": true,
+              "isSingleUseOnly": true,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 53,
             "formId": 15,
             "isRequired": false,
             "exportId": "thank_you_for_respondingyour_par",
-            "position": 35,
+            "position": 34,
             "componentSettings": {
               "shareButtons": true,
               "promptToRespondAgain": true
@@ -3242,16 +3710,28 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
-            "sketchClassFk": null,
             "isInput": false,
-            "sketchClass": null
+            "type": {
+              "componentName": "ThankYou",
+              "label": "Thank You",
+              "isInput": false,
+              "isSurveysOnly": true,
+              "isHidden": true,
+              "isSingleUseOnly": true,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           },
           {
             "id": 5913,
             "formId": 15,
             "isRequired": false,
             "exportId": "guesthouse_name",
-            "position": 29,
+            "position": 37,
             "componentSettings": {},
             "typeId": "ShortText",
             "body": {
@@ -3281,12 +3761,27 @@
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": 112,
-            "sketchClassFk": null,
             "isInput": true,
-            "sketchClass": null
+            "type": {
+              "componentName": "ShortText",
+              "label": "Short Text",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            }
           }
         ]
       }
     }
   }
 }
+    

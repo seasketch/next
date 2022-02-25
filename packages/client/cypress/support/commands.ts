@@ -10,6 +10,7 @@ const jwt = require("jsonwebtoken");
 const users = require("../fixtures/users.json");
 const formElements = require("../fixtures/formElements.json")
 const formLogicRules = require("../fixtures/formLogicRules.json")
+const formLogicConditions = require("../fixtures/formLogicConditions.json")
 
 const AUTH0_CLIENT_ID = Cypress.env("auth0_client_id");
 const AUTH0_CLIENT_SECRET = Cypress.env("auth0_client_secret");
@@ -104,10 +105,22 @@ declare global {
         token: string
       );
 
+      deleteForm(
+        formId: number, 
+        token: string
+      )
+
       createFormElements(
         formId: number,
         surveyAlias: string,
         token: string
+      )
+
+      updateFormElements(
+        elementIds: object,
+        fixtureAlias: string,
+        token: string, 
+        formId: number
       )
 
       deleteFormElements(
@@ -115,17 +128,19 @@ declare global {
         token: string
       )
 
-      deleteForm(
-        formId: number, 
-        token: string
-      )
-
-      addFormLogic(
+      createFormLogicRules(
         formId: number,
         fixtureAlias: string,
         newIds: object, 
         token: string
       ) 
+
+      createFormLogicConditions(
+        formElementIds: object, 
+        fixtureAlias: string,
+        token: string, 
+        formId: number
+      )
     }
   } 
 }
@@ -527,6 +542,82 @@ Cypress.Commands.add("createFormElements", (formId: number, fixtureAlias: string
     })
   }
 })
+
+Cypress.Commands.add("updateFormElements", (elementsToUpdate: object, fixtureAlias: string, token: string, formId: number) => {
+  //elementIds are ids of form elements created at form inception that are required by survey. These need to be updated.
+  //initialize newElements array to store matching form elements from fixture
+  const newElements = []
+  const elements = formElements[fixtureAlias].data.form.formElements
+  //iterate over fixture to get form elements matching elements that need to be updated
+  elements.forEach((t) => {
+    if (t.typeId === "WelcomeMessage") {
+      newElements.push(t)
+    } else if (t.typeId === "SaveScreen") {
+      newElements.push(t)
+    }
+  })
+  //map over newElements array and replace id with form element ids from created form
+  newElements[0].id = elementsToUpdate[0][0].id
+  newElements[1].id = elementsToUpdate[0][1].id
+  console.log(elementsToUpdate)
+  console.log(newElements)
+  newElements.forEach((f) => {
+    console.log(f)
+    return cy
+    .mutation(
+      gql`
+        mutation CypressUpdateFormElements($input: UpdateFormElementInput!) {
+          updateFormElement(input: $input) {
+            formElement {
+              id
+              typeId
+              body
+            } 
+            query {
+              form (id: ${formId}) {
+                id,
+                formElements {
+                  id,
+                  typeId,
+                  body
+                }
+              }
+            }
+            
+
+          }
+        }
+      `,
+    { 
+      "input": {
+        "id": f.id,
+        "patch": {
+          "body": f.body,
+          "position": f.position,
+          "exportId": f.exportId,
+          "componentSettings": f.componentSettings,
+          "backgroundColor": f.backgroundColor,
+          "secondaryColor": f.secondaryColor,
+          "textVariant": f.textVariant,
+          "layout": f.layout,
+          "backgroundPalette": f.backgroundPalette,
+          "backgroundWidth": f.backgroundWidth,
+          "backgroundHeight": f.backgroundHeight,
+          "jumpToId": f.jumpToId,
+          "alternateLanguageSettings": f.alternateLanguageSettings,
+          "subordinateTo": f.subordinateTo
+        }
+      }
+     },
+    (token as any)
+  )
+  .then((data) => {
+    Cypress.log(data);
+    return data
+  })
+
+  })
+})
   
 
 Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
@@ -571,7 +662,9 @@ Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
                     query {
                       form (id: ${formId}) {
                         formElements {
-                          id
+                          id,
+                          typeId,
+                          body
                         }
                       }
                     }
@@ -589,6 +682,7 @@ Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
     })
   }
 })
+
 
   //Cypress.Commands.add("deleteForm", (formId: number, token:string) => {
   //  const deleteForm = 
@@ -617,40 +711,11 @@ Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
   //      cy.log(`Deleted form with id of ${formId}.`)
   //    })
 //
-Cypress.Commands.add("deleteForm", (formId: number, token: string) => {
-  if (!formId) {
-    throw new Error("Please check your form id.");
-  }
-  else {
-    return cy
-      .mutation(
-        gql`
-          mutation CypressDeleteForm($formId: Int!) {
-            deleteForm (input: {id: $formId}) {
-              form {
-                id
-                survey {
-                  project {
-                    slug
-                  }
-                }
-              }
-            }
-          }
-        `,
-      { formId }, 
-      (token as any)
-    ).then((data) => {
-      Cypress.log(data);
-      return data
-    })
-  }
-})
 
-
-
-Cypress.Commands.add("addFormLogic", (formId:number, fixtureAlias:string, newIds: object, token:string) => {
+Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string, newIds: object, token:string) => {
   const formLogic = formLogicRules[fixtureAlias].data.form.logicRules
+  console.log(newIds)
+  console.log(formLogic)
   formLogic.sort((a, b) => {
     if (a.jumpToId > b.jumpToId) return 1; 
     if (a.jumpToId < b.jumpToId) return -1; 
@@ -672,7 +737,9 @@ Cypress.Commands.add("addFormLogic", (formId:number, fixtureAlias:string, newIds
       t.jumpToId = newIds[21] + 1
     }
   })
-  
+  //let f = formLogic[1]
+  console.log(formLogic)
+ //
   formLogic.forEach((f) => {
     return cy
       .mutation(
@@ -707,11 +774,106 @@ Cypress.Commands.add("addFormLogic", (formId:number, fixtureAlias:string, newIds
         },
         (token as any),
       ).then((data) => {
+        console.log(data)
         Cypress.log(data);
-        return data
-    })
+      })
+    })//
   })
-})
+
+  Cypress.Commands.add("createFormLogicConditions", (formElementIds: object, fixtureAlias: string, token: string, formId: number) => {
+    console.log(formElementIds)
+    console.log(formId)
+    console.log(formLogicConditions[fixtureAlias].data.form.logicRules)
+    const conditions = formLogicConditions[fixtureAlias].data.form.logicRules
+    conditions.map((t) => {
+      if (t.conditions[0].subjectId === 74) {
+        t.conditions[0].subjectId = formElementIds[0]
+      }
+    })
+    conditions.forEach ((f) => {
+      console.log(f)
+      return cy
+        .mutation(
+          gql`
+            mutation CypressCreateFormLogicCondition($formLogicCondition:  FormLogicConditionInput!) {
+              createFormLogicCondition(input: {formLogicCondition: $formLogicCondition} )
+              {
+                formLogicCondition {
+                  id
+                }
+                query {
+                  form (id: ${formId}) {
+                    logicRules {
+                      formElementId,
+                      booleanOperator,
+                      jumpToId,
+                      command,
+                      position, 
+                      conditions {
+                        ruleId, 
+                        subjectId, 
+                        operator, 
+                        value
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          `,
+          { "formLogicCondition": {
+              "ruleId": f.conditions[0].ruleId,
+              "subjectId": f.conditions[0].subjectId,
+              "operator": f.conditions[0].operator,
+              "value": f.conditions[0].value
+            }
+          },
+          (token as any),
+        ).then((data) => {
+          console.log(data)
+        })
+      })
+  })
+
+        //if (data.createFormLogicRule.query.form.logicRules != []) {
+  //      //  return cy
+  //      //    .mutation(
+        //      gql`
+        //        mutation CypressCreateFormLogicCondition($formLogicCondition:  FormLogicConditionInput!) {
+        //          createFormLogicCondition(input: {formLogicCondition: $formLogicCondition} )
+        //          {
+        //            formLogicCondition {
+        //              id
+        //            }
+        //            query {
+        //              form (id: ${formId}) {
+        //                logicRules {
+        //                  formElementId,
+        //                  booleanOperator,
+        //                  jumpToId,
+        //                  command,
+        //                  position
+        //                }
+        //              }
+        //            }
+        //          }
+        //        }
+        //      `,
+        //      { "formLogicCondition": {
+        //          "ruleId": f.conditions[0].ruleId,
+        //          "subjectId": f.conditions[0].subjectId,
+        //          "operator": f.conditions[0].operator,
+        //          "value": f.conditions[0].value
+        //        }
+        //      },
+        //      (token as any),
+        //    ).then((data) => {
+        //      console.log(data)
+        //})
+      //}//
+    //})
+  //})
+//})
 
 
   

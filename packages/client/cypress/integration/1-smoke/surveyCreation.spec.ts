@@ -93,75 +93,94 @@ describe("Survey creation smoke test", () => {
           authToken = token
           cy.deleteFormElements(formId, authToken).then((resp) => {
             expect (resp.deleteFormElement.query.form.formElements.length).to.be.lt(5)
+            console.log(resp)
           })
         })
       })
     })
-    it ("Can update form with form elements", () => {
+    it ("Can update default form elements required by survey", () => {
       cy.get('@formId').then((id) => {
-        formId = id 
-        cy.get("@token").then((token) => {
-          authToken = token
-          cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
-            expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
-          })
-          cy.get('@surveyId').then((id) => {
-            surveyId = id
-            cy.deleteSurvey(surveyId, authToken)
-          })
-        })
-      })
+        formId = id
+         cy.get('@token').then((token) => {
+           authToken = token
+           cy.deleteFormElements(formId, authToken).then((resp) => {
+             const elementsToUpdate = []
+             elementsToUpdate.push(resp.deleteFormElement.query.form.formElements)
+             cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId).then((resp) => {
+               expect (resp.updateFormElement.query.form.formElements.length).to.eq(2)
+               expect (resp.updateFormElement.query.form.formElements[0].body.content[0].content[0].text).to.eq("Welcome Ocean Users!")
+             })
+           })
+         })
+       })
     })
-    it ("Can update form with logic rules", () => {
-      cy.wait("@createSurveyRequest")
-      cy.get('@formId').then((id) => {
-        formId = id 
-        cy.get("@token").then((token) => {
-          authToken = token
-          cy.deleteFormElements(formId, authToken)
-          cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
-            const formElements = resp.createFormElement.query.form.formElements
-            expect (formElements.length).to.be.gt(3)
-            let baseId = 0
-            let ids = []
-            function getIds(baseId) {
-              if (baseId === 0) {
-                for(let i=0; i<formElements.length; i++) {
-                  if (
-                    formElements[i].typeId && 
-                    formElements[i].typeId === "MultipleChoice" && 
-                    formElements[i].body.content[0].content[0].text === "Which Atoll do you reside on?"
-                    ){
-                    baseId = formElements[i].id
-                    break
-                  }
-                } 
-                getIds(baseId)
-              } else {
-                for(let i=0; i < 20; i++) {
-                  ids.push(baseId++)
-                }
-              }
-              return ids
-            }
-            let newIds = getIds(baseId)
-            newIds.push(newIds[19] + 6)
-            newIds.push(newIds[20] + 1)
-            expect (newIds.length).to.eq(22)
-            cy.addFormLogic(formId, "Maldives", newIds, authToken).then((resp) => {
-              expect (resp.createFormLogicRule.query.form.logicRules.length).to.eq(21)
-            })
-          })
-          cy.get('@surveyId').then((id) => {
-            surveyId = id
-            cy.deleteSurvey(surveyId, authToken)
-          })
-          
-        })
-      })
-      
-
-    })
+    //it ("Can update form with form elements", () => {
+    //  cy.get('@formId').then((id) => {
+    //    formId = id 
+    //    cy.get("@token").then((token) => {
+    //      authToken = token
+    //      cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+    //        expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
+    //      })
+    //      cy.get('@surveyId').then((id) => {
+    //        surveyId = id
+    //        cy.deleteSurvey(surveyId, authToken)
+    //      })
+    //    })
+    //  })
+    //})
+    //it ("Can update form with logic rules", () => {
+    //  cy.wait("@createSurveyRequest")
+    //  cy.get('@formId').then((id) => {
+    //    formId = id 
+    //    cy.get("@token").then((token) => {
+    //      authToken = token
+    //      cy.deleteFormElements(formId, authToken)
+    //      cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+    //        const formElements = resp.createFormElement.query.form.formElements
+    //        expect (formElements.length).to.be.gt(3)
+    //        let baseId = 0
+    //        let ids = []
+    //        function getIds(baseId) {
+    //          if (baseId === 0) {
+    //            for(let i=0; i<formElements.length; i++) {
+    //              if (
+    //                formElements[i].typeId && 
+    //                formElements[i].typeId === "MultipleChoice" && 
+    //                formElements[i].body.content[0].content[0].text === "Which Atoll do you reside on?"
+    //                ){
+    //                baseId = formElements[i].id
+    //                break
+    //              }
+    //            } 
+    //            getIds(baseId)
+    //          } else {
+    //            for(let i=0; i < 20; i++) {
+    //              ids.push(baseId++)
+    //            }
+    //          }
+    //          return ids
+    //        }
+    //        let newIds = getIds(baseId)
+    //        newIds.push(newIds[19] + 6)
+    //        newIds.push(newIds[20] + 1)
+    //        expect (newIds.length).to.eq(22)
+    //        cy.createFormLogicRules(formId, "Maldives", newIds, authToken).then((resp) => {
+    //          console.log(resp)
+    //          expect (resp.createFormLogicCondition.query.form.logicRules.length).to.eq(19)
+    //          //expect (resp.createFormLogicCondition.query.form.logicRules.conditions).to.have.ownProperty('length')
+    //          //expect (resp.createFormLogicCondition.query.form.logicRules[0].conditions).to.exist
+    //          //console.log(resp.createFormLogicCondition.query.form.logicRules[0].conditions).to.exist
+    //        })
+    //      })
+    //      cy.get('@surveyId').then((id) => {
+    //        surveyId = id
+    //        cy.deleteSurvey(surveyId, authToken)
+    //      })
+    //      
+    //    })
+    //  })
+    //})
   })
   describe ('User survey flow', () => {
     before(() => {
@@ -170,6 +189,8 @@ describe("Survey creation smoke test", () => {
           req.alias = "createProjectRequest"
         } else if ((req.body.operationName) && (req.body.operationName == "CypressCreateSurvey")) {
           req.alias = "createSurveyRequest"
+        } else if ((req.body.operationName) && (req.body.operationName == "CypressCreateFormLogicRule")) {
+          req.alias = "createFormLogicRule"
         }
       })
       cy.getToken("User 1").then(({ access_token }) => {
@@ -202,6 +223,48 @@ describe("Survey creation smoke test", () => {
                   console.log(resp)
                   cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
                     console.log(resp)
+                    const formElements = resp.createFormElement.query.form.formElements
+                    let baseId = 0
+                    let ids = []
+                    function getIds(baseId) {
+                      if (baseId === 0) {
+                        for(let i=0; i<formElements.length; i++) {
+                          console.log("base id = 0")
+                          if (
+                            formElements[i].typeId && 
+                            formElements[i].typeId === "MultipleChoice" && 
+                            formElements[i].body.content[0].content[0].text === "Which Atoll do you reside on?"
+                            ){
+                            baseId = formElements[i].id
+                            break
+                          }
+                        } 
+                        getIds(baseId)
+                      } else {
+                        console.log("base id != 0")
+                        for(let i=0; i < 20; i++) {
+                          ids.push(baseId++)
+                        }
+                      }
+                      return ids
+                    }
+                    //gather newIds through getIds function
+                    let newIds = getIds(baseId)
+                    console.log(newIds)
+                    //account for last  two logic rules with formElementIds 98 and 99
+                    newIds.push(newIds[0] + 24)
+                    newIds.push(newIds[0] + 25)
+                    console.log(newIds[0])
+                    cy.createFormLogicRules(formId, "Maldives", newIds, access_token).then((resp) => {
+                      const formElementIds = []
+                      console.log(resp.createFormLogicRule.query.form.logicRules)
+                      formElementIds.push(resp.createFormLogicRule.query.form.logicRules[0].formElementId)
+                      console.log(formElementIds)
+                      //cy.createFormLogicConditions(formElementIds, "Maldives", access_token, formId)
+                     
+                      //console.log(resp.createFormLogicCondition.query.form.logicRules)
+                      //expect (resp.createFormLogicCondition.query.form.logicRules.length).to.eq(19)
+                    })
                   })
                 })
               })
@@ -211,17 +274,19 @@ describe("Survey creation smoke test", () => {
         cy.get("@surveyId").then((id) => {
         cy.visit(`${slug}/surveys/${id}`)
         })
+        //cy.wait("@createFormLogicRule")
       });
     })
     after(() => {
       cy.restoreLocalStorage()
       cy.getLocalStorage("surveyId").then((id) => {
-        surveyId = id
-        cy.getLocalStorage("token").then((token) => {
-          cy.deleteSurvey(surveyId, token)
-        })
+        surveyId = parseInt(id)
+        console.log(surveyId)
+        //cy.getLocalStorage("token").then((token) => {
+        //  cy.deleteSurvey(surveyId, token)
+        //})
       })
-      cy.deleteProject(`${slug}`) 
+      //cy.deleteProject(`${slug}`) 
     })
     it("Can visit the survey", () => {
        cy.contains('Begin', {timeout: 30000}).click()
@@ -234,8 +299,8 @@ describe("Survey creation smoke test", () => {
         .get("button").contains("Next").click()
     })
     it("Can input email address or can skip question", () => {
-
       cy.get("input")
+      cy.contains("Skip Question").click()
     })
   })
 })
@@ -251,6 +316,7 @@ describe("Survey creation smoke test", () => {
 //Change slug to same slug across commands tests
 //Delete form request - needed for delete project in after each, but not working
 //; projects are persisting to database after "can update form with elements"
+//Move separate but related commands/requests together
 
 
 
