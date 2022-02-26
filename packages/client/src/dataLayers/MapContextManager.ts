@@ -17,7 +17,7 @@ import {
   useState,
   SetStateAction,
 } from "react";
-import { Feature, Polygon } from "geojson";
+import { BBox, Feature, Polygon } from "geojson";
 import {
   Basemap,
   BasemapDetailsFragment,
@@ -179,7 +179,8 @@ class MapContextManager {
     setState: Dispatch<SetStateAction<MapContextInterface>>,
     initialCameraOptions?: CameraOptions,
     preferencesKey?: string,
-    cacheSize?: number
+    cacheSize?: number,
+    initialBounds?: LngLatBoundsLike
   ) {
     cacheSize = cacheSize || bytes("50mb");
     this._setState = setState;
@@ -188,6 +189,7 @@ class MapContextManager {
     this.preferencesKey = preferencesKey;
     this.internalState = initialState;
     this.initialCameraOptions = initialCameraOptions;
+    this.initialBounds = initialBounds;
     this.visibleLayers = initialState.layerStates;
     this.arcgisVectorSourceCache = new ArcGISVectorSourceCache(
       cacheSize,
@@ -1325,6 +1327,17 @@ export interface MapContextInterface {
   showScale?: boolean;
 }
 
+interface MapContextOptions {
+  /** If provided, map state will be restored upon return to the map by storing state in localStorage */
+  preferencesKey?: string;
+  /** For arcgis vector sources. defaults to 50mb */
+  cacheSize?: number;
+  /** Starting bounds of map. If camera option is set, it will take priority */
+  bounds?: BBox;
+  /** Starting camera of map. Will override bounds if both are provided */
+  camera?: CameraOptions;
+}
+
 /**
  * Returns a MapContextManager instance that can be used to store state used by
  * instances of Mapbox GL, Layer lists, Basemap selectors, and layer interactivity
@@ -1333,7 +1346,8 @@ export interface MapContextInterface {
  * @param preferencesKey If provided, map state will be restored upon return to the map by storing state in localStorage
  * @param ignoreLayerVisibilityState Don't store layer visibility state in localStorage
  */
-export function useMapContext(preferencesKey?: string, cacheSize?: number) {
+export function useMapContext(options?: MapContextOptions) {
+  const { preferencesKey, cacheSize, bounds, camera } = options || {};
   let initialState: MapContextInterface = {
     layerStates: {},
     bannerMessages: [],
@@ -1342,7 +1356,7 @@ export function useMapContext(preferencesKey?: string, cacheSize?: number) {
     terrainEnabled: false,
     basemapOptionalLayerStates: {},
   };
-  let initialCameraOptions: CameraOptions | undefined = undefined;
+  let initialCameraOptions: CameraOptions | undefined = camera;
   const { slug } = useParams<{ slug: string }>();
   if (preferencesKey) {
     const preferencesString = window.localStorage.getItem(
@@ -1384,7 +1398,8 @@ export function useMapContext(preferencesKey?: string, cacheSize?: number) {
       setState,
       initialCameraOptions,
       preferencesKey ? `${slug}-${preferencesKey}` : undefined,
-      cacheSize
+      cacheSize,
+      bounds as LngLatBoundsLike
     );
     const newState = {
       ...state,

@@ -65,6 +65,8 @@ import languages, { LangDetails } from "../../lang/supported";
 import i18n from "../../i18n";
 import SurveyContextualMap from "../../surveys/SurveyContextualMap";
 import BasemapMultiSelectInput from "./BasemapMultiSelectInput";
+import MapCameraCaptureButton from "./MapCameraCaptureButton";
+import DropdownButton from "../../components/DropdownButton";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -313,11 +315,7 @@ export default function SurveyFormEditor({
     setStage(0);
   }, [selectedFormElement?.id]);
 
-  const style = useCurrentStyle(
-    data?.survey?.form?.formElements,
-    selectedFormElement,
-    stage
-  );
+  const style = useCurrentStyle(formElements, selectedFormElement, stage);
 
   let isDark = colord(style.backgroundColor || "#efefef").isDark();
   let dynamicTextClass = "text-white";
@@ -600,14 +598,16 @@ export default function SurveyFormEditor({
                 {(layout === FormElementLayout.MapSidebarLeft ||
                   layout === FormElementLayout.MapSidebarRight) &&
                   !selectedFormElement.type?.isSpatial && (
-                    <SurveyContextualMap
-                      basemaps={
-                        (selectedFormElement.mapBasemaps as
-                          | number[]
-                          | undefined) || []
-                      }
-                      cameraOptions={selectedFormElement.mapCameraOptions}
-                    />
+                    <>
+                      <SurveyContextualMap
+                        admin
+                        formElementId={selectedFormElement.id}
+                        basemaps={
+                          (style.mapBasemaps as number[] | undefined) || []
+                        }
+                        cameraOptions={style.mapCameraOptions}
+                      />
+                    </>
                   )}
               </SurveyAppLayout>
             </SurveyContext.Provider>
@@ -868,7 +868,7 @@ export default function SurveyFormEditor({
                     </div>
                   </div>
                 )} */}
-                {!selectedFormElement.layout && (
+                {!selectedFormElement.backgroundColor && (
                   <div className="text-sm p-3 text-gray-500 space-y-2">
                     <span>
                       <Trans ns="admin:surveys">
@@ -909,12 +909,11 @@ export default function SurveyFormEditor({
                 )}
                 <div
                   className={`px-3 py-2 space-y-4 text-base ${
-                    !selectedFormElement.layout &&
-                    !selectedFormElement.backgroundImage &&
+                    !selectedFormElement.backgroundColor &&
                     "pointer-events-none opacity-50 select-none"
                   }`}
                 >
-                  {selectedFormElement.layout && (
+                  {selectedFormElement.backgroundColor && (
                     <p className="text-sm">
                       <Trans ns="admin:surveys">
                         Changing appearance settings will impact all following
@@ -1155,27 +1154,6 @@ export default function SurveyFormEditor({
                       </Trans>
                     </p>
                   </div>
-                  {(layout === FormElementLayout.MapSidebarLeft ||
-                    layout === FormElementLayout.MapSidebarRight) &&
-                    !selectedFormElement.type?.isSpatial && (
-                      <BasemapMultiSelectInput
-                        value={
-                          selectedFormElement.mapBasemaps as
-                            | undefined
-                            | number[]
-                        }
-                        onChange={(value) => {
-                          updateMapSettings({
-                            variables: {
-                              id: selectedFormElement!.id,
-                              mapBasemaps: value,
-                              mapCameraOptions: selectedFormElement!
-                                .mapCameraOptions,
-                            },
-                          });
-                        }}
-                      />
-                    )}
                   <h4 className="text-sm font-medium text-gray-800 mb-2">
                     {t("Text color")}
                   </h4>
@@ -1248,7 +1226,7 @@ export default function SurveyFormEditor({
                     </div>
                   </div>
                   {selectedFormElement.typeId !== "WelcomeMessage" &&
-                    selectedFormElement.layout && (
+                    selectedFormElement.backgroundColor && (
                       <div className="pt-4">
                         <Button
                           small
@@ -1271,6 +1249,38 @@ export default function SurveyFormEditor({
                       </div>
                     )}
                 </div>
+                {(layout === FormElementLayout.MapSidebarLeft ||
+                  layout === FormElementLayout.MapSidebarRight) &&
+                  !selectedFormElement.type?.isSpatial && (
+                    <>
+                      <BasemapMultiSelectInput
+                        value={
+                          selectedFormElement.mapBasemaps as
+                            | undefined
+                            | number[]
+                        }
+                        onChange={(value) => {
+                          updateMapSettings({
+                            variables: {
+                              id: selectedFormElement!.id,
+                              mapBasemaps: value,
+                            },
+                            optimisticResponse: (data) => ({
+                              __typename: "Mutation",
+                              updateFormElement: {
+                                __typename: "UpdateFormElementPayload",
+                                formElement: {
+                                  __typename: "FormElement",
+                                  id: data.id,
+                                  mapBasemaps: data.mapBasemaps as number[],
+                                },
+                              },
+                            }),
+                          });
+                        }}
+                      />
+                    </>
+                  )}
               </>
             )}
           {route === "formElement" &&

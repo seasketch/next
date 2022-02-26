@@ -15,7 +15,10 @@ import Spinner from "../components/Spinner";
 const LazyOverlays = React.lazy(() => import("./OverlayLayers"));
 
 export default function ProjectApp() {
-  const mapContext = useMapContext("homepage", bytes("200mb"));
+  const mapContext = useMapContext({
+    preferencesKey: "homepage",
+    cacheSize: bytes("200mb"),
+  });
   const history = useHistory();
   const { slug } = useParams<{ slug: string }>();
   const showSidebar = useRouteMatch<{ sidebar: string }>(

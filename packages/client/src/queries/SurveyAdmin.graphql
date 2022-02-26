@@ -749,20 +749,22 @@ mutation copyAppearance($id: Int!, $copyFrom: Int!) {
   }
 }
 
-mutation updateFormElementBasemaps(
-  $id: Int!
-  $mapBasemaps: [Int]
-  $mapCameraOptions: JSON
-) {
-  updateFormElement(
-    input: {
-      id: $id
-      patch: { mapBasemaps: $mapBasemaps, mapCameraOptions: $mapCameraOptions }
-    }
-  ) {
+mutation updateFormElementBasemaps($id: Int!, $mapBasemaps: [Int]) {
+  updateFormElement(input: { id: $id, patch: { mapBasemaps: $mapBasemaps } }) {
     formElement {
       id
       mapBasemaps
+    }
+  }
+}
+
+mutation updateFormElementMapCamera($id: Int!, $mapCameraOptions: JSON) {
+  updateFormElement(
+    input: { id: $id, patch: { mapCameraOptions: $mapCameraOptions } }
+  ) {
+    formElement {
+      id
+      mapCameraOptions
     }
   }
 }

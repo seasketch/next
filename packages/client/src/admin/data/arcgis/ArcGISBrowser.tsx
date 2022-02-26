@@ -63,7 +63,10 @@ export default function ArcGISBrowser() {
   const mapServerInfo = useMapServerInfo(selectedMapServer);
   const [selectedFeatureLayer, setSelectedFeatureLayer] = useState<LayerInfo>();
   const serviceColumnRef = useRef<HTMLDivElement>(null);
-  const mapContext = useMapContext("arcgis-browser", bytes("500mb"));
+  const mapContext = useMapContext({
+    preferencesKey: "arcgis-browser",
+    cacheSize: bytes("500mb"),
+  });
   const [treeData, setTreeData] = useState<ClientTableOfContentsItem[]>([]);
   const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
     selectedMapServer

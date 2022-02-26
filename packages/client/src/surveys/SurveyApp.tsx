@@ -224,7 +224,7 @@ function SurveyApp() {
   const surveyButtonFooter = useRef<HTMLDivElement>(null);
 
   const style = useCurrentStyle(
-    data?.survey?.form?.formElements,
+    elements,
     formElement.exiting || formElement.current,
     stage
   );
@@ -559,11 +559,8 @@ function SurveyApp() {
               style.layout === FormElementLayout.MapSidebarRight) &&
               !formElement.current.type?.isSpatial && (
                 <SurveyContextualMap
-                  basemaps={
-                    (formElement.current?.mapBasemaps as
-                      | number[]
-                      | undefined) || []
-                  }
+                  basemaps={(style.mapBasemaps as number[] | undefined) || []}
+                  cameraOptions={style.mapCameraOptions}
                 />
               )}
           </SurveyAppLayout>

@@ -11,6 +11,7 @@ import a11yPlugin from "colord/plugins/a11y";
 import { createContext } from "react";
 import { useMediaQuery } from "beautiful-react-hooks";
 import { components } from "../formElements";
+import { CameraOptions } from "mapbox-gl";
 extend([a11yPlugin]);
 
 export type FormElementStyleProps = Pick<
@@ -21,6 +22,8 @@ export type FormElementStyleProps = Pick<
   | "textVariant"
   | "secondaryColor"
   | "backgroundPalette"
+  | "mapBasemaps"
+  | "mapCameraOptions"
 > & { type?: { isSpatial: boolean } | null };
 export type ComputedFormElementStyle = {
   backgroundColor: string;
@@ -36,6 +39,8 @@ export type ComputedFormElementStyle = {
   unsplashAuthorName?: string;
   unsplashAuthorUrl?: string;
   backgroundPalette?: string[];
+  mapBasemaps: number[] | undefined;
+  mapCameraOptions: CameraOptions | undefined;
 };
 
 export const defaultStyle = {
@@ -55,6 +60,8 @@ export const defaultStyle = {
   textClass: "text-white",
   isDark: true,
   isSmall: false,
+  mapBasemaps: undefined as number[] | undefined,
+  mapCameraOptions: undefined as CameraOptions | undefined,
 };
 
 /**
@@ -90,7 +97,7 @@ export function useCurrentStyle(
     ...(index === 0 ? current : previouslyStyledElement),
   };
 
-  if (current.layout || current.backgroundImage) {
+  if (current.backgroundColor || current.backgroundImage) {
     style = { ...current };
   }
 
@@ -189,5 +196,5 @@ export function getPreviouslyStyledElement(
   return sortedFormElements
     .slice(0, index)
     .reverse()
-    .find((f) => f.layout || f.backgroundImage);
+    .find((f) => f.backgroundColor);
 }

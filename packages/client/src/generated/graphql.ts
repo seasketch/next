@@ -13985,7 +13985,6 @@ export type CopyAppearanceMutation = (
 export type UpdateFormElementBasemapsMutationVariables = Exact<{
   id: Scalars['Int'];
   mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
-  mapCameraOptions?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -13996,6 +13995,23 @@ export type UpdateFormElementBasemapsMutation = (
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
       & Pick<FormElement, 'id' | 'mapBasemaps'>
+    )> }
+  )> }
+);
+
+export type UpdateFormElementMapCameraMutationVariables = Exact<{
+  id: Scalars['Int'];
+  mapCameraOptions?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateFormElementMapCameraMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'mapCameraOptions'>
     )> }
   )> }
 );
@@ -19814,10 +19830,8 @@ export type CopyAppearanceMutationHookResult = ReturnType<typeof useCopyAppearan
 export type CopyAppearanceMutationResult = Apollo.MutationResult<CopyAppearanceMutation>;
 export type CopyAppearanceMutationOptions = Apollo.BaseMutationOptions<CopyAppearanceMutation, CopyAppearanceMutationVariables>;
 export const UpdateFormElementBasemapsDocument = gql`
-    mutation updateFormElementBasemaps($id: Int!, $mapBasemaps: [Int], $mapCameraOptions: JSON) {
-  updateFormElement(
-    input: {id: $id, patch: {mapBasemaps: $mapBasemaps, mapCameraOptions: $mapCameraOptions}}
-  ) {
+    mutation updateFormElementBasemaps($id: Int!, $mapBasemaps: [Int]) {
+  updateFormElement(input: {id: $id, patch: {mapBasemaps: $mapBasemaps}}) {
     formElement {
       id
       mapBasemaps
@@ -19842,7 +19856,6 @@ export type UpdateFormElementBasemapsMutationFn = Apollo.MutationFunction<Update
  *   variables: {
  *      id: // value for 'id'
  *      mapBasemaps: // value for 'mapBasemaps'
- *      mapCameraOptions: // value for 'mapCameraOptions'
  *   },
  * });
  */
@@ -19853,6 +19866,45 @@ export function useUpdateFormElementBasemapsMutation(baseOptions?: Apollo.Mutati
 export type UpdateFormElementBasemapsMutationHookResult = ReturnType<typeof useUpdateFormElementBasemapsMutation>;
 export type UpdateFormElementBasemapsMutationResult = Apollo.MutationResult<UpdateFormElementBasemapsMutation>;
 export type UpdateFormElementBasemapsMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>;
+export const UpdateFormElementMapCameraDocument = gql`
+    mutation updateFormElementMapCamera($id: Int!, $mapCameraOptions: JSON) {
+  updateFormElement(
+    input: {id: $id, patch: {mapCameraOptions: $mapCameraOptions}}
+  ) {
+    formElement {
+      id
+      mapCameraOptions
+    }
+  }
+}
+    `;
+export type UpdateFormElementMapCameraMutationFn = Apollo.MutationFunction<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>;
+
+/**
+ * __useUpdateFormElementMapCameraMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormElementMapCameraMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormElementMapCameraMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormElementMapCameraMutation, { data, loading, error }] = useUpdateFormElementMapCameraMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      mapCameraOptions: // value for 'mapCameraOptions'
+ *   },
+ * });
+ */
+export function useUpdateFormElementMapCameraMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>(UpdateFormElementMapCameraDocument, options);
+      }
+export type UpdateFormElementMapCameraMutationHookResult = ReturnType<typeof useUpdateFormElementMapCameraMutation>;
+export type UpdateFormElementMapCameraMutationResult = Apollo.MutationResult<UpdateFormElementMapCameraMutation>;
+export type UpdateFormElementMapCameraMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -21082,6 +21134,7 @@ export const namedOperations = {
     modifyAnswers: 'modifyAnswers',
     copyAppearance: 'copyAppearance',
     updateFormElementBasemaps: 'updateFormElementBasemaps',
+    updateFormElementMapCamera: 'updateFormElementMapCamera',
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',

@@ -12,6 +12,17 @@ import DrawRectangle from "mapbox-gl-draw-rectangle-mode";
 import { useGetBasemapsQuery } from "../../generated/graphql";
 import { useParams } from "react-router-dom";
 import Switch from "../../components/Switch";
+import { PencilIcon, TrashIcon } from "@heroicons/react/outline";
+import SelectBasemapsModal from "./SelectBasemapsModal";
+import { FormEditorHeader } from "./SurveyFormEditor";
+import DropdownButton from "../../components/DropdownButton";
+import {
+  DragDropContext,
+  Draggable,
+  DraggableProvided,
+  DraggableStateSnapshot,
+  Droppable,
+} from "react-beautiful-dnd";
 
 export default function BasemapMultiSelectInput({
   value,
@@ -28,55 +39,156 @@ export default function BasemapMultiSelectInput({
     },
   });
 
-  const updateSelection = (id: number, toggled: boolean) => {
-    if (onChange && data?.projectBySlug?.basemaps?.length) {
-      value = value || [];
-      onChange(
-        data.projectBySlug.basemaps
-          .map((b) => b.id)
-          .filter((b) => {
-            if (b === id) {
-              return toggled;
-            } else {
-              return (value || []).indexOf(b) !== -1;
-            }
-          })
-      );
-    }
-  };
+  const [selectBasemapsModalOpen, setSelectBasemapsModalOpen] = useState(false);
 
   return (
-    <div>
-      <h4 className="block text-sm font-medium leading-5 text-gray-800">
-        {t("Basemaps")}
-      </h4>
-      <p className="text-sm text-gray-500 mb-2 mt-1">
-        <Trans ns="admin:surveys">
-          Choose which basemaps from your project to include as options.&nbsp;
-        </Trans>
-      </p>
-      <div className="relative space-y-1 py-2">
-        {(data?.projectBySlug?.basemaps || []).map((basemap, i) => (
-          <div key={basemap.id} className="flex items-center space-x-2">
-            <img src={basemap.thumbnail} className="w-8 h-8 rounded shadow" />
-            <div className="flex-1">{basemap.name}</div>
-            <Switch
-              className=""
-              isToggled={
-                (!value && i === 0) || (value || []).indexOf(basemap.id) !== -1
+    <>
+      <FormEditorHeader className="mt-4 relative flex">
+        <span className="flex-1">{t("Basemaps")}</span>
+        <DropdownButton
+          small
+          label={t("add")}
+          options={[
+            {
+              label: t("Existing basemap"),
+              onClick: () => setSelectBasemapsModalOpen(true),
+            },
+            {
+              label: t("New basemap"),
+              onClick: () => null,
+              disabled: true,
+            },
+          ]}
+        />
+      </FormEditorHeader>
+      <div className="bg-gray-50 border-t -mt-0.5 px-3 py-1 pb-8">
+        {selectBasemapsModalOpen && (
+          <SelectBasemapsModal
+            value={value || []}
+            onRequestClose={(value) => {
+              setSelectBasemapsModalOpen(false);
+              if (onChange) {
+                onChange(value);
               }
-              onClick={(toggled) => updateSelection(basemap.id, toggled)}
-            />
-          </div>
-        ))}
-        <p className="h-6 py-2 text-gray-500 italic text-xs">
-          {value?.length === 0 && (
+            }}
+          />
+        )}
+        <p className="text-sm text-gray-500 mb-2 mt-1">
+          {(!value || value.length === 0) && (
             <Trans ns="admin:surveys">
-              If none are selected, the first basemap in the list will be used.
+              If no basemaps are specified, a default will be chosen from your
+              project
             </Trans>
           )}
         </p>
+        <div className="relative space-y-1 py-2">
+          <DragDropContext
+            onDragEnd={(result) => {
+              if (!result.destination) {
+                return;
+              }
+              let sorted = reorder(
+                value || [],
+                result.source.index,
+                result.destination.index
+              );
+              if (onChange) {
+                onChange(sorted);
+              }
+            }}
+          >
+            <Droppable droppableId="droppable">
+              {(provided, snapshot) => {
+                return (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="space-y-2"
+                  >
+                    {(value || []).map((id, i) => {
+                      const basemap = (
+                        data?.projectBySlug?.basemaps || []
+                      ).find((b) => b.id === id);
+                      if (basemap) {
+                        return (
+                          <Draggable
+                            index={i}
+                            draggableId={basemap.id.toString()}
+                            key={basemap.id}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided?.innerRef}
+                                {...provided?.draggableProps}
+                                style={provided?.draggableProps.style}
+                                key={basemap.id}
+                                className="flex items-center space-x-2 bg-white p-2 border rounded shadow-sm select-none"
+                              >
+                                <div
+                                  {...provided.dragHandleProps}
+                                  className="flex items-center space-x-2 flex-1"
+                                >
+                                  <img
+                                    src={basemap.thumbnail}
+                                    className="w-8 h-8 rounded shadow select-none"
+                                  />
+                                  <div className="flex-1 truncate select-none">
+                                    {basemap.name}
+                                  </div>
+                                </div>
+                                <div className="flex space-x-2 items-center">
+                                  <button>
+                                    <PencilIcon className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (onChange) {
+                                        onChange(
+                                          (value || []).filter(
+                                            (i) => i !== basemap.id
+                                          )
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <TrashIcon className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      } else {
+                        return null;
+                      }
+                    })}
+                    {provided.placeholder}
+                  </div>
+                );
+              }}
+            </Droppable>
+          </DragDropContext>
+          {value?.length && value?.length > 1 ? (
+            <p className="py-2 text-gray-500 italic text-sm text-center">
+              <Trans ns="admin:surveys">First listed will be the default</Trans>
+            </p>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </>
   );
+}
+
+/**
+ * Reorders the given list, moving an item from startIndex to endIndex
+ * @param list
+ * @param startIndex
+ * @param endIndex
+ * @returns
+ */
+function reorder<T>(list: T[], startIndex: number, endIndex: number): T[] {
+  const result = Array.from(list);
+  const [removed] = result.splice(startIndex, 1);
+  result.splice(endIndex, 0, removed);
+  return result;
 }
