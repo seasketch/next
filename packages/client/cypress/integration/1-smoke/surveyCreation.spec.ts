@@ -58,9 +58,19 @@ describe("Survey creation smoke test", () => {
     //    .should('have.property', 'id')
     //})
     it ("Creates the survey", () => {
-      cy.wait("@createSurveyRequest")
-        .its('response.body.data.makeSurvey.survey.form.formElements.length')
-        .should('eq', 5)
+      cy.wait("@createSurveyRequest").its('response').then((resp) => {
+        const formElements = resp.body.data.makeSurvey.survey.form.formElements
+        expect (formElements[0].typeId).to.eq('WelcomeMessage')
+        expect (formElements[1].typeId).to.eq('ShortText')
+        expect (formElements[2].typeId).to.eq('ThankYou')
+        expect (formElements[3].typeId).to.eq('SaveScreen')
+        expect (formElements[4].typeId).to.eq('Consent')
+        
+        console.log(formElements)
+      })
+        //.its('response.body.data.makeSurvey.survey.form.formElements.length')
+        //.should('eq', 5)
+        
     })
     //it ("Updates the survey's isDisabled field", () => {
     //  cy.get("@surveyId").then((id) => {
