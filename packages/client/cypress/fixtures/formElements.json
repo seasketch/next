@@ -3720,7 +3720,7 @@
               "isSurveysOnly": true,
               "isHidden": true,
               "isSingleUseOnly": true,
-              "isRequiredForSurveys": false,
+              "isRequiredForSurveys": true,
               "supportedOperators": [],
               "allowedLayouts": null,
               "isSpatial": false,
@@ -3786,4 +3786,3 @@
     }
   }
 }
-    

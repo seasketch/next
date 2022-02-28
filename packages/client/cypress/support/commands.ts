@@ -549,19 +549,24 @@ Cypress.Commands.add("updateFormElements", (elementsToUpdate: object, fixtureAli
   //initialize newElements array to store matching form elements from fixture
   const newElements = []
   const elements = formElements[fixtureAlias].data.form.formElements
+
   //iterate over fixture to get form elements matching elements that need to be updated
   elements.forEach((t) => {
     if (t.typeId === "WelcomeMessage") {
+      newElements.push(t)
+    } else if (t.typeId === "ThankYou") {
       newElements.push(t)
     } else if (t.typeId === "SaveScreen") {
       newElements.push(t)
     }
   })
-  //map over newElements array and replace id with form element ids from created form
-  newElements[0].id = elementsToUpdate[0][0].id
-  newElements[1].id = elementsToUpdate[0][1].id
-  console.log(elementsToUpdate)
-  console.log(newElements)
+  
+  //replace form element ids from fixture survey with form element ids from test survey
+  newElements[0].id = elementsToUpdate[0].id
+  newElements[1].id = elementsToUpdate[2].id
+  newElements[2].id = elementsToUpdate[1].id
+
+  //iterate over elements with corrected ids and update form
   newElements.forEach((f) => {
     console.log(f)
     return cy
@@ -781,9 +786,6 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
   })
 
   Cypress.Commands.add("createFormLogicConditions", (formElementIds: object, fixtureAlias: string, token: string, formId: number) => {
-    console.log(formElementIds)
-    console.log(formId)
-    console.log(formLogicConditions[fixtureAlias].data.form.logicRules)
     const conditions = formLogicConditions[fixtureAlias].data.form.logicRules
     conditions.map((t) => {
       if (t.conditions[0].subjectId === 74) {
