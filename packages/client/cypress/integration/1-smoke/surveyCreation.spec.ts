@@ -60,11 +60,11 @@ describe("Survey creation smoke test", () => {
     it ("Creates the survey", () => {
       cy.wait("@createSurveyRequest").its('response').then((resp) => {
         const formElements = resp.body.data.makeSurvey.survey.form.formElements
-        expect (formElements[0].typeId).to.eq('WelcomeMessage')
-        expect (formElements[1].typeId).to.eq('ShortText')
-        expect (formElements[2].typeId).to.eq('ThankYou')
-        expect (formElements[3].typeId).to.eq('SaveScreen')
-        expect (formElements[4].typeId).to.eq('Consent')
+        expect (formElements[0].type.isRequiredForSurveys).to.eq(true)
+        expect (formElements[1].type.isRequiredForSurveys).to.eq(false)
+        expect (formElements[2].type.isRequiredForSurveys).to.eq(false)
+        expect (formElements[3].type.isRequiredForSurveys).to.eq(true)
+        expect (formElements[4].type.isRequiredForSurveys).to.eq(false)
         
         console.log(formElements)
       })
