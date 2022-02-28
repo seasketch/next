@@ -114,24 +114,68 @@ describe("Survey creation smoke test", () => {
                 expect (resp.updateFormElement.query.form.formElements[0].body.content[0].content[0].text).to.eq("Welcome Ocean Users!")
              })
            })
+           cy.get('@surveyId').then((id) => {
+            surveyId = id
+            cy.deleteSurvey(surveyId, authToken)
+          })
          })
        })
     })
-    //it ("Can update form with form elements", () => {
-    //  cy.get('@formId').then((id) => {
-    //    formId = id 
-    //    cy.get("@token").then((token) => {
-    //      authToken = token
-    //      cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
-    //        expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
-    //      })
-    //      cy.get('@surveyId').then((id) => {
-    //        surveyId = id
-    //        cy.deleteSurvey(surveyId, authToken)
-    //      })
-    //    })
-    //  })
-    //})
+    it ("Can update form with form elements", () => {
+      cy.get('@formId').then((id) => {
+        formId = id 
+        cy.get("@token").then((token) => {
+          authToken = token
+          cy.deleteFormElements(formId, authToken).then((resp) => {
+            const elementsToUpdate = []
+            resp.deleteFormElement.query.form.formElements.forEach(t => {
+              elementsToUpdate.push(t)
+            })
+            cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId)
+          })
+          cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+            expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
+          })
+          cy.get('@surveyId').then((id) => {
+            surveyId = id
+            cy.deleteSurvey(surveyId, authToken)
+          })
+        })
+      })
+    })
+    it ("Can update jumpToId field on form elements", () => {
+      cy.get('@formId').then((id) => {
+        formId = id 
+        cy.get("@token").then((token) => {
+          authToken = token
+          cy.deleteFormElements(formId, authToken).then((resp) => {
+            const elementsToUpdate = []
+            resp.deleteFormElement.query.form.formElements.forEach(t => {
+              elementsToUpdate.push(t)
+            })
+            cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId)
+          })
+          cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+            const elements = resp.createFormElement.query.form.formElements
+            let jumpToId
+            const elementsToUpdate = elements.splice(6,19)
+            for (let i = 0; i < elements.length; i++) {
+              if (elements[i].typeId === "SpatialAccessPriorityInput") {
+                jumpToId = elements[i].id
+                break
+              }
+            }
+            cy.updateJumpToId(jumpToId, elementsToUpdate, formId, authToken).then((resp) => {
+             expect (resp.updateFormElement.formElement.jumpToId).to.eq(jumpToId)
+            })
+          })
+          cy.get('@surveyId').then((id) => {
+            surveyId = id
+            cy.deleteSurvey(surveyId, authToken)
+          })
+        })
+      })
+    })
     //it ("Can update form with logic rules", () => {
     //  cy.wait("@createSurveyRequest")
     //  cy.get('@formId').then((id) => {
@@ -188,11 +232,11 @@ describe("Survey creation smoke test", () => {
   describe ('User survey flow', () => {
     before(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
-        if ((req.body.operationName) && (req.body.operationName == "CypressCreateProject")) {
+        if ((req.body.operationName) && (req.body.operationName === "CypressCreateProject")) {
           req.alias = "createProjectRequest"
-        } else if ((req.body.operationName) && (req.body.operationName == "CypressCreateSurvey")) {
+        } else if ((req.body.operationName) && (req.body.operationName === "CypressCreateSurvey")) {
           req.alias = "createSurveyRequest"
-        } else if ((req.body.operationName) && (req.body.operationName == "CypressCreateFormLogicRule")) {
+        } else if ((req.body.operationName) && (req.body.operationName === "CypressCreateFormLogicRule")) {
           req.alias = "createFormLogicRule"
         }
       })
@@ -217,59 +261,65 @@ describe("Survey creation smoke test", () => {
               cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
               cy.wrap(resp.makeSurvey.survey.form.formElements).as('formElements')
               cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
-              cy.updateSurvey(resp.makeSurvey.survey.id, access_token).then((resp) => {
-                console.log(resp)
-              })
+              cy.updateSurvey(resp.makeSurvey.survey.id, access_token)
               cy.get('@formId').then((id) => {
                 formId = id
                 cy.deleteFormElements(formId, access_token).then((resp) => {
-                  console.log(resp)
-                  cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
-                    console.log(resp)
-                    const formElements = resp.createFormElement.query.form.formElements
-                    let baseId = 0
-                    let ids = []
-                    function getIds(baseId) {
-                      if (baseId === 0) {
-                        for(let i=0; i<formElements.length; i++) {
-                          console.log("base id = 0")
-                          if (
-                            formElements[i].typeId && 
-                            formElements[i].typeId === "MultipleChoice" && 
-                            formElements[i].body.content[0].content[0].text === "Which Atoll do you reside on?"
-                            ){
-                            baseId = formElements[i].id
-                            break
-                          }
-                        } 
-                        getIds(baseId)
-                      } else {
-                        console.log("base id != 0")
-                        for(let i=0; i < 20; i++) {
-                          ids.push(baseId++)
-                        }
-                      }
-                      return ids
-                    }
-                    //gather newIds through getIds function
-                    let newIds = getIds(baseId)
-                    console.log(newIds)
-                    //account for last  two logic rules with formElementIds 98 and 99
-                    newIds.push(newIds[0] + 24)
-                    newIds.push(newIds[0] + 25)
-                    console.log(newIds[0])
-                    cy.createFormLogicRules(formId, "Maldives", newIds, access_token).then((resp) => {
-                      const formElementIds = []
-                      console.log(resp.createFormLogicRule.query.form.logicRules)
-                      formElementIds.push(resp.createFormLogicRule.query.form.logicRules[0].formElementId)
-                      console.log(formElementIds)
-                      //cy.createFormLogicConditions(formElementIds, "Maldives", access_token, formId)
-                     
-                      //console.log(resp.createFormLogicCondition.query.form.logicRules)
-                      //expect (resp.createFormLogicCondition.query.form.logicRules.length).to.eq(19)
-                    })
+                  const elementsToUpdate = []
+                  resp.deleteFormElement.query.form.formElements.forEach(t => {
+                    elementsToUpdate.push(t)
                   })
-                })
+                  cy.updateFormElements(elementsToUpdate,"Maldives", access_token, formId)
+                  cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
+                    const elementsToUpdate = resp.createFormElement.query.form.formElements.splice(6,19)
+                    //cy.updateJumpToId(elementsToUpdate, access_token)
+                  })
+                  //  console.log(resp)
+                    //const formElements = resp.createFormElement.query.form.formElements
+                    //let baseId = 0
+                    //let ids = []
+                    //function getIds(baseId) {
+                    //  if (baseId === 0) {
+                    //    for(let i=0; i<formElements.length; i++) {
+                    //      console.log("base id = 0")
+                    //      if (
+                    //        formElements[i].typeId && 
+                    //        formElements[i].typeId === "MultipleChoice" && 
+                    //        formElements[i].body.content[0].content[0].text === "Which Atoll do you reside on?"
+                    //        ){
+                    //        baseId = formElements[i].id
+                    //        break
+                    //      }
+                    //    } 
+                    //    getIds(baseId)
+                    //  } else {
+                    //    console.log("base id != 0")
+                    //    for(let i=0; i < 20; i++) {
+                    //      ids.push(baseId++)
+                    //    }
+                    //  }
+                    //  return ids
+                    //}
+                    ////gather newIds through getIds function
+                    //let newIds = getIds(baseId)
+                    //console.log(newIds)
+                    ////account for last  two logic rules with formElementIds 98 and 99
+                    //newIds.push(newIds[0] + 24)
+                    //newIds.push(newIds[0] + 25)
+                    //console.log(newIds[0])
+                    //cy.createFormLogicRules(formId, "Maldives", newIds, access_token).then((resp) => {
+                    //  const formElementIds = []
+                    //  console.log(resp)
+                    //  console.log(resp.createFormLogicRule.query.form.logicRules)
+                    //  formElementIds.push(resp.createFormLogicRule.query.form.logicRules[0].formElementId)
+                    //  console.log(formElementIds)
+                    //  //cy.createFormLogicConditions(formElementIds, "Maldives", access_token, formId)
+                    // 
+                    //  //console.log(resp.createFormLogicCondition.query.form.logicRules)
+                    //  //expect (resp.createFormLogicCondition.query.form.logicRules.length).to.eq(19)
+                    //
+                  //})//
+                })//
               })
             })
           });
@@ -294,17 +344,17 @@ describe("Survey creation smoke test", () => {
     it("Can visit the survey", () => {
        cy.contains('Begin', {timeout: 30000}).click()
     })
-    it("Cannot progress until name is provided", () => {
-      cy.contains("What is your name?")
-        .get('[title = "Next Question"]')
-        .should('have.class', "pointer-events-none")
-        .get("input").type("Test User 1") 
-        .get("button").contains("Next").click()
-    })
-    it("Can input email address or can skip question", () => {
-      cy.get("input")
-      cy.contains("Skip Question").click()
-    })
+    //it("Cannot progress until name is provided", () => {
+    //  cy.contains("What is your name?")
+    //    .get('[title = "Next Question"]')
+    //    .should('have.class', "pointer-events-none")
+    //    .get("input").type("Test User 1") 
+    //    .get("button").contains("Next").click()
+    //})
+    //it("Can input email address or can skip question", () => {
+    //  cy.get("input")
+    //  cy.contains("Skip Question").click()
+    //})
   })
 })
 
