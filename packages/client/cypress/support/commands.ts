@@ -796,53 +796,54 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
         (token as any),
       ).then((data) => {
         console.log(data)
-        if (data) {
-          return cy
-            .mutation(
-              gql`
-                mutation CypressCreateFormLogicCondition($formLogicCondition:  FormLogicConditionInput!) {
-                  createFormLogicCondition(input: {formLogicCondition: $formLogicCondition} )
-                  {
-                    formLogicCondition {
-                      id
-                    }
-                    query {
-                      form (id: ${formId}) {
-                        logicRules {
-                          formElementId,
-                          booleanOperator,
-                          jumpToId,
-                          command,
-                          position, 
-                          conditions {
-                            ruleId, 
-                            subjectId, 
-                            operator, 
-                            value
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              `,
-              { "formLogicCondition": {
-                  "ruleId": data.createFormLogicRule.formLogicRule.id,
-                  "subjectId": f.conditions[0].subjectId,
-                  "operator": f.conditions[0].operator,
-                  "value": f.conditions[0].value
-                }
-              },
-              (token as any),
-            ).then((data) => {
-              console.log(data)
-            })
-          }
+        return data
+        //if (data) {
+        //  return cy
+        //    .mutation(
+        //      gql`
+        //        mutation CypressCreateFormLogicCondition($formLogicCondition:  FormLogicConditionInput!) {
+        //          createFormLogicCondition(input: {formLogicCondition: $formLogicCondition} )
+        //          {
+        //            formLogicCondition {
+        //              id
+        //            }
+        //            query {
+        //              form (id: ${formId}) {
+        //                logicRules {
+        //                  formElementId,
+        //                  booleanOperator,
+        //                  jumpToId,
+        //                  command,
+        //                  position, 
+        //                  conditions {
+        //                    ruleId, 
+        //                    subjectId, 
+        //                    operator, 
+        //                    value
+        //                  }
+        //                }
+        //              }
+        //            }
+        //          }
+        //        }
+        //      `,
+        //      { "formLogicCondition": {
+        //          "ruleId": data.createFormLogicRule.formLogicRule.id,
+        //          "subjectId": f.conditions[0].subjectId,
+        //          "operator": f.conditions[0].operator,
+        //          "value": f.conditions[0].value
+        //        }
+        //      },
+        //      (token as any),
+        //    ).then((data) => {
+        //      console.log(data)
+        //    })
+        //  }
         })
       })
     })
 
-    
+
 //TO DO:
 //add rest of form attributes
 
