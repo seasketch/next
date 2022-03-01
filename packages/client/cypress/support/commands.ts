@@ -739,7 +739,7 @@ Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
 })
 
 Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string, newIds: object, token:string) => {
-  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules.splice(0, 18)
+  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules
   formLogic.sort((a, b) => {
     if (a.jumpToId > b.jumpToId) return 1; 
     if (a.jumpToId < b.jumpToId) return -1; 
@@ -773,6 +773,9 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
               }
               query {
                 form (id: ${formId}) {
+                  formElements {
+                    jumpToId
+                  }
                   logicRules {
                     formElementId,
                     booleanOperator,
@@ -796,49 +799,48 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
         (token as any),
       ).then((data) => {
         console.log(data)
-        return data
-        //if (data) {
-        //  return cy
-        //    .mutation(
-        //      gql`
-        //        mutation CypressCreateFormLogicCondition($formLogicCondition:  FormLogicConditionInput!) {
-        //          createFormLogicCondition(input: {formLogicCondition: $formLogicCondition} )
-        //          {
-        //            formLogicCondition {
-        //              id
-        //            }
-        //            query {
-        //              form (id: ${formId}) {
-        //                logicRules {
-        //                  formElementId,
-        //                  booleanOperator,
-        //                  jumpToId,
-        //                  command,
-        //                  position, 
-        //                  conditions {
-        //                    ruleId, 
-        //                    subjectId, 
-        //                    operator, 
-        //                    value
-        //                  }
-        //                }
-        //              }
-        //            }
-        //          }
-        //        }
-        //      `,
-        //      { "formLogicCondition": {
-        //          "ruleId": data.createFormLogicRule.formLogicRule.id,
-        //          "subjectId": f.conditions[0].subjectId,
-        //          "operator": f.conditions[0].operator,
-        //          "value": f.conditions[0].value
-        //        }
-        //      },
-        //      (token as any),
-        //    ).then((data) => {
-        //      console.log(data)
-        //    })
-        //  }
+        if (data) {
+          return cy
+            .mutation(
+              gql`
+                mutation CypressCreateFormLogicCondition($formLogicCondition:  FormLogicConditionInput!) {
+                  createFormLogicCondition(input: {formLogicCondition: $formLogicCondition} )
+                  {
+                    formLogicCondition {
+                      id
+                    }
+                    query {
+                      form (id: ${formId}) {
+                        logicRules {
+                          formElementId,
+                          booleanOperator,
+                          jumpToId,
+                          command,
+                          position, 
+                          conditions {
+                            ruleId, 
+                            subjectId, 
+                            operator, 
+                            value
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `,
+              { "formLogicCondition": {
+                  "ruleId": data.createFormLogicRule.formLogicRule.id,
+                  "subjectId": f.conditions[0].subjectId,
+                  "operator": f.conditions[0].operator,
+                  "value": f.conditions[0].value
+                }
+              },
+              (token as any),
+            ).then((data) => {
+              console.log(data)
+            })
+          }
         })
       })
     })

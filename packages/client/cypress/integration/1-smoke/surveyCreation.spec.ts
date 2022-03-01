@@ -50,7 +50,7 @@ describe("Survey creation smoke test", () => {
       });
     })
     afterEach(() => {
-      cy.deleteProject(`${slug}`)
+     // cy.deleteProject(`${slug}`)
     })
     //it ("Creates the project", () => {
     //  cy.wait('@createProjectRequest')
@@ -192,6 +192,7 @@ describe("Survey creation smoke test", () => {
             const formElements = resp.createFormElement.query.form.formElements
             let jumpToId
             const elementsToUpdate = formElements.splice(6,19)
+            console.log(elementsToUpdate)
             for (let i = 0; i < formElements.length; i++) {
               if (formElements[i].typeId === "SpatialAccessPriorityInput") {
                 jumpToId = formElements[i].id
@@ -228,15 +229,15 @@ describe("Survey creation smoke test", () => {
               expect (newIds.length).to.eq(22)
               cy.createFormLogicRules(formId, "Maldives", newIds, authToken).then((resp) => {
                 console.log(resp)
-                expect (resp.createFormLogicRule.query.form.logicRules.length).does.not.eq(0)
-                //expect (resp.createFormLogicCondition.query.form.logicRules[0].conditions.length).does.not.eq(0)
+                expect (resp.createFormLogicCondition.query.form.logicRules.length).does.not.eq(0)
+                expect (resp.createFormLogicCondition.query.form.logicRules[0].conditions.length).does.not.eq(0)
               })
             })   
           })
-          cy.get('@surveyId').then((id) => {
-            surveyId = id
-            cy.deleteSurvey(surveyId, authToken)
-          })
+          //cy.get('@surveyId').then((id) => {
+          //  surveyId = id
+          //  cy.deleteSurvey(surveyId, authToken)
+          //})
         })
       })
     })
