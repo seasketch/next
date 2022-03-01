@@ -1,0 +1,22 @@
+{
+  "CanCompleteLine": "Klikk for å legge til flere punkter, Dobbel-klikk for å avslutte",
+  "CanCompletePolygonTouch": "Klikk på startpunkt eller dobbelklikk for å avslutte",
+  "ContinueDrawLine": "Klikk for å legge til flere punkter, Dobbel-klikk for å avslutte",
+  "ContinuePolygon": "Klikk for å legge til flere punkter",
+  "ContinuePolygonTouch": "Klikk for å legge til flere punkter",
+  "DragPoint": "Dra punkt for å endre",
+  "DragVertex": "Klikk og dra punkt for å endre",
+  "DragVertexPolygonTouch": "Dra punkt for å endre",
+  "EditPolygonDesktop": "Dra punkter for å endre",
+  "EditPolygonTouch": "Klikk på en figur for å redigere",
+  "FinishPolygonDesktop": "Klikk på startpunktet eller dobbel-klikk siste punkt for å asvlutte",
+  "Invalid Shape": "Ugyldig Form",
+  "InvalidShapeInstructions": "Din figur vil bli rød hvis den er ugyldig. Når dette skjer, vær sikker på at figuren din ikke krysser seg selv, som indikert med X-symbolene. Hvis du fortsetter å få problemer med dette, vurder å slette figuren og start på nytt.",
+  "Okay": "Greit",
+  "Reset Shape": "Nullstill figur",
+  "StartLine": "Klikk på kartet for å starte en linje",
+  "StartPoint": "Klikk på kartet for å plassere et punkt",
+  "StartPointTouch": "Klikk på kartet for å plassere et punkt",
+  "StartPolygon": "<0></0>Klikk på kartet for å starte å tegne en figur",
+  "StartPolygonTouch": "Klikk på kartet for å starte et polygon"
+}
