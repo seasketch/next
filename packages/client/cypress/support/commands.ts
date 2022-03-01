@@ -556,6 +556,7 @@ Cypress.Commands.add("createFormElements", (formId: number, fixtureAlias: string
 Cypress.Commands.add("updateJumpToId", (jumpToId: number, elementsToUpdate: any, formId: number, token: string) => {
   elementsToUpdate.map(t => t.jumpToId = jumpToId)
   elementsToUpdate.forEach((f) => {
+    console.log(f)
       return cy
         .mutation(
           gql`
@@ -737,37 +738,8 @@ Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
   }
 })
 
-
-  //Cypress.Commands.add("deleteForm", (formId: number, token:string) => {
-  //  const deleteForm = 
-  //    `
-  //      mutation deleteForm {
-  //          deleteForm (input: { id: ${formId} }) {
-  //            form {
-  //              id
-  //            }
-  //          }  
-  //      }
-  //    `;
-  //    cy.request({
-  //        log: true,
-  //        url: 'http://localhost:3857/graphql',
-  //        method: 'POST',
-  //        headers: {
-  //            'Content-Type': 'application/json',
-  //            'Authorization': `Bearer ${token}`
-  //        },
-  //        body: {
-  //            query: deleteForm
-  //        },
-  //        failOnStatusCode: false
-  //      })
-  //      cy.log(`Deleted form with id of ${formId}.`)
-  //    })
-//
-
 Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string, newIds: object, token:string) => {
-  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules
+  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules.splice(0, 18)
   formLogic.sort((a, b) => {
     if (a.jumpToId > b.jumpToId) return 1; 
     if (a.jumpToId < b.jumpToId) return -1; 
@@ -823,106 +795,54 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
         },
         (token as any),
       ).then((data) => {
-        Cypress.log(data);
-      })
-    })//
-  })
-
-  Cypress.Commands.add("createFormLogicConditions", (formElementIds: object, fixtureAlias: string, token: string, formId: number) => {
-    const conditions = formLogicConditions[fixtureAlias].data.form.logicRules
-    conditions.map((t) => {
-      if (t.conditions[0].subjectId === 74) {
-        t.conditions[0].subjectId = formElementIds[0]
-      }
-    })
-    conditions.forEach ((f) => {
-      return cy
-        .mutation(
-          gql`
-            mutation CypressCreateFormLogicCondition($formLogicCondition:  FormLogicConditionInput!) {
-              createFormLogicCondition(input: {formLogicCondition: $formLogicCondition} )
-              {
-                formLogicCondition {
-                  id
-                }
-                query {
-                  form (id: ${formId}) {
-                    logicRules {
-                      formElementId,
-                      booleanOperator,
-                      jumpToId,
-                      command,
-                      position, 
-                      conditions {
-                        ruleId, 
-                        subjectId, 
-                        operator, 
-                        value
+        console.log(data)
+        if (data) {
+          return cy
+            .mutation(
+              gql`
+                mutation CypressCreateFormLogicCondition($formLogicCondition:  FormLogicConditionInput!) {
+                  createFormLogicCondition(input: {formLogicCondition: $formLogicCondition} )
+                  {
+                    formLogicCondition {
+                      id
+                    }
+                    query {
+                      form (id: ${formId}) {
+                        logicRules {
+                          formElementId,
+                          booleanOperator,
+                          jumpToId,
+                          command,
+                          position, 
+                          conditions {
+                            ruleId, 
+                            subjectId, 
+                            operator, 
+                            value
+                          }
+                        }
                       }
                     }
                   }
                 }
-              }
-            }
-          `,
-          { "formLogicCondition": {
-              "ruleId": f.conditions[0].ruleId,
-              "subjectId": f.conditions[0].subjectId,
-              "operator": f.conditions[0].operator,
-              "value": f.conditions[0].value
-            }
-          },
-          (token as any),
-        ).then((data) => {
-          console.log(data)
+              `,
+              { "formLogicCondition": {
+                  "ruleId": data.createFormLogicRule.formLogicRule.id,
+                  "subjectId": f.conditions[0].subjectId,
+                  "operator": f.conditions[0].operator,
+                  "value": f.conditions[0].value
+                }
+              },
+              (token as any),
+            ).then((data) => {
+              console.log(data)
+            })
+          }
         })
       })
-  })
+    })
 
-        //if (data.createFormLogicRule.query.form.logicRules != []) {
-  //      //  return cy
-  //      //    .mutation(
-        //      gql`
-        //        mutation CypressCreateFormLogicCondition($formLogicCondition:  FormLogicConditionInput!) {
-        //          createFormLogicCondition(input: {formLogicCondition: $formLogicCondition} )
-        //          {
-        //            formLogicCondition {
-        //              id
-        //            }
-        //            query {
-        //              form (id: ${formId}) {
-        //                logicRules {
-        //                  formElementId,
-        //                  booleanOperator,
-        //                  jumpToId,
-        //                  command,
-        //                  position
-        //                }
-        //              }
-        //            }
-        //          }
-        //        }
-        //      `,
-        //      { "formLogicCondition": {
-        //          "ruleId": f.conditions[0].ruleId,
-        //          "subjectId": f.conditions[0].subjectId,
-        //          "operator": f.conditions[0].operator,
-        //          "value": f.conditions[0].value
-        //        }
-        //      },
-        //      (token as any),
-        //    ).then((data) => {
-        //      console.log(data)
-        //})
-      //}//
-    //})
-  //})
-//})
-
-
-  
- 
-
+    
 //TO DO:
 //add rest of form attributes
 
