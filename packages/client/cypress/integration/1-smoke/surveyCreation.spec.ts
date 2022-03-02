@@ -15,7 +15,7 @@ function generateSlug() {
 const slug = generateSlug()
 
 describe("Survey creation smoke test", () => {
-  describe.only ('Survey creation Cypress commands', () => {
+  describe ('Survey creation Cypress commands', () => {
     beforeEach(() => {
       //slug = generateSlug()
       cy.intercept("http://localhost:3857/graphql", (req) => {
@@ -50,132 +50,132 @@ describe("Survey creation smoke test", () => {
       });
     })
     afterEach(() => {
-     // cy.deleteProject(`${slug}`)
+      cy.deleteProject(`${slug}`)
     })
-    //it ("Creates the project", () => {
-    //  cy.wait('@createProjectRequest')
-    //    .its('response.body.data.createProject.project')
-    //    .should('have.property', 'id')
-    //})
-    //it ("Creates the survey", () => {
-    //  cy.wait("@createSurveyRequest").its('response').then((resp) => {
-    //    const formElements = resp.body.data.makeSurvey.survey.form.formElements
-    //    expect (formElements.length).to.eq(5)
-    //  }) 
-    //})
-    //it ("Updates the survey's isDisabled field", () => {
-    //  cy.get("@surveyId").then((id) => {
-    //    surveyId = id
-    //    cy.get('@token').then((token) => {
-    //      authToken = token
-    //      cy.updateSurvey(surveyId, authToken).then((resp) => {
-    //        expect (resp.updateSurvey.survey.isDisabled).to.eql(false)
-    //        expect (resp.updateSurvey.survey.accessType).to.eql('PUBLIC')
-    //      })
-    //    })
-    //  })
-    //})
-    //it ("Can delete the survey", () => {
-    //  cy.get("@surveyId").then((id) => {
-    //    surveyId = id
-    //    cy.get('@token').then((token) => {
-    //      authToken = token
-    //      cy.deleteSurvey(surveyId, authToken).then((resp) => {
-    //        expect (resp.deleteSurvey.survey.id).to.eql(surveyId)
-    //      })
-    //    })
-    //  })
-    //})
-    //it ("Can delete default form elements not required by survey", () => {
-    // cy.get('@formId').then((id) => {
-    //   formId = id
-    //    cy.get('@token').then((token) => {
-    //      authToken = token
-    //      cy.deleteFormElements(formId, authToken).then((resp) => {
-    //        expect (resp.deleteFormElement.query.form.formElements.length).to.eq(3)
-    //        console.log(resp)
-    //      })
-    //    })
-    //  })
-    //})
-    //it ("Can update default form elements required by survey", () => {
-    //  cy.get('@formId').then((id) => {
-    //    formId = id
-    //     cy.get('@token').then((token) => {
-    //       authToken = token
-    //       cy.deleteFormElements(formId, authToken).then((resp) => {
-    //         const elementsToUpdate = []
-    //         resp.deleteFormElement.query.form.formElements.forEach(t => {
-    //           elementsToUpdate.push(t)
-    //         })
-    //         expect (elementsToUpdate.length).to.eq(3)
-    //          cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId).then((resp) => {
-    //            expect (resp.updateFormElement.query.form.formElements.length).to.eq(3)
-    //            expect (resp.updateFormElement.query.form.formElements[0].body.content[0].content[0].text).to.eq("Welcome Ocean Users!")
-    //         })
-    //       })
-    //       cy.get('@surveyId').then((id) => {
-    //        surveyId = id
-    //        cy.deleteSurvey(surveyId, authToken)
-    //      })
-    //     })
-    //   })
-    //})
-    //it ("Can update form with form elements", () => {
-    //  cy.get('@formId').then((id) => {
-    //    formId = id 
-    //    cy.get("@token").then((token) => {
-    //      authToken = token
-    //      cy.deleteFormElements(formId, authToken).then((resp) => {
-    //        const elementsToUpdate = []
-    //        resp.deleteFormElement.query.form.formElements.forEach(t => {
-    //          elementsToUpdate.push(t)
-    //        })
-    //        cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId)
-    //      })
-    //      cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
-    //        expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
-    //      })
-    //      cy.get('@surveyId').then((id) => {
-    //        surveyId = id
-    //        cy.deleteSurvey(surveyId, authToken)
-    //      })
-    //    })
-    //  })
-    //})
-    //it ("Can update jumpToId field on form elements", () => {
-    //  cy.get('@formId').then((id) => {
-    //    formId = id 
-    //    cy.get("@token").then((token) => {
-    //      authToken = token
-    //      cy.deleteFormElements(formId, authToken).then((resp) => {
-    //        const elementsToUpdate = []
-    //        resp.deleteFormElement.query.form.formElements.forEach(t => {
-    //          elementsToUpdate.push(t)
-    //        })
-    //        cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId)
-    //      })
-    //      cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
-    //        const elements = resp.createFormElement.query.form.formElements
-    //        let jumpToId
-    //        const elementsToUpdate = elements.splice(6,19)
-    //        for (let i = 0; i < elements.length; i++) {
-    //          if (elements[i].typeId === "SpatialAccessPriorityInput") {
-    //            jumpToId = elements[i].id
-    //            break
-    //          }
-    //        }
-    //        cy.updateJumpToId(jumpToId, elementsToUpdate, formId, authToken).then((resp) => {
-    //         expect (resp.updateFormElement.formElement.jumpToId).to.eq(jumpToId)
-    //        })
-    //      })
-    //      cy.get('@surveyId').then((id) => {
-    //        surveyId = id
-    //        cy.deleteSurvey(surveyId, authToken)
-    //      })
-    //    })
-    //  })
-    //})
+    it ("Creates the project", () => {
+      cy.wait('@createProjectRequest')
+        .its('response.body.data.createProject.project')
+        .should('have.property', 'id')
+    })
+    it ("Creates the survey", () => {
+      cy.wait("@createSurveyRequest").its('response').then((resp) => {
+        const formElements = resp.body.data.makeSurvey.survey.form.formElements
+        expect (formElements.length).to.eq(5)
+      }) 
+    })
+    it ("Updates the survey's isDisabled field", () => {
+      cy.get("@surveyId").then((id) => {
+        surveyId = id
+        cy.get('@token').then((token) => {
+          authToken = token
+          cy.updateSurvey(surveyId, authToken).then((resp) => {
+            expect (resp.updateSurvey.survey.isDisabled).to.eql(false)
+            expect (resp.updateSurvey.survey.accessType).to.eql('PUBLIC')
+          })
+        })
+      })
+    })
+    it ("Can delete the survey", () => {
+      cy.get("@surveyId").then((id) => {
+        surveyId = id
+        cy.get('@token').then((token) => {
+          authToken = token
+          cy.deleteSurvey(surveyId, authToken).then((resp) => {
+            expect (resp.deleteSurvey.survey.id).to.eql(surveyId)
+          })
+        })
+      })
+    })
+    it ("Can delete default form elements not required by survey", () => {
+     cy.get('@formId').then((id) => {
+       formId = id
+        cy.get('@token').then((token) => {
+          authToken = token
+          cy.deleteFormElements(formId, authToken).then((resp) => {
+            expect (resp.deleteFormElement.query.form.formElements.length).to.eq(3)
+            console.log(resp)
+          })
+        })
+      })
+    })
+    it ("Can update default form elements required by survey", () => {
+      cy.get('@formId').then((id) => {
+        formId = id
+         cy.get('@token').then((token) => {
+           authToken = token
+           cy.deleteFormElements(formId, authToken).then((resp) => {
+             const elementsToUpdate = []
+             resp.deleteFormElement.query.form.formElements.forEach(t => {
+               elementsToUpdate.push(t)
+             })
+             expect (elementsToUpdate.length).to.eq(3)
+              cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId).then((resp) => {
+                expect (resp.updateFormElement.query.form.formElements.length).to.eq(3)
+                expect (resp.updateFormElement.query.form.formElements[0].body.content[0].content[0].text).to.eq("Welcome Ocean Users!")
+             })
+           })
+           cy.get('@surveyId').then((id) => {
+            surveyId = id
+            cy.deleteSurvey(surveyId, authToken)
+          })
+         })
+       })
+    })
+    it ("Can update form with form elements", () => {
+      cy.get('@formId').then((id) => {
+        formId = id 
+        cy.get("@token").then((token) => {
+          authToken = token
+          cy.deleteFormElements(formId, authToken).then((resp) => {
+            const elementsToUpdate = []
+            resp.deleteFormElement.query.form.formElements.forEach(t => {
+              elementsToUpdate.push(t)
+            })
+            cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId)
+          })
+          cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+            expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
+          })
+          cy.get('@surveyId').then((id) => {
+            surveyId = id
+            cy.deleteSurvey(surveyId, authToken)
+          })
+        })
+      })
+    })
+    it ("Can update jumpToId field on form elements", () => {
+      cy.get('@formId').then((id) => {
+        formId = id 
+        cy.get("@token").then((token) => {
+          authToken = token
+          cy.deleteFormElements(formId, authToken).then((resp) => {
+            const elementsToUpdate = []
+            resp.deleteFormElement.query.form.formElements.forEach(t => {
+              elementsToUpdate.push(t)
+            })
+            cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId)
+          })
+          cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+            const elements = resp.createFormElement.query.form.formElements
+            let jumpToId
+            const elementsToUpdate = elements.splice(6,19)
+            for (let i = 0; i < elements.length; i++) {
+              if (elements[i].typeId === "SpatialAccessPriorityInput") {
+                jumpToId = elements[i].id
+                break
+              }
+            }
+            cy.updateJumpToId(jumpToId, elementsToUpdate, formId, authToken).then((resp) => {
+             expect (resp.updateFormElement.formElement.jumpToId).to.eq(jumpToId)
+            })
+          })
+          cy.get('@surveyId').then((id) => {
+            surveyId = id
+            cy.deleteSurvey(surveyId, authToken)
+          })
+        })
+      })
+    })
     it ("Can update form with logic rules and conditions", () => {
       cy.get('@formId').then((id) => {
         formId = id 
@@ -243,15 +243,15 @@ describe("Survey creation smoke test", () => {
               })
             })   
           })
-          //cy.get('@surveyId').then((id) => {
-          //  surveyId = id
-          //  cy.deleteSurvey(surveyId, authToken)
-          //})
+          cy.get('@surveyId').then((id) => {
+            surveyId = id
+            cy.deleteSurvey(surveyId, authToken)
+          })
         })
       })
     })
 
-  describe ('User survey flow', () => {
+  describe.only ('User survey flow', () => {
     before(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
         if ((req.body.operationName) && (req.body.operationName === "CypressCreateProject")) {
@@ -329,7 +329,6 @@ describe("Survey creation smoke test", () => {
                       newIds.push(newIds[19] + 6)
                       newIds.push(newIds[20] + 1)
                       console.log(newIds)
-                      expect (newIds.length).to.eq(22)
                       cy.createFormLogicRules(formId, "Maldives", newIds, access_token)
                     })
                   })
@@ -348,26 +347,58 @@ describe("Survey creation smoke test", () => {
       cy.getLocalStorage("surveyId").then((id) => {
         surveyId = parseInt(id)
         console.log(surveyId)
-        //cy.getLocalStorage("token").then((token) => {
-        //  cy.deleteSurvey(surveyId, token)
-        //})
+        cy.getLocalStorage("token").then((token) => {
+          cy.deleteSurvey(surveyId, token)
+        })
       })
-      //cy.deleteProject(`${slug}`) 
+      cy.deleteProject(`${slug}`) 
     })
     it("Can visit the survey", () => {
        cy.contains('Begin', {timeout: 30000}).click()
     })
-    //it("Cannot progress until name is provided", () => {
-    //  cy.contains("What is your name?")
-    //    .get('[title = "Next Question"]')
-    //    .should('have.class', "pointer-events-none")
-    //    .get("input").type("Test User 1") 
-    //    .get("button").contains("Next").click()
-    //})
-    //it("Can input email address or can skip question", () => {
-    //  cy.get("input")
-    //  cy.contains("Skip Question").click()
-    //})
+    it("Cannot advance until name is provided", () => {
+      cy.contains("What is your name?")
+        .get('[title = "Next Question"]')
+        .should('have.class', "pointer-events-none")
+        .get("input").type("Test User 1") 
+        .get("button").contains("Next").click()
+    })
+    it("Can input email address or can skip question", () => {
+      cy.get("input")
+      cy.contains("Skip Question").click()
+    })
+    it("Cannot advance until atoll selection is made", () => {
+      cy.contains("Which Atoll do you reside on?")
+        .get('[title = "Next Question"]')
+        .should('have.class', "pointer-events-none")
+      cy.contains('N').click()
+    })
+    it("Advances to appropriate island selection page", () => {
+      cy.contains('Which island of N atoll do you reside on?', {timeout: 30000})
+      cy.contains('Lhohi')
+    })
+    it("Cannot advance until island selection is made", () => {
+      cy.get('[title = "Next Question"]')
+        .should('have.class', "pointer-events-none")
+      cy.contains('Kudafari').click()
+    })
+    it("Cannot advance until sector selection(s) is made", () => {
+        //.should('not.be', 'visible')
+        cy.get('[type = "button"]').as('btn')
+        cy.get('@btn').should('be.hidden')
+      cy.get('[title = "Next Question"]').as('next')
+        .should('have.class', "pointer-events-none")
+      cy.contains('Fisheries - Recreational').click()
+      cy.get('@next').scrollIntoView()
+      cy.get('@btn').then((btn) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        expect (btn).to.be.visible
+      })
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        //expect (btn).to.be.visible
+      //cy.get('[type = "button"]').should('be.visible')
+      
+    })
   })
 })
 
