@@ -189,17 +189,26 @@ describe("Survey creation smoke test", () => {
             cy.updateFormElements(elementsToUpdate,"Maldives", authToken, formId)
           })
           cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
+            //formElements are the newly created elements in addition to WelcomeMessage, 
+            //SaveScreen and ThankYou. There are 34 total.
             const formElements = resp.createFormElement.query.form.formElements
+            console.log(formElements)
             let jumpToId
+            //elementsToUpdate are the elements whose jumpToId needs to be updated 
+            //to represent the id of the "What sectors do you represent question". 
+            //These elements consist of the island questions
             const elementsToUpdate = formElements.splice(6,19)
             console.log(elementsToUpdate)
+            //Get the id of the "What sectors do you represent question" and save as jumpToId
             for (let i = 0; i < formElements.length; i++) {
               if (formElements[i].typeId === "SpatialAccessPriorityInput") {
                 jumpToId = formElements[i].id
                 break
               }
             }
-            cy.updateJumpToId(jumpToId, elementsToUpdate, formId, authToken)
+            cy.updateJumpToId(jumpToId, elementsToUpdate, formId, authToken).then((resp) => {
+              console.log(resp)
+            })
               let baseId = 0
               let ids = []
               function getIds(baseId) {
@@ -228,7 +237,7 @@ describe("Survey creation smoke test", () => {
               console.log(newIds)
               expect (newIds.length).to.eq(22)
               cy.createFormLogicRules(formId, "Maldives", newIds, authToken).then((resp) => {
-                console.log(resp)
+              console.log(resp)
                 expect (resp.createFormLogicCondition.query.form.logicRules.length).does.not.eq(0)
                 expect (resp.createFormLogicCondition.query.form.logicRules[0].conditions.length).does.not.eq(0)
               })

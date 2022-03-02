@@ -487,6 +487,7 @@ Cypress.Commands.add("deleteForm", (formId: number, token: string) => {
 
 Cypress.Commands.add("createFormElements", (formId: number, fixtureAlias: string, token: string) => {
   const elements = formElements[fixtureAlias].data.form.formElements
+  console.log(elements)
   elements.map(t => t.formId = formId)
   if (!fixtureAlias) {
     throw new Error(`Unrecognized alias "${fixtureAlias}"`);
@@ -556,7 +557,6 @@ Cypress.Commands.add("createFormElements", (formId: number, fixtureAlias: string
 Cypress.Commands.add("updateJumpToId", (jumpToId: number, elementsToUpdate: any, formId: number, token: string) => {
   elementsToUpdate.map(t => t.jumpToId = jumpToId)
   elementsToUpdate.forEach((f) => {
-    console.log(f)
       return cy
         .mutation(
           gql`
@@ -739,13 +739,14 @@ Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
 })
 
 Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string, newIds: object, token:string) => {
-  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules
-  formLogic.sort((a, b) => {
-    if (a.jumpToId > b.jumpToId) return 1; 
-    if (a.jumpToId < b.jumpToId) return -1; 
-    else return 0
-  })
-
+  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules.splice(0,18)
+  console.log(formLogic)
+  //formLogic.sort((a, b) => {
+  //  if (a.jumpToId > b.jumpToId) return 1; 
+  //  if (a.jumpToId < b.jumpToId) return -1; 
+  //  else return 0
+  //})
+//
   for (let i=0; i< formLogic.length-2; i++) {
     formLogic[i].jumpToId = newIds[i+1]
   }
@@ -798,7 +799,7 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
         },
         (token as any),
       ).then((data) => {
-        console.log(data)
+        Cypress.log(data)
         if (data) {
           return cy
             .mutation(
@@ -841,11 +842,11 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
               console.log(data)
             })
           }
-        })
-      })
-    })
-
-
-//TO DO:
-//add rest of form attributes
-
+      })//
+    })//
+  })
+//
+////TO DO:
+////add rest of form attributes
+//
+//
