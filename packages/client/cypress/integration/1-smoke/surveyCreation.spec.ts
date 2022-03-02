@@ -194,12 +194,12 @@ describe("Survey creation smoke test", () => {
             const formElements = resp.createFormElement.query.form.formElements
             console.log(formElements)
             let jumpToId
-            //elementsToUpdate are the elements whose jumpToId needs to be updated 
-            //to represent the id of the "What sectors do you represent question". 
-            //These elements consist of the island questions
+            ////elementsToUpdate are the elements whose jumpToId needs to be updated 
+            ////to represent the id of the "What sectors do you represent question". 
+            ////These elements consist of the island questions
             const elementsToUpdate = formElements.splice(6,19)
             console.log(elementsToUpdate)
-            //Get the id of the "What sectors do you represent question" and save as jumpToId
+            ////Get the id of the "What sectors do you represent question" and save as jumpToId
             for (let i = 0; i < formElements.length; i++) {
               if (formElements[i].typeId === "SpatialAccessPriorityInput") {
                 jumpToId = formElements[i].id

@@ -739,7 +739,7 @@ Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
 })
 
 Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string, newIds: object, token:string) => {
-  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules.splice(0,18)
+  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules.splice(0,19)
   console.log(formLogic)
   //formLogic.sort((a, b) => {
   //  if (a.jumpToId > b.jumpToId) return 1; 
@@ -747,7 +747,7 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
   //  else return 0
   //})
 //
-  for (let i=0; i< formLogic.length-2; i++) {
+  for (let i=0; i< formLogic.length; i++) {
     formLogic[i].jumpToId = newIds[i+1]
   }
 
@@ -812,6 +812,12 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
                     }
                     query {
                       form (id: ${formId}) {
+                      formElements {
+                        id, 
+                        jumpToId, 
+                        typeId, 
+                        body
+                      }
                         logicRules {
                           formElementId,
                           booleanOperator,
