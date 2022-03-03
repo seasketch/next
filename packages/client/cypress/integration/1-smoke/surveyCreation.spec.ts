@@ -383,21 +383,25 @@ describe("Survey creation smoke test", () => {
       cy.contains('Kudafari').click()
     })
     it("Cannot advance until sector selection(s) is made", () => {
-        //.should('not.be', 'visible')
-        cy.get('[type = "button"]').as('btn')
-        cy.get('@btn').should('be.hidden')
+      cy.get('[type = "button"]').as('nextBtn')
+      cy.get('@nextBtn').should('be.hidden')
       cy.get('[title = "Next Question"]').as('next')
         .should('have.class', "pointer-events-none")
       cy.contains('Fisheries - Recreational').click()
       cy.get('@next').scrollIntoView()
-      cy.get('@btn').then((btn) => {
+      cy.get('@nextBtn').then((btn) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         expect (btn).to.be.visible
       })
-        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        //expect (btn).to.be.visible
-      //cy.get('[type = "button"]').should('be.visible')
-      
+    })
+    it("Can select multiple sectors", () => {
+      cy.get('[title = "Fisheries - Recreational"]').then(($el) => {
+        expect ($el).to.have.descendants('svg')
+      })
+      cy.get('[title = "Aquaculture / Mariculture"]').click().then(($el) => {
+        expect ($el).to.have.descendants('svg')
+      })
+      cy.get('[type = "button"]').click()
     })
   })
 })
