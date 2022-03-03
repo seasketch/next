@@ -401,7 +401,7 @@ describe("Survey creation smoke test", () => {
       cy.get('[title = "Aquaculture / Mariculture"]').click().then(($el) => {
         expect ($el).to.have.descendants('svg')
       })
-      cy.get('[type = "button"]').click()
+      cy.get('[type = "button"]', {timeout: 7000}).click()
     })
   })
 })
