@@ -52,13 +52,19 @@ export default function useMapEssentials({
   const debouncedCamera = useDebounce(cameraOptions, 30);
 
   useEffect(() => {
-    if (mapContext?.manager && data?.currentProject?.basemaps?.length) {
+    if (
+      mapContext?.manager &&
+      data?.currentProject?.basemaps?.length &&
+      data?.currentProject?.surveyBasemaps?.length
+    ) {
       let basemaps: BasemapDetailsFragment[] = [];
-      if (filterBasemapIds) {
+      const allBasemaps = [
+        ...data.currentProject.basemaps,
+        ...data.currentProject.surveyBasemaps,
+      ];
+      if (filterBasemapIds && filterBasemapIds.length) {
         basemaps = filterBasemapIds
-          .map((id) =>
-            (data.currentProject?.basemaps || []).find((b) => b.id === id)
-          )
+          .map((id) => allBasemaps.find((b) => b.id === id))
           .filter((b) => b !== undefined) as BasemapDetailsFragment[];
       } else {
         basemaps = data.currentProject.basemaps;
@@ -70,7 +76,12 @@ export default function useMapEssentials({
       // mapContext.manager.setProjectBounds(bboxPolygon(bounds));
       mapContext.manager?.setBasemaps(basemaps);
     }
-  }, [data?.currentProject?.basemaps, mapContext.manager, filterBasemapIds]);
+  }, [
+    data?.currentProject?.basemaps,
+    data?.currentProject?.surveyBasemaps,
+    mapContext.manager,
+    filterBasemapIds,
+  ]);
 
   useEffect(() => {
     if (mapContext?.manager?.map && debouncedCamera) {

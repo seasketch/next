@@ -288,6 +288,16 @@ type Basemap implements Node {
     """The method to use when ordering `ProjectsSharedBasemap`."""
     orderBy: [ProjectsSharedBasemapsOrderBy!] = [NATURAL]
   ): ProjectsSharedBasemapsConnection!
+
+  """Reads and enables pagination through a set of `FormElement`."""
+  relatedFormElements(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [FormElement!]
+  surveysOnly: Boolean!
   terrainExaggeration: BigFloat!
   terrainMaxZoom: Int!
 
@@ -367,6 +377,7 @@ input BasemapInput {
   superusers can create Shared Basemaps.
   """
   projectId: Int
+  surveysOnly: Boolean
   terrainExaggeration: BigFloat
   terrainMaxZoom: Int
 
@@ -435,6 +446,7 @@ input BasemapPatch {
   superusers can create Shared Basemaps.
   """
   projectId: Int
+  surveysOnly: Boolean
   terrainExaggeration: BigFloat
   terrainMaxZoom: Int
 
@@ -4232,6 +4244,27 @@ type FormElement implements Node {
   layout: FormElementLayout
 
   """
+  IDs for basemaps that should be included in the map view if a map layout is selected
+  """
+  mapBasemaps: [Int]
+
+  """
+  If using a map-based layout, can be used to set the default starting point of the map
+  
+  See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+  ```json
+  {
+    "center": [-73.5804, 45.53483],
+    "pitch": 60,
+    "bearing": -60,
+    "zoom": 10
+  }
+  ```
+  
+  """
+  mapCameraOptions: JSON
+
+  """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
@@ -4369,6 +4402,27 @@ input FormElementInput {
   layout: FormElementLayout
 
   """
+  IDs for basemaps that should be included in the map view if a map layout is selected
+  """
+  mapBasemaps: [Int]
+
+  """
+  If using a map-based layout, can be used to set the default starting point of the map
+  
+  See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+  ```json
+  {
+    "center": [-73.5804, 45.53483],
+    "pitch": 60,
+    "bearing": -60,
+    "zoom": 10
+  }
+  ```
+  
+  """
+  mapCameraOptions: JSON
+
+  """
   Determines order of field display. Clients should display fields in ascending 
   order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
   update.
@@ -4474,6 +4528,27 @@ input FormElementPatch {
   layout: FormElementLayout
 
   """
+  IDs for basemaps that should be included in the map view if a map layout is selected
+  """
+  mapBasemaps: [Int]
+
+  """
+  If using a map-based layout, can be used to set the default starting point of the map
+  
+  See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+  ```json
+  {
+    "center": [-73.5804, 45.53483],
+    "pitch": 60,
+    "bearing": -60,
+    "zoom": 10
+  }
+  ```
+  
+  """
+  mapCameraOptions: JSON
+
+  """
   Determines order of field display. Clients should display fields in ascending 
   order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
   update.
@@ -4521,6 +4596,8 @@ enum FormElementsOrderBy {
   FORM_ID_DESC
   ID_ASC
   ID_DESC
+  MAP_BASEMAPS_ASC
+  MAP_BASEMAPS_DESC
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
@@ -8173,6 +8250,15 @@ type Project implements Node {
     orderBy: [SpritesOrderBy!]
   ): [Sprite!]!
   supportEmail: String!
+
+  """Reads and enables pagination through a set of `Basemap`."""
+  surveyBasemaps(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Basemap!]
 
   """Reads and enables pagination through a set of `Survey`."""
   surveys(

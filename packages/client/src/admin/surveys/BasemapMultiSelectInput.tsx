@@ -1,7 +1,7 @@
 import bbox from "@turf/bbox";
 import bboxPolygon from "@turf/bbox-polygon";
 import { LngLatBoundsLike, Map } from "mapbox-gl";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import Button from "../../components/Button";
 import truncate from "@turf/truncate";
@@ -9,20 +9,14 @@ import { encode } from "@mapbox/polyline";
 import { BBox } from "geojson";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import DrawRectangle from "mapbox-gl-draw-rectangle-mode";
-import { useGetBasemapsQuery } from "../../generated/graphql";
+import { useAllBasemapsQuery } from "../../generated/graphql";
 import { useParams } from "react-router-dom";
-import Switch from "../../components/Switch";
 import { PencilIcon, TrashIcon } from "@heroicons/react/outline";
 import SelectBasemapsModal from "./SelectBasemapsModal";
 import { FormEditorHeader } from "./SurveyFormEditor";
 import DropdownButton from "../../components/DropdownButton";
-import {
-  DragDropContext,
-  Draggable,
-  DraggableProvided,
-  DraggableStateSnapshot,
-  Droppable,
-} from "react-beautiful-dnd";
+import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
+import CreateBasemapModal from "../data/CreateBasemapModal";
 
 export default function BasemapMultiSelectInput({
   value,
@@ -33,11 +27,25 @@ export default function BasemapMultiSelectInput({
 }) {
   const { t } = useTranslation("admin:surveys");
   const { slug } = useParams<{ slug: string }>();
-  const { data, loading, error } = useGetBasemapsQuery({
-    variables: {
-      slug,
-    },
-  });
+  const { data, loading, error, refetch } = useAllBasemapsQuery({});
+  const [state, setState] = useState(value || []);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+
+  const basemaps = useMemo(() => {
+    if (data?.currentProject?.basemaps && data.currentProject.surveyBasemaps) {
+      return [
+        ...data.currentProject.basemaps,
+        ...data.currentProject.surveyBasemaps,
+      ];
+    }
+    return [];
+  }, [data]);
+
+  useEffect(() => {
+    if (value !== state) {
+      setState(value || []);
+    }
+  }, [value]);
 
   const [selectBasemapsModalOpen, setSelectBasemapsModalOpen] = useState(false);
 
@@ -50,21 +58,34 @@ export default function BasemapMultiSelectInput({
           label={t("add")}
           options={[
             {
-              label: t("Existing basemap"),
+              label: t("Select from project maps"),
               onClick: () => setSelectBasemapsModalOpen(true),
             },
             {
               label: t("New basemap"),
-              onClick: () => null,
-              disabled: true,
+              onClick: () => setCreateModalOpen(true),
             },
           ]}
         />
       </FormEditorHeader>
-      <div className="bg-gray-50 border-t -mt-0.5 px-3 py-1 pb-8">
+      {createModalOpen && (
+        <CreateBasemapModal
+          onRequestClose={() => setCreateModalOpen(false)}
+          surveysOnly={true}
+          onSave={(id) => {
+            if (onChange) {
+              const newState = [...state, id];
+              onChange(newState);
+              setState(newState);
+              refetch();
+            }
+          }}
+        />
+      )}
+      <div className="bg-gray-50 bg-opacity-50 border-t -mt-0.5 px-3 py-1 pb-2 border-b">
         {selectBasemapsModalOpen && (
           <SelectBasemapsModal
-            value={value || []}
+            value={state}
             onRequestClose={(value) => {
               setSelectBasemapsModalOpen(false);
               if (onChange) {
@@ -74,10 +95,10 @@ export default function BasemapMultiSelectInput({
           />
         )}
         <p className="text-sm text-gray-500 mb-2 mt-1">
-          {(!value || value.length === 0) && (
+          {state.length === 0 && (
             <Trans ns="admin:surveys">
-              If no basemaps are specified, a default will be chosen from your
-              project
+              If no basemaps are specified, your project's already configured
+              maps will be used
             </Trans>
           )}
         </p>
@@ -88,11 +109,13 @@ export default function BasemapMultiSelectInput({
                 return;
               }
               let sorted = reorder(
-                value || [],
+                state,
                 result.source.index,
                 result.destination.index
               );
+
               if (onChange) {
+                setState(sorted);
                 onChange(sorted);
               }
             }}
@@ -105,10 +128,8 @@ export default function BasemapMultiSelectInput({
                     {...provided.droppableProps}
                     className="space-y-2"
                   >
-                    {(value || []).map((id, i) => {
-                      const basemap = (
-                        data?.projectBySlug?.basemaps || []
-                      ).find((b) => b.id === id);
+                    {state.map((id, i) => {
+                      const basemap = basemaps.find((b) => b.id === id);
                       if (basemap) {
                         return (
                           <Draggable
@@ -142,12 +163,12 @@ export default function BasemapMultiSelectInput({
                                   </button>
                                   <button
                                     onClick={() => {
+                                      const newState = state.filter(
+                                        (i) => i !== basemap.id
+                                      );
+                                      setState(newState);
                                       if (onChange) {
-                                        onChange(
-                                          (value || []).filter(
-                                            (i) => i !== basemap.id
-                                          )
-                                        );
+                                        onChange(newState);
                                       }
                                     }}
                                   >
@@ -168,7 +189,7 @@ export default function BasemapMultiSelectInput({
               }}
             </Droppable>
           </DragDropContext>
-          {value?.length && value?.length > 1 ? (
+          {state.length > 1 ? (
             <p className="py-2 text-gray-500 italic text-sm text-center">
               <Trans ns="admin:surveys">First listed will be the default</Trans>
             </p>

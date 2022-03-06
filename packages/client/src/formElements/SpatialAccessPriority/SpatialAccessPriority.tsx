@@ -1342,13 +1342,6 @@ function Admin(props: {
                 </Trans>
               }
             />
-            <BasemapMultiSelectInput
-              value={props.componentSettings.basemaps}
-              onChange={updateComponentSetting(
-                "basemaps",
-                props.componentSettings
-              )}
-            />
             <BoundsInput
               value={props.bounds}
               map={props.map}
@@ -1359,6 +1352,15 @@ function Admin(props: {
                 props.componentSettings
               )}
             />
+            <div className="-mx-3">
+              <BasemapMultiSelectInput
+                value={props.componentSettings.basemaps}
+                onChange={updateComponentSetting(
+                  "basemaps",
+                  props.componentSettings
+                )}
+              />
+            </div>
           </>
         );
       }}

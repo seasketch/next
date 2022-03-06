@@ -3,10 +3,17 @@ import { Map } from "mapbox-gl";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import Button from "../../components/Button";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
-import { BasemapType, useCreateBasemapMutation } from "../../generated/graphql";
+import {
+  BasemapType,
+  CursorType,
+  useCreateBasemapMutation,
+  useUpdateInteractivitySettingsLayersMutation,
+  useUpdateInteractivitySettingsMutation,
+} from "../../generated/graphql";
 import { useMapboxStyle } from "../../useMapboxStyle";
 import useProjectId from "../../useProjectId";
 import { createImageBlobFromDataURI } from "./arcgis/arcgis";
@@ -14,12 +21,20 @@ import { createImageBlobFromDataURI } from "./arcgis/arcgis";
 const THUMBNAIL_SIZE = 240;
 const IMAGE_SIZE = THUMBNAIL_SIZE * window.devicePixelRatio;
 
+enum TABS {
+  UPLOAD,
+  URL,
+  ACCOUNT,
+}
+
 export default function CreateBasemapModal({
   onSave,
   onRequestClose,
+  surveysOnly,
 }: {
-  onSave?: () => void;
+  onSave?: (id: number) => void;
   onRequestClose?: () => void;
+  surveysOnly?: boolean;
 }) {
   const [state, setState] = useState<{
     type: BasemapType;
@@ -27,13 +42,22 @@ export default function CreateBasemapModal({
     description?: string;
     url: string;
     mapPreview: boolean;
+    selectedTab: TABS;
   }>({
     type: BasemapType.Mapbox,
     name: "",
     url: "",
     mapPreview: false,
+    selectedTab: TABS.URL,
   });
+
   const { t } = useTranslation("admin");
+  const Tabs = [
+    { name: t("By URL"), id: TABS.URL },
+    { name: t("Upload"), id: TABS.UPLOAD },
+    { name: t("Mapbox Account"), id: TABS.ACCOUNT },
+  ];
+
   const projectId = useProjectId();
   const [mutate, mutationState] = useCreateBasemapMutation({
     update: (cache, { data }) => {
@@ -46,38 +70,85 @@ export default function CreateBasemapModal({
           }),
           fields: {
             basemaps(existingBasemapRefs = [], { readField }) {
-              const newBasemapRef = cache.writeFragment({
-                data: newBasemapData,
-                fragment: gql`
-                  fragment NewBasemap on Basemap {
-                    id
-                    projectId
-                    attribution
-                    description
-                    labelsLayerId
-                    name
-                    nodeId
-                    terrainExaggeration
-                    terrainOptional
-                    url
-                    type
-                    tileSize
-                    thumbnail
-                    terrainUrl
-                    terrainTileSize
-                  }
-                `,
-              });
+              if (!newBasemapData.surveysOnly) {
+                const newBasemapRef = cache.writeFragment({
+                  data: newBasemapData,
+                  fragment: gql`
+                    fragment NewBasemap on Basemap {
+                      id
+                      projectId
+                      attribution
+                      description
+                      labelsLayerId
+                      name
+                      terrainExaggeration
+                      terrainOptional
+                      url
+                      type
+                      tileSize
+                      thumbnail
+                      terrainUrl
+                      terrainTileSize
+                      surveysOnly
+                    }
+                  `,
+                });
 
-              return [...existingBasemapRefs, newBasemapRef];
+                return [...existingBasemapRefs, newBasemapRef];
+              } else {
+                return existingBasemapRefs;
+              }
+            },
+            surveyBasemaps(existingBasemapRefs = [], { readField }) {
+              if (newBasemapData.surveysOnly) {
+                const newBasemapRef = cache.writeFragment({
+                  data: newBasemapData,
+                  fragment: gql`
+                    fragment NewBasemap on Basemap {
+                      id
+                      projectId
+                      attribution
+                      description
+                      labelsLayerId
+                      name
+                      terrainExaggeration
+                      terrainOptional
+                      url
+                      type
+                      tileSize
+                      thumbnail
+                      terrainUrl
+                      terrainTileSize
+                      surveysOnly
+                    }
+                  `,
+                });
+
+                return [...existingBasemapRefs, newBasemapRef];
+              } else {
+                return existingBasemapRefs;
+              }
             },
           },
         });
       }
     },
   });
-  const client = useApolloClient();
 
+  const onError = useGlobalErrorHandler();
+  const [
+    updateInteractivity,
+    updateInteractivityState,
+  ] = useUpdateInteractivitySettingsMutation({
+    onError,
+  });
+
+  const [
+    updateLayers,
+    updateLayersState,
+  ] = useUpdateInteractivitySettingsLayersMutation({
+    onError,
+  });
   const mapboxStyleInfo = useMapboxStyle(
     state.type === BasemapType.Mapbox ? state.url : undefined
   );
@@ -121,7 +192,7 @@ export default function CreateBasemapModal({
       ></canvas>
       <Modal
         open={true}
-        title={t("Custom Basemap")}
+        // title={t("New Map")}
         zeroPadding
         footer={
           <div className="text-right">
@@ -162,12 +233,51 @@ export default function CreateBasemapModal({
                             thumbnail: blob,
                             type: state.type,
                             url: state.url,
+                            surveysOnly,
                           },
-                        }).then((d) => {
-                          if (onRequestClose) {
-                            onRequestClose();
-                          }
-                        });
+                        })
+                          .then((d) => {
+                            if (
+                              mapboxStyleInfo.data?.metadata?.[
+                                "seasketch:interactivity_settings"
+                              ] &&
+                              d.data?.createBasemap?.basemap
+                                ?.interactivitySettings?.id
+                            ) {
+                              const settings =
+                                mapboxStyleInfo.data.metadata[
+                                  "seasketch:interactivity_settings"
+                                ];
+                              const settingsId =
+                                d.data.createBasemap.basemap
+                                  .interactivitySettings.id;
+                              return updateInteractivity({
+                                variables: {
+                                  id: settingsId,
+                                  ...settings,
+                                },
+                              }).then((i) => {
+                                return updateLayers({
+                                  variables: {
+                                    id: settingsId,
+                                    layers: settings.layers,
+                                  },
+                                }).then((a) => {
+                                  return d;
+                                });
+                              });
+                            } else {
+                              return d;
+                            }
+                          })
+                          .then((d) => {
+                            if (onSave && d.data?.createBasemap?.basemap?.id) {
+                              onSave(d.data.createBasemap.basemap.id);
+                            }
+                            if (onRequestClose) {
+                              onRequestClose();
+                            }
+                          });
                       })
                       .catch((e) => {
                         alert(e.toString());
@@ -185,9 +295,62 @@ export default function CreateBasemapModal({
         }
       >
         {!state.mapPreview && (
-          <div className="w-128 h-72">
+          <div className="w-128 max-w-full">
+            <h3 className="text-center py-4 pb-1 font-medium text-xl">
+              {t("New Map")}
+            </h3>
+            <p className="text-sm text-gray-500 text-center px-4 py-2">
+              <Trans ns="admin:surveys">
+                SeaSketch uses{" "}
+                <a
+                  className="underline"
+                  href="https://docs.mapbox.com/mapbox-gl-js/style-spec/"
+                  target="_blank"
+                >
+                  Mapbox Style documents
+                </a>{" "}
+                to represent basemaps. These can be authored in Mapbox Studio or{" "}
+                <a
+                  className="underline"
+                  target="_blank"
+                  href="https://maputnik.github.io/"
+                >
+                  open source tools
+                </a>
+                .
+              </Trans>
+            </p>
+            <div className="block">
+              <nav
+                className="flex space-x-4 w-full justify-center my-2"
+                aria-label="Tabs"
+              >
+                {Tabs.map((tab) => (
+                  <button
+                    onClick={() => {
+                      setState((prev) => ({
+                        ...prev,
+                        selectedTab: tab.id,
+                      }));
+                    }}
+                    key={tab.id}
+                    className={classNames(
+                      tab.id === state.selectedTab
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-500 hover:text-gray-700",
+                      "px-3 py-2 font-medium text-sm rounded-md"
+                    )}
+                    aria-current={
+                      tab.id === state.selectedTab ? "page" : undefined
+                    }
+                  >
+                    {tab.name}
+                  </button>
+                ))}
+              </nav>
+            </div>
             <div className="p-4">
-              <div className="mb-4">
+              {/* <div className="mb-4">
                 <label
                   htmlFor="type"
                   className="block text-sm mb-1 font-medium leading-5 text-gray-700"
@@ -211,63 +374,65 @@ export default function CreateBasemapModal({
                     {t("Raster tile url template")}
                   </option>
                 </select>
-              </div>
-              <div className="mb-2">
-                <TextInput
-                  placeholder={
-                    state.type === BasemapType.Mapbox
-                      ? "mapbox://styles/mapbox/satellite-v9"
-                      : "https://example.com/wms?bbox={bbox-epsg-3857}&request=GetMap&format=image/png&service=WMS&version=1.1.1&srs=EPSG:3857&width=256&height=256&layers=example"
-                  }
-                  inputChildNode={
-                    mapboxStyleInfo.loading ? (
-                      <div className="absolute right-2 top-2">
-                        <Spinner />
-                      </div>
-                    ) : null
-                  }
-                  description={
-                    state.type === BasemapType.Mapbox ? (
-                      <>
+              </div> */}
+              {state.selectedTab === TABS.URL && (
+                <div className="mb-2 -mt-2 h-22">
+                  <TextInput
+                    placeholder={
+                      state.type === BasemapType.Mapbox
+                        ? "mapbox://styles/mapbox/satellite-v9"
+                        : "https://example.com/wms?bbox={bbox-epsg-3857}&request=GetMap&format=image/png&service=WMS&version=1.1.1&srs=EPSG:3857&width=256&height=256&layers=example"
+                    }
+                    inputChildNode={
+                      mapboxStyleInfo.loading ? (
+                        <div className="absolute right-2 top-2">
+                          <Spinner />
+                        </div>
+                      ) : null
+                    }
+                    description={
+                      state.type === BasemapType.Mapbox ? (
+                        <>
+                          <Trans ns="admin">
+                            Enter a{" "}
+                            <code className="bg-gray-100 p-0.5 rounded">
+                              mapbox://
+                            </code>{" "}
+                            type url or the direct url to a mapbox-gl style
+                            hosted on another platform.
+                          </Trans>
+                        </>
+                      ) : (
                         <Trans ns="admin">
                           Enter a{" "}
-                          <code className="bg-gray-100 p-0.5 rounded">
-                            mapbox://
-                          </code>{" "}
-                          type url or the direct url to a mapbox-gl style hosted
-                          on another platform.
+                          <a
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary-500 underline"
+                            href="https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources"
+                          >
+                            url template
+                          </a>{" "}
+                          the tells SeaSketch how to load a raster tile data
+                          source.
                         </Trans>
-                      </>
-                    ) : (
-                      <Trans ns="admin">
-                        Enter a{" "}
-                        <a
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-primary-500 underline"
-                          href="https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources"
-                        >
-                          url template
-                        </a>{" "}
-                        the tells SeaSketch how to load a raster tile data
-                        source.
-                      </Trans>
-                    )
-                  }
-                  name="url"
-                  value={state.url}
-                  label="URL"
-                  onChange={(url) => {
-                    setState((old) => ({
-                      ...old,
-                      url,
-                    }));
-                  }}
-                />
-              </div>
+                      )
+                    }
+                    name="url"
+                    value={state.url}
+                    label={""}
+                    onChange={(url) => {
+                      setState((old) => ({
+                        ...old,
+                        url,
+                      }));
+                    }}
+                  />
+                </div>
+              )}
               <div className="mt-4">
                 <TextInput
-                  label={t("Basemap Name")}
+                  label={t("Map Name")}
                   name="name"
                   value={state.name}
                   onChange={(name) => setState((old) => ({ ...old, name }))}
@@ -320,4 +485,9 @@ export default function CreateBasemapModal({
       </Modal>
     </>
   );
+}
+
+// @ts-ignore
+function classNames(...classes) {
+  return classes.filter(Boolean).join(" ");
 }

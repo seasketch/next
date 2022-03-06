@@ -1265,17 +1265,17 @@ export default function SurveyFormEditor({
                               id: selectedFormElement!.id,
                               mapBasemaps: value,
                             },
-                            optimisticResponse: (data) => ({
-                              __typename: "Mutation",
-                              updateFormElement: {
-                                __typename: "UpdateFormElementPayload",
-                                formElement: {
-                                  __typename: "FormElement",
-                                  id: data.id,
-                                  mapBasemaps: data.mapBasemaps as number[],
-                                },
-                              },
-                            }),
+                            // optimisticResponse: (data) => ({
+                            //   __typename: "Mutation",
+                            //   updateFormElement: {
+                            //     __typename: "UpdateFormElementPayload",
+                            //     formElement: {
+                            //       __typename: "FormElement",
+                            //       id: selectedFormElement!.id,
+                            //       mapBasemaps: value,
+                            //     },
+                            //   },
+                            // }),
                           });
                         }}
                       />

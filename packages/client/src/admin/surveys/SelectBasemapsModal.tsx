@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Switch from "../../components/Switch";
-import { useGetBasemapsQuery } from "../../generated/graphql";
+import {
+  BasemapDetailsFragmentDoc,
+  DeleteBasemapDocument,
+  DeleteBasemapMutation,
+  useAllBasemapsQuery,
+  useDeleteBasemapMutation,
+} from "../../generated/graphql";
+import { useDelete } from "../../graphqlHookWrappers";
 
 export default function SelectBasemapsModal(props: {
   value: number[];
@@ -21,12 +27,23 @@ export default function SelectBasemapsModal(props: {
   }
 
   const { t } = useTranslation("admin:surveys");
-  const { slug } = useParams<{ slug: string }>();
-  const { data, loading, error } = useGetBasemapsQuery({
-    variables: {
-      slug,
-    },
+  const { data, loading, error } = useAllBasemapsQuery({
+    fetchPolicy: "cache-and-network",
   });
+  const deleteBasemap = useDelete<DeleteBasemapMutation>(DeleteBasemapDocument);
+
+  const basemaps = useMemo(() => {
+    if (data?.currentProject?.basemaps && data.currentProject.surveyBasemaps) {
+      return {
+        project: data.currentProject.basemaps,
+        survey: data.currentProject.surveyBasemaps,
+      };
+    }
+    return {
+      project: [],
+      survey: [],
+    };
+  }, [data]);
   return (
     <Modal
       open={true}
@@ -41,11 +58,13 @@ export default function SelectBasemapsModal(props: {
         </div>
       }
     >
-      <div className="px-2 space-y-3">
-        {/* <h4 className="text-sm mb-4 text-gray-500 font-semibold">
-          <Trans ns="admin:surveys">Project basemaps</Trans>
-        </h4> */}
-        {(data?.projectBySlug?.basemaps || []).map((basemap) => (
+      <div className="px-2 space-y-3 w-96 max-w-full">
+        {basemaps.survey.length > 0 && (
+          <h4 className="text-sm mb-4 text-gray-500 font-semibold">
+            <Trans ns="admin:surveys">Project basemaps</Trans>
+          </h4>
+        )}
+        {basemaps.project.map((basemap) => (
           <div key={basemap.id} className="flex items-center space-x-4">
             <img src={basemap.thumbnail} className="w-12 h-12 rounded shadow" />
             <div className="flex-1">{basemap.name}</div>
@@ -56,6 +75,46 @@ export default function SelectBasemapsModal(props: {
             />
           </div>
         ))}
+        {basemaps.survey.length > 0 && (
+          <>
+            <h4 className="text-sm mb-4 text-gray-500 font-semibold">
+              <Trans ns="admin:surveys">Survey basemaps</Trans>
+            </h4>
+            {basemaps.survey.map((basemap) => (
+              <div key={basemap.id} className="flex items-center space-x-4">
+                <img
+                  src={basemap.thumbnail}
+                  className="w-12 h-12 rounded shadow"
+                />
+                <div className="flex-1 flex-col">
+                  <div className="">{basemap.name}</div>
+                  {basemap.relatedFormElements &&
+                    basemap.relatedFormElements.length === 0 &&
+                    state.indexOf(basemap.id) === -1 && (
+                      <div className="text-sm italic text-gray-500">
+                        <Trans ns="admin:surveys">No related elements.</Trans>
+                        &nbsp;
+                        <button
+                          className="text-primary-500 not-italic underline"
+                          onClick={() => {
+                            deleteBasemap(basemap);
+                          }}
+                        >
+                          {t("Discard")}
+                        </button>
+                      </div>
+                    )}
+                </div>
+
+                <Switch
+                  className=""
+                  isToggled={state.indexOf(basemap.id) !== -1}
+                  onClick={(toggled) => updateState(basemap.id, toggled)}
+                />
+              </div>
+            ))}
+          </>
+        )}
       </div>
     </Modal>
   );

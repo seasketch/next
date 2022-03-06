@@ -123,6 +123,9 @@ query GetBasemapsAndRegion {
     basemaps {
       ...BasemapDetails
     }
+    surveyBasemaps {
+      ...BasemapDetails
+    }
     region {
       geojson
     }

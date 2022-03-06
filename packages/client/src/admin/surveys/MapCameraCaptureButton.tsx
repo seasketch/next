@@ -20,7 +20,6 @@ export default function MapCameraCaptureButton({
   map,
   saving,
 }: Props) {
-  const debouncedSaving = useDebounce(saving, 10);
   return (
     <button
       onClick={() => {
@@ -36,7 +35,7 @@ export default function MapCameraCaptureButton({
       className="bg-yellow-300 border border-black text-black rounded p-2 absolute z-50 bottom-4 left-4 flex items-center"
     >
       {saving ? <Spinner /> : <CameraIcon className="w-5 h-5 inline mr-2" />}
-      <Trans ns="admin:surveys">Set Map View</Trans>
+      <Trans ns="admin:surveys">Set Starting Camera</Trans>
     </button>
   );
 }

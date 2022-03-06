@@ -259,6 +259,9 @@ export type Basemap = Node & {
   projectId?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `ProjectsSharedBasemap`. */
   projectsSharedBasemapsConnection: ProjectsSharedBasemapsConnection;
+  /** Reads and enables pagination through a set of `FormElement`. */
+  relatedFormElements?: Maybe<Array<FormElement>>;
+  surveysOnly: Scalars['Boolean'];
   terrainExaggeration: Scalars['BigFloat'];
   terrainMaxZoom: Scalars['Int'];
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
@@ -302,6 +305,12 @@ export type BasemapProjectsSharedBasemapsConnectionArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
+
+export type BasemapRelatedFormElementsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
 /** A condition to be used against `Basemap` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type BasemapCondition = {
   /** Checks for equality with the object’s `id` field. */
@@ -337,6 +346,7 @@ export type BasemapInput = {
    * superusers can create Shared Basemaps.
    */
   projectId?: Maybe<Scalars['Int']>;
+  surveysOnly?: Maybe<Scalars['Boolean']>;
   terrainExaggeration?: Maybe<Scalars['BigFloat']>;
   terrainMaxZoom?: Maybe<Scalars['Int']>;
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
@@ -387,6 +397,7 @@ export type BasemapPatch = {
    * superusers can create Shared Basemaps.
    */
   projectId?: Maybe<Scalars['Int']>;
+  surveysOnly?: Maybe<Scalars['Boolean']>;
   terrainExaggeration?: Maybe<Scalars['BigFloat']>;
   terrainMaxZoom?: Maybe<Scalars['Int']>;
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
@@ -3918,6 +3929,8 @@ export enum FormElementsOrderBy {
   FormIdDesc = 'FORM_ID_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
+  MapBasemapsAsc = 'MAP_BASEMAPS_ASC',
+  MapBasemapsDesc = 'MAP_BASEMAPS_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
@@ -7029,6 +7042,8 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites: Array<Sprite>;
   supportEmail: Scalars['String'];
+  /** Reads and enables pagination through a set of `Basemap`. */
+  surveyBasemaps?: Maybe<Array<Basemap>>;
   /** Reads and enables pagination through a set of `Survey`. */
   surveys: Array<Survey>;
   /** Public layer list. Cannot be edited directly. */
@@ -7236,6 +7251,16 @@ export type ProjectSpritesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SpritesOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectSurveyBasemapsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -11813,7 +11838,7 @@ export type NewTerrainFragment = (
 
 export type NewBasemapFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'projectId' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'nodeId' | 'terrainExaggeration' | 'terrainOptional' | 'url' | 'type' | 'tileSize' | 'thumbnail' | 'terrainUrl' | 'terrainTileSize'>
+  & Pick<Basemap, 'id' | 'projectId' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'terrainExaggeration' | 'terrainOptional' | 'url' | 'type' | 'tileSize' | 'thumbnail' | 'terrainUrl' | 'terrainTileSize' | 'surveysOnly'>
 );
 
 export type ProjectBucketSettingQueryVariables = Exact<{
@@ -12274,7 +12299,7 @@ export type RequestInviteOnlyProjectAccessMutation = (
 
 export type BasemapDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
+  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -12294,7 +12319,10 @@ export type GetBasemapsQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { basemaps?: Maybe<Array<(
+    & { surveyBasemaps?: Maybe<Array<(
+      { __typename?: 'Basemap' }
+      & BasemapDetailsFragment
+    )>>, basemaps?: Maybe<Array<(
       { __typename?: 'Basemap' }
       & BasemapDetailsFragment
     )>> }
@@ -12308,6 +12336,7 @@ export type CreateBasemapMutationVariables = Exact<{
   tileSize?: Maybe<Scalars['Int']>;
   type: BasemapType;
   url: Scalars['String'];
+  surveysOnly?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -12317,14 +12346,7 @@ export type CreateBasemapMutation = (
     { __typename?: 'CreateBasemapPayload' }
     & { basemap?: Maybe<(
       { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
-      & { interactivitySettings?: Maybe<(
-        { __typename?: 'InteractivitySetting' }
-        & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-      )>, optionalBasemapLayers: Array<(
-        { __typename?: 'OptionalBasemapLayer' }
-        & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
-      )> }
+      & BasemapDetailsFragment
     )> }
   )> }
 );
@@ -14016,6 +14038,27 @@ export type UpdateFormElementMapCameraMutation = (
   )> }
 );
 
+export type AllBasemapsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AllBasemapsQuery = (
+  { __typename?: 'Query' }
+  & { currentProject?: Maybe<(
+    { __typename?: 'Project' }
+    & { basemaps?: Maybe<Array<(
+      { __typename?: 'Basemap' }
+      & BasemapDetailsFragment
+    )>>, surveyBasemaps?: Maybe<Array<(
+      { __typename?: 'Basemap' }
+      & { relatedFormElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & Pick<FormElement, 'id'>
+      )>> }
+      & BasemapDetailsFragment
+    )>> }
+  )> }
+);
+
 export type SurveyAppRuleFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
@@ -14111,6 +14154,9 @@ export type GetBasemapsAndRegionQuery = (
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
     & { basemaps?: Maybe<Array<(
+      { __typename?: 'Basemap' }
+      & BasemapDetailsFragment
+    )>>, surveyBasemaps?: Maybe<Array<(
       { __typename?: 'Basemap' }
       & BasemapDetailsFragment
     )>>, region: (
@@ -14653,7 +14699,6 @@ export const NewBasemapFragmentDoc = gql`
   description
   labelsLayerId
   name
-  nodeId
   terrainExaggeration
   terrainOptional
   url
@@ -14662,6 +14707,7 @@ export const NewBasemapFragmentDoc = gql`
   thumbnail
   terrainUrl
   terrainTileSize
+  surveysOnly
 }
     `;
 export const NewQueryParametersFragmentDoc = gql`
@@ -14866,6 +14912,7 @@ export const BasemapDetailsFragmentDoc = gql`
   tileSize
   type
   url
+  surveysOnly
 }
     `;
 export const SurveyListDetailsFragmentDoc = gql`
@@ -15949,6 +15996,9 @@ export const GetBasemapsDocument = gql`
     query GetBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
     id
+    surveyBasemaps {
+      ...BasemapDetails
+    }
     basemaps {
       ...BasemapDetails
     }
@@ -15984,50 +16034,16 @@ export type GetBasemapsQueryHookResult = ReturnType<typeof useGetBasemapsQuery>;
 export type GetBasemapsLazyQueryHookResult = ReturnType<typeof useGetBasemapsLazyQuery>;
 export type GetBasemapsQueryResult = Apollo.QueryResult<GetBasemapsQuery, GetBasemapsQueryVariables>;
 export const CreateBasemapDocument = gql`
-    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!) {
+    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean) {
   createBasemap(
-    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url}}
+    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly}}
   ) {
     basemap {
-      id
-      attribution
-      interactivitySettings {
-        cursor
-        id
-        layers
-        longTemplate
-        shortTemplate
-        type
-      }
-      labelsLayerId
-      name
-      optionalBasemapLayers {
-        basemapId
-        id
-        defaultVisibility
-        description
-        options
-        groupType
-        layers
-        metadata
-        name
-      }
-      description
-      projectId
-      terrainExaggeration
-      terrainMaxZoom
-      terrainOptional
-      terrainTileSize
-      terrainUrl
-      terrainVisibilityDefault
-      thumbnail
-      tileSize
-      type
-      url
+      ...BasemapDetails
     }
   }
 }
-    `;
+    ${BasemapDetailsFragmentDoc}`;
 export type CreateBasemapMutationFn = Apollo.MutationFunction<CreateBasemapMutation, CreateBasemapMutationVariables>;
 
 /**
@@ -16049,6 +16065,7 @@ export type CreateBasemapMutationFn = Apollo.MutationFunction<CreateBasemapMutat
  *      tileSize: // value for 'tileSize'
  *      type: // value for 'type'
  *      url: // value for 'url'
+ *      surveysOnly: // value for 'surveysOnly'
  *   },
  * });
  */
@@ -19905,6 +19922,48 @@ export function useUpdateFormElementMapCameraMutation(baseOptions?: Apollo.Mutat
 export type UpdateFormElementMapCameraMutationHookResult = ReturnType<typeof useUpdateFormElementMapCameraMutation>;
 export type UpdateFormElementMapCameraMutationResult = Apollo.MutationResult<UpdateFormElementMapCameraMutation>;
 export type UpdateFormElementMapCameraMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>;
+export const AllBasemapsDocument = gql`
+    query AllBasemaps {
+  currentProject {
+    basemaps {
+      ...BasemapDetails
+    }
+    surveyBasemaps {
+      ...BasemapDetails
+      relatedFormElements {
+        id
+      }
+    }
+  }
+}
+    ${BasemapDetailsFragmentDoc}`;
+
+/**
+ * __useAllBasemapsQuery__
+ *
+ * To run a query within a React component, call `useAllBasemapsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAllBasemapsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAllBasemapsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useAllBasemapsQuery(baseOptions?: Apollo.QueryHookOptions<AllBasemapsQuery, AllBasemapsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<AllBasemapsQuery, AllBasemapsQueryVariables>(AllBasemapsDocument, options);
+      }
+export function useAllBasemapsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<AllBasemapsQuery, AllBasemapsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<AllBasemapsQuery, AllBasemapsQueryVariables>(AllBasemapsDocument, options);
+        }
+export type AllBasemapsQueryHookResult = ReturnType<typeof useAllBasemapsQuery>;
+export type AllBasemapsLazyQueryHookResult = ReturnType<typeof useAllBasemapsLazyQuery>;
+export type AllBasemapsQueryResult = Apollo.QueryResult<AllBasemapsQuery, AllBasemapsQueryVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -20002,6 +20061,9 @@ export const GetBasemapsAndRegionDocument = gql`
   currentProject {
     id
     basemaps {
+      ...BasemapDetails
+    }
+    surveyBasemaps {
       ...BasemapDetails
     }
     region {
@@ -21047,6 +21109,7 @@ export const namedOperations = {
     GetPhotos: 'GetPhotos',
     SurveyResponses: 'SurveyResponses',
     SurveyMapDetails: 'SurveyMapDetails',
+    AllBasemaps: 'AllBasemaps',
     Survey: 'Survey',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     UserAdminCounts: 'UserAdminCounts',
