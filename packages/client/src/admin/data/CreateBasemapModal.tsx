@@ -1,4 +1,5 @@
 import { gql, useApolloClient } from "@apollo/client";
+import { prepareDataForValidation } from "formik";
 import { Map } from "mapbox-gl";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
@@ -13,10 +14,12 @@ import {
   useCreateBasemapMutation,
   useUpdateInteractivitySettingsLayersMutation,
   useUpdateInteractivitySettingsMutation,
+  useMapboxKeysQuery,
 } from "../../generated/graphql";
 import { useMapboxStyle } from "../../useMapboxStyle";
 import useProjectId from "../../useProjectId";
 import { createImageBlobFromDataURI } from "./arcgis/arcgis";
+import useMapboxAccountStyles from "./useMapboxAccountStyles";
 
 const THUMBNAIL_SIZE = 240;
 const IMAGE_SIZE = THUMBNAIL_SIZE * window.devicePixelRatio;
@@ -51,11 +54,16 @@ export default function CreateBasemapModal({
     selectedTab: TABS.URL,
   });
 
+  const [
+    { styles, loading, error, hasMore },
+    fetchMore,
+  ] = useMapboxAccountStyles();
+  // const { styles, loading, error } = data;
   const { t } = useTranslation("admin");
   const Tabs = [
     { name: t("By URL"), id: TABS.URL },
-    { name: t("Upload"), id: TABS.UPLOAD },
-    { name: t("Mapbox Account"), id: TABS.ACCOUNT },
+    // { name: t("Upload"), id: TABS.UPLOAD },
+    { name: t("From Mapbox Account"), id: TABS.ACCOUNT },
   ];
 
   const projectId = useProjectId();
@@ -191,8 +199,8 @@ export default function CreateBasemapModal({
         className="absolute left-0 top-0 bg-gray-400 hidden"
       ></canvas>
       <Modal
+        onRequestClose={onRequestClose}
         open={true}
-        // title={t("New Map")}
         zeroPadding
         footer={
           <div className="text-right">
@@ -201,96 +209,105 @@ export default function CreateBasemapModal({
               label={t("Cancel")}
               className="mr-2"
             />
-            <Button
-              primary
-              onClick={() => {
-                if (state.mapPreview) {
-                  const dataUrl = mapRef.current?.getCanvas().toDataURL();
-                  const img = new Image();
-                  img.src = dataUrl!;
-                  img.onload = () => {
-                    // TODO: Test using different devicePixelRatio settings
-                    const context = canvasRef.current!.getContext("2d");
-                    context!.drawImage(
-                      img,
-                      (img.width - IMAGE_SIZE) / 2,
-                      (img.height - IMAGE_SIZE) / 2,
-                      IMAGE_SIZE,
-                      IMAGE_SIZE,
-                      0,
-                      0,
-                      IMAGE_SIZE,
-                      IMAGE_SIZE
-                    );
-                    context?.save();
-                    const cropped = canvasRef.current!.toDataURL();
-                    createImageBlobFromDataURI(IMAGE_SIZE, IMAGE_SIZE, cropped)
-                      .then((blob) => {
-                        mutate({
-                          variables: {
-                            projectId: projectId!,
-                            name: state.name,
-                            thumbnail: blob,
-                            type: state.type,
-                            url: state.url,
-                            surveysOnly,
-                          },
-                        })
-                          .then((d) => {
-                            if (
-                              mapboxStyleInfo.data?.metadata?.[
-                                "seasketch:interactivity_settings"
-                              ] &&
-                              d.data?.createBasemap?.basemap
-                                ?.interactivitySettings?.id
-                            ) {
-                              const settings =
-                                mapboxStyleInfo.data.metadata[
+            {(state.selectedTab === TABS.URL || state.mapPreview) && (
+              <Button
+                primary
+                onClick={() => {
+                  if (state.mapPreview) {
+                    const dataUrl = mapRef.current?.getCanvas().toDataURL();
+                    const img = new Image();
+                    img.src = dataUrl!;
+                    img.onload = () => {
+                      // TODO: Test using different devicePixelRatio settings
+                      const context = canvasRef.current!.getContext("2d");
+                      context!.drawImage(
+                        img,
+                        (img.width - IMAGE_SIZE) / 2,
+                        (img.height - IMAGE_SIZE) / 2,
+                        IMAGE_SIZE,
+                        IMAGE_SIZE,
+                        0,
+                        0,
+                        IMAGE_SIZE,
+                        IMAGE_SIZE
+                      );
+                      context?.save();
+                      const cropped = canvasRef.current!.toDataURL();
+                      createImageBlobFromDataURI(
+                        IMAGE_SIZE,
+                        IMAGE_SIZE,
+                        cropped
+                      )
+                        .then((blob) => {
+                          mutate({
+                            variables: {
+                              projectId: projectId!,
+                              name: state.name,
+                              thumbnail: blob,
+                              type: state.type,
+                              url: state.url,
+                              surveysOnly,
+                            },
+                          })
+                            .then((d) => {
+                              if (
+                                mapboxStyleInfo.data?.metadata?.[
                                   "seasketch:interactivity_settings"
-                                ];
-                              const settingsId =
-                                d.data.createBasemap.basemap
-                                  .interactivitySettings.id;
-                              return updateInteractivity({
-                                variables: {
-                                  id: settingsId,
-                                  ...settings,
-                                },
-                              }).then((i) => {
-                                return updateLayers({
+                                ] &&
+                                d.data?.createBasemap?.basemap
+                                  ?.interactivitySettings?.id
+                              ) {
+                                const settings =
+                                  mapboxStyleInfo.data.metadata[
+                                    "seasketch:interactivity_settings"
+                                  ];
+                                const settingsId =
+                                  d.data.createBasemap.basemap
+                                    .interactivitySettings.id;
+                                return updateInteractivity({
                                   variables: {
                                     id: settingsId,
-                                    layers: settings.layers,
+                                    ...settings,
                                   },
-                                }).then((a) => {
-                                  return d;
+                                }).then((i) => {
+                                  return updateLayers({
+                                    variables: {
+                                      id: settingsId,
+                                      layers: settings.layers,
+                                    },
+                                  }).then((a) => {
+                                    return d;
+                                  });
                                 });
-                              });
-                            } else {
-                              return d;
-                            }
-                          })
-                          .then((d) => {
-                            if (onSave && d.data?.createBasemap?.basemap?.id) {
-                              onSave(d.data.createBasemap.basemap.id);
-                            }
-                            if (onRequestClose) {
-                              onRequestClose();
-                            }
-                          });
-                      })
-                      .catch((e) => {
-                        alert(e.toString());
-                      });
-                  };
-                } else {
-                  setState((old) => ({ ...old, mapPreview: true }));
-                }
-              }}
-              label={state.mapPreview ? "Capture and Save" : "Continue"}
-              disabled={mutationState.loading}
-              loading={mutationState.loading}
-            />
+                              } else {
+                                return d;
+                              }
+                            })
+                            .then((d) => {
+                              if (
+                                onSave &&
+                                d.data?.createBasemap?.basemap?.id
+                              ) {
+                                onSave(d.data.createBasemap.basemap.id);
+                              }
+                              if (onRequestClose) {
+                                onRequestClose();
+                              }
+                            });
+                        })
+                        .catch((e) => {
+                          alert(e.toString());
+                        });
+                    };
+                  } else {
+                    setState((old) => ({ ...old, mapPreview: true }));
+                  }
+                }}
+                label={state.mapPreview ? "Capture and Save" : "Continue"}
+                disabled={mutationState.loading || !state.url}
+                loading={mutationState.loading}
+              />
+            )}
           </div>
         }
       >
@@ -430,27 +447,69 @@ export default function CreateBasemapModal({
                   />
                 </div>
               )}
-              <div className="mt-4">
-                <TextInput
-                  label={t("Map Name")}
-                  name="name"
-                  value={state.name}
-                  onChange={(name) => setState((old) => ({ ...old, name }))}
-                />
-              </div>
-
-              {/* 
-          # key info needed
-          
-          * type
-          * url
-          * tileSize if RASTER_URL_TEMPLATE
-          * name
-          * description
-          * thumbnail
-          * whether to include terrain
-          *           
-        */}
+              {state.selectedTab === TABS.URL && (
+                <div className="mt-4">
+                  <TextInput
+                    label={t("Map Name")}
+                    name="name"
+                    value={state.name}
+                    onChange={(name) => setState((old) => ({ ...old, name }))}
+                  />
+                </div>
+              )}
+              {state.selectedTab === TABS.ACCOUNT && (
+                <div className="h-48 overflow-auto">
+                  {loading && <Spinner />}
+                  {error && (
+                    <p className="text-center text-sm text-gray-500">
+                      {/Key not provided/.test(error) ? (
+                        <Trans ns="admin:data">
+                          Provide a MapBox Secret Key in your project settings
+                          to enable browsing of maps in your account.
+                        </Trans>
+                      ) : (
+                        error.toString()
+                      )}
+                    </p>
+                  )}
+                  {styles &&
+                    styles.map((style) => (
+                      <button
+                        key={style.id}
+                        className="p-4 flex items-center space-x-2 hover:bg-primary-300 hover:bg-opacity-10 rounded"
+                        onClick={() => {
+                          setState((prev) => ({
+                            ...prev,
+                            url: style.url,
+                            name: style.name!,
+                            type: BasemapType.Mapbox,
+                            mapPreview: true,
+                          }));
+                        }}
+                      >
+                        <img className="w-10 h-10 rounded" src={style.image} />
+                        <span className="max-w-sm truncate">{style.name!}</span>
+                        <span className="text-gray-500 text-xs font-mono">
+                          {
+                            // @ts-ignore
+                            style.visibility
+                          }
+                        </span>
+                      </button>
+                    ))}
+                  {styles && hasMore && (
+                    <div className="w-full text-center">
+                      <button
+                        className="underline text-primary-500"
+                        onClick={fetchMore}
+                      >
+                        <Trans ns="admin:data">load more</Trans>
+                        {loading && <Spinner />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

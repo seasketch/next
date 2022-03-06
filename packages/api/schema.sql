@@ -3801,7 +3801,11 @@ You have been invited to join the {{projectName}} SeaSketch project. To sign up,
     support_email text NOT NULL,
     created_at timestamp without time zone DEFAULT now(),
     creator_id integer NOT NULL,
+    mapbox_secret_key text,
+    mapbox_public_key text,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
+    CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
+    CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
     CONSTRAINT name_min_length CHECK ((length(name) >= 4))
 );
 
@@ -6976,6 +6980,24 @@ CREATE FUNCTION public.projects_is_admin(p public.projects, "userId" integer) RE
 COMMENT ON FUNCTION public.projects_is_admin(p public.projects, "userId" integer) IS '
 Returns true if the given user is an administrator of the project. Informaiton is only available administrators of the project and will otherwise always return false.
 ';
+
+
+--
+-- Name: projects_mapbox_secret_key(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_mapbox_secret_key(project public.projects) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select mapbox_secret_key from projects where projects.id = project.id and session_is_admin(project.id);
+  $$;
+
+
+--
+-- Name: FUNCTION projects_mapbox_secret_key(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_mapbox_secret_key(project public.projects) IS 'Only available to project admins. Use to query basemaps from a specified account.';
 
 
 --
@@ -15744,6 +15766,20 @@ GRANT SELECT(created_at) ON TABLE public.projects TO anon;
 
 
 --
+-- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.mapbox_public_key; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(mapbox_public_key) ON TABLE public.projects TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18474,6 +18510,13 @@ GRANT ALL ON FUNCTION public.projects_invites(p public.projects, statuses public
 
 REVOKE ALL ON FUNCTION public.projects_is_admin(p public.projects, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_is_admin(p public.projects, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_mapbox_secret_key(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_mapbox_secret_key(project public.projects) FROM PUBLIC;
 
 
 --

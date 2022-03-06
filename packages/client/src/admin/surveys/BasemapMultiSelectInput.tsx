@@ -143,17 +143,17 @@ export default function BasemapMultiSelectInput({
                                 {...provided?.draggableProps}
                                 style={provided?.draggableProps.style}
                                 key={basemap.id}
-                                className="flex items-center space-x-2 bg-white p-2 border rounded shadow-sm select-none"
+                                className="flex bg-white p-2 border rounded shadow-sm select-none overflow-hidden"
                               >
                                 <div
                                   {...provided.dragHandleProps}
-                                  className="flex items-center space-x-2 flex-1"
+                                  className="flex items-center flex-1"
                                 >
                                   <img
                                     src={basemap.thumbnail}
                                     className="w-8 h-8 rounded shadow select-none"
                                   />
-                                  <div className="flex-1 truncate select-none">
+                                  <div className="flex-1 truncate select-none ml-1">
                                     {basemap.name}
                                   </div>
                                 </div>

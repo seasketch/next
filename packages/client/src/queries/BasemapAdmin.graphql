@@ -344,3 +344,11 @@ mutation UpdateInteractivitySettingsLayers($id: Int!, $layers: [String]) {
     }
   }
 }
+
+query MapboxKeys {
+  currentProject {
+    id
+    mapboxPublicKey
+    mapboxSecretKey
+  }
+}

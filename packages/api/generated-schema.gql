@@ -8075,6 +8075,8 @@ type Project implements Node {
   displayed at 48x48 pixels and must be a public url.
   """
   logoUrl: String
+  mapboxPublicKey: String
+  mapboxSecretKey: String
 
   """
   List of all folders created by this user.
@@ -8590,6 +8592,8 @@ input ProjectPatch {
   displayed at 48x48 pixels and must be a public url.
   """
   logoUrl: Upload
+  mapboxPublicKey: String
+  mapboxSecretKey: String
   name: String
   region: GeoJSON
 }

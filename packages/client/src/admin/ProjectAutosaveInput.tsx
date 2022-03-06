@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ReactNode } from "react";
 import useDebounce from "../useDebounce";
 import { useUpdateProjectSettingsMutation } from "../generated/graphql";
 import TextInput from "../components/TextInput";
@@ -9,6 +9,8 @@ export default function ProjectAutosaveInput(props: {
   label: string;
   slug: string;
   placeholder?: string;
+  convertEmptyToNull?: boolean;
+  description?: string | ReactNode;
 }) {
   const [value, setValue] = useState(props.value);
   const debouncedValue = useDebounce(value, 500);
@@ -23,7 +25,8 @@ export default function ProjectAutosaveInput(props: {
     ) {
       setChangeSinceError(false);
       const variables: any = { slug: props.slug };
-      variables[props.propName] = debouncedValue;
+      variables[props.propName] =
+        debouncedValue.length === 0 ? null : debouncedValue;
       mutation({
         variables,
       }).catch((e) => {});
@@ -46,9 +49,11 @@ export default function ProjectAutosaveInput(props: {
 
   return (
     <TextInput
+      placeholder={props.placeholder}
       name={props.propName}
       label={props.label}
       value={value}
+      description={props.description}
       onChange={setValue}
       error={mutationStatus.error?.message}
       state={
