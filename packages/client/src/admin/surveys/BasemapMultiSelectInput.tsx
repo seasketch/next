@@ -191,7 +191,11 @@ export default function BasemapMultiSelectInput({
           </DragDropContext>
           {state.length > 1 ? (
             <p className="py-2 text-gray-500 italic text-sm text-center">
-              <Trans ns="admin:surveys">First listed will be the default</Trans>
+              <Trans ns="admin:surveys">
+                First listed will be the default.
+              </Trans>
+              <br />
+              <Trans ns="admin:surveys">Drag and drop to sort.</Trans>
             </p>
           ) : null}
         </div>
