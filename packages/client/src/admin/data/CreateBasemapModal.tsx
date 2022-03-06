@@ -3,6 +3,7 @@ import { prepareDataForValidation } from "formik";
 import { Map } from "mapbox-gl";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
+import { Link } from "react-router-dom";
 import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Modal from "../../components/Modal";
@@ -39,6 +40,18 @@ export default function CreateBasemapModal({
   onRequestClose?: () => void;
   surveysOnly?: boolean;
 }) {
+  const [
+    { styles, loading, error, hasMore },
+    fetchMore,
+  ] = useMapboxAccountStyles();
+  // const { styles, loading, error } = data;
+  const { t } = useTranslation("admin");
+  const Tabs = [
+    { name: t("By URL"), id: TABS.URL },
+    // { name: t("Upload"), id: TABS.UPLOAD },
+    { name: t("From Mapbox Account"), id: TABS.ACCOUNT },
+  ];
+
   const [state, setState] = useState<{
     type: BasemapType;
     name: string;
@@ -51,20 +64,8 @@ export default function CreateBasemapModal({
     name: "",
     url: "",
     mapPreview: false,
-    selectedTab: TABS.URL,
+    selectedTab: TABS.ACCOUNT,
   });
-
-  const [
-    { styles, loading, error, hasMore },
-    fetchMore,
-  ] = useMapboxAccountStyles();
-  // const { styles, loading, error } = data;
-  const { t } = useTranslation("admin");
-  const Tabs = [
-    { name: t("By URL"), id: TABS.URL },
-    // { name: t("Upload"), id: TABS.UPLOAD },
-    { name: t("From Mapbox Account"), id: TABS.ACCOUNT },
-  ];
 
   const projectId = useProjectId();
   const [mutate, mutationState] = useCreateBasemapMutation({
@@ -458,13 +459,19 @@ export default function CreateBasemapModal({
                 </div>
               )}
               {state.selectedTab === TABS.ACCOUNT && (
-                <div className="h-48 overflow-auto">
+                <div className="h-96 overflow-auto">
                   {loading && <Spinner />}
                   {error && (
                     <p className="text-center text-sm text-gray-500">
                       {/Key not provided/.test(error) ? (
                         <Trans ns="admin:data">
-                          Provide a MapBox Secret Key in your project settings
+                          Provide a MapBox Secret Key in your{" "}
+                          <Link
+                            className="underline text-primary-500"
+                            to="../admin"
+                          >
+                            project settings
+                          </Link>{" "}
                           to enable browsing of maps in your account.
                         </Trans>
                       ) : (
@@ -487,14 +494,26 @@ export default function CreateBasemapModal({
                           }));
                         }}
                       >
-                        <img className="w-10 h-10 rounded" src={style.image} />
-                        <span className="max-w-sm truncate">{style.name!}</span>
-                        <span className="text-gray-500 text-xs font-mono">
-                          {
-                            // @ts-ignore
-                            style.visibility
-                          }
-                        </span>
+                        <img className="w-12 h-12 rounded" src={style.image} />
+                        <div className="flex-col justify-start text-left">
+                          <div className="space-x-2">
+                            <span className="max-w-sm truncate">
+                              {style.name!}
+                            </span>
+                            <span className="text-gray-500 text-xs font-mono">
+                              {
+                                // @ts-ignore
+                                style.visibility
+                              }
+                            </span>
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            <Trans ns="admin:data">Last modified </Trans>
+                            {style.lastModified
+                              ? style.lastModified.toLocaleDateString()
+                              : "unknown"}
+                          </span>
+                        </div>
                       </button>
                     ))}
                   {styles && hasMore && (

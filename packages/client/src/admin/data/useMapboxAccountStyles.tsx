@@ -3,7 +3,12 @@ import { useEffect, useState } from "react";
 import { useMapboxKeysQuery } from "../../generated/graphql";
 
 interface State {
-  styles?: (Style & { image: string; url: string; id: string })[];
+  styles?: (Style & {
+    image: string;
+    url: string;
+    id: string;
+    lastModified: Date;
+  })[];
   error?: string;
   loading: boolean;
   hasMore?: string | null;
@@ -52,6 +57,9 @@ export default function useMapboxAccountStyles(): [State, () => void] {
               ...d,
               image: `https://api.mapbox.com/styles/v1/seasketch/${d.id}/static/auto/100x100@2x?attribution=false&logo=false&access_token=${publicKey}`,
               url: `mapbox://styles/${username}/${d.id}`,
+              lastModified: d.modified
+                ? new Date(d.modified)
+                : new Date(d.created),
             })),
             hasMore: next,
           });
@@ -90,6 +98,9 @@ export default function useMapboxAccountStyles(): [State, () => void] {
                 ...d,
                 image: `https://api.mapbox.com/styles/v1/seasketch/${d.id}/static/auto/100x100@2x?attribution=false&logo=false&access_token=${publicKey}`,
                 url: `mapbox://styles/${username}/${d.id}`,
+                lastModified: d.modified
+                  ? new Date(d.modified)
+                  : new Date(d.created),
               })),
             ],
             hasMore: next,
