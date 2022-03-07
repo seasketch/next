@@ -510,7 +510,7 @@ export default function CreateBasemapModal({
                           <span className="text-sm text-gray-500">
                             <Trans ns="admin:data">Last modified </Trans>
                             {style.lastModified
-                              ? style.lastModified.toLocaleString()
+                              ? formatTimeAgo(style.lastModified)
                               : "unknown"}
                           </span>
                         </div>
@@ -568,4 +568,33 @@ export default function CreateBasemapModal({
 // @ts-ignore
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
+}
+
+const formatter = new Intl.RelativeTimeFormat(undefined, {
+  numeric: "auto",
+});
+
+const DIVISIONS: {
+  amount: number;
+  name: "seconds" | "minutes" | "hours" | "days" | "weeks" | "months" | "years";
+}[] = [
+  { amount: 60, name: "seconds" },
+  { amount: 60, name: "minutes" },
+  { amount: 24, name: "hours" },
+  { amount: 7, name: "days" },
+  { amount: 4.34524, name: "weeks" },
+  { amount: 12, name: "months" },
+  { amount: Number.POSITIVE_INFINITY, name: "years" },
+];
+
+export function formatTimeAgo(date: Date) {
+  let duration = (date.getTime() - new Date().getTime()) / 1000;
+
+  for (let i = 0; i <= DIVISIONS.length; i++) {
+    const division = DIVISIONS[i];
+    if (Math.abs(duration) < division.amount) {
+      return formatter.format(Math.round(duration), division.name);
+    }
+    duration /= division.amount;
+  }
 }

@@ -38,7 +38,7 @@ export default function useMapboxAccountStyles(): [State, () => void] {
         atob(key.replace(/sk\./, "").split(".")[0])
       );
       fetch(
-        `https://api.mapbox.com/styles/v1/${username}?limit=100&draft=false&access_token=${key}`
+        `https://api.mapbox.com/styles/v1/${username}?sortby=modified&limit=100&draft=false&access_token=${key}`
       )
         .then(async (response) => {
           let next = response.headers.get("Link");
