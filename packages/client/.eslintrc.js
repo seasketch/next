@@ -34,6 +34,7 @@ module.exports = {
           "console.warn",
           "console.error",
           "Error",
+          "fetch",
         ],
         onlyAttribute: ["label", "title", "description", "footer"],
         ignoreProperty: ["href", "className"],

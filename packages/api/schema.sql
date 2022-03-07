@@ -2003,6 +2003,336 @@ $$;
 
 
 --
+-- Name: basemaps; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.basemaps (
+    id integer NOT NULL,
+    project_id integer,
+    name text NOT NULL,
+    type public.basemap_type NOT NULL,
+    url text NOT NULL,
+    tile_size integer DEFAULT 256 NOT NULL,
+    labels_layer_id text,
+    thumbnail text NOT NULL,
+    attribution text,
+    terrain_url text,
+    terrain_tile_size integer DEFAULT 512 NOT NULL,
+    terrain_max_zoom integer DEFAULT 14 NOT NULL,
+    terrain_optional boolean DEFAULT true NOT NULL,
+    terrain_visibility_default boolean DEFAULT true NOT NULL,
+    terrain_exaggeration numeric DEFAULT 1 NOT NULL,
+    description text,
+    interactivity_settings_id integer NOT NULL,
+    is_disabled boolean DEFAULT false NOT NULL,
+    surveys_only boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: COLUMN basemaps.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.project_id IS 'If not set, the basemap will be considered a "Shared Basemap" that can be added to any project. Otherwise it is private to the given proejct. Only superusers can create Shared Basemaps.';
+
+
+--
+-- Name: COLUMN basemaps.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.name IS 'Label shown in the basemap picker interface';
+
+
+--
+-- Name: COLUMN basemaps.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.url IS 'For MAPBOX types, this can be a mapbox://-style url or a link to a custom mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)';
+
+
+--
+-- Name: COLUMN basemaps.tile_size; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.tile_size IS 'For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)';
+
+
+--
+-- Name: COLUMN basemaps.labels_layer_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.labels_layer_id IS 'Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.';
+
+
+--
+-- Name: COLUMN basemaps.thumbnail; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.thumbnail IS 'Square thumbnail will be used to identify the basemap';
+
+
+--
+-- Name: COLUMN basemaps.attribution; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.attribution IS 'Optional attribution to show at the bottom of the map. Will be overriden by the attribution specified in the gl-style in the case of MAPBOX types.';
+
+
+--
+-- Name: COLUMN basemaps.terrain_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.terrain_url IS 'Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).';
+
+
+--
+-- Name: COLUMN basemaps.terrain_optional; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.terrain_optional IS 'If set to false, terrain will always be on. Otherwise the user will be given a toggle switch.';
+
+
+--
+-- Name: COLUMN basemaps.interactivity_settings_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.interactivity_settings_id IS '
+@omit create
+';
+
+
+--
+-- Name: COLUMN basemaps.is_disabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.basemaps.is_disabled IS '
+Used to indicate whether the basemap is included in the public basemap listing. Useful for hiding an option temporarily, or adding a basemap to the project which will only be used in surveys.
+';
+
+
+--
+-- Name: form_elements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.form_elements (
+    id integer NOT NULL,
+    form_id integer NOT NULL,
+    is_required boolean DEFAULT false NOT NULL,
+    export_id text,
+    "position" integer DEFAULT 1 NOT NULL,
+    component_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    type_id text NOT NULL,
+    body jsonb NOT NULL,
+    background_color text,
+    secondary_color text,
+    text_variant public.form_element_text_variant DEFAULT 'DYNAMIC'::public.form_element_text_variant NOT NULL,
+    background_image text,
+    layout public.form_element_layout,
+    background_palette text[],
+    unsplash_author_name text,
+    unsplash_author_url text,
+    background_width integer,
+    background_height integer,
+    jump_to_id integer,
+    alternate_language_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    subordinate_to integer,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    map_camera_options jsonb,
+    map_basemaps integer[],
+    CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
+    CONSTRAINT form_fields_position_check CHECK (("position" > 0))
+);
+
+
+--
+-- Name: TABLE form_elements; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.form_elements IS '
+@omit all
+*FormElements* represent input fields or read-only content in a form. Records contain fields to support
+generic functionality like body, position, and isRequired. They 
+also have a JSON `componentSettings` field that can have custom data to support
+a particular input type, indicated by the `type` field.
+
+Project administrators have full control over managing form elements through
+graphile-generated CRUD mutations.
+';
+
+
+--
+-- Name: COLUMN form_elements.form_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.form_id IS 'Form this field belongs to.';
+
+
+--
+-- Name: COLUMN form_elements.is_required; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.is_required IS 'Users must provide input for these fields before submission.';
+
+
+--
+-- Name: COLUMN form_elements.export_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.export_id IS '
+Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body.
+';
+
+
+--
+-- Name: COLUMN form_elements."position"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements."position" IS '
+Determines order of field display. Clients should display fields in ascending 
+order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
+update.
+';
+
+
+--
+-- Name: COLUMN form_elements.component_settings; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.component_settings IS 'Type-specific configuration. For example, a Choice field might have a list of valid choices.';
+
+
+--
+-- Name: COLUMN form_elements.body; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.body IS '
+[prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms.
+';
+
+
+--
+-- Name: COLUMN form_elements.background_color; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.background_color IS '
+Optional background color to transition the form to when this element is displayed.
+';
+
+
+--
+-- Name: COLUMN form_elements.secondary_color; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.secondary_color IS '
+Color used to style navigation controls
+';
+
+
+--
+-- Name: COLUMN form_elements.text_variant; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.text_variant IS '
+Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override.
+';
+
+
+--
+-- Name: COLUMN form_elements.background_image; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.background_image IS '
+@omit create,update
+Optional background image to display when this form_element appears.
+';
+
+
+--
+-- Name: COLUMN form_elements.layout; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.layout IS '
+Layout of image in relation to form_element content.
+';
+
+
+--
+-- Name: COLUMN form_elements.unsplash_author_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.unsplash_author_name IS '@omit create,update';
+
+
+--
+-- Name: COLUMN form_elements.unsplash_author_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.unsplash_author_url IS '@omit create,update';
+
+
+--
+-- Name: COLUMN form_elements.jump_to_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.jump_to_id IS '
+Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`.
+';
+
+
+--
+-- Name: COLUMN form_elements.subordinate_to; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.subordinate_to IS '
+Used for special elements like SpatialAccessPriorityInput to create a sort of sub-form that the parent element controls the rendering of. Will not appear in the form unless the client implementation utilizes something like FormElement.shouldDisplaySubordinateElement to control visibility.
+';
+
+
+--
+-- Name: COLUMN form_elements.map_camera_options; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.map_camera_options IS '
+If using a map-based layout, can be used to set the default starting point of the map
+
+See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+```json
+{
+  "center": [-73.5804, 45.53483],
+  "pitch": 60,
+  "bearing": -60,
+  "zoom": 10
+}
+```
+';
+
+
+--
+-- Name: COLUMN form_elements.map_basemaps; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_elements.map_basemaps IS 'IDs for basemaps that should be included in the map view if a map layout is selected';
+
+
+--
+-- Name: basemaps_related_form_elements(public.basemaps); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.basemaps_related_form_elements(basemap public.basemaps) RETURNS SETOF public.form_elements
+    LANGUAGE sql STABLE
+    AS $$
+    select * from form_elements where basemap.id = any(form_elements.map_basemaps);
+  $$;
+
+
+--
+-- Name: FUNCTION basemaps_related_form_elements(basemap public.basemaps); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.basemaps_related_form_elements(basemap public.basemaps) IS '@simpleCollections only';
+
+
+--
 -- Name: before_basemap_insert_create_interactivity_settings_func(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2722,182 +3052,6 @@ $$;
 
 
 --
--- Name: form_elements; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.form_elements (
-    id integer NOT NULL,
-    form_id integer NOT NULL,
-    is_required boolean DEFAULT false NOT NULL,
-    export_id text,
-    "position" integer DEFAULT 1 NOT NULL,
-    component_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
-    type_id text NOT NULL,
-    body jsonb NOT NULL,
-    background_color text,
-    secondary_color text,
-    text_variant public.form_element_text_variant DEFAULT 'DYNAMIC'::public.form_element_text_variant NOT NULL,
-    background_image text,
-    layout public.form_element_layout,
-    background_palette text[],
-    unsplash_author_name text,
-    unsplash_author_url text,
-    background_width integer,
-    background_height integer,
-    jump_to_id integer,
-    alternate_language_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
-    subordinate_to integer,
-    created_at timestamp without time zone DEFAULT now() NOT NULL,
-    CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
-    CONSTRAINT form_fields_position_check CHECK (("position" > 0))
-);
-
-
---
--- Name: TABLE form_elements; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.form_elements IS '
-@omit all
-*FormElements* represent input fields or read-only content in a form. Records contain fields to support
-generic functionality like body, position, and isRequired. They 
-also have a JSON `componentSettings` field that can have custom data to support
-a particular input type, indicated by the `type` field.
-
-Project administrators have full control over managing form elements through
-graphile-generated CRUD mutations.
-';
-
-
---
--- Name: COLUMN form_elements.form_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.form_id IS 'Form this field belongs to.';
-
-
---
--- Name: COLUMN form_elements.is_required; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.is_required IS 'Users must provide input for these fields before submission.';
-
-
---
--- Name: COLUMN form_elements.export_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.export_id IS '
-Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body.
-';
-
-
---
--- Name: COLUMN form_elements."position"; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements."position" IS '
-Determines order of field display. Clients should display fields in ascending 
-order. Cannot be changed individually. Use `setFormElementOrder()` mutation to 
-update.
-';
-
-
---
--- Name: COLUMN form_elements.component_settings; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.component_settings IS 'Type-specific configuration. For example, a Choice field might have a list of valid choices.';
-
-
---
--- Name: COLUMN form_elements.body; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.body IS '
-[prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms.
-';
-
-
---
--- Name: COLUMN form_elements.background_color; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.background_color IS '
-Optional background color to transition the form to when this element is displayed.
-';
-
-
---
--- Name: COLUMN form_elements.secondary_color; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.secondary_color IS '
-Color used to style navigation controls
-';
-
-
---
--- Name: COLUMN form_elements.text_variant; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.text_variant IS '
-Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override.
-';
-
-
---
--- Name: COLUMN form_elements.background_image; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.background_image IS '
-@omit create,update
-Optional background image to display when this form_element appears.
-';
-
-
---
--- Name: COLUMN form_elements.layout; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.layout IS '
-Layout of image in relation to form_element content.
-';
-
-
---
--- Name: COLUMN form_elements.unsplash_author_name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.unsplash_author_name IS '@omit create,update';
-
-
---
--- Name: COLUMN form_elements.unsplash_author_url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.unsplash_author_url IS '@omit create,update';
-
-
---
--- Name: COLUMN form_elements.jump_to_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.jump_to_id IS '
-Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`.
-';
-
-
---
--- Name: COLUMN form_elements.subordinate_to; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.form_elements.subordinate_to IS '
-Used for special elements like SpatialAccessPriorityInput to create a sort of sub-form that the parent element controls the rendering of. Will not appear in the form unless the client implementation utilizes something like FormElement.shouldDisplaySubordinateElement to control visibility.
-';
-
-
---
 -- Name: clear_form_element_style(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3142,6 +3296,53 @@ invite. Outstanding (or confirmed) invites can be accessed via the
 
 More details on how to handle invites can be found [on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
 ';
+
+
+--
+-- Name: copy_appearance(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_appearance(form_element_id integer, copy_from_id integer) RETURNS public.form_elements
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      return_value form_elements;
+    begin
+      if true or session_is_admin((project_id_for_form_id((select form_id from form_elements where id = form_element_id)))) then
+        update 
+          form_elements dst
+        set background_image = f.background_image,
+        background_color = f.background_color,
+        secondary_color = f.secondary_color,
+        background_palette = f.background_palette,
+        unsplash_author_name = f.unsplash_author_name,
+        unsplash_author_url = f.unsplash_author_url,
+        background_height = f.background_height,
+        background_width = f.background_width,
+        layout = f.layout,
+        text_variant = f.text_variant
+        from
+          form_elements f
+        where
+          f.id = copy_from_id and
+          dst.id = form_element_id
+        returning
+          *
+        into return_value;
+        
+        return return_value;      
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION copy_appearance(form_element_id integer, copy_from_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id integer) IS 'Copies appearance settings like layout and background_image from one form element to another. Useful when initializing custom appearance on an element from the defaults set by a previous question.';
 
 
 --
@@ -3600,7 +3801,11 @@ You have been invited to join the {{projectName}} SeaSketch project. To sign up,
     support_email text NOT NULL,
     created_at timestamp without time zone DEFAULT now(),
     creator_id integer NOT NULL,
+    mapbox_secret_key text,
+    mapbox_public_key text,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
+    CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
+    CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
     CONSTRAINT name_min_length CHECK ((length(name) >= 4))
 );
 
@@ -4749,6 +4954,13 @@ COMMENT ON COLUMN public.form_element_types.is_surveys_only IS 'If true, the ele
 --
 
 COMMENT ON COLUMN public.form_element_types.is_single_use_only IS 'These elements can only be added to a form once.';
+
+
+--
+-- Name: COLUMN form_element_types.is_spatial; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.form_element_types.is_spatial IS 'Indicates if the element type is a spatial data input. Components that implement these types are expected to render their own map (in contrast with elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which expect the SurveyApp component to render a map for them.';
 
 
 --
@@ -6038,113 +6250,6 @@ COMMENT ON FUNCTION public.projects_admins(p public.projects) IS '@simpleCollect
 
 
 --
--- Name: basemaps; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.basemaps (
-    id integer NOT NULL,
-    project_id integer,
-    name text NOT NULL,
-    type public.basemap_type NOT NULL,
-    url text NOT NULL,
-    tile_size integer DEFAULT 256 NOT NULL,
-    labels_layer_id text,
-    thumbnail text NOT NULL,
-    attribution text,
-    terrain_url text,
-    terrain_tile_size integer DEFAULT 512 NOT NULL,
-    terrain_max_zoom integer DEFAULT 14 NOT NULL,
-    terrain_optional boolean DEFAULT true NOT NULL,
-    terrain_visibility_default boolean DEFAULT true NOT NULL,
-    terrain_exaggeration numeric DEFAULT 1 NOT NULL,
-    description text,
-    interactivity_settings_id integer NOT NULL,
-    is_disabled boolean DEFAULT false NOT NULL
-);
-
-
---
--- Name: COLUMN basemaps.project_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.project_id IS 'If not set, the basemap will be considered a "Shared Basemap" that can be added to any project. Otherwise it is private to the given proejct. Only superusers can create Shared Basemaps.';
-
-
---
--- Name: COLUMN basemaps.name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.name IS 'Label shown in the basemap picker interface';
-
-
---
--- Name: COLUMN basemaps.url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.url IS 'For MAPBOX types, this can be a mapbox://-style url or a link to a custom mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)';
-
-
---
--- Name: COLUMN basemaps.tile_size; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.tile_size IS 'For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)';
-
-
---
--- Name: COLUMN basemaps.labels_layer_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.labels_layer_id IS 'Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.';
-
-
---
--- Name: COLUMN basemaps.thumbnail; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.thumbnail IS 'Square thumbnail will be used to identify the basemap';
-
-
---
--- Name: COLUMN basemaps.attribution; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.attribution IS 'Optional attribution to show at the bottom of the map. Will be overriden by the attribution specified in the gl-style in the case of MAPBOX types.';
-
-
---
--- Name: COLUMN basemaps.terrain_url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.terrain_url IS 'Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).';
-
-
---
--- Name: COLUMN basemaps.terrain_optional; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.terrain_optional IS 'If set to false, terrain will always be on. Otherwise the user will be given a toggle switch.';
-
-
---
--- Name: COLUMN basemaps.interactivity_settings_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.interactivity_settings_id IS '
-@omit create
-';
-
-
---
--- Name: COLUMN basemaps.is_disabled; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.basemaps.is_disabled IS '
-Used to indicate whether the basemap is included in the public basemap listing. Useful for hiding an option temporarily, or adding a basemap to the project which will only be used in surveys.
-';
-
-
---
 -- Name: projects_basemaps(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6158,7 +6263,7 @@ CREATE FUNCTION public.projects_basemaps(project public.projects) RETURNS SETOF 
     where 
       session_has_project_access(project.id) and 
       (
-        basemaps.project_id = project.id or 
+        (basemaps.project_id = project.id and (basemaps.surveys_only = false)) or 
         basemaps.id in (
           select 
             basemap_id 
@@ -6878,6 +6983,24 @@ Returns true if the given user is an administrator of the project. Informaiton i
 
 
 --
+-- Name: projects_mapbox_secret_key(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_mapbox_secret_key(project public.projects) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select mapbox_secret_key from projects where projects.id = project.id and session_is_admin(project.id);
+  $$;
+
+
+--
+-- Name: FUNCTION projects_mapbox_secret_key(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_mapbox_secret_key(project public.projects) IS 'Only available to project admins. Use to query basemaps from a specified account.';
+
+
+--
 -- Name: projects_my_folders(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7126,6 +7249,34 @@ CREATE FUNCTION public.projects_session_participation_status(p public.projects) 
     AS $$
     select users_participation_status(users.*, p.id) from users where it_me(users.id);
 $$;
+
+
+--
+-- Name: projects_survey_basemaps(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_survey_basemaps(project public.projects) RETURNS SETOF public.basemaps
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select 
+      * 
+    from 
+      basemaps 
+    where 
+      session_has_project_access(project.id) and 
+      (
+        basemaps.project_id = project.id and basemaps.surveys_only = true
+      );
+  $$;
+
+
+--
+-- Name: FUNCTION projects_survey_basemaps(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_survey_basemaps(project public.projects) IS '
+@simpleCollections only
+';
 
 
 --
@@ -11225,6 +11376,13 @@ CREATE UNIQUE INDEX access_control_lists_table_of_contents_item_id_idx ON public
 
 
 --
+-- Name: basemap_project_id_and_surveys_only; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX basemap_project_id_and_surveys_only ON public.basemaps USING btree (project_id, surveys_only);
+
+
+--
 -- Name: basemaps_interactivity_settings_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11271,6 +11429,13 @@ CREATE INDEX data_sources_project_id_idx ON public.data_sources USING btree (pro
 --
 
 CREATE INDEX email_notification_preferences_user_id_idx ON public.email_notification_preferences USING btree (user_id);
+
+
+--
+-- Name: form_elements_basemap_ids; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX form_elements_basemap_ids ON public.form_elements USING btree (map_basemaps);
 
 
 --
@@ -14794,6 +14959,142 @@ REVOKE ALL ON FUNCTION public.auto_create_profile() FROM PUBLIC;
 
 
 --
+-- Name: TABLE basemaps; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.basemaps TO seasketch_user;
+GRANT SELECT ON TABLE public.basemaps TO anon;
+
+
+--
+-- Name: TABLE form_elements; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.form_elements TO anon;
+GRANT ALL ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.is_required; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_required) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.export_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(export_id) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements."position"; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE("position") ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.component_settings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(component_settings) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.type_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(type_id) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.body; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(body) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_color; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_color) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.secondary_color; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(secondary_color) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.text_variant; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(text_variant) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_image; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_image) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.layout; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(layout) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_palette; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_palette) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.unsplash_author_name; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(unsplash_author_name) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.unsplash_author_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(unsplash_author_url) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_width; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_width) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: COLUMN form_elements.background_height; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(background_height) ON TABLE public.form_elements TO seasketch_user;
+
+
+--
+-- Name: FUNCTION basemaps_related_form_elements(basemap public.basemaps); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.basemaps_related_form_elements(basemap public.basemaps) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.basemaps_related_form_elements(basemap public.basemaps) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION before_basemap_insert_create_interactivity_settings_func(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15174,126 +15475,6 @@ REVOKE ALL ON FUNCTION public.citext_smaller(public.citext, public.citext) FROM 
 
 
 --
--- Name: TABLE form_elements; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.form_elements TO anon;
-GRANT ALL ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.is_required; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(is_required) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.export_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(export_id) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements."position"; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE("position") ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.component_settings; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(component_settings) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.type_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(type_id) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.body; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(body) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.background_color; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(background_color) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.secondary_color; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(secondary_color) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.text_variant; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(text_variant) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.background_image; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(background_image) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.layout; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(layout) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.background_palette; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(background_palette) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.unsplash_author_name; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(unsplash_author_name) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.unsplash_author_url; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(unsplash_author_url) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.background_width; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(background_width) ON TABLE public.form_elements TO seasketch_user;
-
-
---
--- Name: COLUMN form_elements.background_height; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(background_height) ON TABLE public.form_elements TO seasketch_user;
-
-
---
 -- Name: FUNCTION clear_form_element_style(form_element_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15366,6 +15547,14 @@ REVOKE ALL ON FUNCTION public.contains_2d(public.box2df, public.geometry) FROM P
 --
 
 REVOKE ALL ON FUNCTION public.contains_2d(public.geometry, public.box2df) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION copy_appearance(form_element_id integer, copy_from_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id integer) TO seasketch_user;
 
 
 --
@@ -15574,6 +15763,20 @@ GRANT SELECT(support_email) ON TABLE public.projects TO anon;
 --
 
 GRANT SELECT(created_at) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.mapbox_public_key; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(mapbox_public_key) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -17937,14 +18140,6 @@ GRANT ALL ON FUNCTION public.projects_admins(p public.projects) TO seasketch_use
 
 
 --
--- Name: TABLE basemaps; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.basemaps TO seasketch_user;
-GRANT SELECT ON TABLE public.basemaps TO anon;
-
-
---
 -- Name: FUNCTION projects_basemaps(project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18318,6 +18513,13 @@ GRANT ALL ON FUNCTION public.projects_is_admin(p public.projects, "userId" integ
 
 
 --
+-- Name: FUNCTION projects_mapbox_secret_key(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_mapbox_secret_key(project public.projects) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION projects_my_folders(project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18388,6 +18590,15 @@ GRANT ALL ON FUNCTION public.projects_session_outstanding_survey_invites(project
 
 REVOKE ALL ON FUNCTION public.projects_session_participation_status(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_survey_basemaps(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_survey_basemaps(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_survey_basemaps(project public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_survey_basemaps(project public.projects) TO anon;
 
 
 --

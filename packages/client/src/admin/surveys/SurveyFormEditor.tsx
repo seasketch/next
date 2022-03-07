@@ -2,6 +2,8 @@ import {
   AdjustmentsIcon,
   ChevronDoubleDownIcon,
   ChevronLeftIcon,
+  PencilIcon,
+  TrashIcon,
 } from "@heroicons/react/outline";
 import { EyeIcon } from "@heroicons/react/solid";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -24,6 +26,8 @@ import {
   FormElement,
   FormElementFullDetailsFragment,
   LogicRuleDetailsFragment,
+  useCopyAppearanceMutation,
+  useUpdateFormElementBasemapsMutation,
 } from "../../generated/graphql";
 import FormElementFactory from "../../surveys/FormElementFactory";
 import { SurveyAppLayout } from "../../surveys/SurveyAppLayout";
@@ -33,6 +37,7 @@ import {
   FormEditorPortalContext,
   SurveyButtonFooterPortalContext,
   SurveyContext,
+  SurveyMapPortal,
   useUpdateFormElement,
 } from "../../formElements/FormElement";
 import { sortFormElements } from "../../formElements/sortFormElements";
@@ -46,7 +51,10 @@ import ImagePreloader from "../../surveys/ImagePreloader";
 import { Auth0User } from "../../auth/Auth0User";
 import SortableFormElementList from "./SortableFormElementList";
 import AddFormElementButton from "./AddFormElementButton";
-import { useCurrentStyle } from "../../surveys/appearance";
+import {
+  getPreviouslyStyledElement,
+  useCurrentStyle,
+} from "../../surveys/appearance";
 import { advancesAutomatically } from "../../surveys/SurveyApp";
 import SurveyFlowMap from "./SurveyFlowMap";
 import LogicRuleEditor from "./LogicRuleEditor";
@@ -55,6 +63,10 @@ import bbox from "@turf/bbox";
 import { LngLatBoundsLike, LngLatLike } from "mapbox-gl";
 import languages, { LangDetails } from "../../lang/supported";
 import i18n from "../../i18n";
+import SurveyContextualMap from "../../surveys/SurveyContextualMap";
+import BasemapMultiSelectInput from "./BasemapMultiSelectInput";
+import MapCameraCaptureButton from "./MapCameraCaptureButton";
+import DropdownButton from "../../components/DropdownButton";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -125,6 +137,8 @@ export default function SurveyFormEditor({
   >([]);
   const surveyButtonFooter = useRef<HTMLDivElement>(null);
 
+  const [copyAppearance, copyAppearanceState] = useCopyAppearanceMutation();
+
   useEffect(() => {
     if (
       route === "formElement" &&
@@ -186,6 +200,7 @@ export default function SurveyFormEditor({
             backgroundPalette: null,
             unsplashAuthorName: null,
             unsplashAuthorUrl: null,
+            layout: null,
           },
         },
       };
@@ -276,16 +291,31 @@ export default function SurveyFormEditor({
     }
   }
 
+  const [
+    updateMapSettings,
+    updateMapSettingsState,
+  ] = useUpdateFormElementBasemapsMutation({
+    onError,
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateFormElement: {
+          __typename: "UpdateFormElementPayload",
+          formElement: {
+            id: data.id,
+            mapBasemaps: data.mapBasemaps as number[] | undefined,
+          },
+        },
+      };
+    },
+  });
+
   const [stage, setStage] = useState(0);
   useEffect(() => {
     setStage(0);
   }, [selectedFormElement?.id]);
 
-  const style = useCurrentStyle(
-    data?.survey?.form?.formElements,
-    selectedFormElement,
-    stage
-  );
+  const style = useCurrentStyle(formElements, selectedFormElement, stage);
 
   let isDark = colord(style.backgroundColor || "#efefef").isDark();
   let dynamicTextClass = "text-white";
@@ -309,6 +339,9 @@ export default function SurveyFormEditor({
       (f) => f.id === selectedFormElement?.subordinateTo
     );
   }
+
+  const layout =
+    selectedFormElement?.layout || style.layout || FormElementLayout.Top;
 
   return (
     <div className="w-screen h-screen flex flex-col">
@@ -562,6 +595,20 @@ export default function SurveyFormEditor({
                     )}
                   </FormEditorPortalContext.Provider>
                 </SurveyButtonFooterPortalContext.Provider>
+                {(layout === FormElementLayout.MapSidebarLeft ||
+                  layout === FormElementLayout.MapSidebarRight) &&
+                  !selectedFormElement.type?.isSpatial && (
+                    <>
+                      <SurveyContextualMap
+                        admin
+                        formElementId={selectedFormElement.id}
+                        basemaps={
+                          (style.mapBasemaps as number[] | undefined) || []
+                        }
+                        cameraOptions={style.mapCameraOptions}
+                      />
+                    </>
+                  )}
               </SurveyAppLayout>
             </SurveyContext.Provider>
           )}
@@ -802,7 +849,7 @@ export default function SurveyFormEditor({
                     setImageChooserOpen(false);
                   }}
                 />
-                {!selectedFormElement.backgroundImage && (
+                {/* {!selectedFormElement.backgroundImage && (
                   <div className="px-3 py-2 space-y-4 text-base">
                     <p className="text-sm">
                       <Trans ns="admin:surveys">
@@ -820,193 +867,367 @@ export default function SurveyFormEditor({
                       </div>
                     </div>
                   </div>
+                )} */}
+                {!selectedFormElement.backgroundColor && (
+                  <div className="text-sm p-3 text-gray-500 space-y-2">
+                    <span>
+                      <Trans ns="admin:surveys">
+                        This element will render with the appearance settings of
+                        a previous element.
+                      </Trans>
+                    </span>
+                    <div>
+                      <Button
+                        label={t("Customize Appearance")}
+                        small
+                        loading={copyAppearanceState.loading}
+                        disabled={copyAppearanceState.loading}
+                        onClick={() => {
+                          // copy from id
+                          const previous = getPreviouslyStyledElement(
+                            formElements,
+                            formElements.indexOf(selectedFormElement!)
+                          );
+                          if (!previous) {
+                            throw new Error(
+                              "Could not find previously styled element"
+                            );
+                          }
+                          copyAppearance({
+                            variables: {
+                              copyFrom: previous.id,
+                              id: selectedFormElement!.id,
+                            },
+                          });
+                        }}
+                      >
+                        <span>{t("Customize Appearance")}</span>
+                        <PencilIcon className="ml-2 w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
                 )}
-                {selectedFormElement.backgroundImage && (
-                  <div className="px-3 py-2 space-y-4 text-base">
+                <div
+                  className={`px-3 py-2 space-y-4 text-base ${
+                    !selectedFormElement.backgroundColor &&
+                    "pointer-events-none opacity-50 select-none"
+                  }`}
+                >
+                  {selectedFormElement.backgroundColor && (
                     <p className="text-sm">
                       <Trans ns="admin:surveys">
                         Changing appearance settings will impact all following
                         pages until another customized page appears.
                       </Trans>
                     </p>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-800">
-                        {t("Background image")}
-                      </h4>
-                      <div className="flex-rows flex space-x-4 py-2 items-center justify-center">
-                        <div
-                          className="flex-1 h-12"
-                          style={{
-                            background: `url(${selectedFormElement.backgroundImage}&w=200) no-repeat center`,
-                            backgroundSize: "cover",
+                  )}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-800">
+                      {t("Background image")}
+                    </h4>
+                    <div className="flex-rows flex space-x-4 py-2 items-center justify-center">
+                      <div
+                        className="flex-1 h-12"
+                        style={{
+                          background: `url(${
+                            selectedFormElement.backgroundImage ||
+                            style.backgroundImage
+                          }&w=200) no-repeat center`,
+                          backgroundSize: "cover",
+                        }}
+                      ></div>
+                      <Button
+                        small
+                        label={t("Choose image...")}
+                        onClick={() => setImageChooserOpen(true)}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-800 mb-2">
+                      {t("Background color")}
+                    </h4>
+                    <div className="space-x-2 w-36 pl-2">
+                      {(
+                        selectedFormElement.backgroundPalette ||
+                        style.backgroundPalette ||
+                        []
+                      ).map((c) => (
+                        <button
+                          key={c!.toString()}
+                          onClick={() => {
+                            updateBackground({
+                              variables: {
+                                id: selectedFormElement!.id,
+                                backgroundColor: c,
+                              },
+                            });
                           }}
-                        ></div>
-                        <Button
-                          small
-                          label={t("Choose image...")}
-                          onClick={() => setImageChooserOpen(true)}
+                          className={`w-4 h-4 rounded-full shadow ${
+                            selectedFormElement!.backgroundColor === c
+                              ? "ring"
+                              : ""
+                          }`}
+                          style={{ backgroundColor: c! }}
                         />
-                      </div>
+                      ))}
                     </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-800 mb-2">
-                        {t("Background color")}
-                      </h4>
-                      <div className="space-x-2 w-36 pl-2">
-                        {(selectedFormElement.backgroundPalette || []).map(
-                          (c) => (
-                            <button
-                              key={c!.toString()}
-                              onClick={() => {
-                                updateBackground({
-                                  variables: {
-                                    id: selectedFormElement!.id,
-                                    backgroundColor: c,
-                                  },
-                                });
-                              }}
-                              className={`w-4 h-4 rounded-full shadow ${
-                                selectedFormElement!.backgroundColor === c
-                                  ? "ring"
-                                  : ""
-                              }`}
-                              style={{ backgroundColor: c! }}
-                            />
-                          )
-                        )}
-                      </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-800 mb-2">
+                      {t("Secondary color")}
+                    </h4>
+                    <div className="space-x-2 w-36 pl-2">
+                      {secondaryPalette(
+                        selectedFormElement.backgroundColor ||
+                          style.backgroundColor ||
+                          "black",
+                        (selectedFormElement.backgroundPalette ||
+                          style.backgroundPalette ||
+                          []) as string[]
+                      ).map((c, i) => {
+                        return (
+                          <button
+                            key={c!.toString()}
+                            onClick={() => {
+                              updateBackground({
+                                variables: {
+                                  id: selectedFormElement!.id,
+                                  secondaryColor: c,
+                                },
+                              });
+                            }}
+                            className={`w-4 h-4 rounded-full shadow ${
+                              selectedFormElement!.secondaryColor === c
+                                ? "ring"
+                                : ""
+                            }`}
+                            style={{ backgroundColor: c! }}
+                          />
+                        );
+                      })}
                     </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-800 mb-2">
-                        {t("Secondary color")}
-                      </h4>
-                      <div className="space-x-2 w-36 pl-2">
-                        {secondaryPalette(
-                          selectedFormElement.backgroundColor || "black",
-                          (selectedFormElement.backgroundPalette ||
-                            []) as string[]
-                        ).map((c, i) => {
-                          return (
-                            <button
-                              key={c!.toString()}
-                              onClick={() => {
-                                updateBackground({
-                                  variables: {
-                                    id: selectedFormElement!.id,
-                                    secondaryColor: c,
-                                  },
-                                });
-                              }}
-                              className={`w-4 h-4 rounded-full shadow ${
-                                selectedFormElement!.secondaryColor === c
-                                  ? "ring"
-                                  : ""
-                              }`}
-                              style={{ backgroundColor: c! }}
-                            />
-                          );
-                        })}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-800 mb-1">
+                      {t("Layout")}
+                    </h4>
+                    <h5 className="text-sm font-normal text-gray-500 mb-2">
+                      {t("Background Image")}
+                    </h5>
+                    <div className="flex space-x-2">
+                      <div
+                        title="Full Screen Image"
+                        onClick={() => {
+                          updateBackground({
+                            variables: {
+                              id: selectedFormElement!.id,
+                              layout: FormElementLayout.Cover,
+                            },
+                          });
+                        }}
+                        className={`w-12 h-8 border rounded bg-cool-gray-600 flex flex-col justify-center space-y-1 shadow cursor-pointer ${
+                          layout === FormElementLayout.Cover && "ring"
+                        }`}
+                      >
+                        <div className="w-8 mx-auto bg-white rounded h-0.5"></div>
+                        <div className="w-6 mx-auto bg-white rounded h-0.5"></div>
+                        <div className="w-8 mx-auto bg-white rounded h-0.5"></div>
                       </div>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-800 mb-2">
-                        {t("Background layout")}
-                      </h4>
-                      <div className="flex space-x-2">
-                        <div
-                          title="Full Screen Image"
-                          onClick={() => {
-                            updateBackground({
-                              variables: {
-                                id: selectedFormElement!.id,
-                                layout: FormElementLayout.Cover,
-                              },
-                            });
-                          }}
-                          className={`w-12 h-8 border rounded bg-cool-gray-600 flex flex-col justify-center space-y-1 shadow cursor-pointer ${
-                            selectedFormElement.layout ===
-                              FormElementLayout.Cover && "ring"
-                          }`}
-                        >
-                          <div className="w-8 mx-auto bg-white rounded h-0.5"></div>
-                          <div className="w-6 mx-auto bg-white rounded h-0.5"></div>
-                          <div className="w-8 mx-auto bg-white rounded h-0.5"></div>
-                        </div>
-                        <div
-                          title="Top Header Image"
-                          onClick={() => {
-                            updateBackground({
-                              variables: {
-                                id: selectedFormElement!.id,
-                                layout: FormElementLayout.Top,
-                              },
-                            });
-                          }}
-                          className={`w-12 h-8 border overflow-hidden rounded flex flex-col justify-center space-y-1 shadow cursor-pointer ${
-                            selectedFormElement.layout ===
-                              FormElementLayout.Top && "ring"
-                          }`}
-                        >
-                          <div className="w-full -mt-1 bg-gray-400 h-2"></div>
-                          <div className="w-8 ml-1 bg-gray-500 rounded h-0.5"></div>
-                          <div className="w-6 ml-1 bg-gray-500 rounded h-0.5"></div>
-                          <div className="w-8 ml-1 bg-gray-500 rounded h-0.5"></div>
-                        </div>
-                        <div
-                          title="Left Side Image"
-                          onClick={() => {
-                            updateBackground({
-                              variables: {
-                                id: selectedFormElement!.id,
-                                layout: FormElementLayout.Left,
-                              },
-                            });
-                          }}
-                          className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
-                            selectedFormElement.layout ===
-                              FormElementLayout.Left && "ring"
-                          }`}
-                        >
-                          <div className="w-1/3 h-full bg-gray-400"></div>
-                          <div className="w-2/3 space-y-1">
-                            <div className="w-3/4 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
-                            <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
-                            <div className="w-3/4 ml-1 bg-gray-500 rounded h-0.5"></div>
-                          </div>
-                        </div>
-                        <div
-                          title="Right Side Image"
-                          onClick={() => {
-                            updateBackground({
-                              variables: {
-                                id: selectedFormElement!.id,
-                                layout: FormElementLayout.Right,
-                              },
-                            });
-                          }}
-                          className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
-                            selectedFormElement.layout ===
-                              FormElementLayout.Right && "ring"
-                          }`}
-                        >
-                          <div className="w-2/3 space-y-1">
-                            <div className="w-3/4 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
-                            <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
-                            <div className="w-3/4 ml-1 bg-gray-500 rounded h-0.5"></div>
-                          </div>
-                          <div className="w-1/3 h-full bg-gray-400"></div>
+                      <div
+                        title="Top Header Image"
+                        onClick={() => {
+                          updateBackground({
+                            variables: {
+                              id: selectedFormElement!.id,
+                              layout: FormElementLayout.Top,
+                            },
+                          });
+                        }}
+                        className={`w-12 h-8 border overflow-hidden rounded flex flex-col justify-center space-y-1 shadow cursor-pointer ${
+                          layout === FormElementLayout.Top && "ring"
+                        }`}
+                      >
+                        <div className="w-full -mt-1 bg-gray-400 h-2"></div>
+                        <div className="w-8 ml-1 bg-gray-500 rounded h-0.5"></div>
+                        <div className="w-6 ml-1 bg-gray-500 rounded h-0.5"></div>
+                        <div className="w-8 ml-1 bg-gray-500 rounded h-0.5"></div>
+                      </div>
+                      <div
+                        title="Right Side Image"
+                        onClick={() => {
+                          updateBackground({
+                            variables: {
+                              id: selectedFormElement!.id,
+                              layout: FormElementLayout.Right,
+                            },
+                          });
+                        }}
+                        className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
+                          layout === FormElementLayout.Right && "ring"
+                        }`}
+                      >
+                        <div className="w-1/3 h-full bg-gray-400"></div>
+                        <div className="w-2/3 space-y-1">
+                          <div className="w-3/4 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          <div className="w-3/4 ml-1 bg-gray-500 rounded h-0.5"></div>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-800 mt-2.5">
-                        <Trans ns="admin:surveys">
-                          Note that on mobile phones and other small devices,
-                          the top-image layout will be used if left or right
-                          image layout is selected.
-                        </Trans>
-                      </p>
+
+                      <div
+                        title="Left Side Image"
+                        onClick={() => {
+                          updateBackground({
+                            variables: {
+                              id: selectedFormElement!.id,
+                              layout: FormElementLayout.Left,
+                            },
+                          });
+                        }}
+                        className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
+                          layout === FormElementLayout.Left && "ring"
+                        }`}
+                      >
+                        <div className="w-2/3 space-y-1">
+                          <div className="w-3/4 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          <div className="w-3/4 ml-1 bg-gray-500 rounded h-0.5"></div>
+                        </div>
+                        <div className="w-1/3 h-full bg-gray-400"></div>
+                      </div>
                     </div>
-                    {selectedFormElement.typeId !== "WelcomeMessage" && (
-                      <div className="mt-2">
+                    <h5 className="text-sm font-normal text-gray-500 my-2">
+                      {t("Map-based")}
+                    </h5>
+                    <div className="flex space-x-2">
+                      <div
+                        title="Map with sidebar on right"
+                        onClick={() => {
+                          updateBackground({
+                            variables: {
+                              id: selectedFormElement!.id,
+                              layout: FormElementLayout.MapSidebarRight,
+                            },
+                          });
+                        }}
+                        className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
+                          layout === FormElementLayout.MapSidebarRight && "ring"
+                        }`}
+                      >
+                        <div className="w-1/2 h-full bg-gray-400"></div>
+                        <div className="w-1/2 space-y-1">
+                          <div className="w-2/3 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          <div className="w-2/3 ml-1 bg-gray-500 rounded h-0.5"></div>
+                        </div>
+                      </div>
+                      <div
+                        title="Map with sidebar on left"
+                        onClick={() => {
+                          updateBackground({
+                            variables: {
+                              id: selectedFormElement!.id,
+                              layout: FormElementLayout.MapSidebarLeft,
+                            },
+                          });
+                        }}
+                        className={`w-12 h-8 border overflow-hidden rounded flex flex-row justify-center shadow cursor-pointer ${
+                          layout === FormElementLayout.MapSidebarLeft && "ring"
+                        }`}
+                      >
+                        <div className="w-1/2 space-y-1">
+                          <div className="w-2/3 mt-1 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          <div className="w-1/2 ml-1 bg-gray-500 rounded h-0.5"></div>
+                          <div className="w-2/3 ml-1 bg-gray-500 rounded h-0.5"></div>
+                        </div>
+                        <div className="w-1/2 h-full bg-gray-400"></div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-800 mt-2.5">
+                      <Trans ns="admin:surveys">
+                        Note that on <b>mobile</b> phones and other small
+                        devices, the top-image layout will be used if left or
+                        right image layout is selected. For map-based layouts
+                        affordances will be provided for the user to switch
+                        between the map and textual content.
+                      </Trans>
+                    </p>
+                  </div>
+                  <h4 className="text-sm font-medium text-gray-800 mb-2">
+                    {t("Text color")}
+                  </h4>
+                  <div className="flex space-x-2 pb-5">
+                    <div
+                      className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
+                        style.textVariant === FormElementTextVariant.Dynamic &&
+                        "ring"
+                      }`}
+                      style={{ backgroundColor: style.backgroundColor }}
+                      onClick={() =>
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement!.id,
+                            textVariant: FormElementTextVariant.Dynamic,
+                          },
+                        })
+                      }
+                    >
+                      <span className={`font-bold text-lg ${dynamicTextClass}`}>
+                        {t("T", { ns: "no-translate" })}
+                      </span>
+                      <span className="absolute -bottom-5 text-xs">
+                        {t("auto")}
+                      </span>
+                    </div>
+                    <div
+                      className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
+                        style.textVariant === FormElementTextVariant.Light &&
+                        "ring"
+                      }`}
+                      style={{ backgroundColor: style.backgroundColor }}
+                      onClick={() =>
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement!.id,
+                            textVariant: FormElementTextVariant.Light,
+                          },
+                        })
+                      }
+                    >
+                      {/* eslint-disable-next-line i18next/no-literal-string */}
+                      <span className={`font-bold text-lg text-white`}>T</span>
+                      <span className="absolute -bottom-5 text-xs">
+                        {t("light")}
+                      </span>
+                    </div>
+                    <div
+                      className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
+                        style.textVariant === FormElementTextVariant.Dark &&
+                        "ring"
+                      }`}
+                      style={{ backgroundColor: style.backgroundColor }}
+                      onClick={() =>
+                        updateBackground({
+                          variables: {
+                            id: selectedFormElement!.id,
+                            textVariant: FormElementTextVariant.Dark,
+                          },
+                        })
+                      }
+                    >
+                      {/* eslint-disable-next-line i18next/no-literal-string */}
+                      <span className={`font-bold text-lg text-grey-800`}>
+                        T
+                      </span>
+                      <span className="absolute -bottom-5 text-xs">
+                        {t("dark")}
+                      </span>
+                    </div>
+                  </div>
+                  {selectedFormElement.typeId !== "WelcomeMessage" &&
+                    selectedFormElement.backgroundColor && (
+                      <div className="pt-4">
                         <Button
                           small
                           label={t("Clear style")}
@@ -1015,7 +1236,10 @@ export default function SurveyFormEditor({
                               variables: { id: selectedFormElement!.id },
                             });
                           }}
-                        />
+                        >
+                          <span>{t("Clear style")}</span>
+                          <TrashIcon className="w-4 h-4 ml-2" />
+                        </Button>
                         <p className="text-sm text-gray-800 mt-2.5">
                           <Trans>
                             Removing style settings will mean that this page
@@ -1024,83 +1248,39 @@ export default function SurveyFormEditor({
                         </p>
                       </div>
                     )}
-                    <h4 className="text-sm font-medium text-gray-800 mb-2">
-                      {t("Text color")}
-                    </h4>
-                    <div className="flex space-x-2">
-                      <div
-                        className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
-                          style.textVariant ===
-                            FormElementTextVariant.Dynamic && "ring"
-                        }`}
-                        style={{ backgroundColor: style.backgroundColor }}
-                        onClick={() =>
-                          updateBackground({
+                </div>
+                {(layout === FormElementLayout.MapSidebarLeft ||
+                  layout === FormElementLayout.MapSidebarRight) &&
+                  !selectedFormElement.type?.isSpatial && (
+                    <>
+                      <BasemapMultiSelectInput
+                        value={
+                          selectedFormElement.mapBasemaps as
+                            | undefined
+                            | number[]
+                        }
+                        onChange={(value) => {
+                          updateMapSettings({
                             variables: {
                               id: selectedFormElement!.id,
-                              textVariant: FormElementTextVariant.Dynamic,
+                              mapBasemaps: value,
                             },
-                          })
-                        }
-                      >
-                        <span
-                          className={`font-bold text-lg ${dynamicTextClass}`}
-                        >
-                          {t("T", { ns: "no-translate" })}
-                        </span>
-                        <span className="absolute -bottom-5 text-xs">
-                          {t("auto")}
-                        </span>
-                      </div>
-                      <div
-                        className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
-                          style.textVariant === FormElementTextVariant.Light &&
-                          "ring"
-                        }`}
-                        style={{ backgroundColor: style.backgroundColor }}
-                        onClick={() =>
-                          updateBackground({
-                            variables: {
-                              id: selectedFormElement!.id,
-                              textVariant: FormElementTextVariant.Light,
-                            },
-                          })
-                        }
-                      >
-                        {/* eslint-disable-next-line i18next/no-literal-string */}
-                        <span className={`font-bold text-lg text-white`}>
-                          T
-                        </span>
-                        <span className="absolute -bottom-5 text-xs">
-                          {t("light")}
-                        </span>
-                      </div>
-                      <div
-                        className={`relative w-12 h-8 shadow rounded text-center flex justify-center cursor-pointer items-center ${
-                          style.textVariant === FormElementTextVariant.Dark &&
-                          "ring"
-                        }`}
-                        style={{ backgroundColor: style.backgroundColor }}
-                        onClick={() =>
-                          updateBackground({
-                            variables: {
-                              id: selectedFormElement!.id,
-                              textVariant: FormElementTextVariant.Dark,
-                            },
-                          })
-                        }
-                      >
-                        {/* eslint-disable-next-line i18next/no-literal-string */}
-                        <span className={`font-bold text-lg text-grey-800`}>
-                          T
-                        </span>
-                        <span className="absolute -bottom-5 text-xs">
-                          {t("dark")}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                            // optimisticResponse: (data) => ({
+                            //   __typename: "Mutation",
+                            //   updateFormElement: {
+                            //     __typename: "UpdateFormElementPayload",
+                            //     formElement: {
+                            //       __typename: "FormElement",
+                            //       id: selectedFormElement!.id,
+                            //       mapBasemaps: value,
+                            //     },
+                            //   },
+                            // }),
+                          });
+                        }}
+                      />
+                    </>
+                  )}
               </>
             )}
           {route === "formElement" &&

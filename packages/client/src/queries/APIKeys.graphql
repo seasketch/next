@@ -1,0 +1,21 @@
+query MapboxAPIKeys {
+  currentProject {
+    mapboxPublicKey
+    mapboxSecretKey
+  }
+}
+
+mutation updateKeys($id: Int!, $public: String, $secret: String) {
+  updateProject(
+    input: {
+      id: $id
+      patch: { mapboxPublicKey: $public, mapboxSecretKey: $secret }
+    }
+  ) {
+    project {
+      id
+      mapboxPublicKey
+      mapboxSecretKey
+    }
+  }
+}

@@ -34,11 +34,15 @@ fragment BasemapDetails on Basemap {
   tileSize
   type
   url
+  surveysOnly
 }
 
 query GetBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
     id
+    surveyBasemaps {
+      ...BasemapDetails
+    }
     basemaps {
       ...BasemapDetails
     }
@@ -52,6 +56,7 @@ mutation CreateBasemap(
   $tileSize: Int
   $type: BasemapType!
   $url: String!
+  $surveysOnly: Boolean
 ) {
   createBasemap(
     input: {
@@ -62,45 +67,12 @@ mutation CreateBasemap(
         tileSize: $tileSize
         type: $type
         url: $url
+        surveysOnly: $surveysOnly
       }
     }
   ) {
     basemap {
-      id
-      attribution
-      interactivitySettings {
-        cursor
-        id
-        layers
-        longTemplate
-        shortTemplate
-        type
-      }
-      labelsLayerId
-      name
-      optionalBasemapLayers {
-        basemapId
-        id
-        defaultVisibility
-        description
-        options
-        groupType
-        layers
-        metadata
-        name
-      }
-      description
-      projectId
-      terrainExaggeration
-      terrainMaxZoom
-      terrainOptional
-      terrainTileSize
-      terrainUrl
-      terrainVisibilityDefault
-      thumbnail
-      tileSize
-      type
-      url
+      ...BasemapDetails
     }
   }
 }
@@ -370,5 +342,13 @@ mutation UpdateInteractivitySettingsLayers($id: Int!, $layers: [String]) {
       layers
       id
     }
+  }
+}
+
+query MapboxKeys {
+  currentProject {
+    id
+    mapboxPublicKey
+    mapboxSecretKey
   }
 }

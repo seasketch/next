@@ -1,39 +1,72 @@
 import { gql, useApolloClient } from "@apollo/client";
+import { prepareDataForValidation } from "formik";
 import { Map } from "mapbox-gl";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
+import { Link } from "react-router-dom";
 import Button from "../../components/Button";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
-import { BasemapType, useCreateBasemapMutation } from "../../generated/graphql";
+import {
+  BasemapType,
+  CursorType,
+  useCreateBasemapMutation,
+  useUpdateInteractivitySettingsLayersMutation,
+  useUpdateInteractivitySettingsMutation,
+  useMapboxKeysQuery,
+} from "../../generated/graphql";
 import { useMapboxStyle } from "../../useMapboxStyle";
 import useProjectId from "../../useProjectId";
 import { createImageBlobFromDataURI } from "./arcgis/arcgis";
+import useMapboxAccountStyles from "./useMapboxAccountStyles";
 
 const THUMBNAIL_SIZE = 240;
 const IMAGE_SIZE = THUMBNAIL_SIZE * window.devicePixelRatio;
 
+enum TABS {
+  UPLOAD,
+  URL,
+  ACCOUNT,
+}
+
 export default function CreateBasemapModal({
   onSave,
   onRequestClose,
+  surveysOnly,
 }: {
-  onSave?: () => void;
+  onSave?: (id: number) => void;
   onRequestClose?: () => void;
+  surveysOnly?: boolean;
 }) {
+  const [
+    { styles, loading, error, hasMore },
+    fetchMore,
+  ] = useMapboxAccountStyles();
+  // const { styles, loading, error } = data;
+  const { t } = useTranslation("admin");
+  const Tabs = [
+    { name: t("By URL"), id: TABS.URL },
+    // { name: t("Upload"), id: TABS.UPLOAD },
+    { name: t("From Mapbox Account"), id: TABS.ACCOUNT },
+  ];
+
   const [state, setState] = useState<{
     type: BasemapType;
     name: string;
     description?: string;
     url: string;
     mapPreview: boolean;
+    selectedTab: TABS;
   }>({
     type: BasemapType.Mapbox,
     name: "",
     url: "",
     mapPreview: false,
+    selectedTab: TABS.ACCOUNT,
   });
-  const { t } = useTranslation("admin");
+
   const projectId = useProjectId();
   const [mutate, mutationState] = useCreateBasemapMutation({
     update: (cache, { data }) => {
@@ -46,38 +79,85 @@ export default function CreateBasemapModal({
           }),
           fields: {
             basemaps(existingBasemapRefs = [], { readField }) {
-              const newBasemapRef = cache.writeFragment({
-                data: newBasemapData,
-                fragment: gql`
-                  fragment NewBasemap on Basemap {
-                    id
-                    projectId
-                    attribution
-                    description
-                    labelsLayerId
-                    name
-                    nodeId
-                    terrainExaggeration
-                    terrainOptional
-                    url
-                    type
-                    tileSize
-                    thumbnail
-                    terrainUrl
-                    terrainTileSize
-                  }
-                `,
-              });
+              if (!newBasemapData.surveysOnly) {
+                const newBasemapRef = cache.writeFragment({
+                  data: newBasemapData,
+                  fragment: gql`
+                    fragment NewBasemap on Basemap {
+                      id
+                      projectId
+                      attribution
+                      description
+                      labelsLayerId
+                      name
+                      terrainExaggeration
+                      terrainOptional
+                      url
+                      type
+                      tileSize
+                      thumbnail
+                      terrainUrl
+                      terrainTileSize
+                      surveysOnly
+                    }
+                  `,
+                });
 
-              return [...existingBasemapRefs, newBasemapRef];
+                return [...existingBasemapRefs, newBasemapRef];
+              } else {
+                return existingBasemapRefs;
+              }
+            },
+            surveyBasemaps(existingBasemapRefs = [], { readField }) {
+              if (newBasemapData.surveysOnly) {
+                const newBasemapRef = cache.writeFragment({
+                  data: newBasemapData,
+                  fragment: gql`
+                    fragment NewBasemap on Basemap {
+                      id
+                      projectId
+                      attribution
+                      description
+                      labelsLayerId
+                      name
+                      terrainExaggeration
+                      terrainOptional
+                      url
+                      type
+                      tileSize
+                      thumbnail
+                      terrainUrl
+                      terrainTileSize
+                      surveysOnly
+                    }
+                  `,
+                });
+
+                return [...existingBasemapRefs, newBasemapRef];
+              } else {
+                return existingBasemapRefs;
+              }
             },
           },
         });
       }
     },
   });
-  const client = useApolloClient();
 
+  const onError = useGlobalErrorHandler();
+  const [
+    updateInteractivity,
+    updateInteractivityState,
+  ] = useUpdateInteractivitySettingsMutation({
+    onError,
+  });
+
+  const [
+    updateLayers,
+    updateLayersState,
+  ] = useUpdateInteractivitySettingsLayersMutation({
+    onError,
+  });
   const mapboxStyleInfo = useMapboxStyle(
     state.type === BasemapType.Mapbox ? state.url : undefined
   );
@@ -120,8 +200,8 @@ export default function CreateBasemapModal({
         className="absolute left-0 top-0 bg-gray-400 hidden"
       ></canvas>
       <Modal
+        onRequestClose={onRequestClose}
         open={true}
-        title={t("Custom Basemap")}
         zeroPadding
         footer={
           <div className="text-right">
@@ -130,64 +210,165 @@ export default function CreateBasemapModal({
               label={t("Cancel")}
               className="mr-2"
             />
-            <Button
-              primary
-              onClick={() => {
-                if (state.mapPreview) {
-                  const dataUrl = mapRef.current?.getCanvas().toDataURL();
-                  const img = new Image();
-                  img.src = dataUrl!;
-                  img.onload = () => {
-                    // TODO: Test using different devicePixelRatio settings
-                    const context = canvasRef.current!.getContext("2d");
-                    context!.drawImage(
-                      img,
-                      (img.width - IMAGE_SIZE) / 2,
-                      (img.height - IMAGE_SIZE) / 2,
-                      IMAGE_SIZE,
-                      IMAGE_SIZE,
-                      0,
-                      0,
-                      IMAGE_SIZE,
-                      IMAGE_SIZE
-                    );
-                    context?.save();
-                    const cropped = canvasRef.current!.toDataURL();
-                    createImageBlobFromDataURI(IMAGE_SIZE, IMAGE_SIZE, cropped)
-                      .then((blob) => {
-                        mutate({
-                          variables: {
-                            projectId: projectId!,
-                            name: state.name,
-                            thumbnail: blob,
-                            type: state.type,
-                            url: state.url,
-                          },
-                        }).then((d) => {
-                          if (onRequestClose) {
-                            onRequestClose();
-                          }
+            {(state.selectedTab === TABS.URL || state.mapPreview) && (
+              <Button
+                primary
+                onClick={() => {
+                  if (state.mapPreview) {
+                    const dataUrl = mapRef.current?.getCanvas().toDataURL();
+                    const img = new Image();
+                    img.src = dataUrl!;
+                    img.onload = () => {
+                      // TODO: Test using different devicePixelRatio settings
+                      const context = canvasRef.current!.getContext("2d");
+                      context!.drawImage(
+                        img,
+                        (img.width - IMAGE_SIZE) / 2,
+                        (img.height - IMAGE_SIZE) / 2,
+                        IMAGE_SIZE,
+                        IMAGE_SIZE,
+                        0,
+                        0,
+                        IMAGE_SIZE,
+                        IMAGE_SIZE
+                      );
+                      context?.save();
+                      const cropped = canvasRef.current!.toDataURL();
+                      createImageBlobFromDataURI(
+                        IMAGE_SIZE,
+                        IMAGE_SIZE,
+                        cropped
+                      )
+                        .then((blob) => {
+                          mutate({
+                            variables: {
+                              projectId: projectId!,
+                              name: state.name,
+                              thumbnail: blob,
+                              type: state.type,
+                              url: state.url,
+                              surveysOnly,
+                            },
+                          })
+                            .then((d) => {
+                              if (
+                                mapboxStyleInfo.data?.metadata?.[
+                                  "seasketch:interactivity_settings"
+                                ] &&
+                                d.data?.createBasemap?.basemap
+                                  ?.interactivitySettings?.id
+                              ) {
+                                const settings =
+                                  mapboxStyleInfo.data.metadata[
+                                    "seasketch:interactivity_settings"
+                                  ];
+                                const settingsId =
+                                  d.data.createBasemap.basemap
+                                    .interactivitySettings.id;
+                                return updateInteractivity({
+                                  variables: {
+                                    id: settingsId,
+                                    ...settings,
+                                  },
+                                }).then((i) => {
+                                  return updateLayers({
+                                    variables: {
+                                      id: settingsId,
+                                      layers: settings.layers,
+                                    },
+                                  }).then((a) => {
+                                    return d;
+                                  });
+                                });
+                              } else {
+                                return d;
+                              }
+                            })
+                            .then((d) => {
+                              if (
+                                onSave &&
+                                d.data?.createBasemap?.basemap?.id
+                              ) {
+                                onSave(d.data.createBasemap.basemap.id);
+                              }
+                              if (onRequestClose) {
+                                onRequestClose();
+                              }
+                            });
+                        })
+                        .catch((e) => {
+                          alert(e.toString());
                         });
-                      })
-                      .catch((e) => {
-                        alert(e.toString());
-                      });
-                  };
-                } else {
-                  setState((old) => ({ ...old, mapPreview: true }));
-                }
-              }}
-              label={state.mapPreview ? "Capture and Save" : "Continue"}
-              disabled={mutationState.loading}
-              loading={mutationState.loading}
-            />
+                    };
+                  } else {
+                    setState((old) => ({ ...old, mapPreview: true }));
+                  }
+                }}
+                label={state.mapPreview ? "Capture and Save" : "Continue"}
+                disabled={mutationState.loading || !state.url}
+                loading={mutationState.loading}
+              />
+            )}
           </div>
         }
       >
         {!state.mapPreview && (
-          <div className="w-128 h-72">
+          <div className="w-128 max-w-full">
+            <h3 className="text-center py-4 pb-1 font-medium text-xl">
+              {t("New Map")}
+            </h3>
+            <p className="text-sm text-gray-500 text-center px-4 py-2">
+              <Trans ns="admin:surveys">
+                SeaSketch uses{" "}
+                <a
+                  className="underline"
+                  href="https://docs.mapbox.com/mapbox-gl-js/style-spec/"
+                  target="_blank"
+                >
+                  Mapbox Style documents
+                </a>{" "}
+                to represent basemaps. These can be authored in Mapbox Studio or{" "}
+                <a
+                  className="underline"
+                  target="_blank"
+                  href="https://maputnik.github.io/"
+                >
+                  open source tools
+                </a>
+                .
+              </Trans>
+            </p>
+            <div className="block">
+              <nav
+                className="flex space-x-4 w-full justify-center my-2"
+                aria-label="Tabs"
+              >
+                {Tabs.map((tab) => (
+                  <button
+                    onClick={() => {
+                      setState((prev) => ({
+                        ...prev,
+                        selectedTab: tab.id,
+                      }));
+                    }}
+                    key={tab.id}
+                    className={classNames(
+                      tab.id === state.selectedTab
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-500 hover:text-gray-700",
+                      "px-3 py-2 font-medium text-sm rounded-md"
+                    )}
+                    aria-current={
+                      tab.id === state.selectedTab ? "page" : undefined
+                    }
+                  >
+                    {tab.name}
+                  </button>
+                ))}
+              </nav>
+            </div>
             <div className="p-4">
-              <div className="mb-4">
+              {/* <div className="mb-4">
                 <label
                   htmlFor="type"
                   className="block text-sm mb-1 font-medium leading-5 text-gray-700"
@@ -211,81 +392,143 @@ export default function CreateBasemapModal({
                     {t("Raster tile url template")}
                   </option>
                 </select>
-              </div>
-              <div className="mb-2">
-                <TextInput
-                  placeholder={
-                    state.type === BasemapType.Mapbox
-                      ? "mapbox://styles/mapbox/satellite-v9"
-                      : "https://example.com/wms?bbox={bbox-epsg-3857}&request=GetMap&format=image/png&service=WMS&version=1.1.1&srs=EPSG:3857&width=256&height=256&layers=example"
-                  }
-                  inputChildNode={
-                    mapboxStyleInfo.loading ? (
-                      <div className="absolute right-2 top-2">
-                        <Spinner />
-                      </div>
-                    ) : null
-                  }
-                  description={
-                    state.type === BasemapType.Mapbox ? (
-                      <>
+              </div> */}
+              {state.selectedTab === TABS.URL && (
+                <div className="mb-2 -mt-2 h-22">
+                  <TextInput
+                    placeholder={
+                      state.type === BasemapType.Mapbox
+                        ? "mapbox://styles/mapbox/satellite-v9"
+                        : "https://example.com/wms?bbox={bbox-epsg-3857}&request=GetMap&format=image/png&service=WMS&version=1.1.1&srs=EPSG:3857&width=256&height=256&layers=example"
+                    }
+                    inputChildNode={
+                      mapboxStyleInfo.loading ? (
+                        <div className="absolute right-2 top-2">
+                          <Spinner />
+                        </div>
+                      ) : null
+                    }
+                    description={
+                      state.type === BasemapType.Mapbox ? (
+                        <>
+                          <Trans ns="admin">
+                            Enter a{" "}
+                            <code className="bg-gray-100 p-0.5 rounded">
+                              mapbox://
+                            </code>{" "}
+                            type url or the direct url to a mapbox-gl style
+                            hosted on another platform.
+                          </Trans>
+                        </>
+                      ) : (
                         <Trans ns="admin">
                           Enter a{" "}
-                          <code className="bg-gray-100 p-0.5 rounded">
-                            mapbox://
-                          </code>{" "}
-                          type url or the direct url to a mapbox-gl style hosted
-                          on another platform.
+                          <a
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary-500 underline"
+                            href="https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources"
+                          >
+                            url template
+                          </a>{" "}
+                          the tells SeaSketch how to load a raster tile data
+                          source.
                         </Trans>
-                      </>
-                    ) : (
-                      <Trans ns="admin">
-                        Enter a{" "}
-                        <a
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-primary-500 underline"
-                          href="https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources"
-                        >
-                          url template
-                        </a>{" "}
-                        the tells SeaSketch how to load a raster tile data
-                        source.
-                      </Trans>
-                    )
-                  }
-                  name="url"
-                  value={state.url}
-                  label="URL"
-                  onChange={(url) => {
-                    setState((old) => ({
-                      ...old,
-                      url,
-                    }));
-                  }}
-                />
-              </div>
-              <div className="mt-4">
-                <TextInput
-                  label={t("Basemap Name")}
-                  name="name"
-                  value={state.name}
-                  onChange={(name) => setState((old) => ({ ...old, name }))}
-                />
-              </div>
-
-              {/* 
-          # key info needed
-          
-          * type
-          * url
-          * tileSize if RASTER_URL_TEMPLATE
-          * name
-          * description
-          * thumbnail
-          * whether to include terrain
-          *           
-        */}
+                      )
+                    }
+                    name="url"
+                    value={state.url}
+                    label={""}
+                    onChange={(url) => {
+                      setState((old) => ({
+                        ...old,
+                        url,
+                      }));
+                    }}
+                  />
+                </div>
+              )}
+              {state.selectedTab === TABS.URL && (
+                <div className="mt-4">
+                  <TextInput
+                    label={t("Map Name")}
+                    name="name"
+                    value={state.name}
+                    onChange={(name) => setState((old) => ({ ...old, name }))}
+                  />
+                </div>
+              )}
+              {state.selectedTab === TABS.ACCOUNT && (
+                <div className="h-96 overflow-auto">
+                  {loading && <Spinner />}
+                  {error && (
+                    <p className="text-center text-sm text-gray-500">
+                      {/Key not provided/.test(error) ? (
+                        <Trans ns="admin:data">
+                          Provide a MapBox Secret Key in your{" "}
+                          <Link
+                            className="underline text-primary-500"
+                            to="../admin"
+                          >
+                            project settings
+                          </Link>{" "}
+                          to enable browsing of maps in your account.
+                        </Trans>
+                      ) : (
+                        error.toString()
+                      )}
+                    </p>
+                  )}
+                  {styles &&
+                    styles.map((style) => (
+                      <button
+                        key={style.id}
+                        className="p-4 flex items-center space-x-2 hover:bg-primary-300 hover:bg-opacity-10 rounded"
+                        onClick={() => {
+                          setState((prev) => ({
+                            ...prev,
+                            url: style.url,
+                            name: style.name!,
+                            type: BasemapType.Mapbox,
+                            mapPreview: true,
+                          }));
+                        }}
+                      >
+                        <img className="w-12 h-12 rounded" src={style.image} />
+                        <div className="flex-col justify-start text-left">
+                          <div className="space-x-2">
+                            <span className="max-w-sm truncate">
+                              {style.name!}
+                            </span>
+                            <span className="text-gray-500 text-xs font-mono">
+                              {
+                                // @ts-ignore
+                                style.visibility
+                              }
+                            </span>
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            <Trans ns="admin:data">Last modified </Trans>
+                            {style.lastModified
+                              ? style.lastModified.toLocaleString()
+                              : "unknown"}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  {styles && hasMore && (
+                    <div className="w-full text-center">
+                      <button
+                        className="underline text-primary-500"
+                        onClick={fetchMore}
+                      >
+                        <Trans ns="admin:data">load more</Trans>
+                        {loading && <Spinner />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -320,4 +563,9 @@ export default function CreateBasemapModal({
       </Modal>
     </>
   );
+}
+
+// @ts-ignore
+function classNames(...classes) {
+  return classes.filter(Boolean).join(" ");
 }

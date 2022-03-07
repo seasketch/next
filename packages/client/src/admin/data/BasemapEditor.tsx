@@ -36,14 +36,6 @@ export default function BaseMapEditor() {
     }
   }, [data?.projectBySlug?.basemaps, mapContext.manager]);
 
-  const selectedBasemap = mapContext.manager?.getSelectedBasemap();
-  const terrainOptional =
-    selectedBasemap &&
-    selectedBasemap.terrainUrl &&
-    selectedBasemap.terrainOptional;
-  const showBasemapOptions =
-    selectedBasemap &&
-    (selectedBasemap.optionalBasemapLayers.length || terrainOptional);
   return (
     <>
       <div>
@@ -51,7 +43,7 @@ export default function BaseMapEditor() {
           <div className="mb-4">
             <Button
               small
-              label={t("Add basemap")}
+              label={t("Add a new map")}
               onClick={() => setAddModalOpen(true)}
             />
             <Button
@@ -115,7 +107,12 @@ export default function BaseMapEditor() {
             />
           </div>
           {addModalOpen && (
-            <CreateBasemapModal onRequestClose={() => setAddModalOpen(false)} />
+            <CreateBasemapModal
+              onRequestClose={() => setAddModalOpen(false)}
+              onSave={(id) => {
+                mapContext.manager?.setSelectedBasemap(id.toString());
+              }}
+            />
           )}
           <BasemapControl
             basemaps={(data?.projectBySlug?.basemaps || []) as ClientBasemap[]}

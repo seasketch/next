@@ -8,9 +8,9 @@ export interface SegmentControlProps {
 }
 
 export default function SegmentControl(props: SegmentControlProps) {
-  const index = props.segments.indexOf(props.value);
+  let index = props.segments.indexOf(props.value);
   if (index === -1) {
-    throw new Error("Unknown SegmentControl value " + props.value);
+    index = 0;
   }
   let position = `${(index / props.segments.length) * 100}%`;
   return (
