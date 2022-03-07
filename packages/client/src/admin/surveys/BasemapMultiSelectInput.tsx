@@ -21,9 +21,11 @@ import CreateBasemapModal from "../data/CreateBasemapModal";
 export default function BasemapMultiSelectInput({
   value,
   onChange,
+  disabledMessage,
 }: {
   value?: number[];
   onChange?: (value: number[] | undefined) => void;
+  disabledMessage?: string;
 }) {
   const { t } = useTranslation("admin:surveys");
   const { slug } = useParams<{ slug: string }>();
@@ -53,8 +55,10 @@ export default function BasemapMultiSelectInput({
     <>
       <FormEditorHeader className="mt-4 relative flex">
         <span className="flex-1">{t("Basemaps")}</span>
+
         <DropdownButton
           small
+          disabled={!!disabledMessage}
           label={t("add")}
           options={[
             {
@@ -68,138 +72,144 @@ export default function BasemapMultiSelectInput({
           ]}
         />
       </FormEditorHeader>
-      {createModalOpen && (
-        <CreateBasemapModal
-          onRequestClose={() => setCreateModalOpen(false)}
-          surveysOnly={true}
-          onSave={(id) => {
-            if (onChange) {
-              const newState = [...state, id];
-              onChange(newState);
-              setState(newState);
-              refetch();
-            }
-          }}
-        />
-      )}
-      <div className="bg-gray-50 bg-opacity-50 border-t -mt-0.5 px-3 py-1 pb-2 border-b">
-        {selectBasemapsModalOpen && (
-          <SelectBasemapsModal
-            value={state}
-            onRequestClose={(value) => {
-              setSelectBasemapsModalOpen(false);
-              if (onChange) {
-                onChange(value);
-              }
-            }}
-          />
-        )}
-        <p className="text-sm text-gray-500 mb-2 mt-1">
-          {state.length === 0 && (
-            <Trans ns="admin:surveys">
-              If no basemaps are specified, your project's already configured
-              maps will be used
-            </Trans>
-          )}
-        </p>
-        <div className="relative space-y-1 py-2">
-          <DragDropContext
-            onDragEnd={(result) => {
-              if (!result.destination) {
-                return;
-              }
-              let sorted = reorder(
-                state,
-                result.source.index,
-                result.destination.index
-              );
-
-              if (onChange) {
-                setState(sorted);
-                onChange(sorted);
-              }
-            }}
-          >
-            <Droppable droppableId="droppable">
-              {(provided, snapshot) => {
-                return (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="space-y-2"
-                  >
-                    {state.map((id, i) => {
-                      const basemap = basemaps.find((b) => b.id === id);
-                      if (basemap) {
-                        return (
-                          <Draggable
-                            index={i}
-                            draggableId={basemap.id.toString()}
-                            key={basemap.id}
-                          >
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided?.innerRef}
-                                {...provided?.draggableProps}
-                                style={provided?.draggableProps.style}
-                                key={basemap.id}
-                                className="flex bg-white p-2 border rounded shadow-sm select-none overflow-hidden"
-                              >
-                                <div
-                                  {...provided.dragHandleProps}
-                                  className="flex items-center flex-1"
-                                >
-                                  <img
-                                    src={basemap.thumbnail}
-                                    className="w-8 h-8 rounded shadow select-none"
-                                  />
-                                  <div className="flex-1 truncate select-none ml-1">
-                                    {basemap.name}
-                                  </div>
-                                </div>
-                                <div className="flex space-x-2 items-center">
-                                  <button>
-                                    <PencilIcon className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      const newState = state.filter(
-                                        (i) => i !== basemap.id
-                                      );
-                                      setState(newState);
-                                      if (onChange) {
-                                        onChange(newState);
-                                      }
-                                    }}
-                                  >
-                                    <TrashIcon className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        );
-                      } else {
-                        return null;
-                      }
-                    })}
-                    {provided.placeholder}
-                  </div>
-                );
+      {disabledMessage ? (
+        <p className="p-2 text-sm text-gray-500">{disabledMessage}</p>
+      ) : (
+        <>
+          {createModalOpen && (
+            <CreateBasemapModal
+              onRequestClose={() => setCreateModalOpen(false)}
+              surveysOnly={true}
+              onSave={(id) => {
+                if (onChange) {
+                  const newState = [...state, id];
+                  onChange(newState);
+                  setState(newState);
+                  refetch();
+                }
               }}
-            </Droppable>
-          </DragDropContext>
-          {state.length > 1 ? (
-            <p className="py-2 text-gray-500 italic text-sm text-center">
-              <Trans ns="admin:surveys">
-                First listed will be the default.
-              </Trans>
-              <br />
-              <Trans ns="admin:surveys">Drag and drop to sort.</Trans>
+            />
+          )}
+          <div className="bg-gray-50 bg-opacity-50 border-t -mt-0.5 px-3 py-1 pb-2 border-b">
+            {selectBasemapsModalOpen && (
+              <SelectBasemapsModal
+                value={state}
+                onRequestClose={(value) => {
+                  setSelectBasemapsModalOpen(false);
+                  if (onChange) {
+                    onChange(value);
+                  }
+                }}
+              />
+            )}
+            <p className="text-sm text-gray-500 mb-2 mt-1">
+              {state.length === 0 && (
+                <Trans ns="admin:surveys">
+                  If no basemaps are specified, your project's already
+                  configured maps will be used
+                </Trans>
+              )}
             </p>
-          ) : null}
-        </div>
-      </div>
+            <div className="relative space-y-1 py-2">
+              <DragDropContext
+                onDragEnd={(result) => {
+                  if (!result.destination) {
+                    return;
+                  }
+                  let sorted = reorder(
+                    state,
+                    result.source.index,
+                    result.destination.index
+                  );
+
+                  if (onChange) {
+                    setState(sorted);
+                    onChange(sorted);
+                  }
+                }}
+              >
+                <Droppable droppableId="droppable">
+                  {(provided, snapshot) => {
+                    return (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="space-y-2"
+                      >
+                        {state.map((id, i) => {
+                          const basemap = basemaps.find((b) => b.id === id);
+                          if (basemap) {
+                            return (
+                              <Draggable
+                                index={i}
+                                draggableId={basemap.id.toString()}
+                                key={basemap.id}
+                              >
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided?.innerRef}
+                                    {...provided?.draggableProps}
+                                    style={provided?.draggableProps.style}
+                                    key={basemap.id}
+                                    className="flex bg-white p-2 border rounded shadow-sm select-none overflow-hidden"
+                                  >
+                                    <div
+                                      {...provided.dragHandleProps}
+                                      className="flex items-center flex-1"
+                                    >
+                                      <img
+                                        src={basemap.thumbnail}
+                                        className="w-8 h-8 rounded shadow select-none"
+                                      />
+                                      <div className="flex-1 truncate select-none ml-1">
+                                        {basemap.name}
+                                      </div>
+                                    </div>
+                                    <div className="flex space-x-2 items-center">
+                                      <button>
+                                        <PencilIcon className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          const newState = state.filter(
+                                            (i) => i !== basemap.id
+                                          );
+                                          setState(newState);
+                                          if (onChange) {
+                                            onChange(newState);
+                                          }
+                                        }}
+                                      >
+                                        <TrashIcon className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </Draggable>
+                            );
+                          } else {
+                            return null;
+                          }
+                        })}
+                        {provided.placeholder}
+                      </div>
+                    );
+                  }}
+                </Droppable>
+              </DragDropContext>
+              {state.length > 1 ? (
+                <p className="py-2 text-gray-500 italic text-sm text-center">
+                  <Trans ns="admin:surveys">
+                    First listed will be the default.
+                  </Trans>
+                  <br />
+                  <Trans ns="admin:surveys">Drag and drop to sort.</Trans>
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

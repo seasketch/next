@@ -65,7 +65,6 @@ import languages, { LangDetails } from "../../lang/supported";
 import i18n from "../../i18n";
 import SurveyContextualMap from "../../surveys/SurveyContextualMap";
 import BasemapMultiSelectInput from "./BasemapMultiSelectInput";
-import MapCameraCaptureButton from "./MapCameraCaptureButton";
 import DropdownButton from "../../components/DropdownButton";
 
 extend([a11yPlugin]);
@@ -600,7 +599,7 @@ export default function SurveyFormEditor({
                   !selectedFormElement.type?.isSpatial && (
                     <>
                       <SurveyContextualMap
-                        admin
+                        admin={!!selectedFormElement.backgroundColor}
                         formElementId={selectedFormElement.id}
                         basemaps={
                           (style.mapBasemaps as number[] | undefined) || []
@@ -1258,6 +1257,13 @@ export default function SurveyFormEditor({
                           selectedFormElement.mapBasemaps as
                             | undefined
                             | number[]
+                        }
+                        disabledMessage={
+                          !selectedFormElement.backgroundColor
+                            ? t(
+                                "Enable customized appearance to adjust map settings"
+                              )
+                            : undefined
                         }
                         onChange={(value) => {
                           updateMapSettings({
