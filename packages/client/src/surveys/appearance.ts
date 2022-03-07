@@ -97,6 +97,8 @@ export function useCurrentStyle(
     ...(index === 0 ? current : previouslyStyledElement),
   };
 
+  style.layout = style.layout || getPreviousLayout(formElements, index);
+
   if (current.backgroundColor || current.backgroundImage) {
     style = { ...current };
   }
@@ -197,4 +199,25 @@ export function getPreviouslyStyledElement(
     .slice(0, index)
     .reverse()
     .find((f) => f.backgroundColor);
+}
+
+/**
+ * This really shouldn't be necessary but surveys created with an older version
+ * of the tool may have pages with background colors or images set but not the
+ * layout. This can result in odd layouts. Newer versions of the tool always set
+ * layout when creating a page with "customized style".
+ * @param sortedFormElements
+ * @param index
+ * @returns
+ */
+export function getPreviousLayout(
+  sortedFormElements: FormElementFullDetailsFragment[],
+  index: number
+) {
+  return (
+    sortedFormElements
+      .slice(0, index)
+      .reverse()
+      .find((f) => f.layout)?.layout || FormElementLayout.Top
+  );
 }

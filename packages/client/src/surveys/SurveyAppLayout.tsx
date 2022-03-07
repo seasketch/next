@@ -97,8 +97,6 @@ export const SurveyAppLayout: React.FunctionComponent<{
     };
   }, []);
 
-  // eslint-disabled-next-line
-  console.warn("layout", style.layout);
   // eslint-disable-next-line i18next/no-literal-string
   let grid: string;
   let navPosition: string =
