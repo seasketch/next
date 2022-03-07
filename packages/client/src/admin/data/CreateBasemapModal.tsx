@@ -510,7 +510,7 @@ export default function CreateBasemapModal({
                           <span className="text-sm text-gray-500">
                             <Trans ns="admin:data">Last modified </Trans>
                             {style.lastModified
-                              ? style.lastModified.toLocaleDateString()
+                              ? style.lastModified.toLocaleString()
                               : "unknown"}
                           </span>
                         </div>
