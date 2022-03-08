@@ -58,7 +58,10 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
           }}
           value={props.value || ""}
           onChange={(e) =>
-            props.onChange(e.target.value, e.target.value.length === 0)
+            props.onChange(
+              e.target.value,
+              props.isRequired && !e.target.value.length
+            )
           }
         />
       </div>
