@@ -9,8 +9,9 @@ import "cypress-localstorage-commands"
 const jwt = require("jsonwebtoken");
 const users = require("../fixtures/users.json");
 const formElements = require("../fixtures/formElements.json")
+const SAPElements = require("../fixtures/SAPElements.json")
 const formLogicRules = require("../fixtures/formLogicRules.json")
-const formLogicConditions = require("../fixtures/formLogicConditions.json")
+
 
 const AUTH0_CLIENT_ID = Cypress.env("auth0_client_id");
 const AUTH0_CLIENT_SECRET = Cypress.env("auth0_client_secret");
@@ -112,6 +113,12 @@ declare global {
 
       createFormElements(
         formId: number,
+        surveyAlias: string,
+        token: string
+      )
+
+      createSAPElements(
+        formId: number, 
         surveyAlias: string,
         token: string
       )
@@ -495,6 +502,76 @@ Cypress.Commands.add("createFormElements", (formId: number, fixtureAlias: string
   else {
     elements.forEach((e) => {
       if (e.typeId !== "WelcomeMessage" && e.typeId !== "ThankYou" && e.typeId !== "SaveScreen") {
+        return cy
+        .mutation(
+          gql`
+            mutation CypressCreateFormElement($formElement: FormElementInput!) {
+              createFormElement(input: {formElement: $formElement} )
+              {
+                formElement {
+                  formId, 
+                  body
+                }
+                query {
+                  form (id: ${formId}) {
+                    logicRules {
+                      formElementId,
+                      booleanOperator,
+                      command
+                    }
+                    formElements {
+                      typeId, 
+                      id, 
+                      body
+                    }
+                    survey {
+                      project {
+                        id,
+                        slug
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          `,
+          { "formElement": {
+            "formId": e.formId,
+            "isRequired": e.isRequired,
+            "exportId": e.exportId,
+            "position": e.position,
+            "componentSettings": e.componentSettings,
+            "typeId": e.typeId,
+            "body": e.body,
+            "backgroundColor": e.backgroundColor,
+            "secondaryColor": e.secondaryColor,
+            "textVariant": e.textVariant,
+            "layout": e.layout,
+            "alternateLanguageSettings": e.alternateLanguageSettings,
+            //"subordinateTo": e.subordinateTo
+            }
+          },
+        (token as any)
+        ).then((data) => {
+          Cypress.log(data)
+          return data
+        })
+      }
+    })
+  }
+})
+
+Cypress.Commands.add("createSAPElements", (formId: number, fixtureAlias: string, token: string) => {
+  const elements = SAPElements[fixtureAlias].data.form.formElements
+  console.log(elements)
+  console.log(formId)
+  elements.map(t => t.formId = formId)
+  if (!fixtureAlias) {
+    throw new Error(`Unrecognized alias "${fixtureAlias}"`);
+  }
+  else {
+    elements.forEach((e) => {
+      if (e.typeId !== "FeatureName" && e.typeId !== "SAPRange") {
         return cy
         .mutation(
           gql`

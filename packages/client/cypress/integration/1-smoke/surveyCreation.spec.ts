@@ -15,7 +15,7 @@ function generateSlug() {
 const slug = generateSlug()
 
 describe("Survey creation smoke test", () => {
-  describe ('Survey creation Cypress commands', () => {
+  describe.only ('Survey creation Cypress commands', () => {
     beforeEach(() => {
       //slug = generateSlug()
       cy.intercept("http://localhost:3857/graphql", (req) => {
@@ -135,6 +135,9 @@ describe("Survey creation smoke test", () => {
           })
           cy.createFormElements(formId, "Maldives", authToken).then((resp) => {
             expect (resp.createFormElement.query.form.formElements.length).to.be.gt(3)
+            cy.createSAPElements((formId + 1), "Maldives", authToken).then((resp) => {
+              expect (resp.createFormElement.query.form.formElements.length).to.be.gt(2)
+            })
           })
           cy.get('@surveyId').then((id) => {
             surveyId = id
@@ -250,8 +253,7 @@ describe("Survey creation smoke test", () => {
         })
       })
     })
-
-  describe.only ('User survey flow', () => {
+  describe ('User survey flow', () => {
     before(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
         if ((req.body.operationName) && (req.body.operationName === "CypressCreateProject")) {
@@ -292,7 +294,10 @@ describe("Survey creation smoke test", () => {
                     elementsToUpdate.push(t)
                   })
                   cy.updateFormElements(elementsToUpdate,"Maldives", access_token, formId)
+                  console.log(access_token)
                   cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
+                    const SAPFormId = formId + 1
+                    cy.createSAPElements(SAPFormId, "Maldives", access_token)
                     const formElements = resp.createFormElement.query.form.formElements
                     let jumpToId
                     const elementsToUpdate = formElements.splice(6,19)
@@ -347,9 +352,9 @@ describe("Survey creation smoke test", () => {
       cy.getLocalStorage("surveyId").then((id) => {
         surveyId = parseInt(id)
         console.log(surveyId)
-        cy.getLocalStorage("token").then((token) => {
-          cy.deleteSurvey(surveyId, token)
-        })
+        //cy.getLocalStorage("token").then((token) => {
+        //  cy.deleteSurvey(surveyId, token)
+        //})
       })
       cy.deleteProject(`${slug}`) 
     })
@@ -395,13 +400,14 @@ describe("Survey creation smoke test", () => {
       })
     })
     it("Can select multiple sectors", () => {
+      cy.get('[type = "button"]').as('nextBtn')
       cy.get('[title = "Fisheries - Recreational"]').then(($el) => {
         expect ($el).to.have.descendants('svg')
       })
       cy.get('[title = "Aquaculture / Mariculture"]').click().then(($el) => {
         expect ($el).to.have.descendants('svg')
       })
-      cy.get('[type = "button"]', {timeout: 7000}).click()
+      cy.get('@nextBtn').click()
     })
   })
 })
