@@ -1,7 +1,7 @@
 import { gql, useApolloClient } from "@apollo/client";
 import { prepareDataForValidation } from "formik";
 import { Map } from "mapbox-gl";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button";
@@ -21,6 +21,8 @@ import { useMapboxStyle } from "../../useMapboxStyle";
 import useProjectId from "../../useProjectId";
 import { createImageBlobFromDataURI } from "./arcgis/arcgis";
 import useMapboxAccountStyles from "./useMapboxAccountStyles";
+import Fuse from "fuse.js";
+import { SearchIcon } from "@heroicons/react/outline";
 
 const THUMBNAIL_SIZE = 240;
 const IMAGE_SIZE = THUMBNAIL_SIZE * window.devicePixelRatio;
@@ -40,10 +42,7 @@ export default function CreateBasemapModal({
   onRequestClose?: () => void;
   surveysOnly?: boolean;
 }) {
-  const [
-    { styles, loading, error, hasMore },
-    fetchMore,
-  ] = useMapboxAccountStyles();
+  const { styles, loading, error } = useMapboxAccountStyles();
   // const { styles, loading, error } = data;
   const { t } = useTranslation("admin");
   const Tabs = [
@@ -51,6 +50,7 @@ export default function CreateBasemapModal({
     // { name: t("Upload"), id: TABS.UPLOAD },
     { name: t("From Mapbox Account"), id: TABS.ACCOUNT },
   ];
+  const [query, setQuery] = useState("");
 
   const [state, setState] = useState<{
     type: BasemapType;
@@ -189,6 +189,24 @@ export default function CreateBasemapModal({
       mapRef.current?.remove();
     };
   }, [state.mapPreview]);
+
+  const fuse = useMemo(() => {
+    return new Fuse(styles || [], {
+      keys: [
+        "name",
+        "metadata.seasketch:heatmap-project",
+        "metadata.seasketch:heatmap-name",
+      ],
+    });
+  }, [styles]);
+
+  const filteredStyles = useMemo(() => {
+    if (query && query.length) {
+      return fuse.search(query).map((r) => r.item);
+    } else {
+      return styles || [];
+    }
+  }, [query, fuse]);
 
   return (
     <>
@@ -459,7 +477,7 @@ export default function CreateBasemapModal({
                 </div>
               )}
               {state.selectedTab === TABS.ACCOUNT && (
-                <div className="h-96 overflow-auto">
+                <div className="h-96 overflow-hidden flex-col">
                   {loading && <Spinner />}
                   {error && (
                     <p className="text-center text-sm text-gray-500">
@@ -479,52 +497,56 @@ export default function CreateBasemapModal({
                       )}
                     </p>
                   )}
-                  {styles &&
-                    styles.map((style) => (
-                      <button
-                        key={style.id}
-                        className="p-4 flex items-center space-x-2 hover:bg-primary-300 hover:bg-opacity-10 rounded"
-                        onClick={() => {
-                          setState((prev) => ({
-                            ...prev,
-                            url: style.url,
-                            name: style.name!,
-                            type: BasemapType.Mapbox,
-                            mapPreview: true,
-                          }));
-                        }}
-                      >
-                        <img className="w-12 h-12 rounded" src={style.image} />
-                        <div className="flex-col justify-start text-left">
-                          <div className="space-x-2">
-                            <span className="max-w-sm truncate">
-                              {style.name!}
-                            </span>
-                            <span className="text-gray-500 text-xs font-mono">
-                              {
-                                // @ts-ignore
-                                style.visibility
-                              }
+                  <div className="flex justify-center items-center pb-4">
+                    <SearchIcon className="w-5 h-5 text-gray-500 absolute left-24 -mb-2" />
+                    <input
+                      className="w-3/4 outline-none shadow focus:ring-0 rounded-lg border-gray-300 pl-12 -mb-2"
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                    />
+                  </div>
+                  {styles && (
+                    <div className="flex-1 overflow-auto h-80 bg-gray-50 rounded">
+                      {filteredStyles.map((style) => (
+                        <button
+                          key={style.id}
+                          className="p-4 flex w-full border-b items-center space-x-2 hover:bg-primary-300 hover:bg-opacity-10"
+                          onClick={() => {
+                            setState((prev) => ({
+                              ...prev,
+                              url: style.url,
+                              name: style.name!,
+                              type: BasemapType.Mapbox,
+                              mapPreview: true,
+                            }));
+                          }}
+                        >
+                          <img
+                            className="w-12 h-12 rounded"
+                            src={style.image}
+                          />
+                          <div className="flex-col justify-start text-left">
+                            <div className="space-x-2">
+                              <span className="max-w-sm truncate">
+                                {style.name!}
+                              </span>
+                              <span className="text-gray-500 text-xs font-mono">
+                                {
+                                  // @ts-ignore
+                                  style.visibility
+                                }
+                              </span>
+                            </div>
+                            <span className="text-sm text-gray-500">
+                              <Trans ns="admin:data">Last modified </Trans>
+                              {style.lastModified
+                                ? formatTimeAgo(style.lastModified)
+                                : "unknown"}
                             </span>
                           </div>
-                          <span className="text-sm text-gray-500">
-                            <Trans ns="admin:data">Last modified </Trans>
-                            {style.lastModified
-                              ? formatTimeAgo(style.lastModified)
-                              : "unknown"}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  {styles && hasMore && (
-                    <div className="w-full text-center">
-                      <button
-                        className="underline text-primary-500"
-                        onClick={fetchMore}
-                      >
-                        <Trans ns="admin:data">load more</Trans>
-                        {loading && <Spinner />}
-                      </button>
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
