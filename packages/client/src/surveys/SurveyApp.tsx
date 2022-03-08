@@ -518,7 +518,9 @@ function SurveyApp() {
                             : currentValue === undefined ||
                               currentValue === null ||
                               currentValue === ""
-                            ? t("Skip Question")
+                            ? formElement.current.isInput
+                              ? t("Skip Question")
+                              : t("Next")
                             : t("Next")
                         }
                         onClick={handleAdvance}
