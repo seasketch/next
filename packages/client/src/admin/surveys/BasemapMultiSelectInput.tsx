@@ -9,7 +9,10 @@ import { encode } from "@mapbox/polyline";
 import { BBox } from "geojson";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import DrawRectangle from "mapbox-gl-draw-rectangle-mode";
-import { useAllBasemapsQuery } from "../../generated/graphql";
+import {
+  BasemapDetailsFragment,
+  useAllBasemapsQuery,
+} from "../../generated/graphql";
 import { useParams } from "react-router-dom";
 import { PencilIcon, TrashIcon } from "@heroicons/react/outline";
 import SelectBasemapsModal from "./SelectBasemapsModal";
@@ -17,6 +20,14 @@ import { FormEditorHeader } from "./SurveyFormEditor";
 import DropdownButton from "../../components/DropdownButton";
 import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import CreateBasemapModal from "../data/CreateBasemapModal";
+
+function filterBasemaps<T extends { id: number }>(
+  basemaps: T[],
+  ids: number[] | undefined | null
+) {
+  const idList = ids || [];
+  return basemaps.filter((b) => idList.indexOf(b.id) !== -1);
+}
 
 export default function BasemapMultiSelectInput({
   value,
@@ -44,10 +55,11 @@ export default function BasemapMultiSelectInput({
   }, [data]);
 
   useEffect(() => {
-    if (value !== state) {
-      setState(value || []);
+    const newValue = filterBasemaps(basemaps || [], value).map((b) => b.id);
+    if (newValue !== state) {
+      setState(newValue);
     }
-  }, [value]);
+  }, [value, basemaps]);
 
   const [selectBasemapsModalOpen, setSelectBasemapsModalOpen] = useState(false);
 
@@ -90,7 +102,7 @@ export default function BasemapMultiSelectInput({
               }}
             />
           )}
-          <div className="bg-gray-50 bg-opacity-50 border-t -mt-0.5 px-3 py-1 pb-2 border-b">
+          <div className="bg-gray-50 bg-opacity-50 border-t -mt-0.5 px-3 py-1 pb-10 border-b">
             {selectBasemapsModalOpen && (
               <SelectBasemapsModal
                 value={state}
@@ -155,13 +167,13 @@ export default function BasemapMultiSelectInput({
                                   >
                                     <div
                                       {...provided.dragHandleProps}
-                                      className="flex items-center flex-1"
+                                      className="flex items-center flex-1 overflow-hidden space-x-2"
                                     >
                                       <img
                                         src={basemap.thumbnail}
                                         className="w-8 h-8 rounded shadow select-none"
                                       />
-                                      <div className="flex-1 truncate select-none ml-1">
+                                      <div className="flex-1 truncate select-none">
                                         {basemap.name}
                                       </div>
                                     </div>
