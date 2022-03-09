@@ -1,3 +1,4 @@
+/* eslint-disable cypress/no-unnecessary-waiting */
 //const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
 import { ProjectAccessControlSetting } from "../../../src/generated/graphql";
 import "cypress-localstorage-commands"
@@ -414,15 +415,24 @@ describe("Survey creation smoke test", () => {
     //  cy.get('@nextBtn').click()
     //})
     it("Can draw a polygon", () => {
-      // eslint-disable-next-line cypress/no-unnecessary-waiting
-      cy.get('.mapboxgl-canvas', {timeout: 10000}).click(300, 300)
+      cy.wait(10000)
+      cy.get('.mapboxgl-canvas').each((t) => {
+        const canvases = []
+        canvases.push(t)
+        return canvases
+      }).then((ary) => {
+        console.log(ary[0])
+        const el = ary[0]
+        return el
+      }).as('el')
+      cy.get('@el').click(300,300)        
         .click(300, 100)
         .click(100, 100)
         .click(100, 300)
         .dblclick(300, 300)
-        .wait(8000)
+        //.wait(8000)
         //.dblclick(400,200)
-      cy.contains('Finish Shape').click()
+      cy.contains('Done').click()
       //invalid shape
       //cy.get('.mapboxgl-canvas').click(300, 300)
       //  .click(100, 600)
