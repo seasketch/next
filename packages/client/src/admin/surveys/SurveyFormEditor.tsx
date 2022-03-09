@@ -1265,6 +1265,7 @@ export default function SurveyFormEditor({
                               )
                             : undefined
                         }
+                        cameraOptions={selectedFormElement.mapCameraOptions}
                         onChange={(value) => {
                           updateMapSettings({
                             variables: {

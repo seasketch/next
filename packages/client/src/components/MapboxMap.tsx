@@ -171,7 +171,7 @@ function Tooltip({
         scale: { type: "spring", stiffness: 200 },
         default: { duration: 0.1 },
       }}
-      className="absolute z-10 bg-white p-1 px-2 shadow-lg rounded text-sm"
+      className="absolute z-50 bg-white p-1 px-2 shadow-lg rounded text-sm"
       style={{ left: state.x + 15, top: state.y + 15 }}
       animate={visible ? "visible" : "hidden"}
       variants={{

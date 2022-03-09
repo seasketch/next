@@ -1,7 +1,7 @@
 import bbox from "@turf/bbox";
 import bboxPolygon from "@turf/bbox-polygon";
-import { LngLatBoundsLike, Map } from "mapbox-gl";
-import { useEffect, useMemo, useState } from "react";
+import { CameraOptions, LngLatBoundsLike, Map } from "mapbox-gl";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import Button from "../../components/Button";
 import truncate from "@turf/truncate";
@@ -20,6 +20,7 @@ import { FormEditorHeader } from "./SurveyFormEditor";
 import DropdownButton from "../../components/DropdownButton";
 import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import CreateBasemapModal from "../data/CreateBasemapModal";
+import BasemapEditorPanel from "../data/BasemapEditorPanel";
 
 function filterBasemaps<T extends { id: number }>(
   basemaps: T[],
@@ -33,16 +34,18 @@ export default function BasemapMultiSelectInput({
   value,
   onChange,
   disabledMessage,
+  cameraOptions,
 }: {
   value?: number[];
   onChange?: (value: number[] | undefined) => void;
   disabledMessage?: string;
+  cameraOptions?: CameraOptions;
 }) {
   const { t } = useTranslation("admin:surveys");
-  const { slug } = useParams<{ slug: string }>();
   const { data, loading, error, refetch } = useAllBasemapsQuery({});
   const [state, setState] = useState(value || []);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editorId, setEditorId] = useState<null | number>(null);
 
   const basemaps = useMemo(() => {
     if (data?.currentProject?.basemaps && data.currentProject.surveyBasemaps) {
@@ -56,7 +59,7 @@ export default function BasemapMultiSelectInput({
 
   useEffect(() => {
     const newValue = filterBasemaps(basemaps || [], value).map((b) => b.id);
-    if (newValue !== state) {
+    if (newValue.join(",") !== state.join(",")) {
       setState(newValue);
     }
   }, [value, basemaps]);
@@ -65,6 +68,16 @@ export default function BasemapMultiSelectInput({
 
   return (
     <>
+      {editorId && (
+        <BasemapEditorPanel
+          className="left-0 w-full shadow-2xl z-50"
+          onRequestClose={() => setEditorId(null)}
+          basemapId={editorId}
+          hideTerrain={true}
+          showMap={true}
+          cameraOptions={cameraOptions}
+        />
+      )}
       <FormEditorHeader className="mt-4 relative flex">
         <span className="flex-1">{t("Basemaps")}</span>
 
@@ -178,7 +191,9 @@ export default function BasemapMultiSelectInput({
                                       </div>
                                     </div>
                                     <div className="flex space-x-2 items-center">
-                                      <button>
+                                      <button
+                                        onClick={() => setEditorId(basemap.id)}
+                                      >
                                         <PencilIcon className="w-4 h-4" />
                                       </button>
                                       <button

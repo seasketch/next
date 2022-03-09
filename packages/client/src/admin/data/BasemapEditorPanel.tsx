@@ -1,4 +1,4 @@
-import { Layer } from "mapbox-gl";
+import { CameraOptions, Layer } from "mapbox-gl";
 import React, { useEffect, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import Spinner from "../../components/Spinner";
@@ -11,6 +11,7 @@ import {
   useSet3dTerrainMutation,
   useUpdateTerrainExaggerationMutation,
   useUpdateBasemapUrlMutation,
+  BasemapDetailsFragment,
 } from "../../generated/graphql";
 import { gql, useApolloClient } from "@apollo/client";
 
@@ -27,15 +28,26 @@ import OptionalBasemapLayerEditor from "../../dataLayers/OptionalBasemapLayerEdi
 import useDebounce from "../../useDebounce";
 import InteractivitySettings from "./InteractivitySettings";
 import { ClientBasemap } from "../../dataLayers/MapContextManager";
+import MapboxMap from "../../components/MapboxMap";
+import BasemapEditorPanelMap from "./BasemapEditorMap";
+import { useMediaQuery } from "beautiful-react-hooks";
 
 const TERRAIN_URL = "mapbox://mapbox.mapbox-terrain-dem-v1";
 
 export default function BasemapEditorPanel({
   basemapId,
   onRequestClose,
+  className,
+  hideTerrain,
+  showMap,
+  cameraOptions,
 }: {
   basemapId: number;
   onRequestClose?: () => void;
+  className?: string;
+  hideTerrain?: boolean;
+  showMap?: boolean;
+  cameraOptions?: CameraOptions;
 }) {
   const [createOptionOpen, setCreateOptionOpen] = useState(false);
   const { t } = useTranslation(["admin"]);
@@ -57,6 +69,7 @@ export default function BasemapEditorPanel({
   );
   const debouncedExaggeration = useDebounce(exaggeration, 50);
   const basemap = data?.basemap;
+  const isPhone = useMediaQuery("(max-width: 767px)");
 
   useEffect(() => {
     if (basemap && !exaggeration) {
@@ -119,10 +132,47 @@ export default function BasemapEditorPanel({
   }
 
   return (
-    <div className="bg-white z-20 absolute bottom-0 w-128 flex flex-col h-full">
-      <div className="flex-0 p-4 border-b shadow-sm bg-primary-600">
+    <div
+      className={`bg-white z-20 absolute bottom-0 w-128 h-full grid gap-0 shadow-xl ${className} ${
+        showMap ? "w-full" : ""
+      }`}
+      style={
+        showMap
+          ? isPhone
+            ? {
+                grid: `
+          [row1-start] "header" auto [row1-end]
+          [row2-start] "sidebar" 1fr [row2-end]
+          / 1fr`,
+              }
+            : {
+                grid: `
+          [row1-start] "header header" auto [row1-end]
+          [row2-start] "sidebar map" 1fr [row2-end]
+          / 512px 1fr`,
+              }
+          : {
+              grid: `
+            [row1-start] "header" auto [row1-end]
+            [row2-start] "sidebar" 1fr [row2-end]
+            / 512px`,
+            }
+      }
+    >
+      <div
+        className="flex-0 p-4 border-b shadow-sm bg-primary-600 flex items-center"
+        style={{ gridArea: "header" }}
+      >
+        <h4
+          className={`${
+            showMap ? "text-xl" : ""
+          } text-white font-medium flex-1`}
+        >
+          <Trans ns={["admin"]}>Edit Map</Trans>
+        </h4>
+
         <button
-          className="bg-gray-300 bg-opacity-25 float-right rounded-full p-1 cursor-pointer focus:ring-blue-300"
+          className="bg-gray-300 bg-opacity-25 hover:bg-gray-200 hover:bg-opacity-25  rounded-full p-1 cursor-pointer focus:ring-blue-300"
           onClick={onRequestClose}
         >
           <svg
@@ -130,7 +180,7 @@ export default function BasemapEditorPanel({
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
-            className="w-5 h-5 text-white"
+            className={showMap ? "w-8 h-8 text-white" : "w-5 h-5 text-white"}
           >
             <path
               strokeLinecap="round"
@@ -140,17 +190,20 @@ export default function BasemapEditorPanel({
             />
           </svg>
         </button>
-        <h4 className="font-medium text-white">
-          <Trans ns={["admin"]}>Edit Basemap</Trans>
-        </h4>
       </div>
       {!basemap || mapboxStyle.loading ? (
-        <div className="w-full mt-20 flex items-center justify-center text-gray-600">
+        <div
+          className="w-full mt-20 flex items-center justify-center text-gray-600"
+          style={{ gridArea: "sidebar" }}
+        >
           <span className="mx-1">{t("Loading style")}</span>
           <Spinner className="ml-0.5" />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-scroll px-4 pb-4">
+        <div
+          className="w-full h-full overflow-y-scroll px-4 pb-4 max-w-xl"
+          style={{ gridArea: "sidebar" }}
+        >
           <div className="md:max-w-sm mt-5">
             <MutableAutosaveInput
               mutation={mutateItem}
@@ -221,103 +274,109 @@ export default function BasemapEditorPanel({
               ))}
             </select>
           </div>
-          <RadioGroup
-            className="mt-5"
-            legend={t(`3d Terrain`)}
-            state={
-              set3dTerrainMutationState.called
-                ? set3dTerrainMutationState.loading
-                  ? "SAVING"
-                  : "SAVED"
-                : "NONE"
-            }
-            items={[
-              {
-                label: t("None"),
-                value: "NONE",
-                description: t(
-                  "Terrain works best with imagery data and is often best disabled otherwise"
-                ),
-              },
-              {
-                label: t("Always on"),
-                value: "ALWAYS",
-                description: t(
-                  "Terrain will be enabled whenever this basemap is visible"
-                ),
-              },
-              {
-                label: t("On by default"),
-                value: "DEFAULT_ON",
-                description: t("Users can turn off 3d terrain if desired"),
-              },
-              {
-                label: t("Off by default"),
-                value: "DEFAULT_OFF",
-                description: t("Users can turn on 3d terrain if desired"),
-              },
-            ]}
-            value={terrainSetting}
-            onChange={(v) => {
-              let settings = {
-                terrainUrl: null as null | string,
-                terrainOptional: false,
-                terrainVisibilityDefault: true,
-              };
-              if (v === "ALWAYS") {
-                settings.terrainUrl = TERRAIN_URL;
-              } else if (v === "DEFAULT_ON") {
-                settings.terrainUrl = TERRAIN_URL;
-                settings.terrainOptional = true;
-              } else if (v === "DEFAULT_OFF") {
-                settings.terrainUrl = TERRAIN_URL;
-                settings.terrainOptional = true;
-                settings.terrainVisibilityDefault = false;
-              }
-              client.writeFragment({
-                id: `Basemap:${basemap.id}`,
-                fragment: gql`
-                  fragment NewTerrain on Basemap {
-                    terrainUrl
-                    terrainOptional
-                    terrainVisibilityDefault
+          {!hideTerrain && (
+            <>
+              <RadioGroup
+                className="mt-5"
+                legend={t(`3d Terrain`)}
+                state={
+                  set3dTerrainMutationState.called
+                    ? set3dTerrainMutationState.loading
+                      ? "SAVING"
+                      : "SAVED"
+                    : "NONE"
+                }
+                items={[
+                  {
+                    label: t("None"),
+                    value: "NONE",
+                    description: t(
+                      "Terrain works best with imagery data and is often best disabled otherwise"
+                    ),
+                  },
+                  {
+                    label: t("Always on"),
+                    value: "ALWAYS",
+                    description: t(
+                      "Terrain will be enabled whenever this basemap is visible"
+                    ),
+                  },
+                  {
+                    label: t("On by default"),
+                    value: "DEFAULT_ON",
+                    description: t("Users can turn off 3d terrain if desired"),
+                  },
+                  {
+                    label: t("Off by default"),
+                    value: "DEFAULT_OFF",
+                    description: t("Users can turn on 3d terrain if desired"),
+                  },
+                ]}
+                value={terrainSetting}
+                onChange={(v) => {
+                  let settings = {
+                    terrainUrl: null as null | string,
+                    terrainOptional: false,
+                    terrainVisibilityDefault: true,
+                  };
+                  if (v === "ALWAYS") {
+                    settings.terrainUrl = TERRAIN_URL;
+                  } else if (v === "DEFAULT_ON") {
+                    settings.terrainUrl = TERRAIN_URL;
+                    settings.terrainOptional = true;
+                  } else if (v === "DEFAULT_OFF") {
+                    settings.terrainUrl = TERRAIN_URL;
+                    settings.terrainOptional = true;
+                    settings.terrainVisibilityDefault = false;
                   }
-                `,
-                data: settings,
-              });
-              set3dTerrain({
-                variables: {
-                  id: basemap.id,
-                  ...settings,
-                },
-              });
-            }}
-          />
-          <InputBlock
-            className={`mt-5 relative ${
-              terrainSetting === "NONE"
-                ? "text-gray-400 pointer-events-none opacity-20"
-                : ""
-            }`}
-            mutationStatus={updateExaggerationMutationState}
-            labelType="small"
-            title={t("Terrain Exaggeration")}
-            input={
-              <>
-                <input
-                  type="range"
-                  value={exaggeration}
-                  min={0.5}
-                  max={3}
-                  step={0.1}
-                  onChange={(e) => {
-                    setExaggeration(parseFloat(e.target.value));
-                  }}
-                />
-                <div className="absolute right-44">{exaggeration || 1.2}x</div>
-              </>
-            }
-          ></InputBlock>
+                  client.writeFragment({
+                    id: `Basemap:${basemap.id}`,
+                    fragment: gql`
+                      fragment NewTerrain on Basemap {
+                        terrainUrl
+                        terrainOptional
+                        terrainVisibilityDefault
+                      }
+                    `,
+                    data: settings,
+                  });
+                  set3dTerrain({
+                    variables: {
+                      id: basemap.id,
+                      ...settings,
+                    },
+                  });
+                }}
+              />
+              <InputBlock
+                className={`mt-5 relative ${
+                  terrainSetting === "NONE"
+                    ? "text-gray-400 pointer-events-none opacity-20"
+                    : ""
+                }`}
+                mutationStatus={updateExaggerationMutationState}
+                labelType="small"
+                title={t("Terrain Exaggeration")}
+                input={
+                  <>
+                    <input
+                      type="range"
+                      value={exaggeration}
+                      min={0.5}
+                      max={3}
+                      step={0.1}
+                      onChange={(e) => {
+                        setExaggeration(parseFloat(e.target.value));
+                      }}
+                    />
+                    <div className="absolute right-44">
+                      {exaggeration || 1.2}x
+                    </div>
+                  </>
+                }
+              ></InputBlock>
+            </>
+          )}
           <div className="mt-5">
             <h5 className="block text-sm font-medium leading-5 text-gray-700">
               <Trans ns={["admin"]}>Optional Layers</Trans>
@@ -350,6 +409,14 @@ export default function BasemapEditorPanel({
               />
             </div>
           )}
+        </div>
+      )}
+      {showMap && basemap && (
+        <div className="flex-1 bg-gray-50" style={{ gridArea: "map" }}>
+          <BasemapEditorPanelMap
+            basemap={basemap as BasemapDetailsFragment}
+            cameraOptions={cameraOptions}
+          />
         </div>
       )}
       {createOptionOpen && (
