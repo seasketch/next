@@ -15,7 +15,7 @@ function generateSlug() {
 const slug = generateSlug()
 
 describe("Survey creation smoke test", () => {
-  describe.only ('Survey creation Cypress commands', () => {
+  describe ('Survey creation Cypress commands', () => {
     beforeEach(() => {
       //slug = generateSlug()
       cy.intercept("http://localhost:3857/graphql", (req) => {
@@ -253,7 +253,7 @@ describe("Survey creation smoke test", () => {
         })
       })
     })
-  describe ('User survey flow', () => {
+  describe.only ('User survey flow', () => {
     before(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
         if ((req.body.operationName) && (req.body.operationName === "CypressCreateProject")) {
@@ -356,7 +356,7 @@ describe("Survey creation smoke test", () => {
         //  cy.deleteSurvey(surveyId, token)
         //})
       })
-      cy.deleteProject(`${slug}`) 
+      //cy.deleteProject(`${slug}`) 
     })
     it("Can visit the survey", () => {
        cy.contains('Begin', {timeout: 30000}).click()
@@ -392,27 +392,68 @@ describe("Survey creation smoke test", () => {
       cy.get('@nextBtn').should('be.hidden')
       cy.get('[title = "Next Question"]').as('next')
         .should('have.class', "pointer-events-none")
-      cy.contains('Fisheries - Recreational').click()
+      cy.contains('Fisheries - Commercial, Tuna').click()
       cy.get('@next').scrollIntoView()
-      cy.get('@nextBtn').then((btn) => {
+      cy.get('@nextBtn').then(($btn) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect (btn).to.be.visible
+        expect ($btn).to.be.visible
       })
+      
     })
-    it("Can select multiple sectors", () => {
-      cy.get('[type = "button"]').as('nextBtn')
-      cy.get('[title = "Fisheries - Recreational"]').then(($el) => {
-        expect ($el).to.have.descendants('svg')
-      })
-      cy.get('[title = "Aquaculture / Mariculture"]').click().then(($el) => {
-        expect ($el).to.have.descendants('svg')
-      })
-      cy.get('@nextBtn').click()
+    it("Can advance to map page", () => {
+      cy.get('[type = "button"]').as('nextBtn').click()
     })
-  })
-})
-
-
+    //it("Can select multiple sectors", () => {
+    //  cy.get('[type = "button"]').as('nextBtn')
+    //  cy.get('[title = "Fisheries - Commercial, Tuna"]').then(($el) => {
+    //    expect ($el).to.have.descendants('svg')
+    //  })
+    //  cy.get('[title = "Aquaculture / Mariculture"]').click().then(($el) => {
+    //    expect ($el).to.have.descendants('svg')
+    //  })
+    //  cy.get('@nextBtn').click()
+    //})
+    it("Can draw a polygon", () => {
+      // eslint-disable-next-line cypress/no-unnecessary-waiting
+      cy.get('.mapboxgl-canvas').click(300, 300)
+        .click(300, 100)
+        .click(100, 100)
+        .click(100, 300)
+        .dblclick(300, 300)
+        .wait(8000)
+        //.dblclick(400,200)
+      cy.contains('Finish Shape').click()
+      //invalid shape
+      //cy.get('.mapboxgl-canvas').click(300, 300)
+      //  .click(100, 600)
+      //  .click(300, 600)
+      //  .click(300, 300)
+      //  .click(400, 400)
+      //  .dblclick(300,300)
+      //cy.get('[name = "Finish Shape"]')
+    })
+    it("Can assign attributes to the polygon", () => {
+      cy.get(".mt-1 > .block").clear()
+        .type("A dope fishing spot for yellowfin tuna")
+      cy.get('[title="Handline"]').click()
+      cy.get('[title="Yellowfin"]').click()
+      cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in fall and winter.")
+      cy.contains('Save').click()
+    })
+    it("Correctly records attributes", () => {
+      cy.contains("A dope fishing spot for yellowfin tuna")
+      
+    })
+    it("Can finish sector", () => {
+      cy.contains('Finish Sector', {timeout: 6000}).then(($btn) => {
+        cy.get($btn, {timeout: 6000}).click()
+      })
+      //cy.contains('Next Question').click()
+    })
+  })//
+})//
+//
+//
 //Refactor
 //Consolidate
 //Move command tests to command tests folder
