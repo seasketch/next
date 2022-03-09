@@ -33,7 +33,7 @@ interface Section {
 }
 
 const iconClassName =
-  "mr-3 h-6 w-6 text-indigo-400 group-hover:text-indigo-300 group-focus:text-indigo-300 transition ease-in-out duration-150";
+  "mr-3 h-6 w-6 text-primary-300  transition ease-in-out duration-150";
 
 export default function AdminApp() {
   const { slug } = useParams<{ slug: string }>();
@@ -206,9 +206,10 @@ export default function AdminApp() {
     },
   ];
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [mobileHeaderState, setMobileHeaderState] = useState<
-    AdminMobileHeaderState
-  >({});
+  const [
+    mobileHeaderState,
+    setMobileHeaderState,
+  ] = useState<AdminMobileHeaderState>({});
 
   const routeConfig = [
     ...sections,
@@ -360,14 +361,14 @@ function SidebarContents(props: {
         </span>
       </div>
       <div className="mt-5 flex-1 flex flex-col">
-        <nav className="flex-1 px-2 bg-indigo-800 space-y-1">
+        <nav className="flex-1 px-2 bg-gray-800 space-y-1">
           {props.sections.map((section) => (
             <NavLink
               exact
               key={section.path}
               to={`/${props.slug}${section.path}`}
-              activeClassName="bg-indigo-900 text-white"
-              className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-300 rounded-md hover:text-white hover:bg-indigo-700 focus:outline-none focus:text-white focus:bg-indigo-700 transition ease-in-out duration-75"
+              activeClassName="bg-primary-700 text-white"
+              className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-100 rounded-md hover:text-white hover:bg-primary-600 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75"
             >
               {section.icon}
               {section.breadcrumb}
@@ -377,7 +378,7 @@ function SidebarContents(props: {
             <>
               <div className="flex w-full pl-1 pt-2 pb-1">
                 <ProfileStatusButton className="flex-none" />
-                <div className="ml-2 flex-1 text-indigo-300">
+                <div className="ml-2 flex-1 text-gray-300">
                   <p className="text-base md:text-sm leading-5">
                     {t("Signed in as")}
                   </p>
@@ -391,7 +392,7 @@ function SidebarContents(props: {
               </div>
               <button
                 onClick={() => logout()}
-                className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-300 rounded-md hover:text-white hover:bg-indigo-700 focus:outline-none focus:text-white focus:bg-indigo-700 transition ease-in-out duration-75 w-full"
+                className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-gray-300 rounded-md hover:text-white hover:bg-primary-600 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75 w-full"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -431,7 +432,7 @@ function StaticSidebar({
   return (
     <div className="hidden md:flex md:flex-shrink-0 min-h-screen">
       <div className="flex flex-col w-56">
-        <div className="flex flex-col flex-grow bg-indigo-800 pt-5 pb-4 overflow-y-auto text-white">
+        <div className="flex flex-col flex-grow bg-gray-800 pt-5 pb-4 overflow-y-auto text-white">
           <SidebarContents
             sections={sections}
             slug={slug}
@@ -473,7 +474,7 @@ function MobileSidebar({
           <div className="absolute inset-0 bg-gray-600 opacity-75"></div>
         </div>
         <div
-          className={`relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-indigo-800`}
+          className={`relative flex-1 flex flex-col max-w-xs w-full pt-5 pb-4 bg-gray-800`}
         >
           <div className="absolute top-0 right-0 -mr-14 p-1">
             <button
