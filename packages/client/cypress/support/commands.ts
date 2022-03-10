@@ -123,6 +123,13 @@ declare global {
         token: string
       )
 
+      updateSubordinateToId(
+        subordinateToId: number, 
+        elementsToUpdate: any, 
+        formId: number, 
+        token: string
+      )
+
       updateJumpToId(
         jumptToId: number,
         elementsToUpdate: any, 
@@ -522,7 +529,8 @@ Cypress.Commands.add("createFormElements", (formId: number, fixtureAlias: string
                     formElements {
                       typeId, 
                       id, 
-                      body
+                      body, 
+                      subordinateTo
                     }
                     survey {
                       project {
@@ -630,34 +638,79 @@ Cypress.Commands.add("createSAPElements", (formId: number, fixtureAlias: string,
     })
   }
 })
-
-Cypress.Commands.add("updateJumpToId", (jumpToId: number, elementsToUpdate: any, formId: number, token: string) => {
-  elementsToUpdate.map(t => t.jumpToId = jumpToId)
+Cypress.Commands.add("updateSubordinateToId", (subordinateToId: number, elementsToUpdate: any, formId: number, token: string) => {
+  elementsToUpdate.map(t => t.subordinateTo = subordinateToId)
   elementsToUpdate.forEach((f) => {
+    console.log(f)
       return cy
         .mutation(
           gql`
-            mutation CypressUpdateJumpToId($input: UpdateFormElementInput!) {
-          updateFormElement(input: $input) {
-            formElement {
-              id,
-              typeId,
-              jumpToId
-            } 
-            query {
-              form (id: ${formId}) {
+            mutation CypressUpdateSubordinateToId($input: UpdateFormElementInput!) {
+            updateFormElement(input: $input) {
+              formElement {
                 id,
-                formElements {
+                typeId,
+                subordinateTo
+              } 
+               query {
+                form (id: ${formId}) {
                   id,
-                  typeId,
-                  jumpToId
+                  formElements {
+                    id,
+                    typeId,
+                    subordinateTo
+                  }
                 }
               }
             }
           }
+        `,
+      { 
+      "input": {
+        "id": f.id,
+        "patch": {
+          "subordinateTo": f.subordinateTo
         }
-      `,
-    { 
+      }
+     },
+    (token as any)
+    ).then((data) => {
+      Cypress.log(data)
+      return data
+    })
+  })
+})
+  
+Cypress.Commands.add("updateJumpToId", (jumpToId: number, elementsToUpdate: any, formId: number, token: string) => {
+  elementsToUpdate.map(t => t.jumpToId = jumpToId)
+  console.log(elementsToUpdate)
+  console.log(jumpToId)
+  elementsToUpdate.forEach((f) => {
+    console.log(f)
+      return cy
+        .mutation(
+          gql`
+            mutation CypressUpdateJumpToId($input: UpdateFormElementInput!) {
+            updateFormElement(input: $input) {
+              formElement {
+                id,
+                typeId,
+                jumpToId
+              } 
+               query {
+                form (id: ${formId}) {
+                  id,
+                  formElements {
+                    id,
+                    typeId,
+                    jumpToId
+                  }
+                }
+              }
+            }
+          }
+        `,
+      { 
       "input": {
         "id": f.id,
         "patch": {
