@@ -444,25 +444,26 @@ describe("Survey creation smoke test", () => {
       //  .dblclick(300,300)
       //cy.get('[name = "Finish Shape"]')
     })
-    //it("Can assign attributes to the polygon", () => {
-    //  cy.get(".mt-1 > .block").clear()
-    //    .type("A dope fishing spot for yellowfin tuna")
-    //  cy.get('[title="Handline"]').click()
-    //  cy.get('[title="Yellowfin"]').click()
-    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in fall and winter.")
-    //  cy.contains('Save').click()
-    //})
-    //it("Correctly records attributes", () => {
-    //  cy.contains("A dope fishing spot for yellowfin tuna")
-    //  
-    //})
-    //it("Can finish sector", () => {
-    //  cy.contains('Finish Sector', {timeout: 6000}).then(($btn) => {
-    //    cy.get($btn, {timeout: 6000}).click()
-    //  })
-    //  //cy.contains('Next Question').click()
-    //})
-  })//
+    it("Can assign attributes to the polygon", () => {
+      cy.get(".mt-1 > .block").clear()
+        .type("A great fishing spot for yellowfin tuna.")
+      cy.get('[title="Handline"]').click()
+      cy.get('[title="Yellowfin"]').click()
+      cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in fall and winter.")
+      cy.contains('Save').click()
+    })
+    it("Correctly records attributes", () => {
+      cy.contains("A great fishing spot for yellowfin tuna.")
+      
+    })
+    it("Can finish sector", () => {
+      cy.wait(10000)
+      cy.contains('Finish Sector').click()
+      cy.contains("Fisheries - Commercial, Tuna")
+      cy.contains("Next Question").click()
+      //cy.contains('Next Question').click()
+    })
+  })
 })//
 //
 //
