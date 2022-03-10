@@ -26,6 +26,7 @@ import {
 } from "../formElements/FormElement";
 import PracticeBanner from "./PracticeBanner";
 import SurveyHeroImage from "./SurveyHeroImage";
+import useWindowSize from "../useWindowSize";
 
 require("./surveys.css");
 
@@ -72,6 +73,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
     }
   }, []);
   const surveyContext = useContext(SurveyContext);
+  const windowSize = useWindowSize();
 
   const [layoutContext, setLayoutContext] = useState<LayoutContext>({
     mapPortal: null,
@@ -97,6 +99,9 @@ export const SurveyAppLayout: React.FunctionComponent<{
     };
   }, []);
 
+  const min = style.isSmall ? windowSize.width || 390 : 480;
+
+  console.log("layout", style.layout);
   // eslint-disable-next-line i18next/no-literal-string
   let grid: string;
   let navPosition: string =
@@ -125,7 +130,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
       // eslint-disable-next-line i18next/no-literal-string
       grid = `
         [row1-start] "content hero-image" 100% [row1-end]
-        / minmax(480px, 1fr) 1fr
+        / minmax(${min}px, 1fr) 1fr
       `;
       navPosition =
         "fixed bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
@@ -134,7 +139,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
       // eslint-disable-next-line i18next/no-literal-string
       grid = `
         [row1-start] "hero-image content" 100% [row1-end]
-        / 1fr minmax(480px, 1fr)
+        / 1fr minmax(${min}px, 1fr)
       `;
       navPosition =
         "fixed bottom-3 right-3 md:right-1/2 md:bottom-6 md:pr-4 lg:bottom-10 lg:pr-8";
@@ -144,7 +149,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
       grid = `
         [row0-start] "sidebar-header map" min-content [row0-end]
         [row1-start] "content map" auto [row1-end]
-        / minmax(480px, 1fr) 2fr
+        / minmax(${min}px, 1fr) 2fr
       `;
       break;
     case FormElementLayout.MapSidebarRight:
@@ -152,7 +157,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
       grid = `
         [row0-start] "map sidebar-header" min-content [row0-end]
         [row1-start] "map content" auto [row1-end]
-        / 2fr minmax(480px, 1fr)
+        / 2fr minmax(${min}px, 1fr)
       `;
       navPosition =
         "fixed bottom-3 left-96 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
@@ -168,7 +173,10 @@ export const SurveyAppLayout: React.FunctionComponent<{
     case FormElementLayout.MapTop:
       // eslint-disable-next-line i18next/no-literal-string
       grid = `
-        [row1-start] "map map" 120px [row1-end]
+        [row1-start] "map map" ${getMapTopLayoutMapHeight(
+          style.isSmall,
+          windowSize.height
+        )}px [row1-end]
         [row2-start] "content content" 1fr [row2-end]
         / auto auto
       `;
@@ -248,7 +256,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
                 }}
                 className={`relative md:flex md:flex-col ${
                   scrollContentArea && "overflow-y-auto"
-                } p-3 lg:p-5 xl:p-10 2xl:p-14 3xl:p-20 ${centerIsh} ${
+                } max-w-screen p-3 lg:p-5 xl:p-10 2xl:p-14 3xl:p-20 ${centerIsh} ${
                   style.textClass
                 } ${
                   style.layout === FormElementLayout.MapFullscreen
@@ -325,3 +333,21 @@ export const SurveyAppLayout: React.FunctionComponent<{
 };
 
 export default SurveyAppLayout;
+
+export function getMapTopLayoutMapHeight(
+  isSmall: boolean,
+  windowHeight?: number | null
+) {
+  return isSmall
+    ? windowHeight
+      ? windowHeight < 700
+        ? // old iPhone SE range
+          120
+        : windowHeight < 800
+        ? 150
+        : 190
+      : // If can't determine height, default to quite small
+        120
+    : // doesn't matter. will never get here on "desktop"
+      120;
+}

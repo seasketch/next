@@ -142,6 +142,24 @@ export function useCurrentStyle(
     };
   }
 
+  if (
+    isSmall &&
+    (style.layout === FormElementLayout.MapSidebarLeft ||
+      style.layout === FormElementLayout.MapSidebarRight)
+  ) {
+    if (stage === 1) {
+      style = {
+        ...style,
+        layout: FormElementLayout.MapFullscreen,
+      };
+    } else {
+      style = {
+        ...style,
+        layout: FormElementLayout.MapTop,
+      };
+    }
+  }
+
   return {
     ...style,
     isSmall,

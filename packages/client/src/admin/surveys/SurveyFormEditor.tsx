@@ -599,6 +599,7 @@ export default function SurveyFormEditor({
                   !selectedFormElement.type?.isSpatial && (
                     <>
                       <SurveyContextualMap
+                        isSmall={style.isSmall}
                         admin={!!selectedFormElement.backgroundColor}
                         formElementId={selectedFormElement.id}
                         basemaps={

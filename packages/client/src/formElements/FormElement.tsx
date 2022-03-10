@@ -39,6 +39,7 @@ import { LangDetails } from "../lang/supported";
 import set from "lodash.set";
 import deepCopy from "lodash.clonedeep";
 import { components } from ".";
+import SpatialAccessPriority from "./SpatialAccessPriority/SpatialAccessPriority";
 
 require("./prosemirror-body.css");
 require("./unreset.css");
@@ -536,8 +537,17 @@ export function hideNav(
   Component: FormElementComponent<any, any>,
   componentSettings: any,
   isMobile: boolean,
-  stage?: number
+  stage?: number,
+  layout?: FormElementLayout
 ) {
+  if (
+    layout === FormElementLayout.MapFullscreen &&
+    isMobile &&
+    !Component.hideNav &&
+    Component !== SpatialAccessPriority
+  ) {
+    return stage === 1;
+  }
   if (Component.hideNav === undefined) {
     return false;
   } else if (Component.hideNav === false) {

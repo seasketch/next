@@ -384,7 +384,8 @@ function SurveyApp() {
                   components[formElement.current!.typeId],
                   formElement.current.componentSettings,
                   isMobile,
-                  stage
+                  stage,
+                  style.layout
                 )}
                 slug={slug}
                 surveyId={surveyId}
@@ -558,9 +559,18 @@ function SurveyApp() {
               />
             )} */}
             {(style.layout === FormElementLayout.MapSidebarLeft ||
-              style.layout === FormElementLayout.MapSidebarRight) &&
+              style.layout === FormElementLayout.MapSidebarRight ||
+              style.layout === FormElementLayout.MapTop ||
+              style.layout === FormElementLayout.MapFullscreen) &&
               !formElement.current.type?.isSpatial && (
                 <SurveyContextualMap
+                  isSmall={style.isSmall}
+                  displayShowMapButton={
+                    style.layout === FormElementLayout.MapTop
+                  }
+                  displayHideMapButton={stage === 1}
+                  onRequestStageChange={setStage}
+                  hideControls={style.layout === FormElementLayout.MapTop}
                   basemaps={(style.mapBasemaps as number[] | undefined) || []}
                   cameraOptions={style.mapCameraOptions}
                 />
