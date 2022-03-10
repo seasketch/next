@@ -101,7 +101,6 @@ export const SurveyAppLayout: React.FunctionComponent<{
 
   const min = style.isSmall ? windowSize.width || 390 : 480;
 
-  console.log("layout", style.layout);
   // eslint-disable-next-line i18next/no-literal-string
   let grid: string;
   let navPosition: string =

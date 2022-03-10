@@ -130,7 +130,26 @@ export function useCurrentStyle(
       prevLayout || style.layout || FormElementLayout.Top,
       isSmall
     );
+  } else {
+    if (
+      isSmall &&
+      (style.layout === FormElementLayout.MapSidebarLeft ||
+        style.layout === FormElementLayout.MapSidebarRight)
+    ) {
+      if (stage === 1) {
+        style = {
+          ...style,
+          layout: FormElementLayout.MapFullscreen,
+        };
+      } else {
+        style = {
+          ...style,
+          layout: FormElementLayout.MapTop,
+        };
+      }
+    }
   }
+
   if (
     isSmall &&
     (style.layout === FormElementLayout.Left ||
@@ -140,24 +159,6 @@ export function useCurrentStyle(
       ...style,
       layout: FormElementLayout.Top,
     };
-  }
-
-  if (
-    isSmall &&
-    (style.layout === FormElementLayout.MapSidebarLeft ||
-      style.layout === FormElementLayout.MapSidebarRight)
-  ) {
-    if (stage === 1) {
-      style = {
-        ...style,
-        layout: FormElementLayout.MapFullscreen,
-      };
-    } else {
-      style = {
-        ...style,
-        layout: FormElementLayout.MapTop,
-      };
-    }
   }
 
   return {
