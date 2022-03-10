@@ -339,10 +339,10 @@ export function getMapTopLayoutMapHeight(
 ) {
   return isSmall
     ? windowHeight
-      ? windowHeight < 700
+      ? windowHeight < 650
         ? // old iPhone SE range
-          120
-        : windowHeight < 800
+          130
+        : windowHeight < 780
         ? 150
         : 190
       : // If can't determine height, default to quite small

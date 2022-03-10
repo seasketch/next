@@ -57,10 +57,8 @@ export default function SurveyContextualMap(props: {
               }
             }}
             style={{
-              height: getMapTopLayoutMapHeight(
-                props.isSmall,
-                windowSize.height
-              ),
+              height:
+                getMapTopLayoutMapHeight(props.isSmall, windowSize.height) - 18,
             }}
             className="z-50 absolute top-0 text-white flex items-center w-full justify-center font-semibold space-x-2"
           >
