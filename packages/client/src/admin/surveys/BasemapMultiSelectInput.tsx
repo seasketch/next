@@ -13,7 +13,7 @@ import {
   BasemapDetailsFragment,
   useAllBasemapsQuery,
 } from "../../generated/graphql";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { PencilIcon, TrashIcon } from "@heroicons/react/outline";
 import SelectBasemapsModal from "./SelectBasemapsModal";
 import { FormEditorHeader } from "./SurveyFormEditor";
@@ -40,12 +40,15 @@ export default function BasemapMultiSelectInput({
   onChange?: (value: number[] | undefined) => void;
   disabledMessage?: string;
   cameraOptions?: CameraOptions;
+  /** Used if user clicks through to the basemap editor page */
+  returnToUrl?: string;
 }) {
   const { t } = useTranslation("admin:surveys");
   const { data, loading, error, refetch } = useAllBasemapsQuery({});
   const [state, setState] = useState(value || []);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editorId, setEditorId] = useState<null | number>(null);
+  const { slug } = useParams<{ slug: string }>();
 
   const basemaps = useMemo(() => {
     if (data?.currentProject?.basemaps && data.currentProject.surveyBasemaps) {
@@ -190,20 +193,34 @@ export default function BasemapMultiSelectInput({
                                         {basemap.name}
                                       </div>
                                     </div>
-                                    <div className="flex space-x-2 items-center">
-                                      <button
-                                        onClick={() => setEditorId(basemap.id)}
+                                    <div className="flex space-x-2 items-center underline px-1 text-sm">
+                                      <Link
+                                        to={`/${slug}/edit-basemap/${
+                                          basemap.id
+                                        }?returnToUrl=${
+                                          window.location.pathname
+                                        }&camera=${btoa(
+                                          JSON.stringify(cameraOptions)
+                                        )}`}
                                       >
-                                        <PencilIcon className="w-4 h-4" />
-                                      </button>
+                                        <Trans ns="admin:surveys">edit</Trans>
+                                      </Link>
                                       <button
                                         onClick={() => {
-                                          const newState = state.filter(
-                                            (i) => i !== basemap.id
-                                          );
-                                          setState(newState);
-                                          if (onChange) {
-                                            onChange(newState);
+                                          if (
+                                            window.confirm(
+                                              t(
+                                                "Are you sure you want to remove this map?"
+                                              )
+                                            )
+                                          ) {
+                                            const newState = state.filter(
+                                              (i) => i !== basemap.id
+                                            );
+                                            setState(newState);
+                                            if (onChange) {
+                                              onChange(newState);
+                                            }
                                           }
                                         }}
                                       >

@@ -31,6 +31,8 @@ import { ClientBasemap } from "../../dataLayers/MapContextManager";
 import MapboxMap from "../../components/MapboxMap";
 import BasemapEditorPanelMap from "./BasemapEditorMap";
 import { useMediaQuery } from "beautiful-react-hooks";
+import { Link } from "react-router-dom";
+import { ArrowLeftIcon } from "@heroicons/react/outline";
 
 const TERRAIN_URL = "mapbox://mapbox.mapbox-terrain-dem-v1";
 
@@ -41,6 +43,7 @@ export default function BasemapEditorPanel({
   hideTerrain,
   showMap,
   cameraOptions,
+  returnToUrl,
 }: {
   basemapId: number;
   onRequestClose?: () => void;
@@ -48,6 +51,7 @@ export default function BasemapEditorPanel({
   hideTerrain?: boolean;
   showMap?: boolean;
   cameraOptions?: CameraOptions;
+  returnToUrl?: string;
 }) {
   const [createOptionOpen, setCreateOptionOpen] = useState(false);
   const { t } = useTranslation(["admin"]);
@@ -165,31 +169,48 @@ export default function BasemapEditorPanel({
       >
         <h4
           className={`${
-            showMap ? "text-xl" : ""
-          } text-white font-medium flex-1`}
+            showMap ? "text-2xl" : ""
+          } text-white font-medium flex-1 flex items-center`}
         >
+          {returnToUrl && (
+            <Link replace={true} to={returnToUrl}>
+              <ArrowLeftIcon className="w-8 h-8 mr-4" />
+            </Link>
+          )}
           <Trans ns={["admin"]}>Edit Map</Trans>
         </h4>
 
-        <button
-          className="bg-gray-300 bg-opacity-25 hover:bg-gray-200 hover:bg-opacity-25  rounded-full p-1 cursor-pointer focus:ring-blue-300"
-          onClick={onRequestClose}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            className={showMap ? "w-8 h-8 text-white" : "w-5 h-5 text-white"}
+        {!returnToUrl && (
+          <button
+            className="bg-gray-300 bg-opacity-25 hover:bg-gray-200 hover:bg-opacity-25  rounded-full p-1 cursor-pointer focus:ring-blue-300"
+            onClick={onRequestClose}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              className={showMap ? "w-8 h-8 text-white" : "w-5 h-5 text-white"}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
+        {returnToUrl && (
+          <Link
+            to={returnToUrl}
+            replace={true}
+            className="bg-gray-300 text-white px-4 py-2 bg-opacity-25 hover:bg-gray-200 hover:bg-opacity-25  rounded-full p-1 cursor-pointer focus:ring-blue-300"
+            onClick={onRequestClose}
+          >
+            <Trans ns="admin">Done</Trans>
+          </Link>
+        )}
       </div>
       {!basemap || mapboxStyle.loading ? (
         <div

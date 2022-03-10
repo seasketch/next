@@ -20,6 +20,7 @@ import AdminMobileHeader, {
 import PhoneAccessGate from "./PhoneAccessGate";
 import { useAuth0 } from "@auth0/auth0-react";
 import Spinner from "../components/Spinner";
+import EditBasemapPage from "./data/EditBasemapPage";
 
 const LazyBasicSettings = React.lazy(() => import("./Settings"));
 const LazyDataSettings = React.lazy(() => import("./data/DataSettings"));
