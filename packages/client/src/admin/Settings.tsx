@@ -815,7 +815,7 @@ function MapboxAPIKeys() {
               convertEmptyToNull={true}
               propName="mapboxSecretKey"
               description={
-                <Trans ns="admin">
+                <Trans ns="admin" key={"mapbox-secret-key"}>
                   Provide a secret key if you would like to list and add
                   basemaps directly from your MapBox account. You will need to
                   provide a key with{" "}
