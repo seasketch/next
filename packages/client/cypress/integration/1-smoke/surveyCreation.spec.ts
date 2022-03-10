@@ -402,7 +402,9 @@ describe("Survey creation smoke test", () => {
       
     })
     it("Can advance to map page", () => {
-      cy.get('[type = "button"]').as('nextBtn').click()
+      cy.get('[type = "button"]').as('nextBtn')
+      cy.wait(8000)
+      cy.get('@nextBtn').click()
     })
     //it("Can select multiple sectors", () => {
     //  cy.get('[type = "button"]').as('nextBtn')
