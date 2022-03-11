@@ -151,7 +151,6 @@ export default function BasemapMultiSelectInput({
                     result.source.index,
                     result.destination.index
                   );
-                  console.log("onDragEnd", result, sorted);
 
                   if (onChange) {
                     setState(sorted);
