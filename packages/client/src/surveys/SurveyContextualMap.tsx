@@ -8,6 +8,7 @@ import MapCameraCaptureButton from "../admin/surveys/MapCameraCaptureButton";
 import useMapEssentials from "../admin/surveys/useMapEssentials";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import MapboxMap from "../components/MapboxMap";
+import MapPicker from "../components/MapPicker";
 import { SurveyMapPortal } from "../formElements/FormElement";
 import { useUpdateFormElementMapCameraMutation } from "../generated/graphql";
 import useWindowSize from "../useWindowSize";
@@ -34,7 +35,9 @@ export default function SurveyContextualMap(props: {
   const windowSize = useWindowSize();
   return (
     <SurveyMapPortal mapContext={mapContext}>
-      {basemaps.length > 1 && <MiniBasemapSelector basemaps={basemaps} right />}
+      {basemaps.length > 1 && !props.displayShowMapButton && (
+        <MapPicker basemaps={basemaps} />
+      )}
       <MapboxMap
         className={`w-full h-full ${
           props.hideControls ? "hide-all-gl-controls" : ""
@@ -72,7 +75,7 @@ export default function SurveyContextualMap(props: {
         // )
       }
       {props.displayHideMapButton && (
-        <div className="absolute z-50 bottom-10 w-full justify-center flex">
+        <div className="absolute z-40 bottom-10 w-full justify-center flex">
           <SurveyButton
             onClick={() => {
               if (props.onRequestStageChange) {

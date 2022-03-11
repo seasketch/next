@@ -219,7 +219,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
         <SurveyStyleContext.Provider value={style}>
           <AnimatePresence initial={false} presenceAffectsLayout={false}>
             <div
-              className={`grid overflow-hidden ${
+              className={`SurveyAppLayout grid overflow-hidden ${
                 scrollContentArea || fullscreenMapLayout ? "h-full" : ""
               }`}
               style={{ grid }}
