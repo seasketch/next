@@ -48,6 +48,7 @@ import bbox from "@turf/bbox";
 import { LngLatBoundsLike } from "mapbox-gl";
 import SurveyNavigationButton from "./SurveyNavigationButtons";
 import languages from "../lang/supported";
+import SurveyContextualMap from "./SurveyContextualMap";
 
 require("./surveys.css");
 
@@ -223,7 +224,7 @@ function SurveyApp() {
   const surveyButtonFooter = useRef<HTMLDivElement>(null);
 
   const style = useCurrentStyle(
-    data?.survey?.form?.formElements,
+    elements,
     formElement.exiting || formElement.current,
     stage
   );
@@ -383,7 +384,8 @@ function SurveyApp() {
                   components[formElement.current!.typeId],
                   formElement.current.componentSettings,
                   isMobile,
-                  stage
+                  stage,
+                  style.layout
                 )}
                 slug={slug}
                 surveyId={surveyId}
@@ -517,7 +519,9 @@ function SurveyApp() {
                             : currentValue === undefined ||
                               currentValue === null ||
                               currentValue === ""
-                            ? t("Skip Question")
+                            ? formElement.current.isInput
+                              ? t("Skip Question")
+                              : t("Next")
                             : t("Next")
                         }
                         onClick={handleAdvance}
@@ -554,6 +558,23 @@ function SurveyApp() {
                 }}
               />
             )} */}
+            {(style.layout === FormElementLayout.MapSidebarLeft ||
+              style.layout === FormElementLayout.MapSidebarRight ||
+              style.layout === FormElementLayout.MapTop ||
+              style.layout === FormElementLayout.MapFullscreen) &&
+              !formElement.current.type?.isSpatial && (
+                <SurveyContextualMap
+                  isSmall={style.isSmall}
+                  displayShowMapButton={
+                    style.layout === FormElementLayout.MapTop
+                  }
+                  displayHideMapButton={stage === 1}
+                  onRequestStageChange={setStage}
+                  hideControls={style.layout === FormElementLayout.MapTop}
+                  basemaps={(style.mapBasemaps as number[] | undefined) || []}
+                  cameraOptions={style.mapCameraOptions}
+                />
+              )}
           </SurveyAppLayout>
           <Modal
             open={practiceModalOpen}

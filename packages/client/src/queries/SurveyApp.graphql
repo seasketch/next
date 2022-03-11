@@ -49,6 +49,8 @@ fragment SurveyAppFormElement on FormElement {
   backgroundHeight
   jumpToId
   subordinateTo
+  mapBasemaps
+  mapCameraOptions
 }
 
 fragment SurveyAppSurvey on Survey {
@@ -121,8 +123,13 @@ query GetBasemapsAndRegion {
     basemaps {
       ...BasemapDetails
     }
+    surveyBasemaps {
+      ...BasemapDetails
+    }
     region {
       geojson
     }
+    mapboxPublicKey
+    mapboxSecretKey
   }
 }

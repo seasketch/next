@@ -75,7 +75,7 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
   return (
     <>
       {/* TODO: Really shouldn't be handling these text wrapping issues here. Should be handled in SurveyAppLayout */}
-      <div className="mb-5 md:w-96 xl:w-160">
+      <div className="mb-5 md:w-96 xl:w-160 max-w-full">
         <h4 className="text-xl ">
           {!isOnline && <Trans ns="surveys">You Are Offline</Trans>}
           {isOnline && saving && (

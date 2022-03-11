@@ -31,6 +31,7 @@ type ExportRow = { [key: string]: string | boolean | number | null } & {
   is_duplicate_ip: boolean;
   is_logged_in: boolean;
   account_email: string | null;
+  archived: boolean;
 };
 
 type FormElement = Pick<
@@ -50,6 +51,7 @@ export function getDataForExport(
     | "userId"
     | "data"
     | "accountEmail"
+    | "archived"
   >[],
   formElements: FormElement[],
   rules: Pick<
@@ -92,6 +94,7 @@ export function getDataForExport(
       is_duplicate_ip: response.isDuplicateIp,
       is_logged_in: !!response.userId,
       account_email: response.accountEmail || null,
+      archived: response.archived || false,
     };
     // answer data
     const elements = getUnskippedInputElementsForCompletedResponse(

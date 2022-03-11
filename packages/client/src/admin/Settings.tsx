@@ -15,6 +15,8 @@ import {
   ProjectAccessControlSetting,
   useProjectRegionQuery,
   useUpdateProjectRegionMutation,
+  useUpdateKeysMutation,
+  useMapboxApiKeysQuery,
 } from "../generated/graphql";
 import ProjectAutosaveInput from "./ProjectAutosaveInput";
 import { useDropzone } from "react-dropzone";
@@ -29,6 +31,7 @@ import Button from "../components/Button";
 import { useTranslation, Trans } from "react-i18next";
 import DataBucketSettings from "./data/DataBucketSettings";
 import { AdminMobileHeaderContext } from "./AdminMobileHeaderContext";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 
 export default function Settings() {
   const { data } = useCurrentProjectMetadataQuery();
@@ -53,6 +56,9 @@ export default function Settings() {
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <AccessControlSettings />
+        </div>
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+          <MapboxAPIKeys />
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <MapExtentSettings />
@@ -749,5 +755,85 @@ function SuperUserSettings() {
         </form>
       </div>
     </>
+  );
+}
+
+function MapboxAPIKeys() {
+  const { t, i18n } = useTranslation(["admin"]);
+  const onError = useGlobalErrorHandler();
+  const [mutate, mutationState] = useUpdateKeysMutation({ onError });
+  const { slug } = useParams<{ slug: string }>();
+  const { data, loading, error } = useMapboxApiKeysQuery({ onError });
+
+  if (loading) {
+    return null;
+  }
+
+  return (
+    <div className="mt-5 md:col-span-2">
+      <div className="shadow sm:rounded-md sm:overflow-hidden">
+        <div className="px-4 py-5 bg-white sm:p-6 space-y-4">
+          <h3 className="text-lg font-medium leading-6 text-gray-900 mb-5">
+            {t("Mapbox Access Tokens")}
+          </h3>
+          <div className="">
+            <ProjectAutosaveInput
+              convertEmptyToNull={true}
+              placeholder="pk.abcd123"
+              description={
+                <Trans ns="admin">
+                  While a default key is available to get started, we require
+                  production projects to provide a{" "}
+                  <a
+                    className="underline text-primary-500"
+                    href="https://docs.mapbox.com/help/getting-started/access-tokens/"
+                    target="_blank"
+                  >
+                    public access token
+                  </a>{" "}
+                  which will be used when loading maps. Use of MapBox via
+                  SeaSketch may incur fees, though most projects should fall
+                  under their{" "}
+                  <a
+                    className="underline text-primary-500"
+                    target="_blank"
+                    href="https://www.mapbox.com/pricing#maps"
+                  >
+                    generous free tier
+                  </a>
+                  .
+                </Trans>
+              }
+              propName="mapboxPublicKey"
+              label={t("Public Access Token")}
+              value={data?.currentProject?.mapboxPublicKey || ""}
+              slug={slug}
+            />
+          </div>
+          <div className="mt-5">
+            <ProjectAutosaveInput
+              convertEmptyToNull={true}
+              propName="mapboxSecretKey"
+              description={
+                <Trans ns="admin" key={"mapbox-secret-key"}>
+                  Provide a secret key if you would like to list and add
+                  basemaps directly from your MapBox account. You will need to
+                  provide a key with{" "}
+                  <code className="bg-gray-100 border  font-mono px-1 rounded">
+                    STYLES:LIST
+                  </code>{" "}
+                  scope, and we recommend limiting the key to the SeaSketch
+                  domain.
+                </Trans>
+              }
+              label={t("Optional Secret Key")}
+              placeholder={t("sk.12345678910")}
+              value={data?.currentProject?.mapboxSecretKey || ""}
+              slug={slug}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

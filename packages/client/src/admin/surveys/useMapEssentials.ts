@@ -1,6 +1,11 @@
 import bbox from "@turf/bbox";
 import { BBox } from "geojson";
-import { LngLatBoundsLike, Map } from "mapbox-gl";
+import {
+  CameraOptions,
+  FreeCameraOptions,
+  LngLatBoundsLike,
+  Map,
+} from "mapbox-gl";
 import { useEffect, useState } from "react";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useMapContext } from "../../dataLayers/MapContextManager";
@@ -8,6 +13,7 @@ import {
   BasemapDetailsFragment,
   useGetBasemapsAndRegionQuery,
 } from "../../generated/graphql";
+import useDebounce from "../../useDebounce";
 
 export const defaultStartingBounds = [
   -119.91579655058345,
@@ -23,15 +29,18 @@ export const defaultStartingBounds = [
 export default function useMapEssentials({
   bounds,
   filterBasemapIds,
+  cameraOptions,
 }: {
   /** Starting bounds of the map. If not provided will default to project region */
   bounds?: BBox;
   /** Limit basemaps to those with the provided IDs */
   filterBasemapIds?: number[];
+  /** Will take priority over bounds if set */
+  cameraOptions?: CameraOptions;
 }) {
   const onError = useGlobalErrorHandler();
   const { data } = useGetBasemapsAndRegionQuery({ onError });
-  const mapContext = useMapContext();
+  const mapContext = useMapContext({ camera: cameraOptions, bounds });
   const [basemaps, setBasemaps] = useState<BasemapDetailsFragment[]>([]);
   bounds =
     bounds ||
@@ -40,31 +49,48 @@ export default function useMapEssentials({
       : defaultStartingBounds) ||
     defaultStartingBounds;
 
+  const debouncedCamera = useDebounce(cameraOptions, 30);
+
   useEffect(() => {
-    if (mapContext?.manager && data?.currentProject?.basemaps?.length) {
+    if (
+      mapContext?.manager &&
+      data?.currentProject?.basemaps?.length &&
+      data?.currentProject?.surveyBasemaps?.length
+    ) {
       let basemaps: BasemapDetailsFragment[] = [];
-      basemaps = data.currentProject.basemaps.filter(
-        (b) => !filterBasemapIds || filterBasemapIds.indexOf(b.id) !== -1
-      );
+      const allBasemaps = [
+        ...data.currentProject.basemaps,
+        ...data.currentProject.surveyBasemaps,
+      ];
+      if (filterBasemapIds && filterBasemapIds.length) {
+        basemaps = filterBasemapIds
+          .map((id) => allBasemaps.find((b) => b.id === id))
+          .filter((b) => b !== undefined) as BasemapDetailsFragment[];
+      } else {
+        basemaps = data.currentProject.basemaps;
+      }
       if (!basemaps.length) {
         basemaps = [data.currentProject.basemaps[0]];
       }
       setBasemaps(basemaps);
       // mapContext.manager.setProjectBounds(bboxPolygon(bounds));
       mapContext.manager?.setBasemaps(basemaps);
-      // TODO: This is a pretty shitty way to do this. MapContextManager needs
-      // to be modified a bit to account for these simpler use-cases that aren't
-      // so bound to project-wide settings
-      setTimeout(() => {
-        if (mapContext?.manager?.map) {
-          mapContext!.manager!.map!.fitBounds(bounds as LngLatBoundsLike, {
-            animate: false,
-            padding: 2,
-          });
-        }
-      }, 200);
     }
-  }, [data?.currentProject?.basemaps, mapContext.manager, filterBasemapIds]);
+  }, [
+    data?.currentProject?.basemaps,
+    data?.currentProject?.surveyBasemaps,
+    mapContext.manager,
+    filterBasemapIds,
+  ]);
 
-  return { basemaps, mapContext, bounds };
+  useEffect(() => {
+    if (mapContext?.manager?.map && debouncedCamera) {
+      const map = mapContext.manager.map;
+      map.flyTo({
+        ...debouncedCamera,
+      });
+    }
+  }, [debouncedCamera]);
+
+  return { basemaps, mapContext, bounds, cameraOptions };
 }

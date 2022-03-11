@@ -14,11 +14,15 @@ import GlobalErrorHandler, {
 import { HeadProvider, Meta } from "react-head";
 import { useAuth0 } from "@auth0/auth0-react";
 import * as Sentry from "@sentry/react";
+import { CameraOptions } from "mapbox-gl";
 
 const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
 const LazyProjectAdmin = React.lazy(() => import("./admin/AdminApp"));
 const LazyAuthLanding = React.lazy(() => import("./auth/ProjectInviteLanding"));
 const LazySurveyApp = React.lazy(() => import("./surveys/SurveyApp"));
+const LazyBasemapEditor = React.lazy(
+  () => import("./admin/data/EditBasemapPage")
+);
 const LazySurveyFormEditor = React.lazy(
   () => import("./admin/surveys/SurveyFormEditor")
 );
@@ -111,6 +115,39 @@ function App() {
                 )}
               />
               <Route path="/:slug">
+                <Route
+                  exact
+                  path={`/:slug/edit-basemap/:id`}
+                  render={(history) => {
+                    const { slug, id } = history.match.params;
+                    const search = new URLSearchParams(
+                      history.location.search || ""
+                    );
+                    const encodedCameraOptions = search.get("camera");
+                    let cameraOptions: CameraOptions | undefined = undefined;
+                    if (encodedCameraOptions) {
+                      try {
+                        const decoded = atob(encodedCameraOptions);
+                        cameraOptions = JSON.parse(decoded);
+                      } catch (e) {
+                        console.warn(
+                          "Problem decoding cameraOptions search parameter"
+                        );
+                        console.warn(e);
+                      }
+                    }
+                    return (
+                      <ProjectAccessGate admin={true}>
+                        <LazyBasemapEditor
+                          id={parseInt(id)}
+                          returnToUrl={search.get("returnToUrl")}
+                          cameraOptions={cameraOptions}
+                        />
+                      </ProjectAccessGate>
+                    );
+                  }}
+                ></Route>
+
                 <Route
                   path="/:slug/survey-editor/:surveyId/:subpath?"
                   render={(history) => {

@@ -168,6 +168,32 @@ type ApproveParticipantPayload {
   query: Query
 }
 
+"""All input for the `archiveResponses` mutation."""
+input ArchiveResponsesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  ids: [Int]
+  makeArchived: Boolean
+}
+
+"""The output of our `archiveResponses` mutation."""
+type ArchiveResponsesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  surveyResponses: [SurveyResponse!]
+}
+
 type Basemap implements Node {
   """Reads a single `Acl` that is related to this `Basemap`."""
   acl: Acl
@@ -262,6 +288,16 @@ type Basemap implements Node {
     """The method to use when ordering `ProjectsSharedBasemap`."""
     orderBy: [ProjectsSharedBasemapsOrderBy!] = [NATURAL]
   ): ProjectsSharedBasemapsConnection!
+
+  """Reads and enables pagination through a set of `FormElement`."""
+  relatedFormElements(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [FormElement!]
+  surveysOnly: Boolean!
   terrainExaggeration: BigFloat!
   terrainMaxZoom: Int!
 
@@ -341,6 +377,7 @@ input BasemapInput {
   superusers can create Shared Basemaps.
   """
   projectId: Int
+  surveysOnly: Boolean
   terrainExaggeration: BigFloat
   terrainMaxZoom: Int
 
@@ -409,6 +446,7 @@ input BasemapPatch {
   superusers can create Shared Basemaps.
   """
   projectId: Int
+  surveysOnly: Boolean
   terrainExaggeration: BigFloat
   terrainMaxZoom: Int
 
@@ -650,6 +688,38 @@ type ConfirmProjectInviteWithVerifiedEmailPayload {
   """
   clientMutationId: String
   integer: Int
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `copyAppearance` mutation."""
+input CopyAppearanceInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  copyFromId: Int
+  formElementId: Int
+}
+
+"""The output of our `copyAppearance` mutation."""
+type CopyAppearancePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  formElement: FormElement
+
+  """An edge for our `FormElement`. May be used by Relay 1."""
+  formElementEdge(
+    """The method to use when ordering `FormElement`."""
+    orderBy: [FormElementsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormElementsEdge
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -4141,6 +4211,7 @@ type FormElement implements Node {
   Type-specific configuration. For example, a Choice field might have a list of valid choices.
   """
   componentSettings: JSON!
+  createdAt: Datetime!
 
   """
   Column name used in csv export, property name in reporting tools. Keep stable
@@ -4171,6 +4242,27 @@ type FormElement implements Node {
   
   """
   layout: FormElementLayout
+
+  """
+  IDs for basemaps that should be included in the map view if a map layout is selected
+  """
+  mapBasemaps: [Int]
+
+  """
+  If using a map-based layout, can be used to set the default starting point of the map
+  
+  See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+  ```json
+  {
+    "center": [-73.5804, 45.53483],
+    "pitch": 60,
+    "bearing": -60,
+    "zoom": 10
+  }
+  ```
+  
+  """
+  mapCameraOptions: JSON
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
@@ -4208,6 +4300,35 @@ type FormElement implements Node {
   
   """
   subordinateTo: Int
+
+  """Reads and enables pagination through a set of `SurveyConsentDocument`."""
+  surveyConsentDocumentsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SurveyConsentDocumentCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `SurveyConsentDocument`."""
+    orderBy: [SurveyConsentDocumentsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyConsentDocumentsConnection!
 
   """
   Indicates whether the form element should be displayed with dark or light text
@@ -4249,6 +4370,7 @@ input FormElementInput {
   Type-specific configuration. For example, a Choice field might have a list of valid choices.
   """
   componentSettings: JSON
+  createdAt: Datetime
 
   """
   Column name used in csv export, property name in reporting tools. Keep stable
@@ -4278,6 +4400,27 @@ input FormElementInput {
   
   """
   layout: FormElementLayout
+
+  """
+  IDs for basemaps that should be included in the map view if a map layout is selected
+  """
+  mapBasemaps: [Int]
+
+  """
+  If using a map-based layout, can be used to set the default starting point of the map
+  
+  See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+  ```json
+  {
+    "center": [-73.5804, 45.53483],
+    "pitch": 60,
+    "bearing": -60,
+    "zoom": 10
+  }
+  ```
+  
+  """
+  mapCameraOptions: JSON
 
   """
   Determines order of field display. Clients should display fields in ascending 
@@ -4353,6 +4496,7 @@ input FormElementPatch {
   Type-specific configuration. For example, a Choice field might have a list of valid choices.
   """
   componentSettings: JSON
+  createdAt: Datetime
 
   """
   Column name used in csv export, property name in reporting tools. Keep stable
@@ -4382,6 +4526,27 @@ input FormElementPatch {
   
   """
   layout: FormElementLayout
+
+  """
+  IDs for basemaps that should be included in the map view if a map layout is selected
+  """
+  mapBasemaps: [Int]
+
+  """
+  If using a map-based layout, can be used to set the default starting point of the map
+  
+  See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+  ```json
+  {
+    "center": [-73.5804, 45.53483],
+    "pitch": 60,
+    "bearing": -60,
+    "zoom": 10
+  }
+  ```
+  
+  """
+  mapCameraOptions: JSON
 
   """
   Determines order of field display. Clients should display fields in ascending 
@@ -4431,6 +4596,8 @@ enum FormElementsOrderBy {
   FORM_ID_DESC
   ID_ASC
   ID_DESC
+  MAP_BASEMAPS_ASC
+  MAP_BASEMAPS_DESC
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
@@ -4447,6 +4614,7 @@ Identifies the type of element in a form, including metadata about that element 
 
 """
 type FormElementType implements Node {
+  allowAdminUpdates: Boolean!
   allowedLayouts: [FormElementLayout]
   componentName: String!
   isHidden: Boolean!
@@ -4461,6 +4629,13 @@ type FormElementType implements Node {
 
   """These elements can only be added to a form once."""
   isSingleUseOnly: Boolean!
+
+  """
+  Indicates if the element type is a spatial data input. Components that
+  implement these types are expected to render their own map (in contrast with
+  elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which
+  expect the SurveyApp component to render a map for them.
+  """
   isSpatial: Boolean!
 
   """
@@ -5563,6 +5738,65 @@ type MakeResponseDraftPayload {
   ): SurveyResponsesEdge
 }
 
+"""All input for the `makeResponsesNotPractice` mutation."""
+input MakeResponsesNotPracticeInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  ids: [Int]
+}
+
+"""The output of our `makeResponsesNotPractice` mutation."""
+type MakeResponsesNotPracticePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  surveyResponses: [SurveyResponse!]
+}
+
+"""All input for the `makeResponsesPractice` mutation."""
+input MakeResponsesPracticeInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  ids: [Int]
+}
+
+"""The output of our `makeResponsesPractice` mutation."""
+type MakeResponsesPracticePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyResponse`."""
+  survey: Survey
+  surveyResponse: SurveyResponse
+
+  """An edge for our `SurveyResponse`. May be used by Relay 1."""
+  surveyResponseEdge(
+    """The method to use when ordering `SurveyResponse`."""
+    orderBy: [SurveyResponsesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyResponsesEdge
+}
+
 """All input for the `makeSketchClass` mutation."""
 input MakeSketchClassInput {
   """
@@ -5658,6 +5892,33 @@ type MarkTopicAsReadPayload {
   query: Query
 }
 
+"""All input for the `modifySurveyAnswers` mutation."""
+input ModifySurveyAnswersInput {
+  answers: JSON
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  responseIds: [Int]
+}
+
+"""The output of our `modifySurveyAnswers` mutation."""
+type ModifySurveyAnswersPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  surveyResponses: [SurveyResponse!]
+}
+
 """
 The root mutation type which contains root level fields which mutate data.
 """
@@ -5701,6 +5962,12 @@ type Mutation {
     """
     input: ApproveParticipantInput!
   ): ApproveParticipantPayload
+  archiveResponses(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ArchiveResponsesInput!
+  ): ArchiveResponsesPayload
   clearFormElementStyle(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -5765,6 +6032,18 @@ type Mutation {
     """
     input: ConfirmProjectInviteWithVerifiedEmailInput!
   ): ConfirmProjectInviteWithVerifiedEmailPayload
+
+  """
+  Copies appearance settings like layout and background_image from one form
+  element to another. Useful when initializing custom appearance on an element
+  from the defaults set by a previous question.
+  """
+  copyAppearance(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CopyAppearanceInput!
+  ): CopyAppearancePayload
 
   """Creates a single `Basemap`."""
   createBasemap(
@@ -6512,6 +6791,18 @@ type Mutation {
     """
     input: MakeResponseDraftInput!
   ): MakeResponseDraftPayload
+  makeResponsesNotPractice(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: MakeResponsesNotPracticeInput!
+  ): MakeResponsesNotPracticePayload
+  makeResponsesPractice(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: MakeResponsesPracticeInput!
+  ): MakeResponsesPracticePayload
   makeSketchClass(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -6537,6 +6828,12 @@ type Mutation {
     """
     input: MarkTopicAsReadInput!
   ): MarkTopicAsReadPayload
+  modifySurveyAnswers(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ModifySurveyAnswersInput!
+  ): ModifySurveyAnswersPayload
 
   """
   Copies all table of contents items, related layers, sources, and access
@@ -6727,6 +7024,12 @@ type Mutation {
     """
     input: ToggleForumPostingBanInput!
   ): ToggleForumPostingBanPayload
+  toggleResponsesPractice(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ToggleResponsesPracticeInput!
+  ): ToggleResponsesPracticePayload
 
   """Updates a single `Acl` using a unique key and a patch."""
   updateAcl(
@@ -7812,6 +8115,8 @@ type Project implements Node {
   displayed at 48x48 pixels and must be a public url.
   """
   logoUrl: String
+  mapboxPublicKey: String
+  mapboxSecretKey: String
 
   """
   List of all folders created by this user.
@@ -7947,6 +8252,15 @@ type Project implements Node {
     orderBy: [SpritesOrderBy!]
   ): [Sprite!]!
   supportEmail: String!
+
+  """Reads and enables pagination through a set of `Basemap`."""
+  surveyBasemaps(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Basemap!]
 
   """Reads and enables pagination through a set of `Survey`."""
   surveys(
@@ -8318,6 +8632,8 @@ input ProjectPatch {
   displayed at 48x48 pixels and must be a public url.
   """
   logoUrl: Upload
+  mapboxPublicKey: String
+  mapboxSecretKey: String
   name: String
   region: GeoJSON
 }
@@ -8956,6 +9272,45 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Survey`."""
     nodeId: ID!
   ): Survey
+  surveyConsentDocument(id: Int!): SurveyConsentDocument
+  surveyConsentDocumentByFormElementIdAndVersion(formElementId: Int!, version: Int!): SurveyConsentDocument
+
+  """Reads a single `SurveyConsentDocument` using its globally unique `ID`."""
+  surveyConsentDocumentByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `SurveyConsentDocument`.
+    """
+    nodeId: ID!
+  ): SurveyConsentDocument
+
+  """Reads and enables pagination through a set of `SurveyConsentDocument`."""
+  surveyConsentDocumentsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SurveyConsentDocumentCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `SurveyConsentDocument`."""
+    orderBy: [SurveyConsentDocumentsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SurveyConsentDocumentsConnection
   surveyInvite(id: Int!): SurveyInvite
   surveyInviteByEmail(email: Email!): SurveyInvite
   surveyInviteByEmailAndSurveyId(email: Email!, surveyId: Int!): SurveyInvite
@@ -10073,6 +10428,7 @@ type Survey implements Node {
   
   """
   accessType: SurveyAccessType!
+  archivedResponseCount: Int
 
   """Reads a single `Form` that is related to this `Survey`."""
   form: Form
@@ -10127,6 +10483,7 @@ type Survey implements Node {
   
   """
   isDisabled: Boolean!
+  isSpatial: Boolean
   isTemplate: Boolean
 
   """
@@ -10235,6 +10592,75 @@ input SurveyCondition {
 
   """Checks for equality with the object’s `projectId` field."""
   projectId: Int
+}
+
+type SurveyConsentDocument implements Node {
+  createdAt: Datetime!
+
+  """
+  Reads a single `FormElement` that is related to this `SurveyConsentDocument`.
+  """
+  formElement: FormElement
+  formElementId: Int!
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  url: String!
+  version: Int!
+}
+
+"""
+A condition to be used against `SurveyConsentDocument` object types. All fields
+are tested for equality and combined with a logical ‘and.’
+"""
+input SurveyConsentDocumentCondition {
+  """Checks for equality with the object’s `formElementId` field."""
+  formElementId: Int
+
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+}
+
+"""A connection to a list of `SurveyConsentDocument` values."""
+type SurveyConsentDocumentsConnection {
+  """
+  A list of edges which contains the `SurveyConsentDocument` and cursor to aid in pagination.
+  """
+  edges: [SurveyConsentDocumentsEdge!]!
+
+  """A list of `SurveyConsentDocument` objects."""
+  nodes: [SurveyConsentDocument!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `SurveyConsentDocument` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `SurveyConsentDocument` edge in the connection."""
+type SurveyConsentDocumentsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `SurveyConsentDocument` at the end of the edge."""
+  node: SurveyConsentDocument!
+}
+
+"""Methods to use when ordering `SurveyConsentDocument`."""
+enum SurveyConsentDocumentsOrderBy {
+  FORM_ELEMENT_ID_ASC
+  FORM_ELEMENT_ID_DESC
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
 }
 
 type SurveyInvite implements Node {
@@ -10420,6 +10846,7 @@ input SurveyPatch {
 
 type SurveyResponse implements Node {
   accountEmail: String
+  archived: Boolean!
 
   """
   Should be set by the client on submission and tracked by cookies or
@@ -10464,6 +10891,8 @@ type SurveyResponse implements Node {
   
   """
   isUnrecognizedUserAgent: Boolean!
+  lastUpdatedByEmail: String
+  lastUpdatedById: Int
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
@@ -10509,6 +10938,8 @@ input SurveyResponseCondition {
 Represents an update to a `SurveyResponse`. Fields that are set will be updated.
 """
 input SurveyResponsePatch {
+  archived: Boolean
+
   """JSON representation of responses, keyed by the form field export_id"""
   data: JSON
 
@@ -10516,6 +10947,8 @@ input SurveyResponsePatch {
   Users may save their responses for later editing before submission. After submission they can no longer edit them.
   """
   isDraft: Boolean
+  isPractice: Boolean
+  updatedAt: Datetime
 }
 
 """A connection to a list of `SurveyResponse` values."""
@@ -10880,6 +11313,32 @@ type ToggleForumPostingBanPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+"""All input for the `toggleResponsesPractice` mutation."""
+input ToggleResponsesPracticeInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  ids: [Int]
+  isPractice: Boolean
+}
+
+"""The output of our `toggleResponsesPractice` mutation."""
+type ToggleResponsesPracticePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  surveyResponses: [SurveyResponse!]
 }
 
 type Topic implements Node {

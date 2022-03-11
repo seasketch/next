@@ -1,7 +1,17 @@
-import { Style } from "mapbox-gl";
+import { Style as MapboxStyle } from "mapbox-gl";
 import { useEffect, useState } from "react";
+import { InteractivitySetting } from "./generated/graphql";
 
 const TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
+
+interface Style extends MapboxStyle {
+  metadata?: {
+    "seasketch:interactivity_settings"?: Pick<
+      InteractivitySetting,
+      "cursor" | "layers" | "longTemplate" | "shortTemplate" | "type"
+    >;
+  };
+}
 
 function useMapboxStyle(styleUrl?: string) {
   const [state, setState] = useState<{

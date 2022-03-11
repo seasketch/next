@@ -20,7 +20,7 @@ export default function DataSettings() {
   const { path } = useRouteMatch();
   const { slug } = useParams<{ slug: string }>();
   const { t } = useTranslation("admin");
-  const mapContext = useMapContext("data-settings");
+  const mapContext = useMapContext({ preferencesKey: "data-settings" });
   const { data, loading, error } = useProjectRegionQuery({
     variables: {
       slug,

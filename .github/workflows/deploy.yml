@@ -154,6 +154,7 @@ jobs:
           BUILD: ${{ needs.detect_changes.outputs.build_label }}
           COMMIT: ${{ needs.detect_changes.outputs.build_label }}
           UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           cdk deploy -e SeaSketchGraphQLServer
   deploy_client:

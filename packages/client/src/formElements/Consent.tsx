@@ -115,6 +115,7 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
                 clickedDoc: true,
                 docVersion: props.componentSettings!.documentVersion!,
                 presentation: props.componentSettings.presentation!,
+                docUrl: props.componentSettings!.documentUrl,
               };
               props.onChange(
                 newValue,

@@ -7,12 +7,12 @@ import BaseMapEditor from "./BasemapEditor";
 import TableOfContentsEditor from "./TableOfContentsEditor";
 
 interface LayerAdminSidebarProps {}
-type Segment = "Basemaps" | "Overlay Layers";
+type Segment = "Maps" | "Overlay Layers";
 
 export default function LayerAdminSidebar() {
   const [selectedTab, setSelectedTab, segments] = useSegmentState({
-    segments: ["Basemaps", "Overlay Layers"],
-    defaultValue: "Basemaps",
+    segments: ["Maps", "Overlay Layers"],
+    defaultValue: "Maps",
     storageKey: "data-admin-tabs",
   });
   // const [selectedTab, setSelectedTab] = useState<Segment>("Basemaps");
@@ -31,7 +31,7 @@ export default function LayerAdminSidebar() {
         <div className={selectedTab === "Overlay Layers" ? "block" : "hidden"}>
           <TableOfContentsEditor />
         </div>
-        <div className={selectedTab === "Basemaps" ? "block" : "hidden"}>
+        <div className={selectedTab === "Maps" ? "block" : "hidden"}>
           <BaseMapEditor />
         </div>
       </div>

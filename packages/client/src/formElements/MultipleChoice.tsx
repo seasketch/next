@@ -1,10 +1,15 @@
 import { CheckIcon } from "@heroicons/react/outline";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import EditableResponseCell, {
+  CellEditorComponent,
+} from "../admin/surveys/EditableResponseCell";
+import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
+import Badge from "../components/Badge";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import { ChoiceAdminValueInput } from "./ComboBox";
+import { ChoiceAdminValueInput, SingleSelectCellEditor } from "./ComboBox";
 import {
   FormElementBody,
   FormElementComponent,
@@ -176,5 +181,32 @@ MultipleChoice.icon = () => (
 );
 
 MultipleChoice.adminValueInput = ChoiceAdminValueInput;
+
+MultipleChoice.ResponseGridCell = function ({
+  value,
+  componentSettings,
+  updateValue,
+  elementId,
+}) {
+  return (
+    <EditableResponseCell
+      elementId={elementId}
+      value={value}
+      updateValue={updateValue}
+      editor={SingleSelectCellEditor}
+      componentSettings={componentSettings}
+    >
+      <div className="space-x-1">
+        {(componentSettings.options || [])
+          .filter((o) => (value || []).indexOf(o.value || o.label) !== -1)
+          .map((option) => (
+            <Badge key={option.value || option.label} variant="green">
+              {option.label}
+            </Badge>
+          ))}
+      </div>
+    </EditableResponseCell>
+  );
+};
 
 export default MultipleChoice;

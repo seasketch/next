@@ -197,6 +197,30 @@ export type ApproveParticipantPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `archiveResponses` mutation. */
+export type ArchiveResponsesInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  makeArchived?: Maybe<Scalars['Boolean']>;
+};
+
+/** The output of our `archiveResponses` mutation. */
+export type ArchiveResponsesPayload = {
+  __typename?: 'ArchiveResponsesPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  surveyResponses?: Maybe<Array<SurveyResponse>>;
+};
+
 export type Basemap = Node & {
   __typename?: 'Basemap';
   /** Reads a single `Acl` that is related to this `Basemap`. */
@@ -235,6 +259,9 @@ export type Basemap = Node & {
   projectId?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `ProjectsSharedBasemap`. */
   projectsSharedBasemapsConnection: ProjectsSharedBasemapsConnection;
+  /** Reads and enables pagination through a set of `FormElement`. */
+  relatedFormElements?: Maybe<Array<FormElement>>;
+  surveysOnly: Scalars['Boolean'];
   terrainExaggeration: Scalars['BigFloat'];
   terrainMaxZoom: Scalars['Int'];
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
@@ -278,6 +305,12 @@ export type BasemapProjectsSharedBasemapsConnectionArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
+
+export type BasemapRelatedFormElementsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
 /** A condition to be used against `Basemap` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type BasemapCondition = {
   /** Checks for equality with the object’s `id` field. */
@@ -313,6 +346,7 @@ export type BasemapInput = {
    * superusers can create Shared Basemaps.
    */
   projectId?: Maybe<Scalars['Int']>;
+  surveysOnly?: Maybe<Scalars['Boolean']>;
   terrainExaggeration?: Maybe<Scalars['BigFloat']>;
   terrainMaxZoom?: Maybe<Scalars['Int']>;
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
@@ -363,6 +397,7 @@ export type BasemapPatch = {
    * superusers can create Shared Basemaps.
    */
   projectId?: Maybe<Scalars['Int']>;
+  surveysOnly?: Maybe<Scalars['Boolean']>;
   terrainExaggeration?: Maybe<Scalars['BigFloat']>;
   terrainMaxZoom?: Maybe<Scalars['Int']>;
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
@@ -565,6 +600,38 @@ export type ConfirmProjectInviteWithVerifiedEmailPayload = {
   integer?: Maybe<Scalars['Int']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `copyAppearance` mutation. */
+export type CopyAppearanceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  copyFromId?: Maybe<Scalars['Int']>;
+  formElementId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `copyAppearance` mutation. */
+export type CopyAppearancePayload = {
+  __typename?: 'CopyAppearancePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formElement?: Maybe<FormElement>;
+  /** An edge for our `FormElement`. May be used by Relay 1. */
+  formElementEdge?: Maybe<FormElementsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `copyAppearance` mutation. */
+export type CopyAppearancePayloadFormElementEdgeArgs = {
+  orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the create `Basemap` mutation. */
@@ -3521,6 +3588,7 @@ export type FormElement = Node & {
   body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings: Scalars['JSON'];
+  createdAt: Scalars['Datetime'];
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
@@ -3541,6 +3609,22 @@ export type FormElement = Node & {
   jumpToId?: Maybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
   layout?: Maybe<FormElementLayout>;
+  /** IDs for basemaps that should be included in the map view if a map layout is selected */
+  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * If using a map-based layout, can be used to set the default starting point of the map
+   *
+   * See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+   * ```json
+   * {
+   *   "center": [-73.5804, 45.53483],
+   *   "pitch": 60,
+   *   "bearing": -60,
+   *   "zoom": 10
+   * }
+   * ```
+   */
+  mapCameraOptions?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -3562,6 +3646,8 @@ export type FormElement = Node & {
    * FormElement.shouldDisplaySubordinateElement to control visibility.
    */
   subordinateTo?: Maybe<Scalars['Int']>;
+  /** Reads and enables pagination through a set of `SurveyConsentDocument`. */
+  surveyConsentDocumentsConnection: SurveyConsentDocumentsConnection;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
@@ -3572,6 +3658,26 @@ export type FormElement = Node & {
   typeId: Scalars['String'];
   unsplashAuthorName?: Maybe<Scalars['String']>;
   unsplashAuthorUrl?: Maybe<Scalars['String']>;
+};
+
+
+/**
+ * *FormElements* represent input fields or read-only content in a form. Records contain fields to support
+ * generic functionality like body, position, and isRequired. They
+ * also have a JSON `componentSettings` field that can have custom data to support
+ * a particular input type, indicated by the `type` field.
+ *
+ * Project administrators have full control over managing form elements through
+ * graphile-generated CRUD mutations.
+ */
+export type FormElementSurveyConsentDocumentsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SurveyConsentDocumentCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SurveyConsentDocumentsOrderBy>>;
 };
 
 /** An input for mutations affecting `FormElement` */
@@ -3592,6 +3698,7 @@ export type FormElementInput = {
   body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
@@ -3611,6 +3718,22 @@ export type FormElementInput = {
   jumpToId?: Maybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
   layout?: Maybe<FormElementLayout>;
+  /** IDs for basemaps that should be included in the map view if a map layout is selected */
+  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * If using a map-based layout, can be used to set the default starting point of the map
+   *
+   * See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+   * ```json
+   * {
+   *   "center": [-73.5804, 45.53483],
+   *   "pitch": 60,
+   *   "bearing": -60,
+   *   "zoom": 10
+   * }
+   * ```
+   */
+  mapCameraOptions?: Maybe<Scalars['JSON']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
@@ -3665,6 +3788,7 @@ export type FormElementPatch = {
   body?: Maybe<Scalars['JSON']>;
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
@@ -3684,6 +3808,22 @@ export type FormElementPatch = {
   jumpToId?: Maybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
   layout?: Maybe<FormElementLayout>;
+  /** IDs for basemaps that should be included in the map view if a map layout is selected */
+  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * If using a map-based layout, can be used to set the default starting point of the map
+   *
+   * See https://docs.mapbox.com/mapbox-gl-js/api/properties/#cameraoptions
+   * ```json
+   * {
+   *   "center": [-73.5804, 45.53483],
+   *   "pitch": 60,
+   *   "bearing": -60,
+   *   "zoom": 10
+   * }
+   * ```
+   */
+  mapCameraOptions?: Maybe<Scalars['JSON']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
@@ -3717,6 +3857,7 @@ export enum FormElementTextVariant {
 /** Identifies the type of element in a form, including metadata about that element type. */
 export type FormElementType = Node & {
   __typename?: 'FormElementType';
+  allowAdminUpdates: Scalars['Boolean'];
   allowedLayouts?: Maybe<Array<Maybe<FormElementLayout>>>;
   componentName: Scalars['String'];
   isHidden: Scalars['Boolean'];
@@ -3729,6 +3870,12 @@ export type FormElementType = Node & {
   isRequiredForSurveys: Scalars['Boolean'];
   /** These elements can only be added to a form once. */
   isSingleUseOnly: Scalars['Boolean'];
+  /**
+   * Indicates if the element type is a spatial data input. Components that
+   * implement these types are expected to render their own map (in contrast with
+   * elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which
+   * expect the SurveyApp component to render a map for them.
+   */
   isSpatial: Scalars['Boolean'];
   /** If true, the element type should only be added to forms related to a survey. */
   isSurveysOnly: Scalars['Boolean'];
@@ -3782,6 +3929,8 @@ export enum FormElementsOrderBy {
   FormIdDesc = 'FORM_ID_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
+  MapBasemapsAsc = 'MAP_BASEMAPS_ASC',
+  MapBasemapsDesc = 'MAP_BASEMAPS_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
@@ -4735,6 +4884,62 @@ export type MakeResponseDraftPayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
 
+/** All input for the `makeResponsesNotPractice` mutation. */
+export type MakeResponsesNotPracticeInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `makeResponsesNotPractice` mutation. */
+export type MakeResponsesNotPracticePayload = {
+  __typename?: 'MakeResponsesNotPracticePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  surveyResponses?: Maybe<Array<SurveyResponse>>;
+};
+
+/** All input for the `makeResponsesPractice` mutation. */
+export type MakeResponsesPracticeInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `makeResponsesPractice` mutation. */
+export type MakeResponsesPracticePayload = {
+  __typename?: 'MakeResponsesPracticePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `Survey` that is related to this `SurveyResponse`. */
+  survey?: Maybe<Survey>;
+  surveyResponse?: Maybe<SurveyResponse>;
+  /** An edge for our `SurveyResponse`. May be used by Relay 1. */
+  surveyResponseEdge?: Maybe<SurveyResponsesEdge>;
+};
+
+
+/** The output of our `makeResponsesPractice` mutation. */
+export type MakeResponsesPracticePayloadSurveyResponseEdgeArgs = {
+  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+};
+
 /** All input for the `makeSketchClass` mutation. */
 export type MakeSketchClassInput = {
   /**
@@ -4822,6 +5027,30 @@ export type MarkTopicAsReadPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `modifySurveyAnswers` mutation. */
+export type ModifySurveyAnswersInput = {
+  answers?: Maybe<Scalars['JSON']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  responseIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `modifySurveyAnswers` mutation. */
+export type ModifySurveyAnswersPayload = {
+  __typename?: 'ModifySurveyAnswersPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  surveyResponses?: Maybe<Array<SurveyResponse>>;
+};
+
 /** The root mutation type which contains root level fields which mutate data. */
 export type Mutation = {
   __typename?: 'Mutation';
@@ -4834,6 +5063,7 @@ export type Mutation = {
   addValidChildSketchClass?: Maybe<AddValidChildSketchClassPayload>;
   /** For invite_only projects. Approve access request by a user. Must be an administrator of the project. */
   approveParticipant?: Maybe<ApproveParticipantPayload>;
+  archiveResponses?: Maybe<ArchiveResponsesPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
   confirmOnboarded?: Maybe<ConfirmOnboardedPayload>;
@@ -4866,6 +5096,12 @@ export type Mutation = {
    * wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
    */
   confirmProjectInviteWithVerifiedEmail?: Maybe<ConfirmProjectInviteWithVerifiedEmailPayload>;
+  /**
+   * Copies appearance settings like layout and background_image from one form
+   * element to another. Useful when initializing custom appearance on an element
+   * from the defaults set by a previous question.
+   */
+  copyAppearance?: Maybe<CopyAppearancePayload>;
   /** Creates a single `Basemap`. */
   createBasemap?: Maybe<CreateBasemapPayload>;
   /** Creates a single `CommunityGuideline`. */
@@ -5084,6 +5320,8 @@ export type Mutation = {
    * resubmitted by the respondant.
    */
   makeResponseDraft?: Maybe<MakeResponseDraftPayload>;
+  makeResponsesNotPractice?: Maybe<MakeResponsesNotPracticePayload>;
+  makeResponsesPractice?: Maybe<MakeResponsesPracticePayload>;
   makeSketchClass?: Maybe<MakeSketchClassPayload>;
   makeSurvey?: Maybe<MakeSurveyPayload>;
   /**
@@ -5092,6 +5330,7 @@ export type Mutation = {
    * and whenever new posts are shown.
    */
   markTopicAsRead?: Maybe<MarkTopicAsReadPayload>;
+  modifySurveyAnswers?: Maybe<ModifySurveyAnswersPayload>;
   /**
    * Copies all table of contents items, related layers, sources, and access
    * control lists to create a new table of contents that will be displayed to project users.
@@ -5159,6 +5398,7 @@ export type Mutation = {
   toggleAdminAccess?: Maybe<ToggleAdminAccessPayload>;
   /** Ban a user from posting in the discussion forum */
   toggleForumPostingBan?: Maybe<ToggleForumPostingBanPayload>;
+  toggleResponsesPractice?: Maybe<ToggleResponsesPracticePayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAcl?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
@@ -5334,6 +5574,12 @@ export type MutationApproveParticipantArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationArchiveResponsesArgs = {
+  input: ArchiveResponsesInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationClearFormElementStyleArgs = {
   input: ClearFormElementStyleInput;
 };
@@ -5360,6 +5606,12 @@ export type MutationConfirmProjectInviteWithSurveyTokenArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationConfirmProjectInviteWithVerifiedEmailArgs = {
   input: ConfirmProjectInviteWithVerifiedEmailInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCopyAppearanceArgs = {
+  input: CopyAppearanceInput;
 };
 
 
@@ -5885,6 +6137,18 @@ export type MutationMakeResponseDraftArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationMakeResponsesNotPracticeArgs = {
+  input: MakeResponsesNotPracticeInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationMakeResponsesPracticeArgs = {
+  input: MakeResponsesPracticeInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationMakeSketchClassArgs = {
   input: MakeSketchClassInput;
 };
@@ -5899,6 +6163,12 @@ export type MutationMakeSurveyArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMarkTopicAsReadArgs = {
   input: MarkTopicAsReadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationModifySurveyAnswersArgs = {
+  input: ModifySurveyAnswersInput;
 };
 
 
@@ -6016,6 +6286,12 @@ export type MutationToggleAdminAccessArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationToggleForumPostingBanArgs = {
   input: ToggleForumPostingBanInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationToggleResponsesPracticeArgs = {
+  input: ToggleResponsesPracticeInput;
 };
 
 
@@ -6753,6 +7029,8 @@ export type Project = Node & {
    * displayed at 48x48 pixels and must be a public url.
    */
   logoUrl?: Maybe<Scalars['String']>;
+  mapboxPublicKey?: Maybe<Scalars['String']>;
+  mapboxSecretKey?: Maybe<Scalars['String']>;
   /** List of all folders created by this user. */
   myFolders?: Maybe<Array<SketchFolder>>;
   /** A list of all sketches for this project and the current user session */
@@ -6806,6 +7084,8 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites: Array<Sprite>;
   supportEmail: Scalars['String'];
+  /** Reads and enables pagination through a set of `Basemap`. */
+  surveyBasemaps?: Maybe<Array<Basemap>>;
   /** Reads and enables pagination through a set of `Survey`. */
   surveys: Array<Survey>;
   /** Public layer list. Cannot be edited directly. */
@@ -7013,6 +7293,16 @@ export type ProjectSpritesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SpritesOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectSurveyBasemapsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -7332,6 +7622,8 @@ export type ProjectPatch = {
    * displayed at 48x48 pixels and must be a public url.
    */
   logoUrl?: Maybe<Scalars['Upload']>;
+  mapboxPublicKey?: Maybe<Scalars['String']>;
+  mapboxSecretKey?: Maybe<Scalars['String']>;
   name?: Maybe<Scalars['String']>;
   region?: Maybe<Scalars['GeoJSON']>;
 };
@@ -7607,6 +7899,12 @@ export type Query = Node & {
   survey?: Maybe<Survey>;
   /** Reads a single `Survey` using its globally unique `ID`. */
   surveyByNodeId?: Maybe<Survey>;
+  surveyConsentDocument?: Maybe<SurveyConsentDocument>;
+  surveyConsentDocumentByFormElementIdAndVersion?: Maybe<SurveyConsentDocument>;
+  /** Reads a single `SurveyConsentDocument` using its globally unique `ID`. */
+  surveyConsentDocumentByNodeId?: Maybe<SurveyConsentDocument>;
+  /** Reads and enables pagination through a set of `SurveyConsentDocument`. */
+  surveyConsentDocumentsConnection?: Maybe<SurveyConsentDocumentsConnection>;
   surveyInvite?: Maybe<SurveyInvite>;
   surveyInviteByEmail?: Maybe<SurveyInvite>;
   surveyInviteByEmailAndSurveyId?: Maybe<SurveyInvite>;
@@ -8162,6 +8460,37 @@ export type QuerySurveyArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySurveyConsentDocumentArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySurveyConsentDocumentByFormElementIdAndVersionArgs = {
+  formElementId: Scalars['Int'];
+  version: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySurveyConsentDocumentByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySurveyConsentDocumentsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SurveyConsentDocumentCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SurveyConsentDocumentsOrderBy>>;
 };
 
 
@@ -9109,6 +9438,7 @@ export type Survey = Node & {
   __typename?: 'Survey';
   /** PUBLIC or INVITE_ONLY */
   accessType: SurveyAccessType;
+  archivedResponseCount?: Maybe<Scalars['Int']>;
   /** Reads a single `Form` that is related to this `Survey`. */
   form?: Maybe<Form>;
   /**
@@ -9126,6 +9456,7 @@ export type Survey = Node & {
    * be paused.
    */
   isDisabled: Scalars['Boolean'];
+  isSpatial?: Maybe<Scalars['Boolean']>;
   isTemplate?: Maybe<Scalars['Boolean']>;
   /**
    * If set, there can only be one response with matching contact information. The
@@ -9212,6 +9543,63 @@ export type SurveyCondition = {
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
 };
+
+export type SurveyConsentDocument = Node & {
+  __typename?: 'SurveyConsentDocument';
+  createdAt: Scalars['Datetime'];
+  /** Reads a single `FormElement` that is related to this `SurveyConsentDocument`. */
+  formElement?: Maybe<FormElement>;
+  formElementId: Scalars['Int'];
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  url: Scalars['String'];
+  version: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `SurveyConsentDocument` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type SurveyConsentDocumentCondition = {
+  /** Checks for equality with the object’s `formElementId` field. */
+  formElementId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `SurveyConsentDocument` values. */
+export type SurveyConsentDocumentsConnection = {
+  __typename?: 'SurveyConsentDocumentsConnection';
+  /** A list of edges which contains the `SurveyConsentDocument` and cursor to aid in pagination. */
+  edges: Array<SurveyConsentDocumentsEdge>;
+  /** A list of `SurveyConsentDocument` objects. */
+  nodes: Array<SurveyConsentDocument>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `SurveyConsentDocument` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `SurveyConsentDocument` edge in the connection. */
+export type SurveyConsentDocumentsEdge = {
+  __typename?: 'SurveyConsentDocumentsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `SurveyConsentDocument` at the end of the edge. */
+  node: SurveyConsentDocument;
+};
+
+/** Methods to use when ordering `SurveyConsentDocument`. */
+export enum SurveyConsentDocumentsOrderBy {
+  FormElementIdAsc = 'FORM_ELEMENT_ID_ASC',
+  FormElementIdDesc = 'FORM_ELEMENT_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
 
 export type SurveyInvite = Node & {
   __typename?: 'SurveyInvite';
@@ -9370,6 +9758,7 @@ export type SurveyPatch = {
 export type SurveyResponse = Node & {
   __typename?: 'SurveyResponse';
   accountEmail?: Maybe<Scalars['String']>;
+  archived: Scalars['Boolean'];
   /**
    * Should be set by the client on submission and tracked by cookies or
    * localStorage. Surveys that permit only a single entry enable users to bypass
@@ -9397,6 +9786,8 @@ export type SurveyResponse = Node & {
    * scripting but does not necessarily imply malicious intent.
    */
   isUnrecognizedUserAgent: Scalars['Boolean'];
+  lastUpdatedByEmail?: Maybe<Scalars['String']>;
+  lastUpdatedById?: Maybe<Scalars['Int']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -9431,10 +9822,13 @@ export type SurveyResponseCondition = {
 
 /** Represents an update to a `SurveyResponse`. Fields that are set will be updated. */
 export type SurveyResponsePatch = {
+  archived?: Maybe<Scalars['Boolean']>;
   /** JSON representation of responses, keyed by the form field export_id */
   data?: Maybe<Scalars['JSON']>;
   /** Users may save their responses for later editing before submission. After submission they can no longer edit them. */
   isDraft?: Maybe<Scalars['Boolean']>;
+  isPractice?: Maybe<Scalars['Boolean']>;
+  updatedAt?: Maybe<Scalars['Datetime']>;
 };
 
 /** A connection to a list of `SurveyResponse` values. */
@@ -9717,6 +10111,30 @@ export type ToggleForumPostingBanPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `toggleResponsesPractice` mutation. */
+export type ToggleResponsesPracticeInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  isPractice?: Maybe<Scalars['Boolean']>;
+};
+
+/** The output of our `toggleResponsesPractice` mutation. */
+export type ToggleResponsesPracticePayload = {
+  __typename?: 'ToggleResponsesPracticePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  surveyResponses?: Maybe<Array<SurveyResponse>>;
 };
 
 export type Topic = Node & {
@@ -11464,7 +11882,7 @@ export type NewTerrainFragment = (
 
 export type NewBasemapFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'projectId' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'nodeId' | 'terrainExaggeration' | 'terrainOptional' | 'url' | 'type' | 'tileSize' | 'thumbnail' | 'terrainUrl' | 'terrainTileSize'>
+  & Pick<Basemap, 'id' | 'projectId' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'terrainExaggeration' | 'terrainOptional' | 'url' | 'type' | 'tileSize' | 'thumbnail' | 'terrainUrl' | 'terrainTileSize' | 'surveysOnly'>
 );
 
 export type ProjectBucketSettingQueryVariables = Exact<{
@@ -11623,6 +12041,35 @@ export type UpdateComponentSettingsFragment = (
 export type UpdateBodyFragment = (
   { __typename?: 'FormElement' }
   & Pick<FormElement, 'body'>
+);
+
+export type MapboxApiKeysQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MapboxApiKeysQuery = (
+  { __typename?: 'Query' }
+  & { currentProject?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'mapboxPublicKey' | 'mapboxSecretKey'>
+  )> }
+);
+
+export type UpdateKeysMutationVariables = Exact<{
+  id: Scalars['Int'];
+  public?: Maybe<Scalars['String']>;
+  secret?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateKeysMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
+    )> }
+  )> }
 );
 
 export type GetAclQueryVariables = Exact<{
@@ -11925,7 +12372,7 @@ export type RequestInviteOnlyProjectAccessMutation = (
 
 export type BasemapDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
+  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -11945,7 +12392,10 @@ export type GetBasemapsQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { basemaps?: Maybe<Array<(
+    & { surveyBasemaps?: Maybe<Array<(
+      { __typename?: 'Basemap' }
+      & BasemapDetailsFragment
+    )>>, basemaps?: Maybe<Array<(
       { __typename?: 'Basemap' }
       & BasemapDetailsFragment
     )>> }
@@ -11959,6 +12409,7 @@ export type CreateBasemapMutationVariables = Exact<{
   tileSize?: Maybe<Scalars['Int']>;
   type: BasemapType;
   url: Scalars['String'];
+  surveysOnly?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -11968,14 +12419,7 @@ export type CreateBasemapMutation = (
     { __typename?: 'CreateBasemapPayload' }
     & { basemap?: Maybe<(
       { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
-      & { interactivitySettings?: Maybe<(
-        { __typename?: 'InteractivitySetting' }
-        & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-      )>, optionalBasemapLayers: Array<(
-        { __typename?: 'OptionalBasemapLayer' }
-        & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
-      )> }
+      & BasemapDetailsFragment
     )> }
   )> }
 );
@@ -12296,6 +12740,17 @@ export type UpdateInteractivitySettingsLayersMutation = (
       { __typename?: 'InteractivitySetting' }
       & Pick<InteractivitySetting, 'layers' | 'id'>
     )> }
+  )> }
+);
+
+export type MapboxKeysQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MapboxKeysQuery = (
+  { __typename?: 'Query' }
+  & { currentProject?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
   )> }
 );
 
@@ -12969,6 +13424,7 @@ export type SurveyByIdQuery = (
   { __typename?: 'Query' }
   & { survey?: Maybe<(
     { __typename?: 'Survey' }
+    & Pick<Survey, 'isSpatial'>
     & SurveyListDetailsFragment
   )> }
 );
@@ -12980,7 +13436,7 @@ export type AddFormElementTypeDetailsFragment = (
 
 export type FormElementDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
@@ -13342,7 +13798,7 @@ export type ClearFormElementStyleMutation = (
     { __typename?: 'ClearFormElementStylePayload' }
     & { formElement?: Maybe<(
       { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'backgroundColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'textVariant' | 'secondaryColor'>
+      & Pick<FormElement, 'id' | 'backgroundColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'textVariant' | 'secondaryColor' | 'layout'>
     )> }
   )> }
 );
@@ -13490,6 +13946,23 @@ export type UploadConsentDocMutation = (
   ) }
 );
 
+export type SurveyResponseFragment = (
+  { __typename?: 'SurveyResponse' }
+  & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent' | 'archived' | 'lastUpdatedByEmail'>
+);
+
+export type FormElementExtendedDetailsFragment = (
+  { __typename?: 'FormElement' }
+  & { surveyConsentDocumentsConnection: (
+    { __typename?: 'SurveyConsentDocumentsConnection' }
+    & { nodes: Array<(
+      { __typename?: 'SurveyConsentDocument' }
+      & Pick<SurveyConsentDocument, 'url' | 'version'>
+    )> }
+  ) }
+  & FormElementDetailsFragment
+);
+
 export type SurveyResponsesQueryVariables = Exact<{
   surveyId: Scalars['Int'];
 }>;
@@ -13499,12 +13972,12 @@ export type SurveyResponsesQuery = (
   { __typename?: 'Query' }
   & { survey?: Maybe<(
     { __typename?: 'Survey' }
-    & Pick<Survey, 'id' | 'practiceResponseCount' | 'submittedResponseCount'>
+    & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
     & { form?: Maybe<(
       { __typename?: 'Form' }
       & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
-        & FormElementDetailsFragment
+        & FormElementExtendedDetailsFragment
       )>>, logicRules?: Maybe<Array<(
         { __typename?: 'FormLogicRule' }
         & SurveyAppRuleFragment
@@ -13513,7 +13986,7 @@ export type SurveyResponsesQuery = (
       { __typename?: 'SurveyResponsesConnection' }
       & { nodes: Array<(
         { __typename?: 'SurveyResponse' }
-        & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent'>
+        & SurveyResponseFragment
       )> }
     ) }
   )> }
@@ -13539,6 +14012,137 @@ export type SurveyMapDetailsQuery = (
   )> }
 );
 
+export type ToggleResponsesPracticeMutationVariables = Exact<{
+  ids?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+  isPractice?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type ToggleResponsesPracticeMutation = (
+  { __typename?: 'Mutation' }
+  & { toggleResponsesPractice?: Maybe<(
+    { __typename?: 'ToggleResponsesPracticePayload' }
+    & { surveyResponses?: Maybe<Array<(
+      { __typename?: 'SurveyResponse' }
+      & Pick<SurveyResponse, 'id' | 'isPractice' | 'archived' | 'lastUpdatedByEmail'>
+      & { survey?: Maybe<(
+        { __typename?: 'Survey' }
+        & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
+      )> }
+    )>> }
+  )> }
+);
+
+export type ArchiveResponsesMutationVariables = Exact<{
+  ids?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+  makeArchived?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type ArchiveResponsesMutation = (
+  { __typename?: 'Mutation' }
+  & { archiveResponses?: Maybe<(
+    { __typename?: 'ArchiveResponsesPayload' }
+    & { surveyResponses?: Maybe<Array<(
+      { __typename?: 'SurveyResponse' }
+      & Pick<SurveyResponse, 'id' | 'isPractice' | 'archived' | 'lastUpdatedByEmail'>
+      & { survey?: Maybe<(
+        { __typename?: 'Survey' }
+        & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
+      )> }
+    )>> }
+  )> }
+);
+
+export type ModifyAnswersMutationVariables = Exact<{
+  responseIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  answers?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type ModifyAnswersMutation = (
+  { __typename?: 'Mutation' }
+  & { modifySurveyAnswers?: Maybe<(
+    { __typename?: 'ModifySurveyAnswersPayload' }
+    & { surveyResponses?: Maybe<Array<(
+      { __typename?: 'SurveyResponse' }
+      & Pick<SurveyResponse, 'id' | 'data' | 'updatedAt' | 'lastUpdatedByEmail'>
+    )>> }
+  )> }
+);
+
+export type CopyAppearanceMutationVariables = Exact<{
+  id: Scalars['Int'];
+  copyFrom: Scalars['Int'];
+}>;
+
+
+export type CopyAppearanceMutation = (
+  { __typename?: 'Mutation' }
+  & { copyAppearance?: Maybe<(
+    { __typename?: 'CopyAppearancePayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'backgroundImage' | 'backgroundColor' | 'secondaryColor' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundHeight' | 'backgroundWidth' | 'layout' | 'textVariant'>
+    )> }
+  )> }
+);
+
+export type UpdateFormElementBasemapsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+}>;
+
+
+export type UpdateFormElementBasemapsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'mapBasemaps'>
+    )> }
+  )> }
+);
+
+export type UpdateFormElementMapCameraMutationVariables = Exact<{
+  id: Scalars['Int'];
+  mapCameraOptions?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateFormElementMapCameraMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'mapCameraOptions'>
+    )> }
+  )> }
+);
+
+export type AllBasemapsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AllBasemapsQuery = (
+  { __typename?: 'Query' }
+  & { currentProject?: Maybe<(
+    { __typename?: 'Project' }
+    & { basemaps?: Maybe<Array<(
+      { __typename?: 'Basemap' }
+      & BasemapDetailsFragment
+    )>>, surveyBasemaps?: Maybe<Array<(
+      { __typename?: 'Basemap' }
+      & { relatedFormElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & Pick<FormElement, 'id'>
+      )>> }
+      & BasemapDetailsFragment
+    )>> }
+  )> }
+);
+
 export type SurveyAppRuleFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
@@ -13550,7 +14154,7 @@ export type SurveyAppRuleFragment = (
 
 export type SurveyAppFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
@@ -13632,8 +14236,11 @@ export type GetBasemapsAndRegionQuery = (
   { __typename?: 'Query' }
   & { currentProject?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id'>
+    & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
     & { basemaps?: Maybe<Array<(
+      { __typename?: 'Basemap' }
+      & BasemapDetailsFragment
+    )>>, surveyBasemaps?: Maybe<Array<(
       { __typename?: 'Basemap' }
       & BasemapDetailsFragment
     )>>, region: (
@@ -13670,6 +14277,8 @@ export type UpdateProjectSettingsMutationVariables = Exact<{
   logoUrl?: Maybe<Scalars['Upload']>;
   logoLink?: Maybe<Scalars['String']>;
   isFeatured?: Maybe<Scalars['Boolean']>;
+  mapboxPublicKey?: Maybe<Scalars['String']>;
+  mapboxSecretKey?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -13680,7 +14289,7 @@ export type UpdateProjectSettingsMutation = (
     & Pick<UpdateProjectPayload, 'clientMutationId'>
     & { project?: Maybe<(
       { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'logoLink'>
+      & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'logoLink' | 'mapboxPublicKey' | 'mapboxSecretKey' | 'isFeatured'>
     )> }
   )> }
 );
@@ -14176,7 +14785,6 @@ export const NewBasemapFragmentDoc = gql`
   description
   labelsLayerId
   name
-  nodeId
   terrainExaggeration
   terrainOptional
   url
@@ -14185,6 +14793,7 @@ export const NewBasemapFragmentDoc = gql`
   thumbnail
   terrainUrl
   terrainTileSize
+  surveysOnly
 }
     `;
 export const NewQueryParametersFragmentDoc = gql`
@@ -14389,6 +14998,7 @@ export const BasemapDetailsFragmentDoc = gql`
   tileSize
   type
   url
+  surveysOnly
 }
     `;
 export const SurveyListDetailsFragmentDoc = gql`
@@ -14451,6 +15061,8 @@ export const FormElementDetailsFragmentDoc = gql`
   backgroundWidth
   backgroundHeight
   subordinateTo
+  mapBasemaps
+  mapCameraOptions
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
 export const LogicRuleDetailsFragmentDoc = gql`
@@ -14501,6 +15113,35 @@ export const FormElementFullDetailsFragmentDoc = gql`
 }
     ${FormElementDetailsFragmentDoc}
 ${SketchClassDetailsFragmentDoc}`;
+export const SurveyResponseFragmentDoc = gql`
+    fragment SurveyResponse on SurveyResponse {
+  id
+  surveyId
+  bypassedDuplicateSubmissionControl
+  updatedAt
+  accountEmail
+  userId
+  createdAt
+  data
+  isDuplicateEntry
+  isDuplicateIp
+  isPractice
+  isUnrecognizedUserAgent
+  archived
+  lastUpdatedByEmail
+}
+    `;
+export const FormElementExtendedDetailsFragmentDoc = gql`
+    fragment FormElementExtendedDetails on FormElement {
+  ...FormElementDetails
+  surveyConsentDocumentsConnection {
+    nodes {
+      url
+      version
+    }
+  }
+}
+    ${FormElementDetailsFragmentDoc}`;
 export const SurveyAppRuleFragmentDoc = gql`
     fragment SurveyAppRule on FormLogicRule {
   booleanOperator
@@ -14554,6 +15195,8 @@ export const SurveyAppFormElementFragmentDoc = gql`
   backgroundHeight
   jumpToId
   subordinateTo
+  mapBasemaps
+  mapCameraOptions
 }
     ${SketchClassDetailsFragmentDoc}`;
 export const SurveyAppSurveyFragmentDoc = gql`
@@ -14738,6 +15381,82 @@ export function useUpdateProjectStorageBucketMutation(baseOptions?: Apollo.Mutat
 export type UpdateProjectStorageBucketMutationHookResult = ReturnType<typeof useUpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationResult = Apollo.MutationResult<UpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationOptions = Apollo.BaseMutationOptions<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>;
+export const MapboxApiKeysDocument = gql`
+    query MapboxAPIKeys {
+  currentProject {
+    mapboxPublicKey
+    mapboxSecretKey
+  }
+}
+    `;
+
+/**
+ * __useMapboxApiKeysQuery__
+ *
+ * To run a query within a React component, call `useMapboxApiKeysQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMapboxApiKeysQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMapboxApiKeysQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMapboxApiKeysQuery(baseOptions?: Apollo.QueryHookOptions<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>(MapboxApiKeysDocument, options);
+      }
+export function useMapboxApiKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>(MapboxApiKeysDocument, options);
+        }
+export type MapboxApiKeysQueryHookResult = ReturnType<typeof useMapboxApiKeysQuery>;
+export type MapboxApiKeysLazyQueryHookResult = ReturnType<typeof useMapboxApiKeysLazyQuery>;
+export type MapboxApiKeysQueryResult = Apollo.QueryResult<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>;
+export const UpdateKeysDocument = gql`
+    mutation updateKeys($id: Int!, $public: String, $secret: String) {
+  updateProject(
+    input: {id: $id, patch: {mapboxPublicKey: $public, mapboxSecretKey: $secret}}
+  ) {
+    project {
+      id
+      mapboxPublicKey
+      mapboxSecretKey
+    }
+  }
+}
+    `;
+export type UpdateKeysMutationFn = Apollo.MutationFunction<UpdateKeysMutation, UpdateKeysMutationVariables>;
+
+/**
+ * __useUpdateKeysMutation__
+ *
+ * To run a mutation, you first call `useUpdateKeysMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateKeysMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateKeysMutation, { data, loading, error }] = useUpdateKeysMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      public: // value for 'public'
+ *      secret: // value for 'secret'
+ *   },
+ * });
+ */
+export function useUpdateKeysMutation(baseOptions?: Apollo.MutationHookOptions<UpdateKeysMutation, UpdateKeysMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateKeysMutation, UpdateKeysMutationVariables>(UpdateKeysDocument, options);
+      }
+export type UpdateKeysMutationHookResult = ReturnType<typeof useUpdateKeysMutation>;
+export type UpdateKeysMutationResult = Apollo.MutationResult<UpdateKeysMutation>;
+export type UpdateKeysMutationOptions = Apollo.BaseMutationOptions<UpdateKeysMutation, UpdateKeysMutationVariables>;
 export const GetAclDocument = gql`
     query GetAcl($nodeId: ID!) {
   aclByNodeId(nodeId: $nodeId) {
@@ -15439,6 +16158,9 @@ export const GetBasemapsDocument = gql`
     query GetBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
     id
+    surveyBasemaps {
+      ...BasemapDetails
+    }
     basemaps {
       ...BasemapDetails
     }
@@ -15474,50 +16196,16 @@ export type GetBasemapsQueryHookResult = ReturnType<typeof useGetBasemapsQuery>;
 export type GetBasemapsLazyQueryHookResult = ReturnType<typeof useGetBasemapsLazyQuery>;
 export type GetBasemapsQueryResult = Apollo.QueryResult<GetBasemapsQuery, GetBasemapsQueryVariables>;
 export const CreateBasemapDocument = gql`
-    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!) {
+    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean) {
   createBasemap(
-    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url}}
+    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly}}
   ) {
     basemap {
-      id
-      attribution
-      interactivitySettings {
-        cursor
-        id
-        layers
-        longTemplate
-        shortTemplate
-        type
-      }
-      labelsLayerId
-      name
-      optionalBasemapLayers {
-        basemapId
-        id
-        defaultVisibility
-        description
-        options
-        groupType
-        layers
-        metadata
-        name
-      }
-      description
-      projectId
-      terrainExaggeration
-      terrainMaxZoom
-      terrainOptional
-      terrainTileSize
-      terrainUrl
-      terrainVisibilityDefault
-      thumbnail
-      tileSize
-      type
-      url
+      ...BasemapDetails
     }
   }
 }
-    `;
+    ${BasemapDetailsFragmentDoc}`;
 export type CreateBasemapMutationFn = Apollo.MutationFunction<CreateBasemapMutation, CreateBasemapMutationVariables>;
 
 /**
@@ -15539,6 +16227,7 @@ export type CreateBasemapMutationFn = Apollo.MutationFunction<CreateBasemapMutat
  *      tileSize: // value for 'tileSize'
  *      type: // value for 'type'
  *      url: // value for 'url'
+ *      surveysOnly: // value for 'surveysOnly'
  *   },
  * });
  */
@@ -16318,6 +17007,42 @@ export function useUpdateInteractivitySettingsLayersMutation(baseOptions?: Apoll
 export type UpdateInteractivitySettingsLayersMutationHookResult = ReturnType<typeof useUpdateInteractivitySettingsLayersMutation>;
 export type UpdateInteractivitySettingsLayersMutationResult = Apollo.MutationResult<UpdateInteractivitySettingsLayersMutation>;
 export type UpdateInteractivitySettingsLayersMutationOptions = Apollo.BaseMutationOptions<UpdateInteractivitySettingsLayersMutation, UpdateInteractivitySettingsLayersMutationVariables>;
+export const MapboxKeysDocument = gql`
+    query MapboxKeys {
+  currentProject {
+    id
+    mapboxPublicKey
+    mapboxSecretKey
+  }
+}
+    `;
+
+/**
+ * __useMapboxKeysQuery__
+ *
+ * To run a query within a React component, call `useMapboxKeysQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMapboxKeysQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMapboxKeysQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMapboxKeysQuery(baseOptions?: Apollo.QueryHookOptions<MapboxKeysQuery, MapboxKeysQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<MapboxKeysQuery, MapboxKeysQueryVariables>(MapboxKeysDocument, options);
+      }
+export function useMapboxKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MapboxKeysQuery, MapboxKeysQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<MapboxKeysQuery, MapboxKeysQueryVariables>(MapboxKeysDocument, options);
+        }
+export type MapboxKeysQueryHookResult = ReturnType<typeof useMapboxKeysQuery>;
+export type MapboxKeysLazyQueryHookResult = ReturnType<typeof useMapboxKeysLazyQuery>;
+export type MapboxKeysQueryResult = Apollo.QueryResult<MapboxKeysQuery, MapboxKeysQueryVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
@@ -17959,6 +18684,7 @@ export const SurveyByIdDocument = gql`
     query SurveyById($id: Int!) {
   survey(id: $id) {
     ...SurveyListDetails
+    isSpatial
   }
 }
     ${SurveyListDetailsFragmentDoc}`;
@@ -18686,6 +19412,7 @@ export const ClearFormElementStyleDocument = gql`
       unsplashAuthorUrl
       textVariant
       secondaryColor
+      layout
     }
   }
 }
@@ -19054,7 +19781,7 @@ export const SurveyResponsesDocument = gql`
   survey(id: $surveyId) {
     form {
       formElements {
-        ...FormElementDetails
+        ...FormElementExtendedDetails
       }
       logicRules {
         ...SurveyAppRule
@@ -19062,27 +19789,18 @@ export const SurveyResponsesDocument = gql`
     }
     id
     practiceResponseCount
+    archivedResponseCount
     submittedResponseCount
     surveyResponsesConnection {
       nodes {
-        id
-        surveyId
-        bypassedDuplicateSubmissionControl
-        updatedAt
-        accountEmail
-        userId
-        createdAt
-        data
-        isDuplicateEntry
-        isDuplicateIp
-        isPractice
-        isUnrecognizedUserAgent
+        ...SurveyResponse
       }
     }
   }
 }
-    ${FormElementDetailsFragmentDoc}
-${SurveyAppRuleFragmentDoc}`;
+    ${FormElementExtendedDetailsFragmentDoc}
+${SurveyAppRuleFragmentDoc}
+${SurveyResponseFragmentDoc}`;
 
 /**
  * __useSurveyResponsesQuery__
@@ -19151,6 +19869,299 @@ export function useSurveyMapDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookO
 export type SurveyMapDetailsQueryHookResult = ReturnType<typeof useSurveyMapDetailsQuery>;
 export type SurveyMapDetailsLazyQueryHookResult = ReturnType<typeof useSurveyMapDetailsLazyQuery>;
 export type SurveyMapDetailsQueryResult = Apollo.QueryResult<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>;
+export const ToggleResponsesPracticeDocument = gql`
+    mutation toggleResponsesPractice($ids: [Int], $isPractice: Boolean) {
+  toggleResponsesPractice(input: {ids: $ids, isPractice: $isPractice}) {
+    surveyResponses {
+      id
+      isPractice
+      archived
+      lastUpdatedByEmail
+      survey {
+        id
+        practiceResponseCount
+        archivedResponseCount
+        submittedResponseCount
+      }
+    }
+  }
+}
+    `;
+export type ToggleResponsesPracticeMutationFn = Apollo.MutationFunction<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>;
+
+/**
+ * __useToggleResponsesPracticeMutation__
+ *
+ * To run a mutation, you first call `useToggleResponsesPracticeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useToggleResponsesPracticeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [toggleResponsesPracticeMutation, { data, loading, error }] = useToggleResponsesPracticeMutation({
+ *   variables: {
+ *      ids: // value for 'ids'
+ *      isPractice: // value for 'isPractice'
+ *   },
+ * });
+ */
+export function useToggleResponsesPracticeMutation(baseOptions?: Apollo.MutationHookOptions<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>(ToggleResponsesPracticeDocument, options);
+      }
+export type ToggleResponsesPracticeMutationHookResult = ReturnType<typeof useToggleResponsesPracticeMutation>;
+export type ToggleResponsesPracticeMutationResult = Apollo.MutationResult<ToggleResponsesPracticeMutation>;
+export type ToggleResponsesPracticeMutationOptions = Apollo.BaseMutationOptions<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>;
+export const ArchiveResponsesDocument = gql`
+    mutation archiveResponses($ids: [Int], $makeArchived: Boolean) {
+  archiveResponses(input: {ids: $ids, makeArchived: $makeArchived}) {
+    surveyResponses {
+      id
+      isPractice
+      archived
+      lastUpdatedByEmail
+      survey {
+        id
+        practiceResponseCount
+        archivedResponseCount
+        submittedResponseCount
+      }
+    }
+  }
+}
+    `;
+export type ArchiveResponsesMutationFn = Apollo.MutationFunction<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>;
+
+/**
+ * __useArchiveResponsesMutation__
+ *
+ * To run a mutation, you first call `useArchiveResponsesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useArchiveResponsesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [archiveResponsesMutation, { data, loading, error }] = useArchiveResponsesMutation({
+ *   variables: {
+ *      ids: // value for 'ids'
+ *      makeArchived: // value for 'makeArchived'
+ *   },
+ * });
+ */
+export function useArchiveResponsesMutation(baseOptions?: Apollo.MutationHookOptions<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>(ArchiveResponsesDocument, options);
+      }
+export type ArchiveResponsesMutationHookResult = ReturnType<typeof useArchiveResponsesMutation>;
+export type ArchiveResponsesMutationResult = Apollo.MutationResult<ArchiveResponsesMutation>;
+export type ArchiveResponsesMutationOptions = Apollo.BaseMutationOptions<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>;
+export const ModifyAnswersDocument = gql`
+    mutation modifyAnswers($responseIds: [Int]!, $answers: JSON) {
+  modifySurveyAnswers(input: {responseIds: $responseIds, answers: $answers}) {
+    surveyResponses {
+      id
+      data
+      updatedAt
+      lastUpdatedByEmail
+    }
+  }
+}
+    `;
+export type ModifyAnswersMutationFn = Apollo.MutationFunction<ModifyAnswersMutation, ModifyAnswersMutationVariables>;
+
+/**
+ * __useModifyAnswersMutation__
+ *
+ * To run a mutation, you first call `useModifyAnswersMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useModifyAnswersMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [modifyAnswersMutation, { data, loading, error }] = useModifyAnswersMutation({
+ *   variables: {
+ *      responseIds: // value for 'responseIds'
+ *      answers: // value for 'answers'
+ *   },
+ * });
+ */
+export function useModifyAnswersMutation(baseOptions?: Apollo.MutationHookOptions<ModifyAnswersMutation, ModifyAnswersMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ModifyAnswersMutation, ModifyAnswersMutationVariables>(ModifyAnswersDocument, options);
+      }
+export type ModifyAnswersMutationHookResult = ReturnType<typeof useModifyAnswersMutation>;
+export type ModifyAnswersMutationResult = Apollo.MutationResult<ModifyAnswersMutation>;
+export type ModifyAnswersMutationOptions = Apollo.BaseMutationOptions<ModifyAnswersMutation, ModifyAnswersMutationVariables>;
+export const CopyAppearanceDocument = gql`
+    mutation copyAppearance($id: Int!, $copyFrom: Int!) {
+  copyAppearance(input: {formElementId: $id, copyFromId: $copyFrom}) {
+    formElement {
+      id
+      backgroundImage
+      backgroundColor
+      secondaryColor
+      backgroundPalette
+      unsplashAuthorName
+      unsplashAuthorUrl
+      backgroundHeight
+      backgroundWidth
+      layout
+      textVariant
+    }
+  }
+}
+    `;
+export type CopyAppearanceMutationFn = Apollo.MutationFunction<CopyAppearanceMutation, CopyAppearanceMutationVariables>;
+
+/**
+ * __useCopyAppearanceMutation__
+ *
+ * To run a mutation, you first call `useCopyAppearanceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCopyAppearanceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [copyAppearanceMutation, { data, loading, error }] = useCopyAppearanceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      copyFrom: // value for 'copyFrom'
+ *   },
+ * });
+ */
+export function useCopyAppearanceMutation(baseOptions?: Apollo.MutationHookOptions<CopyAppearanceMutation, CopyAppearanceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CopyAppearanceMutation, CopyAppearanceMutationVariables>(CopyAppearanceDocument, options);
+      }
+export type CopyAppearanceMutationHookResult = ReturnType<typeof useCopyAppearanceMutation>;
+export type CopyAppearanceMutationResult = Apollo.MutationResult<CopyAppearanceMutation>;
+export type CopyAppearanceMutationOptions = Apollo.BaseMutationOptions<CopyAppearanceMutation, CopyAppearanceMutationVariables>;
+export const UpdateFormElementBasemapsDocument = gql`
+    mutation updateFormElementBasemaps($id: Int!, $mapBasemaps: [Int]) {
+  updateFormElement(input: {id: $id, patch: {mapBasemaps: $mapBasemaps}}) {
+    formElement {
+      id
+      mapBasemaps
+    }
+  }
+}
+    `;
+export type UpdateFormElementBasemapsMutationFn = Apollo.MutationFunction<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>;
+
+/**
+ * __useUpdateFormElementBasemapsMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormElementBasemapsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormElementBasemapsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormElementBasemapsMutation, { data, loading, error }] = useUpdateFormElementBasemapsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      mapBasemaps: // value for 'mapBasemaps'
+ *   },
+ * });
+ */
+export function useUpdateFormElementBasemapsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>(UpdateFormElementBasemapsDocument, options);
+      }
+export type UpdateFormElementBasemapsMutationHookResult = ReturnType<typeof useUpdateFormElementBasemapsMutation>;
+export type UpdateFormElementBasemapsMutationResult = Apollo.MutationResult<UpdateFormElementBasemapsMutation>;
+export type UpdateFormElementBasemapsMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>;
+export const UpdateFormElementMapCameraDocument = gql`
+    mutation updateFormElementMapCamera($id: Int!, $mapCameraOptions: JSON) {
+  updateFormElement(
+    input: {id: $id, patch: {mapCameraOptions: $mapCameraOptions}}
+  ) {
+    formElement {
+      id
+      mapCameraOptions
+    }
+  }
+}
+    `;
+export type UpdateFormElementMapCameraMutationFn = Apollo.MutationFunction<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>;
+
+/**
+ * __useUpdateFormElementMapCameraMutation__
+ *
+ * To run a mutation, you first call `useUpdateFormElementMapCameraMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFormElementMapCameraMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFormElementMapCameraMutation, { data, loading, error }] = useUpdateFormElementMapCameraMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      mapCameraOptions: // value for 'mapCameraOptions'
+ *   },
+ * });
+ */
+export function useUpdateFormElementMapCameraMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>(UpdateFormElementMapCameraDocument, options);
+      }
+export type UpdateFormElementMapCameraMutationHookResult = ReturnType<typeof useUpdateFormElementMapCameraMutation>;
+export type UpdateFormElementMapCameraMutationResult = Apollo.MutationResult<UpdateFormElementMapCameraMutation>;
+export type UpdateFormElementMapCameraMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>;
+export const AllBasemapsDocument = gql`
+    query AllBasemaps {
+  currentProject {
+    basemaps {
+      ...BasemapDetails
+    }
+    surveyBasemaps {
+      ...BasemapDetails
+      relatedFormElements {
+        id
+      }
+    }
+  }
+}
+    ${BasemapDetailsFragmentDoc}`;
+
+/**
+ * __useAllBasemapsQuery__
+ *
+ * To run a query within a React component, call `useAllBasemapsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAllBasemapsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAllBasemapsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useAllBasemapsQuery(baseOptions?: Apollo.QueryHookOptions<AllBasemapsQuery, AllBasemapsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<AllBasemapsQuery, AllBasemapsQueryVariables>(AllBasemapsDocument, options);
+      }
+export function useAllBasemapsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<AllBasemapsQuery, AllBasemapsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<AllBasemapsQuery, AllBasemapsQueryVariables>(AllBasemapsDocument, options);
+        }
+export type AllBasemapsQueryHookResult = ReturnType<typeof useAllBasemapsQuery>;
+export type AllBasemapsLazyQueryHookResult = ReturnType<typeof useAllBasemapsLazyQuery>;
+export type AllBasemapsQueryResult = Apollo.QueryResult<AllBasemapsQuery, AllBasemapsQueryVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -19250,9 +20261,14 @@ export const GetBasemapsAndRegionDocument = gql`
     basemaps {
       ...BasemapDetails
     }
+    surveyBasemaps {
+      ...BasemapDetails
+    }
     region {
       geojson
     }
+    mapboxPublicKey
+    mapboxSecretKey
   }
 }
     ${BasemapDetailsFragmentDoc}`;
@@ -19325,9 +20341,9 @@ export type UpdateProjectNameMutationHookResult = ReturnType<typeof useUpdatePro
 export type UpdateProjectNameMutationResult = Apollo.MutationResult<UpdateProjectNameMutation>;
 export type UpdateProjectNameMutationOptions = Apollo.BaseMutationOptions<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>;
 export const UpdateProjectSettingsDocument = gql`
-    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean) {
+    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String, $mapboxSecretKey: String) {
   updateProjectBySlug(
-    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured}}
+    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey, mapboxSecretKey: $mapboxSecretKey}}
   ) {
     clientMutationId
     project {
@@ -19336,6 +20352,9 @@ export const UpdateProjectSettingsDocument = gql`
       description
       logoUrl
       logoLink
+      mapboxPublicKey
+      mapboxSecretKey
+      isFeatured
     }
   }
 }
@@ -19362,6 +20381,8 @@ export type UpdateProjectSettingsMutationFn = Apollo.MutationFunction<UpdateProj
  *      logoUrl: // value for 'logoUrl'
  *      logoLink: // value for 'logoLink'
  *      isFeatured: // value for 'isFeatured'
+ *      mapboxPublicKey: // value for 'mapboxPublicKey'
+ *      mapboxSecretKey: // value for 'mapboxSecretKey'
  *   },
  * });
  */
@@ -20262,6 +21283,7 @@ export type UpdateProfileMutationOptions = Apollo.BaseMutationOptions<UpdateProf
 export const namedOperations = {
   Query: {
     ProjectBucketSetting: 'ProjectBucketSetting',
+    MapboxAPIKeys: 'MapboxAPIKeys',
     GetAcl: 'GetAcl',
     Groups: 'Groups',
     VerifyProjectInvite: 'VerifyProjectInvite',
@@ -20270,6 +21292,7 @@ export const namedOperations = {
     OptionalLayer: 'OptionalLayer',
     GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
+    MapboxKeys: 'MapboxKeys',
     CurrentProjectMetadata: 'CurrentProjectMetadata',
     DraftTableOfContents: 'DraftTableOfContents',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
@@ -20293,6 +21316,7 @@ export const namedOperations = {
     GetPhotos: 'GetPhotos',
     SurveyResponses: 'SurveyResponses',
     SurveyMapDetails: 'SurveyMapDetails',
+    AllBasemaps: 'AllBasemaps',
     Survey: 'Survey',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     UserAdminCounts: 'UserAdminCounts',
@@ -20306,6 +21330,7 @@ export const namedOperations = {
   },
   Mutation: {
     UpdateProjectStorageBucket: 'UpdateProjectStorageBucket',
+    updateKeys: 'updateKeys',
     UpdateAclType: 'UpdateAclType',
     AddGroupToAcl: 'AddGroupToAcl',
     RemoveGroupFromAcl: 'RemoveGroupFromAcl',
@@ -20375,6 +21400,12 @@ export const namedOperations = {
     AddCondition: 'AddCondition',
     UpdateSurveyDraftStatus: 'UpdateSurveyDraftStatus',
     UploadConsentDoc: 'UploadConsentDoc',
+    toggleResponsesPractice: 'toggleResponsesPractice',
+    archiveResponses: 'archiveResponses',
+    modifyAnswers: 'modifyAnswers',
+    copyAppearance: 'copyAppearance',
+    updateFormElementBasemaps: 'updateFormElementBasemaps',
+    updateFormElementMapCamera: 'updateFormElementMapCamera',
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',
@@ -20423,6 +21454,8 @@ export const namedOperations = {
     SketchClassDetails: 'SketchClassDetails',
     FormElementFullDetails: 'FormElementFullDetails',
     LogicRuleDetails: 'LogicRuleDetails',
+    SurveyResponse: 'SurveyResponse',
+    FormElementExtendedDetails: 'FormElementExtendedDetails',
     SurveyAppRule: 'SurveyAppRule',
     SurveyAppFormElement: 'SurveyAppFormElement',
     SurveyAppSurvey: 'SurveyAppSurvey',

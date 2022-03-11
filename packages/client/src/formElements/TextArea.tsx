@@ -1,5 +1,9 @@
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import EditableResponseCell, {
+  CellEditorComponent,
+} from "../admin/surveys/EditableResponseCell";
+import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
@@ -54,7 +58,10 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
           }}
           value={props.value || ""}
           onChange={(e) =>
-            props.onChange(e.target.value, e.target.value.length === 0)
+            props.onChange(
+              e.target.value,
+              props.isRequired && !e.target.value.length
+            )
           }
         />
       </div>
@@ -109,5 +116,53 @@ TextArea.icon = () => (
     <span className="text-2xl">¶</span>
   </div>
 );
+
+TextArea.ResponseGridCell = ({
+  value,
+  componentSettings,
+  elementId,
+  updateValue,
+}) => {
+  return (
+    <EditableResponseCell
+      elementId={elementId}
+      value={value}
+      updateValue={updateValue}
+      editor={TextAreaCellEditor}
+      componentSettings={componentSettings}
+    >
+      {value === undefined || value === null ? <SkippedQuestion /> : value}
+    </EditableResponseCell>
+  );
+};
+
+export const TextAreaCellEditor: CellEditorComponent<
+  string | null | undefined
+> = ({ value, disabled, onChange, onRequestSave, onRequestCancel }) => {
+  const [val, setVal] = useState(value);
+
+  useEffect(() => {
+    onChange(val);
+  }, [val]);
+
+  return (
+    <textarea
+      disabled={disabled}
+      autoFocus
+      value={val || ""}
+      onChange={(e) => setVal(e.target.value)}
+      className={`p-1 block w-full h-full rounded m-0 text-xs ${
+        disabled && "opacity-50 pointer-events-none"
+      }`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.metaKey) {
+          onRequestSave();
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+    />
+  );
+};
 
 export default TextArea;

@@ -4,12 +4,14 @@ import {
   FormElementLayout,
   FormElementDetailsFragment,
   Maybe,
+  FormElementFullDetailsFragment,
 } from "../generated/graphql";
 import { colord, extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { createContext } from "react";
 import { useMediaQuery } from "beautiful-react-hooks";
 import { components } from "../formElements";
+import { CameraOptions } from "mapbox-gl";
 extend([a11yPlugin]);
 
 export type FormElementStyleProps = Pick<
@@ -19,6 +21,9 @@ export type FormElementStyleProps = Pick<
   | "layout"
   | "textVariant"
   | "secondaryColor"
+  | "backgroundPalette"
+  | "mapBasemaps"
+  | "mapCameraOptions"
 > & { type?: { isSpatial: boolean } | null };
 export type ComputedFormElementStyle = {
   backgroundColor: string;
@@ -33,6 +38,9 @@ export type ComputedFormElementStyle = {
   isSmall: boolean;
   unsplashAuthorName?: string;
   unsplashAuthorUrl?: string;
+  backgroundPalette?: string[];
+  mapBasemaps: number[] | undefined;
+  mapCameraOptions: CameraOptions | undefined;
 };
 
 export const defaultStyle = {
@@ -52,6 +60,8 @@ export const defaultStyle = {
   textClass: "text-white",
   isDark: true,
   isSmall: false,
+  mapBasemaps: undefined as number[] | undefined,
+  mapCameraOptions: undefined as CameraOptions | undefined,
 };
 
 /**
@@ -76,38 +86,21 @@ export function useCurrentStyle(
     return defaultStyle;
   }
   const index = formElements.indexOf(current) || 0;
-  let style: FormElementStyleProps = formElements[0];
-  if (formElements[0].unsplashAuthorName) {
-    unsplashAuthorName = formElements[0].unsplashAuthorName!;
-    unsplashAuthorUrl = formElements[0].unsplashAuthorUrl!;
-  }
 
-  for (var i = 1; i <= index; i++) {
-    if (formElements[i] && formElements[i].backgroundImage) {
-      style = {
-        backgroundColor:
-          formElements[i].backgroundColor ||
-          style.backgroundColor ||
-          defaultStyle.backgroundColor,
-        secondaryColor:
-          formElements[i].secondaryColor ||
-          style.secondaryColor ||
-          defaultStyle.secondaryColor,
-        textVariant:
-          formElements[i].textVariant ||
-          style.textVariant ||
-          defaultStyle.textVariant,
-        layout: formElements[i].layout || style.layout || defaultStyle.layout,
-        backgroundImage:
-          formElements[i].backgroundImage ||
-          style.backgroundImage ||
-          defaultStyle.backgroundImage,
-      };
-      if (formElements[i].unsplashAuthorName) {
-        unsplashAuthorName = formElements[i].unsplashAuthorName!;
-        unsplashAuthorUrl = formElements[i].unsplashAuthorUrl!;
-      }
-    }
+  const previouslyStyledElement = getPreviouslyStyledElement(
+    formElements,
+    index
+  );
+
+  let style: FormElementStyleProps = {
+    ...defaultStyle,
+    ...(index === 0 ? current : previouslyStyledElement),
+  };
+
+  style.layout = style.layout || getPreviousLayout(formElements, index);
+
+  if (current.backgroundColor || current.backgroundImage) {
+    style = { ...current };
   }
 
   const prevLayout = style.layout;
@@ -137,7 +130,26 @@ export function useCurrentStyle(
       prevLayout || style.layout || FormElementLayout.Top,
       isSmall
     );
+  } else {
+    if (
+      isSmall &&
+      (style.layout === FormElementLayout.MapSidebarLeft ||
+        style.layout === FormElementLayout.MapSidebarRight)
+    ) {
+      if (stage === 1) {
+        style = {
+          ...style,
+          layout: FormElementLayout.MapFullscreen,
+        };
+      } else {
+        style = {
+          ...style,
+          layout: FormElementLayout.MapTop,
+        };
+      }
+    }
   }
+
   if (
     isSmall &&
     (style.layout === FormElementLayout.Left ||
@@ -197,3 +209,34 @@ export function surveyBackground(
 }
 
 export const SurveyStyleContext = createContext(defaultStyle);
+
+export function getPreviouslyStyledElement(
+  sortedFormElements: FormElementFullDetailsFragment[],
+  index: number
+) {
+  return sortedFormElements
+    .slice(0, index)
+    .reverse()
+    .find((f) => f.backgroundColor);
+}
+
+/**
+ * This really shouldn't be necessary but surveys created with an older version
+ * of the tool may have pages with background colors or images set but not the
+ * layout. This can result in odd layouts. Newer versions of the tool always set
+ * layout when creating a page with "customized style".
+ * @param sortedFormElements
+ * @param index
+ * @returns
+ */
+export function getPreviousLayout(
+  sortedFormElements: FormElementFullDetailsFragment[],
+  index: number
+) {
+  return (
+    sortedFormElements
+      .slice(0, index)
+      .reverse()
+      .find((f) => f.layout)?.layout || FormElementLayout.Top
+  );
+}
