@@ -497,15 +497,17 @@ export default function CreateBasemapModal({
                       )}
                     </p>
                   )}
-                  <div className="flex justify-center items-center pb-4">
-                    <SearchIcon className="w-5 h-5 text-gray-500 absolute left-24 -mb-2" />
-                    <input
-                      className="w-3/4 outline-none shadow focus:ring-0 rounded-lg border-gray-300 pl-12 -mb-2"
-                      type="text"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                    />
-                  </div>
+                  {!(error && /Key not provided/.test(error)) && (
+                    <div className="flex justify-center items-center pb-4">
+                      <SearchIcon className="w-5 h-5 text-gray-500 absolute left-24 -mb-2" />
+                      <input
+                        className="w-3/4 outline-none shadow focus:ring-0 rounded-lg border-gray-300 pl-12 -mb-2"
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                      />
+                    </div>
+                  )}
                   {styles && (
                     <div className="flex-1 overflow-auto h-80 bg-gray-50 rounded">
                       {filteredStyles.map((style) => (
