@@ -162,6 +162,11 @@ declare global {
         token: string, 
         formId: number
       )
+
+      getSurveyResponse(
+        responseId: number, 
+        token: string
+      )
     }
   } 
 }
@@ -981,7 +986,30 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
       })//
     })//
   })
-//
+
+  Cypress.Commands.add("getSurveyResponse", (surveyResponseId: number, token: string) => {
+    return cy
+    .query(
+      gql`
+        query CypressGetSurveyResponse($surveyResponseId: Int!) {
+          query {
+            surveyResponse(id: $surveyResponseId) {
+              id, 
+              surveyId, 
+              data
+            }
+          
+          }
+        }
+      `,
+     {
+      "surveyResponseId": surveyResponseId
+      },
+      (token as any)
+    ).then((data) => {
+      console.log(data)
+    })
+  })
 ////TO DO:
 ////add rest of form attributes
 //
