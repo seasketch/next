@@ -25,9 +25,11 @@ import BasemapEditorPanel from "../data/BasemapEditorPanel";
 function filterBasemaps<T extends { id: number }>(
   basemaps: T[],
   ids: number[] | undefined | null
-) {
+): T[] {
   const idList = ids || [];
-  return basemaps.filter((b) => idList.indexOf(b.id) !== -1);
+  return idList
+    .map((id) => basemaps.find((b) => b.id === id))
+    .filter(Boolean) as T[];
 }
 
 export default function BasemapMultiSelectInput({
