@@ -52,22 +52,18 @@ export default function useMapEssentials({
   const debouncedCamera = useDebounce(cameraOptions, 30);
 
   useEffect(() => {
-    if (
-      mapContext?.manager &&
-      data?.currentProject?.basemaps?.length &&
-      data?.currentProject?.surveyBasemaps?.length
-    ) {
+    if (mapContext?.manager && data?.currentProject?.basemaps) {
       let basemaps: BasemapDetailsFragment[] = [];
       const allBasemaps = [
-        ...data.currentProject.basemaps,
-        ...data.currentProject.surveyBasemaps,
+        ...(data.currentProject.basemaps || []),
+        ...(data.currentProject.surveyBasemaps || []),
       ];
       if (filterBasemapIds && filterBasemapIds.length) {
         basemaps = filterBasemapIds
           .map((id) => allBasemaps.find((b) => b.id === id))
           .filter((b) => b !== undefined) as BasemapDetailsFragment[];
       } else {
-        basemaps = data.currentProject.basemaps;
+        basemaps = allBasemaps;
       }
       if (!basemaps.length) {
         basemaps = [data.currentProject.basemaps[0]];
