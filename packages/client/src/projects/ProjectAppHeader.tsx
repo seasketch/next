@@ -1,12 +1,12 @@
 import React, { ReactNode } from "react";
 import { useParams } from "react-router-dom";
-import { useCurrentProjectMetadataQuery } from "../generated/graphql";
+import { useCurrentProjectMetadata } from "../generated/graphql";
 import { useTranslation } from "react-i18next";
 import ProfileControl from "../header/ProfileControl";
 
 export default function ProjectAppHeader() {
   const { t, i18n } = useTranslation(["nav"]);
-  const { data, loading, error } = useCurrentProjectMetadataQuery();
+  const { data, loading, error } = useCurrentProjectMetadata();
 
   let logo: ReactNode | null = null;
   if (data?.currentProject?.logoUrl) {

@@ -10,9 +10,9 @@ import {
   AdminButton,
 } from "./MiniSidebarButtons";
 import { useHistory, useParams } from "react-router-dom";
-import { useCurrentProjectMetadataQuery } from "../generated/graphql";
 import { MenuToggle } from "./MenuToggle";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 export default function MiniSidebar({
   onExpand,
@@ -23,7 +23,7 @@ export default function MiniSidebar({
 }) {
   const { slug, sidebar } = useParams<{ slug: string; sidebar: string }>();
   const history = useHistory();
-  const { data } = useCurrentProjectMetadataQuery();
+  const { data } = useCurrentProjectMetadata();
 
   const { t } = useTranslation("sidebar");
 
@@ -76,7 +76,7 @@ export default function MiniSidebar({
         anySidebarOpen={!!sidebar}
       />
 
-      {data?.currentProject?.sessionIsAdmin && (
+      {data?.project?.sessionIsAdmin && (
         <AdminButton
           href={`/${slug}/admin`}
           tooltip={t("Administration")}

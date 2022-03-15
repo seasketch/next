@@ -3,18 +3,16 @@ import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import ProfilePhoto from "../admin/users/ProfilePhoto";
-import {
-  useCurrentProjectMetadataQuery,
-  useUpdateProfileMutation,
-} from "../generated/graphql";
+import { useUpdateProfileMutation } from "../generated/graphql";
 import ProjectAppSidebar from "../projects/ProjectAppSidebar";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import Button from "./Button";
 import { useGlobalErrorHandler } from "./GlobalErrorHandler";
 
 export default function ProfileAvatarUploader() {
   const auth0 = useAuth0();
   const onError = useGlobalErrorHandler();
-  const { data, loading, error } = useCurrentProjectMetadataQuery({
+  const { data, loading, error } = useCurrentProjectMetadata({
     fetchPolicy: "cache-and-network",
     onError,
   });
