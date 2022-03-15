@@ -297,9 +297,13 @@ describe("Survey creation smoke test", () => {
         if ((req.body.operationName) && (req.body.operationName === "CreateResponse")) {
           req.alias = "createResponse"
         }
+        if ((req.body.operationName) && (req.body.operationName === "CurrentProjectMetadata")) {
+          req.alias = "currentProjectMetadata"
+        }
       })
     })
     before(() => {
+      cy.setLocalStorage("slug", slug)
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
         cy.setLocalStorage("token", access_token)
@@ -413,14 +417,18 @@ describe("Survey creation smoke test", () => {
       cy.getLocalStorage("surveyId").then((id) => {
         surveyId = parseInt(id)
         console.log(surveyId)
-        //cy.getLocalStorage("token").then((token) => {
-        //  cy.deleteSurvey(surveyId, token)
-        //})
+        cy.getLocalStorage("token").then((token) => {
+          cy.deleteSurvey(surveyId, token)
+        })
       })
-      //cy.deleteProject(`${slug}`) 
+      cy.deleteProject(`${slug}`) 
     })
     it("Can visit the survey", () => {
-       cy.contains('Begin', {timeout: 30000}).click()
+      //wait for first request
+      cy.wait('@currentProjectMetadata').its('response.statusCode').should('eq', 200)
+      //wait for second request
+      cy.wait('@currentProjectMetadata').its('response.statusCode').should('eq', 200)
+      cy.contains('Begin').click()
     })
     it("Cannot advance until name is provided", () => {
       cy.contains("What is your name?")
@@ -430,198 +438,197 @@ describe("Survey creation smoke test", () => {
         .get("button").contains("Next").click()
     })
     it("Can input email address or can skip question", () => {
-      cy.get("input").as('input')
-        .wait(8000)
-      cy.get('@input').type("test_user_1@seasketch.org")
+      cy.get("input")
+      .type("test_user_1@seasketch.org")
       cy.contains("Next").click()
     })
-    it("Cannot advance until atoll selection is made", () => {
-      cy.contains("Which Atoll do you reside on?")
-        .get('[title = "Next Question"]')
-        .should('have.class', "pointer-events-none")
-      cy.contains('N').click()
-    })
-    it("Advances to appropriate island selection page", () => {
-      cy.contains('Which island of N atoll do you reside on?', {timeout: 30000})
-      cy.contains('Lhohi')
-    })
-    it("Cannot advance until island selection is made", () => {
-      cy.get('[title = "Next Question"]')
-        .should('have.class', "pointer-events-none")
-      cy.contains('Kudafari').click()
-    })
-    it("Cannot advance until sector selection(s) is made", () => {
-      cy.get('[type = "button"]').as('nextBtn')
-      cy.get('@nextBtn').should('be.hidden')
-      cy.get('[title = "Next Question"]').as('next')
-        .should('have.class', "pointer-events-none")
-      cy.contains('Fisheries - Commercial, Tuna').click()
-      cy.get('@next').scrollIntoView()
-      cy.get('@nextBtn').then(($btn) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect ($btn).to.be.visible
-      })
-      
-    })
-    it("Can advance to map page", () => {
-      cy.get('[type = "button"]').as('nextBtn')
-      cy.wait(8000)
-      cy.get('@nextBtn').click()
-    })
-    //it("Can select multiple sectors", () => {
+    //it("Cannot advance until atoll selection is made", () => {
+    //  cy.contains("Which Atoll do you reside on?")
+    //    .get('[title = "Next Question"]')
+    //    .should('have.class', "pointer-events-none")
+    //  cy.contains('N').click()
+    //})
+    ////it("Advances to appropriate island selection page", () => {
+    //  cy.contains('Which island of N atoll do you reside on?', {timeout: 30000})
+    //  cy.contains('Lhohi')
+    //})
+    //it("Cannot advance until island selection is made", () => {
+    //  cy.get('[title = "Next Question"]')
+    //    .should('have.class', "pointer-events-none")
+    //  cy.contains('Kudafari').click()
+    //})
+    //it("Cannot advance until sector selection(s) is made", () => {
     //  cy.get('[type = "button"]').as('nextBtn')
-    //  cy.get('[title = "Fisheries - Commercial, Tuna"]').then(($el) => {
-    //    expect ($el).to.have.descendants('svg')
+    //  cy.get('@nextBtn').should('be.hidden')
+    //  cy.get('[title = "Next Question"]').as('next')
+    //    .should('have.class', "pointer-events-none")
+    //  cy.contains('Fisheries - Commercial, Tuna').click()
+    //  cy.get('@next').scrollIntoView()
+    //  cy.get('@nextBtn').then(($btn) => {
+    //    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    //    expect ($btn).to.be.visible
     //  })
-    //  cy.get('[title = "Aquaculture / Mariculture"]').click().then(($el) => {
-    //    expect ($el).to.have.descendants('svg')
-    //  })
+    //  
+    //})
+    //it("Can advance to map page", () => {
+    //  cy.get('[type = "button"]').as('nextBtn')
+    //  cy.wait(8000)
     //  cy.get('@nextBtn').click()
     //})
-    it("Can draw a polygon", () => {
-      cy.wait(10000)
-      cy.get('.mapboxgl-canvas').each((t) => {
-        const canvases = []
-        canvases.push(t)
-        return canvases
-      }).then((ary) => {
-        console.log(ary[0])
-        const el = ary[0]
-        return el
-      }).as('el')
-      cy.get('@el').click(300,300)        
-        .click(300, 100)
-        .click(100, 100)
-        .click(100, 300)
-        .dblclick(300, 300)
-        //.wait(8000)
-        //.dblclick(400,200)
-      cy.contains('Done').click()
-      //invalid shape
-      //cy.get('.mapboxgl-canvas').click(300, 300)
-      //  .click(100, 600)
-      //  .click(300, 600)
-      //  .click(300, 300)
-      //  .click(400, 400)
-      //  .dblclick(300,300)
-      //cy.get('[name = "Finish Shape"]')
-    })
-    it("Can assign attributes to the polygon", () => {
-      cy.get(".mt-1 > .block").clear()
-        .type("A great fishing spot for yellowfin tuna.")
-      cy.get('[title="Handline"]').click()
-      cy.get('[title="Yellowfin"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
-      cy.contains('Save').click()
-    })
-    it("Correctly records attributes", () => {
-      cy.contains("A great fishing spot for yellowfin tuna.")
-      
-    })
-    it("Can finish sector", () => {
-      cy.wait(10000)
-      cy.contains('Finish Sector').click()
-      cy.contains("Fisheries - Commercial, Tuna")
-      cy.wait(10000)
-      cy.contains('Next Question', {timeout: 8000}).click()
-      //cy.get('.select-none').click()
-    })
-    it("Can answer supplemental questions", () => {
-      cy.contains('Are you willing to answer a few additional questions about who you are?')
-      cy.contains('Yes').click()
-    })
-    it("Can input age", () => {
-      cy.contains("Your age")
-      cy.get('input').clear().type("30")
-      cy.contains('Next').click()
-    })
-    it("Can select gender", () => {
-      cy.contains("Gender")
-      cy.contains("Female").click()
-    })
-    it("Can add comments", () => {
-      cy.get("textarea").type("My general comments.")
-    })
-    it("Records the correct response", () => {
-      cy.contains("Complete Submission").click()
-      cy.wait(8000)
-      cy.contains("Thank You for Responding")
-      cy.wait("@createResponse").then((req) => {
-        const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
-        expect (surveyResponseId).to.not.equal(null)
-        cy.restoreLocalStorage()
-        cy.getLocalStorage("access_token").then((token) => {
-          cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
-            const data = resp.query.surveyResponse.data
-            const responses = ['Test User 1', "test_user_1@seasketch.org", 'N']
-            const ary = []
-            Object.entries(data).forEach(([, value], index) => {
-              ary.push(value)
-            })//;
-            expect(ary.length).to.eq(9)
-            expect (ary[0].name).to.eq('Test User 1')
-            expect (ary[1]).to.eq('test_user_1@seasketch.org')
-            expect (ary[2][0]).to.eq('N')
-            expect (ary[3][0]).to.eq('Kudafari')
-            expect (ary[4].sectors[0]).to.equal("Fisheries - Commercial, Tuna")
-            expect (ary[5]).to.eq(true)
-            expect (ary[6]).to.eq(30)
-            expect (ary[7][0]).to.eq('Female')
-            expect (ary[8]).to.eq("My general comments.")
-            console.log(ary)
-            //function find(array, criteriaFn) {
-            //  let current = array
-            //  let next = []
-            //  while (current || current === 0) {
-            //    // if `current` satisfies the `criteriaFn`, then
-            //    // return it — recall that `return` will exit the
-            //    // entire function!
-            //    if (criteriaFn(current)) {
-            //      assert(current, `${current} is present in survey response`)
-            //      //current = next.shift()
-            //      //return current
-            //    }
-            //
-            //    // if `current` is an array, we want to push all of
-            //    // its elements (which might be arrays) onto `next`
-            //    if (typeof current === 'object') {
-            //      for (let i = 0; i < current.length; i++) {
-            //        next.push(current[i])
-            //      }
-            //    }
-            //
-            //    // after pushing any children (if there
-            //    // are any) of `current` onto `next`, we want to take
-            //    // the first element of `next` and make it the
-            //    // new `current` for the next pass of the `while`
-            //    // loop
-            //    current = next.shift()
-            //  }
-            //  //return null
-            //}
-            //responses.forEach((t) => {
-            //  find(ary, resp => resp === t)
-            //})
-            
-            //data.forEach((t) => {
-            //  responses.push(t)
-            //})
-            //console.log(responses)
-            //for(let i = 0; i < data.length; i++) {
-            //  console.log(data[i])
-            //}
-            //for (const [index, [, value]] of Object.entries(Object.entries(data))) {
-            //  console.log(`${index}: ${value}`);
-            //}
-            
-            //const objects = []
-           
-          })
-        })
-      })
-    })
-  })
-})//
+    ////it("Can select multiple sectors", () => {
+    ////  cy.get('[type = "button"]').as('nextBtn')
+    ////  cy.get('[title = "Fisheries - Commercial, Tuna"]').then(($el) => {
+    ////    expect ($el).to.have.descendants('svg')
+    ////  })
+    ////  cy.get('[title = "Aquaculture / Mariculture"]').click().then(($el) => {
+    ////    expect ($el).to.have.descendants('svg')
+    ////  })
+    ////  cy.get('@nextBtn').click()
+    ////})
+    //it("Can draw a polygon", () => {
+    //  cy.wait(10000)
+    //  cy.get('.mapboxgl-canvas').each((t) => {
+    //    const canvases = []
+    //    canvases.push(t)
+    //    return canvases
+    //  }).then((ary) => {
+    //    console.log(ary[0])
+    //    const el = ary[0]
+    //    return el
+    //  }).as('el')
+    //  cy.get('@el').click(300,300)        
+    //    .click(300, 100)
+    //    .click(100, 100)
+    //    .click(100, 300)
+    //    .dblclick(300, 300)
+    //    //.wait(8000)
+    //    //.dblclick(400,200)
+    //  cy.contains('Done').click()
+    //  //invalid shape
+    //  //cy.get('.mapboxgl-canvas').click(300, 300)
+    //  //  .click(100, 600)
+    //  //  .click(300, 600)
+    //  //  .click(300, 300)
+    //  //  .click(400, 400)
+    //  //  .dblclick(300,300)
+    //  //cy.get('[name = "Finish Shape"]')
+    //})
+    //it("Can assign attributes to the polygon", () => {
+    //  cy.get(".mt-1 > .block").clear()
+    //    .type("A great fishing spot for yellowfin tuna.")
+    //  cy.get('[title="Handline"]').click()
+    //  cy.get('[title="Yellowfin"]').click()
+    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
+    //  cy.contains('Save').click()
+    //})
+    //it("Correctly records attributes", () => {
+    //  cy.contains("A great fishing spot for yellowfin tuna.")
+    //  
+    //})
+    //it("Can finish sector", () => {
+    //  cy.wait(10000)
+    //  cy.contains('Finish Sector').click()
+    //  cy.contains("Fisheries - Commercial, Tuna")
+    //  cy.wait(10000)
+    //  cy.contains('Next Question', {timeout: 8000}).click()
+    //  //cy.get('.select-none').click()
+    //})
+    //it("Can answer supplemental questions", () => {
+    //  cy.contains('Are you willing to answer a few additional questions about who you are?')
+    //  cy.contains('Yes').click()
+    //})
+    //it("Can input age", () => {
+    //  cy.contains("Your age")
+    //  cy.get('input').clear().type("28")
+    //  cy.contains('Next').click()
+    //})
+    //it("Can select gender", () => {
+    //  cy.contains("Gender")
+    //  cy.contains("Female").click()
+    //})
+    //it("Can add comments", () => {
+    //  cy.get("textarea").type("My general comments.")
+    //})
+    //it("Records the correct response", () => {
+    //  cy.contains("Complete Submission").click()
+    //  cy.wait(8000)
+    //  cy.contains("Thank You for Responding")
+    //  cy.wait("@createResponse").then((req) => {
+    //    const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
+    //    expect (surveyResponseId).to.not.equal(null)
+    //    cy.restoreLocalStorage()
+    //    cy.getLocalStorage("access_token").then((token) => {
+    //      cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
+    //        const data = resp.query.surveyResponse.data
+    //        const responses = ['Test User 1', "test_user_1@seasketch.org", 'N']
+    //        const ary = []
+    //        Object.entries(data).forEach(([, value], index) => {
+    //          ary.push(value)
+    //        })//;
+    //        expect(ary.length).to.eq(9)
+    //        expect (ary[0].name).to.eq('Test User 1')
+    //        expect (ary[1]).to.eq('test_user_1@seasketch.org')
+    //        expect (ary[2][0]).to.eq('N')
+    //        expect (ary[3][0]).to.eq('Kudafari')
+    //        expect (ary[4].sectors[0]).to.equal("Fisheries - Commercial, Tuna")
+    //        expect (ary[5]).to.eq(true)
+    //        expect (ary[6]).to.eq(28)
+    //        expect (ary[7][0]).to.eq('Female')
+    //        expect (ary[8]).to.eq("My general comments.")
+    //        console.log(ary)
+    //        //function find(array, criteriaFn) {
+    //        //  let current = array
+    //        //  let next = []
+    //        //  while (current || current === 0) {
+    //        //    // if `current` satisfies the `criteriaFn`, then
+    //        //    // return it — recall that `return` will exit the
+    //        //    // entire function!
+    //        //    if (criteriaFn(current)) {
+    //        //      assert(current, `${current} is present in survey response`)
+    //        //      //current = next.shift()
+    //        //      //return current
+    //        //    }
+    //        //
+    //        //    // if `current` is an array, we want to push all of
+    //        //    // its elements (which might be arrays) onto `next`
+    //        //    if (typeof current === 'object') {
+    //        //      for (let i = 0; i < current.length; i++) {
+    //        //        next.push(current[i])
+    //        //      }
+    //        //    }
+    //        //
+    //        //    // after pushing any children (if there
+    //        //    // are any) of `current` onto `next`, we want to take
+    //        //    // the first element of `next` and make it the
+    //        //    // new `current` for the next pass of the `while`
+    //        //    // loop
+    //        //    current = next.shift()
+    //        //  }
+    //        //  //return null
+    //        //}
+    //        //responses.forEach((t) => {
+    //        //  find(ary, resp => resp === t)
+    //        //})
+    //        
+    //        //data.forEach((t) => {
+    //        //  responses.push(t)
+    //        //})
+    //        //console.log(responses)
+    //        //for(let i = 0; i < data.length; i++) {
+    //        //  console.log(data[i])
+    //        //}
+    //        //for (const [index, [, value]] of Object.entries(Object.entries(data))) {
+    //        //  console.log(`${index}: ${value}`);
+    //        //}
+    //        
+    //        //const objects = []
+    //       
+    //      })
+    //    })
+    //  })
+    //})
+  })//
+})////
 //
 //
 //Refactor
