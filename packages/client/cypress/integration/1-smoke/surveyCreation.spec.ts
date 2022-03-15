@@ -439,24 +439,25 @@ describe("Survey creation smoke test", () => {
     })
     it("Can input email address or can skip question", () => {
       cy.get("input")
+      cy.get("input")
       .type("test_user_1@seasketch.org")
       cy.contains("Next").click()
     })
-    //it("Cannot advance until atoll selection is made", () => {
-    //  cy.contains("Which Atoll do you reside on?")
-    //    .get('[title = "Next Question"]')
-    //    .should('have.class', "pointer-events-none")
-    //  cy.contains('N').click()
-    //})
-    ////it("Advances to appropriate island selection page", () => {
-    //  cy.contains('Which island of N atoll do you reside on?', {timeout: 30000})
-    //  cy.contains('Lhohi')
-    //})
-    //it("Cannot advance until island selection is made", () => {
-    //  cy.get('[title = "Next Question"]')
-    //    .should('have.class', "pointer-events-none")
-    //  cy.contains('Kudafari').click()
-    //})
+     it("Cannot advance until atoll selection is made", () => {
+       cy.contains("Which Atoll do you reside on?")
+         .get('[title = "Next Question"]')
+         .should('have.class', "pointer-events-none")
+       cy.contains('N').click()
+     })
+    it("Advances to appropriate island selection page", () => {
+      cy.contains('Which island of N atoll do you reside on?')
+      cy.contains('Lhohi')
+    })
+    it("Cannot advance until island selection is made", () => {
+      cy.get('[title = "Next Question"]')
+        .should('have.class', "pointer-events-none")
+      cy.contains('Kudafari').click()
+    })
     //it("Cannot advance until sector selection(s) is made", () => {
     //  cy.get('[type = "button"]').as('nextBtn')
     //  cy.get('@nextBtn').should('be.hidden')
