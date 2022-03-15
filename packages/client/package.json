@@ -81,6 +81,7 @@
     "colord": "^2.9.0",
     "colorthief": "2.2.0",
     "comlink-loader": "^2.0.0",
+    "cypress-localstorage-commands": "^1.7.0",
     "dagre": "^0.8.5",
     "downshift": "^6.1.7",
     "eslint-plugin-cypress": "^2.12.1",
