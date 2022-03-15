@@ -7,8 +7,8 @@ import {
   useRouteMatch,
 } from "react-router-dom";
 import Header from "../header/Header";
-import { useCurrentProjectMetadata } from "../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 // import AdminApp from "../admin/AdminApp";
 const LazyAdminApp = React.lazy(() => import("../admin/AdminApp"));
 const LazyProjectApp = React.lazy(() => import("./ProjectApp"));
@@ -24,7 +24,7 @@ export default function ProjectSimpleNav() {
         <Route exact path={path}>
           <Header />
           <nav className="max-w-lg mt-4 mx-auto text-center bg-white rounded shadow">
-            {data && data.currentProject?.sessionIsAdmin && (
+            {data && data.project?.sessionIsAdmin && (
               <Link
                 className="inline-block m-4 p-2 px-4 bg-primary-600 text-white shadow rounded"
                 to={`/${slug}/admin`}

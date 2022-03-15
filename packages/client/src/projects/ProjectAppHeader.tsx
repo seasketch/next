@@ -1,21 +1,19 @@
 import React, { ReactNode } from "react";
 import { useParams } from "react-router-dom";
-import { useCurrentProjectMetadata } from "../generated/graphql";
 import { useTranslation } from "react-i18next";
 import ProfileControl from "../header/ProfileControl";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 export default function ProjectAppHeader() {
   const { t, i18n } = useTranslation(["nav"]);
   const { data, loading, error } = useCurrentProjectMetadata();
 
   let logo: ReactNode | null = null;
-  if (data?.currentProject?.logoUrl) {
-    logo = (
-      <img src={data.currentProject.logoUrl} className="w-8 h-8 mr-2 inline" />
-    );
-    if (data.currentProject.logoLink) {
+  if (data?.project?.logoUrl) {
+    logo = <img src={data.project.logoUrl} className="w-8 h-8 mr-2 inline" />;
+    if (data.project.logoLink) {
       logo = (
-        <a href={data.currentProject.logoLink} target="_blank">
+        <a href={data.project.logoLink} target="_blank">
           {logo}
         </a>
       );
@@ -27,7 +25,7 @@ export default function ProjectAppHeader() {
       <div className="p-2 pl-5 flex place-items-center mr-auto ml-auto">
         <div className="flex-grow">
           {logo}
-          {data?.currentProject?.name}
+          {data?.project?.name}
         </div>
         <div className="flex-0">
           <ProfileControl />
