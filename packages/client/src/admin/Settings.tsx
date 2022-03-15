@@ -8,7 +8,6 @@ import React, {
 import { useParams, Link } from "react-router-dom";
 import TextInput from "../components/TextInput";
 import {
-  useCurrentProjectMetadataQuery,
   useUpdateProjectSettingsMutation,
   useProjectAccessControlSettingsQuery,
   useUpdateProjectAccessControlSettingsMutation,
@@ -32,9 +31,10 @@ import { useTranslation, Trans } from "react-i18next";
 import DataBucketSettings from "./data/DataBucketSettings";
 import { AdminMobileHeaderContext } from "./AdminMobileHeaderContext";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 export default function Settings() {
-  const { data } = useCurrentProjectMetadataQuery();
+  const { data } = useCurrentProjectMetadata();
   const { user } = useAuth0();
   const { setState: setHeaderState } = useContext(AdminMobileHeaderContext);
   useEffect(() => {
@@ -47,10 +47,10 @@ export default function Settings() {
     <>
       <div className="pt-2 pb-6 md:py-6 max-h-full overflow-y-auto">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
-          {data && data.currentProject && (
+          {data && data.project && (
             <BasicSettingsForm
-              {...data.currentProject}
-              url={`https://seasketch.org/${data.currentProject.slug}`}
+              {...data.project}
+              url={`https://seasketch.org/${data.project.slug}`}
             />
           )}
         </div>
@@ -683,7 +683,7 @@ function SuperUserSettings() {
   const { t, i18n } = useTranslation(["admin"]);
   const { slug } = useParams<{ slug: string }>();
   const [isFeatured, setIsFeatured] = useState<boolean | null>(null);
-  const { data, loading, error } = useCurrentProjectMetadataQuery();
+  const { data, loading, error } = useCurrentProjectMetadata();
   const [mutate, mutationState] = useUpdateProjectSettingsMutation();
 
   if (loading) {
@@ -691,7 +691,7 @@ function SuperUserSettings() {
   }
 
   const isFeaturedToggled =
-    isFeatured === null ? data?.currentProject?.isFeatured : isFeatured;
+    isFeatured === null ? data?.project?.isFeatured : isFeatured;
 
   const toggleIsFeatured = () => {
     const featured = !isFeaturedToggled;

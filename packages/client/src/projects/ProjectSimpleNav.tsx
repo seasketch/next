@@ -7,7 +7,7 @@ import {
   useRouteMatch,
 } from "react-router-dom";
 import Header from "../header/Header";
-import { useCurrentProjectMetadataQuery } from "../generated/graphql";
+import { useCurrentProjectMetadata } from "../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 // import AdminApp from "../admin/AdminApp";
 const LazyAdminApp = React.lazy(() => import("../admin/AdminApp"));
@@ -17,7 +17,7 @@ export default function ProjectSimpleNav() {
   const { t } = useTranslation(["admin"]);
   const { slug } = useParams<{ slug: string }>();
   let { path } = useRouteMatch();
-  const { data } = useCurrentProjectMetadataQuery();
+  const { data } = useCurrentProjectMetadata();
   return (
     <div>
       <Switch>

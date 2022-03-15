@@ -3,7 +3,6 @@ import Spinner from "../components/Spinner";
 import {
   ProjectAccessControlSetting,
   ProjectAccessStatus,
-  useCurrentProjectMetadataQuery,
   useResendEmailVerificationMutation,
   useUpdateProfileMutation,
   useRequestInviteOnlyProjectAccessMutation,
@@ -29,6 +28,7 @@ import {
 import { Persist } from "formik-persist";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import ProfileAvatarUploader from "../components/ProfileAvatarUploader";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 interface ProfileFormValues {
   fullname: string;
@@ -43,7 +43,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
 ) => {
   const auth0 = useAuth0();
   const onError = useGlobalErrorHandler();
-  const { data, loading, error, refetch } = useCurrentProjectMetadataQuery({
+  const { data, loading, error, refetch } = useCurrentProjectMetadata({
     onError,
   });
   const { t } = useTranslation();
@@ -96,7 +96,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
       </div>
     );
   } else if ((status as ProjectAccessStatus) === ProjectAccessStatus.Granted) {
-    if (!props.admin || data?.currentProject?.sessionIsAdmin) {
+    if (!props.admin || data?.project?.sessionIsAdmin) {
       return <div>{props.children}</div>;
     } else {
       icon = lockedIcon;
