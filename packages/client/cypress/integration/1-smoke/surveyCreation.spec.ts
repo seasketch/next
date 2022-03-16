@@ -300,7 +300,11 @@ describe("Survey creation smoke test", () => {
         if ((req.body.operationName) && (req.body.operationName === "CurrentProjectMetadata")) {
           req.alias = "currentProjectMetadata"
         }
+        //if ((req.body.operationName) && (req.body.operationName === "GetBasemapsAndRegion")) {
+        //  req.alias = "getBasemaps"
+        //}
       })
+      cy.intercept("https://api.mapbox.com/map-sessions/*").as('basemaps')
     })
     before(() => {
       cy.setLocalStorage("slug", slug)
@@ -438,17 +442,22 @@ describe("Survey creation smoke test", () => {
         .get("button").contains("Next").click()
     })
     it("Can input email address or can skip question", () => {
+      cy.contains("What is your email address?")
+      cy.get("input").should('be.visible')
       cy.get("input")
-      cy.get("input")
+      //cy.url().should('eq', Cypress.config().baseUrl + '/projects');
+      //cy.get("input")
+      ////cy.get("input")
+      ////cy.get("input")
       .type("test_user_1@seasketch.org")
       cy.contains("Next").click()
     })
-     it("Cannot advance until atoll selection is made", () => {
-       cy.contains("Which Atoll do you reside on?")
-         .get('[title = "Next Question"]')
-         .should('have.class', "pointer-events-none")
-       cy.contains('N').click()
-     })
+    it("Cannot advance until atoll selection is made", () => {
+      cy.contains("Which Atoll do you reside on?")
+        .get('[title = "Next Question"]')
+        .should('have.class', "pointer-events-none")
+      cy.contains('N').click()
+    })
     it("Advances to appropriate island selection page", () => {
       cy.contains('Which island of N atoll do you reside on?')
       cy.contains('Lhohi')
@@ -458,80 +467,94 @@ describe("Survey creation smoke test", () => {
         .should('have.class', "pointer-events-none")
       cy.contains('Kudafari').click()
     })
-    //it("Cannot advance until sector selection(s) is made", () => {
-    //  cy.get('[type = "button"]').as('nextBtn')
-    //  cy.get('@nextBtn').should('be.hidden')
-    //  cy.get('[title = "Next Question"]').as('next')
-    //    .should('have.class', "pointer-events-none")
-    //  cy.contains('Fisheries - Commercial, Tuna').click()
-    //  cy.get('@next').scrollIntoView()
-    //  cy.get('@nextBtn').then(($btn) => {
-    //    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    //    expect ($btn).to.be.visible
-    //  })
-    //  
-    //})
-    //it("Can advance to map page", () => {
-    //  cy.get('[type = "button"]').as('nextBtn')
-    //  cy.wait(8000)
-    //  cy.get('@nextBtn').click()
-    //})
-    ////it("Can select multiple sectors", () => {
+    it("Cannot advance until sector selection(s) is made", () => {
+      cy.get('[type = "button"]').as('nextBtn')
+      cy.get('@nextBtn').should('be.hidden')
+      cy.get('[title = "Next Question"]').as('next')
+        .should('have.class', "pointer-events-none")
+      cy.contains('Fisheries - Commercial, Tuna').click()
+      cy.get('@next').scrollIntoView()
+      //cy.get('@next').click()
+      cy.get('@nextBtn').then(($btn) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        expect ($btn).to.be.visible
+      })  
+      //cy.contains("Next", {timeout: 6000}).click()
+    })
+    it("Can advance to map page", () => {
+      cy.contains("Next")
+      cy.get('[type = "button"]').as('nextBtn')
+      cy.get('@nextBtn')//.click()
+      cy.get('@nextBtn').click()
+    })
+    ////it("Can select a sector", () => {
     ////  cy.get('[type = "button"]').as('nextBtn')
     ////  cy.get('[title = "Fisheries - Commercial, Tuna"]').then(($el) => {
     ////    expect ($el).to.have.descendants('svg')
     ////  })
-    ////  cy.get('[title = "Aquaculture / Mariculture"]').click().then(($el) => {
-    ////    expect ($el).to.have.descendants('svg')
-    ////  })
     ////  cy.get('@nextBtn').click()
-    ////})
-    //it("Can draw a polygon", () => {
-    //  cy.wait(10000)
-    //  cy.get('.mapboxgl-canvas').each((t) => {
-    //    const canvases = []
-    //    canvases.push(t)
-    //    return canvases
-    //  }).then((ary) => {
-    //    console.log(ary[0])
-    //    const el = ary[0]
-    //    return el
-    //  }).as('el')
-    //  cy.get('@el').click(300,300)        
-    //    .click(300, 100)
-    //    .click(100, 100)
-    //    .click(100, 300)
-    //    .dblclick(300, 300)
-    //    //.wait(8000)
-    //    //.dblclick(400,200)
-    //  cy.contains('Done').click()
-    //  //invalid shape
-    //  //cy.get('.mapboxgl-canvas').click(300, 300)
-    //  //  .click(100, 600)
-    //  //  .click(300, 600)
-    //  //  .click(300, 300)
-    //  //  .click(400, 400)
-    //  //  .dblclick(300,300)
-    //  //cy.get('[name = "Finish Shape"]')
+    ////////  cy.get('[title = "Aquaculture / Mariculture"]').click().then(($el) => {
+    ////////    expect ($el).to.have.descendants('svg')
+    //////  })
+    //////  cy.get('@nextBtn').click()
     //})
-    //it("Can assign attributes to the polygon", () => {
-    //  cy.get(".mt-1 > .block").clear()
-    //    .type("A great fishing spot for yellowfin tuna.")
-    //  cy.get('[title="Handline"]').click()
-    //  cy.get('[title="Yellowfin"]').click()
-    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
-    //  cy.contains('Save').click()
-    //})
+    it("Can draw a polygon", () => {
+      cy.contains("Fisheries - Commercial, Tuna")
+      cy.wait('@basemaps')
+      cy.get('.mapboxgl-canvas').each((t) => {
+        const canvases = []
+        canvases.push(t)
+        return canvases
+    }).then((ary) => {
+    //////    console.log(ary[0])
+        const el = ary[0]
+        return el
+      }).as('el')
+      cy.get('@el').click(300,300)        
+        .click(300, 100)
+        .click(100, 100)
+        .click(100, 300)
+        .dblclick(300, 300)
+        //.wait(8000)
+        //.dblclick(400,200)
+      cy.contains('Done').click()
+      ////invalid shape
+      ////cy.get('.mapboxgl-canvas').click(300, 300)
+      ////  .click(100, 600)
+      ////  .click(300, 600)
+      ////  .click(300, 300)
+      ////  .click(400, 400)
+      ////  .dblclick(300,300)
+      ////cy.get('[name = "Finish Shape"]')
+    })//
+    it("Can assign attributes to the polygon", () => {
+      cy.get(".mt-1 > .block").clear()
+        .type("A great fishing spot for yellowfin tuna.")
+      cy.get('[title="Handline"]').click()
+      cy.get('[title="Yellowfin"]').click()
+      cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
+      cy.contains('Save').click()
+    })
     //it("Correctly records attributes", () => {
     //  cy.contains("A great fishing spot for yellowfin tuna.")
     //  
     //})
     //it("Can finish sector", () => {
-    //  cy.wait(10000)
-    //  cy.contains('Finish Sector').click()
     //  cy.contains("Fisheries - Commercial, Tuna")
-    //  cy.wait(10000)
-    //  cy.contains('Next Question', {timeout: 8000}).click()
+    //  //cy.wait(10000)
+    //  //cy.contains('Finish Sector', {timeout: 8000}).click()
+    //  cy.contains("Finish Sector")
+    //  cy.get(".space-y-2 > :nth-child(2) > .select-none").as('finishSector')
+    //  cy.get('@finishSector', {timeout: 10000}).click()
+    //  //cy.get('@finishSector')
+    //  //cy.get('@finishSector').click()
+    //  //
+    //  //cy.contains("Your sectors")
+    //  //cy.contains("Next Question").as("nextQuestion")
+    //  //cy.get("@nextQuestion")
+    //  //cy.get("@nextQuestion").click()
+    //  //cy.wait(10000)
+    //  //cy.contains('Next Question').click()
     //  //cy.get('.select-none').click()
     //})
     //it("Can answer supplemental questions", () => {
