@@ -49,7 +49,6 @@ export default function BasemapMultiSelectInput({
   const { data, loading, error, refetch } = useAllBasemapsQuery({});
   const [state, setState] = useState(value || []);
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editorId, setEditorId] = useState<null | number>(null);
   const { slug } = useParams<{ slug: string }>();
 
   const basemaps = useMemo(() => {
@@ -70,19 +69,9 @@ export default function BasemapMultiSelectInput({
   }, [value, basemaps]);
 
   const [selectBasemapsModalOpen, setSelectBasemapsModalOpen] = useState(false);
-
+  return null;
   return (
     <>
-      {editorId && (
-        <BasemapEditorPanel
-          className="left-0 w-full shadow-2xl z-50"
-          onRequestClose={() => setEditorId(null)}
-          basemapId={editorId}
-          hideTerrain={true}
-          showMap={true}
-          cameraOptions={cameraOptions}
-        />
-      )}
       <FormEditorHeader className="mt-4 relative flex">
         <span className="flex-1">{t("Basemaps")}</span>
 

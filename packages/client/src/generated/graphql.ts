@@ -13489,7 +13489,7 @@ export type SurveyFormEditorDetailsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'name'>
+    & Pick<Project, 'id' | 'name'>
   )>, formElementTypes?: Maybe<Array<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
@@ -13509,7 +13509,7 @@ export type SurveyFormEditorDetailsQuery = (
     & SurveyListDetailsFragment
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'name' | 'url'>
+    & Pick<Project, 'id' | 'name' | 'url'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
@@ -14131,6 +14131,7 @@ export type AllBasemapsQuery = (
   { __typename?: 'Query' }
   & { currentProject?: Maybe<(
     { __typename?: 'Project' }
+    & Pick<Project, 'id'>
     & { basemaps?: Maybe<Array<(
       { __typename?: 'Basemap' }
       & BasemapDetailsFragment
@@ -18735,6 +18736,7 @@ export type SurveyByIdQueryResult = Apollo.QueryResult<SurveyByIdQuery, SurveyBy
 export const SurveyFormEditorDetailsDocument = gql`
     query SurveyFormEditorDetails($id: Int!, $slug: String!) {
   projectBySlug(slug: $slug) {
+    id
     name
   }
   formElementTypes {
@@ -18757,6 +18759,7 @@ export const SurveyFormEditorDetailsDocument = gql`
     }
   }
   currentProject {
+    id
     name
     url
     region {
@@ -20139,6 +20142,7 @@ export type UpdateFormElementMapCameraMutationOptions = Apollo.BaseMutationOptio
 export const AllBasemapsDocument = gql`
     query AllBasemaps {
   currentProject {
+    id
     basemaps {
       ...BasemapDetails
     }
