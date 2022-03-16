@@ -526,25 +526,29 @@ describe("Survey creation smoke test", () => {
       ////  .dblclick(300,300)
       ////cy.get('[name = "Finish Shape"]')
     })//
-    //it("Can assign attributes to the polygon", () => {
-    //  cy.get(".mt-1 > .block").clear()
-    //    .type("A great fishing spot for yellowfin tuna.")
-    //  cy.get('[title="Handline"]').click()
-    //  cy.get('[title="Yellowfin"]').click()
-    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
-    //  cy.contains('Save').click()
-    //})
+    it("Can assign attributes to the polygon", () => {
+      cy.get(".mt-1 > .block").clear()
+        .type("A great fishing spot for yellowfin tuna.")
+      cy.get('[title="Handline"]').click()
+      cy.get('[title="Yellowfin"]').click()
+      cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
+      cy.contains('Save').click()
+    })
     ////it("Correctly records attributes", () => {
     ////  cy.contains("A great fishing spot for yellowfin tuna.")
     ////  
     ////})
-    //it("Can finish sector", () => {
-    //  cy.contains("A great fishing spot for yellowfin tuna.")
-    //  cy.contains("Fisheries - Commercial, Tuna")
-    //  //cy.wait(10000)
-    //  //cy.contains('Finish Sector', {timeout: 8000}).click()
+    it("Can finish sector", () => {
+      cy.contains("A great fishing spot for yellowfin tuna.")
+      cy.contains("Fisheries - Commercial, Tuna")
+      //cy.wait(10000)
+      //cy.contains('Finish Sector').should('be.visible').then(($el) => {
+      //  {$el.trigger('click')}
+      //}) 
     //  cy.contains("Finish Sector").trigger('click', {force: true})
-    //  //cy.get(".space-y-2 > :nth-child(2) > .select-none").as('finishSector')
+      cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
+        {$el.trigger('click')}
+      })
     //  //cy.get('@finishSector', {timeout: 10000}).click()
     //  //cy.get('@finishSector')
     //  //cy.get('@finishSector').click()
@@ -556,7 +560,7 @@ describe("Survey creation smoke test", () => {
     //  //cy.wait(10000)
     //  //cy.contains('Next Question').click()
     //  //cy.get('.select-none').click()
-    //})
+    })
     //it("Can answer supplemental questions", () => {
     //  cy.contains('Are you willing to answer a few additional questions about who you are?')
     //  cy.contains('Yes').click()
