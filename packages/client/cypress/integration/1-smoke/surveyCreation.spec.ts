@@ -24,8 +24,8 @@ describe("Survey creation smoke test", () => {
         if ((req.body.operationName) && (req.body.operationName === "CreateResponse")) {
           req.alias = "createResponse"
         }
-        if ((req.body.operationName) && (req.body.operationName === "CurrentProjectMetadata")) {
-          req.alias = "currentProjectMetadata"
+        if ((req.body.operationName) && (req.body.operationName === "Survey")) {
+          req.alias = "getSurvey"
         }
       })
       cy.intercept("https://api.mapbox.com/map-sessions/*").as('basemaps')
@@ -153,11 +153,10 @@ describe("Survey creation smoke test", () => {
       cy.deleteProject(`${slug}`) 
     })
     it("Can visit the survey", () => {
-      //wait for first request
-      cy.wait('@currentProjectMetadata').its('response.statusCode').should('eq', 200)
-      //wait for second request
-      cy.wait('@currentProjectMetadata').its('response.statusCode').should('eq', 200)
-      cy.contains('Begin').click()
+      cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
+      cy.get('.select-none').should('be.visible').then(($btn) => {
+        {$btn.trigger('click')}
+      })
     })
     it("Cannot advance until name is provided", () => {
       cy.contains("What is your name?")
