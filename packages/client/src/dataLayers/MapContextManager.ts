@@ -420,13 +420,15 @@ class MapContextManager {
   setBasemaps(basemaps: BasemapDetailsFragment[]) {
     this.basemaps = {};
     for (const basemap of basemaps) {
-      this.basemaps[basemap.id.toString()] = basemap;
+      if (basemap) {
+        this.basemaps[basemap.id.toString()] = basemap;
+      }
     }
     if (
       !this.internalState.selectedBasemap ||
       !this.basemaps[this.internalState.selectedBasemap]
     ) {
-      if (basemaps.length) {
+      if (basemaps.length && basemaps[0]) {
         this.setSelectedBasemap(basemaps[0].id.toString());
       }
     }

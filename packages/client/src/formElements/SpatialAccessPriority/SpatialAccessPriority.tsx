@@ -1442,7 +1442,7 @@ function ChildVisibilitySettings({
               isToggled={childVisibilitySettings.enabled}
               onClick={updateComponentSetting(
                 `childVisibilitySettings.${childId}.enabled`,
-                componentSettings
+                unArrayifySettings(componentSettings)
               )}
             />
           }
@@ -1470,7 +1470,7 @@ function ChildVisibilitySettings({
                     const sectors = childVisibilitySettings.sectors || [];
                     updateComponentSetting(
                       `childVisibilitySettings.${childId}.sectors`,
-                      componentSettings
+                      unArrayifySettings(componentSettings)
                     )(
                       toggled
                         ? [...sectors, s.value || s.label]
@@ -1538,15 +1538,14 @@ function SubordinateVisibilitySettings({
                     -1
                   }
                   onClick={(toggled) => {
+                    const sectors = visibilitySettings || [];
                     updateComponentSetting(
                       `subordinateVisibilitySettings.${childId}`,
-                      componentSettings
+                      unArrayifySettings(componentSettings)
                     )(
                       toggled
                         ? [...visibilitySettings, s.value || s.label]
-                        : visibilitySettings.filter(
-                            (sec) => sec !== (s.value || s.label)
-                          )
+                        : sectors.filter((sec) => sec !== (s.value || s.label))
                     );
                   }}
                 />
@@ -1558,6 +1557,61 @@ function SubordinateVisibilitySettings({
       </div>
     </>
   );
+}
+
+// In-situ fix for data corrupted by https://github.com/seasketch/next/issues/339
+// Using lodash.set was assuming updating a value like childVisibilitySettings.72 should create or update
+// an array, setting array index 72 to a value. Instead, we want it to treat childVisibilitySettings as an
+// object. This is fixed by using lodash.setWith, but current data needs to be fixed by this function.
+function unArrayifySettings(settings?: SpatialAccessPriorityProps) {
+  if (
+    settings &&
+    (Array.isArray(settings.childVisibilitySettings) ||
+      Array.isArray(settings.subordinateVisibilitySettings))
+  ) {
+    const newSettings = { ...settings };
+    if (
+      newSettings.childVisibilitySettings &&
+      Array.isArray(newSettings.childVisibilitySettings)
+    ) {
+      newSettings.childVisibilitySettings = unArrayify(
+        newSettings.childVisibilitySettings
+      );
+    }
+    if (
+      newSettings.subordinateVisibilitySettings &&
+      Array.isArray(newSettings.subordinateVisibilitySettings)
+    ) {
+      newSettings.subordinateVisibilitySettings = unArrayify(
+        newSettings.subordinateVisibilitySettings
+      );
+    }
+    return newSettings;
+  } else if (
+    Object.values(settings?.subordinateVisibilitySettings || {})[0] === null
+  ) {
+    const newSettings = { ...settings };
+    const visibilitySettings = { ...newSettings.subordinateVisibilitySettings };
+    for (const key in visibilitySettings) {
+      if (visibilitySettings[key] === null) {
+        delete visibilitySettings[key];
+      }
+    }
+    newSettings.subordinateVisibilitySettings = visibilitySettings;
+    return newSettings;
+  } else {
+    return settings;
+  }
+}
+
+function unArrayify(values: (number | null | undefined)[]) {
+  const pojo: { [key: number]: any } = {};
+  for (var i = 0; i < values.length; i++) {
+    if (values[i] !== null || values[i] !== undefined) {
+      pojo[i] = values[i];
+    }
+  }
+  return pojo;
 }
 
 SpatialAccessPriority.ChildOptions = (props) => {
@@ -1582,18 +1636,20 @@ SpatialAccessPriority.ChildOptions = (props) => {
   if (!props.child.subordinateTo) {
     return (
       <ChildVisibilitySettings
+        key={props.child.id}
         childId={props.child.id}
-        updateComponentSetting={props.updateComponentSetting}
         componentSettings={props.componentSettings}
         childVisibilitySettings={childVisibilitySettings}
+        updateComponentSetting={props.updateComponentSetting}
       />
     );
   } else {
     return (
       <SubordinateVisibilitySettings
+        key={props.child.id}
+        childId={props.child.id}
         componentSettings={props.componentSettings}
         visibilitySettings={subordinateVisibilitySettings}
-        childId={props.child.id}
         updateComponentSetting={props.updateComponentSetting}
       />
     );

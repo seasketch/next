@@ -6,7 +6,14 @@ import {
   TrashIcon,
 } from "@heroicons/react/outline";
 import { EyeIcon } from "@heroicons/react/solid";
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useHistory } from "react-router-dom";
 import Button from "../../components/Button";
@@ -129,7 +136,7 @@ export default function SurveyFormEditor({
       results.flattenedFormElements
     );
     return results;
-  }, [data?.survey?.form?.formElements, data?.survey?.form?.logicRules]);
+  }, [data]);
 
   const [selectedLogicFormElements, setSelectedLogicFormElements] = useState<
     number[]
@@ -702,7 +709,10 @@ export default function SurveyFormEditor({
                     </p>
                     <div className="relative space-y-1 py-2">
                       {languages.map((lang) => (
-                        <div className="flex items-center space-x-2">
+                        <div
+                          key={lang.code}
+                          className="flex items-center space-x-2"
+                        >
                           <div className="flex-1">{lang.name}</div>
                           <Switch
                             className=""

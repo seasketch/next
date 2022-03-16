@@ -126,6 +126,7 @@ export default function BasemapMultiSelectInput({
                 value={state}
                 onRequestClose={(value) => {
                   setSelectBasemapsModalOpen(false);
+                  setState(value);
                   if (onChange) {
                     onChange(value);
                   }

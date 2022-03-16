@@ -4,12 +4,14 @@ import { ProfileForm, ProjectAccessGate } from "./ProjectAccessGate";
 import { MockedProvider } from "@apollo/client/testing";
 import { Auth0Provider, Auth0Context } from "@auth0/auth0-react";
 import {
-  CurrentProjectMetadataDocument,
   ProjectAccessControlSetting,
   ProjectAccessStatus,
+  ProjectMetadataDocument,
 } from "../generated/graphql";
 import { InMemoryCache } from "@apollo/client";
 import ProjectAppSidebar from "../projects/ProjectAppSidebar";
+import { createMemoryHistory } from "history";
+import { Router } from "react-router-dom";
 
 export default {
   title: "ProjectAccessGate",
@@ -36,7 +38,7 @@ const project = {
 
 const mockedProjectMetadata = {
   data: {
-    currentProject: { ...project },
+    project: { ...project },
     currentProjectPublicDetails,
     currentProjectAccessStatus: ProjectAccessStatus.Granted,
     me: {
@@ -55,37 +57,42 @@ const mockedProjectMetadata = {
 };
 
 const Template: Story<{ metadata: any; delay?: number }> = (props) => {
+  const history = createMemoryHistory();
+  const url = "/cburt/foo";
+  history.push(url);
   return (
     <div style={{ width: "100%" }}>
-      <Auth0Context.Provider
-        // @ts-ignore
-        value={{
-          isAuthenticated: false,
-          user: undefined,
-        }}
-      >
-        <MockedProvider
-          mocks={[
-            {
-              request: {
-                query: CurrentProjectMetadataDocument,
-              },
-              result: () => {
-                return props.metadata;
-              },
-              delay: props.delay,
-              // error: new Error("Hi!"),
-            },
-          ]}
+      <Router history={history}>
+        <Auth0Context.Provider
+          // @ts-ignore
+          value={{
+            isAuthenticated: false,
+            user: undefined,
+          }}
         >
-          <ProjectAccessGate>
-            <h1>Project Name: {props.metadata.data.currentProject?.name}</h1>
-            <p>
-              This gated content would be replaced with the full application.
-            </p>
-          </ProjectAccessGate>
-        </MockedProvider>
-      </Auth0Context.Provider>
+          <MockedProvider
+            mocks={[
+              {
+                request: {
+                  query: ProjectMetadataDocument,
+                },
+                result: () => {
+                  return props.metadata;
+                },
+                delay: props.delay,
+                // error: new Error("Hi!"),
+              },
+            ]}
+          >
+            <ProjectAccessGate>
+              <h1>Project Name: {props.metadata.data.project?.name}</h1>
+              <p>
+                This gated content would be replaced with the full application.
+              </p>
+            </ProjectAccessGate>
+          </MockedProvider>
+        </Auth0Context.Provider>
+      </Router>
     </div>
   );
 };
@@ -103,7 +110,7 @@ export const Error404 = () => (
     metadata={{
       data: {
         ...mockedProjectMetadata.data,
-        currentProject: null,
+        project: null,
         currentProjectPublicDetails: null,
         currentProjectAccessStatus: ProjectAccessStatus.ProjectDoesNotExist,
       },
@@ -151,7 +158,7 @@ export const DeniedAdminsOnlyAndAnon = () => (
     metadata={{
       data: {
         ...mockedProjectMetadata.data,
-        currentProject: {
+        project: {
           ...project,
           accessControl: ProjectAccessControlSetting.AdminsOnly,
         },
