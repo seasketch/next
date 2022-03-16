@@ -14145,6 +14145,19 @@ export type AllBasemapsQuery = (
   )> }
 );
 
+export type GetFormElementQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetFormElementQuery = (
+  { __typename?: 'Query' }
+  & { formElement?: Maybe<(
+    { __typename?: 'FormElement' }
+    & FormElementDetailsFragment
+  )> }
+);
+
 export type SurveyAppRuleFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
@@ -20165,6 +20178,41 @@ export function useAllBasemapsLazyQuery(baseOptions?: Apollo.LazyQueryHookOption
 export type AllBasemapsQueryHookResult = ReturnType<typeof useAllBasemapsQuery>;
 export type AllBasemapsLazyQueryHookResult = ReturnType<typeof useAllBasemapsLazyQuery>;
 export type AllBasemapsQueryResult = Apollo.QueryResult<AllBasemapsQuery, AllBasemapsQueryVariables>;
+export const GetFormElementDocument = gql`
+    query GetFormElement($id: Int!) {
+  formElement(id: $id) {
+    ...FormElementDetails
+  }
+}
+    ${FormElementDetailsFragmentDoc}`;
+
+/**
+ * __useGetFormElementQuery__
+ *
+ * To run a query within a React component, call `useGetFormElementQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetFormElementQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetFormElementQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetFormElementQuery(baseOptions: Apollo.QueryHookOptions<GetFormElementQuery, GetFormElementQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetFormElementQuery, GetFormElementQueryVariables>(GetFormElementDocument, options);
+      }
+export function useGetFormElementLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetFormElementQuery, GetFormElementQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetFormElementQuery, GetFormElementQueryVariables>(GetFormElementDocument, options);
+        }
+export type GetFormElementQueryHookResult = ReturnType<typeof useGetFormElementQuery>;
+export type GetFormElementLazyQueryHookResult = ReturnType<typeof useGetFormElementLazyQuery>;
+export type GetFormElementQueryResult = Apollo.QueryResult<GetFormElementQuery, GetFormElementQueryVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!) {
   me {
@@ -21320,6 +21368,7 @@ export const namedOperations = {
     SurveyResponses: 'SurveyResponses',
     SurveyMapDetails: 'SurveyMapDetails',
     AllBasemaps: 'AllBasemaps',
+    GetFormElement: 'GetFormElement',
     Survey: 'Survey',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     UserAdminCounts: 'UserAdminCounts',

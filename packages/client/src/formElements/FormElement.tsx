@@ -20,7 +20,9 @@ import {
   Maybe,
   Sketch,
   SketchClassDetailsFragment,
+  SurveyFormEditorDetailsDocument,
   UpdateFormElementMutation,
+  useGetFormElementQuery,
   useUpdateFormElementMutation,
   useUpdateFormElementSketchClassMutation,
   useUpdateSurveyBaseSettingsMutation,
@@ -36,7 +38,7 @@ import {
 import { BBox, Feature, FeatureCollection } from "geojson";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 import { LangDetails } from "../lang/supported";
-import set from "lodash.set";
+import set from "lodash.setwith";
 import deepCopy from "lodash.clonedeep";
 import { components } from ".";
 import SpatialAccessPriority from "./SpatialAccessPriority/SpatialAccessPriority";
@@ -338,13 +340,23 @@ export function ChildOptionsFactory(props: ChildOptionsFactoryProps) {
     updateComponentSetting,
     updateFormElementState,
   ] = useUpdateFormElement(props);
+  const { data, loading, error } = useGetFormElementQuery({
+    variables: {
+      id: props.id,
+    },
+  });
   const C = components[props.typeId];
+  if (!data?.formElement) {
+    return null;
+  }
   if (C.ChildOptions) {
     return (
       <C.ChildOptions
         child={props.child}
-        componentSettings={props.componentSettings}
-        updateComponentSetting={updateComponentSetting}
+        componentSettings={data.formElement.componentSettings}
+        updateComponentSetting={(...args) => {
+          return updateComponentSetting(...args);
+        }}
       />
     );
   } else {
@@ -358,6 +370,7 @@ export function useUpdateFormElement(
     | "body"
     | "componentSettings"
     | "id"
+    | "formId"
     | "isRequired"
     | "typeId"
     | "alternateLanguageSettings"
@@ -401,13 +414,18 @@ export function useUpdateFormElement(
         id: data.id,
       },
       onError,
-      optimisticResponse: {
-        updateFormElement: {
-          formElement: {
-            ...data,
-            ...variables,
+      optimisticResponse: (props) => {
+        return {
+          __typename: "Mutation",
+          updateFormElement: {
+            __typename: "UpdateFormElementPayload",
+            formElement: {
+              __typename: "FormElement",
+              ...data,
+              ...variables,
+            },
           },
-        },
+        };
       },
     }).catch((e) => onError(e));
   };
@@ -430,15 +448,21 @@ export function useUpdateFormElement(
 
     if (!language || language === "EN") {
       const newSettings = deepCopy(currentSettings);
-      set(newSettings, setting, value);
-      // @ts-ignore
-      window.newSettings = newSettings;
-      // @ts-ignore
-      window.set = set;
-      updater({ componentSettings: newSettings });
+      set(
+        newSettings,
+        setting,
+        value,
+        /\w\./.test(setting) ? Object : undefined
+      );
+      updater({ componentSettings: deepCopy(newSettings) });
     } else {
       const newSettings = deepCopy(alternateLanguageSettings[language]);
-      set(newSettings, setting, value);
+      set(
+        newSettings,
+        setting,
+        value,
+        /\w\./.test(setting) ? Object : undefined
+      );
       updater({
         alternateLanguageSettings: {
           ...alternateLanguageSettings,

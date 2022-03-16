@@ -782,3 +782,9 @@ query AllBasemaps {
     }
   }
 }
+
+query GetFormElement($id: Int!) {
+  formElement(id: $id) {
+    ...FormElementDetails
+  }
+}
