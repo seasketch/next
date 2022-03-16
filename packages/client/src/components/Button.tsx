@@ -21,6 +21,8 @@ export interface ButtonProps {
   loading?: boolean;
   /** Render a <label /> with htmlFor set */
   labelFor?: string;
+  /* Id for targetting specific buttons */
+  id?: string;
   href?: string;
   mailTo?: string;
   children?: React.ReactNode;
@@ -152,6 +154,7 @@ export default function Button(props: ButtonProps) {
         props.className
       }`}
       onClick={props.disabled ? undefined : onClick}
+      id={props.id}
     >
       {props.labelFor ? (
         <label
@@ -181,7 +184,7 @@ export default function Button(props: ButtonProps) {
                 setDropdownOpen(!dropdownOpen);
               }}
             >
-              <ChevronDownIcon className="w-4 h-4" />
+              <ChevronDownIcon className="w-4 h-4" id="chevron-down" />
               {dropdownOpen && (
                 <nav className="bg-white rounded shadow absolute right-0 top-full mt-2 z-10 w-content overflow-hidden">
                   {props.segmentItems.map((i, n) => (

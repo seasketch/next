@@ -1,0 +1,393 @@
+{
+  "Maldives": {
+    "data": {
+      "form": {
+        "sketchClassId": null,
+        "surveyId": 11,
+        "isTemplate": false,
+        "templateType": null,
+        "templateName": null,
+        "logicRules": [
+          {
+            "formElementId": 74,
+            "id": 1,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 75,
+            "position": 1,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDFd",
+                "id": 1,
+                "ruleId": 1,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "HA"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 2,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 76,
+            "position": 2,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDNd",
+                "id": 3,
+                "ruleId": 2,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "HDh"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 3,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 77,
+            "position": 3,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDRd",
+                "id": 4,
+                "ruleId": 3,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Sh"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 4,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 78,
+            "position": 4,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDVd",
+                "id": 5,
+                "ruleId": 4,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "N"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 5,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 79,
+            "position": 5,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDZd",
+                "id": 6,
+                "ruleId": 5,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "R"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 6,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 80,
+            "position": 6,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDdd",
+                "id": 7,
+                "ruleId": 6,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "B"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 7,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 81,
+            "position": 7,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDhd",
+                "id": 8,
+                "ruleId": 7,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Lh"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 8,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 82,
+            "position": 8,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDld",
+                "id": 9,
+                "ruleId": 8,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "AA"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 9,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 84,
+            "position": 9,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDEwXQ==",
+                "id": 10,
+                "ruleId": 9,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "ADh"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 10,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 85,
+            "position": 10,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDExXQ==",
+                "id": 11,
+                "ruleId": 10,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "V"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 11,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 83,
+            "position": 11,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDEyXQ==",
+                "id": 12,
+                "ruleId": 11,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "M"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 12,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 86,
+            "position": 12,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDEzXQ==",
+                "id": 13,
+                "ruleId": 12,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "F"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 13,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 87,
+            "position": 13,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDE0XQ==",
+                "id": 14,
+                "ruleId": 13,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Dh"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 14,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 88,
+            "position": 14,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDE1XQ==",
+                "id": 15,
+                "ruleId": 14,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Th"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 15,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 89,
+            "position": 15,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDE2XQ==",
+                "id": 16,
+                "ruleId": 15,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "L"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 16,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 90,
+            "position": 16,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDE3XQ==",
+                "id": 17,
+                "ruleId": 16,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "GA"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 17,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 91,
+            "position": 17,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDE4XQ==",
+                "id": 18,
+                "ruleId": 17,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "GDh"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 18,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 92,
+            "position": 18,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDE5XQ==",
+                "id": 19,
+                "ruleId": 18,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Addu"
+              }
+            ]
+          },
+          {
+            "formElementId": 74,
+            "id": 19,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 93,
+            "position": 19,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDIwXQ==",
+                "id": 20,
+                "ruleId": 19,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Gn"
+              }
+            ]
+          },
+          {
+            "formElementId": 98,
+            "id": 20,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 99,
+            "position": 20,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDIxXQ==",
+                "id": 21,
+                "ruleId": 20,
+                "subjectId": 98,
+                "operator": "EQUAL",
+                "value": true
+              }
+            ]
+          },
+          {
+            "formElementId": 99,
+            "id": 22,
+            "booleanOperator": "OR",
+            "command": "JUMP",
+            "jumpToId": 100,
+            "position": 22,
+            "conditions": [
+              {
+                "nodeId": "WyJmb3JtX2xvZ2ljX2NvbmRpdGlvbnMiLDIzXQ==",
+                "id": 23,
+                "ruleId": 22,
+                "subjectId": 99,
+                "operator": "IS_BLANK",
+                "value": null
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

@@ -54,6 +54,7 @@ export default function FullSidebar({
   };
 
   const project = data?.project;
+
   return (
     <motion.div
       variants={{
@@ -91,7 +92,7 @@ export default function FullSidebar({
           )}
         </div>
         <div className="flex-1 max-w-md flex items-center text-xl">
-          <h1 className=" ">{project?.name}</h1>
+          <h1 className="">{projectName}</h1>
         </div>
         <button
           onClick={onClose}

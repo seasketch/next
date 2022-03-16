@@ -23,10 +23,12 @@ import EditBasemapPage from "./data/EditBasemapPage";
 import { useProjectMetadataQuery } from "../generated/graphql";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
+
 const LazyBasicSettings = React.lazy(() => import("./Settings"));
 const LazyDataSettings = React.lazy(() => import("./data/DataSettings"));
 const LazyUserSettings = React.lazy(() => import("./users/UserSettings"));
 const LazySurveyAdmin = React.lazy(() => import("./surveys/SurveyAdmin"));
+
 
 interface Section {
   breadcrumb: string;
@@ -239,7 +241,22 @@ export default function AdminApp() {
   if (data && data.project?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;
   }
-
+  
+  const getProjectName = () => {
+   // eslint-disable-next-line react-hooks/rules-of-hooks
+     const { data, loading, error } = useGetProjectBySlugQuery({
+       variables: {
+          slug: slug
+       },
+     });
+     return data?.projectBySlug?.name
+  }
+  
+  const projectName = getProjectName()
+   
+  //if (data && data.currentProject?.sessionIsAdmin === false) {
+  //  return <Redirect to={`/${slug}`} />;
+  //}
   return (
     <AdminMobileHeaderContext.Provider
       value={{ ...mobileHeaderState, setState: setMobileHeaderState }}

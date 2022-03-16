@@ -1,0 +1,340 @@
+{
+  "Maldives": 
+  {
+    "data": {
+      "form": {
+        "id": 25,
+        "formElements": [
+          {
+            "formId": 25,
+            "id": 117,
+            "isRequired": false,
+            "exportId": "tuna_gear",
+            "position": 1,
+            "componentSettings": {
+              "options": [
+                {
+                  "label": "Trolling / drifting dropline",
+                  "value": "Trolling / drifting dropline  | ވަދު ނަނުގެ މަސްވެރިކަން"
+                },
+                {
+                  "label": "Handline",
+                  "value": "Handline | ބޮޑުކަންނެލީގެ އަތުނަނު/ އޮއިނަނުގެ މަސްވެރިކަން"
+                },
+                {
+                  "label": "Longline",
+                  "value": "Longline | ލޭނުގެ މަސްވެރިކަން"
+                },
+                {
+                  "label": "Pole and Line",
+                  "value": "Pole and Line | ކަޅުބިލަމަހުގެ ދޮށީގެ މަސްވެރިކަން"
+                }
+              ],
+              "multipleSelect": true
+            },
+            "typeId": "MultipleChoice",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "What type of gear do you use here?",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "unsplashAuthorUrl": null,
+            "backgroundWidth": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "isInput": true,
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            },
+            "sketchClassFk": null,
+            "sketchClass": null
+          },
+          {
+            "formId": 25,
+            "id": 118,
+            "isRequired": false,
+            "exportId": "tuna_species",
+            "position": 2,
+            "componentSettings": {
+              "options": [
+                {
+                  "label": "Bigeye",
+                  "value": "Bigeye | ލޯބޮޑު ކަންނެލި"
+                },
+                {
+                  "label": "Yellowfin",
+                  "value": "Yellowfin | ރީނދޫއުރަހަ ކަންނެލި"
+                },
+                {
+                  "label": "Skipjack",
+                  "value": "Skipjack |  ކަޅުބިލަމަސް"
+                },
+                {
+                  "label": "Frigate",
+                  "value": "Frigate | ރާގޮނޑި"
+                },
+                {
+                  "label": "Kawakawa",
+                  "value": "Kawakawa | ލައްޓި"
+                }
+              ],
+              "multipleSelect": true
+            },
+            "typeId": "MultipleChoice",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "What species do you fish here?",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "unsplashAuthorUrl": null,
+            "backgroundWidth": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "isInput": true,
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            },
+            "sketchClassFk": null,
+            "sketchClass": null
+          },
+          {
+            "formId": 25,
+            "id": 116,
+            "isRequired": false,
+            "exportId": "comments",
+            "position": 4,
+            "componentSettings": {
+              "compact": true
+            },
+            "typeId": "TextArea",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "Comments",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "unsplashAuthorUrl": null,
+            "backgroundWidth": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "isInput": true,
+            "type": {
+              "componentName": "TextArea",
+              "label": "Text Area",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "IS_BLANK"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            },
+            "sketchClassFk": null,
+            "sketchClass": null
+          },
+          {
+            "formId": 25,
+            "id": 113,
+            "isRequired": true,
+            "exportId": "feature_name",
+            "position": 5,
+            "componentSettings": {
+              "generatedNamePrefix": "Area"
+            },
+            "typeId": "FeatureName",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "attrs": {},
+                  "content": [
+                    {
+                      "text": "Area Name",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "unsplashAuthorUrl": null,
+            "backgroundWidth": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "isInput": true,
+            "type": {
+              "componentName": "FeatureName",
+              "label": "Feature Name",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": true,
+              "isSingleUseOnly": true,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": true
+            },
+            "sketchClassFk": null,
+            "sketchClass": null
+          },
+          {
+            "formId": 25,
+            "id": 114,
+            "isRequired": true,
+            "exportId": "priority",
+            "position": 6,
+            "componentSettings": {
+              "lowText": "Low",
+              "highText": "High",
+              "averageText": "Average"
+            },
+            "typeId": "SAPRange",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "Please indicate the relative value of this area to you",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "unsplashAuthorUrl": null,
+            "backgroundWidth": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "isInput": true,
+            "type": {
+              "componentName": "SAPRange",
+              "label": "Spatial Access Priority Range Input",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": true,
+              "isSingleUseOnly": true,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false
+            },
+            "sketchClassFk": null,
+            "sketchClass": null
+          }
+        ]
+      }
+    }
+  }
+}
