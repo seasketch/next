@@ -1,0 +1,221 @@
+{ 
+  "Maldives": {
+    "data": {
+      "form": {
+        "id": 15,
+        "logicRules": [
+          {
+            "conditions": [
+              {
+                "ruleId": 1,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "HA"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 2,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "HDh"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 3,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Sh"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 4,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "N"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 5,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "R"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 6,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "B"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 7,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Lh"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 8,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "AA"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 9,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "ADh"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 10,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "V"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 11,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "M"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 12,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "F"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 13,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Dh"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 14,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Th"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 15,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "L"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 16,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "GA"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 17,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "GDh"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 18,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Addu"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 19,
+                "subjectId": 74,
+                "operator": "EQUAL",
+                "value": "Gn"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 20,
+                "subjectId": 98,
+                "operator": "EQUAL",
+                "value": true
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "ruleId": 22,
+                "subjectId": 99,
+                "operator": "IS_BLANK",
+                "value": null
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
