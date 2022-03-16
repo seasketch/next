@@ -474,19 +474,18 @@ describe("Survey creation smoke test", () => {
         .should('have.class', "pointer-events-none")
       cy.contains('Fisheries - Commercial, Tuna').click()
       cy.get('@next').scrollIntoView()
-      //cy.get('@next').click()
-      cy.get('@nextBtn').then(($btn) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-        expect ($btn).to.be.visible
-      })  
+      cy.get('@nextBtn').should('be.visible').then(($btn) => {
+        {$btn.trigger('click')}
+      })
       //cy.contains("Next", {timeout: 6000}).click()
     })
-    it("Can advance to map page", () => {
-      cy.contains("Next")
-      cy.get('[type = "button"]').as('nextBtn')
-      cy.get('@nextBtn')//.click()
-      cy.get('@nextBtn').click()
-    })
+    //it("Can advance to map page", () => {
+    //  cy.contains('Fisheries - Commercial, Tuna').click()
+    //  cy.contains("Next")
+    //  cy.get('[type = "button"]').as('nextBtn')
+    //  cy.get('@nextBtn')//.click()
+    //  cy.get('@nextBtn').click()
+    //})
     ////it("Can select a sector", () => {
     ////  cy.get('[type = "button"]').as('nextBtn')
     ////  cy.get('[title = "Fisheries - Commercial, Tuna"]').then(($el) => {
@@ -498,54 +497,55 @@ describe("Survey creation smoke test", () => {
     //////  })
     //////  cy.get('@nextBtn').click()
     //})
-    it("Can draw a polygon", () => {
-      cy.contains("Fisheries - Commercial, Tuna")
-      cy.wait('@basemaps')
-      cy.get('.mapboxgl-canvas').each((t) => {
-        const canvases = []
-        canvases.push(t)
-        return canvases
-    }).then((ary) => {
-    //////    console.log(ary[0])
-        const el = ary[0]
-        return el
-      }).as('el')
-      cy.get('@el').click(300,300)        
-        .click(300, 100)
-        .click(100, 100)
-        .click(100, 300)
-        .dblclick(300, 300)
-        //.wait(8000)
-        //.dblclick(400,200)
-      cy.contains('Done').click()
-      ////invalid shape
-      ////cy.get('.mapboxgl-canvas').click(300, 300)
-      ////  .click(100, 600)
-      ////  .click(300, 600)
-      ////  .click(300, 300)
-      ////  .click(400, 400)
-      ////  .dblclick(300,300)
-      ////cy.get('[name = "Finish Shape"]')
-    })//
-    it("Can assign attributes to the polygon", () => {
-      cy.get(".mt-1 > .block").clear()
-        .type("A great fishing spot for yellowfin tuna.")
-      cy.get('[title="Handline"]').click()
-      cy.get('[title="Yellowfin"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
-      cy.contains('Save').click()
-    })
-    //it("Correctly records attributes", () => {
-    //  cy.contains("A great fishing spot for yellowfin tuna.")
-    //  
+    //it("Can draw a polygon", () => {
+    //  cy.contains("Fisheries - Commercial, Tuna")
+    //  cy.wait('@basemaps')
+    //  cy.get('.mapboxgl-canvas').each((t) => {
+    //    const canvases = []
+    //    canvases.push(t)
+    //    return canvases
+    //}).then((ary) => {
+    ////////    console.log(ary[0])
+    //    const el = ary[0]
+    //    return el
+    //  }).as('el')
+    //  cy.get('@el').click(300,300)        
+    //    .click(300, 100)
+    //    .click(100, 100)
+    //    .click(100, 300)
+    //    .dblclick(300, 300)
+    //    //.wait(8000)
+    //    //.dblclick(400,200)
+    //  cy.contains('Done').click()
+    //  ////invalid shape
+    //  ////cy.get('.mapboxgl-canvas').click(300, 300)
+    //  ////  .click(100, 600)
+    //  ////  .click(300, 600)
+    //  ////  .click(300, 300)
+    //  ////  .click(400, 400)
+    //  ////  .dblclick(300,300)
+    //  ////cy.get('[name = "Finish Shape"]')
+    //})//
+    //it("Can assign attributes to the polygon", () => {
+    //  cy.get(".mt-1 > .block").clear()
+    //    .type("A great fishing spot for yellowfin tuna.")
+    //  cy.get('[title="Handline"]').click()
+    //  cy.get('[title="Yellowfin"]').click()
+    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
+    //  cy.contains('Save').click()
     //})
+    ////it("Correctly records attributes", () => {
+    ////  cy.contains("A great fishing spot for yellowfin tuna.")
+    ////  
+    ////})
     //it("Can finish sector", () => {
+    //  cy.contains("A great fishing spot for yellowfin tuna.")
     //  cy.contains("Fisheries - Commercial, Tuna")
     //  //cy.wait(10000)
     //  //cy.contains('Finish Sector', {timeout: 8000}).click()
-    //  cy.contains("Finish Sector")
-    //  cy.get(".space-y-2 > :nth-child(2) > .select-none").as('finishSector')
-    //  cy.get('@finishSector', {timeout: 10000}).click()
+    //  cy.contains("Finish Sector").trigger('click', {force: true})
+    //  //cy.get(".space-y-2 > :nth-child(2) > .select-none").as('finishSector')
+    //  //cy.get('@finishSector', {timeout: 10000}).click()
     //  //cy.get('@finishSector')
     //  //cy.get('@finishSector').click()
     //  //
