@@ -14870,20 +14870,18 @@ registerComponent({
   name: "SpatialAccessPriorityInput",
   fname: "SpatialAccessPriority/SpatialAccessPriority",
   getColumns: (componentSettings, exportId) => {
-    return [`${exportId}_sectors`, `${exportId}_feature_ids`];
+    return [`${exportId}_sectors`];
   },
   getAnswers: (settings, exportId, answer) => {
     if (Array.isArray(answer)) {
       return {
         [`${exportId}_sectors`]: [
           "Unknown -- https://github.com/seasketch/next/commit/3a69e33b14dd444b240edc24aa95d754099e2c25"
-        ],
-        [`${exportId}_feature_ids`]: answer
+        ]
       };
     } else {
       return {
-        [`${exportId}_sectors`]: answer.sectors,
-        [`${exportId}_feature_ids`]: answer.collection || []
+        [`${exportId}_sectors`]: answer.sectors
       };
     }
   },
@@ -14933,7 +14931,6 @@ var NewBasemapFragmentDoc = import_client.gql`
   description
   labelsLayerId
   name
-  nodeId
   terrainExaggeration
   terrainOptional
   url
@@ -14942,6 +14939,7 @@ var NewBasemapFragmentDoc = import_client.gql`
   thumbnail
   terrainUrl
   terrainTileSize
+  surveysOnly
 }
     `;
 var NewQueryParametersFragmentDoc = import_client.gql`
@@ -15146,6 +15144,7 @@ var BasemapDetailsFragmentDoc = import_client.gql`
   tileSize
   type
   url
+  surveysOnly
 }
     `;
 var SurveyListDetailsFragmentDoc = import_client.gql`
@@ -15208,6 +15207,8 @@ var FormElementDetailsFragmentDoc = import_client.gql`
   backgroundWidth
   backgroundHeight
   subordinateTo
+  mapBasemaps
+  mapCameraOptions
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
 var LogicRuleDetailsFragmentDoc = import_client.gql`
@@ -15258,6 +15259,35 @@ var FormElementFullDetailsFragmentDoc = import_client.gql`
 }
     ${FormElementDetailsFragmentDoc}
 ${SketchClassDetailsFragmentDoc}`;
+var SurveyResponseFragmentDoc = import_client.gql`
+    fragment SurveyResponse on SurveyResponse {
+  id
+  surveyId
+  bypassedDuplicateSubmissionControl
+  updatedAt
+  accountEmail
+  userId
+  createdAt
+  data
+  isDuplicateEntry
+  isDuplicateIp
+  isPractice
+  isUnrecognizedUserAgent
+  archived
+  lastUpdatedByEmail
+}
+    `;
+var FormElementExtendedDetailsFragmentDoc = import_client.gql`
+    fragment FormElementExtendedDetails on FormElement {
+  ...FormElementDetails
+  surveyConsentDocumentsConnection {
+    nodes {
+      url
+      version
+    }
+  }
+}
+    ${FormElementDetailsFragmentDoc}`;
 var SurveyAppRuleFragmentDoc = import_client.gql`
     fragment SurveyAppRule on FormLogicRule {
   booleanOperator
@@ -15311,6 +15341,8 @@ var SurveyAppFormElementFragmentDoc = import_client.gql`
   backgroundHeight
   jumpToId
   subordinateTo
+  mapBasemaps
+  mapCameraOptions
 }
     ${SketchClassDetailsFragmentDoc}`;
 var SurveyAppSurveyFragmentDoc = import_client.gql`
@@ -15436,6 +15468,27 @@ var UpdateProjectStorageBucketDocument = import_client.gql`
         region
         name
       }
+    }
+  }
+}
+    `;
+var MapboxApiKeysDocument = import_client.gql`
+    query MapboxAPIKeys {
+  currentProject {
+    mapboxPublicKey
+    mapboxSecretKey
+  }
+}
+    `;
+var UpdateKeysDocument = import_client.gql`
+    mutation updateKeys($id: Int!, $public: String, $secret: String) {
+  updateProject(
+    input: {id: $id, patch: {mapboxPublicKey: $public, mapboxSecretKey: $secret}}
+  ) {
+    project {
+      id
+      mapboxPublicKey
+      mapboxSecretKey
     }
   }
 }
@@ -15682,6 +15735,9 @@ var GetBasemapsDocument = import_client.gql`
     query GetBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
     id
+    surveyBasemaps {
+      ...BasemapDetails
+    }
     basemaps {
       ...BasemapDetails
     }
@@ -15689,50 +15745,16 @@ var GetBasemapsDocument = import_client.gql`
 }
     ${BasemapDetailsFragmentDoc}`;
 var CreateBasemapDocument = import_client.gql`
-    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!) {
+    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean) {
   createBasemap(
-    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url}}
+    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly}}
   ) {
     basemap {
-      id
-      attribution
-      interactivitySettings {
-        cursor
-        id
-        layers
-        longTemplate
-        shortTemplate
-        type
-      }
-      labelsLayerId
-      name
-      optionalBasemapLayers {
-        basemapId
-        id
-        defaultVisibility
-        description
-        options
-        groupType
-        layers
-        metadata
-        name
-      }
-      description
-      projectId
-      terrainExaggeration
-      terrainMaxZoom
-      terrainOptional
-      terrainTileSize
-      terrainUrl
-      terrainVisibilityDefault
-      thumbnail
-      tileSize
-      type
-      url
+      ...BasemapDetails
     }
   }
 }
-    `;
+    ${BasemapDetailsFragmentDoc}`;
 var GetBasemapDocument = import_client.gql`
     query GetBasemap($id: Int!) {
   basemap(id: $id) {
@@ -15980,6 +16002,15 @@ var UpdateInteractivitySettingsLayersDocument = import_client.gql`
   }
 }
     `;
+var MapboxKeysDocument = import_client.gql`
+    query MapboxKeys {
+  currentProject {
+    id
+    mapboxPublicKey
+    mapboxSecretKey
+  }
+}
+    `;
 var CreateProjectDocument = import_client.gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
@@ -15987,42 +16018,6 @@ var CreateProjectDocument = import_client.gql`
       id
       url
       slug
-    }
-  }
-}
-    `;
-var CurrentProjectMetadataDocument = import_client.gql`
-    query CurrentProjectMetadata {
-  currentProject {
-    id
-    slug
-    url
-    name
-    description
-    logoLink
-    logoUrl
-    accessControl
-    sessionIsAdmin
-    isFeatured
-  }
-  currentProjectPublicDetails {
-    id
-    accessControl
-    slug
-    name
-    logoUrl
-    supportEmail
-  }
-  currentProjectAccessStatus
-  me {
-    id
-    profile {
-      fullname
-      nickname
-      email
-      picture
-      bio
-      affiliations
     }
   }
 }
@@ -16515,6 +16510,42 @@ var UpdateProjectAccessControlSettingsDocument = import_client.gql`
   }
 }
     `;
+var ProjectMetadataDocument = import_client.gql`
+    query ProjectMetadata($slug: String!) {
+  project: projectBySlug(slug: $slug) {
+    id
+    slug
+    url
+    name
+    description
+    logoLink
+    logoUrl
+    accessControl
+    sessionIsAdmin
+    isFeatured
+  }
+  currentProjectPublicDetails {
+    id
+    accessControl
+    slug
+    name
+    logoUrl
+    supportEmail
+  }
+  currentProjectAccessStatus
+  me {
+    id
+    profile {
+      fullname
+      nickname
+      email
+      picture
+      bio
+      affiliations
+    }
+  }
+}
+    `;
 var ProjectRegionDocument = import_client.gql`
     query ProjectRegion($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -16616,6 +16647,7 @@ var SurveyByIdDocument = import_client.gql`
     query SurveyById($id: Int!) {
   survey(id: $id) {
     ...SurveyListDetails
+    isSpatial
   }
 }
     ${SurveyListDetailsFragmentDoc}`;
@@ -16877,6 +16909,7 @@ var ClearFormElementStyleDocument = import_client.gql`
       unsplashAuthorUrl
       textVariant
       secondaryColor
+      layout
     }
   }
 }
@@ -16997,7 +17030,7 @@ var SurveyResponsesDocument = import_client.gql`
   survey(id: $surveyId) {
     form {
       formElements {
-        ...FormElementDetails
+        ...FormElementExtendedDetails
       }
       logicRules {
         ...SurveyAppRule
@@ -17005,27 +17038,18 @@ var SurveyResponsesDocument = import_client.gql`
     }
     id
     practiceResponseCount
+    archivedResponseCount
     submittedResponseCount
     surveyResponsesConnection {
       nodes {
-        id
-        surveyId
-        bypassedDuplicateSubmissionControl
-        updatedAt
-        accountEmail
-        userId
-        createdAt
-        data
-        isDuplicateEntry
-        isDuplicateIp
-        isPractice
-        isUnrecognizedUserAgent
+        ...SurveyResponse
       }
     }
   }
 }
-    ${FormElementDetailsFragmentDoc}
-${SurveyAppRuleFragmentDoc}`;
+    ${FormElementExtendedDetailsFragmentDoc}
+${SurveyAppRuleFragmentDoc}
+${SurveyResponseFragmentDoc}`;
 var SurveyMapDetailsDocument = import_client.gql`
     query SurveyMapDetails($surveyId: Int!) {
   survey(id: $surveyId) {
@@ -17038,6 +17062,110 @@ var SurveyMapDetailsDocument = import_client.gql`
   }
 }
     ${FormElementDetailsFragmentDoc}`;
+var ToggleResponsesPracticeDocument = import_client.gql`
+    mutation toggleResponsesPractice($ids: [Int], $isPractice: Boolean) {
+  toggleResponsesPractice(input: {ids: $ids, isPractice: $isPractice}) {
+    surveyResponses {
+      id
+      isPractice
+      archived
+      lastUpdatedByEmail
+      survey {
+        id
+        practiceResponseCount
+        archivedResponseCount
+        submittedResponseCount
+      }
+    }
+  }
+}
+    `;
+var ArchiveResponsesDocument = import_client.gql`
+    mutation archiveResponses($ids: [Int], $makeArchived: Boolean) {
+  archiveResponses(input: {ids: $ids, makeArchived: $makeArchived}) {
+    surveyResponses {
+      id
+      isPractice
+      archived
+      lastUpdatedByEmail
+      survey {
+        id
+        practiceResponseCount
+        archivedResponseCount
+        submittedResponseCount
+      }
+    }
+  }
+}
+    `;
+var ModifyAnswersDocument = import_client.gql`
+    mutation modifyAnswers($responseIds: [Int]!, $answers: JSON) {
+  modifySurveyAnswers(input: {responseIds: $responseIds, answers: $answers}) {
+    surveyResponses {
+      id
+      data
+      updatedAt
+      lastUpdatedByEmail
+    }
+  }
+}
+    `;
+var CopyAppearanceDocument = import_client.gql`
+    mutation copyAppearance($id: Int!, $copyFrom: Int!) {
+  copyAppearance(input: {formElementId: $id, copyFromId: $copyFrom}) {
+    formElement {
+      id
+      backgroundImage
+      backgroundColor
+      secondaryColor
+      backgroundPalette
+      unsplashAuthorName
+      unsplashAuthorUrl
+      backgroundHeight
+      backgroundWidth
+      layout
+      textVariant
+    }
+  }
+}
+    `;
+var UpdateFormElementBasemapsDocument = import_client.gql`
+    mutation updateFormElementBasemaps($id: Int!, $mapBasemaps: [Int]) {
+  updateFormElement(input: {id: $id, patch: {mapBasemaps: $mapBasemaps}}) {
+    formElement {
+      id
+      mapBasemaps
+    }
+  }
+}
+    `;
+var UpdateFormElementMapCameraDocument = import_client.gql`
+    mutation updateFormElementMapCamera($id: Int!, $mapCameraOptions: JSON) {
+  updateFormElement(
+    input: {id: $id, patch: {mapCameraOptions: $mapCameraOptions}}
+  ) {
+    formElement {
+      id
+      mapCameraOptions
+    }
+  }
+}
+    `;
+var AllBasemapsDocument = import_client.gql`
+    query AllBasemaps {
+  currentProject {
+    basemaps {
+      ...BasemapDetails
+    }
+    surveyBasemaps {
+      ...BasemapDetails
+      relatedFormElements {
+        id
+      }
+    }
+  }
+}
+    ${BasemapDetailsFragmentDoc}`;
 var SurveyDocument = import_client.gql`
     query Survey($id: Int!) {
   me {
@@ -17078,9 +17206,14 @@ var GetBasemapsAndRegionDocument = import_client.gql`
     basemaps {
       ...BasemapDetails
     }
+    surveyBasemaps {
+      ...BasemapDetails
+    }
     region {
       geojson
     }
+    mapboxPublicKey
+    mapboxSecretKey
   }
 }
     ${BasemapDetailsFragmentDoc}`;
@@ -17098,9 +17231,9 @@ var UpdateProjectNameDocument = import_client.gql`
 }
     `;
 var UpdateProjectSettingsDocument = import_client.gql`
-    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean) {
+    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String, $mapboxSecretKey: String) {
   updateProjectBySlug(
-    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured}}
+    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey, mapboxSecretKey: $mapboxSecretKey}}
   ) {
     clientMutationId
     project {
@@ -17109,6 +17242,9 @@ var UpdateProjectSettingsDocument = import_client.gql`
       description
       logoUrl
       logoLink
+      mapboxPublicKey
+      mapboxSecretKey
+      isFeatured
     }
   }
 }
@@ -17591,7 +17727,8 @@ function getDataForExport(responses, formElements, rules) {
       updated_at_utc: response.updatedAt ? new Date(response.updatedAt).toISOString() : null,
       is_duplicate_ip: response.isDuplicateIp,
       is_logged_in: !!response.userId,
-      account_email: response.accountEmail || null
+      account_email: response.accountEmail || null,
+      archived: response.archived || false
     };
     const elements = getUnskippedInputElementsForCompletedResponse(sortedElements, rules, response.data);
     const answers = getAnswersAsProperties(elements, response.data);

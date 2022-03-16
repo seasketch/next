@@ -8,7 +8,6 @@ import fromMarkdown from "./fromMarkdown";
 import { MockedProvider } from "@apollo/client/testing";
 import { Auth0Provider, Auth0Context } from "@auth0/auth0-react";
 import {
-  CurrentProjectMetadataDocument,
   ProjectAccessControlSetting,
   ProjectAccessStatus,
 } from "../generated/graphql";

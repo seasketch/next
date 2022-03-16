@@ -12771,28 +12771,6 @@ export type CreateProjectMutation = (
   )> }
 );
 
-export type CurrentProjectMetadataQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type CurrentProjectMetadataQuery = (
-  { __typename?: 'Query' }
-  & Pick<Query, 'currentProjectAccessStatus'>
-  & { currentProject?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
-  )>, currentProjectPublicDetails?: Maybe<(
-    { __typename?: 'PublicProjectDetail' }
-    & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail'>
-  )>, me?: Maybe<(
-    { __typename?: 'User' }
-    & Pick<User, 'id'>
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
-    )> }
-  )> }
-);
-
 export type DraftTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13264,6 +13242,30 @@ export type UpdateProjectAccessControlSettingsMutation = (
     & { project?: Maybe<(
       { __typename: 'Project' }
       & Pick<Project, 'id' | 'accessControl' | 'isListed'>
+    )> }
+  )> }
+);
+
+export type ProjectMetadataQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectMetadataQuery = (
+  { __typename?: 'Query' }
+  & Pick<Query, 'currentProjectAccessStatus'>
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
+  )>, currentProjectPublicDetails?: Maybe<(
+    { __typename?: 'PublicProjectDetail' }
+    & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail'>
+  )>, me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & Pick<Profile, 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
     )> }
   )> }
 );
@@ -17081,69 +17083,6 @@ export function useCreateProjectMutation(baseOptions?: Apollo.MutationHookOption
 export type CreateProjectMutationHookResult = ReturnType<typeof useCreateProjectMutation>;
 export type CreateProjectMutationResult = Apollo.MutationResult<CreateProjectMutation>;
 export type CreateProjectMutationOptions = Apollo.BaseMutationOptions<CreateProjectMutation, CreateProjectMutationVariables>;
-export const CurrentProjectMetadataDocument = gql`
-    query CurrentProjectMetadata {
-  currentProject {
-    id
-    slug
-    url
-    name
-    description
-    logoLink
-    logoUrl
-    accessControl
-    sessionIsAdmin
-    isFeatured
-  }
-  currentProjectPublicDetails {
-    id
-    accessControl
-    slug
-    name
-    logoUrl
-    supportEmail
-  }
-  currentProjectAccessStatus
-  me {
-    id
-    profile {
-      fullname
-      nickname
-      email
-      picture
-      bio
-      affiliations
-    }
-  }
-}
-    `;
-
-/**
- * __useCurrentProjectMetadataQuery__
- *
- * To run a query within a React component, call `useCurrentProjectMetadataQuery` and pass it any options that fit your needs.
- * When your component renders, `useCurrentProjectMetadataQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useCurrentProjectMetadataQuery({
- *   variables: {
- *   },
- * });
- */
-export function useCurrentProjectMetadataQuery(baseOptions?: Apollo.QueryHookOptions<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>(CurrentProjectMetadataDocument, options);
-      }
-export function useCurrentProjectMetadataLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>(CurrentProjectMetadataDocument, options);
-        }
-export type CurrentProjectMetadataQueryHookResult = ReturnType<typeof useCurrentProjectMetadataQuery>;
-export type CurrentProjectMetadataLazyQueryHookResult = ReturnType<typeof useCurrentProjectMetadataLazyQuery>;
-export type CurrentProjectMetadataQueryResult = Apollo.QueryResult<CurrentProjectMetadataQuery, CurrentProjectMetadataQueryVariables>;
 export const DraftTableOfContentsDocument = gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -18359,6 +18298,70 @@ export function useUpdateProjectAccessControlSettingsMutation(baseOptions?: Apol
 export type UpdateProjectAccessControlSettingsMutationHookResult = ReturnType<typeof useUpdateProjectAccessControlSettingsMutation>;
 export type UpdateProjectAccessControlSettingsMutationResult = Apollo.MutationResult<UpdateProjectAccessControlSettingsMutation>;
 export type UpdateProjectAccessControlSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateProjectAccessControlSettingsMutation, UpdateProjectAccessControlSettingsMutationVariables>;
+export const ProjectMetadataDocument = gql`
+    query ProjectMetadata($slug: String!) {
+  project: projectBySlug(slug: $slug) {
+    id
+    slug
+    url
+    name
+    description
+    logoLink
+    logoUrl
+    accessControl
+    sessionIsAdmin
+    isFeatured
+  }
+  currentProjectPublicDetails {
+    id
+    accessControl
+    slug
+    name
+    logoUrl
+    supportEmail
+  }
+  currentProjectAccessStatus
+  me {
+    id
+    profile {
+      fullname
+      nickname
+      email
+      picture
+      bio
+      affiliations
+    }
+  }
+}
+    `;
+
+/**
+ * __useProjectMetadataQuery__
+ *
+ * To run a query within a React component, call `useProjectMetadataQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectMetadataQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectMetadataQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectMetadataQuery(baseOptions: Apollo.QueryHookOptions<ProjectMetadataQuery, ProjectMetadataQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectMetadataQuery, ProjectMetadataQueryVariables>(ProjectMetadataDocument, options);
+      }
+export function useProjectMetadataLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectMetadataQuery, ProjectMetadataQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectMetadataQuery, ProjectMetadataQueryVariables>(ProjectMetadataDocument, options);
+        }
+export type ProjectMetadataQueryHookResult = ReturnType<typeof useProjectMetadataQuery>;
+export type ProjectMetadataLazyQueryHookResult = ReturnType<typeof useProjectMetadataLazyQuery>;
+export type ProjectMetadataQueryResult = Apollo.QueryResult<ProjectMetadataQuery, ProjectMetadataQueryVariables>;
 export const ProjectRegionDocument = gql`
     query ProjectRegion($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -21293,7 +21296,6 @@ export const namedOperations = {
     GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
-    CurrentProjectMetadata: 'CurrentProjectMetadata',
     DraftTableOfContents: 'DraftTableOfContents',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
@@ -21304,6 +21306,7 @@ export const namedOperations = {
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
+    ProjectMetadata: 'ProjectMetadata',
     ProjectRegion: 'ProjectRegion',
     GetProjectBySlug: 'GetProjectBySlug',
     ProjectSlugExists: 'ProjectSlugExists',

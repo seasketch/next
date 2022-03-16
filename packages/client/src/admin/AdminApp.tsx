@@ -8,7 +8,6 @@ import {
   Redirect,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useCurrentProjectMetadataQuery, useGetProjectBySlugQuery } from "../generated/graphql";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useBreadcrumbs from "use-react-router-breadcrumbs";
 import { Trans } from "react-i18next";
@@ -21,6 +20,8 @@ import PhoneAccessGate from "./PhoneAccessGate";
 import { useAuth0 } from "@auth0/auth0-react";
 import Spinner from "../components/Spinner";
 import EditBasemapPage from "./data/EditBasemapPage";
+import { useProjectMetadataQuery } from "../generated/graphql";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 
 const LazyBasicSettings = React.lazy(() => import("./Settings"));
@@ -235,9 +236,9 @@ export default function AdminApp() {
   let { path } = useRouteMatch();
   const breadcrumbs = useBreadcrumbs(routeConfig, { disableDefaults: true });
 
-  const { data, loading, error } = useCurrentProjectMetadataQuery();
+  const { data, loading, error } = useCurrentProjectMetadata();
 
-  if (data && data.currentProject?.sessionIsAdmin === false) {
+  if (data && data.project?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;
   }
   
@@ -266,7 +267,7 @@ export default function AdminApp() {
         <MobileSidebar
           sections={sections}
           slug={slug}
-          projectName={projectName || "▌"}
+          projectName={data?.project?.name || "▌"}
           open={mobileSidebarOpen}
           onRequestClose={() => setMobileSidebarOpen(false)}
         />
@@ -275,7 +276,7 @@ export default function AdminApp() {
         <StaticSidebar
           sections={sections}
           slug={slug}
-          projectName={projectName || "▌"} 
+          projectName={data?.project?.name || "▌"}
         />
         <div className="flex w-0 flex-1 max-h-screen">
           {/* Header (mobile-only) */}
