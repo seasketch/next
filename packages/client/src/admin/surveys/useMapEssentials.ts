@@ -65,7 +65,7 @@ export default function useMapEssentials({
       } else {
         basemaps = allBasemaps;
       }
-      if (!basemaps.length) {
+      if (!basemaps.length && data.currentProject.basemaps.length) {
         basemaps = [data.currentProject.basemaps[0]];
       }
       setBasemaps(basemaps);
