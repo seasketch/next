@@ -32,3 +32,7 @@ html.survey {
   .mapboxgl-canvas-container.mapboxgl-interactive {
   cursor: not-allowed;
 }
+
+.SurveyAppLayout .mapboxgl-ctrl-top-left {
+  /* top: 4px; */
+}

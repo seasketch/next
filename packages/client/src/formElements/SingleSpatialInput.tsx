@@ -37,7 +37,7 @@ import {
   PreviousQuestion,
   ResetView,
   ZoomToFeature,
-} from "../draw/DigitizingActionsPopup";
+} from "../draw/MapSettingsPopup";
 import BoundsInput from "../admin/surveys/BoundsInput";
 import BasemapMultiSelectInput from "../admin/surveys/BasemapMultiSelectInput";
 import DigitizingMiniMap from "./DigitizingMiniMap";

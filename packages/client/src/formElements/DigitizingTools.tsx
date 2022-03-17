@@ -16,7 +16,7 @@ import {
 } from "@heroicons/react/outline";
 import useMobileDeviceDetector from "../surveys/useMobileDeviceDetector";
 import { DigitizingState } from "../draw/useMapboxGLDraw";
-import DigitizingActionsPopup from "../draw/DigitizingActionsPopup";
+import MapSettingsPopup from "../draw/MapSettingsPopup";
 import BowtieInstructions from "../draw/BowtieInstructions";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
@@ -100,7 +100,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           <QuestionMarkCircleIcon className="w-6 h-6 text-gray-900" />
         </button>
       )} */}
-      <button
+      {/* <button
         title="Options"
         ref={actionsButtonAnchor}
         onClick={() => {
@@ -110,7 +110,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         `}
       >
         <DotsHorizontalIcon className={bottomToolbar ? "w-6 h-6" : "w-5 h-5"} />
-      </button>
+      </button> */}
 
       {DigitizingState.NO_SELECTION && !multiFeature && (
         <Button
@@ -211,12 +211,12 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               : undefined
           }
         />
-        <DigitizingActionsPopup
+        <MapSettingsPopup
           open={toolsOpen}
           onRequestClose={() => setToolsOpen(false)}
         >
           {children}
-        </DigitizingActionsPopup>
+        </MapSettingsPopup>
         <AnimatePresence>
           {instructions && (
             <motion.div
@@ -262,13 +262,13 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             {buttons}
           </div>
         </motion.div>
-        <DigitizingActionsPopup
+        <MapSettingsPopup
           anchor={actionsButtonAnchor.current || undefined}
           open={toolsOpen}
           onRequestClose={() => setToolsOpen(false)}
         >
           {children}
-        </DigitizingActionsPopup>
+        </MapSettingsPopup>
       </>
       // </div>
     );

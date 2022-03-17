@@ -130,6 +130,7 @@ fragment LogicRuleDetails on FormLogicRule {
 
 query SurveyFormEditorDetails($id: Int!, $slug: String!) {
   projectBySlug(slug: $slug) {
+    id
     name
   }
   formElementTypes {
@@ -152,6 +153,7 @@ query SurveyFormEditorDetails($id: Int!, $slug: String!) {
     }
   }
   currentProject {
+    id
     name
     url
     region {
@@ -771,6 +773,7 @@ mutation updateFormElementMapCamera($id: Int!, $mapCameraOptions: JSON) {
 
 query AllBasemaps {
   currentProject {
+    id
     basemaps {
       ...BasemapDetails
     }
