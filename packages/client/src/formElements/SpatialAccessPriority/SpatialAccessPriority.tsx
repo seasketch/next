@@ -34,7 +34,7 @@ import {
   ResetView,
   ShowScaleBar,
   ZoomToFeature,
-} from "../../draw/DigitizingActionsPopup";
+} from "../../draw/MapSettingsPopup";
 import useMapboxGLDraw, {
   DigitizingState,
   EMPTY_FEATURE_COLLECTION,
@@ -76,6 +76,7 @@ import { collectText } from "../../admin/surveys/collectText";
 import { ChoiceAdminValueInput } from "../ComboBox";
 import useDebounce from "../../useDebounce";
 import Badge from "../../components/Badge";
+import MapPicker from "../../components/MapPicker";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -576,6 +577,38 @@ const SpatialAccessPriority: FormElementComponent<
       }
     }, 10);
   }, [mapContext, props, selection]);
+
+  const popupActions = (
+    <>
+      <ResetView map={mapContext.manager?.map!} bounds={bounds} />
+      {selection ||
+      (props.value?.collection &&
+        props.value.collection.features.length > 0) ? (
+        <ZoomToFeature
+          map={mapContext.manager?.map!}
+          feature={
+            selection
+              ? selection
+              : {
+                  ...EMPTY_FEATURE_COLLECTION,
+                  features: (
+                    props.value?.collection || EMPTY_FEATURE_COLLECTION
+                  ).features.filter(
+                    (f) =>
+                      f.properties?.sector === (sector!.value || sector!.label)
+                  ),
+                }
+          }
+          isSmall={style.isSmall}
+          geometryType={props.sketchClass!.geometryType}
+          title={
+            !selection ? t("Focus on shapes", { ns: "surveys" }) : undefined
+          }
+        />
+      ) : null}
+      <ShowScaleBar mapContext={mapContext} />
+    </>
+  );
 
   return (
     <>
@@ -1127,43 +1160,7 @@ const SpatialAccessPriority: FormElementComponent<
                   // props.onSubmit();
                   // }
                 }}
-              >
-                <ResetView map={mapContext.manager?.map!} bounds={bounds} />
-                {selection || props.value?.collection ? (
-                  <ZoomToFeature
-                    map={mapContext.manager?.map!}
-                    feature={
-                      selection
-                        ? selection
-                        : {
-                            ...EMPTY_FEATURE_COLLECTION,
-                            features: (
-                              props.value?.collection ||
-                              EMPTY_FEATURE_COLLECTION
-                            ).features.filter(
-                              (f) =>
-                                f.properties?.sector ===
-                                (sector!.value || sector!.label)
-                            ),
-                          }
-                    }
-                    isSmall={style.isSmall}
-                    geometryType={props.sketchClass!.geometryType}
-                    title={
-                      !selection
-                        ? t("Focus on shapes", { ns: "surveys" })
-                        : undefined
-                    }
-                  />
-                ) : null}
-                <ShowScaleBar mapContext={mapContext} />
-                <BasemapControl
-                  basemaps={basemaps}
-                  afterChange={() => {
-                    // updateMiniBasemap
-                  }}
-                />
-              </DigitizingTools>
+              ></DigitizingTools>
             )}
             <MapboxMap
               key={`sap-map-${props.id}`}
@@ -1185,6 +1182,9 @@ const SpatialAccessPriority: FormElementComponent<
                     props.stage !== STAGES.SECTOR_NAVIGATION)
               }
             />
+            {props.stage !== STAGES.MOBILE_EDIT_PROPERTIES && (
+              <MapPicker basemaps={basemaps}>{popupActions}</MapPicker>
+            )}
             {miniMapStyle && mapContext.manager?.map && (
               <DigitizingMiniMap
                 topologyErrors={selfIntersects}

@@ -69,7 +69,7 @@ export default function BasemapMultiSelectInput({
   }, [value, basemaps]);
 
   const [selectBasemapsModalOpen, setSelectBasemapsModalOpen] = useState(false);
-  return null;
+
   return (
     <>
       <FormEditorHeader className="mt-4 relative flex">

@@ -156,6 +156,10 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
   pointer-events: none;
 }
 
+.non-interactive .MapPicker {
+  display: none;
+}
+
 .hide-draw-controls .mapboxgl-ctrl-top-right {
   display: none;
 }

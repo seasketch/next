@@ -1301,6 +1301,23 @@ class MapContextManager {
     this.updatePreferences();
     this.debouncedUpdateStyle();
   }
+
+  setCamera(camera: CameraOptions) {
+    if (this.map) {
+      if (camera.center) {
+        this.map.setCenter(camera.center);
+      }
+      if (camera.zoom) {
+        this.map.setZoom(camera.zoom);
+      }
+      if (camera.pitch) {
+        this.map.setPitch(camera.pitch);
+      }
+      if (camera.bearing) {
+        this.map.setBearing(camera.bearing);
+      }
+    }
+  }
 }
 
 export default MapContextManager;
