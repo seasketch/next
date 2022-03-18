@@ -12050,7 +12050,7 @@ export type MapboxApiKeysQuery = (
   { __typename?: 'Query' }
   & { currentProject?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'mapboxPublicKey' | 'mapboxSecretKey'>
+    & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
   )> }
 );
 
@@ -15400,6 +15400,7 @@ export type UpdateProjectStorageBucketMutationOptions = Apollo.BaseMutationOptio
 export const MapboxApiKeysDocument = gql`
     query MapboxAPIKeys {
   currentProject {
+    id
     mapboxPublicKey
     mapboxSecretKey
   }

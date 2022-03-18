@@ -32,6 +32,12 @@ import DataBucketSettings from "./data/DataBucketSettings";
 import { AdminMobileHeaderContext } from "./AdminMobileHeaderContext";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import {
+  getTokenClaims,
+  MapboxTokeClaims,
+  MapboxTokenType,
+} from "./data/useMapboxAccountStyles";
+import Badge from "../components/Badge";
 
 export default function Settings() {
   const { data } = useCurrentProjectMetadata();
@@ -761,16 +767,75 @@ function SuperUserSettings() {
 function MapboxAPIKeys() {
   const { t, i18n } = useTranslation(["admin"]);
   const onError = useGlobalErrorHandler();
-  const [mutate, mutationState] = useUpdateKeysMutation({ onError });
   const { slug } = useParams<{ slug: string }>();
   const { data, loading, error } = useMapboxApiKeysQuery({ onError });
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [accountName, setAccount] = useState<{
+    public?: string;
+    secret?: string;
+  }>({});
+  function setAccountName(type: MapboxTokenType, name: string | undefined) {
+    setAccount((prev) => ({
+      ...prev,
+      [type]: name,
+    }));
+  }
+
+  useEffect(() => {
+    let publicClaims: undefined | MapboxTokeClaims;
+    let secretClaims: undefined | MapboxTokeClaims;
+    try {
+      if (data?.currentProject?.mapboxPublicKey) {
+        publicClaims = getTokenClaims(data.currentProject.mapboxPublicKey);
+        setAccountName("public", publicClaims.u);
+      }
+    } catch (e) {
+      setValidationError(
+        t(
+          "Problem parsing public token. Make sure you have copied the entire token."
+        )
+      );
+      return;
+    }
+    try {
+      if (data?.currentProject?.mapboxSecretKey) {
+        secretClaims = getTokenClaims(data.currentProject.mapboxSecretKey);
+        setAccountName("secret", secretClaims.u);
+      }
+    } catch (e) {
+      setValidationError(
+        t(
+          "Problem parsing secret key. Make sure you have copied the entire token."
+        )
+      );
+      return;
+    }
+    if (publicClaims && secretClaims && publicClaims?.u !== secretClaims?.u) {
+      setValidationError(
+        t(
+          "Public token and secret key are for different accounts! This means the secret key could be used to add basemaps which cannot be viewed using the public token."
+        )
+      );
+    } else if (secretClaims && !publicClaims) {
+      setValidationError(
+        t(
+          "You must provide a public access token for the same account as the secret key or maps added from your account may not be viewable."
+        )
+      );
+    } else {
+      setValidationError(null);
+    }
+  }, [
+    data?.currentProject?.mapboxPublicKey,
+    data?.currentProject?.mapboxSecretKey,
+  ]);
 
   if (loading) {
     return null;
   }
 
   return (
-    <div className="mt-5 md:col-span-2">
+    <div className="mt-5 md:col-span-2" id="mapbox-tokens">
       <div className="shadow sm:rounded-md sm:overflow-hidden">
         <div className="px-4 py-5 bg-white sm:p-6 space-y-4">
           <h3 className="text-lg font-medium leading-6 text-gray-900 mb-5">
@@ -805,7 +870,17 @@ function MapboxAPIKeys() {
                 </Trans>
               }
               propName="mapboxPublicKey"
-              label={t("Public Access Token")}
+              label={
+                <div className="flex items-center">
+                  <span className="flex-1">{t("Public Access Token")} </span>
+                  {!validationError && accountName.public && (
+                    // eslint-disable-next-line i18next/no-literal-string
+                    <Badge className="font-mono">
+                      <span className="">{accountName.public}</span>
+                    </Badge>
+                  )}
+                </div>
+              }
               value={data?.currentProject?.mapboxPublicKey || ""}
               slug={slug}
             />
@@ -826,12 +901,22 @@ function MapboxAPIKeys() {
                   domain.
                 </Trans>
               }
-              label={t("Optional Secret Key")}
+              label={
+                <div className="flex items-center">
+                  <span className="flex-1">{t("Optional Secret Key")} </span>
+                  {!validationError && accountName.secret && (
+                    <Badge className="font-mono">{accountName.secret}</Badge>
+                  )}
+                </div>
+              }
               placeholder={t("sk.12345678910")}
               value={data?.currentProject?.mapboxSecretKey || ""}
               slug={slug}
             />
           </div>
+          {validationError && (
+            <div className="text-sm text-red-900">{validationError}</div>
+          )}
         </div>
       </div>
     </div>

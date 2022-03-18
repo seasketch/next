@@ -95,3 +95,25 @@ export default function useMapboxAccountStyles() {
 
   return state;
 }
+
+export type MapboxTokenType = "public" | "secret";
+
+export function getTokenType(token: string) {
+  if (/^pk\./.test(token)) {
+    return "public";
+  }
+  if (/^sk\./.test(token)) {
+    return "secret";
+  }
+  throw new Error("Unknown token type");
+}
+
+export type MapboxTokeClaims = {
+  u: string;
+  [key: string]: any;
+};
+export function getTokenClaims(token: string) {
+  return JSON.parse(
+    atob(token.replace(/[s|p]k\./, "").split(".")[0])
+  ) as MapboxTokeClaims;
+}

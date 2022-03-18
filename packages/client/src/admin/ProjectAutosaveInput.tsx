@@ -6,7 +6,7 @@ import TextInput from "../components/TextInput";
 export default function ProjectAutosaveInput(props: {
   propName: string;
   value: string;
-  label: string;
+  label: string | ReactNode;
   slug: string;
   placeholder?: string;
   convertEmptyToNull?: boolean;

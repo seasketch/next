@@ -1,5 +1,6 @@
 query MapboxAPIKeys {
   currentProject {
+    id
     mapboxPublicKey
     mapboxSecretKey
   }
