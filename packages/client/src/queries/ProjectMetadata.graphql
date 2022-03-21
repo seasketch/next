@@ -32,3 +32,17 @@ query ProjectMetadata($slug: String!) {
     }
   }
 }
+
+query Me {
+  me {
+    id
+    profile {
+      fullname
+      nickname
+      email
+      picture
+      bio
+      affiliations
+    }
+  }
+}

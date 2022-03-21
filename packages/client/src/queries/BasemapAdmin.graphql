@@ -77,6 +77,26 @@ mutation CreateBasemap(
   }
 }
 
+mutation UploadBasemap(
+  $projectId: Int!
+  $name: String!
+  $thumbnail: Upload!
+  $existingId: Int
+  $style: JSON!
+  $surveysOnly: Boolean
+) {
+  uploadStyle(
+    thumb: $thumbnail
+    style: $style
+    projectId: $projectId
+    id: $existingId
+    name: $name
+    surveysOnly: $surveysOnly
+  ) {
+    ...BasemapDetails
+  }
+}
+
 query GetBasemap($id: Int!) {
   basemap(id: $id) {
     id
