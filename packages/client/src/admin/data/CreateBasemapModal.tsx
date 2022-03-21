@@ -1,7 +1,14 @@
-import { gql, useApolloClient } from "@apollo/client";
+import { ApolloCache, gql, useApolloClient } from "@apollo/client";
 import { prepareDataForValidation } from "formik";
-import { Map } from "mapbox-gl";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Map, Style } from "mapbox-gl";
+import React, {
+  CSSProperties,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button";
@@ -16,13 +23,17 @@ import {
   useUpdateInteractivitySettingsLayersMutation,
   useUpdateInteractivitySettingsMutation,
   useMapboxKeysQuery,
+  BasemapDetailsFragment,
+  useUploadBasemapMutation,
 } from "../../generated/graphql";
 import { useMapboxStyle } from "../../useMapboxStyle";
 import useProjectId from "../../useProjectId";
 import { createImageBlobFromDataURI } from "./arcgis/arcgis";
 import useMapboxAccountStyles from "./useMapboxAccountStyles";
 import Fuse from "fuse.js";
-import { SearchIcon } from "@heroicons/react/outline";
+import { SearchIcon, UploadIcon } from "@heroicons/react/outline";
+import { useDropzone } from "react-dropzone";
+import { FixedSizeList as List, FixedSizeListProps } from "react-window";
 
 const THUMBNAIL_SIZE = 240;
 const IMAGE_SIZE = THUMBNAIL_SIZE * window.devicePixelRatio;
@@ -42,12 +53,13 @@ export default function CreateBasemapModal({
   onRequestClose?: () => void;
   surveysOnly?: boolean;
 }) {
+  const projectId = useProjectId();
   const { styles, loading, error } = useMapboxAccountStyles();
   // const { styles, loading, error } = data;
   const { t } = useTranslation("admin");
   const Tabs = [
     { name: t("By URL"), id: TABS.URL },
-    // { name: t("Upload"), id: TABS.UPLOAD },
+    { name: t("Upload"), id: TABS.UPLOAD },
     { name: t("From Mapbox Account"), id: TABS.ACCOUNT },
   ];
   const [query, setQuery] = useState("");
@@ -57,6 +69,7 @@ export default function CreateBasemapModal({
     name: string;
     description?: string;
     url: string;
+    styleJson?: Style;
     mapPreview: boolean;
     selectedTab: TABS;
   }>({
@@ -67,82 +80,111 @@ export default function CreateBasemapModal({
     selectedTab: TABS.ACCOUNT,
   });
 
-  const projectId = useProjectId();
+  const updater = useCallback(
+    (cache: ApolloCache<any>, newBasemapData: BasemapDetailsFragment) => {
+      cache.modify({
+        id: cache.identify({
+          __typename: "Project",
+          id: projectId,
+        }),
+        fields: {
+          basemaps(existingBasemapRefs = [], { readField }) {
+            if (!newBasemapData.surveysOnly) {
+              const newBasemapRef = cache.writeFragment({
+                data: newBasemapData,
+                fragment: gql`
+                  fragment NewBasemap on Basemap {
+                    id
+                    projectId
+                    attribution
+                    description
+                    labelsLayerId
+                    name
+                    terrainExaggeration
+                    terrainOptional
+                    url
+                    type
+                    tileSize
+                    thumbnail
+                    terrainUrl
+                    terrainTileSize
+                    surveysOnly
+                  }
+                `,
+              });
+
+              return [...existingBasemapRefs, newBasemapRef];
+            } else {
+              return existingBasemapRefs;
+            }
+          },
+          surveyBasemaps(existingBasemapRefs = [], { readField }) {
+            if (newBasemapData.surveysOnly) {
+              const newBasemapRef = cache.writeFragment({
+                data: newBasemapData,
+                fragment: gql`
+                  fragment NewBasemap on Basemap {
+                    id
+                    projectId
+                    attribution
+                    description
+                    labelsLayerId
+                    name
+                    terrainExaggeration
+                    terrainOptional
+                    url
+                    type
+                    tileSize
+                    thumbnail
+                    terrainUrl
+                    terrainTileSize
+                    surveysOnly
+                  }
+                `,
+              });
+
+              return [...existingBasemapRefs, newBasemapRef];
+            } else {
+              return existingBasemapRefs;
+            }
+          },
+        },
+      });
+    },
+    []
+  );
+
   const [mutate, mutationState] = useCreateBasemapMutation({
     update: (cache, { data }) => {
       if (data?.createBasemap?.basemap) {
         const newBasemapData = data.createBasemap.basemap;
-        cache.modify({
-          id: cache.identify({
-            __typename: "Project",
-            id: projectId,
-          }),
-          fields: {
-            basemaps(existingBasemapRefs = [], { readField }) {
-              if (!newBasemapData.surveysOnly) {
-                const newBasemapRef = cache.writeFragment({
-                  data: newBasemapData,
-                  fragment: gql`
-                    fragment NewBasemap on Basemap {
-                      id
-                      projectId
-                      attribution
-                      description
-                      labelsLayerId
-                      name
-                      terrainExaggeration
-                      terrainOptional
-                      url
-                      type
-                      tileSize
-                      thumbnail
-                      terrainUrl
-                      terrainTileSize
-                      surveysOnly
-                    }
-                  `,
-                });
-
-                return [...existingBasemapRefs, newBasemapRef];
-              } else {
-                return existingBasemapRefs;
-              }
-            },
-            surveyBasemaps(existingBasemapRefs = [], { readField }) {
-              if (newBasemapData.surveysOnly) {
-                const newBasemapRef = cache.writeFragment({
-                  data: newBasemapData,
-                  fragment: gql`
-                    fragment NewBasemap on Basemap {
-                      id
-                      projectId
-                      attribution
-                      description
-                      labelsLayerId
-                      name
-                      terrainExaggeration
-                      terrainOptional
-                      url
-                      type
-                      tileSize
-                      thumbnail
-                      terrainUrl
-                      terrainTileSize
-                      surveysOnly
-                    }
-                  `,
-                });
-
-                return [...existingBasemapRefs, newBasemapRef];
-              } else {
-                return existingBasemapRefs;
-              }
-            },
-          },
-        });
+        updater(cache, newBasemapData);
       }
     },
   });
+
+  const [upload, uploadState] = useUploadBasemapMutation({
+    update: (cache, { data }) => {
+      if (data?.uploadStyle) {
+        const newBasemapData = data.uploadStyle;
+        updater(cache, newBasemapData);
+      }
+    },
+  });
+  const inputRef = useRef<HTMLInputElement>(null);
+  const onDrop = useCallback(
+    async (acceptedFiles) => {
+      try {
+        const style = JSON.parse(await acceptedFiles[0].text());
+        // Do something with the files
+        setState((old) => ({ ...old, mapPreview: true, styleJson: style }));
+      } catch (e) {
+        onError(e);
+      }
+    },
+    [upload]
+  );
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   const onError = useGlobalErrorHandler();
   const [
@@ -179,7 +221,7 @@ export default function CreateBasemapModal({
     if (state.mapPreview && mapDivRef.current) {
       const map = new Map({
         container: mapDivRef.current,
-        style: state.url,
+        style: state.styleJson || state.url,
         attributionControl: false,
         preserveDrawingBuffer: true,
       });
@@ -207,6 +249,46 @@ export default function CreateBasemapModal({
       return styles || [];
     }
   }, [query, fuse]);
+
+  const Row = ({
+    style,
+    index,
+  }: FixedSizeListProps<any> & { index: number }) => {
+    const { id, url, name, image, lastModified } = filteredStyles[index];
+    return (
+      <button
+        style={style}
+        key={id}
+        className="p-4 flex w-full border-b items-center space-x-2 hover:bg-primary-300 hover:bg-opacity-10"
+        onClick={() => {
+          setState((prev) => ({
+            ...prev,
+            url: url,
+            name: name!,
+            type: BasemapType.Mapbox,
+            mapPreview: true,
+          }));
+        }}
+      >
+        <img className="w-12 h-12 rounded" src={image} />
+        <div className="flex-col justify-start text-left">
+          <div className="space-x-2">
+            <span className="max-w-sm truncate">{name!}</span>
+            <span className="text-gray-500 text-xs font-mono">
+              {
+                // @ts-ignore
+                style.visibility
+              }
+            </span>
+          </div>
+          <span className="text-sm text-gray-500">
+            <Trans ns="admin:data">Last modified </Trans>
+            {lastModified ? formatTimeAgo(lastModified) : "unknown"}
+          </span>
+        </div>
+      </button>
+    );
+  };
 
   return (
     <>
@@ -258,61 +340,89 @@ export default function CreateBasemapModal({
                         cropped
                       )
                         .then((blob) => {
-                          mutate({
-                            variables: {
-                              projectId: projectId!,
-                              name: state.name,
-                              thumbnail: blob,
-                              type: state.type,
-                              url: state.url,
-                              surveysOnly,
-                            },
-                          })
-                            .then((d) => {
-                              if (
-                                mapboxStyleInfo.data?.metadata?.[
-                                  "seasketch:interactivity_settings"
-                                ] &&
-                                d.data?.createBasemap?.basemap
-                                  ?.interactivitySettings?.id
-                              ) {
-                                const settings =
-                                  mapboxStyleInfo.data.metadata[
-                                    "seasketch:interactivity_settings"
-                                  ];
-                                const settingsId =
-                                  d.data.createBasemap.basemap
-                                    .interactivitySettings.id;
-                                return updateInteractivity({
-                                  variables: {
-                                    id: settingsId,
-                                    ...settings,
-                                  },
-                                }).then((i) => {
-                                  return updateLayers({
-                                    variables: {
-                                      id: settingsId,
-                                      layers: settings.layers,
-                                    },
-                                  }).then((a) => {
-                                    return d;
-                                  });
-                                });
-                              } else {
-                                return d;
-                              }
-                            })
-                            .then((d) => {
-                              if (
-                                onSave &&
-                                d.data?.createBasemap?.basemap?.id
-                              ) {
-                                onSave(d.data.createBasemap.basemap.id);
-                              }
-                              if (onRequestClose) {
-                                onRequestClose();
-                              }
+                          if (state.url) {
+                            return mutate({
+                              variables: {
+                                projectId: projectId!,
+                                name: state.name,
+                                thumbnail: blob,
+                                type: state.type,
+                                url: state.url,
+                                surveysOnly,
+                              },
                             });
+                          } else {
+                            return upload({
+                              variables: {
+                                projectId: projectId!,
+                                name:
+                                  state.name ||
+                                  (state.styleJson?.name as string),
+                                thumbnail: blob,
+                                style: state.styleJson,
+                                surveysOnly,
+                              },
+                            });
+                          }
+                        })
+                        .then((d) => {
+                          const basemapDetails:
+                            | BasemapDetailsFragment
+                            | undefined =
+                            d?.data?.createBasemap?.basemap ||
+                            // @ts-ignore
+                            d?.data?.uploadStyle ||
+                            undefined;
+                          if (d?.errors?.length) {
+                            throw new Error(d.errors[0].message);
+                          }
+                          if (
+                            (mapboxStyleInfo.data?.metadata?.[
+                              "seasketch:interactivity_settings"
+                            ] ||
+                              state.styleJson?.metadata[
+                                "seasketch:interactivity_settings"
+                              ]) &&
+                            basemapDetails?.interactivitySettings?.id
+                          ) {
+                            const settings =
+                              mapboxStyleInfo.data?.metadata?.[
+                                "seasketch:interactivity_settings"
+                              ] ||
+                              state.styleJson?.metadata[
+                                "seasketch:interactivity_settings"
+                              ];
+                            const settingsId =
+                              basemapDetails.interactivitySettings.id;
+                            return updateInteractivity({
+                              variables: {
+                                id: settingsId,
+                                ...settings,
+                              },
+                            }).then((i) => {
+                              return updateLayers({
+                                variables: {
+                                  id: settingsId,
+                                  layers: settings.layers,
+                                },
+                              }).then((a) => {
+                                return basemapDetails;
+                              });
+                            });
+                          } else {
+                            return basemapDetails;
+                          }
+                        })
+                        .then((d) => {
+                          if (onSave && d) {
+                            onSave(d.id);
+                          } else if (onSave && d) {
+                            onSave(d.id);
+                          }
+
+                          if (onRequestClose) {
+                            onRequestClose();
+                          }
                         })
                         .catch((e) => {
                           alert(e.toString());
@@ -323,8 +433,12 @@ export default function CreateBasemapModal({
                   }
                 }}
                 label={state.mapPreview ? "Capture and Save" : "Continue"}
-                disabled={mutationState.loading || !state.url}
-                loading={mutationState.loading}
+                disabled={
+                  mutationState.loading ||
+                  uploadState.loading ||
+                  (!state.url && !state.styleJson)
+                }
+                loading={mutationState.loading || uploadState.loading}
               />
             )}
           </div>
@@ -386,34 +500,59 @@ export default function CreateBasemapModal({
               </nav>
             </div>
             <div className="p-4">
-              {/* <div className="mb-4">
-                <label
-                  htmlFor="type"
-                  className="block text-sm mb-1 font-medium leading-5 text-gray-700"
+              {state.selectedTab === TABS.UPLOAD && (
+                <div
+                  {...getRootProps()}
+                  className={`flex h-96 p-12 items-center bg-gray-100 rounded-lg justify-center text-center ${
+                    isDragActive
+                      ? "border-dashed border-2 rounded-lg border-gray-300 -ml-1.5 mt-1.5 -mb-0.5"
+                      : ""
+                  }`}
                 >
-                  {t("Basemap Type")}
-                </label>
-                <select
-                  id="type"
-                  value={state?.type}
-                  onChange={(e) => {
-                    const type = e.target.value as BasemapType;
-                    setState((old) => ({ ...old, type }));
-                  }}
-                  className="bg-white text-sm overflow-visible p-2 px-4 pr-7 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 rounded-md focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-md sm:leading-5"
-                  style={{ lineHeight: 1, backgroundSize: "1em 1em" }}
-                >
-                  <option value={BasemapType.Mapbox}>
-                    {t("Mapbox GL Style")}
-                  </option>
-                  <option value={BasemapType.RasterUrlTemplate}>
-                    {t("Raster tile url template")}
-                  </option>
-                </select>
-              </div> */}
+                  <span className="">
+                    {!uploadState.loading && (
+                      <div className="-mt-10">
+                        <UploadIcon className="w-8 h-8 mx-auto mb-8 text-gray-500" />
+
+                        <Trans ns="admin:surveys">
+                          Drag and Drop your style JSON here. Uploaded styles
+                          will be be publicly hosted but their locations will be
+                          unlisted.
+                        </Trans>
+                      </div>
+                    )}
+                    {uploadState.loading && (
+                      <div className="p-5 flex">
+                        <Trans ns="admin:surveys">Uploading style...</Trans>
+                        {(uploadState.loading || false) && (
+                          <Spinner className="ml-2" />
+                        )}
+                      </div>
+                    )}
+
+                    <input
+                      ref={inputRef}
+                      // {...getInputProps()}
+                      id="upload-style-input"
+                      type="file"
+                      title="choose"
+                      accept="application/json"
+                      disabled={uploadState.loading}
+                      className="hidden py-2 px-1 text-sm leading-1 font-medium text-gray-700 hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-50 active:text-gray-800 transition duration-150 ease-in-out"
+                    />
+
+                    {uploadState.error && (
+                      <p className="text-red-900">
+                        {uploadState.error.message}
+                      </p>
+                    )}
+                  </span>
+                </div>
+              )}
               {state.selectedTab === TABS.URL && (
-                <div className="mb-2 -mt-2 h-22">
+                <div className="h-96">
                   <TextInput
+                    label={t("Style location")}
                     placeholder={
                       state.type === BasemapType.Mapbox
                         ? "mapbox://styles/mapbox/satellite-v9"
@@ -434,8 +573,7 @@ export default function CreateBasemapModal({
                             <code className="bg-gray-100 p-0.5 rounded">
                               mapbox://
                             </code>{" "}
-                            type url or the direct url to a mapbox-gl style
-                            hosted on another platform.
+                            url or the direct url to a style hosted elsewhere.
                           </Trans>
                         </>
                       ) : (
@@ -456,7 +594,6 @@ export default function CreateBasemapModal({
                     }
                     name="url"
                     value={state.url}
-                    label={""}
                     onChange={(url) => {
                       setState((old) => ({
                         ...old,
@@ -464,16 +601,17 @@ export default function CreateBasemapModal({
                       }));
                     }}
                   />
-                </div>
-              )}
-              {state.selectedTab === TABS.URL && (
-                <div className="mt-4">
-                  <TextInput
-                    label={t("Map Name")}
-                    name="name"
-                    value={state.name}
-                    onChange={(name) => setState((old) => ({ ...old, name }))}
-                  />
+                  <div className="mt-4">
+                    <TextInput
+                      label={t("Map Name")}
+                      description={t(
+                        "The map name will be automatically assigned from the style json, and can be overidden."
+                      )}
+                      name="name"
+                      value={state.name}
+                      onChange={(name) => setState((old) => ({ ...old, name }))}
+                    />
+                  </div>
                 </div>
               )}
               {state.selectedTab === TABS.ACCOUNT && (
@@ -510,45 +648,15 @@ export default function CreateBasemapModal({
                   )}
                   {styles && (
                     <div className="flex-1 overflow-auto h-80 bg-gray-50 rounded">
-                      {filteredStyles.map((style) => (
-                        <button
-                          key={style.id}
-                          className="p-4 flex w-full border-b items-center space-x-2 hover:bg-primary-300 hover:bg-opacity-10"
-                          onClick={() => {
-                            setState((prev) => ({
-                              ...prev,
-                              url: style.url,
-                              name: style.name!,
-                              type: BasemapType.Mapbox,
-                              mapPreview: true,
-                            }));
-                          }}
-                        >
-                          <img
-                            className="w-12 h-12 rounded"
-                            src={style.image}
-                          />
-                          <div className="flex-col justify-start text-left">
-                            <div className="space-x-2">
-                              <span className="max-w-sm truncate">
-                                {style.name!}
-                              </span>
-                              <span className="text-gray-500 text-xs font-mono">
-                                {
-                                  // @ts-ignore
-                                  style.visibility
-                                }
-                              </span>
-                            </div>
-                            <span className="text-sm text-gray-500">
-                              <Trans ns="admin:data">Last modified </Trans>
-                              {style.lastModified
-                                ? formatTimeAgo(style.lastModified)
-                                : "unknown"}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
+                      <List
+                        height={320}
+                        itemCount={filteredStyles.length}
+                        itemSize={81}
+                        width={480}
+                      >
+                        {/* @ts-ignore */}
+                        {Row}
+                      </List>
                     </div>
                   )}
                 </div>
