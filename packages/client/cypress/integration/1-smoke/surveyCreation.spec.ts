@@ -209,7 +209,6 @@ describe("Survey creation smoke test", () => {
         canvases.push(t)
         return canvases
     }).then((ary) => {
-    //////    console.log(ary[0])
         const el = ary[0]
         return el
       }).as('el')
