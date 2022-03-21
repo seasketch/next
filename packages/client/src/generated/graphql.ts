@@ -5536,6 +5536,8 @@ export type Mutation = {
   updateZIndexes?: Maybe<UpdateZIndexesPayload>;
   /** Use to upload pdf documents for use with the Consent FormElement */
   uploadConsentDocument: FormElement;
+  /** Upload mapbox-gl-style documents for use as basemaps */
+  uploadStyle: Basemap;
 };
 
 
@@ -6690,6 +6692,17 @@ export type MutationUploadConsentDocumentArgs = {
   document: Scalars['Upload'];
   formElementId: Scalars['Int'];
   version: Scalars['Int'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUploadStyleArgs = {
+  id?: Maybe<Scalars['Int']>;
+  name: Scalars['String'];
+  projectId: Scalars['Int'];
+  style: Scalars['JSON'];
+  surveysOnly?: Maybe<Scalars['Boolean']>;
+  thumb: Scalars['Upload'];
 };
 
 /** An object with a globally unique `ID`. */
@@ -12424,6 +12437,24 @@ export type CreateBasemapMutation = (
   )> }
 );
 
+export type UploadBasemapMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  name: Scalars['String'];
+  thumbnail: Scalars['Upload'];
+  existingId?: Maybe<Scalars['Int']>;
+  style: Scalars['JSON'];
+  surveysOnly?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UploadBasemapMutation = (
+  { __typename?: 'Mutation' }
+  & { uploadStyle: (
+    { __typename?: 'Basemap' }
+    & BasemapDetailsFragment
+  ) }
+);
+
 export type GetBasemapQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
@@ -16255,6 +16286,51 @@ export function useCreateBasemapMutation(baseOptions?: Apollo.MutationHookOption
 export type CreateBasemapMutationHookResult = ReturnType<typeof useCreateBasemapMutation>;
 export type CreateBasemapMutationResult = Apollo.MutationResult<CreateBasemapMutation>;
 export type CreateBasemapMutationOptions = Apollo.BaseMutationOptions<CreateBasemapMutation, CreateBasemapMutationVariables>;
+export const UploadBasemapDocument = gql`
+    mutation UploadBasemap($projectId: Int!, $name: String!, $thumbnail: Upload!, $existingId: Int, $style: JSON!, $surveysOnly: Boolean) {
+  uploadStyle(
+    thumb: $thumbnail
+    style: $style
+    projectId: $projectId
+    id: $existingId
+    name: $name
+    surveysOnly: $surveysOnly
+  ) {
+    ...BasemapDetails
+  }
+}
+    ${BasemapDetailsFragmentDoc}`;
+export type UploadBasemapMutationFn = Apollo.MutationFunction<UploadBasemapMutation, UploadBasemapMutationVariables>;
+
+/**
+ * __useUploadBasemapMutation__
+ *
+ * To run a mutation, you first call `useUploadBasemapMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUploadBasemapMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [uploadBasemapMutation, { data, loading, error }] = useUploadBasemapMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      name: // value for 'name'
+ *      thumbnail: // value for 'thumbnail'
+ *      existingId: // value for 'existingId'
+ *      style: // value for 'style'
+ *      surveysOnly: // value for 'surveysOnly'
+ *   },
+ * });
+ */
+export function useUploadBasemapMutation(baseOptions?: Apollo.MutationHookOptions<UploadBasemapMutation, UploadBasemapMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UploadBasemapMutation, UploadBasemapMutationVariables>(UploadBasemapDocument, options);
+      }
+export type UploadBasemapMutationHookResult = ReturnType<typeof useUploadBasemapMutation>;
+export type UploadBasemapMutationResult = Apollo.MutationResult<UploadBasemapMutation>;
+export type UploadBasemapMutationOptions = Apollo.BaseMutationOptions<UploadBasemapMutation, UploadBasemapMutationVariables>;
 export const GetBasemapDocument = gql`
     query GetBasemap($id: Int!) {
   basemap(id: $id) {
@@ -21402,6 +21478,7 @@ export const namedOperations = {
     ResendEmailVerification: 'ResendEmailVerification',
     RequestInviteOnlyProjectAccess: 'RequestInviteOnlyProjectAccess',
     CreateBasemap: 'CreateBasemap',
+    UploadBasemap: 'UploadBasemap',
     UpdateBasemap: 'UpdateBasemap',
     UpdateBasemapUrl: 'UpdateBasemapUrl',
     UpdateBasemapLabelsLayer: 'UpdateBasemapLabelsLayer',

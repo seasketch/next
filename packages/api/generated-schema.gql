@@ -7591,6 +7591,21 @@ type Mutation {
 
   """Use to upload pdf documents for use with the Consent FormElement"""
   uploadConsentDocument(document: Upload!, formElementId: Int!, version: Int!): FormElement!
+
+  """Upload mapbox-gl-style documents for use as basemaps"""
+  uploadStyle(
+    """Existing basemap ID, if updating"""
+    id: Int
+
+    """Name for the basemap"""
+    name: String!
+    projectId: Int!
+
+    """Style json file"""
+    style: JSON!
+    surveysOnly: Boolean
+    thumb: Upload!
+  ): Basemap!
 }
 
 """An object with a globally unique `ID`."""
