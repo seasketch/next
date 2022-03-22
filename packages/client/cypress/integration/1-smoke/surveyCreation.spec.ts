@@ -27,8 +27,13 @@ describe("Survey creation smoke test", () => {
         if ((req.body.operationName) && (req.body.operationName === "Survey")) {
           req.alias = "getSurvey"
         }
+        if ((req.body.operationName) && (req.body.operationName === "GetBasemapsAndRegion")) {
+          req.alias = "getBasemaps"
+        }
       })
-      cy.intercept("https://api.mapbox.com/map-sessions/*").as('basemaps')
+      cy.intercept("https://api.mapbox.com/map-sessions/*", 
+      
+      ).as('loadBasemaps')
     })
     before(() => {
       cy.setLocalStorage("slug", slug)
@@ -188,25 +193,22 @@ describe("Survey creation smoke test", () => {
       cy.contains('Kudafari').click()
     })
     it("Cannot advance until sector selection(s) is made", () => {
-      cy.get('[type = "button"]').as('nextBtn')
-      cy.get('@nextBtn').should('be.hidden')
-      cy.get('[title = "Next Question"]').as('next')
-        .should('have.class', "pointer-events-none")
+      cy.get('[type = "button"]').as('nextBtn').should('be.hidden')
       cy.contains('Fisheries - Commercial, Tuna').click()
-      cy.get('@next').scrollIntoView()
+      cy.get('@nextBtn').scrollIntoView()
       cy.get('@nextBtn').should('be.visible').then(($btn) => {
         {$btn.trigger('click')}
       })
+      cy.wait('@getBasemaps').its('response.statusCode').should('eq', 200)
     })
     it("Can draw a polygon", () => {
-      cy.contains("Fisheries - Commercial, Tuna")
-      cy.wait('@basemaps')
+      cy.contains("Fisheries - Commercial, Tuna").should('be.visible')
+      cy.wait('@loadBasemaps')
       cy.get('.mapboxgl-canvas').each((t) => {
         const canvases = []
         canvases.push(t)
         return canvases
     }).then((ary) => {
-    //////    console.log(ary[0])
         const el = ary[0]
         return el
       }).as('el')
