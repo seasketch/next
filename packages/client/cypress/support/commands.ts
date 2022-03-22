@@ -123,6 +123,13 @@ declare global {
         token: string
       )
 
+      updateComponentSettings(
+        elementsToUpdate: undefined, 
+        componentSettings: object, 
+        token: string, 
+        formId: number
+      )
+
       updateSubordinateToId(
         subordinateToId: number, 
         elementsToUpdate: any, 
@@ -506,7 +513,6 @@ Cypress.Commands.add("deleteForm", (formId: number, token: string) => {
 
 Cypress.Commands.add("createFormElements", (formId: number, fixtureAlias: string, token: string) => {
   const elements = formElements[fixtureAlias].data.form.formElements
-  console.log(elements)
   elements.map(t => t.formId = formId)
   if (!fixtureAlias) {
     throw new Error(`Unrecognized alias "${fixtureAlias}"`);
@@ -576,19 +582,18 @@ Cypress.Commands.add("createFormElements", (formId: number, fixtureAlias: string
 
 Cypress.Commands.add("createSAPElements", (formId: number, fixtureAlias: string, token: string) => {
   const elements = SAPElements[fixtureAlias].data.form.formElements
-  console.log(elements)
-  console.log(formId)
   elements.map(t => t.formId = formId)
   if (!fixtureAlias) {
     throw new Error(`Unrecognized alias "${fixtureAlias}"`);
   }
   else {
     elements.forEach((e) => {
+      console.log(e)
       if (e.typeId !== "FeatureName" && e.typeId !== "SAPRange") {
         return cy
         .mutation(
           gql`
-            mutation CypressCreateFormElement($formElement: FormElementInput!) {
+            mutation CypressCreateSAPElement($formElement: FormElementInput!) {
               createFormElement(input: {formElement: $formElement} )
               {
                 formElement {
@@ -643,10 +648,10 @@ Cypress.Commands.add("createSAPElements", (formId: number, fixtureAlias: string,
     })
   }
 })
+
 Cypress.Commands.add("updateSubordinateToId", (subordinateToId: number, elementsToUpdate: any, formId: number, token: string) => {
   elementsToUpdate.map(t => t.subordinateTo = subordinateToId)
   elementsToUpdate.forEach((f) => {
-    console.log(f)
       return cy
         .mutation(
           gql`
@@ -688,10 +693,7 @@ Cypress.Commands.add("updateSubordinateToId", (subordinateToId: number, elements
   
 Cypress.Commands.add("updateJumpToId", (jumpToId: number, elementsToUpdate: any, formId: number, token: string) => {
   elementsToUpdate.map(t => t.jumpToId = jumpToId)
-  console.log(elementsToUpdate)
-  console.log(jumpToId)
   elementsToUpdate.forEach((f) => {
-    console.log(f)
       return cy
         .mutation(
           gql`
@@ -729,6 +731,50 @@ Cypress.Commands.add("updateJumpToId", (jumpToId: number, elementsToUpdate: any,
           return data
         })
     })
+})
+
+Cypress.Commands.add("updateComponentSettings", (elementsToUpdate: object, componentSettings: object, token: string, formId: number) => {
+  return cy
+    .mutation(
+      gql`
+        mutation CypressUpdateComponentSettings($input: UpdateFormElementInput!) {
+          updateFormElement(input: $input) {
+            formElement {
+            form
+              id
+              typeId
+              body, 
+              componentSettings
+            } 
+            query {
+              form (id: ${formId}) {
+                id,
+                formElements {
+                  id,
+                  typeId,
+                  body, 
+                  componentSettings
+                }
+              }
+            }
+          }
+        }
+      `,
+    { 
+      "input": {
+        "id": elementsToUpdate,
+        "patch": {
+          "componentSettings": componentSettings,
+        }
+      }
+     },
+    (token as any)
+  )
+  .then((data) => {
+    Cypress.log(data);
+    return data
+  })
+
 })
 
 Cypress.Commands.add("updateFormElements", (elementsToUpdate: object, fixtureAlias: string, token: string, formId: number) => {
@@ -875,13 +921,6 @@ Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
 
 Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string, newIds: object, token:string) => {
   const formLogic = formLogicRules[fixtureAlias].data.form.logicRules.splice(0,19)
-  console.log(formLogic)
-  //formLogic.sort((a, b) => {
-  //  if (a.jumpToId > b.jumpToId) return 1; 
-  //  if (a.jumpToId < b.jumpToId) return -1; 
-  //  else return 0
-  //})
-//
   for (let i=0; i< formLogic.length; i++) {
     formLogic[i].jumpToId = newIds[i+1]
   }
@@ -980,7 +1019,7 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
               },
               (token as any),
             ).then((data) => {
-              console.log(data)
+              Cypress.log(data)
             })
           }
       })//
@@ -1007,10 +1046,6 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
       },
       (token as any)
     ).then((data) => {
-      console.log(data)
+      Cypress.log(data)
     })
   })
-////TO DO:
-////add rest of form attributes
-//
-//

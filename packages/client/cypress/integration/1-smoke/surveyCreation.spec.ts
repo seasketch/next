@@ -68,11 +68,11 @@ describe("Survey creation smoke test", () => {
                     elementsToUpdate.push(t)
                   })
                   cy.updateFormElements(elementsToUpdate,"Maldives", access_token, formId)
-                  console.log(access_token)
                   cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
                     const SAPFormId = formId + 1
                     cy.createSAPElements(SAPFormId, "Maldives", access_token)
                     const formElements = resp.createFormElement.query.form.formElements
+                    console.log(formElements)
                     let jumpToId
                     const elementsToUpdate = formElements.slice(5,24)
                     for (let i = 0; i < formElements.length; i++) {
@@ -131,6 +131,7 @@ describe("Survey creation smoke test", () => {
                       let newIds = getIds(baseId)
                       newIds.push(newIds[19] + 6)
                       newIds.push(newIds[20] + 1)
+                      console.log(newIds)
                       cy.createFormLogicRules(formId, "Maldives", newIds, access_token)
                     })
                   })
