@@ -2,7 +2,7 @@ import express, { Request } from "express";
 import { postgraphile, makePluginHook } from "postgraphile";
 import compression from "compression";
 import path from "path";
-import pool, { workerPool } from "./pool";
+import pool, { createPool, workerPool } from "./pool";
 import { getJWKS, rotateKeys } from "./auth/jwks";
 import authorizationMiddleware from "./middleware/authorizationMiddleware";
 import userAccountMiddlware from "./middleware/userAccountMiddleware";
@@ -193,25 +193,29 @@ run({
   taskDirectory: path.join(__dirname, "..", "tasks"),
 });
 
+const tilesetPool = createPool();
+
 app.use(
   "/export-survey/:id/spatial/:element_id/tiles/:z/:x/:y.pbf",
   authorizationMiddleware,
   currentProjectMiddlware,
   userAccountMiddlware,
   async function (req, res, next) {
-    await pool.query("BEGIN");
-    await setTransactionSessionVariables(getPgSettings(req), pool);
+    const client = await tilesetPool.connect();
+    await client.query("BEGIN");
+    await setTransactionSessionVariables(getPgSettings(req), client);
     const x = parseInt(req.params.x, 10);
     const y = parseInt(req.params.y, 10);
     const z = parseInt(req.params.z, 10);
     const surveyId = parseInt(req.params.id);
     const elementId = parseInt(req.params.element_id);
     try {
-      const tile = await getMVT(elementId, x, y, z, pool);
-      await pool.query("COMMIT");
+      const tile = await getMVT(elementId, x, y, z, client);
+      await client.query("COMMIT");
+      await client.release();
       res.setHeader("Content-Type", "application/x-protobuf");
-      // res.setHeader("Cache-Control", "public, max-age=300");
-      if (tile.length === 0) {
+      res.setHeader("Cache-Control", "public, max-age=300");
+      if (tile === null || tile.length === 0) {
         res.status(204);
       }
       res.send(tile);
