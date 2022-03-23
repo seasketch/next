@@ -31,9 +31,8 @@ describe("Survey creation smoke test", () => {
           req.alias = "getBasemaps"
         }
       })
-      cy.intercept("https://api.mapbox.com/map-sessions/*", 
-      
-      ).as('loadBasemaps')
+      cy.intercept("https://api.mapbox.com/map-sessions/*").as('loadBasemaps')
+      cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiEvent')
     })
     before(() => {
       cy.setLocalStorage("slug", slug)
@@ -196,28 +195,19 @@ describe("Survey creation smoke test", () => {
       cy.contains('Kudafari').click()
     })
     it("Cannot advance until sector selection(s) is made", () => {
-      cy.log("Next button should be hidden")
-      cy.get('[type = "button"]').as('nextBtn').should('be.hidden')
-      cy.log("Selecting sector")
+      cy.get('[type = "button"]').contains('Next').as('nextBtn').should('be.hidden')
       cy.contains('Fisheries - Commercial, Tuna').click()
-      cy.log("Scrolling next button into view")
       cy.get('@nextBtn').scrollIntoView()
-      cy.log("Getting next button; should be visible")
       cy.get('@nextBtn').should('be.visible').then(($btn) => {
         {$btn.trigger('click')}
       })
-      cy.log("waiting for @getBasemaps")
       cy.wait('@getBasemaps').its('response.statusCode').should('eq', 200)
-      cy.log("Finished sector selection")
     })
     it("Can draw a polygon", () => {
-      cy.log("Can draw a polygon - cy.contains paragraph")
-      cy.contains(
-        "Use the map to indicate the most valued places for this activity. You can draw multiple areas and prioritize them individually.")
+      cy.get('h4').contains('Fisheries - Commercial, Tuna')
         .should('be.visible')
-      cy.log("Waiting for @loadBasemaps")
-      cy.wait('@loadBasemaps')
-      cy.log("Get mapboxgl-canvases")
+      cy.wait('@mapboxApiEvent').its('response.statusCode').should('eq', 200)
+      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
       cy.get('.mapboxgl-canvas').each((t) => {
         const canvases = []
         canvases.push(t)
@@ -299,10 +289,9 @@ describe("Survey creation smoke test", () => {
             expect (ary[6]).to.eq(28)
             expect (ary[7][0]).to.eq('Female')
             expect (ary[8]).to.eq("My general comments.")
-            //cy.setLocalStorage('responseId', surveyResponseId)
           })
         })
       })
     })
-  })//
-})//
+  })
+})
