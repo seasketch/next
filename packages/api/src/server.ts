@@ -22,6 +22,7 @@ import graphileOptions from "./graphileOptions";
 import { getFeatureCollection } from "./exportSurvey";
 import * as Sentry from "@sentry/node";
 import * as Tracing from "@sentry/tracing";
+import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
 
 interface SSNRequest extends Request {
   user?: { id: number; canonicalEmail: string };
@@ -193,7 +194,30 @@ run({
 });
 
 app.use(
+  "/export-survey/:id/spatial/:element_id/tiles/:z/:x/:y.pbf",
+  authorizationMiddleware,
+  currentProjectMiddlware,
+  userAccountMiddlware,
+  async function (req, res, next) {
+    await pool.query("BEGIN");
+    await setTransactionSessionVariables(getPgSettings(req), pool);
+    const x = parseInt(req.params.x);
+    const y = parseInt(req.params.y);
+    const z = parseInt(req.params.z);
+    const surveyId = parseInt(req.params.id);
+    const elementId = parseInt(req.params.element_id);
+    console.log({ x, y, z, surveyId, elementId });
+    await pool.query("COMMIT");
+    res.status(500);
+    res.send("fail");
+  }
+);
+
+app.use(
   "/export-survey/:id/spatial/:element_id/:format",
+  authorizationMiddleware,
+  currentProjectMiddlware,
+  userAccountMiddlware,
   async function (req, res, next) {
     let { id, element_id, format } = req.params;
     if (!id || !element_id || !format) {
@@ -201,49 +225,40 @@ app.use(
         "Invalid request. id, element_id and format parameters required"
       );
     }
-    const collection = await getFeatureCollection(
-      parseInt(req.params.id),
-      parseInt(req.params.element_id),
-      pool
-    );
-
-    if (format === "geojson") {
-      res.header({ "Content-Type": "application/json" });
-      res.header({
-        "Content-Disposition": `attachment; filename="${
-          req.query.filename || `${req.params.element_id}.geojson.json`
-        }"`,
-      });
-      res.send(JSON.stringify(collection));
-    } else {
-      throw new Error(
-        `Format was ${format}. Only GeoJSON is currently supported`
+    try {
+      await pool.query("BEGIN");
+      await setTransactionSessionVariables(getPgSettings(req), pool);
+      const collection = await getFeatureCollection(
+        parseInt(req.params.id),
+        parseInt(req.params.element_id),
+        pool
       );
+      await pool.query("COMMIT");
+
+      if (format === "geojson") {
+        res.header({ "Content-Type": "application/json" });
+        res.header({
+          "Content-Disposition": `attachment; filename="${
+            req.query.filename || `${req.params.element_id}.geojson.json`
+          }"`,
+        });
+        res.send(JSON.stringify(collection));
+      } else {
+        throw new Error(
+          `Format was ${format}. Only GeoJSON is currently supported`
+        );
+      }
+    } catch (e: any) {
+      res.status(500);
+      res.send(e.toString());
     }
-    // next()
   }
 );
 
 app.use(
   postgraphile(pool, "public", {
     ...graphileOptions(),
-    pgSettings: async (req: IncomingRequest) => {
-      // These session vars will be added to each postgres transaction
-      return {
-        role: req.user
-          ? req.user.superuser
-            ? "seasketch_superuser"
-            : "seasketch_user"
-          : "anon",
-        "session.project_id": req.projectId,
-        "session.email_verified": !!req.user?.emailVerified,
-        "session.canonical_email": req.user?.canonicalEmail,
-        "session.user_id": req.user?.id,
-        "session.request_ip": req.ip,
-        "session.survey_invite_email": req.surveyInvite?.email,
-        "session.survey_invite_id": req.surveyInvite?.inviteId,
-      };
-    },
+    pgSettings: getPgSettings,
     websocketMiddlewares: [
       authorizationMiddleware,
       currentProjectMiddlware,

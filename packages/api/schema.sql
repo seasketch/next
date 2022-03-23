@@ -4827,7 +4827,7 @@ CREATE FUNCTION public.export_spatial_responses(fid integer) RETURNS json
     declare
       output json;
     begin
-    if (true or session_is_admin(project_id_from_field_id(fid))) then
+    if (session_is_admin(project_id_from_field_id(fid))) then
         SELECT json_build_object(
           'type', 'FeatureCollection',
           'features', json_agg(jsonb_build_object(
@@ -5528,6 +5528,17 @@ CREATE FUNCTION public.make_responses_not_practice(ids integer[]) RETURNS SETOF 
     LANGUAGE sql
     AS $$
     update survey_responses set is_practice = false where id = any(ids) returning survey_responses.*;
+$$;
+
+
+--
+-- Name: make_responses_practice(integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.make_responses_practice(ids integer[]) RETURNS public.survey_responses
+    LANGUAGE sql
+    AS $$
+    update survey_responses set is_practice = true where id = any(ids) returning survey_responses.*;
 $$;
 
 
@@ -17436,6 +17447,14 @@ GRANT ALL ON FUNCTION public.make_response_draft("responseId" integer) TO seaske
 
 REVOKE ALL ON FUNCTION public.make_responses_not_practice(ids integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.make_responses_not_practice(ids integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION make_responses_practice(ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.make_responses_practice(ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.make_responses_practice(ids integer[]) TO seasketch_user;
 
 
 --
