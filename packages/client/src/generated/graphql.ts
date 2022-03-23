@@ -1278,6 +1278,8 @@ export type CreateSketchPayload = {
   collection?: Maybe<Sketch>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   copiedFrom?: Maybe<Sketch>;
+  /** Reads a single `FormElement` that is related to this `Sketch`. */
+  formElement?: Maybe<FormElement>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `Sketch` that was created by this mutation. */
@@ -3049,6 +3051,8 @@ export type DeleteSketchPayload = {
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   copiedFrom?: Maybe<Sketch>;
   deletedSketchNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `FormElement` that is related to this `Sketch`. */
+  formElement?: Maybe<FormElement>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `Sketch` that was deleted by this mutation. */
@@ -7935,6 +7939,7 @@ export type Query = Node & {
   tableOfContentsItemByNodeId?: Maybe<TableOfContentsItem>;
   /** Reads and enables pagination through a set of `Form`. */
   templateForms?: Maybe<Array<Form>>;
+  tilebbox?: Maybe<GeometryInterface>;
   topic?: Maybe<Topic>;
   /** Reads a single `Topic` using its globally unique `ID`. */
   topicByNodeId?: Maybe<Topic>;
@@ -8589,6 +8594,15 @@ export type QueryTemplateFormsArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryTilebboxArgs = {
+  srid?: Maybe<Scalars['Int']>;
+  x?: Maybe<Scalars['Int']>;
+  y?: Maybe<Scalars['Int']>;
+  z?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryTopicArgs = {
   id: Scalars['Int'];
 };
@@ -9019,6 +9033,8 @@ export type Sketch = Node & {
   copyOf?: Maybe<Scalars['Int']>;
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
   folderId?: Maybe<Scalars['Int']>;
+  /** Reads a single `FormElement` that is related to this `Sketch`. */
+  formElement?: Maybe<FormElement>;
   formElementId?: Maybe<Scalars['Int']>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
@@ -11404,6 +11420,8 @@ export type UpdateSketchPayload = {
   collection?: Maybe<Sketch>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   copiedFrom?: Maybe<Sketch>;
+  /** Reads a single `FormElement` that is related to this `Sketch`. */
+  formElement?: Maybe<FormElement>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `Sketch` that was updated by this mutation. */

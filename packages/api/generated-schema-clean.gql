@@ -1439,6 +1439,9 @@ type CreateSketchPayload {
   """Reads a single `Sketch` that is related to this `Sketch`."""
   copiedFrom: Sketch
 
+  """Reads a single `FormElement` that is related to this `Sketch`."""
+  formElement: FormElement
+
   """
   Our root query field type. Allows us to run any query from our mutation payload.
   """
@@ -3598,6 +3601,9 @@ type DeleteSketchPayload {
   """Reads a single `Sketch` that is related to this `Sketch`."""
   copiedFrom: Sketch
   deletedSketchNodeId: ID
+
+  """Reads a single `FormElement` that is related to this `Sketch`."""
+  formElement: FormElement
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -9395,6 +9401,7 @@ type Query implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [Form!]
+  tilebbox(srid: Int, x: Int, y: Int, z: Int): GeometryInterface
   topic(id: Int!): Topic
 
   """Reads a single `Topic` using its globally unique `ID`."""
@@ -9886,6 +9893,9 @@ type Sketch implements Node {
   Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.
   """
   folderId: Int
+
+  """Reads a single `FormElement` that is related to this `Sketch`."""
+  formElement: FormElement
   formElementId: Int
 
   """
@@ -12926,6 +12936,9 @@ type UpdateSketchPayload {
 
   """Reads a single `Sketch` that is related to this `Sketch`."""
   copiedFrom: Sketch
+
+  """Reads a single `FormElement` that is related to this `Sketch`."""
+  formElement: FormElement
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

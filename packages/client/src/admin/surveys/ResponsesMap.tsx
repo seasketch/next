@@ -1,3 +1,4 @@
+import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect, useState } from "react";
 import MapboxMap from "../../components/MapboxMap";
 import MapContextManager, {
@@ -13,10 +14,12 @@ import {
   SurveyListDetailsFragment,
   useSurveyMapDetailsQuery,
 } from "../../generated/graphql";
+import useAccessToken from "../../useAccessToken";
 import MiniBasemapSelector from "../data/MiniBasemapSelector";
 import useMapEssentials from "./useMapEssentials";
 
 export default function ResponsesMap({ surveyId }: { surveyId: number }) {
+  const token = useAccessToken();
   const essentials = useMapEssentials({});
   const { data } = useSurveyMapDetailsQuery({
     variables: {
@@ -51,15 +54,27 @@ export default function ResponsesMap({ surveyId }: { surveyId: number }) {
       )!;
       // eslint-disable-next-line i18next/no-literal-string
       const dataSourceId = `${selectedQuestion}-source`;
+      // dataSources.push({
+      //   id: dataSourceId,
+      //   type: DataSourceTypes.Geojson,
+      //   supportsDynamicLayers: false,
+      //   url: `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
+      //     "/graphql",
+      //     // eslint-disable-next-line i18next/no-literal-string
+      //     `/export-survey/${surveyId}/spatial/${element.id}/geojson`
+      //   )}`,
+      // });
       dataSources.push({
         id: dataSourceId,
-        type: DataSourceTypes.Geojson,
+        type: DataSourceTypes.Vector,
         supportsDynamicLayers: false,
-        url: `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
-          "/graphql",
-          // eslint-disable-next-line i18next/no-literal-string
-          `/export-survey/${surveyId}/spatial/${element.id}/geojson`
-        )}`,
+        tiles: [
+          `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
+            "/graphql",
+            // eslint-disable-next-line i18next/no-literal-string
+            `/export-survey/${surveyId}/spatial/${element.id}/tiles/{z}/{x}/{y}.pbf`
+          )}`,
+        ],
       });
       layers.push({
         // eslint-disable-next-line i18next/no-literal-string
@@ -71,6 +86,7 @@ export default function ResponsesMap({ surveyId }: { surveyId: number }) {
           {
             type: "fill",
             layout: {},
+            "source-layer": "sketches",
             paint: {
               "fill-color": "#881011", // blue color fill
               "fill-opacity": 0.15,
@@ -90,7 +106,28 @@ export default function ResponsesMap({ surveyId }: { surveyId: number }) {
   return (
     <MapContext.Provider value={essentials.mapContext}>
       <MiniBasemapSelector basemaps={essentials.basemaps} />
-      <MapboxMap className="w-full h-full" />
+      <MapboxMap
+        className="w-full h-full"
+        initOptions={{
+          // @ts-ignore
+          transformRequest: (url, resourceType) => {
+            if (
+              new URL(url).host ===
+                new URL(process.env.REACT_APP_GRAPHQL_ENDPOINT!).host &&
+              token
+            ) {
+              return {
+                url: url + `?time=${new Date().getTime()}`,
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              };
+            } else {
+              return null;
+            }
+          },
+        }}
+      />
       {spatialQuestions && (
         <select
           className="absolute top-0 right-0 text-sm rounded mt-1 mr-1"

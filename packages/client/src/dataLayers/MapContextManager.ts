@@ -10,6 +10,8 @@ import mapboxgl, {
   MapboxOptions,
   AnySourceImpl,
 } from "mapbox-gl";
+// @ts-ignore
+import * as spec from "@mapbox/mapbox-gl-style-spec";
 import {
   createContext,
   Dispatch,
@@ -800,6 +802,14 @@ class MapContextManager {
               // Add the source
               if (!baseStyle.sources[source.id.toString()]) {
                 switch (source.type) {
+                  case DataSourceTypes.Vector:
+                    baseStyle.sources[source.id.toString()] = {
+                      type: "vector",
+                      // attribution: source.attribution || "",
+                      tiles: source.tiles as string[],
+                    };
+                    sourceWasAdded = true;
+                    break;
                   case DataSourceTypes.SeasketchVector:
                   case DataSourceTypes.Geojson:
                     baseStyle.sources[source.id.toString()] = {

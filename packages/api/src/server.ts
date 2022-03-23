@@ -19,7 +19,7 @@ import cors from "cors";
 import https from "https";
 import fs from "fs";
 import graphileOptions from "./graphileOptions";
-import { getFeatureCollection } from "./exportSurvey";
+import { getFeatureCollection, getMVT } from "./exportSurvey";
 import * as Sentry from "@sentry/node";
 import * as Tracing from "@sentry/tracing";
 import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
@@ -201,15 +201,25 @@ app.use(
   async function (req, res, next) {
     await pool.query("BEGIN");
     await setTransactionSessionVariables(getPgSettings(req), pool);
-    const x = parseInt(req.params.x);
-    const y = parseInt(req.params.y);
-    const z = parseInt(req.params.z);
+    const x = parseInt(req.params.x, 10);
+    const y = parseInt(req.params.y, 10);
+    const z = parseInt(req.params.z, 10);
     const surveyId = parseInt(req.params.id);
     const elementId = parseInt(req.params.element_id);
-    console.log({ x, y, z, surveyId, elementId });
-    await pool.query("COMMIT");
-    res.status(500);
-    res.send("fail");
+    try {
+      const tile = await getMVT(elementId, x, y, z, pool);
+      await pool.query("COMMIT");
+      res.setHeader("Content-Type", "application/x-protobuf");
+      // res.setHeader("Cache-Control", "public, max-age=300");
+      if (tile.length === 0) {
+        res.status(204);
+      }
+      res.send(tile);
+    } catch (e: any) {
+      res.send(`Problem generating tiles.\n${e.toString()}`);
+      res.status(500);
+      return;
+    }
   }
 );
 

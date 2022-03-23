@@ -702,7 +702,11 @@ export default function ResponseGrid(props: Props) {
             row.cells.map((cell) => {
               // Apply the cell props
               return (
-                <RenderCellContents cell={cell} isSelected={row.isSelected} />
+                <RenderCellContents
+                  {...cell.getCellProps()}
+                  cell={cell}
+                  isSelected={row.isSelected}
+                />
               );
             })
           }

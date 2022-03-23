@@ -9091,6 +9091,34 @@ COMMENT ON FUNCTION public.template_forms() IS '@simpleCollections only';
 
 
 --
+-- Name: tilebbox(integer, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tilebbox(z integer, x integer, y integer, srid integer DEFAULT 3857) RETURNS public.geometry
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+declare
+    max numeric := 20037508.34;
+    res numeric := (max*2)/(2^z);
+    bbox geometry;
+begin
+    bbox := ST_MakeEnvelope(
+        -max + (x * res),
+        max - (y * res),
+        -max + (x * res) + res,
+        max - (y * res) - res,
+        3857
+    );
+    if srid = 3857 then
+        return bbox;
+    else
+        return ST_Transform(bbox, srid);
+    end if;
+end;
+$$;
+
+
+--
 -- Name: toggle_admin_access(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11706,6 +11734,13 @@ CREATE INDEX sketches_collection_id_idx ON public.sketches USING btree (collecti
 --
 
 CREATE INDEX sketches_copy_of_idx ON public.sketches USING btree (copy_of);
+
+
+--
+-- Name: sketches_form_element_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketches_form_element_id ON public.sketches USING btree (form_element_id);
 
 
 --
@@ -15257,6 +15292,7 @@ REVOKE ALL ON FUNCTION public.box(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.box2d(public.box3d) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.box2d(public.box3d) TO anon;
 
 
 --
@@ -15264,6 +15300,7 @@ REVOKE ALL ON FUNCTION public.box2d(public.box3d) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.box2d(public.geometry) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.box2d(public.geometry) TO anon;
 
 
 --
@@ -19459,6 +19496,7 @@ REVOKE ALL ON FUNCTION public.st_aslatlontext(geom public.geometry, tmpl text) F
 --
 
 REVOKE ALL ON FUNCTION public.st_asmvtgeom(geom public.geometry, bounds public.box2d, extent integer, buffer integer, clip_geom boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_asmvtgeom(geom public.geometry, bounds public.box2d, extent integer, buffer integer, clip_geom boolean) TO anon;
 
 
 --
@@ -20811,6 +20849,7 @@ REVOKE ALL ON FUNCTION public.st_makebox2d(geom1 public.geometry, geom2 public.g
 --
 
 REVOKE ALL ON FUNCTION public.st_makeenvelope(double precision, double precision, double precision, double precision, integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_makeenvelope(double precision, double precision, double precision, double precision, integer) TO anon;
 
 
 --
@@ -21716,6 +21755,7 @@ REVOKE ALL ON FUNCTION public.st_touches(geom1 public.geometry, geom2 public.geo
 --
 
 REVOKE ALL ON FUNCTION public.st_transform(public.geometry, integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_transform(public.geometry, integer) TO anon;
 
 
 --
@@ -21723,6 +21763,7 @@ REVOKE ALL ON FUNCTION public.st_transform(public.geometry, integer) FROM PUBLIC
 --
 
 REVOKE ALL ON FUNCTION public.st_transform(geom public.geometry, to_proj text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_transform(geom public.geometry, to_proj text) TO anon;
 
 
 --
@@ -21730,6 +21771,7 @@ REVOKE ALL ON FUNCTION public.st_transform(geom public.geometry, to_proj text) F
 --
 
 REVOKE ALL ON FUNCTION public.st_transform(geom public.geometry, from_proj text, to_srid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_transform(geom public.geometry, from_proj text, to_srid integer) TO anon;
 
 
 --
@@ -21737,6 +21779,7 @@ REVOKE ALL ON FUNCTION public.st_transform(geom public.geometry, from_proj text,
 --
 
 REVOKE ALL ON FUNCTION public.st_transform(geom public.geometry, from_proj text, to_proj text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_transform(geom public.geometry, from_proj text, to_proj text) TO anon;
 
 
 --
@@ -22111,6 +22154,14 @@ REVOKE ALL ON FUNCTION public.texticregexne(public.citext, public.citext) FROM P
 
 
 --
+-- Name: FUNCTION tilebbox(z integer, x integer, y integer, srid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.tilebbox(z integer, x integer, y integer, srid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.tilebbox(z integer, x integer, y integer, srid integer) TO anon;
+
+
+--
 -- Name: FUNCTION toggle_admin_access("projectId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22435,6 +22486,7 @@ REVOKE ALL ON FUNCTION public.st_asgeobuf(anyelement, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_asmvt(anyelement) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_asmvt(anyelement) TO anon;
 
 
 --
@@ -22442,6 +22494,7 @@ REVOKE ALL ON FUNCTION public.st_asmvt(anyelement) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_asmvt(anyelement, text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_asmvt(anyelement, text) TO anon;
 
 
 --
@@ -22449,6 +22502,7 @@ REVOKE ALL ON FUNCTION public.st_asmvt(anyelement, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_asmvt(anyelement, text, integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_asmvt(anyelement, text, integer) TO anon;
 
 
 --
@@ -22456,6 +22510,7 @@ REVOKE ALL ON FUNCTION public.st_asmvt(anyelement, text, integer) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_asmvt(anyelement, text, integer, text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_asmvt(anyelement, text, integer, text) TO anon;
 
 
 --
@@ -22463,6 +22518,7 @@ REVOKE ALL ON FUNCTION public.st_asmvt(anyelement, text, integer, text) FROM PUB
 --
 
 REVOKE ALL ON FUNCTION public.st_asmvt(anyelement, text, integer, text, text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_asmvt(anyelement, text, integer, text, text) TO anon;
 
 
 --
