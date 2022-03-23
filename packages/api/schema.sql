@@ -5737,6 +5737,7 @@ CREATE TABLE public.sketches (
     num_vertices integer GENERATED ALWAYS AS (public.st_npoints(COALESCE(geom, user_geom))) STORED,
     form_element_id integer,
     response_id integer,
+    mercator_geometry public.geometry(Geometry,3857) GENERATED ALWAYS AS (public.st_transform(COALESCE(geom, user_geom), 3857)) STORED,
     CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
 );
 
@@ -8948,6 +8949,40 @@ COMMENT ON FUNCTION public.survey_invites_status(invite public.survey_invites) I
 
 
 --
+-- Name: survey_response_mvt(integer, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.survey_response_mvt(form_element_id integer, x integer, y integer, z integer) RETURNS bytea
+    LANGUAGE sql SECURITY DEFINER
+    AS $_$
+  SELECT ST_AsMVT(q, 'sketches', 4096, 'geom')
+  FROM (
+    SELECT
+        id,
+        name,
+        response_id,
+        ST_AsMVTGeom(
+            mercator_geometry,
+            TileBBox(z, x, y, 3857),
+            4096,
+            256,
+            true
+        ) geom
+    FROM sketches c
+    where form_element_id = $1
+    and session_is_admin(project_id_from_field_id(form_element_id))
+  ) q
+  $_$;
+
+
+--
+-- Name: FUNCTION survey_response_mvt(form_element_id integer, x integer, y integer, z integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.survey_response_mvt(form_element_id integer, x integer, y integer, z integer) IS '@omit';
+
+
+--
 -- Name: survey_responses_account_email(public.survey_responses); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11741,6 +11776,13 @@ CREATE INDEX sketches_copy_of_idx ON public.sketches USING btree (copy_of);
 --
 
 CREATE INDEX sketches_form_element_id ON public.sketches USING btree (form_element_id);
+
+
+--
+-- Name: sketches_mercator_geometry_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketches_mercator_geometry_idx ON public.sketches USING gist (mercator_geometry);
 
 
 --
@@ -17558,6 +17600,14 @@ GRANT ALL ON FUNCTION public.st_npoints(public.geometry) TO anon;
 
 
 --
+-- Name: FUNCTION st_transform(public.geometry, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_transform(public.geometry, integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_transform(public.geometry, integer) TO anon;
+
+
+--
 -- Name: TABLE sketches; Type: ACL; Schema: public; Owner: -
 --
 
@@ -21751,14 +21801,6 @@ REVOKE ALL ON FUNCTION public.st_touches(geom1 public.geometry, geom2 public.geo
 
 
 --
--- Name: FUNCTION st_transform(public.geometry, integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.st_transform(public.geometry, integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.st_transform(public.geometry, integer) TO anon;
-
-
---
 -- Name: FUNCTION st_transform(geom public.geometry, to_proj text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22007,6 +22049,14 @@ GRANT ALL ON FUNCTION public.survey_invite_was_used(invite_id integer) TO anon;
 
 REVOKE ALL ON FUNCTION public.survey_invites_status(invite public.survey_invites) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.survey_invites_status(invite public.survey_invites) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION survey_response_mvt(form_element_id integer, x integer, y integer, z integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.survey_response_mvt(form_element_id integer, x integer, y integer, z integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.survey_response_mvt(form_element_id integer, x integer, y integer, z integer) TO seasketch_user;
 
 
 --

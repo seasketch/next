@@ -215,12 +215,11 @@ app.use(
       await client.release();
       res.setHeader("Content-Type", "application/x-protobuf");
       res.setHeader("Cache-Control", "public, max-age=300");
-      if (tile.length === 0) {
+      if (tile === null || tile.length === 0) {
         res.status(204);
       }
       res.send(tile);
     } catch (e: any) {
-      await client.release();
       res.send(`Problem generating tiles.\n${e.toString()}`);
       res.status(500);
       return;

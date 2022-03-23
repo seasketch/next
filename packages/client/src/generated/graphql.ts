@@ -9044,6 +9044,7 @@ export type Sketch = Node & {
    */
   geom?: Maybe<GeometryGeometry>;
   id: Scalars['Int'];
+  mercatorGeometry?: Maybe<GeometryGeometry>;
   /** User provided name for the sketch. */
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -9311,6 +9312,7 @@ export type SketchInput = {
    */
   geom?: Maybe<Scalars['GeoJSON']>;
   id?: Maybe<Scalars['Int']>;
+  mercatorGeometry?: Maybe<Scalars['GeoJSON']>;
   /** User provided name for the sketch. */
   name: Scalars['String'];
   numVertices?: Maybe<Scalars['Int']>;
