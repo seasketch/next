@@ -73,15 +73,21 @@ describe("Survey creation smoke test", () => {
                     cy.createSAPElements(SAPFormId, "Maldives", access_token)
                     const formElements = resp.createFormElement.query.form.formElements
                     console.log(formElements)
-                    let jumpToId
+                    const jumpToIds = []
                     const elementsToUpdate = formElements.slice(5,24)
+                    //YesNo
+                    elementsToUpdate.push(formElements[30])
+                    console.log(elementsToUpdate)
                     for (let i = 0; i < formElements.length; i++) {
-                      if (formElements[i].typeId === "SpatialAccessPriorityInput") {
-                        jumpToId = formElements[i].id
-                        break
+                      if (formElements[i].typeId === "SpatialAccessPriorityInput"
+                       || formElements[i].typeId === "SaveScreen"
+                        ) {
+                        jumpToIds.push(formElements[i].id)
                       }
                     }
-                    cy.updateJumpToId(jumpToId, elementsToUpdate, formId, access_token)
+                    const sapId = jumpToIds[1]
+                    console.log(sapId)
+                    cy.updateJumpToId(jumpToIds, elementsToUpdate, formId, access_token)
                     const updateSubToIdElements = []
                     formElements.forEach((t) => {
                       console.log(t.body.content[0].content[0].text)
@@ -105,7 +111,7 @@ describe("Survey creation smoke test", () => {
                         updateSubToIdElements.push(t)
                       }
                     })
-                     cy.updateSubordinateToId(jumpToId, updateSubToIdElements, formId, access_token)
+                     cy.updateSubordinateToId(sapId, updateSubToIdElements, formId, access_token)
                       let baseId = 0
                       let ids = []
                       function getIds(baseId) {
@@ -129,10 +135,12 @@ describe("Survey creation smoke test", () => {
                         return ids
                       }
                       let newIds = getIds(baseId)
-                      newIds.push(newIds[19] + 6)
+                      newIds.push(newIds[19] + 8)
                       newIds.push(newIds[20] + 1)
                       console.log(newIds)
-                      cy.createFormLogicRules(formId, "Maldives", newIds, access_token)
+                      cy.createFormLogicRules(formId, "Maldives", newIds, access_token).then((resp) => {
+                        //cy.createLastFormLogicRules(formId, "Maldives", newIds, access_token)
+                      })
                     })
                   })
               })
