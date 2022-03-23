@@ -8952,34 +8952,41 @@ COMMENT ON FUNCTION public.survey_invites_status(invite public.survey_invites) I
 -- Name: survey_response_mvt(integer, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.survey_response_mvt(form_element_id integer, x integer, y integer, z integer) RETURNS bytea
-    LANGUAGE sql SECURITY DEFINER
+CREATE FUNCTION public.survey_response_mvt("formElementId" integer, x integer, y integer, z integer) RETURNS bytea
+    LANGUAGE plpgsql SECURITY DEFINER
     AS $_$
-  SELECT ST_AsMVT(q, 'sketches', 4096, 'geom')
-  FROM (
-    SELECT
-        id,
-        name,
-        response_id,
-        ST_AsMVTGeom(
-            mercator_geometry,
-            TileBBox(z, x, y, 3857),
-            4096,
-            256,
-            true
-        ) geom
-    FROM sketches c
-    where form_element_id = $1
-    and session_is_admin(project_id_from_field_id(form_element_id))
-  ) q
-  $_$;
+  declare
+    tile bytea;
+  begin
+  if session_is_admin(project_id_from_field_id("formElementId")) then
+    SELECT ST_AsMVT(q, 'sketches', 4096, 'geom') into tile
+    FROM (
+      SELECT
+          id,
+          name,
+          response_id,
+          ST_AsMVTGeom(
+              mercator_geometry,
+              TileBBox(z, x, y, 3857),
+              4096,
+              256,
+              true
+          ) geom
+      FROM sketches c
+      where form_element_id = $1
+    ) q;
+    return tile;
+  end if;
+  raise exception 'Permission denied';
+  end;
+$_$;
 
 
 --
--- Name: FUNCTION survey_response_mvt(form_element_id integer, x integer, y integer, z integer); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION survey_response_mvt("formElementId" integer, x integer, y integer, z integer); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.survey_response_mvt(form_element_id integer, x integer, y integer, z integer) IS '@omit';
+COMMENT ON FUNCTION public.survey_response_mvt("formElementId" integer, x integer, y integer, z integer) IS '@omit';
 
 
 --
@@ -22052,11 +22059,11 @@ GRANT ALL ON FUNCTION public.survey_invites_status(invite public.survey_invites)
 
 
 --
--- Name: FUNCTION survey_response_mvt(form_element_id integer, x integer, y integer, z integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION survey_response_mvt("formElementId" integer, x integer, y integer, z integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.survey_response_mvt(form_element_id integer, x integer, y integer, z integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.survey_response_mvt(form_element_id integer, x integer, y integer, z integer) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.survey_response_mvt("formElementId" integer, x integer, y integer, z integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.survey_response_mvt("formElementId" integer, x integer, y integer, z integer) TO seasketch_user;
 
 
 --
