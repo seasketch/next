@@ -588,7 +588,6 @@ Cypress.Commands.add("createSAPElements", (formId: number, fixtureAlias: string,
   }
   else {
     elements.forEach((e) => {
-      console.log(e)
       if (e.typeId !== "FeatureName" && e.typeId !== "SAPRange") {
         return cy
         .mutation(
@@ -692,8 +691,6 @@ Cypress.Commands.add("updateSubordinateToId", (subordinateToId: number, elements
 })
   
 Cypress.Commands.add("updateJumpToId", (jumpToIds: object, elementsToUpdate: any, formId: number, token: string) => {
-  console.log(elementsToUpdate)
-  console.log(jumpToIds)
   elementsToUpdate.map(t => {
     if(t.typeId !== "YesNo") {
       t.jumpToId = jumpToIds[1]
@@ -929,8 +926,7 @@ Cypress.Commands.add("deleteFormElements", (formId: number, token: string) => {
 })
 
 Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string, newIds: object, token:string) => {
-  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules//.slice(0,19)
-  console.log(formLogic)
+  const formLogic = formLogicRules[fixtureAlias].data.form.logicRules
   for (let i=0; i< formLogic.length; i++) {
     formLogic[i].jumpToId = newIds[i+1]
   }
@@ -1033,117 +1029,8 @@ Cypress.Commands.add("createFormLogicRules", (formId:number, fixtureAlias:string
               return data
             })
           }
-      })//
-    })//
-  })
-
-  Cypress.Commands.add("createLastFormLogicRules", (formId:number, fixtureAlias:string, newIds: object, token:string) => {
-    const formLogic = formLogicRules[fixtureAlias].data.form.logicRules.slice(19,22)
-    console.log(formLogic)
-    for (let i=0; i< formLogic.length; i++) {
-      formLogic[i].jumpToId = newIds[i+1]
-    }
-  
-    //formLogic.map(t => {
-    //  if (t.formElementId === 74 && t.conditions[0].subjectId === 74) {
-    //    t.formElementId = t.conditions[0].subjectId = newIds[0]
-    //  } else if (t.formElementId === 98 && t.conditions[0].subjectId === 98) {
-    //    t.formElementId = t.conditions[0].subjectId = newIds[20]
-    //    t.jumpToId = newIds[21]
-    //  } else if (t.formElementId === 99 && t.conditions[0].subjectId === 99) {
-    //    t.formElementId = t.conditions[0].subjectId = newIds[21]
-    //    t.jumpToId = newIds[21] + 1
-    //  }
-    //})
-    //formLogic.forEach((f) => {
-    //  return cy
-    //    .mutation(
-    //      gql`
-    //        mutation CypressCreateFormLogicRule($formLogicRule: FormLogicRuleInput!) {
-    //          createFormLogicRule(input: {formLogicRule: $formLogicRule} )
-    //          {
-    //            formLogicRule {
-    //              id
-    //            }
-    //            query {
-    //              form (id: ${formId}) {
-    //                formElements {
-    //                  jumpToId
-    //                }
-    //                logicRules {
-    //                  formElementId,
-    //                  booleanOperator,
-    //                  jumpToId,
-    //                  command,
-    //                  position
-    //                }
-    //              }
-    //            }
-    //          }
-    //        }
-    //      `,
-    //      { "formLogicRule": {
-    //          "formElementId": f.formElementId,
-    //          "booleanOperator": f.booleanOperator,
-    //          "command": f.command,
-    //          "jumpToId": f.jumpToId,
-    //          "position": f.position
-    //        }
-    //      },
-    //      (token as any),
-    //    ).then((data) => {
-    //      Cypress.log(data)
-    //      if (data) {
-    //        return cy
-    //          .mutation(
-    //            gql`
-    //              mutation CypressCreateFormLogicCondition($formLogicCondition:  FormLogicConditionInput!) {
-    //                createFormLogicCondition(input: {formLogicCondition: $formLogicCondition} )
-    //                {
-    //                  formLogicCondition {
-    //                    id
-    //                  }
-    //                  query {
-    //                    form (id: ${formId}) {
-    //                    formElements {
-    //                      id, 
-    //                      jumpToId, 
-    //                      typeId, 
-    //                      body
-    //                    }
-    //                      logicRules {
-    //                        formElementId,
-    //                        booleanOperator,
-    //                        jumpToId,
-    //                        command,
-    //                        position, 
-    //                        conditions {
-    //                          ruleId, 
-    //                          subjectId, 
-    //                          operator, 
-    //                          value
-    //                        }
-    //                      }
-    //                    }
-    //                  }
-    //                }
-    //              }
-    //            `,
-    //            { "formLogicCondition": {
-    //                "ruleId": data.createFormLogicRule.formLogicRule.id,
-    //                "subjectId": f.conditions[0].subjectId,
-    //                "operator": f.conditions[0].operator,
-    //                "value": f.conditions[0].value
-    //              }
-    //            },
-    //            (token as any),
-    //          ).then((data) => {
-    //            Cypress.log(data)
-    //            return data
-    //          })
-    //        }
-    //    })//
-    //  })//
+      })
+    })
   })
 
   Cypress.Commands.add("getSurveyResponse", (surveyResponseId: number, token: string) => {

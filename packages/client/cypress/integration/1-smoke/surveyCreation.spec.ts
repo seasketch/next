@@ -72,12 +72,11 @@ describe("Survey creation smoke test", () => {
                     const SAPFormId = formId + 1
                     cy.createSAPElements(SAPFormId, "Maldives", access_token)
                     const formElements = resp.createFormElement.query.form.formElements
-                    console.log(formElements)
                     const jumpToIds = []
+                    //atoll questions
                     const elementsToUpdate = formElements.slice(5,24)
-                    //YesNo
+                    //YesNo id
                     elementsToUpdate.push(formElements[30])
-                    console.log(elementsToUpdate)
                     for (let i = 0; i < formElements.length; i++) {
                       if (formElements[i].typeId === "SpatialAccessPriorityInput"
                        || formElements[i].typeId === "SaveScreen"
@@ -86,11 +85,9 @@ describe("Survey creation smoke test", () => {
                       }
                     }
                     const sapId = jumpToIds[1]
-                    console.log(sapId)
                     cy.updateJumpToId(jumpToIds, elementsToUpdate, formId, access_token)
                     const updateSubToIdElements = []
                     formElements.forEach((t) => {
-                      console.log(t.body.content[0].content[0].text)
                       if (
                        t.body.content[0].content[0].text === "If you are representing a guesthouse, please provide the name of your establishment:"
                       ) {
@@ -137,10 +134,7 @@ describe("Survey creation smoke test", () => {
                       let newIds = getIds(baseId)
                       newIds.push(newIds[19] + 8)
                       newIds.push(newIds[20] + 1)
-                      console.log(newIds)
-                      cy.createFormLogicRules(formId, "Maldives", newIds, access_token).then((resp) => {
-                        //cy.createLastFormLogicRules(formId, "Maldives", newIds, access_token)
-                      })
+                      cy.createFormLogicRules(formId, "Maldives", newIds, access_token)
                     })
                   })
               })
@@ -202,17 +196,28 @@ describe("Survey creation smoke test", () => {
       cy.contains('Kudafari').click()
     })
     it("Cannot advance until sector selection(s) is made", () => {
+      cy.log("Next button should be hidden")
       cy.get('[type = "button"]').as('nextBtn').should('be.hidden')
+      cy.log("Selecting sector")
       cy.contains('Fisheries - Commercial, Tuna').click()
+      cy.log("Scrolling next button into view")
       cy.get('@nextBtn').scrollIntoView()
+      cy.log("Getting next button; should be visible")
       cy.get('@nextBtn').should('be.visible').then(($btn) => {
         {$btn.trigger('click')}
       })
+      cy.log("waiting for @getBasemaps")
       cy.wait('@getBasemaps').its('response.statusCode').should('eq', 200)
+      cy.log("Finished sector selection")
     })
     it("Can draw a polygon", () => {
-      cy.contains("Fisheries - Commercial, Tuna").should('be.visible')
+      cy.log("Can draw a polygon - cy.contains paragraph")
+      cy.contains(
+        "Use the map to indicate the most valued places for this activity. You can draw multiple areas and prioritize them individually.")
+        .should('be.visible')
+      cy.log("Waiting for @loadBasemaps")
       cy.wait('@loadBasemaps')
+      cy.log("Get mapboxgl-canvases")
       cy.get('.mapboxgl-canvas').each((t) => {
         const canvases = []
         canvases.push(t)
@@ -299,5 +304,5 @@ describe("Survey creation smoke test", () => {
         })
       })
     })
-  })
-})
+  })//
+})//
