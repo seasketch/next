@@ -1,9 +1,7 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 //const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
-import { CursorType, ProjectAccessControlSetting } from "../../../src/generated/graphql";
+import { ProjectAccessControlSetting } from "../../../src/generated/graphql";
 import "cypress-localstorage-commands"
-import { verify } from "crypto";
-import { VariablesInAllowedPositionRule } from "graphql";
 
 let surveyId: any
 let authToken: any
