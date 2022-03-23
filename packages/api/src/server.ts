@@ -199,23 +199,26 @@ app.use(
   currentProjectMiddlware,
   userAccountMiddlware,
   async function (req, res, next) {
-    await pool.query("BEGIN");
-    await setTransactionSessionVariables(getPgSettings(req), pool);
+    const client = await pool.connect();
+    await client.query("BEGIN");
+    await setTransactionSessionVariables(getPgSettings(req), client);
     const x = parseInt(req.params.x, 10);
     const y = parseInt(req.params.y, 10);
     const z = parseInt(req.params.z, 10);
     const surveyId = parseInt(req.params.id);
     const elementId = parseInt(req.params.element_id);
     try {
-      const tile = await getMVT(elementId, x, y, z, pool);
-      await pool.query("COMMIT");
+      const tile = await getMVT(elementId, x, y, z, client);
+      await client.query("COMMIT");
+      client.release();
       res.setHeader("Content-Type", "application/x-protobuf");
-      // res.setHeader("Cache-Control", "public, max-age=300");
+      res.setHeader("Cache-Control", "public, max-age=300");
       if (tile.length === 0) {
         res.status(204);
       }
       res.send(tile);
     } catch (e: any) {
+      client.release();
       res.send(`Problem generating tiles.\n${e.toString()}`);
       res.status(500);
       return;
