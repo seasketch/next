@@ -13588,7 +13588,7 @@ CREATE POLICY sketches_insert ON public.sketches FOR INSERT WITH CHECK ((public.
 -- Name: sketches sketches_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY sketches_select ON public.sketches FOR SELECT USING (public.it_me(user_id));
+CREATE POLICY sketches_select ON public.sketches FOR SELECT USING ((public.it_me(user_id) OR public.session_is_admin(public.project_id_from_field_id(form_element_id))));
 
 
 --

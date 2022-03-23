@@ -68,7 +68,7 @@ export async function getMVT(
     SELECT
         id,
         name,
-        properties,
+        response_id,
         ST_AsMVTGeom(
             ST_Transform(coalesce(geom, user_geom), 3857),
             TileBBox(${z}, ${x}, ${y}, 3857),

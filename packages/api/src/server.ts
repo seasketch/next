@@ -2,7 +2,7 @@ import express, { Request } from "express";
 import { postgraphile, makePluginHook } from "postgraphile";
 import compression from "compression";
 import path from "path";
-import pool, { workerPool } from "./pool";
+import pool, { createPool, workerPool } from "./pool";
 import { getJWKS, rotateKeys } from "./auth/jwks";
 import authorizationMiddleware from "./middleware/authorizationMiddleware";
 import userAccountMiddlware from "./middleware/userAccountMiddleware";
@@ -193,13 +193,15 @@ run({
   taskDirectory: path.join(__dirname, "..", "tasks"),
 });
 
+const tilesetPool = createPool();
+
 app.use(
   "/export-survey/:id/spatial/:element_id/tiles/:z/:x/:y.pbf",
   authorizationMiddleware,
   currentProjectMiddlware,
   userAccountMiddlware,
   async function (req, res, next) {
-    const client = await pool.connect();
+    const client = await tilesetPool.connect();
     await client.query("BEGIN");
     await setTransactionSessionVariables(getPgSettings(req), client);
     const x = parseInt(req.params.x, 10);
@@ -210,7 +212,7 @@ app.use(
     try {
       const tile = await getMVT(elementId, x, y, z, client);
       await client.query("COMMIT");
-      client.release();
+      await client.release();
       res.setHeader("Content-Type", "application/x-protobuf");
       res.setHeader("Cache-Control", "public, max-age=300");
       if (tile.length === 0) {
@@ -218,7 +220,7 @@ app.use(
       }
       res.send(tile);
     } catch (e: any) {
-      client.release();
+      await client.release();
       res.send(`Problem generating tiles.\n${e.toString()}`);
       res.status(500);
       return;
