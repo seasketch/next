@@ -54,28 +54,28 @@ export default function ResponsesMap({ surveyId }: { surveyId: number }) {
       )!;
       // eslint-disable-next-line i18next/no-literal-string
       const dataSourceId = `${selectedQuestion}-source`;
-      // dataSources.push({
-      //   id: dataSourceId,
-      //   type: DataSourceTypes.Geojson,
-      //   supportsDynamicLayers: false,
-      //   url: `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
-      //     "/graphql",
-      //     // eslint-disable-next-line i18next/no-literal-string
-      //     `/export-survey/${surveyId}/spatial/${element.id}/geojson`
-      //   )}`,
-      // });
       dataSources.push({
         id: dataSourceId,
-        type: DataSourceTypes.Vector,
+        type: DataSourceTypes.Geojson,
         supportsDynamicLayers: false,
-        tiles: [
-          `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
-            "/graphql",
-            // eslint-disable-next-line i18next/no-literal-string
-            `/export-survey/${surveyId}/spatial/${element.id}/tiles/{z}/{x}/{y}.pbf`
-          )}`,
-        ],
+        url: `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
+          "/graphql",
+          // eslint-disable-next-line i18next/no-literal-string
+          `/export-survey/${surveyId}/spatial/${element.id}/geojson`
+        )}`,
       });
+      // dataSources.push({
+      //   id: dataSourceId,
+      //   type: DataSourceTypes.Vector,
+      //   supportsDynamicLayers: false,
+      //   tiles: [
+      //     `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
+      //       "/graphql",
+      //       // eslint-disable-next-line i18next/no-literal-string
+      //       `/export-survey/${surveyId}/spatial/${element.id}/tiles/{z}/{x}/{y}.pbf`
+      //     )}`,
+      //   ],
+      // });
       layers.push({
         // eslint-disable-next-line i18next/no-literal-string
         dataSourceId,
@@ -86,7 +86,7 @@ export default function ResponsesMap({ surveyId }: { surveyId: number }) {
           {
             type: "fill",
             layout: {},
-            "source-layer": "sketches",
+            // "source-layer": "sketches",
             paint: {
               "fill-color": "#881011", // blue color fill
               "fill-opacity": 0.15,
