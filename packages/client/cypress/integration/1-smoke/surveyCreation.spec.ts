@@ -28,6 +28,9 @@ describe("Survey creation smoke test", () => {
         if ((req.body.operationName) && (req.body.operationName === "GetBasemapsAndRegion")) {
           req.alias = "getBasemaps"
         }
+        if ((req.body.operationName) && (req.body.operationName === "CreateResponse")) {
+          req.alias = "createResponse"
+        }
       })
       cy.intercept("https://api.mapbox.com/map-sessions/*").as('loadBasemaps')
       cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiEvent')
@@ -245,13 +248,31 @@ describe("Survey creation smoke test", () => {
         {$btn.trigger('click')}
       })
     })
-    it("Can answer supplemental questions", () => {
+    it("Skips to end when answer to additional questions is no", () => {
       cy.contains('Are you willing to answer a few additional questions about who you are?')
+        .should('be.visible')
+      cy.get('[title="No"]')
+        .contains('No')
+        .should('be.visible')
+        .click()
+      cy.wait('@createResponse').its('response.statusCode').should('eq', 200)
+      cy.get('h1').contains('Thank You for Responding').should('be.visible')
+      cy.restoreLocalStorage()
+      cy.getLocalStorage('surveyId').then((id) => {
+        cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
+      })
+    })
+    it("Can answer additional questions", () => {
+      cy.restoreLocalStorage()
+      cy.getLocalStorage('surveyId').then((id) => {
+        cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28` )
+      })
+      cy.get('h1').contains('Are you willing to answer a few additional questions about who you are?')
       cy.contains('Yes').click()
     })
     it("Can input age", () => {
       cy.contains("Your age")
-      cy.get('input').clear().type("28")
+      cy.get('input').clear().type("30")
       cy.contains('Next').click()
     })
     it("Can select gender", () => {
@@ -284,7 +305,7 @@ describe("Survey creation smoke test", () => {
             expect (ary[3][0]).to.eq('Kudafari')
             expect (ary[4].sectors[0]).to.equal("Fisheries - Commercial, Tuna")
             expect (ary[5]).to.eq(true)
-            expect (ary[6]).to.eq(28)
+            expect (ary[6]).to.eq(30)
             expect (ary[7][0]).to.eq('Female')
             expect (ary[8]).to.eq("My general comments.")
           })
