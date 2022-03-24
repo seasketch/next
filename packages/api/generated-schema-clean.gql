@@ -9906,6 +9906,7 @@ type Sketch implements Node {
   """
   geom: GeometryGeometry
   id: Int!
+  mercatorGeometry: GeometryGeometry
 
   """User provided name for the sketch."""
   name: String!
@@ -10264,6 +10265,7 @@ input SketchInput {
   """
   geom: GeoJSON
   id: Int
+  mercatorGeometry: GeoJSON
 
   """User provided name for the sketch."""
   name: String!

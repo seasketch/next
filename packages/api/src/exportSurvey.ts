@@ -61,26 +61,15 @@ export async function getMVT(
   z: number,
   client: DBClient
 ) {
-  const { rows } = await client.query(
-    `
-  SELECT ST_AsMVT(q, 'sketches', 4096, 'geom')
-  FROM (
-    SELECT
-        id,
-        name,
-        properties,
-        ST_AsMVTGeom(
-            ST_Transform(coalesce(geom, user_geom), 3857),
-            TileBBox(${z}, ${x}, ${y}, 3857),
-            4096,
-            256,
-            true
-        ) geom
-    FROM sketches c
-    where form_element_id = $1
-  ) q
-  `,
-    [elementId]
-  );
-  return rows[0].st_asmvt;
+  try {
+    const { rows } = await client.query(
+      `
+      SELECT survey_response_mvt($1, $2, $3, $4)
+      `,
+      [elementId, x, y, z]
+    );
+    return rows[0].survey_response_mvt;
+  } catch (e) {
+    return null;
+  }
 }

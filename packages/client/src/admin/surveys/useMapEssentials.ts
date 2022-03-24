@@ -69,7 +69,6 @@ export default function useMapEssentials({
         basemaps = [data.currentProject.basemaps[0]];
       }
       setBasemaps(basemaps);
-      // mapContext.manager.setProjectBounds(bboxPolygon(bounds));
       mapContext.manager?.setBasemaps(basemaps);
     }
   }, [

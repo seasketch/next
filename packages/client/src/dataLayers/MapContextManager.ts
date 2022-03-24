@@ -175,6 +175,7 @@ class MapContextManager {
   private mapIsLoaded = false;
   private mapContainer?: HTMLDivElement;
   private scaleControl = new mapboxgl.ScaleControl();
+  private basemapsWereSet = false;
 
   constructor(
     initialState: MapContextInterface,
@@ -420,6 +421,7 @@ class MapContextManager {
    * @param basemaps List of Basemap objects
    */
   setBasemaps(basemaps: BasemapDetailsFragment[]) {
+    this.basemapsWereSet = true;
     this.basemaps = {};
     for (const basemap of basemaps) {
       if (basemap) {
@@ -436,7 +438,9 @@ class MapContextManager {
     }
     this.setState((prev) => ({
       ...prev,
-      ready: !!(this.initialCameraOptions || this.initialBounds),
+      ready:
+        !!(this.initialCameraOptions || this.initialBounds) &&
+        this.basemapsWereSet,
       terrainEnabled: this.shouldEnableTerrain(),
       basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
         this.internalState.selectedBasemap
@@ -454,7 +458,9 @@ class MapContextManager {
     this.initialBounds = box.slice(0, 4) as [number, number, number, number];
     this.setState((prev) => ({
       ...prev,
-      ready: !!(this.initialCameraOptions || this.initialBounds),
+      ready:
+        !!(this.initialCameraOptions || this.initialBounds) &&
+        this.basemapsWereSet,
     }));
   }
 
