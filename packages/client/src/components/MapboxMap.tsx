@@ -34,6 +34,7 @@ export default function MapboxMap(props: OverlayMapProps) {
     if (
       !map &&
       mapContainer.current &&
+      mapContext.selectedBasemap &&
       mapContext.manager &&
       mapContext.ready &&
       (props.lazyLoadReady === undefined || props.lazyLoadReady === true)
