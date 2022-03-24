@@ -31,7 +31,6 @@ export default function MapboxMap(props: OverlayMapProps) {
     props.interactive === undefined ? true : props.interactive;
 
   useEffect(() => {
-    console.log("useEffect", mapContext.ready);
     if (
       !map &&
       mapContainer.current &&
