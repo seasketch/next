@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, ReactNode } from "react";
+import { useMemo, useState, useEffect, ReactNode, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { getAnswers, getDataForExport } from "../../formElements/ExportUtils";
 import { sortFormElements } from "../../formElements/sortFormElements";
@@ -42,10 +42,14 @@ import EditableResponseCell, {
 } from "./EditableResponseCell";
 import { areEqual, FixedSizeList } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
+import Badge from "../../components/Badge";
 
+const ITEM_SIZE = 35;
 interface Props {
   surveyId: number;
   className?: string;
+  highlightedRows: number[];
+  onSelectionChange?: (selection: number[]) => void;
 }
 
 export function SkippedQuestion() {
@@ -251,6 +255,27 @@ export default function ResponseGrid(props: Props) {
   ] = useArchiveResponsesMutation({ onError });
   const [modifyAnswers, modifyAnwersState] = useModifyAnswersMutation({});
   const [editingCell, setEditingCell] = useState(false);
+  const scrollContainer = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (
+      props.highlightedRows.length &&
+      data?.survey?.surveyResponsesConnection.nodes &&
+      scrollContainer.current
+    ) {
+      const index = rows.findIndex(
+        (r) => parseInt(r.id) === props.highlightedRows[0]
+      );
+      if (index > -1) {
+        (scrollContainer.current.childNodes[0] as HTMLDivElement).scrollTop =
+          ITEM_SIZE * index - 100;
+      }
+      toggleAllRowsSelected(false);
+      for (const id of props.highlightedRows) {
+        toggleRowSelected(id.toString(), true);
+      }
+    }
+  }, [props.highlightedRows]);
 
   const rowData = useMemo(() => {
     return survey?.surveyResponsesConnection.nodes || [];
@@ -652,8 +677,19 @@ export default function ResponseGrid(props: Props) {
     setGlobalFilter,
     selectedFlatRows,
     totalColumnsWidth,
+    toggleAllRowsSelected,
+    toggleRowSelected,
     state: { selectedRowIds },
   } = tableInstance;
+
+  useEffect(() => {
+    if (props.onSelectionChange) {
+      const selection = Object.keys(selectedRowIds)
+        .filter((k) => selectedRowIds[k] === true)
+        .map((k) => parseInt(k));
+      props.onSelectionChange(selection);
+    }
+  }, [selectedRowIds]);
 
   useEffect(() => {
     setGlobalFilter(tab);
@@ -725,6 +761,7 @@ export default function ResponseGrid(props: Props) {
       className={`${props.className} px-0 pt-0 overflow-hidden flex flex-col`}
     >
       <FakeTabs
+        selectionCount={selectedFlatRows.length}
         mutating={togglePracticeState.loading || archiveResponsesState.loading}
         disableDropdownButton={selectedFlatRows.length === 0}
         dropdownOptions={[
@@ -852,11 +889,15 @@ export default function ResponseGrid(props: Props) {
                       ))
                     }
                   </div>
-                  <div {...getTableBodyProps()} className="block">
+                  <div
+                    {...getTableBodyProps()}
+                    className="block"
+                    ref={scrollContainer}
+                  >
                     <FixedSizeList
                       height={height - 38}
                       itemCount={rows.length}
-                      itemSize={35}
+                      itemSize={ITEM_SIZE}
                       width={totalColumnsWidth}
                       itemKey={getItemKey}
                     >
@@ -902,6 +943,7 @@ function FakeTabs({
   disableDropdownButton,
   dropdownOptions,
   mutating,
+  selectionCount,
 }: {
   tabs: {
     current: boolean;
@@ -915,6 +957,7 @@ function FakeTabs({
   disableDropdownButton: boolean;
   dropdownOptions: DropdownOption[];
   mutating: boolean;
+  selectionCount: number;
 }) {
   const { t } = useTranslation("admin:surveys");
   return (
@@ -984,7 +1027,12 @@ function FakeTabs({
             <DropdownButton
               className="-mt-1"
               disabled={disableDropdownButton || mutating}
-              label={t("Move to")}
+              label={
+                <span className="flex items-center space-x-2">
+                  {selectionCount > 0 && <Badge>{selectionCount}</Badge>}
+                  <span>{t("Move to")}</span>
+                </span>
+              }
               options={dropdownOptions}
             />
             {mutating && <Spinner className="pl-2" />}

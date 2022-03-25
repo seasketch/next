@@ -8959,7 +8959,7 @@ CREATE FUNCTION public.survey_response_mvt("formElementId" integer, x integer, y
     tile bytea;
   begin
   if session_is_admin(project_id_from_field_id("formElementId")) then
-    SELECT ST_AsMVT(q, 'sketches', 4096, 'geom') into tile
+    SELECT ST_AsMVT(q, 'sketches', 4096, 'geom', 'id') into tile
     FROM (
       SELECT
           id,

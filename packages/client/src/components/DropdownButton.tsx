@@ -1,6 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
 /* This example requires Tailwind CSS v2.0+ */
-import { Fragment } from "react";
+import { Fragment, ReactNode } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { ChevronDownIcon } from "@heroicons/react/solid";
 
@@ -16,7 +16,7 @@ export interface DropdownOption {
 
 interface DropdownButtonProps {
   disabled?: boolean;
-  label: string;
+  label: string | ReactNode;
   options: DropdownOption[];
   className?: string;
   small?: boolean;

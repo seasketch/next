@@ -11,7 +11,7 @@ import { Link } from "react-router-dom";
 import { useSurveyByIdQuery } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import SurveyDraftControl from "./SurveyDraftControl";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ResponseGrid from "./ResponseGrid";
 import ResponsesMap from "./ResponsesMap";
 import { ErrorBoundary } from "@sentry/react";
@@ -19,6 +19,8 @@ import ErrorBoundaryFallback from "../../components/ErrorBoundaryFallback";
 
 export default function SurveyDetail({ surveyId }: { surveyId: number }) {
   const projectId = useProjectId();
+  const [highlighedRows, setHighlightedRows] = useState<number[]>([]);
+  const [selection, setSelection] = useState<number[]>([]);
   const { t } = useTranslation("admin:surveys");
   const onError = useGlobalErrorHandler();
   const { data, loading, error } = useSurveyByIdQuery({
@@ -68,7 +70,11 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
       </div>
       {data?.survey?.isSpatial && (
         <div className="h-72 flex-shrink-0 relative">
-          <ResponsesMap surveyId={surveyId} />
+          <ResponsesMap
+            selection={selection}
+            onClickResponses={setHighlightedRows}
+            surveyId={surveyId}
+          />
         </div>
       )}
       <ErrorBoundary
@@ -76,7 +82,12 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
           <ErrorBoundaryFallback title={t("Failed to render responses grid")} />
         }
       >
-        <ResponseGrid className="flex-1 bg-white" surveyId={surveyId} />
+        <ResponseGrid
+          highlightedRows={highlighedRows}
+          className="flex-1 bg-white"
+          surveyId={surveyId}
+          onSelectionChange={(selection) => setSelection(selection)}
+        />
       </ErrorBoundary>
       {!survey && <Spinner />}
     </div>
