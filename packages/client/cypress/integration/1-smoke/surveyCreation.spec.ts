@@ -26,14 +26,20 @@ describe("Survey creation smoke test", () => {
           req.alias = "getSurvey"
         }
         if ((req.body.operationName) && (req.body.operationName === "GetBasemapsAndRegion")) {
-          req.alias = "getBasemaps"
+           // // do nothing with the req, only call the response with a 10s delay.
+           // req.continue(res => {
+           //   res.delay = 10000;
+           //   res.send();
+           // });
+            req.alias = "getBasemaps"
         }
-        if ((req.body.operationName) && (req.body.operationName === "CreateResponse")) {
-          req.alias = "createResponse"
+        if ((req.body.operationName) && (req.body.operationName === "ProjectRegion")) {
+          req.alias = "getProjectRegion"
         }
       })
       cy.intercept("https://api.mapbox.com/map-sessions/*").as('loadBasemaps')
       cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiEvent')
+      cy.intercept("https://api.mapbox.com/styles/v1/underbluewaters/*").as("apiStyleEvent")
     })
     before(() => {
       cy.setLocalStorage("slug", slug)
@@ -199,21 +205,29 @@ describe("Survey creation smoke test", () => {
       cy.get('[type = "button"]').contains('Next').as('nextBtn').should('be.hidden')
       cy.contains('Fisheries - Commercial, Tuna').click()
       cy.get('@nextBtn').scrollIntoView()
-      cy.get('@nextBtn').should('be.visible').then(($btn) => {
-        {$btn.trigger('click')}
+        .should('exist')
+        .and('be.visible')
+        .then(($btn) => {
+           {$btn.trigger('click')}
+        })
       })
-      cy.wait('@getBasemaps').its('response.statusCode').should('eq', 200)
-    })
     it("Can draw a polygon", () => {
+      cy.get('[type = "button"]').contains('Next').as('nextBtn').then(($btn) => {
+        if ($btn) {
+          {$btn.trigger('click')}
+        }
+      })
+      cy.get('@nextBtn')
+        .should('not.exist')
       cy.get('h4').contains('Fisheries - Commercial, Tuna')
-        .should('be.visible')
-      cy.wait('@mapboxApiEvent').its('response.statusCode').should('eq', 200)
+        .should('exist')
+        .and('be.visible')
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
       cy.get('.mapboxgl-canvas').each((t) => {
         const canvases = []
         canvases.push(t)
         return canvases
-    }).then((ary) => {
+      }).then((ary) => {
         const el = ary[0]
         return el
       }).as('el')
