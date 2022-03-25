@@ -8962,18 +8962,24 @@ CREATE FUNCTION public.survey_response_mvt("formElementId" integer, x integer, y
     SELECT ST_AsMVT(q, 'sketches', 4096, 'geom', 'id') into tile
     FROM (
       SELECT
-          id,
-          name,
-          response_id,
+          sketches.id as id,
+          sketches.name as name,
+          sketches.response_id as response_id,
+          survey_responses.is_practice as practice,
+          survey_responses.archived as archived,
           ST_AsMVTGeom(
-              mercator_geometry,
+              sketches.mercator_geometry,
               TileBBox(z, x, y, 3857),
               4096,
               256,
               true
           ) geom
-      FROM sketches c
-      where form_element_id = $1
+      FROM sketches
+      inner join
+        survey_responses
+      on
+        survey_responses.id = sketches.response_id
+      where sketches.form_element_id = $1
     ) q;
     return tile;
   end if;

@@ -22,7 +22,18 @@ import {
 } from "../../generated/graphql";
 import useAccessToken from "../../useAccessToken";
 import MiniBasemapSelector from "../data/MiniBasemapSelector";
+import { ResponseGridTabName } from "./ResponseGrid";
 import useMapEssentials from "./useMapEssentials";
+
+function getFilter(tab: ResponseGridTabName) {
+  if (tab === "practice") {
+    return ["all", ["==", "practice", true], ["==", "archived", false]];
+  } else if (tab === "archived") {
+    return ["==", "archived", true];
+  } else {
+    return ["all", ["==", "practice", false], ["==", "archived", false]];
+  }
+}
 
 const initTime = new Date().getTime();
 
@@ -30,10 +41,14 @@ export default function ResponsesMap({
   surveyId,
   onClickResponses,
   selection,
+  filter,
+  mapTileCacheBuster,
 }: {
   surveyId: number;
   onClickResponses?: (ids: number[]) => void;
   selection: number[];
+  filter: ResponseGridTabName;
+  mapTileCacheBuster: number;
 }) {
   const token = useAccessToken();
   const essentials = useMapEssentials({});
@@ -63,7 +78,14 @@ export default function ResponsesMap({
     const questionId = spatialQuestions.find(
       (q) => q.exportId === selectedQuestion
     )?.id;
-    if (map && selectedQuestion && responses?.length && questionId) {
+    if (
+      essentials.mapContext.ready &&
+      map &&
+      selectedQuestion &&
+      responses?.length &&
+      questionId &&
+      map.loaded
+    ) {
       // eslint-disable-next-line i18next/no-literal-string
       const sourceId = `${selectedQuestion}-source`;
       const sourceLayer = "sketches";
@@ -91,7 +113,29 @@ export default function ResponsesMap({
         }
       }
     }
-  }, [selection, essentials.mapContext.manager?.map, selectedQuestion]);
+  }, [
+    selection,
+    essentials.mapContext.manager?.map,
+    essentials.mapContext.ready,
+    selectedQuestion,
+    essentials.mapContext.manager?.map?.loaded,
+  ]);
+
+  useEffect(() => {
+    const map = essentials.mapContext.manager?.map;
+    if (map) {
+      map.setFilter(
+        // eslint-disable-next-line i18next/no-literal-string
+        `seasketch/${selectedQuestion}/0`,
+        getFilter(filter)
+      );
+      map.setFilter(
+        // eslint-disable-next-line i18next/no-literal-string
+        `seasketch/${selectedQuestion}/1`,
+        getFilter(filter)
+      );
+    }
+  }, [filter]);
 
   const NameElement = useMemo(
     () =>
@@ -248,16 +292,6 @@ export default function ResponsesMap({
       )!;
       // eslint-disable-next-line i18next/no-literal-string
       const dataSourceId = `${selectedQuestion}-source`;
-      // dataSources.push({
-      //   id: dataSourceId,
-      //   type: DataSourceTypes.Geojson,
-      //   supportsDynamicLayers: false,
-      //   url: `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
-      //     "/graphql",
-      //     // eslint-disable-next-line i18next/no-literal-string
-      //     `/export-survey/${surveyId}/spatial/${element.id}/geojson`
-      //   )}`,
-      // });
       dataSources.push({
         id: dataSourceId,
         type: DataSourceTypes.Vector,
@@ -266,7 +300,7 @@ export default function ResponsesMap({
           `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
             "/graphql",
             // eslint-disable-next-line i18next/no-literal-string
-            `/export-survey/${surveyId}/spatial/${element.id}/tiles/{z}/{x}/{y}.pbf`
+            `/export-survey/${surveyId}/spatial/${element.id}/tiles/{z}/{x}/{y}.pbf?cacheBuster=${mapTileCacheBuster}`
           )}`,
         ],
       });
@@ -297,6 +331,7 @@ export default function ResponsesMap({
               ],
               "fill-antialias": true,
             },
+            filter: getFilter(filter),
           },
           {
             type: "line",
@@ -316,6 +351,7 @@ export default function ResponsesMap({
                 "red",
               ],
             },
+            filter: getFilter(filter),
           },
         ],
       });
@@ -326,7 +362,7 @@ export default function ResponsesMap({
     } else {
       essentials.mapContext.manager?.setVisibleLayers([]);
     }
-  }, [selectedQuestion]);
+  }, [selectedQuestion, mapTileCacheBuster]);
 
   return (
     <MapContext.Provider value={essentials.mapContext}>
@@ -342,7 +378,7 @@ export default function ResponsesMap({
               token
             ) {
               return {
-                url: url + `?time=${initTime}`,
+                url: url,
                 headers: {
                   Authorization: `Bearer ${token}`,
                 },

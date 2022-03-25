@@ -201,15 +201,15 @@ app.use(
   currentProjectMiddlware,
   userAccountMiddlware,
   async function (req, res, next) {
-    const client = await tilesetPool.connect();
-    await client.query("BEGIN");
-    await setTransactionSessionVariables(getPgSettings(req), client);
-    const x = parseInt(req.params.x, 10);
-    const y = parseInt(req.params.y, 10);
-    const z = parseInt(req.params.z, 10);
-    const surveyId = parseInt(req.params.id);
-    const elementId = parseInt(req.params.element_id);
     try {
+      const client = await tilesetPool.connect();
+      await client.query("BEGIN");
+      await setTransactionSessionVariables(getPgSettings(req), client);
+      const x = parseInt(req.params.x, 10);
+      const y = parseInt(req.params.y, 10);
+      const z = parseInt(req.params.z, 10);
+      const surveyId = parseInt(req.params.id);
+      const elementId = parseInt(req.params.element_id);
       const tile = await getMVT(elementId, x, y, z, client);
       await client.query("COMMIT");
       await client.release();

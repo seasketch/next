@@ -50,6 +50,8 @@ interface Props {
   className?: string;
   highlightedRows: number[];
   onSelectionChange?: (selection: number[]) => void;
+  onTabChange?: (tab: ResponseGridTabName) => void;
+  onNewMapTilesRequired: () => void;
 }
 
 export function SkippedQuestion() {
@@ -212,11 +214,15 @@ const IndeterminateCheckbox = React.forwardRef<
   );
 });
 
-type TabName = "responses" | "practice" | "archived" | "export";
+export type ResponseGridTabName =
+  | "responses"
+  | "practice"
+  | "archived"
+  | "export";
 
 function filterRows(
   rows: Row<{ isPractice: boolean; archived: boolean }>[],
-  selectedTab: TabName
+  selectedTab: ResponseGridTabName
 ) {
   // return rows;
   if (selectedTab === "responses") {
@@ -248,14 +254,26 @@ export default function ResponseGrid(props: Props) {
   const [
     togglePractice,
     togglePracticeState,
-  ] = useToggleResponsesPracticeMutation({ onError });
+  ] = useToggleResponsesPracticeMutation({
+    onError,
+    onCompleted: props.onNewMapTilesRequired,
+  });
   const [
     archiveResponses,
     archiveResponsesState,
-  ] = useArchiveResponsesMutation({ onError });
+  ] = useArchiveResponsesMutation({
+    onError,
+    onCompleted: props.onNewMapTilesRequired,
+  });
   const [modifyAnswers, modifyAnwersState] = useModifyAnswersMutation({});
   const [editingCell, setEditingCell] = useState(false);
   const scrollContainer = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (props.onTabChange) {
+      props.onTabChange(tab as ResponseGridTabName);
+    }
+  }, [tab]);
 
   useEffect(() => {
     if (
@@ -605,7 +623,7 @@ export default function ResponseGrid(props: Props) {
     return (
       rows: Row<{ isPractice: boolean; archived: boolean }>[],
       columnIds: any,
-      selectedTab: TabName
+      selectedTab: ResponseGridTabName
     ) => {
       return filterRows(rows, selectedTab) as Row<any>[];
     };
@@ -679,6 +697,7 @@ export default function ResponseGrid(props: Props) {
     totalColumnsWidth,
     toggleAllRowsSelected,
     toggleRowSelected,
+    filteredFlatRows,
     state: { selectedRowIds },
   } = tableInstance;
 
