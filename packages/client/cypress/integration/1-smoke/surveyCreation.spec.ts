@@ -1,11 +1,10 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
-//const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
 import { ProjectAccessControlSetting } from "../../../src/generated/graphql";
-import "cypress-localstorage-commands"
+import "cypress-localstorage-commands";
 
-let surveyId: any
-let authToken: any
-let formId: any
+let surveyId: any;
+let authToken: any;
+let formId: any;
 
 
 function generateSlug() { 
@@ -13,7 +12,9 @@ function generateSlug() {
   return result
 }
 
-const slug = generateSlug()
+const slug: string = generateSlug();
+const devices: any = [ "iphone-x", "iphone-5", "macbook-15", "ipad-2"]
+
 
 describe("Survey creation smoke test", () => {
   describe ('User survey flow', () => {
@@ -21,22 +22,17 @@ describe("Survey creation smoke test", () => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
         if ((req.body.operationName) && (req.body.operationName === "CreateResponse")) {
           req.alias = "createResponse"
-        }
+        };
         if ((req.body.operationName) && (req.body.operationName === "Survey")) {
           req.alias = "getSurvey"
-        }
+        };
         if ((req.body.operationName) && (req.body.operationName === "GetBasemapsAndRegion")) {
-           // // do nothing with the req, only call the response with a 10s delay.
-           // req.continue(res => {
-           //   res.delay = 10000;
-           //   res.send();
-           // });
-            req.alias = "getBasemaps"
-        }
+          req.alias = "getBasemaps"
+        };
         if ((req.body.operationName) && (req.body.operationName === "ProjectRegion")) {
           req.alias = "getProjectRegion"
-        }
-      })
+        };
+      });
       cy.intercept("https://api.mapbox.com/map-sessions/*").as('loadBasemaps')
       cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiEvent')
       cy.intercept("https://api.mapbox.com/styles/v1/underbluewaters/*").as("apiStyleEvent")
@@ -150,7 +146,6 @@ describe("Survey creation smoke test", () => {
         cy.get("@surveyId").then((id) => {
         cy.visit(`${slug}/surveys/${id}`)
         })
-       
       });
     })
     after(() => {
@@ -326,5 +321,166 @@ describe("Survey creation smoke test", () => {
         })
       })
     })
+  })
+  describe.only("Visual testing for vital elements", () => {
+    describe("Mobile devices", () => {
+      beforeEach(() => {
+        cy.intercept("http://localhost:3857/graphql", (req) => {
+          if ((req.body.operationName) && (req.body.operationName === "CreateResponse")) {
+            req.alias = "createResponse"
+          };
+          if ((req.body.operationName) && (req.body.operationName === "Survey")) {
+            req.alias = "getSurvey"
+          };
+          if ((req.body.operationName) && (req.body.operationName === "GetBasemapsAndRegion")) {
+            req.alias = "getBasemaps"
+          };
+          if ((req.body.operationName) && (req.body.operationName === "ProjectRegion")) {
+            req.alias = "getProjectRegion"
+          };
+        });
+        cy.intercept("https://api.mapbox.com/map-sessions/*").as('loadBasemaps')
+        cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiEvent')
+        cy.intercept("https://api.mapbox.com/styles/v1/underbluewaters/*").as("apiStyleEvent")
+      }) 
+      before(() => {
+        cy.setLocalStorage("slug", slug)
+        cy.getToken("User 1").then(({ access_token }) => {
+          cy.wrap(access_token).as("token");
+          cy.setLocalStorage("token", access_token)
+          cy.createProject(
+            `Maldives Spatial Planning Test - ${slug}`,
+            slug,
+            ProjectAccessControlSetting.Public,
+            true
+          )
+          .then((projectId) => {
+            cy.wrap(projectId).as("projectId").then(() => {
+              cy.createSurvey(
+                `Maldives Ocean Use Survey Test - ${slug}`, 
+                projectId, 
+                access_token
+              ).then((resp) => {
+                cy.setLocalStorage("surveyId", resp.makeSurvey.survey.id)
+                cy.setLocalStorage("access_token", access_token)
+                cy.saveLocalStorage()
+                cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
+                cy.wrap(resp.makeSurvey.survey.form.formElements).as('formElements')
+                cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
+                cy.updateSurvey(resp.makeSurvey.survey.id, access_token)
+                cy.get('@formId').then((id) => {
+                  formId = id
+                  cy.deleteFormElements(formId, access_token).then((resp) => {
+                    const elementsToUpdate = []
+                    resp.deleteFormElement.query.form.formElements.forEach(t => {
+                      elementsToUpdate.push(t)
+                    })
+                    cy.updateFormElements(elementsToUpdate,"Maldives", access_token, formId)
+                    cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
+                      const SAPFormId = formId + 1
+                      cy.createSAPElements(SAPFormId, "Maldives", access_token)
+                      const formElements = resp.createFormElement.query.form.formElements
+                      const jumpToIds = []
+                      //atoll questions
+                      const elementsToUpdate = formElements.slice(5,24)
+                      //YesNo id
+                      elementsToUpdate.push(formElements[30])
+                      for (let i = 0; i < formElements.length; i++) {
+                        if (formElements[i].typeId === "SpatialAccessPriorityInput"
+                         || formElements[i].typeId === "SaveScreen"
+                          ) {
+                          jumpToIds.push(formElements[i].id)
+                        }
+                      }
+                      const sapId = jumpToIds[1]
+                      cy.updateJumpToId(jumpToIds, elementsToUpdate, formId, access_token)
+                      const updateSubToIdElements = []
+                      formElements.forEach((t) => {
+                        if (
+                         t.body.content[0].content[0].text === "If you are representing a guesthouse, please provide the name of your establishment:"
+                        ) {
+                        updateSubToIdElements.push(t)
+                        }
+                        else if (
+                          t.body.content[0].content[0].text === "Please indicate how many people are reflected in this response"
+                        ) {
+                         updateSubToIdElements.push(t)
+                        }
+                        else if (
+                          t.body.content[0].content[0].text === "Are you a part-time or full-time fisher?"
+                        ) {
+                          updateSubToIdElements.push(t)
+                        } else if (
+                          t.body.content[0].content[0].text === "Please provide the name or the number of the vessel you fish on"
+                        ) {
+                          updateSubToIdElements.push(t)
+                        }
+                      })
+                       cy.updateSubordinateToId(sapId, updateSubToIdElements, formId, access_token)
+                        let baseId = 0
+                        let ids = []
+                        function getIds(baseId) {
+                          if (baseId === 0) {
+                            for(let i=0; i<formElements.length; i++) {
+                              if (
+                                formElements[i].typeId && 
+                                formElements[i].typeId === "MultipleChoice" && 
+                                formElements[i].body.content[0].content[0].text === "Which Atoll do you reside on?"
+                                ){
+                                baseId = formElements[i].id
+                                break
+                              }
+                            } 
+                            getIds(baseId)
+                          } else {
+                            for(let i=0; i < 20; i++) {
+                              ids.push(baseId++)
+                            }
+                          }
+                          return ids
+                        }
+                        let newIds = getIds(baseId)
+                        newIds.push(newIds[19] + 8)
+                        newIds.push(newIds[20] + 1)
+                        cy.createFormLogicRules(formId, "Maldives", newIds, access_token)
+                      })
+                    })
+                })
+              })
+            });
+          });
+          cy.get("@surveyId").then((id) => {
+          cy.visit(`${slug}/surveys/${id}`)
+          })
+        });
+      })
+      it('Can visit the survey', () => {
+        cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
+      })
+      devices.forEach((device) => {
+        it(`Renders survey homepage correctly -${device}`, () => {
+          cy.viewport(device);
+          cy.get('p').contains('confidential')
+          cy.get('button').contains('Begin')
+            .should('exist')
+            .should('be.visible')
+          cy.get('button').contains('Language')
+            .should('exist')
+            .and('be.visible')
+          cy.get('button').contains('Settings')
+            .should('exist')
+            .and('be.visible')
+       })
+        it(`Can view settings options -${device}`, () => {
+         cy.viewport(device);
+         cy.get('button').contains('Settings').then(($btn) => {
+           {$btn.trigger('click')}
+         })
+         cy.contains('Facilitated Response')
+         cy.contains('Practice Mode')
+        })
+      })     
+    })
+   
   })
 })
