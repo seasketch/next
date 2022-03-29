@@ -109,71 +109,71 @@ declare global {
       deleteForm(
         formId: number, 
         token: string
-      )
+      );
 
       createFormElements(
         formId: number,
         surveyAlias: string,
         token: string
-      )
+      );
 
       createSAPElements(
         formId: number, 
         surveyAlias: string,
         token: string
-      )
+      );
 
       updateComponentSettings(
         elementsToUpdate: any, 
         componentSettings: object, 
         token: string, 
         formId: number
-      )
+      );
 
       updateSubordinateToId(
         subordinateToId: number, 
         elementsToUpdate: any, 
         formId: number, 
         token: string
-      )
+      );
 
       updateJumpToId(
         jumptToIds: object,
         elementsToUpdate: any, 
         formId: number,
         token: string
-      )
+      );
 
       updateFormElements(
         elementIds: object,
         fixtureAlias: string,
         token: string, 
         formId: number
-      )
+      );
 
       deleteFormElements(
         formId: number,
         token: string
-      )
+      );
 
       createFormLogicRules(
         formId: number,
         fixtureAlias: string,
         newIds: object, 
         token: string
-      ) 
+      );
 
       createLastFormLogicRules(
         formId: number,
         fixtureAlias: string,
         newIds: object, 
         token: string
-      ) 
+      );
 
       getSurveyResponse(
         responseId: number, 
         token: string
-      )
+      );
     }
   } 
 }
@@ -432,7 +432,8 @@ Cypress.Commands.add("updateSurvey", (surveyId: number, token: string) => {
             id: $surveyId 
             patch: {
               isDisabled: false, 
-              accessType: PUBLIC
+              accessType: PUBLIC, 
+              supportedLanguages: "dv"
             }
           }) 
           {
