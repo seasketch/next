@@ -1,6 +1,7 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
+import { createPublicKey } from "crypto";
 
 let surveyId: any;
 let authToken: any;
@@ -469,10 +470,7 @@ describe("Survey creation smoke test", () => {
       devices.forEach((device) => {
         it(`Renders survey homepage correctly -${device}`, () => {
           cy.viewport(device);
-          cy.get('p').contains('confidential')
-          cy.get('button').contains('Begin')
-            .should('exist')
-            .should('be.visible')
+          cy.get('h1').contains('Welcome Ocean Users!')
           cy.get('button').contains('Language')
             .should('exist')
             .and('be.visible')
@@ -487,6 +485,7 @@ describe("Survey creation smoke test", () => {
           .then(($btn) => {
           {$btn.trigger('click')}
         })
+        //***settings button not always visible */
         cy.get('span').contains('Facilitated Response')
         cy.get('span').contains('Practice Mode')
         //cy.get('span.inline-flex').as('switches')
@@ -522,15 +521,49 @@ describe("Survey creation smoke test", () => {
               cy.get('.fixed.z-50').click()
             }
           });
-          cy.get('button').contains('Language').click();
+          cy.get('button').contains('Language', {timeout:10000}).click();
+          cy.get('span').contains('DV')
+            .should('exist')
+            .and('be.visible');
           cy.get('span').contains('EN')
             .should('exist')
             .and('be.visible') 
-          cy.get('span').contains('DV')
+            .click();
+        });
+      });
+      it('Proceeds to name input page', () => {
+        cy.get('button').contains('Begin').click()
+      })
+      devices.forEach((device) => {
+        it(`Renders name input page properly - ${device}`, () => {
+          cy.viewport(device);
+          cy.contains('What is your name?')
+            //**"What is your name" is not always visible */ .should('be.visible ')
+          cy.get('input')
+          cy.get('button.px-3')
             .should('exist')
             .and('be.visible')
         });
-      });    
+      }); 
+      it('Proceeds to email input page', () => {
+        cy.get('input').type('Test User 1')
+        cy.get('button').contains('Next').click()
+      });
+      devices.forEach((device) => {
+        it(`Renders the email input page properly - ${device}`, () => {
+          cy.viewport(device); 
+          cy.contains("What is your email address?")
+          cy.get('input')
+            .should('exist')
+            .and('be.visible')
+          cy.get('button.px-3')
+            .should('exist')
+            .and('be.visible')
+          cy.get('button').contains('Skip Question')
+            .should('exist')
+            .and('be.visible')
+        });
+      });
     });
   });
 });
