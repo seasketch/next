@@ -1,5 +1,5 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
-import { ProjectAccessControlSetting } from "../../../src/generated/graphql";
+import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
 
 let surveyId: any;
@@ -12,8 +12,8 @@ function generateSlug() {
   return result
 }
 
-const slug: string = generateSlug();
-const devices: any = [ "iphone-x", "iphone-5", "macbook-15", "ipad-2"]
+
+const devices: any = [ "iphone-x", "iphone-5", "macbook-15", "ipad-2"];
 
 
 describe("Survey creation smoke test", () => {
@@ -38,6 +38,7 @@ describe("Survey creation smoke test", () => {
       cy.intercept("https://api.mapbox.com/styles/v1/underbluewaters/*").as("apiStyleEvent")
     })
     before(() => {
+      const slug: string = generateSlug();
       cy.setLocalStorage("slug", slug)
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
@@ -159,7 +160,9 @@ describe("Survey creation smoke test", () => {
         //  cy.deleteSurvey(surveyId, token)
         //})
       })
-      cy.deleteProject(`${slug}`) 
+      cy.getLocalStorage("slug").then((slug) => {
+        cy.deleteProject(`${slug}`)
+      })
     })
     it("Can visit the survey", () => {
       cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
@@ -268,13 +271,18 @@ describe("Survey creation smoke test", () => {
       cy.get('h1').contains('Thank You for Responding').should('be.visible')
       cy.restoreLocalStorage()
       cy.getLocalStorage('surveyId').then((id) => {
-        cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
+        })
       })
     })
     it("Can answer additional questions", () => {
       cy.restoreLocalStorage()
       cy.getLocalStorage('surveyId').then((id) => {
-        cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28` )
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
+        })
+        
       })
       cy.get('h1').contains('Are you willing to answer a few additional questions about who you are?')
       cy.contains('Yes').click()
@@ -322,7 +330,7 @@ describe("Survey creation smoke test", () => {
       })
     })
   })
-  describe.only("Visual testing for vital elements", () => {
+  describe("Visual testing for key elements", () => {
     describe("Mobile devices", () => {
       beforeEach(() => {
         cy.intercept("http://localhost:3857/graphql", (req) => {
@@ -344,6 +352,7 @@ describe("Survey creation smoke test", () => {
         cy.intercept("https://api.mapbox.com/styles/v1/underbluewaters/*").as("apiStyleEvent")
       }) 
       before(() => {
+        const slug: string = generateSlug();
         cy.setLocalStorage("slug", slug)
         cy.getToken("User 1").then(({ access_token }) => {
           cy.wrap(access_token).as("token");
@@ -471,15 +480,46 @@ describe("Survey creation smoke test", () => {
             .should('exist')
             .and('be.visible')
        })
-        it(`Can view settings options -${device}`, () => {
-         cy.viewport(device);
-         cy.get('button').contains('Settings').then(($btn) => {
-           {$btn.trigger('click')}
-         })
-         cy.contains('Facilitated Response')
-         cy.contains('Practice Mode')
+       it(`Can view settings options -${device}`, () => {
+        cy.viewport(device);
+        cy.get('button').contains('Settings').then(($btn) => {
+          {$btn.trigger('click')}
         })
-      })     
+        cy.get('span').contains('Facilitated Response')
+        cy.get('span').contains('Practice Mode')
+        //cy.get('span.inline-flex').as('switches')
+        //let toggle
+        //let toggled
+        //const setToggle = () => {
+        //  if (toggle === false) {
+        //    toggle = true
+        //  } else {
+        //    toggle = false
+        //  }
+        //}
+        //cy.get('@switches').each(($switch) => {
+        //
+        //    
+        //    {$switch.trigger('click')}
+        //    setToggle()
+        //    if (toggle) {
+        //      expect ($switch).to.have.css('background-color', 'rgb(46, 115, 182)' )
+        //    } else {
+        //      expect ($switch).to.have.css('background-color', 'rgba(0, 0, 0, 0.18)')
+        //    }
+        //  
+        //})
+       //
+        })
+        //it ("Can view language options", () => {
+        //  //cy.contains('Practice Mode').blur()
+        //  cy.get('.fixed.z-50').click(400, 600)
+        //  
+        //  cy.get('button').contains('Language').click()
+        //  
+        //  //cy.get('button').contains('Language').click()
+        //})
+      })//     
     })
    
   })
