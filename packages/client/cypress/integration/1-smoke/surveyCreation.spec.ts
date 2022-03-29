@@ -330,8 +330,8 @@ describe("Survey creation smoke test", () => {
       })
     })
   })
-  describe("Visual testing for key elements", () => {
-    describe("Mobile devices", () => {
+  describe("Visual testing", () => {
+    describe.only("Testing for key elements on mobile devices", () => {
       beforeEach(() => {
         cy.intercept("http://localhost:3857/graphql", (req) => {
           if ((req.body.operationName) && (req.body.operationName === "CreateResponse")) {
@@ -482,7 +482,9 @@ describe("Survey creation smoke test", () => {
        })
        it(`Can view settings options -${device}`, () => {
         cy.viewport(device);
-        cy.get('button').contains('Settings').then(($btn) => {
+        cy.get('button').contains('Settings')
+          .should('be.visible')
+          .then(($btn) => {
           {$btn.trigger('click')}
         })
         cy.get('span').contains('Facilitated Response')
@@ -511,16 +513,24 @@ describe("Survey creation smoke test", () => {
         //})
        //
         })
-        //it ("Can view language options", () => {
-        //  //cy.contains('Practice Mode').blur()
-        //  cy.get('.fixed.z-50').click(400, 600)
-        //  
-        //  cy.get('button').contains('Language').click()
-        //  
-        //  //cy.get('button').contains('Language').click()
-        //})
-      })//     
-    })
-   
-  })
-})
+        it (`Can view language options - ${device}`, () => {
+          cy.get('div.absolute.inset-0').then((el) => {
+            if (el) {
+              el.trigger('click')
+              //cy.get('.fixed.z-50').click()
+            } else {
+              cy.get('.fixed.z-50').click()
+            }
+          });
+          cy.get('button').contains('Language').click();
+          cy.get('span').contains('EN')
+            .should('exist')
+            .and('be.visible') 
+          cy.get('span').contains('DV')
+            .should('exist')
+            .and('be.visible')
+        });
+      });    
+    });
+  });
+});
