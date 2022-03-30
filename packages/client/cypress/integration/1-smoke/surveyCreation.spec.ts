@@ -332,7 +332,7 @@ describe("Survey creation smoke test", () => {
     })
   })
   describe("Visual testing", () => {
-    describe.only("Testing for key elements on mobile devices", () => {
+    describe("Testing for key elements on mobile devices", () => {
       beforeEach(() => {
         cy.intercept("http://localhost:3857/graphql", (req) => {
           if ((req.body.operationName) && (req.body.operationName === "CreateResponse")) {
@@ -567,3 +567,6 @@ describe("Survey creation smoke test", () => {
     });
   });
 });
+
+//only
+//data-cy
