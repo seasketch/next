@@ -2,11 +2,12 @@
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
 import { createPublicKey } from "crypto";
+import { getByDataCy } from "../../support/utils/utils.js"
 
 let surveyId: any;
 let authToken: any;
 let formId: any;
-
+let regEx: any;
 
 function generateSlug() { 
   const result = Math.random().toString(36).substring(2,7);
@@ -169,14 +170,14 @@ describe("Survey creation smoke test", () => {
       cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
       cy.get('.select-none').should('be.visible').then(($btn) => {
         {$btn.trigger('click')}
-      })
-    })
+      });
+    });
     it("Cannot advance until name is provided", () => {
-      cy.contains("What is your name?")
+      cy.contains('What is your name?')
         .get('[title = "Next Question"]')
-        .should('have.class', "pointer-events-none")
-        .get("input").type("Test User 1") 
-        .get("button").contains("Next").click()
+        .should('have.class', 'pointer-events-none')
+      cy.get('input').type("Test User 1") 
+      cy.get('button').contains('Next').click()
     })
     it("Can input email address or can skip question", () => {
       cy.contains("What is your email address?")
@@ -316,6 +317,7 @@ describe("Survey creation smoke test", () => {
             Object.entries(data).forEach(([, value]) => {
               ary.push(value)
             })
+            const sketchId = (ary[4].collection[0])-1
             expect(ary.length).to.eq(9)
             expect (ary[0].name).to.eq('Test User 1')
             expect (ary[1]).to.eq('test_user_1@seasketch.org')
@@ -326,13 +328,21 @@ describe("Survey creation smoke test", () => {
             expect (ary[6]).to.eq(30)
             expect (ary[7][0]).to.eq('Female')
             expect (ary[8]).to.eq("My general comments.")
+            cy.restoreLocalStorage()
+            //cy.getLocalStorage('token').then((token) => {
+            //  console.log(token)
+            //  cy.deleteSketch(sketchId, token).then((resp)=> {
+            //    
+            //    console.log(resp)
+            //  })
+            //})
           })
         })
       })
     })
   })
   describe("Visual testing", () => {
-    describe("Testing for key elements on mobile devices", () => {
+    describe.only("Testing for key elements on mobile devices", () => {
       beforeEach(() => {
         cy.intercept("http://localhost:3857/graphql", (req) => {
           if ((req.body.operationName) && (req.body.operationName === "CreateResponse")) {
@@ -512,23 +522,23 @@ describe("Survey creation smoke test", () => {
         //})
        //
         })
-        it (`Can view language options - ${device}`, () => {
-          cy.get('div.absolute.inset-0').then((el) => {
-            if (el) {
-              el.trigger('click')
-              //cy.get('.fixed.z-50').click()
-            } else {
-              cy.get('.fixed.z-50').click()
-            }
-          });
-          cy.get('button').contains('Language', {timeout:10000}).click();
-          cy.get('span').contains('DV')
-            .should('exist')
-            .and('be.visible');
-          cy.get('span').contains('EN')
-            .should('exist')
-            .and('be.visible') 
-            .click();
+      it (`Can view language options - ${device}`, () => {
+        cy.get('div.absolute.inset-0').then((el) => {
+          if (el) {
+            el.trigger('click')
+            //cy.get('.fixed.z-50').click()
+          } else {
+            cy.get('.fixed.z-50').click()
+          }
+        });
+        cy.get('button').contains('Language', {timeout:10000}).click();
+        cy.get('span').contains('DV')
+          .should('exist')
+          .and('be.visible');
+        cy.get('span').contains('EN')
+          .should('exist')
+          .and('be.visible') 
+          .click();
         });
       });
       it('Proceeds to name input page', () => {
@@ -543,6 +553,8 @@ describe("Survey creation smoke test", () => {
           cy.get('button.px-3')
             .should('exist')
             .and('be.visible')
+          //cy.get('input').type('Test User 1')
+          //cy.get('[data-cy=cy-Next]')//.should('have.class', 'pointer-events-none')
         });
       }); 
       it('Proceeds to email input page', () => {
@@ -559,14 +571,81 @@ describe("Survey creation smoke test", () => {
           cy.get('button.px-3')
             .should('exist')
             .and('be.visible')
-          cy.get('button').contains('Skip Question')
+            cy.get('button').contains('Skip Question')
             .should('exist')
             .and('be.visible')
         });
       });
-    });
-  });
-});
+      it('Proceeds to atoll selection page', () => {
+        cy.get('[data-cy^="button-"]').should('be.visible')
+          .click()
+      })
+      devices.forEach((device) => {
+        it(`Renders atoll selection page properly - ${device}`, () => {
+          cy.viewport(device);
+          //this has an issue with iphone-c
+          cy.contains("Which Atoll do you reside on?")
+          cy.get('[title="HA"]').siblings().then(($atolls) => {
+            //these have a visbility issue with iphone-x
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+            expect($atolls).to.exist
+            expect(($atolls).length).to.eq(19)
+          })
+          cy.get('button.px-3')
+          .should('exist')
+          .and('be.visible')
+        });
+      });
+      it ('Proceeds to island selection page', () => {
+        cy.get('[title="HA"]').click()
+      });
+      devices.forEach((device) => {
+        it(`Renders island selection page properly - ${device}`, () => {
+          cy.viewport(device);
+          //this has an issue with iphone-c
+          cy.contains("Which island of HA atoll do you reside on?")
+          cy.get('[title="Thuraakunu"]').siblings().then(($islands) => {
+            //these have a visbility issue with iphone-x
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+            expect($islands).to.exist
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+            //expect($islands).to.be.visible
+            expect(($islands).length).to.eq(15)
+          })
+          cy.get('button.px-3')
+          .should('exist')
+          .and('be.visible')
+        });
+      });
+      it ('Proceeds to island selection page', () => {
+        cy.get('[title="Thuraakunu"]').click()
+      });
+      devices.forEach((device) => {
+        it(`Renders sector selection page properly - ${device}`, () => {
+          cy.viewport(device);
+          //this has an issue with iphone-c
+          cy.contains("What sectors do you represent?")
+          cy.get('[title="Fisheries - Commercial, Tuna"]').siblings().then(($sectors) => {
+            //these have a visbility issue with iphone-x
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+            expect($sectors).to.exist
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+            expect($sectors).to.be.visible
+            expect(($sectors).length).to.eq(15)
+          })
+          cy.get('button.px-3')
+          .should('exist')
+          .and('be.visible')
+        });
+      });
+      it ('Proceeds to spatial access priority page', () => {
+        cy.get('[title="Shipping"]').click()
+        cy.get('button').contains('Next').scrollIntoView().click()
+      });
 
+    });
+  });//
+});//
+//
 //only
 //data-cy

@@ -38,6 +38,7 @@ export interface ButtonProps {
   shadowSize?: "shadow-sm" | "shadow" | "shadow-md" | "shadow-lg" | "shadow-xl";
   segmentItems?: string[];
   onSegmentClick?: (index: number) => void;
+  'data-cy'?: string
 }
 
 export default function Button(props: ButtonProps) {
@@ -78,6 +79,13 @@ export default function Button(props: ButtonProps) {
   let label: string | React.ReactNode = props.label;
   if (props.children) {
     label = props.children;
+  }
+
+  let cyLabel = label as string
+  if (!props.label) {
+    cyLabel = props.name?.toLowerCase() as string || props.title?.toLowerCase() as string
+  } else {
+    cyLabel = `button-${label}`.toLowerCase().replaceAll(' ', '-')
   }
   // eslint-disable-next-line i18next/no-literal-string
   const buttonClassName = `select-none ${
@@ -172,6 +180,7 @@ export default function Button(props: ButtonProps) {
           autoFocus={props.autofocus}
           className={`${buttonClassName} ${props.buttonClassName}`}
           style={style}
+          data-cy = {cyLabel}
         >
           {label}
           {props.loading && spinner}
