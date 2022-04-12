@@ -1,0 +1,186 @@
+{
+"Maldives": {
+    "data": {
+      "formElement": {
+        "componentSettings": {
+          "navBody": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "heading",
+                "attrs": {
+                  "level": 1
+                },
+                "content": [
+                  {
+                    "text": "Your sectors",
+                    "type": "text"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "text": "Please prioritize areas for each sector you represent.",
+                    "type": "text"
+                  }
+                ]
+              }
+            ]
+          },
+          "beginBody": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "text": "Use the map to indicate the most valued places for this activity. You can draw multiple areas and prioritize them individually.",
+                    "type": "text"
+                  }
+                ]
+              }
+            ]
+          },
+          "sectorOptions": [
+            {
+              "label": "Fisheries - Commercial, Tuna",
+              "value": "Fisheries - Commercial, Tuna"
+            },
+            {
+              "label": "Fisheries - Commercial, Non-Tuna Species",
+              "value": "Fisheries - Commercial, Non-Tuna Species"
+            },
+            {
+              "label": "Fisheries - Recreational",
+              "value": "Fisheries - Recreational"
+            },
+            {
+              "label": "Fisheries- Artisanal/Subsistence",
+              "value": "Fisheries- Artisanal/Subsistence"
+            },
+            {
+              "label": "Accommodation and tourism establishments e.g. Resorts, Hotels, Guest Houses",
+              "value": "Accommodation and tourism establishments e.g. Resorts, Hotels, Guest Houses"
+            },
+            {
+              "label": "Boat Charters e.g. Liveaboard/Safari Vessels, Dive Charters, and Surf Charters",
+              "value": "Boat Charters e.g. Liveaboard/Safari Vessels, Dive Charters, and Surf Charters"
+            },
+            {
+              "label": "Aquaculture / Mariculture",
+              "value": "Aquaculture / Mariculture"
+            },
+            {
+              "label": "Cultural Use e.g. Coir rope making, Agriculture, etc.",
+              "value": "Cultural Use e.g. Coir rope making, Agriculture, etc."
+            },
+            {
+              "label": "Research and Conservation",
+              "value": "Research and Conservation"
+            },
+            {
+              "label": "Community Recreational Use e.g. swimming, snorkeling, diving watersports",
+              "value": "Community Recreational Use e.g. swimming, snorkeling, diving watersports"
+            },
+            {
+              "label": "Maritime Transportation",
+              "value": "Maritime Transportation"
+            },
+            {
+              "label": "Utilities e.g Waste Management, Renewable Energy, Desalination",
+              "value": "Utilities e.g Waste Management, Renewable Energy, Desalination"
+            },
+            {
+              "label": "Construction and Infrastructure  e.g. Mining, Beach Nourishment",
+              "value": "Construction and Infrastructure  e.g. Mining, Beach Nourishment"
+            },
+            {
+              "label": "Shipping",
+              "value": "Shipping"
+            },
+            {
+              "label": "Safety and Defense",
+              "value": "Safety and Defense"
+            },
+            {
+              "label": "Other e.g Fish Processing, Food Industry, etc.",
+              "value": "Other e.g Fish Processing, Food Industry, etc."
+            }
+          ],
+          "listShapesBody": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "text": "Add as many shapes as necessary to represent valued areas for this activity, then adjust their relative priority below.",
+                    "type": "text"
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "text": "These scores will be summed among all survey responses to create a heatmap of valued areas.",
+                    "type": "text"
+                  }
+                ]
+              }
+            ]
+          },
+          "childVisibilitySettings": {
+            "tuna_gear": {
+              "enabled": true,
+              "sectors": [
+                "Fisheries - Commercial, Tuna"
+              ]
+            },
+            "tuna_species": {
+              "enabled": true,
+              "sectors": [
+                "Fisheries - Commercial, Tuna"
+              ]
+            },
+            "gear_ntuna": {
+              "enabled": true,
+              "sectors": [
+                "Fisheries - Commercial, Non-Tuna Species"
+              ]
+            },
+            "nontuna_species": {
+              "enabled": true,
+              "sectors": [
+                "Fisheries- Artisanal/Subsistence"
+              ]
+            },
+            "recfish_type": {
+              "enabled": true,
+              "sectors": [
+                "Fisheries - Recreational"
+              ]
+            }
+          },
+          "subordinateVisibilitySettings": {
+            "num_of_ppl": [
+              "Fisheries - Commercial, Tuna"
+            ],
+            "part_time": [
+              "Fisheries - Commercial, Tuna",
+              "Fisheries - Commercial, Non-Tuna Species"
+            ],
+            "vessel": [
+              "Fisheries - Commercial, Tuna"
+            ],
+            "guesthouse_name": [
+              "Accommodation and tourism establishments e.g. Resorts, Hotels, Guest Houses"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

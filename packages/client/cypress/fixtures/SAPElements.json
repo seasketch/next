@@ -3,11 +3,10 @@
   {
     "data": {
       "form": {
-        "id": 25,
         "formElements": [
           {
-            "formId": 25,
             "id": 117,
+            "formId": 25,
             "isRequired": false,
             "exportId": "tuna_gear",
             "position": 1,
@@ -54,12 +53,15 @@
             "layout": null,
             "backgroundPalette": null,
             "unsplashAuthorName": null,
-            "unsplashAuthorUrl": null,
             "backgroundWidth": null,
+            "unsplashAuthorUrl": null,
             "backgroundHeight": null,
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
+            "createdAt": "2022-03-03T18:55:21.575733",
+            "mapCameraOptions": null,
+            "mapBasemaps": null,
             "isInput": true,
             "type": {
               "componentName": "MultipleChoice",
@@ -77,14 +79,13 @@
               "allowedLayouts": null,
               "isSpatial": false,
               "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            },
-            "sketchClassFk": null,
-            "sketchClass": null
+              "isRequiredForSketchClasses": false,
+              "allowAdminUpdates": true
+            }
           },
           {
-            "formId": 25,
             "id": 118,
+            "formId": 25,
             "isRequired": false,
             "exportId": "tuna_species",
             "position": 2,
@@ -135,12 +136,15 @@
             "layout": null,
             "backgroundPalette": null,
             "unsplashAuthorName": null,
-            "unsplashAuthorUrl": null,
             "backgroundWidth": null,
+            "unsplashAuthorUrl": null,
             "backgroundHeight": null,
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
+            "createdAt": "2022-03-03T18:55:21.575733",
+            "mapCameraOptions": null,
+            "mapBasemaps": null,
             "isInput": true,
             "type": {
               "componentName": "MultipleChoice",
@@ -158,17 +162,298 @@
               "allowedLayouts": null,
               "isSpatial": false,
               "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            },
-            "sketchClassFk": null,
-            "sketchClass": null
+              "isRequiredForSketchClasses": false,
+              "allowAdminUpdates": true
+            }
           },
           {
+            "id": 95760,
             "formId": 25,
+            "isRequired": false,
+            "exportId": "gear_ntuna",
+            "position": 3,
+            "componentSettings": {
+              "options": [
+                {
+                  "label": "Trolling",
+                  "value": "Trolling"
+                },
+                {
+                  "label": "Dropline",
+                  "value": "Dropline"
+                },
+                {
+                  "label": "Handline",
+                  "value": "Handline"
+                },
+                {
+                  "label": "Jigging",
+                  "value": "Jigging"
+                },
+                {
+                  "label": "Hand-picking",
+                  "value": "Hand-picking"
+                },
+                {
+                  "label": "Spearfishing",
+                  "value": "Spearfishing"
+                },
+                {
+                  "label": "Fish hooks",
+                  "value": "Fish hooks"
+                },
+                {
+                  "label": "Flying Gaff",
+                  "value": "Flying Gaff"
+                },
+                {
+                  "label": "Hand-held nets",
+                  "value": "Hand-held nets"
+                },
+                {
+                  "label": "Lift net",
+                  "value": "Lift net"
+                },
+                {
+                  "label": "Weighted Handline",
+                  "value": "Weighted Handline"
+                }
+              ]
+            },
+            "typeId": "MultipleChoice",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "What type of gear do you use here?",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "backgroundWidth": null,
+            "unsplashAuthorUrl": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "createdAt": "2022-04-04T23:27:55.33587",
+            "mapCameraOptions": null,
+            "mapBasemaps": null,
+            "isInput": true,
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false,
+              "allowAdminUpdates": true
+            }
+          },
+          {
+            "id": 95761,
+            "formId": 25,
+            "isRequired": false,
+            "exportId": "nontuna_species",
+            "position": 4,
+            "componentSettings": {
+              "options": [
+                {
+                  "label": "Billfish",
+                  "value": "Billfish"
+                },
+                {
+                  "label": "Reef Fish",
+                  "value": "Reef Fish"
+                },
+                {
+                  "label": "Neritic Tuna",
+                  "value": "Neritic Tuna"
+                },
+                {
+                  "label": "Grouper",
+                  "value": "Grouper"
+                },
+                {
+                  "label": "Octopus",
+                  "value": "Octopus"
+                },
+                {
+                  "label": "Lobster",
+                  "value": "Lobster"
+                },
+                {
+                  "label": "Conch (all species)",
+                  "value": "Conch"
+                },
+                {
+                  "label": "Other",
+                  "value": "Other"
+                }
+              ]
+            },
+            "typeId": "MultipleChoice",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "What species do you fish here?",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "backgroundWidth": null,
+            "unsplashAuthorUrl": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "createdAt": "2022-04-04T23:29:08.96998",
+            "mapCameraOptions": null,
+            "mapBasemaps": null,
+            "isInput": true,
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false,
+              "allowAdminUpdates": true
+            }
+          },
+          {
+            "id": 95762,
+            "formId": 25,
+            "isRequired": false,
+            "exportId": "recfish_type",
+            "position": 5,
+            "componentSettings": {
+              "options": [
+                {
+                  "label": "Big Game / Sports Fishing",
+                  "value": "Big Game / Sports Fishing"
+                },
+                {
+                  "label": "Reef Fishing",
+                  "value": "Reef Fishing"
+                },
+                {
+                  "label": "Spearfishing",
+                  "value": "Spearfishing"
+                },
+                {
+                  "label": "Hand-picking",
+                  "value": "Hand-picking"
+                },
+                {
+                  "label": "Other",
+                  "value": "Other"
+                }
+              ]
+            },
+            "typeId": "MultipleChoice",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "What type of recreational fishing do you do here?",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "backgroundWidth": null,
+            "unsplashAuthorUrl": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "createdAt": "2022-04-04T23:30:17.792622",
+            "mapCameraOptions": null,
+            "mapBasemaps": null,
+            "isInput": true,
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false,
+              "allowAdminUpdates": true
+            }
+          },
+          {
             "id": 116,
+            "formId": 25,
             "isRequired": false,
             "exportId": "comments",
-            "position": 4,
+            "position": 6,
             "componentSettings": {
               "compact": true
             },
@@ -194,12 +479,15 @@
             "layout": null,
             "backgroundPalette": null,
             "unsplashAuthorName": null,
-            "unsplashAuthorUrl": null,
             "backgroundWidth": null,
+            "unsplashAuthorUrl": null,
             "backgroundHeight": null,
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
+            "createdAt": "2022-03-03T18:55:21.575733",
+            "mapCameraOptions": null,
+            "mapBasemaps": null,
             "isInput": true,
             "type": {
               "componentName": "TextArea",
@@ -215,73 +503,16 @@
               "allowedLayouts": null,
               "isSpatial": false,
               "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
-            },
-            "sketchClassFk": null,
-            "sketchClass": null
+              "isRequiredForSketchClasses": false,
+              "allowAdminUpdates": true
+            }
           },
           {
-            "formId": 25,
-            "id": 113,
-            "isRequired": true,
-            "exportId": "feature_name",
-            "position": 5,
-            "componentSettings": {
-              "generatedNamePrefix": "Area"
-            },
-            "typeId": "FeatureName",
-            "body": {
-              "type": "doc",
-              "content": [
-                {
-                  "type": "question",
-                  "attrs": {},
-                  "content": [
-                    {
-                      "text": "Area Name",
-                      "type": "text"
-                    }
-                  ]
-                }
-              ]
-            },
-            "backgroundColor": null,
-            "secondaryColor": null,
-            "textVariant": "DYNAMIC",
-            "backgroundImage": null,
-            "layout": null,
-            "backgroundPalette": null,
-            "unsplashAuthorName": null,
-            "unsplashAuthorUrl": null,
-            "backgroundWidth": null,
-            "backgroundHeight": null,
-            "jumpToId": null,
-            "alternateLanguageSettings": {},
-            "subordinateTo": null,
-            "isInput": true,
-            "type": {
-              "componentName": "FeatureName",
-              "label": "Feature Name",
-              "isInput": true,
-              "isSurveysOnly": false,
-              "isHidden": true,
-              "isSingleUseOnly": true,
-              "isRequiredForSurveys": false,
-              "supportedOperators": [],
-              "allowedLayouts": null,
-              "isSpatial": false,
-              "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": true
-            },
-            "sketchClassFk": null,
-            "sketchClass": null
-          },
-          {
-            "formId": 25,
             "id": 114,
+            "formId": 25,
             "isRequired": true,
             "exportId": "priority",
-            "position": 6,
+            "position": 7,
             "componentSettings": {
               "lowText": "Low",
               "highText": "High",
@@ -309,12 +540,15 @@
             "layout": null,
             "backgroundPalette": null,
             "unsplashAuthorName": null,
-            "unsplashAuthorUrl": null,
             "backgroundWidth": null,
+            "unsplashAuthorUrl": null,
             "backgroundHeight": null,
             "jumpToId": null,
             "alternateLanguageSettings": {},
             "subordinateTo": null,
+            "createdAt": "2022-03-03T18:55:21.575733",
+            "mapCameraOptions": null,
+            "mapBasemaps": null,
             "isInput": true,
             "type": {
               "componentName": "SAPRange",
@@ -328,13 +562,72 @@
               "allowedLayouts": null,
               "isSpatial": false,
               "sketchClassTemplateId": null,
-              "isRequiredForSketchClasses": false
+              "isRequiredForSketchClasses": false,
+              "allowAdminUpdates": true
+            }
+          },
+          {
+            "id": 113,
+            "formId": 25,
+            "isRequired": true,
+            "exportId": "feature_name",
+            "position": 8,
+            "componentSettings": {
+              "generatedNamePrefix": "Area"
             },
-            "sketchClassFk": null,
-            "sketchClass": null
+            "typeId": "FeatureName",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "attrs": {},
+                  "content": [
+                    {
+                      "text": "Area Name",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "backgroundWidth": null,
+            "unsplashAuthorUrl": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "createdAt": "2022-03-03T18:55:21.575733",
+            "mapCameraOptions": null,
+            "mapBasemaps": null,
+            "isInput": true,
+            "type": {
+              "componentName": "FeatureName",
+              "label": "Feature Name",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": true,
+              "isSingleUseOnly": true,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": true,
+              "allowAdminUpdates": true
+            }
           }
         ]
       }
     }
   }
 }
+    
+  
