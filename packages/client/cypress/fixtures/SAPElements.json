@@ -273,11 +273,114 @@
             }
           },
           {
+            "id": 124294,
+            "formId": 25,
+            "isRequired": false,
+            "exportId": "nontuna_sp",
+            "position": 4,
+            "componentSettings": {
+              "options": [
+                {
+                  "label": "Diamondback squid",
+                  "value": "Diamondback squid | ތުތިބޯވަދިލަމަސް"
+                },
+                {
+                  "label": "Reef fish",
+                  "value": "Reef fish | ފަރުމަހުގެ ބާވަތްތައް"
+                },
+                {
+                  "label": "Lobster",
+                  "value": "Lobster"
+                },
+                {
+                  "label": "Conch (all species)",
+                  "value": "Conch (all species)"
+                },
+                {
+                  "label": "Sea cucumber",
+                  "value": "Sea cucumber | ހުއިފިލަނޑާގެ ބާވަތްތައް"
+                },
+                {
+                  "label": "Grouper",
+                  "value": "Grouper | ފާނަމަސްވެރިކަން"
+                },
+                {
+                  "label": "Aquarium fish",
+                  "value": "Aquarium fish | ދިރޭ ކުދިމަހުގެ ބާވަތްތައް (އެކުއޭރިއަމް ފިޝް)"
+                },
+                {
+                  "label": "Livebait",
+                  "value": "Livebait | ދިރޭ އެން"
+                },
+                {
+                  "label": "Billfish",
+                  "value": "Billfish | ހިބަރުގެ ބާވަތްތައް"
+                },
+                {
+                  "label": "Other",
+                  "value": "Other | އެހެނިހެން"
+                }
+              ],
+              "multipleSelect": true
+            },
+            "typeId": "MultipleChoice",
+            "body": {
+              "type": "doc",
+              "content": [
+                {
+                  "type": "question",
+                  "content": [
+                    {
+                      "text": "What type of species do you fish here?",
+                      "type": "text"
+                    }
+                  ]
+                }
+              ]
+            },
+            "backgroundColor": null,
+            "secondaryColor": null,
+            "textVariant": "DYNAMIC",
+            "backgroundImage": null,
+            "layout": null,
+            "backgroundPalette": null,
+            "unsplashAuthorName": null,
+            "backgroundWidth": null,
+            "unsplashAuthorUrl": null,
+            "backgroundHeight": null,
+            "jumpToId": null,
+            "alternateLanguageSettings": {},
+            "subordinateTo": null,
+            "createdAt": "2022-04-13T15:05:09.272177",
+            "mapCameraOptions": null,
+            "mapBasemaps": null,
+            "isInput": true,
+            "type": {
+              "componentName": "MultipleChoice",
+              "label": "Multiple Choice",
+              "isInput": true,
+              "isSurveysOnly": false,
+              "isHidden": false,
+              "isSingleUseOnly": false,
+              "isRequiredForSurveys": false,
+              "supportedOperators": [
+                "EQUAL",
+                "NOT_EQUAL",
+                "CONTAINS"
+              ],
+              "allowedLayouts": null,
+              "isSpatial": false,
+              "sketchClassTemplateId": null,
+              "isRequiredForSketchClasses": false,
+              "allowAdminUpdates": true
+            }
+          },
+          {
             "id": 95761,
             "formId": 25,
             "isRequired": false,
             "exportId": "nontuna_species",
-            "position": 4,
+            "position": 5,
             "componentSettings": {
               "options": [
                 {
@@ -371,7 +474,7 @@
             "formId": 25,
             "isRequired": false,
             "exportId": "recfish_type",
-            "position": 5,
+            "position": 6,
             "componentSettings": {
               "options": [
                 {
@@ -453,7 +556,7 @@
             "formId": 25,
             "isRequired": false,
             "exportId": "comments",
-            "position": 6,
+            "position": 7,
             "componentSettings": {
               "compact": true
             },
@@ -512,7 +615,7 @@
             "formId": 25,
             "isRequired": true,
             "exportId": "priority",
-            "position": 7,
+            "position": 8,
             "componentSettings": {
               "lowText": "Low",
               "highText": "High",
@@ -571,7 +674,7 @@
             "formId": 25,
             "isRequired": true,
             "exportId": "feature_name",
-            "position": 8,
+            "position": 9,
             "componentSettings": {
               "generatedNamePrefix": "Area"
             },

@@ -162,6 +162,12 @@
               "sectors": [
                 "Fisheries - Recreational"
               ]
+            },
+            "nontuna_sp": {
+              "enabled": true,
+              "sectors": [
+                "Fisheries - Commercial, Non-Tuna Species"
+              ]
             }
           },
           "subordinateVisibilitySettings": {

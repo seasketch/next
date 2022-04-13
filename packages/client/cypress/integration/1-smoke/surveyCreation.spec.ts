@@ -23,36 +23,24 @@ function checkForNavAndLang() {
       .should('be.visible')
 }
 
-function drawPolygon() {
+const drawPolygon = () => {
   cy.get('.mapboxgl-canvas').each((t) => {
     const canvases = []
     canvases.push(t)
     return canvases
   }).then((ary) => {
+    console.log(ary)
     const el = ary[0]
+    console.log(el)
     return el
   }).as('el')
+  
   cy.get('@el').click(300,300)        
     .click(300, 100)
     .click(100, 100)
     .click(100, 300)
     .dblclick(300, 300)
 }
-
-
-
-function getToCurrentPage() {
-  cy.restoreLocalStorage()
-  cy.getLocalStorage('surveyId').then((id) => {
-    cy.getLocalStorage('slug').then((slug) => {
-      cy.visit(`${slug}/surveys/${id}/23`)
-    })
-  })
-   //cy.visit()
-   //cy.getLocalStorage()
-}
-
-
 
 
 const devices: any = [ "iphone-x", "iphone-5", "macbook-15", "ipad-2"];
@@ -194,7 +182,8 @@ describe("Survey creation smoke test", () => {
                       "num_of_ppl": 5, 
                       "part-time": 6, 
                       "vessel": 7, 
-                      "guesthouse_name": 8
+                      "guesthouse_name": 8,
+                      "nontuna_sp": 9
                     }
                     const updateComponentSettings = (formElements) => {
                       let referenceElements = []
@@ -324,7 +313,7 @@ describe("Survey creation smoke test", () => {
         .type("Yellowfin tuna fishing area.")
       cy.contains('What type of gear do you use here?')
       cy.contains('What species do you fish here')
-      cy.get('[title="Handline"]').click()
+      cy.get('[title="Pole and Line"]').click()
       cy.get('[title="Yellowfin"]').click()
       cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
       cy.contains('Save').click()
@@ -337,6 +326,45 @@ describe("Survey creation smoke test", () => {
       })
       cy.contains("Next sector").as("nextSector")
       cy.get('@nextSector').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+    })
+    it('Can draw a polygon - Fisheries - Commercial, Non-Tuna Species', () => {
+      cy.get('[type = "button"]').contains('Next')
+        .should('not.exist')
+      cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
+        .should('exist')
+        .and('be.visible')
+      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+      //wait for second call to route
+      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+      drawPolygon()
+    })
+    it("Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species", () => {
+      cy.get('h1').contains('Area Name')
+      cy.get(".mt-1 > .block").clear()
+        .type("Sea cucumber fishing area.")
+      cy.contains('What type of gear do you use here?')
+      cy.contains('What type of species do you fish here?')
+      cy.get('[title="Pole and Line"]')
+        .should('not.exist')
+      cy.get('[title="Pole and Line"]')
+        .should('not.exist')
+      cy.get('[title="Yellowfin"]')
+        .should('not.exist')
+      cy.get('[title="Sea cucumber"]').click()
+      cy.get('[title="Jigging"]').click()
+      cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!")
+      cy.contains('Save').click()
+    })
+    it('Can finish sector -  - Fisheries - Commercial, Non-Tuna Species', () => {
+      cy.contains("Sea cucumber fishing area.")
+      cy.contains("Fisheries - Commercial, Non-Tuna Species")
+      //cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
+      //  {$el.trigger('click')}
+      //})
+      cy.contains("Finish Sector").as("finishSector")
+      cy.get('@finishSector').then(($btn) => {
         {$btn.trigger('click')}
       })
     })
