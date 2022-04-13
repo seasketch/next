@@ -15,6 +15,11 @@ const jwtCheck = jwt({
   issuer: process.env.JWT_ISS,
   algorithms: ["RS256"],
   credentialsRequired: false,
+  getToken: (req) => {
+    return (
+      req.query["token"] || req.header("authorization")?.split("Bearer ")[1]
+    );
+  },
 });
 
 export default jwtCheck;

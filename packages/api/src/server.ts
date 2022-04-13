@@ -74,7 +74,9 @@ app.use(
       "x-apollo-tracing",
       "content-length",
       "x-postgraphile-explain",
+      "if-none-match",
     ],
+    exposedHeaders: ["ETag"],
     maxAge: 600,
   })
 );
@@ -201,8 +203,8 @@ app.use(
   currentProjectMiddlware,
   userAccountMiddlware,
   async function (req, res, next) {
+    const client = await tilesetPool.connect();
     try {
-      const client = await tilesetPool.connect();
       await client.query("BEGIN");
       await setTransactionSessionVariables(getPgSettings(req), client);
       const x = parseInt(req.params.x, 10);
@@ -220,8 +222,8 @@ app.use(
       }
       res.send(tile);
     } catch (e: any) {
-      res.send(`Problem generating tiles.\n${e.toString()}`);
-      res.status(500);
+      client.release();
+      res.status(500).send(`Problem generating tiles.\n${e.toString()}`);
       return;
     }
   }

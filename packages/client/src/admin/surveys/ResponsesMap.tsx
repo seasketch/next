@@ -371,17 +371,14 @@ export default function ResponsesMap({
         className="w-full h-full"
         initOptions={{
           // @ts-ignore
-          transformRequest: (url, resourceType) => {
+          transformRequest: (url, resourceType, etc) => {
             if (
               new URL(url).host ===
                 new URL(process.env.REACT_APP_GRAPHQL_ENDPOINT!).host &&
               token
             ) {
               return {
-                url: url,
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
+                url: url + `?token=${token}`,
               };
             } else {
               return null;
