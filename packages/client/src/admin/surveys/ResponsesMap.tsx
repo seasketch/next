@@ -377,8 +377,10 @@ export default function ResponsesMap({
                 new URL(process.env.REACT_APP_GRAPHQL_ENDPOINT!).host &&
               token
             ) {
+              const Url = new URL(url);
+              Url.searchParams.set("token", token);
               return {
-                url: url + `?token=${token}`,
+                url: Url.toString(),
               };
             } else {
               return null;
