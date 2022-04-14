@@ -4,6 +4,7 @@ import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
 import { createPublicKey } from "crypto";
 import { getByDataCy } from "../../support/utils/utils.js"
+import { isTypedArray } from "cypress/types/lodash";
 
 let surveyId: any;
 let authToken: any;
@@ -236,9 +237,9 @@ describe("Survey creation smoke test", () => {
         //cy.getLocalStorage("responseId").then((responseId) => {
         //  cy.deleteResponse
         //})
-        //cy.getLocalStorage("token").then((token) => {
-        //  cy.deleteSurvey(surveyId, token)
-        //})
+        cy.getLocalStorage("token").then((token) => {
+          cy.deleteSurvey(surveyId, token)
+        })
       })
       cy.getLocalStorage("slug").then((slug) => {
         cy.deleteProject(`${slug}`)
@@ -357,14 +358,48 @@ describe("Survey creation smoke test", () => {
       cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!")
       cy.contains('Save').click()
     })
-    it('Can finish sector -  - Fisheries - Commercial, Non-Tuna Species', () => {
+    it('Can finish sector - Fisheries - Commercial, Non-Tuna Species', () => {
       cy.contains("Sea cucumber fishing area.")
       cy.contains("Fisheries - Commercial, Non-Tuna Species")
-      //cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
-      //  {$el.trigger('click')}
-      //})
+      cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
+        {$el.trigger('click')}
+      })
       cy.contains("Finish Sector").as("finishSector")
       cy.get('@finishSector').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+    })
+    it ('Shows what sectors have been completed', () => {
+      cy.get('h1').contains('Your sectors')
+      cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
+        expect ($btn.css('background')).to.include('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153))')
+      })
+      //completed sector
+      cy.get('button').contains('Fisheries - Commercial, Non-Tuna Species').parent().then(($btn) => {
+        expect ($btn.css('background'))
+        .to
+        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+      })
+      //completed sector
+      cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
+        expect ($btn.css('background'))
+        .to
+        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+      })
+      //not yet completed sector
+      cy.get('button').contains('Fisheries - Recreational').parent().then(($btn) => {
+        expect ($btn.css('background'))
+        .to
+        .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
+      })
+      //not yet completed sector
+      cy.get('button').contains('Fisheries- Artisanal/Subsistence').parent().then(($btn) => {
+        expect ($btn.css('background'))
+        .to
+        .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
+      })
+      cy.contains("Next sector").as("nextSector")
+      cy.get('@nextSector').then(($btn) => {
         {$btn.trigger('click')}
       })
     })
