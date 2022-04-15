@@ -61,15 +61,11 @@ export async function getMVT(
   z: number,
   client: DBClient
 ) {
-  try {
-    const { rows } = await client.query(
-      `
+  const { rows } = await client.query(
+    `
       SELECT survey_response_mvt($1, $2, $3, $4)
       `,
-      [elementId, x, y, z]
-    );
-    return rows[0].survey_response_mvt;
-  } catch (e) {
-    return null;
-  }
+    [elementId, x, y, z]
+  );
+  return rows[0].survey_response_mvt;
 }
