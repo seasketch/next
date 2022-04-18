@@ -4,6 +4,7 @@ import InputBlock from "../../components/InputBlock";
 import Modal from "../../components/Modal";
 import Switch from "../../components/Switch";
 import { FormElementDetailsFragment } from "../../generated/graphql";
+import useAccessToken from "../../useAccessToken";
 
 export default function ExportResponsesModal({
   surveyId,
@@ -19,6 +20,7 @@ export default function ExportResponsesModal({
   onRequestData: (includePractice: boolean) => string;
 }) {
   const { t } = useTranslation("admin:surveys");
+  const token = useAccessToken();
   const [includePractice, setIncludePractice] = useState(false);
   return (
     <Modal
@@ -75,7 +77,7 @@ export default function ExportResponsesModal({
               "/graphql",
               `/export-survey/${surveyId}/spatial/${
                 element.id
-              }/geojson?filename=${element.exportId!}.geojson.json`
+              }/geojson?token=${token}&filename=${element.exportId!}.geojson.json`
             )}`}
           >
             {
