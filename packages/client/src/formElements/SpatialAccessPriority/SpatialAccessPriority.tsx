@@ -1588,16 +1588,24 @@ function unArrayifySettings(settings?: SpatialAccessPriorityProps) {
     }
     return newSettings;
   } else if (
-    Object.values(settings?.subordinateVisibilitySettings || {})[0] === null
+    Object.values(settings?.subordinateVisibilitySettings || {}).length ||
+    Object.values(settings?.childVisibilitySettings || {}).length
   ) {
     const newSettings = { ...settings };
     const visibilitySettings = { ...newSettings.subordinateVisibilitySettings };
+    const childVisibilitySettings = { ...newSettings.childVisibilitySettings };
     for (const key in visibilitySettings) {
       if (visibilitySettings[key] === null) {
         delete visibilitySettings[key];
       }
     }
+    for (const key in childVisibilitySettings) {
+      if (childVisibilitySettings[key] === null) {
+        delete childVisibilitySettings[key];
+      }
+    }
     newSettings.subordinateVisibilitySettings = visibilitySettings;
+    newSettings.childVisibilitySettings = childVisibilitySettings;
     return newSettings;
   } else {
     return settings;
