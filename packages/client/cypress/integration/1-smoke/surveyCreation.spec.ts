@@ -4,7 +4,7 @@ import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
 import { createPublicKey } from "crypto";
 import { getByDataCy } from "../../support/utils/utils.js"
-import { isTypedArray } from "cypress/types/lodash";
+import { ceil, isTypedArray } from "cypress/types/lodash";
 
 let surveyId: any;
 let authToken: any;
@@ -40,6 +40,25 @@ const drawPolygon = () => {
     .click(300, 100)
     .click(100, 100)
     .click(100, 300)
+    .dblclick(300, 300)
+}
+
+const drawInvalidPolygon = () => {
+  cy.get('.mapboxgl-canvas').each((t) => {
+    const canvases = []
+    canvases.push(t)
+    return canvases
+  }).then((ary) => {
+    console.log(ary)
+    const el = ary[0]
+    console.log(el)
+    return el
+  }).as('el')
+  
+  cy.get('@el').click(300,300)        
+    .click(100, 300)
+    .click(150, 200)
+    .click(50, 200)
     .dblclick(300, 300)
 }
 
@@ -263,7 +282,6 @@ describe("Survey creation smoke test", () => {
       })
     })
     it("Can visit the survey", () => {
-      
       cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
       cy.get('.select-none').should('be.visible').then(($btn) => {
         {$btn.trigger('click')}
@@ -336,7 +354,7 @@ describe("Survey creation smoke test", () => {
       cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
       cy.contains('Save').click()
     })
-    it('Can finish sector - Fisheries - Commercial, Tuna"', () => {
+    it('Can finish sector - Fisheries - Commercial, Tuna', () => {
       cy.contains("Yellowfin tuna fishing area.")
       cy.contains("Fisheries - Commercial, Tuna")
       cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
@@ -378,9 +396,9 @@ describe("Survey creation smoke test", () => {
     it('Can finish sector - Fisheries - Commercial, Non-Tuna Species', () => {
       cy.contains("Sea cucumber fishing area.")
       cy.contains("Fisheries - Commercial, Non-Tuna Species")
-      cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
-        {$el.trigger('click')}
-      })
+      //cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
+      //  {$el.trigger('click')}
+      //})
       cy.contains("Finish Sector").as("finishSector")
       cy.get('@finishSector').then(($btn) => {
         {$btn.trigger('click')}
@@ -456,7 +474,7 @@ describe("Survey creation smoke test", () => {
     it("Renders sector specific attributes for second shape - Fisheries - Recreational", () => {
       cy.get('h1').contains('Area Name')
       cy.get(".mt-1 > .block").clear()
-        .type("Big game fishing area.")
+        .type("Sports fishing area.")
       cy.contains('What type of recreational fishing do you do here?')
       cy.contains('What type of species do you fish here?')
         .should('not.exist')
@@ -471,12 +489,7 @@ describe("Survey creation smoke test", () => {
     it('Can finish sector - Fisheries - Recreational', () => {
       cy.contains("Fisheries - Recreational")
       cy.contains("Reef fishing area.")
-      cy.contains("Big game fishing area")
-      
-      cy.get(".space-y-2 > :nth-child(2) > .select-none")
-      //.should('be.visible').then(($el) => {
-      //  {$el.trigger('click')}
-      //})
+      cy.contains("Sports fishing area")
       cy.contains("Finish Sector").as("finishSector")
       cy.get('@finishSector').then(($btn) => {
         {$btn.trigger('click')}
@@ -500,7 +513,7 @@ describe("Survey creation smoke test", () => {
         {$btn.trigger('click')}
       })
     })
-    it('Can draw a polygon - Fisheries - Artisanal/Subsistence', () => {
+    it('Errors when invalid polygon is drawn - Fisheries - Artisanal/Subsistence', () => {
       cy.get('[type = "button"]').contains('Next')
         .should('not.exist')
       cy.get('h4').contains('Fisheries- Artisanal/Subsistence')
@@ -509,8 +522,88 @@ describe("Survey creation smoke test", () => {
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
       //wait for second call to route
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      drawPolygon()
+      drawInvalidPolygon()
+      cy.get('button').contains('Invalid Shape').as('invalidShapeBtn')
+      cy.get('@invalidShapeBtn').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      cy.get('[role="dialog"]').contains('Invalid Shape')
+      cy.get('video').should('be.visible')
+      cy.get('button').contains('Okay').as('okayBtn')
+      cy.get('@okayBtn').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      cy.get('button').contains('Done').as('doneBtn')
+      const stub = cy.stub()  
+      cy.on ('window:alert', stub)
+      cy
+      cy.get('@doneBtn').then(($btn) => {
+        {$btn.trigger('click')}
+        expect(stub.getCall(0)).to.be.calledWith('Please fix problems with your shape first.') 
+      })
     })  
+    it('Can delete invalid shape - Fisheries - Artisanal/Subsistence', () => {
+      //trash icon
+      cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn')
+      const stub = cy.stub()  
+      cy.on ('window:confirm', stub)
+      cy.get('@trashBtn').then(($btn) => {
+        {$btn.trigger('click')}
+        expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?')
+      })
+    })
+    it('Can draw new shape - Fisheries - Artisanal/Subsistence', () => {
+      cy.contains('New Shape').as('newShape')
+      cy.get('@newShape').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      drawPolygon()
+    })
+    it("Renders sector specific attributes - Fisheries - Artisanal/Subsistence", () => {
+      cy.get('h1').contains('Area Name')
+      cy.get(".mt-1 > .block").clear()
+        .type("Grouper fishing area.")
+      cy.contains('What type of recreational fishing do you do here?')
+        .should('not.exist')
+      cy.contains('What species do you fish here?')
+      cy.get('[title="Pole and Line"]')
+        .should('not.exist')
+      cy.get('[title="Yellowfin"]')
+        .should('not.exist')
+      cy.get('[title="Grouper"]').click()
+      cy.get('[style="max-height: 60vh;"] > .w-full').type("Prolific grouper population here.")
+      cy.contains('Save').click()
+    })
+    it('Can finish sector - Fisheries - Recreational', () => {
+      cy.contains("Fisheries- Artisanal/Subsistence")
+      cy.contains("Grouper fishing area.")
+      cy.get(".space-y-2 > :nth-child(2) > .select-none")
+      //.should('be.visible').then(($el) => {
+      //  {$el.trigger('click')}
+      //})
+      cy.contains("Finish Sector").as("finishSector")
+      cy.get('@finishSector').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      cy.get('h1').contains('Your sectors')
+        .should('be.visible')
+      //additional completed sector
+      cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
+        expect ($btn.css('background'))
+        .to
+        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+      })
+      //not yet completed sector
+      cy.get('div').contains("Fisheries- Artisanal/Subsistence").then(($btn) => {
+        expect ($btn.css('background'))
+        .to
+        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+      })
+      //cy.contains("Next sector").as("nextSector")
+      //cy.get('@nextSector').then(($btn) => {
+      //  {$btn.trigger('click')}
+      })
+    })
     
 
     //  cy.contains("Your sectors")
@@ -914,7 +1007,7 @@ describe("Survey creation smoke test", () => {
       //  //drawPolygon()
       //})
 
-  });//
+  //});//
 });//
 //
 //only
