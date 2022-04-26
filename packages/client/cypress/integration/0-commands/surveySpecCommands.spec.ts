@@ -15,7 +15,7 @@ var body = new FormData()
 //const FormData = require('form-data')
 //import fetch = require('node-fetch');
 
-const createBasemaps = (token) => {
+const createBasemaps = (token, id) => {
   body.append(
     //'hello', 'whatsup'
     'operations',
@@ -26,7 +26,8 @@ const createBasemaps = (token) => {
             basemap {
               id, 
               name, 
-              url
+              url,
+              projectId
             }
             
           }
@@ -35,7 +36,7 @@ const createBasemaps = (token) => {
       variables: {
         input: {
           basemap: {
-            projectId: 1441,
+            projectId: id,
             name: "Maldives Light", 
             type: "MAPBOX",
             url: "mapbox://styles/seasketch/ckxywn6wm4r2h14qm9ufcu23w",
@@ -261,10 +262,13 @@ describe ('Survey creation Cypress commands', () => {
   //})
   it.only("Can add basemaps", () => {
     cy.get('@token').then((token: any) => {
-      createBasemaps(token)
-      cy.wait('@createBasemapRequest').then((req) => {
-        expect (req.response.body.data.createBasemap.basemap.name).to.eq("Maldives Light")
+      cy.get('@projectId').then((id) => {
+        createBasemaps(token, id)
+        cy.wait('@createBasemapRequest').then((req) => {
+          expect (req.response.body.data.createBasemap.basemap.name).to.eq("Maldives Light")
+        })
       })
+      
       
       //})
     })
