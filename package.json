@@ -18,5 +18,9 @@
     "branch": "master",
     "schema": "packages/api/generated-schema.gql"
   },
-  "license": "BSD-3-Clause"
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "form-data": "^4.0.0",
+    "node-fetch": "^2.6.7"
+  }
 }
