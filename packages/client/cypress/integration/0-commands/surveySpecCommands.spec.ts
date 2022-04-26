@@ -271,8 +271,13 @@ describe ('Survey creation Cypress commands', () => {
         //  console.log(read.read())
         //})
         cy.wait('@createBasemapRequest').then((req) => {
-          cy.log(req.response.body)
-         
+          if (req.response.body.errors) {
+            cy.log(req.response.body.errors)
+          } else {
+            cy.log("no errors")
+          }
+          //cy.log(req.response.body)
+
           expect (req.response.body).to.not.equal(null)
         })
       })
