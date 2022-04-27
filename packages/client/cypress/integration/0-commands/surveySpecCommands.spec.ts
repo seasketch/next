@@ -272,9 +272,10 @@ describe ('Survey creation Cypress commands', () => {
         //})
         cy.wait('@createBasemapRequest').then((req) => {
           if (req.response.body.errors) {
-            cy.log(req.response.body.errors)
+            console.log(req.response.body.errors)
+            console.error()
           } else {
-            cy.log("no errors")
+            console.log('no errors')
           }
           //cy.log(req.response.body)
 
