@@ -2,13 +2,96 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
-import { createPublicKey } from "crypto";
-import { getByDataCy } from "../../support/utils/utils.js"
-import { ceil, isTypedArray } from "cypress/types/lodash";
+
 
 let surveyId: any;
 let authToken: any;
 let formId: any;
+
+
+const FormData = require('form-data')
+const fetch = require('node-fetch')
+
+const basemapNames = ["Maldives Light", "Maldives Satellite"]
+
+const basemaps = {
+  "Maldives Light": {
+    "name": "Maldives Light", 
+    "type": "MAPBOX", 
+    "url": "mapbox://styles/seasketch/ckxywn6wm4r2h14qm9ufcu23w"
+  },
+  "Maldives Satellite": {
+    "name": "Satellite", 
+    "type": "MAPBOX", 
+    "url": "mapbox://styles/mapbox/satellite-streets-v11"
+  }
+}
+
+const createBasemaps = (id, token, name) => {
+  const body = new FormData()
+  
+  
+    console.log(name)
+    console.log(basemaps[name].name)
+    console.log(basemaps[name].type)
+    console.log(basemaps[name].url)
+    body.append(
+      //'hello', 'whatsup'
+      'operations',
+      JSON.stringify({
+        query: /* GraphQL */ `
+          mutation CypressCreateBasemap($input: CreateBasemapInput!) {
+            createBasemap(input: $input) {
+              basemap {
+                id, 
+                name, 
+                url,
+                projectId
+              }
+              
+            }
+          }
+        `,
+        variables: {
+          input: {
+            basemap: {
+              projectId: id,
+              name: basemaps[name].name,
+              type: basemaps[name].type,
+              url: basemaps[name].url,
+              thumbnail: null
+            }
+          }
+        }
+      })
+    )
+  //})
+  
+  
+  const file = new File(["basemap_thumbnail"], "basemap_thumbnail.jpg", {
+    type: "image/jpeg",
+  });
+
+  
+  //console.log(body)
+  body.append('map', JSON.stringify({ 1: ['variables.input.basemap.thumbnail'] }))
+  //body.append('my_file', fs.createReadStream('/foo/bar.jpg'));
+  body.append('1', file)
+  //body.append('authorization')
+
+  //var xhr = new XMLHttpRequest;
+  //xhr.open('POST', 'http://localhost:3857/graphql', true);
+  //xhr.send(body);
+  console.log(body)
+  const fetchResponse = fetch(
+    'http://localhost:3857/graphql', 
+    { method: 'POST', 
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    }, body })
+
+  return fetchResponse
+}
 
 
 function generateSlug() { 
@@ -30,9 +113,7 @@ const drawPolygon = () => {
     canvases.push(t)
     return canvases
   }).then((ary) => {
-    console.log(ary)
     const el = ary[0]
-    console.log(el)
     return el
   }).as('el')
   
@@ -49,9 +130,7 @@ const drawInvalidPolygon = () => {
     canvases.push(t)
     return canvases
   }).then((ary) => {
-    console.log(ary)
     const el = ary[0]
-    console.log(el)
     return el
   }).as('el')
   
@@ -122,6 +201,12 @@ describe("Survey creation smoke test", () => {
               projectId, 
               access_token
             ).then((resp) => {
+              basemapNames.forEach((t) => {
+                createBasemaps(projectId, access_token, t).then((resp) => {
+                  console.log(resp)
+                })
+              })
+             
               cy.setLocalStorage("surveyId", resp.makeSurvey.survey.id)
               cy.setLocalStorage("access_token", access_token)
               cy.saveLocalStorage()
@@ -235,7 +320,6 @@ describe("Survey creation smoke test", () => {
                       cy.get('@sapId').then((id: any) => {
                         //sapId is the id of the SAP form element whose componentSettings need to be updated
                         cy.updateComponentSettings(id, referenceElements, access_token, formId).then((resp) => {
-                          console.log(referenceElements)
                           let values: object = Object.values(resp.updateFormElement.formElement.componentSettings.childVisibilitySettings)
                           expect (values[0].enabled).to.eq(true) &&
                           expect (values[0].sectors.toString()).to.eq('Fisheries - Commercial, Tuna')
@@ -245,14 +329,10 @@ describe("Survey creation smoke test", () => {
                     };
                     let settingsElements = []
                     cy.get('@createFormLogicResponse').then((resp:any) => {
-                      console.log(resp)
                       settingsElements.push(resp.createFormLogicCondition.query.form.formElements)
                     });
                     cy.get('@SAPResponse').then((resp: any) => {
-                      console.log(resp)
-                      console.log(settingsElements)
                       let settingsAry = settingsElements[0].concat(resp.createFormElement.query.form.formElements)
-                      console.log(settingsAry)
                       updateComponentSettings(settingsAry)
                     });
                   })
@@ -329,7 +409,7 @@ describe("Survey creation smoke test", () => {
            {$btn.trigger('click')}
         })
     })
-    it("Can draw a polygon", () => {
+    it ("Should render correct basemap", () => {
       cy.get('[type = "button"]').contains('Next').as('nextBtn').then(($btn) => {
         if ($btn) {
           {$btn.trigger('click')}
@@ -337,280 +417,302 @@ describe("Survey creation smoke test", () => {
       })
       cy.get('@nextBtn')
         .should('not.exist')
+    })
+    it("Can draw a polygon", () => {
       cy.get('h4').contains('Fisheries - Commercial, Tuna')
         .should('exist')
         .and('be.visible')
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
       drawPolygon()
     })
-    it("Renders sector specific attributes - Fisheries - Commercial, Tuna", () => {
-      cy.get('h1').contains('Area Name')
-      cy.get(".mt-1 > .block").clear()
-        .type("Yellowfin tuna fishing area.")
-      cy.contains('What type of gear do you use here?')
-      cy.contains('What species do you fish here')
-      cy.get('[title="Pole and Line"]').click()
-      cy.get('[title="Yellowfin"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
-      cy.contains('Save').click()
+    it ('Renders the correct basemap', () => {
+      cy.get('img').click()
+      cy.get('h4').contains('Maldives Light').parent()
+        .should('have.class', 'font-semibold')
+        cy.get('h4').contains('Satellite').as('satelliteBasemap').parent()
+          .should('not.have.class', 'font-semibold')
     })
-    it('Can finish sector - Fisheries - Commercial, Tuna', () => {
-      cy.contains("Yellowfin tuna fishing area.")
-      cy.contains("Fisheries - Commercial, Tuna")
-      cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
-        {$el.trigger('click')}
-      })
-      cy.contains("Next sector").as("nextSector")
-      cy.get('@nextSector').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-    })
-    it('Can draw a polygon - Fisheries - Commercial, Non-Tuna Species', () => {
-      cy.get('[type = "button"]').contains('Next')
-        .should('not.exist')
-      cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
-        .should('exist')
-        .and('be.visible')
-      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      //wait for second call to route
-      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      drawPolygon()
-    })
-    it("Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species", () => {
-      cy.get('h1').contains('Area Name')
-      cy.get(".mt-1 > .block").clear()
-        .type("Sea cucumber fishing area.")
-      cy.contains('What type of gear do you use here?')
-      cy.contains('What type of species do you fish here?')
-      cy.get('[title="Pole and Line"]')
-        .should('not.exist')
-      cy.get('[title="Pole and Line"]')
-        .should('not.exist')
-      cy.get('[title="Yellowfin"]')
-        .should('not.exist')
-      cy.get('[title="Sea cucumber"]').click()
-      cy.get('[title="Jigging"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!")
-      cy.contains('Save').click()
-    })
-    it('Can finish sector - Fisheries - Commercial, Non-Tuna Species', () => {
-      cy.contains("Sea cucumber fishing area.")
-      cy.contains("Fisheries - Commercial, Non-Tuna Species")
-      //cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
-      //  {$el.trigger('click')}
-      //})
-      cy.contains("Finish Sector").as("finishSector")
-      cy.get('@finishSector').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-    })
-    it ('Shows what sectors have been completed', () => {
-      cy.get('h1').contains('Your sectors')
-      cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
-        expect ($btn.css('background')).to.include('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153))')
-      })
-      //completed sector
-      cy.get('button').contains('Fisheries - Commercial, Non-Tuna Species').parent().then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      //completed sector
-      cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      //not yet completed sector
-      cy.get('button').contains('Fisheries - Recreational').parent().then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      //not yet completed sector
-      cy.get('button').contains('Fisheries- Artisanal/Subsistence').parent().then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      cy.contains("Next sector").as("nextSector")
-      cy.get('@nextSector').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-    })
-    it('Can draw a polygon - Fisheries - Recreational', () => {
-      cy.get('[type = "button"]').contains('Next')
-        .should('not.exist')
-      cy.get('h4').contains('Fisheries - Recreational')
-        .should('exist')
-        .and('be.visible')
-      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      //wait for second call to route
-      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      drawPolygon()
-    })
-    it("Renders sector specific attributes - Fisheries - Recreational", () => {
-      cy.get('h1').contains('Area Name')
-      cy.get(".mt-1 > .block").clear()
-        .type("Reef fishing area.")
-      cy.contains('What type of recreational fishing do you do here?')
-      cy.contains('What type of species do you fish here?')
-        .should('not.exist')
-      cy.get('[title="Pole and Line"]')
-        .should('not.exist')
-      cy.get('[title="Yellowfin"]')
-        .should('not.exist')
-      cy.get('[title="Reef Fishing"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Bountiful reef fishing.")
-      cy.contains('Save').click()
-    })
-    it('Can draw a new shape - Fisheries, Recreational', () => {
-      cy.contains('New Shape').as('newShape')
-      cy.get('@newShape').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      drawSecondPolygon()
-    })
-    it("Renders sector specific attributes for second shape - Fisheries - Recreational", () => {
-      cy.get('h1').contains('Area Name')
-      cy.get(".mt-1 > .block").clear()
-        .type("Sports fishing area.")
-      cy.contains('What type of recreational fishing do you do here?')
-      cy.contains('What type of species do you fish here?')
-        .should('not.exist')
-      cy.get('[title="Pole and Line"]')
-        .should('not.exist')
-      cy.get('[title="Yellowfin"]')
-        .should('not.exist')
-      cy.get('[title="Big Game / Sports Fishing"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Exciting sport fishing to be had here.")
-      cy.contains('Save').click()
-    })
-    it('Can finish sector - Fisheries - Recreational', () => {
-      cy.contains("Fisheries - Recreational")
-      cy.contains("Reef fishing area.")
-      cy.contains("Sports fishing area")
-      cy.contains("Finish Sector").as("finishSector")
-      cy.get('@finishSector').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.get('h1').contains('Your sectors')
-        .should('be.visible')
-      //additional completed sector
-      cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      //not yet completed sector
-      cy.get('button').contains('Fisheries- Artisanal/Subsistence').parent().then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      cy.contains("Next sector").as("nextSector")
-      cy.get('@nextSector').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-    })
-    it('Errors when invalid polygon is drawn - Fisheries - Artisanal/Subsistence', () => {
-      cy.get('[type = "button"]').contains('Next')
-        .should('not.exist')
-      cy.get('h4').contains('Fisheries- Artisanal/Subsistence')
-        .should('exist')
-        .and('be.visible')
-      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      //wait for second call to route
-      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      drawInvalidPolygon()
-      cy.get('button').contains('Invalid Shape').as('invalidShapeBtn')
-      cy.get('@invalidShapeBtn').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.get('[role="dialog"]').contains('Invalid Shape')
-      cy.get('video').should('be.visible')
-      cy.get('button').contains('Okay').as('okayBtn')
-      cy.get('@okayBtn').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.get('button').contains('Done').as('doneBtn')
-      const stub = cy.stub()  
-      cy.on ('window:alert', stub)
-      cy
-      cy.get('@doneBtn').then(($btn) => {
-        {$btn.trigger('click')}
-        expect(stub.getCall(0)).to.be.calledWith('Please fix problems with your shape first.') 
-      })
-    })  
-    it('Can delete invalid shape - Fisheries - Artisanal/Subsistence', () => {
-      //trash icon
-      cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn')
-      const stub = cy.stub()  
-      cy.on ('window:confirm', stub)
-      cy.get('@trashBtn').then(($btn) => {
-        {$btn.trigger('click')}
-        expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?')
-      })
-    })
-    it('Can draw new shape - Fisheries - Artisanal/Subsistence', () => {
-      cy.contains('New Shape').as('newShape')
-      cy.get('@newShape').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      drawPolygon()
-    })
-    it("Renders sector specific attributes - Fisheries - Artisanal/Subsistence", () => {
-      cy.get('h1').contains('Area Name')
-      cy.get(".mt-1 > .block").clear()
-        .type("Grouper fishing area.")
-      cy.contains('What type of recreational fishing do you do here?')
-        .should('not.exist')
-      cy.contains('What species do you fish here?')
-      cy.get('[title="Pole and Line"]')
-        .should('not.exist')
-      cy.get('[title="Yellowfin"]')
-        .should('not.exist')
-      cy.get('[title="Grouper"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Prolific grouper population here.")
-      cy.contains('Save').click()
-    })
-    it('Can finish sector - Fisheries - Recreational', () => {
-      cy.contains("Fisheries- Artisanal/Subsistence")
-      cy.contains("Grouper fishing area.")
-      cy.get(".space-y-2 > :nth-child(2) > .select-none")
-      //.should('be.visible').then(($el) => {
-      //  {$el.trigger('click')}
-      //})
-      cy.contains("Finish Sector").as("finishSector")
-      cy.get('@finishSector').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.get('h1').contains('Your sectors')
-        .should('be.visible')
-      //additional completed sector
-      cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      //not yet completed sector
-      cy.get('div').contains("Fisheries- Artisanal/Subsistence").then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      //cy.contains("Next sector").as("nextSector")
-      //cy.get('@nextSector').then(($btn) => {
-      //  {$btn.trigger('click')}
-      })
+    it ('Can select different basemap', () => {
+       //.then(() => {
+        
+        cy.contains('Satellite').click()
+          .should('have.class', 'font-semibold')
+        cy.wait('@mapboxApiEvent')
+        //cy.get('h4').contains('Satellite').click().parent()
+        //  
+    //  //  //cy.get('h4').contains('Maldives Light').parent()
+    //    //  .should('not.have.class', 'font-semibold')
+    //    //cy.get('h4').contains('Maldives Light').click()
     })
     
-
-    //  cy.contains("Your sectors")
-    // 
-    //  cy.get("@nextQuestion").should('be.visible').then(($btn) => {
+    //it("Renders sector specific attributes - Fisheries - Commercial, Tuna", () => {
+    //  cy.get('h1').contains('Area Name')
+    //  cy.get(".mt-1 > .block").clear()
+    //    .type("Yellowfin tuna fishing area.")
+    //  cy.contains('What type of gear do you use here?')
+    //  cy.contains('What species do you fish here')
+    //  cy.get('[title="Pole and Line"]').click()
+    //  cy.get('[title="Yellowfin"]').click()
+    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
+    //  cy.contains('Save').click()
+    //})
+    //it('Can finish sector - Fisheries - Commercial, Tuna', () => {
+    //  cy.contains("Yellowfin tuna fishing area.")
+    //  cy.contains("Fisheries - Commercial, Tuna")
+    //  cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
+    //    {$el.trigger('click')}
+    //  })
+    //  cy.contains("Next sector").as("nextSector")
+    //  cy.get('@nextSector').then(($btn) => {
     //    {$btn.trigger('click')}
     //  })
+    //})
+    //it('Can draw a polygon - Fisheries - Commercial, Non-Tuna Species', () => {
+    //  cy.get('[type = "button"]').contains('Next')
+    //    .should('not.exist')
+    //  cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
+    //    .should('exist')
+    //    .and('be.visible')
+    //  cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+    //  //wait for second call to route
+    //  cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+    //  drawPolygon()
+    //})
+    //it("Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species", () => {
+    //  cy.get('h1').contains('Area Name')
+    //  cy.get(".mt-1 > .block").clear()
+    //    .type("Sea cucumber fishing area.")
+    //  cy.contains('What type of gear do you use here?')
+    //  cy.contains('What type of species do you fish here?')
+    //  cy.get('[title="Pole and Line"]')
+    //    .should('not.exist')
+    //  cy.get('[title="Pole and Line"]')
+    //    .should('not.exist')
+    //  cy.get('[title="Yellowfin"]')
+    //    .should('not.exist')
+    //  cy.get('[title="Sea cucumber"]').click()
+    //  cy.get('[title="Jigging"]').click()
+    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!")
+    //  cy.contains('Save').click()
+    //})
+    //it('Can finish sector - Fisheries - Commercial, Non-Tuna Species', () => {
+    //  cy.contains("Sea cucumber fishing area.")
+    //  cy.contains("Fisheries - Commercial, Non-Tuna Species")
+    //  //cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
+    //  //  {$el.trigger('click')}
+    //  //})
+    //  cy.contains("Finish Sector").as("finishSector")
+    //  cy.get('@finishSector').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //})
+    //it ('Shows what sectors have been completed', () => {
+    //  cy.get('h1').contains('Your sectors')
+    //  cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
+    //    expect ($btn.css('background')).to.include('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153))')
+    //  })
+    //  //completed sector
+    //  cy.get('button').contains('Fisheries - Commercial, Non-Tuna Species').parent().then(($btn) => {
+    //    expect ($btn.css('background'))
+    //    .to
+    //    .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+    //  })
+    //  //completed sector
+    //  cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
+    //    expect ($btn.css('background'))
+    //    .to
+    //    .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+    //  })
+    //  //not yet completed sector
+    //  cy.get('button').contains('Fisheries - Recreational').parent().then(($btn) => {
+    //    expect ($btn.css('background'))
+    //    .to
+    //    .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
+    //  })
+    //  //not yet completed sector
+    //  cy.get('button').contains('Fisheries- Artisanal/Subsistence').parent().then(($btn) => {
+    //    expect ($btn.css('background'))
+    //    .to
+    //    .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
+    //  })
+    //  cy.contains("Next sector").as("nextSector")
+    //  cy.get('@nextSector').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //})
+    //it('Can draw a polygon - Fisheries - Recreational', () => {
+    //  cy.get('[type = "button"]').contains('Next')
+    //    .should('not.exist')
+    //  cy.get('h4').contains('Fisheries - Recreational')
+    //    .should('exist')
+    //    .and('be.visible')
+    //  cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+    //  //wait for second call to route
+    //  cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+    //  drawPolygon()
+    //})
+    //it("Renders sector specific attributes - Fisheries - Recreational", () => {
+    //  cy.get('h1').contains('Area Name')
+    //  cy.get(".mt-1 > .block").clear()
+    //    .type("Reef fishing area.")
+    //  cy.contains('What type of recreational fishing do you do here?')
+    //  cy.contains('What type of species do you fish here?')
+    //    .should('not.exist')
+    //  cy.get('[title="Pole and Line"]')
+    //    .should('not.exist')
+    //  cy.get('[title="Yellowfin"]')
+    //    .should('not.exist')
+    //  cy.get('[title="Reef Fishing"]').click()
+    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Bountiful reef fishing.")
+    //  cy.contains('Save').click()
+    //})
+    //it('Can draw a new shape - Fisheries, Recreational', () => {
+    //  cy.contains('New Shape').as('newShape')
+    //  cy.get('@newShape').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //  drawSecondPolygon()
+    //})
+    //it("Renders sector specific attributes for second shape - Fisheries - Recreational", () => {
+    //  cy.get('h1').contains('Area Name')
+    //  cy.get(".mt-1 > .block").clear()
+    //    .type("Sports fishing area.")
+    //  cy.contains('What type of recreational fishing do you do here?')
+    //  cy.contains('What type of species do you fish here?')
+    //    .should('not.exist')
+    //  cy.get('[title="Pole and Line"]')
+    //    .should('not.exist')
+    //  cy.get('[title="Yellowfin"]')
+    //    .should('not.exist')
+    //  cy.get('[title="Big Game / Sports Fishing"]').click()
+    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Exciting sport fishing to be had here.")
+    //  cy.contains('Save').click()
+    //})
+    //it('Can finish sector - Fisheries - Recreational', () => {
+    //  cy.contains("Fisheries - Recreational")
+    //  cy.contains("Reef fishing area.")
+    //  cy.contains("Sports fishing area")
+    //  cy.contains("Finish Sector").as("finishSector")
+    //  cy.get('@finishSector').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //  cy.get('h1').contains('Your sectors')
+    //    .should('be.visible')
+    //  //additional completed sector
+    //  cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
+    //    expect ($btn.css('background'))
+    //    .to
+    //    .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+    //  })
+    //  //not yet completed sector
+    //  cy.get('button').contains('Fisheries- Artisanal/Subsistence').parent().then(($btn) => {
+    //    expect ($btn.css('background'))
+    //    .to
+    //    .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
+    //  })
+    //  cy.contains("Next sector").as("nextSector")
+    //  cy.get('@nextSector').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //})
+    //it('Errors when invalid polygon is drawn - Fisheries - Artisanal/Subsistence', () => {
+    //  cy.get('[type = "button"]').contains('Next')
+    //    .should('not.exist')
+    //  cy.get('h4').contains('Fisheries- Artisanal/Subsistence')
+    //    .should('exist')
+    //    .and('be.visible')
+    //  cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+    //  //wait for second call to route
+    //  cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+    //  drawInvalidPolygon()
+    //  cy.get('button').contains('Invalid Shape').as('invalidShapeBtn')
+    //  cy.get('@invalidShapeBtn').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //  cy.get('[role="dialog"]').contains('Invalid Shape')
+    //  cy.get('video').should('be.visible')
+    //  cy.get('button').contains('Okay').as('okayBtn')
+    //  cy.get('@okayBtn').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //  cy.get('button').contains('Done').as('doneBtn')
+    //  const stub = cy.stub()  
+    //  cy.on ('window:alert', stub)
+    //  cy
+    //  cy.get('@doneBtn').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //    expect(stub.getCall(0)).to.be.calledWith('Please fix problems with your shape first.') 
+    //  })
+    //})  
+    //it('Can delete invalid shape - Fisheries - Artisanal/Subsistence', () => {
+    //  //trash icon
+    //  cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn')
+    //  const stub = cy.stub()  
+    //  cy.on ('window:confirm', stub)
+    //  cy.get('@trashBtn').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //    expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?')
+    //  })
+    //})
+    //it('Can draw new shape - Fisheries - Artisanal/Subsistence', () => {
+    //  cy.contains('New Shape').as('newShape')
+    //  cy.get('@newShape').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //  drawPolygon()
+    //})
+    //it("Renders sector specific attributes - Fisheries - Artisanal/Subsistence", () => {
+    //  cy.get('h1').contains('Area Name')
+    //  cy.get(".mt-1 > .block").clear()
+    //    .type("Grouper fishing area.")
+    //  cy.contains('What type of recreational fishing do you do here?')
+    //    .should('not.exist')
+    //  cy.contains('What species do you fish here?')
+    //  cy.get('[title="Pole and Line"]')
+    //    .should('not.exist')
+    //  cy.get('[title="Yellowfin"]')
+    //    .should('not.exist')
+    //  cy.get('[title="Grouper"]').click()
+    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Prolific grouper population here.")
+    //  cy.contains('Save').click()
+    //})
+    //it('Can finish sector - Fisheries - Recreational', () => {
+    //  cy.contains("Fisheries- Artisanal/Subsistence")
+    //  cy.contains("Grouper fishing area.")
+    //  cy.get(".space-y-2 > :nth-child(2) > .select-none")
+    //  //.should('be.visible').then(($el) => {
+    //  //  {$el.trigger('click')}
+    //  //})
+    //  cy.contains("Finish Sector").as("finishSector")
+    //  cy.get('@finishSector').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //  cy.get('h1').contains('Your sectors')
+    //    .should('be.visible')
+    //  //additional completed sector
+    //  cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
+    //    expect ($btn.css('background'))
+    //    .to
+    //    .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+    //  })
+    //  //not yet completed sector
+    //  cy.get('div').contains("Fisheries- Artisanal/Subsistence").then(($btn) => {
+    //    expect ($btn.css('background'))
+    //    .to
+    //    .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+    //  })
+    //  //cy.contains("Next sector").as("nextSector")
+    //  //cy.get('@nextSector').then(($btn) => {
+    //  //  {$btn.trigger('click')}
+    //  })
+    })
+    //
+//
+    ////  cy.contains("Your sectors")
+    //// 
+    ////  cy.get("@nextQuestion").should('be.visible').then(($btn) => {
+    ////    {$btn.trigger('click')}
+    ////  })
     //})
     ////it("Skips to end when answer to additional questions is no", () => {
     ////  cy.contains('Are you willing to answer a few additional questions about who you are?')

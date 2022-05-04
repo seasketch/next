@@ -1,58 +1,66 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 //const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
-import { CursorType, ProjectAccessControlSetting, ProjectInviteEmailStatusSubscriptionDocument, RequestInviteOnlyProjectAccessDocument } from "../../../src/generated/graphql";
+import { ProjectAccessControlSetting, ProjectInviteEmailStatusSubscriptionDocument, RequestInviteOnlyProjectAccessDocument } from "../../../src/generated/graphql";
 import "cypress-localstorage-commands"
-import { verify } from "crypto";
-import { VariablesInAllowedPositionRule } from "graphql";
+
 const FormData = require('form-data')
 const fetch = require('node-fetch')
 
-var body = new FormData()
+const basemapNames = ["Maldives Light", "Maldives Satellite"]
 
+const basemaps = {
+  "Maldives Light": {
+    "name": "Maldives Light", 
+    "type": "MAPBOX", 
+    "url": "mapbox://styles/seasketch/ckxywn6wm4r2h14qm9ufcu23w"
+  },
+  "Maldives Satellite": {
+    "name": "Satellite", 
+    "type": "MAPBOX", 
+    "url": "mapbox://styles/mapbox/satellite-streets-v11"
+  }
+}
 
-
-
-//const FormData = require('form-data')
-//import fetch = require('node-fetch');
-
-const createBasemaps = (token, id) => {
-  body.append(
-    //'hello', 'whatsup'
-    'operations',
-    JSON.stringify({
-      query: /* GraphQL */ `
-        mutation CypressCreateBasemap($input: CreateBasemapInput!) {
-          createBasemap(input: $input) {
-            basemap {
-              id, 
-              name, 
-              url,
-              projectId
+const createBasemaps = (id, token, name) => {
+  const body = new FormData()
+    body.append(
+      //'hello', 'whatsup'
+      'operations',
+      JSON.stringify({
+        query: /* GraphQL */ `
+          mutation CypressCreateBasemap($input: CreateBasemapInput!) {
+            createBasemap(input: $input) {
+              basemap {
+                id, 
+                name, 
+                url,
+                projectId
+              }
+              
             }
-            
+          }
+        `,
+        variables: {
+          input: {
+            basemap: {
+              projectId: id,
+              name: basemaps[name].name,
+              type: basemaps[name].type,
+              url: basemaps[name].url,
+              thumbnail: null
+            }
           }
         }
-      `,
-      variables: {
-        input: {
-          basemap: {
-            projectId: id,
-            name: "Maldives Light", 
-            type: "MAPBOX",
-            url: "mapbox://styles/seasketch/ckxywn6wm4r2h14qm9ufcu23w",
-            thumbnail: null
-          }
-        }
-      }
-    })
-  )
+      })
+    )
+  //})
   
-  const file = new File(["foo"], "foo.jpg", {
+  
+  const file = new File(["basemap_thumbnail"], "basemap_thumbnail.jpg", {
     type: "image/jpeg",
   });
 
   
-  //console.log(body)
   body.append('map', JSON.stringify({ 1: ['variables.input.basemap.thumbnail'] }))
   //body.append('my_file', fs.createReadStream('/foo/bar.jpg'));
   body.append('1', file)
@@ -61,7 +69,6 @@ const createBasemaps = (token, id) => {
   //var xhr = new XMLHttpRequest;
   //xhr.open('POST', 'http://localhost:3857/graphql', true);
   //xhr.send(body);
-  
   const fetchResponse = fetch(
     'http://localhost:3857/graphql', 
     { method: 'POST', 
@@ -70,37 +77,8 @@ const createBasemaps = (token, id) => {
     }, body })
 
   return fetchResponse
-  
-  //.mutation(
-  //  gql`
-  //   mutation CreateBasemap($input: CreateBasemapInput!) {
-  //    createBasemap(input: $input) {
-  //      basemap{
-  //        id
-  //      }
-  //    }
-//
-  //    }
-  //  `,
-  //  { "input": {
-  //    "basemap": {
-  //        "projectId": 1441,
-  //        "name": "Maldives Light", 
-  //        "type": "type": "MAPBOX",
-  //        "url": "mapbox://styles/seasketch/ckxywn6wm4r2h14qm9ufcu23w" 
-  //        "thumbnail": null
-  //      }
-  //    //
-  //    }
-  //  },
-  //(token as any)
-  //).then((data) => {
-  //  Cypress.log(data)
-  //  return data
-  //})
 }
-
-
+  
 let surveyId: any
 let authToken: any
 let formId: any
@@ -263,44 +241,22 @@ describe ('Survey creation Cypress commands', () => {
   it.only("Can add basemaps", () => {
     cy.get('@token').then((token: any) => {
       cy.get('@projectId').then((id) => {
-        createBasemaps(token, id)
-        
-        //.then((resp) => {
-        //  
-        //  const read = resp.getReader()
-        //  console.log(read.read())
-        //})
+        basemapNames.forEach((t) => {
+          createBasemaps(id, token, t).then((resp) => {
+            console.log(resp)
+          })
+        })
         cy.wait('@createBasemapRequest').then((req) => {
           if (req.response.body.errors) {
             console.log(req.response.body.errors)
-            console.error()
           } else {
             console.log('no errors')
           }
-          //cy.log(req.response.body)
-
+          console.log(req.response)
           expect (req.response.body).to.not.equal(null)
         })
       })
-      
-      
-      //})
     })
-    //console.log(fetchResponse)
-    //fetchResponse().then((resp) => {
-    //  console.log(resp)
-    //})
-    cy.get('@projectId').then((id: any) => {
-      cy.get('@token').then((token: any) => {
-        //console.log(fetchResponse)
-        
-        //cy.createBasemaps("Maldives", id, token).then((resp) => {
-        //  console.log(resp)
-        //})
-      })
-      
-    })
-    
   })
 
   it ("Updates the survey's isDisabled field", () => {
@@ -540,7 +496,6 @@ describe ('Survey creation Cypress commands', () => {
         //sapId is the id of the SAP form element whose componentSettings need to be updated
         sapId = id
         cy.updateComponentSettings(sapId, referenceElements, authToken, formId).then((resp) => {
-          console.log(referenceElements)
           let values: object = Object.values(resp.updateFormElement.formElement.componentSettings.childVisibilitySettings)
           expect (values[0].enabled).to.eq(true) &&
           expect (values[0].sectors.toString()).to.eq('Fisheries - Commercial, Tuna')
