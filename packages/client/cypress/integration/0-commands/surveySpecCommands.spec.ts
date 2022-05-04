@@ -249,9 +249,8 @@ describe ('Survey creation Cypress commands', () => {
         cy.wait('@createBasemapRequest').then((req) => {
           if (req.response.body.errors) {
             Cypress.log({
-              name: 'Error',
-              message: `message: ${req.response.body.errors[0].message}; 
-                        path: ${req.response.body.errors[0].path}` 
+              name: `message: ${req.response.body.errors[0].message}`,
+              message: `path: ${req.response.body.errors[0].path}` 
             })
           } else {
             Cypress.log({
