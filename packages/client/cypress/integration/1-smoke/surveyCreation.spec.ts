@@ -425,25 +425,25 @@ describe("Survey creation smoke test", () => {
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
       drawPolygon()
     })
-    it ('Renders the correct basemap', () => {
-      cy.get('img').click()
-      cy.get('h4').contains('Maldives Light').parent()
-        .should('have.class', 'font-semibold')
-        cy.get('h4').contains('Satellite').as('satelliteBasemap').parent()
-          .should('not.have.class', 'font-semibold')
-    })
-    it ('Can select different basemap', () => {
-       //.then(() => {
-        
-        cy.contains('Satellite').click()
-          .should('have.class', 'font-semibold')
-        cy.wait('@mapboxApiEvent')
-        //cy.get('h4').contains('Satellite').click().parent()
-        //  
-    //  //  //cy.get('h4').contains('Maldives Light').parent()
-    //    //  .should('not.have.class', 'font-semibold')
-    //    //cy.get('h4').contains('Maldives Light').click()
-    })
+    //it ('Renders the correct basemap', () => {
+    //  cy.get('img').click()
+    //  cy.get('h4').contains('Maldives Light').parent()
+    //    .should('have.class', 'font-semibold')
+    //    cy.get('h4').contains('Satellite').as('satelliteBasemap').parent()
+    //      .should('not.have.class', 'font-semibold')
+    //})
+    //it ('Can select different basemap', () => {
+    //   //.then(() => {
+    //    
+    //    cy.contains('Satellite').click()
+    //      .should('have.class', 'font-semibold')
+    //    cy.wait('@mapboxApiEvent')
+    //    //cy.get('h4').contains('Satellite').click().parent()
+    //    //  
+    ////  //  //cy.get('h4').contains('Maldives Light').parent()
+    ////    //  .should('not.have.class', 'font-semibold')
+    ////    //cy.get('h4').contains('Maldives Light').click()
+    //})
     
     //it("Renders sector specific attributes - Fisheries - Commercial, Tuna", () => {
     //  cy.get('h1').contains('Area Name')

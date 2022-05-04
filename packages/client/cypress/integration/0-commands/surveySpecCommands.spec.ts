@@ -253,9 +253,14 @@ describe ('Survey creation Cypress commands', () => {
             console.log('no errors')
           }
           console.log(req.response)
-          expect (req.response.body).to.not.equal(null)
+          //cy.log(req.response.body)
+
+          expect (req.response.body.errors).to.equal(undefined)
         })
       })
+      
+      
+      //})
     })
   })
 
