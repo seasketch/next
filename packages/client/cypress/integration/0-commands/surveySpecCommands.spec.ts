@@ -248,14 +248,17 @@ describe ('Survey creation Cypress commands', () => {
         })
         cy.wait('@createBasemapRequest').then((req) => {
           if (req.response.body.errors) {
-            console.log(req.response.body.errors)
+            Cypress.log({
+              name: 'Error',
+              message: `message: ${req.response.body.errors[0].message}; 
+                        path: ${req.response.body.errors[0].path}` 
+            })
           } else {
-            console.log('no errors')
+            Cypress.log({
+              message: 'no errors'
+            })
           }
-          console.log(req.response)
-          //cy.log(req.response.body)
-
-          expect (req.response.body.errors).to.equal(undefined)
+          expect (req.response.body).to.not.equal(null)
         })
       })
       
