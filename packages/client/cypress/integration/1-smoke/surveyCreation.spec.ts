@@ -425,37 +425,39 @@ describe("Survey creation smoke test", () => {
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
       drawPolygon()
     })
-    //it ('Renders the correct basemap', () => {
-    //  cy.get('img').click()
-    //  cy.get('h4').contains('Maldives Light').parent()
-    //    .should('have.class', 'font-semibold')
-    //    cy.get('h4').contains('Satellite').as('satelliteBasemap').parent()
-    //      .should('not.have.class', 'font-semibold')
-    //})
-    //it ('Can select different basemap', () => {
-    //   //.then(() => {
-    //    
-    //    cy.contains('Satellite').click()
-    //      .should('have.class', 'font-semibold')
-    //    cy.wait('@mapboxApiEvent')
-    //    //cy.get('h4').contains('Satellite').click().parent()
-    //    //  
-    ////  //  //cy.get('h4').contains('Maldives Light').parent()
-    ////    //  .should('not.have.class', 'font-semibold')
-    ////    //cy.get('h4').contains('Maldives Light').click()
-    //})
-    
-    //it("Renders sector specific attributes - Fisheries - Commercial, Tuna", () => {
-    //  cy.get('h1').contains('Area Name')
-    //  cy.get(".mt-1 > .block").clear()
-    //    .type("Yellowfin tuna fishing area.")
-    //  cy.contains('What type of gear do you use here?')
-    //  cy.contains('What species do you fish here')
-    //  cy.get('[title="Pole and Line"]').click()
-    //  cy.get('[title="Yellowfin"]').click()
-    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
-    //  cy.contains('Save').click()
-    //})
+    it ('Renders the correct basemap', () => {
+      cy.get('img').click()
+      cy.contains('Maldives Light').as('maldivesLight')
+      cy.get('@maldivesLight').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      cy.get('@maldivesLight').should('have.class', 'font-semibold')
+      cy.contains('Satellite')
+          .should('not.have.class', 'font-semibold')
+        //cy.get('h4').contains('Satellite').as('satelliteBasemap').parent()
+        //  .should('not.have.class', 'font-semibold')
+    })
+    it ('Can select different basemap', () => {
+        cy.contains('Satellite').click()
+          .should('have.class', 'font-semibold')
+        cy.contains('Maldives Light')
+          .should('not.have.class', 'font-semibold')
+        cy.wait('@mapboxApiEvent')
+    })
+    it("Renders sector specific attributes - Fisheries - Commercial, Tuna", () => {
+      cy.get('img').then((imgs) => {
+        imgs[0].click()
+      })
+      cy.get('h1').contains('Area Name')
+      cy.get(".mt-1 > .block").scrollIntoView().clear()
+        .type("Yellowfin tuna fishing area.")
+      cy.contains('What type of gear do you use here?')
+      cy.contains('What species do you fish here')
+      cy.get('[title="Pole and Line"]').click()
+      cy.get('[title="Yellowfin"]').click()
+      cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
+      cy.contains('Save').click()
+    })
     //it('Can finish sector - Fisheries - Commercial, Tuna', () => {
     //  cy.contains("Yellowfin tuna fishing area.")
     //  cy.contains("Fisheries - Commercial, Tuna")

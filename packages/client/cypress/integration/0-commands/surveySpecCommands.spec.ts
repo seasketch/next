@@ -227,37 +227,32 @@ describe ('Survey creation Cypress commands', () => {
   afterEach(() => {
     cy.deleteProject(`${slug}`)
   })
-  //it ("Creates the project", () => {
-  //  cy.wait('@createProjectRequest')
-  //    .its('response.body.data.createProject.project')
-  //    .should('have.property', 'id')
-  //})
-  //it ("Creates the survey", () => {
-  //  cy.wait("@createSurveyRequest").its('response').then((resp) => {
-  //    const formElements = resp.body.data.makeSurvey.survey.form.formElements
-  //    expect (formElements.length).to.eq(5)
-  //  }) 
-  //})
+  it ("Creates the project", () => {
+    cy.wait('@createProjectRequest')
+      .its('response.body.data.createProject.project')
+      .should('have.property', 'id')
+  })
+  it ("Creates the survey", () => {
+    cy.wait("@createSurveyRequest").its('response').then((resp) => {
+      const formElements = resp.body.data.makeSurvey.survey.form.formElements
+      expect (formElements.length).to.eq(5)
+    }) 
+  })
   it.only("Can add basemaps", () => {
     cy.get('@token').then((token: any) => {
       cy.get('@projectId').then((id) => {
         basemapNames.forEach((t) => {
-          createBasemaps(id, token, t).then((resp) => {
-            console.log(resp)
-          })
+          createBasemaps(id, token, t)
         })
         cy.wait('@createBasemapRequest').then((req) => {
+          console.log(req)
           if (req.response.body.errors) {
             Cypress.log({
               name: `message: ${req.response.body.errors[0].message}`,
               message: `path: ${req.response.body.errors[0].path}` 
             })
-          } else {
-            Cypress.log({
-              message: 'no errors'
-            })
-          }
-          expect (req.response.body).to.not.equal(null)
+          } 
+          expect (req.response.body.data.createBasemap.basemap.projectId).to.equal(id)
         })
       })
       
