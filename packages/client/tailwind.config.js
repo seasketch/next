@@ -73,6 +73,7 @@ module.exports = {
     padding: ["responsive", "direction"],
     textAlign: ["responsive", "direction"],
     borderRadius: ["responsive", "direction"],
+    translate: ["responsive", "direction"],
   },
   plugins: [
     require("@tailwindcss/forms"),
