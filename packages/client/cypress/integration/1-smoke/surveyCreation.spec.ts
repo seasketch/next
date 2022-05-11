@@ -407,9 +407,8 @@ describe("Survey creation smoke test", () => {
          expect (basemaps[maps[key].name]).to.exist
        })
       })
-      
     })
-    it("Can draw a polygon", () => {
+    it("Can draw a polygon - Fisheries - Commercial, Tuna", () => {
       cy.get('h4').contains('Fisheries - Commercial, Tuna')
         .should('exist')
         .and('be.visible')
@@ -712,13 +711,15 @@ describe("Survey creation smoke test", () => {
       cy.contains("Fisheries- Artisanal/Subsistence")
       cy.contains("Grouper fishing area.")
       cy.get(".space-y-2 > :nth-child(2) > .select-none")
-      //.should('be.visible').then(($el) => {
-      //  {$el.trigger('click')}
-      //})
+        .should('be.visible').then(($el) => {
+          {$el.trigger('click')}
+        })
       cy.contains("Finish Sector").as("finishSector")
       cy.get('@finishSector').then(($btn) => {
         {$btn.trigger('click')}
       })
+    })
+    it('Shows completed sectors', () => {
       cy.get('h1').contains('Your sectors')
         .should('be.visible')
       //additional completed sector
@@ -733,9 +734,6 @@ describe("Survey creation smoke test", () => {
         .to
         .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
       })
-      //cy.contains("Next sector").as("nextSector")
-      //cy.get('@nextSector').then(($btn) => {
-      //  {$btn.trigger('click')}
     })
   })
     
