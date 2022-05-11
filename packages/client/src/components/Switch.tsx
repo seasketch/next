@@ -46,7 +46,9 @@ export default function Switch(props: SwitchProps) {
         <span
           aria-hidden="true"
           className={`${
-            !!props.isToggled ? "translate-x-5" : "translate-x-0"
+            !!props.isToggled
+              ? "translate-x-5 rtl:-translate-x-5"
+              : "translate-x-0"
           } inline-block h-5 w-5 rounded-full bg-white shadow transform transition ease-in-out duration-200`}
         ></span>
       </span>
