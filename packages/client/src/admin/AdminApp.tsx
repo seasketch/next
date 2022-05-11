@@ -23,10 +23,20 @@ import EditBasemapPage from "./data/EditBasemapPage";
 import { useProjectMetadataQuery } from "../generated/graphql";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
-const LazyBasicSettings = React.lazy(() => import("./Settings"));
-const LazyDataSettings = React.lazy(() => import("./data/DataSettings"));
-const LazyUserSettings = React.lazy(() => import("./users/UserSettings"));
-const LazySurveyAdmin = React.lazy(() => import("./surveys/SurveyAdmin"));
+const LazyBasicSettings = React.lazy(
+  /* webpackChunkName: "AdminSettings" */ () => import("./Settings")
+);
+const LazyDataSettings = React.lazy(
+  () =>
+    import(/* webpackChunkName: "AdminDataSettings" */ "./data/DataSettings")
+);
+const LazyUserSettings = React.lazy(
+  () =>
+    import(/* webpackChunkName: "AdminUserSettings" */ "./users/UserSettings")
+);
+const LazySurveyAdmin = React.lazy(
+  () => import(/* webpackChunkName: "AdminSurveys" */ "./surveys/SurveyAdmin")
+);
 
 interface Section {
   breadcrumb: string;

@@ -12,7 +12,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import BasemapControl from "../dataLayers/BasemapControl";
 import useMapData from "../dataLayers/useMapData";
 import Spinner from "../components/Spinner";
-const LazyOverlays = React.lazy(() => import("./OverlayLayers"));
+const LazyOverlays = React.lazy(
+  () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
+);
 
 export default function ProjectApp() {
   const mapContext = useMapContext({

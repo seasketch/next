@@ -14,7 +14,12 @@ import bbox from "@turf/bbox";
 import { Map } from "mapbox-gl";
 import { MapContext, useMapContext } from "../../dataLayers/MapContextManager";
 import { useTranslation } from "react-i18next";
-const LazyArcGISBrowser = React.lazy(() => import("./arcgis/ArcGISBrowser"));
+const LazyArcGISBrowser = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminArcGISBrowser" */ "./arcgis/ArcGISBrowser"
+    )
+);
 
 export default function DataSettings() {
   const { path } = useRouteMatch();

@@ -16,15 +16,32 @@ import { useAuth0 } from "@auth0/auth0-react";
 import * as Sentry from "@sentry/react";
 import { CameraOptions } from "mapbox-gl";
 
-const LazyProjectApp = React.lazy(() => import("./projects/ProjectApp"));
-const LazyProjectAdmin = React.lazy(() => import("./admin/AdminApp"));
-const LazyAuthLanding = React.lazy(() => import("./auth/ProjectInviteLanding"));
-const LazySurveyApp = React.lazy(() => import("./surveys/SurveyApp"));
+const LazyProjectApp = React.lazy(
+  () => import(/* webpackChunkName: "ProjectApp" */ "./projects/ProjectApp")
+);
+const LazyProjectAdmin = React.lazy(
+  () => import(/* webpackChunkName: "AdminApp" */ "./admin/AdminApp")
+);
+const LazyAuthLanding = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "ProjectInviteLanding" */ "./auth/ProjectInviteLanding"
+    )
+);
+const LazySurveyApp = React.lazy(
+  () => import(/* webpackChunkName: "SurveyApp" */ "./surveys/SurveyApp")
+);
 const LazyBasemapEditor = React.lazy(
-  () => import("./admin/data/EditBasemapPage")
+  () =>
+    import(
+      /* webpackChunkName: "AdminEditBasemapPage" */ "./admin/data/EditBasemapPage"
+    )
 );
 const LazySurveyFormEditor = React.lazy(
-  () => import("./admin/surveys/SurveyFormEditor")
+  () =>
+    import(
+      /* webpackChunkName: "AdminSurveyFormEditor" */ "./admin/surveys/SurveyFormEditor"
+    )
 );
 
 function App() {

@@ -10,8 +10,12 @@ import Header from "../header/Header";
 import { useTranslation, Trans } from "react-i18next";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 // import AdminApp from "../admin/AdminApp";
-const LazyAdminApp = React.lazy(() => import("../admin/AdminApp"));
-const LazyProjectApp = React.lazy(() => import("./ProjectApp"));
+const LazyAdminApp = React.lazy(
+  () => import(/* webpackChunkName: "AdminApp" */ "../admin/AdminApp")
+);
+const LazyProjectApp = React.lazy(
+  () => import(/* webpackChunkName: "ProjectApp" */ "./ProjectApp")
+);
 
 export default function ProjectSimpleNav() {
   const { t } = useTranslation(["admin"]);
