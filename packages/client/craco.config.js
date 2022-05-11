@@ -1,3 +1,5 @@
+const GoogleFontsPlugin = require("@beyonk/google-fonts-webpack-plugin");
+
 // craco.config.js
 const path = require("path");
 module.exports = {
@@ -7,6 +9,14 @@ module.exports = {
     },
   },
   webpack: {
+    plugins: {
+      add: [
+        // Include in bundle for offline use
+        new GoogleFontsPlugin({
+          fonts: [{ family: "Inter", variants: ["400", "500", "600", "700"] }],
+        }),
+      ],
+    },
     configure: {
       module: {
         rules: [
