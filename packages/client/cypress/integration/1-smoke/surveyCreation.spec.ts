@@ -3,7 +3,6 @@
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
 
-
 let surveyId: any;
 let authToken: any;
 let formId: any;
@@ -12,7 +11,7 @@ let formId: any;
 const FormData = require('form-data')
 const fetch = require('node-fetch')
 
-const basemapNames = ["Maldives Light", "Maldives Satellite"]
+const basemapNames = ["Maldives Light", "Satellite"]
 
 const basemaps = {
   "Maldives Light": {
@@ -20,7 +19,7 @@ const basemaps = {
     "type": "MAPBOX", 
     "url": "mapbox://styles/seasketch/ckxywn6wm4r2h14qm9ufcu23w"
   },
-  "Maldives Satellite": {
+  "Satellite": {
     "name": "Satellite", 
     "type": "MAPBOX", 
     "url": "mapbox://styles/mapbox/satellite-streets-v11"
@@ -29,14 +28,7 @@ const basemaps = {
 
 const createBasemaps = (id, token, name) => {
   const body = new FormData()
-  
-  
-    console.log(name)
-    console.log(basemaps[name].name)
-    console.log(basemaps[name].type)
-    console.log(basemaps[name].url)
     body.append(
-      //'hello', 'whatsup'
       'operations',
       JSON.stringify({
         query: /* GraphQL */ `
@@ -64,32 +56,21 @@ const createBasemaps = (id, token, name) => {
           }
         }
       })
-    )
-  //})
-  
-  
+    );
   const file = new File(["basemap_thumbnail"], "basemap_thumbnail.jpg", {
     type: "image/jpeg",
   });
-
-  
-  //console.log(body)
   body.append('map', JSON.stringify({ 1: ['variables.input.basemap.thumbnail'] }))
-  //body.append('my_file', fs.createReadStream('/foo/bar.jpg'));
   body.append('1', file)
-  //body.append('authorization')
-
   //var xhr = new XMLHttpRequest;
   //xhr.open('POST', 'http://localhost:3857/graphql', true);
   //xhr.send(body);
-  console.log(body)
   const fetchResponse = fetch(
     'http://localhost:3857/graphql', 
     { method: 'POST', 
     headers: {
       'Authorization': `Bearer ${token}`,
     }, body })
-
   return fetchResponse
 }
 
@@ -181,6 +162,10 @@ describe("Survey creation smoke test", () => {
       cy.intercept("https://api.mapbox.com/map-sessions/*").as('loadBasemaps')
       cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiEvent')
       cy.intercept("https://api.mapbox.com/styles/v1/underbluewaters/*").as("apiStyleEvent")
+      //cy.intercept({
+      //  method: 'GET', 
+      //  url: '/static/js/1.chunk.js.map'
+      //}).as("getRequest")
     })
     before(() => {
       const slug: string = generateSlug();
@@ -202,11 +187,8 @@ describe("Survey creation smoke test", () => {
               access_token
             ).then((resp) => {
               basemapNames.forEach((t) => {
-                createBasemaps(projectId, access_token, t).then((resp) => {
-                  console.log(resp)
-                })
+                createBasemaps(projectId, access_token, t)
               })
-             
               cy.setLocalStorage("surveyId", resp.makeSurvey.survey.id)
               cy.setLocalStorage("access_token", access_token)
               cy.saveLocalStorage()
@@ -418,46 +400,92 @@ describe("Survey creation smoke test", () => {
       cy.get('@nextBtn')
         .should('not.exist')
     })
+    it('Can load basemaps', () => {
+      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+      cy.window().its('mapContext.basemaps').then((maps) => {
+       Object.keys(maps).forEach((key) => {
+         expect (basemaps[maps[key].name]).to.exist
+       })
+      })
+      
+    })
     it("Can draw a polygon", () => {
       cy.get('h4').contains('Fisheries - Commercial, Tuna')
         .should('exist')
         .and('be.visible')
-      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
       drawPolygon()
     })
-    it ('Renders the correct basemap', () => {
+    it('Can view basemap selector', () => {
       cy.get('img').click()
-      cy.contains('Maldives Light').as('maldivesLight')
-      cy.get('@maldivesLight').then(($btn) => {
+      let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
+      values.forEach((val) => {
+        cy.get('.fixed > .overflow-y-auto').children().contains(val)
+      })
+    })
+    it ('Can show scale bar', () => {
+      cy.get('h4').contains('Show scale bar')
+      cy.get('[role="switch"]').then(($switch) => {
+        {$switch.trigger('click')}
+      })
+      cy.contains('5000 km')
+    })
+    it ('Renders the correct basemap', () => {
+      cy.contains('Maldives Light').as('maldivesLightBasemap')
+      cy.get('@maldivesLightBasemap').then(($btn) => {
         {$btn.trigger('click')}
       })
-      cy.get('@maldivesLight').should('have.class', 'font-semibold')
+      cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
       cy.contains('Satellite')
-          .should('not.have.class', 'font-semibold')
-        //cy.get('h4').contains('Satellite').as('satelliteBasemap').parent()
-        //  .should('not.have.class', 'font-semibold')
+        .should('not.have.class', 'font-semibold')
     })
     it ('Can select different basemap', () => {
-        cy.contains('Satellite').click()
-          .should('have.class', 'font-semibold')
-        cy.contains('Maldives Light')
-          .should('not.have.class', 'font-semibold')
-        cy.wait('@mapboxApiEvent')
+      cy.contains('Satellite').as('satelliteBasemap')
+        cy.get('@satelliteBasemap').then(($btn) => {
+          {$btn.trigger('click')}
+          
+        })
+        .should('have.class', 'font-semibold')   
+      cy.contains('Maldives Light')
+        .should('not.have.class', 'font-semibold')
     })
-    it("Renders sector specific attributes - Fisheries - Commercial, Tuna", () => {
-      cy.get('img').then((imgs) => {
-        imgs[0].click()
+    it('Shows option to focus on location', () => {
+      cy.restoreLocalStorage()
+      cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
+        cy.setLocalStorage("lat", `${center["lat"]}`)
+        cy.setLocalStorage("long", `${center["lng"]}`)
+        cy.getLocalStorage("surveyId").then((id) => {
+          cy.setLocalStorage("surveyId", id)
+        })
+        cy.saveLocalStorage()
+        cy.get('h4').contains('Focus on location').click()
       })
-      cy.get('h1').contains('Area Name')
-      cy.get(".mt-1 > .block").scrollIntoView().clear()
-        .type("Yellowfin tuna fishing area.")
-      cy.contains('What type of gear do you use here?')
-      cy.contains('What species do you fish here')
-      cy.get('[title="Pole and Line"]').click()
-      cy.get('[title="Yellowfin"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
-      cy.contains('Save').click()
     })
+    it('Focuses on location', () => {
+      cy.restoreLocalStorage()
+      cy.getLocalStorage('lat').then((lat) => {
+        cy.getLocalStorage('long').then((lng) => {
+          cy.window().its('mapContext.map.transform._center').then((coords) => {
+            expect (coords["lat"]).to.not.equal(lat)
+            expect (coords["lng"]).to.not.equal(lng)
+          })
+        })
+      })
+    })
+   
+    //it('Renders sector specific attributes - Fisheries - Commercial, Tuna', () => {
+    //  //cy.get('img').then((imgs) => {
+    //  //  imgs[0].click()
+    //  //})
+    //  cy.get('h1').contains('Area Name')
+    //  cy.get(".mt-1 > .block").scrollIntoView().clear()
+    //    .type("Yellowfin tuna fishing area.")
+    //  cy.contains('What type of gear do you use here?')
+    //  cy.contains('What species do you fish here')
+    //  cy.get('[title="Pole and Line"]').click()
+    //  cy.get('[title="Yellowfin"]').click()
+    //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
+    //  cy.contains('Save').click()
+    //})
     //it('Can finish sector - Fisheries - Commercial, Tuna', () => {
     //  cy.contains("Yellowfin tuna fishing area.")
     //  cy.contains("Fisheries - Commercial, Tuna")
