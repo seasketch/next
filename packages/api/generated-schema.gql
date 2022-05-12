@@ -8888,6 +8888,7 @@ type Query implements Node {
   
   """
   currentProjectPublicDetails: PublicProjectDetail
+  currentUserIsSuperuser: Boolean!
   dataLayer(id: Int!): DataLayer
   dataLayerByInteractivitySettingsId(interactivitySettingsId: Int!): DataLayer
 

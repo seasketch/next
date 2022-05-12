@@ -7809,6 +7809,7 @@ export type Query = Node & {
   currentProjectAccessStatus?: Maybe<ProjectAccessStatus>;
   /** Executable by all users and used to display a "gate" should a user arrive directly on a project url without authorization. */
   currentProjectPublicDetails?: Maybe<PublicProjectDetail>;
+  currentUserIsSuperuser: Scalars['Boolean'];
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
   /** Reads a single `DataLayer` using its globally unique `ID`. */
@@ -14842,6 +14843,14 @@ export type UpdateProfileMutation = (
   )> }
 );
 
+export type UserIsSuperuserQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type UserIsSuperuserQuery = (
+  { __typename?: 'Query' }
+  & Pick<Query, 'currentUserIsSuperuser'>
+);
+
 export const UpdateTerrainExaggerationFragmentDoc = gql`
     fragment UpdateTerrainExaggeration on Basemap {
   terrainExaggeration
@@ -21489,6 +21498,38 @@ export function useUpdateProfileMutation(baseOptions?: Apollo.MutationHookOption
 export type UpdateProfileMutationHookResult = ReturnType<typeof useUpdateProfileMutation>;
 export type UpdateProfileMutationResult = Apollo.MutationResult<UpdateProfileMutation>;
 export type UpdateProfileMutationOptions = Apollo.BaseMutationOptions<UpdateProfileMutation, UpdateProfileMutationVariables>;
+export const UserIsSuperuserDocument = gql`
+    query UserIsSuperuser {
+  currentUserIsSuperuser
+}
+    `;
+
+/**
+ * __useUserIsSuperuserQuery__
+ *
+ * To run a query within a React component, call `useUserIsSuperuserQuery` and pass it any options that fit your needs.
+ * When your component renders, `useUserIsSuperuserQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserIsSuperuserQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useUserIsSuperuserQuery(baseOptions?: Apollo.QueryHookOptions<UserIsSuperuserQuery, UserIsSuperuserQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<UserIsSuperuserQuery, UserIsSuperuserQueryVariables>(UserIsSuperuserDocument, options);
+      }
+export function useUserIsSuperuserLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<UserIsSuperuserQuery, UserIsSuperuserQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<UserIsSuperuserQuery, UserIsSuperuserQueryVariables>(UserIsSuperuserDocument, options);
+        }
+export type UserIsSuperuserQueryHookResult = ReturnType<typeof useUserIsSuperuserQuery>;
+export type UserIsSuperuserLazyQueryHookResult = ReturnType<typeof useUserIsSuperuserLazyQuery>;
+export type UserIsSuperuserQueryResult = Apollo.QueryResult<UserIsSuperuserQuery, UserIsSuperuserQueryVariables>;
 export const namedOperations = {
   Query: {
     ProjectBucketSetting: 'ProjectBucketSetting',
@@ -21537,7 +21578,8 @@ export const namedOperations = {
     UserSettingsLists: 'UserSettingsLists',
     UserInfo: 'UserInfo',
     ProjectInvites: 'ProjectInvites',
-    InviteEditorModalQuery: 'InviteEditorModalQuery'
+    InviteEditorModalQuery: 'InviteEditorModalQuery',
+    UserIsSuperuser: 'UserIsSuperuser'
   },
   Mutation: {
     UpdateProjectStorageBucket: 'UpdateProjectStorageBucket',
