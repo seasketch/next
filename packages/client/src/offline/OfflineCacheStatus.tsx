@@ -1,16 +1,10 @@
 import { CogIcon } from "@heroicons/react/outline";
 import bytes from "bytes";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import Button from "../components/Button";
-import CenteredCardListLayout, {
-  Card,
-} from "../components/CenteredCardListLayout";
 import DropdownButton from "../components/DropdownButton";
 import InputBlock from "../components/InputBlock";
-import Spinner from "../components/Spinner";
 import Switch from "../components/Switch";
-import useIsSuperuser from "../useIsSuperuser";
 import useStaticAssetCache from "../useStaticAssetCache";
 import { CacheProgress } from "./CacheStatus";
 
@@ -33,6 +27,7 @@ export default function OfflineCacheStatus() {
       percentCached: (numCached / numFiles) * 100,
     };
   }, [cacheState]);
+  const [showFiles, setShowFiles] = useState(false);
   const { t } = useTranslation("superuser");
 
   return (
@@ -74,14 +69,38 @@ export default function OfflineCacheStatus() {
           <CacheProgress
             className="mt-4"
             loading={loading && !ready}
-            // eslint-disable-next-line i18next/no-literal-string
-            description={`${numCached}/${numFiles} files. ${
-              cacheState ? bytes(cacheState.bytes) : ""
-            }`}
+            description={
+              <span>
+                {numCached}/{numFiles}{" "}
+                <button
+                  className="underline"
+                  onClick={() => setShowFiles(!showFiles)}
+                >
+                  {t("files")}
+                </button>
+                . {cacheState ? bytes(cacheState.bytes) : ""}
+              </span>
+            }
             percent={percentCached || 0}
           />
         </div>
         <p className="text-sm text-red-900">{error && error.toString()}</p>
+        {showFiles && cacheState && (
+          <ul className="p-4">
+            {cacheState.entries.map(({ path, cached }) => (
+              <li className="flex items-center" key={path}>
+                <span
+                  className={`${
+                    cached ? "bg-primary-500" : "bg-white border"
+                  } rounded-full w-3 h-3 mr-2`}
+                >
+                  &nbsp;
+                </span>
+                <span className="truncate flex-1">{path}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </>
   );
