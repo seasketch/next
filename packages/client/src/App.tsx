@@ -44,6 +44,13 @@ const LazySurveyFormEditor = React.lazy(
     )
 );
 
+const LazyAccountSettingsPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AccountSettingsPage" */ "./auth/AccountSettingsPage"
+    )
+);
+
 function App() {
   const { user } = useAuth0();
   const { t } = useTranslation(["homepage"]);
@@ -104,6 +111,9 @@ function App() {
                 <span>
                   <Trans>authenticating...</Trans>
                 </span>
+              </Route>
+              <Route path="/account-settings">
+                <LazyAccountSettingsPage />
               </Route>
               <Route exact path="/">
                 <div className="p-4 pb-12 bg-white">

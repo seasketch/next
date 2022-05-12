@@ -1,4 +1,5 @@
 const GoogleFontsPlugin = require("@beyonk/google-fonts-webpack-plugin");
+const WorkboxWebpackPlugin = require("workbox-webpack-plugin");
 
 // craco.config.js
 const path = require("path");
@@ -15,7 +16,15 @@ module.exports = {
         new GoogleFontsPlugin({
           fonts: [{ family: "Inter", variants: ["400", "500", "600", "700"] }],
         }),
+        new WorkboxWebpackPlugin.InjectManifest({
+          swSrc: path.resolve(__dirname, "src/service-worker.ts"),
+          dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
+          exclude: [/\.map$/, /asset-manifest\.json$/, /LICENSE/],
+          additionalManifestEntries: ["/favicon.ico"],
+          maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
+        }),
       ],
+      remove: ["InjectManifest"],
     },
     configure: {
       module: {
