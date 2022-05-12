@@ -31,12 +31,6 @@ export default function useStaticAssetCache() {
             loading: false,
             ready: true,
           });
-          if (
-            s.precacheEnabled &&
-            s.entries.filter((e) => !e.cached).length > 0
-          ) {
-            populateCache();
-          }
         })
         .catch((error) =>
           setState({
@@ -62,9 +56,9 @@ export default function useStaticAssetCache() {
    * will be updated as files are added to the cache.
    */
   const togglePrefetchCaching = useCallback(
-    (enable: boolean) => {
+    async (enable: boolean) => {
       if (cache) {
-        cache.precacheEnabled = enable;
+        await cache.setPrecacheEnabled(enable);
         setState((prev) => {
           if (prev.cacheState) {
             return {

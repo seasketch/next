@@ -1,5 +1,8 @@
 import { PrecacheEntry } from "workbox-precaching/_types";
 import ServiceWorkerWindow from "./offline/ServiceWorkerWindow";
+import localforage from "localforage";
+import pTimeout from "p-timeout";
+
 const PRECACHING_ENABLED_KEY = "ENABLE_STATIC_ASSET_PRECACHING";
 const STATIC_ASSET_CACHE_NAME = "static-assets";
 type PrecacheManifest = (string | PrecacheEntry)[];
@@ -40,15 +43,15 @@ class StaticAssetCache {
    * still be cached if they have been loaded at runtime, but they will not be
    * precached in bulk by the ServiceWorker upon registration.
    */
-  get precacheEnabled(): boolean {
-    return localStorage.getItem(PRECACHING_ENABLED_KEY) === "true";
+  async precacheEnabled() {
+    return !!(await localforage.getItem(PRECACHING_ENABLED_KEY));
   }
 
   /**
    * Enables static asset prefetching upon service worker registration.
    */
-  set precacheEnabled(enable: boolean) {
-    localStorage.setItem(PRECACHING_ENABLED_KEY, enable ? "true" : "false");
+  setPrecacheEnabled(enable: boolean) {
+    return localforage.setItem(PRECACHING_ENABLED_KEY, enable);
   }
 
   /**
@@ -64,14 +67,13 @@ class StaticAssetCache {
       const [url, cacheKey] = this.cacheKeyForEntry(entry);
       this.urlsToCacheKeys.set(url, cacheKey);
     }
-    return this.purgeStaleEntries();
   }
 
   async setManifestFromServiceWorker() {
-    const manifest = await addTimeout(
+    const manifest = await pTimeout(
       ServiceWorkerWindow.getManifest(),
-      2000,
-      "Request for manifest from ServiceWorker timed out"
+      3000,
+      "Failed to contact ServiceWorker. Refresh your browser."
     );
     this.setManifest(manifest);
   }
@@ -89,7 +91,6 @@ class StaticAssetCache {
     if (!this.manifest) {
       throw new Error("Manifest not set");
     }
-    const precacheEnabled = this.precacheEnabled;
     const entries = [];
     let bytes = 0;
     for (const entry of this.manifest) {
@@ -102,6 +103,7 @@ class StaticAssetCache {
         cached: !!response,
       });
     }
+    const precacheEnabled = await this.precacheEnabled();
     return {
       precacheEnabled,
       entries,
@@ -182,7 +184,7 @@ class StaticAssetCache {
           ];
         }
         progressFn({
-          precacheEnabled: this.precacheEnabled,
+          precacheEnabled: await this.precacheEnabled(),
           entries,
           bytes,
         });
@@ -190,6 +192,11 @@ class StaticAssetCache {
     } else {
       await cache.addAll([...filteredKeys]);
     }
+    // Finally, add index.html. Note that this step is last. index.html will
+    // contain references to all the javascript chunks. It should only be
+    // updated if these other assets are cached successfully
+    await cache.add("/index.html");
+    await this.purgeStaleEntries();
     return this.getState();
   }
 
@@ -229,7 +236,10 @@ class StaticAssetCache {
       (entry) => this.cacheKeyForEntry(entry)[1]
     );
     for (const cacheKey of cachedUrls) {
-      if (manifestCacheKeys.indexOf(cacheKey) === -1) {
+      if (
+        manifestCacheKeys.indexOf(cacheKey) === -1 &&
+        cacheKey !== "/index.html"
+      ) {
         console.warn(`purging ${cacheKey} from static asset cache`);
         cache.delete(cacheKey);
       }
@@ -270,17 +280,37 @@ class StaticAssetCache {
       return fetch(event.request);
     }
   }
+
+  async networkThenIndexHtmlCache(event: FetchEvent) {
+    try {
+      const response = await fetch(event.request);
+      if (response) {
+        return response;
+      } else {
+        const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
+        const response = await cache.match("/index.html");
+        if (response) {
+          return response;
+        } else {
+          return new Response("Failed to fetch or retrieve from cache", {
+            status: 408,
+            headers: { "Content-Type": "text/plain" },
+          });
+        }
+      }
+    } catch (e) {
+      const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
+      const response = await cache.match("/index.html");
+      if (response) {
+        return response;
+      } else {
+        return new Response("Failed to fetch or retrieve from cache", {
+          status: 408,
+          headers: { "Content-Type": "text/plain" },
+        });
+      }
+    }
+  }
 }
 
 export default StaticAssetCache;
-
-const awaitTimeout = (delay: number, reason: string) =>
-  new Promise((resolve, reject) =>
-    setTimeout(
-      () => (reason === undefined ? resolve(null) : reject(reason)),
-      delay
-    )
-  );
-
-const addTimeout = (promise: Promise<any>, delay: number, reason: string) =>
-  Promise.race([promise, awaitTimeout(delay, reason)]);

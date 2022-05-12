@@ -13,6 +13,26 @@ clientsClaim();
 
 const MANIFEST = self.__WB_MANIFEST;
 
+const staticAssetCache = new StaticAssetCache(MANIFEST);
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    (async () => {
+      if (await staticAssetCache.precacheEnabled()) {
+        await staticAssetCache.populateCache();
+      }
+      self.skipWaiting();
+    })()
+  );
+});
+
+self.addEventListener("waiting", (event) => {
+  console.log(
+    `A new service worker has installed, but it can't activate` +
+      `until all tabs running the current version have fully unloaded.`
+  );
+});
+
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     // This allows the web app to trigger skipWaiting via
@@ -23,7 +43,7 @@ self.addEventListener("message", (event) => {
   }
 });
 
-const staticAssetCache = new StaticAssetCache(MANIFEST);
+const fileExtensionRegexp = new RegExp("/[^/?]+\\.[^/]+$");
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
@@ -32,5 +52,10 @@ self.addEventListener("fetch", (event) => {
     staticAssetCache.urlInManifest(url)
   ) {
     event.respondWith(staticAssetCache.handleRequest(url, event));
+  } else if (
+    url.host === self.location.host &&
+    !fileExtensionRegexp.test(url.pathname)
+  ) {
+    event.respondWith(staticAssetCache.networkThenIndexHtmlCache(event));
   }
 });
