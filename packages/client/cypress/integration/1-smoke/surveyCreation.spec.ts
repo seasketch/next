@@ -398,23 +398,18 @@ describe("Survey creation smoke test", () => {
           {$btn.trigger('click')}
         }
       })
-     // cy.get('button').contains('Next')
-     //   .should('not.exist')
-     // //cy.get('@nextBtn')
-     // //  .should('not.exist')
-    })//
-    it('Can load basemaps', () => {
-      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      cy.window().its('mapContext.basemaps').then((maps) => {
-       Object.keys(maps).forEach((key) => {
-         expect (basemaps[maps[key].name]).to.exist
-       })
-      })
     })
     it("Can draw a polygon - Fisheries - Commercial, Tuna", () => {
       cy.get('h4').contains('Fisheries - Commercial, Tuna')
         .should('exist')
         .and('be.visible')
+      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+      //Check that basemaps are loaded in window
+      cy.window().its('mapContext.basemaps').then((maps) => {
+        Object.keys(maps).forEach((key) => {
+          expect (basemaps[maps[key].name]).to.exist
+        })
+      })
       drawPolygon()
     })
     it('Can view basemap selector', () => {
@@ -749,7 +744,7 @@ describe("Survey creation smoke test", () => {
     //  })
 
     ////it("Skips to end when answer to additional questions is no", () => {
-    ////  cy.contains('Are you willing to answer a few additional questions about who you are?')
+    //////  cy.contains('Are you willing to answer a few additional questions about who you are?')
     ////    .should('be.visible')
     ////  cy.get('[title="No"]')
     //////    .contains('No')
