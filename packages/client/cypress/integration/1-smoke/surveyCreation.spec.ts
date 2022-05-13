@@ -160,7 +160,7 @@ describe("Survey creation smoke test", () => {
         };
       });
       cy.intercept("https://api.mapbox.com/map-sessions/*").as('loadBasemaps')
-      cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiEvent')
+      cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiRequest')
       cy.intercept("https://api.mapbox.com/styles/v1/underbluewaters/*").as("apiStyleEvent")
       //cy.intercept({
       //  method: 'GET', 
@@ -394,23 +394,42 @@ describe("Survey creation smoke test", () => {
     it ("Advances to SAP page", () => {
       cy.get('[type = "button"]').then(($btn) => {
         if($btn.html() === "Next") {
+          console.log('yes')
           cy.wrap($btn).as('nextBtn')
           {$btn.trigger('click')}
         }
       })
     })
     it("Can draw a polygon - Fisheries - Commercial, Tuna", () => {
+      cy.get('[type = "button"]').as('nextBtn').then(($btn) => {
+        if($btn.html() === "Next") {
+          cy.wrap($btn).as('nextBtn')
+          {$btn.trigger('click')}
+        }
+      })
       cy.get('h4').contains('Fisheries - Commercial, Tuna')
         .should('exist')
         .and('be.visible')
-      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+        //cy.get('@nextBtn').then(($btn) => {
+        //  console.log($btn)
+        //  expect ($btn).to.not.exist
+        //})
+        //.should('not.exist')
+       
       //Check that basemaps are loaded in window
       cy.window().its('mapContext.basemaps').then((maps) => {
         Object.keys(maps).forEach((key) => {
           expect (basemaps[maps[key].name]).to.exist
         })
       })
-      drawPolygon()
+      cy.wait('@mapboxApiRequest').its('response.statusCode').should('eq', 200)
+      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+      
+        drawPolygon()
+
+        
+      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+     
     })
     it('Can view basemap selector', () => {
       cy.get('img').click()
@@ -527,9 +546,9 @@ describe("Survey creation smoke test", () => {
     it('Can finish sector - Fisheries - Commercial, Non-Tuna Species', () => {
       cy.contains("Sea cucumber fishing area.")
       cy.contains("Fisheries - Commercial, Non-Tuna Species")
-      //cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
-      //  {$el.trigger('click')}
-      //})
+      cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
+        {$el.trigger('click')}
+      })
       cy.contains("Finish Sector").as("finishSector")
       cy.get('@finishSector').then(($btn) => {
         {$btn.trigger('click')}
@@ -742,14 +761,14 @@ describe("Survey creation smoke test", () => {
     //  cy.get("@nextQuestion").should('be.visible').then(($btn) => {
     //    {$btn.trigger('click')}
     //  })
-
-    ////it("Skips to end when answer to additional questions is no", () => {
-    //////  cy.contains('Are you willing to answer a few additional questions about who you are?')
-    ////    .should('be.visible')
-    ////  cy.get('[title="No"]')
-    //////    .contains('No')
-    ////    .should('be.visible')
-    //    .click()
+//
+    ////////it("Skips to end when answer to additional questions is no", () => {
+    //////////  cy.contains('Are you willing to answer a few additional questions about who you are?')
+    ////////    .should('be.visible')
+    //////  cy.get('[title="No"]')
+    ////////    .contains('No')
+    //////    .should('be.visible')
+    ////    .click()
     //  cy.wait('@createResponse').its('response.statusCode').should('eq', 200)
     //  cy.get('h1').contains('Thank You for Responding').should('be.visible')
     //  cy.restoreLocalStorage()
@@ -840,7 +859,7 @@ describe("Survey creation smoke test", () => {
           };
         });
         cy.intercept("https://api.mapbox.com/map-sessions/*").as('loadBasemaps')
-        cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiEvent')
+        cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiRequest')
         cy.intercept("https://api.mapbox.com/styles/v1/underbluewaters/*").as("apiStyleEvent")
       }) 
       before(() => {
