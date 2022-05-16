@@ -285,6 +285,8 @@ class StaticAssetCache {
     try {
       const response = await fetch(event.request);
       if (response) {
+        const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
+        await cache.put("/index.html", response.clone());
         return response;
       } else {
         const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
