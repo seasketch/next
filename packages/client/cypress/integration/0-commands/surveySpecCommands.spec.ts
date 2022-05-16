@@ -1,11 +1,84 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 //const devices = ["macbook-15", "ipad-2", "iphone-x", "iphone-5"];
-import { CursorType, ProjectAccessControlSetting, ProjectInviteEmailStatusSubscriptionDocument } from "../../../src/generated/graphql";
+import { ProjectAccessControlSetting, ProjectInviteEmailStatusSubscriptionDocument, RequestInviteOnlyProjectAccessDocument } from "../../../src/generated/graphql";
 import "cypress-localstorage-commands"
-import { verify } from "crypto";
-import { VariablesInAllowedPositionRule } from "graphql";
-import { curry } from "cypress/types/lodash";
 
+const FormData = require('form-data')
+const fetch = require('node-fetch')
+
+const basemapNames = ["Maldives Light", "Maldives Satellite"]
+
+const basemaps = {
+  "Maldives Light": {
+    "name": "Maldives Light", 
+    "type": "MAPBOX", 
+    "url": "mapbox://styles/seasketch/ckxywn6wm4r2h14qm9ufcu23w"
+  },
+  "Maldives Satellite": {
+    "name": "Satellite", 
+    "type": "MAPBOX", 
+    "url": "mapbox://styles/mapbox/satellite-streets-v11"
+  }
+}
+
+const createBasemaps = (id, token, name) => {
+  const body = new FormData()
+    body.append(
+      //'hello', 'whatsup'
+      'operations',
+      JSON.stringify({
+        query: /* GraphQL */ `
+          mutation CypressCreateBasemap($input: CreateBasemapInput!) {
+            createBasemap(input: $input) {
+              basemap {
+                id, 
+                name, 
+                url,
+                projectId
+              }
+              
+            }
+          }
+        `,
+        variables: {
+          input: {
+            basemap: {
+              projectId: id,
+              name: basemaps[name].name,
+              type: basemaps[name].type,
+              url: basemaps[name].url,
+              thumbnail: null
+            }
+          }
+        }
+      })
+    )
+  //})
+  
+  
+  const file = new File(["basemap_thumbnail"], "basemap_thumbnail.jpg", {
+    type: "image/jpeg",
+  });
+
+  
+  body.append('map', JSON.stringify({ 1: ['variables.input.basemap.thumbnail'] }))
+  //body.append('my_file', fs.createReadStream('/foo/bar.jpg'));
+  body.append('1', file)
+  //body.append('authorization')
+
+  //var xhr = new XMLHttpRequest;
+  //xhr.open('POST', 'http://localhost:3857/graphql', true);
+  //xhr.send(body);
+  const fetchResponse = fetch(
+    'http://localhost:3857/graphql', 
+    { method: 'POST', 
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    }, body })
+
+  return fetchResponse
+}
+  
 let surveyId: any
 let authToken: any
 let formId: any
@@ -118,7 +191,16 @@ describe ('Survey creation Cypress commands', () => {
         req.alias = "createSurveyRequest"
       } else if ((req.body.operationName) && (req.body.operationName === "CypressCreateFormElement")) {
         req.alias = "createFormElementRequest"
+      } else if ((req.body.operationName) && (req.body.operationName === "CypressSetAccessControl")) {
+        req.alias = "setAccessControlRequest"
+      } else {
+        req.alias = "createBasemapRequest"
       }
+        //req.continue((resp) => {
+        //  if (resp.body.data.createBasemap) {
+        //    cy.wrap(resp).as('createBasemapResponse')
+        //  }
+        //})
     })
     cy.getToken("User 1").then(({ access_token }) => {
       cy.wrap(access_token).as("token");
@@ -156,6 +238,29 @@ describe ('Survey creation Cypress commands', () => {
       expect (formElements.length).to.eq(5)
     }) 
   })
+  it.only("Can add basemaps", () => {
+    cy.get('@token').then((token: any) => {
+      cy.get('@projectId').then((id) => {
+        basemapNames.forEach((t) => {
+          createBasemaps(id, token, t)
+        })
+        cy.wait('@createBasemapRequest').then((req) => {
+          console.log(req)
+          if (req.response.body.errors) {
+            Cypress.log({
+              name: `message: ${req.response.body.errors[0].message}`,
+              message: `path: ${req.response.body.errors[0].path}` 
+            })
+          } 
+          expect (req.response.body.data.createBasemap.basemap.projectId).to.equal(id)
+        })
+      })
+      
+      
+      //})
+    })
+  })
+
   it ("Updates the survey's isDisabled field", () => {
     cy.get("@surveyId").then((id) => {
       surveyId = id
@@ -393,7 +498,6 @@ describe ('Survey creation Cypress commands', () => {
         //sapId is the id of the SAP form element whose componentSettings need to be updated
         sapId = id
         cy.updateComponentSettings(sapId, referenceElements, authToken, formId).then((resp) => {
-          console.log(referenceElements)
           let values: object = Object.values(resp.updateFormElement.formElement.componentSettings.childVisibilitySettings)
           expect (values[0].enabled).to.eq(true) &&
           expect (values[0].sectors.toString()).to.eq('Fisheries - Commercial, Tuna')

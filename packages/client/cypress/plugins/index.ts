@@ -11,3 +11,4 @@ export default function BasePlugin(on, config) {
   config.env.graphql_endpoint = process.env.REACT_APP_GRAPHQL_ENDPOINT;
   return config;
 }
+
