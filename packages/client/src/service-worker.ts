@@ -16,14 +16,12 @@ const MANIFEST = self.__WB_MANIFEST;
 const staticAssetCache = new StaticAssetCache(MANIFEST);
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    (async () => {
-      if (await staticAssetCache.precacheEnabled()) {
-        await staticAssetCache.populateCache();
-      }
-      skipWaiting();
-    })()
-  );
+  skipWaiting();
+  (async () => {
+    if (await staticAssetCache.precacheEnabled()) {
+      await staticAssetCache.populateCache();
+    }
+  })();
 });
 
 self.addEventListener("waiting", (event) => {
