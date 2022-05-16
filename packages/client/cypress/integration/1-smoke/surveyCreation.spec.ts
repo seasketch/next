@@ -2,13 +2,77 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
-import { createPublicKey } from "crypto";
-import { getByDataCy } from "../../support/utils/utils.js"
-import { isTypedArray } from "cypress/types/lodash";
 
 let surveyId: any;
 let authToken: any;
 let formId: any;
+
+
+const FormData = require('form-data')
+const fetch = require('node-fetch')
+
+const basemapNames = ["Maldives Light", "Satellite"]
+
+const basemaps = {
+  "Maldives Light": {
+    "name": "Maldives Light", 
+    "type": "MAPBOX", 
+    "url": "mapbox://styles/seasketch/ckxywn6wm4r2h14qm9ufcu23w"
+  },
+  "Satellite": {
+    "name": "Satellite", 
+    "type": "MAPBOX", 
+    "url": "mapbox://styles/mapbox/satellite-streets-v11"
+  }
+}
+
+const createBasemaps = (id, token, name) => {
+  const body = new FormData()
+    body.append(
+      'operations',
+      JSON.stringify({
+        query: /* GraphQL */ `
+          mutation CypressCreateBasemap($input: CreateBasemapInput!) {
+            createBasemap(input: $input) {
+              basemap {
+                id, 
+                name, 
+                url,
+                projectId
+              }
+              
+            }
+          }
+        `,
+        variables: {
+          input: {
+            basemap: {
+              projectId: id,
+              name: basemaps[name].name,
+              type: basemaps[name].type,
+              url: basemaps[name].url,
+              thumbnail: null
+            }
+          }
+        }
+      })
+    );
+  const file = new File(["basemap_thumbnail"], "basemap_thumbnail.jpg", {
+    type: "image/jpeg",
+  });
+  body.append('map', JSON.stringify({ 1: ['variables.input.basemap.thumbnail'] }))
+  body.append('1', file)
+  //var xhr = new XMLHttpRequest;
+  //xhr.open('POST', 'http://localhost:3857/graphql', true);
+  //xhr.send(body);
+  const fetchResponse = fetch(
+    'http://localhost:3857/graphql', 
+    { method: 'POST', 
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    }, body })
+  return fetchResponse
+}
 
 
 function generateSlug() { 
@@ -30,9 +94,7 @@ const drawPolygon = () => {
     canvases.push(t)
     return canvases
   }).then((ary) => {
-    console.log(ary)
     const el = ary[0]
-    console.log(el)
     return el
   }).as('el')
   
@@ -40,6 +102,23 @@ const drawPolygon = () => {
     .click(300, 100)
     .click(100, 100)
     .click(100, 300)
+    .dblclick(300, 300)
+}
+
+const drawInvalidPolygon = () => {
+  cy.get('.mapboxgl-canvas').each((t) => {
+    const canvases = []
+    canvases.push(t)
+    return canvases
+  }).then((ary) => {
+    const el = ary[0]
+    return el
+  }).as('el')
+  
+  cy.get('@el').click(300,300)        
+    .click(100, 300)
+    .click(150, 200)
+    .click(50, 200)
     .dblclick(300, 300)
 }
 
@@ -81,8 +160,12 @@ describe("Survey creation smoke test", () => {
         };
       });
       cy.intercept("https://api.mapbox.com/map-sessions/*").as('loadBasemaps')
-      cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiEvent')
+      cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiRequest')
       cy.intercept("https://api.mapbox.com/styles/v1/underbluewaters/*").as("apiStyleEvent")
+      //cy.intercept({
+      //  method: 'GET', 
+      //  url: '/static/js/1.chunk.js.map'
+      //}).as("getRequest")
     })
     before(() => {
       const slug: string = generateSlug();
@@ -103,6 +186,9 @@ describe("Survey creation smoke test", () => {
               projectId, 
               access_token
             ).then((resp) => {
+              basemapNames.forEach((t) => {
+                createBasemaps(projectId, access_token, t)
+              })
               cy.setLocalStorage("surveyId", resp.makeSurvey.survey.id)
               cy.setLocalStorage("access_token", access_token)
               cy.saveLocalStorage()
@@ -216,7 +302,6 @@ describe("Survey creation smoke test", () => {
                       cy.get('@sapId').then((id: any) => {
                         //sapId is the id of the SAP form element whose componentSettings need to be updated
                         cy.updateComponentSettings(id, referenceElements, access_token, formId).then((resp) => {
-                          console.log(referenceElements)
                           let values: object = Object.values(resp.updateFormElement.formElement.componentSettings.childVisibilitySettings)
                           expect (values[0].enabled).to.eq(true) &&
                           expect (values[0].sectors.toString()).to.eq('Fisheries - Commercial, Tuna')
@@ -226,14 +311,10 @@ describe("Survey creation smoke test", () => {
                     };
                     let settingsElements = []
                     cy.get('@createFormLogicResponse').then((resp:any) => {
-                      console.log(resp)
                       settingsElements.push(resp.createFormLogicCondition.query.form.formElements)
                     });
                     cy.get('@SAPResponse').then((resp: any) => {
-                      console.log(resp)
-                      console.log(settingsElements)
                       let settingsAry = settingsElements[0].concat(resp.createFormElement.query.form.formElements)
-                      console.log(settingsAry)
                       updateComponentSettings(settingsAry)
                     });
                   })
@@ -263,7 +344,6 @@ describe("Survey creation smoke test", () => {
       })
     })
     it("Can visit the survey", () => {
-      
       cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
       cy.get('.select-none').should('be.visible').then(($btn) => {
         {$btn.trigger('click')}
@@ -311,23 +391,111 @@ describe("Survey creation smoke test", () => {
            {$btn.trigger('click')}
         })
     })
-    it("Can draw a polygon", () => {
-      cy.get('[type = "button"]').contains('Next').as('nextBtn').then(($btn) => {
-        if ($btn) {
+    it ("Advances to SAP page", () => {
+      cy.get('[type = "button"]').then(($btn) => {
+        if($btn.html() === "Next") {
+          console.log('yes')
+          cy.wrap($btn).as('nextBtn')
           {$btn.trigger('click')}
         }
       })
-      cy.get('@nextBtn')
-        .should('not.exist')
+    })
+    it("Can draw a polygon - Fisheries - Commercial, Tuna", () => {
+      cy.get('[type = "button"]').as('nextBtn').then(($btn) => {
+        if($btn.html() === "Next") {
+          cy.wrap($btn).as('nextBtn')
+          {$btn.trigger('click')}
+        }
+      })
       cy.get('h4').contains('Fisheries - Commercial, Tuna')
         .should('exist')
         .and('be.visible')
+        //cy.get('@nextBtn').then(($btn) => {
+        //  console.log($btn)
+        //  expect ($btn).to.not.exist
+        //})
+        //.should('not.exist')
+       
+      //Check that basemaps are loaded in window
+      cy.window().its('mapContext.basemaps').then((maps) => {
+        Object.keys(maps).forEach((key) => {
+          expect (basemaps[maps[key].name]).to.exist
+        })
+      })
+      cy.wait('@mapboxApiRequest').its('response.statusCode').should('eq', 200)
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      drawPolygon()
+      
+        drawPolygon()
+
+        
+      cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
+     
     })
-    it("Renders sector specific attributes - Fisheries - Commercial, Tuna", () => {
+    it('Can view basemap selector', () => {
+      cy.get('img').click()
+      let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
+      values.forEach((val) => {
+        cy.get('.fixed > .overflow-y-auto').children().contains(val)
+      })
+    })
+    it ('Can show scale bar', () => {
+      cy.get('h4').contains('Show scale bar')
+      cy.get('[role="switch"]').then(($switch) => {
+        {$switch.trigger('click')}
+      })
+      cy.contains('5000 km')
+    })
+    it ('Renders the correct basemap', () => {
+      cy.contains('Maldives Light').as('maldivesLightBasemap')
+      cy.get('@maldivesLightBasemap').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
+      cy.contains('Satellite')
+        .should('not.have.class', 'font-semibold')
+    })
+    it ('Can select different basemap', () => {
+      cy.contains('Satellite').as('satelliteBasemap')
+        cy.get('@satelliteBasemap').then(($btn) => {
+          {$btn.trigger('click')}
+          
+        })
+        .should('have.class', 'font-semibold')   
+      cy.contains('Maldives Light')
+        .should('not.have.class', 'font-semibold')
+    })
+    it('Shows option to focus on location', () => {
+      cy.restoreLocalStorage()
+      cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
+        cy.setLocalStorage("lat", `${center["lat"]}`)
+        cy.setLocalStorage("long", `${center["lng"]}`)
+        cy.getLocalStorage("surveyId").then((id) => {
+          cy.setLocalStorage("surveyId", id)
+        })
+        cy.saveLocalStorage()
+        cy.get('h4').contains('Focus on location').click()
+      })
+    })
+    it('Focuses on location', () => {
+      cy.restoreLocalStorage()
+      cy.getLocalStorage('lat').then((lat) => {
+        cy.getLocalStorage('long').then((lng) => {
+          cy.window().its('mapContext.map.transform._center').then((coords) => {
+            expect (coords["lat"]).to.not.equal(lat)
+            expect (coords["lng"]).to.not.equal(lng)
+          })
+        })
+      })
+    })
+    it('Adjusts scale bar after focusing on location', () => {
+      cy.contains('2000 km')
+    })
+    it('Renders sector specific attributes - Fisheries - Commercial, Tuna', () => {
+      cy.get('img').then((imgs) => {
+        imgs[0].click()
+      })
       cy.get('h1').contains('Area Name')
-      cy.get(".mt-1 > .block").clear()
+      cy.get(".mt-1 > .block").scrollIntoView().clear()
         .type("Yellowfin tuna fishing area.")
       cy.contains('What type of gear do you use here?')
       cy.contains('What species do you fish here')
@@ -336,7 +504,7 @@ describe("Survey creation smoke test", () => {
       cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
       cy.contains('Save').click()
     })
-    it('Can finish sector - Fisheries - Commercial, Tuna"', () => {
+    it('Can finish sector - Fisheries - Commercial, Tuna', () => {
       cy.contains("Yellowfin tuna fishing area.")
       cy.contains("Fisheries - Commercial, Tuna")
       cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
@@ -446,7 +614,7 @@ describe("Survey creation smoke test", () => {
       cy.get('[style="max-height: 60vh;"] > .w-full').type("Bountiful reef fishing.")
       cy.contains('Save').click()
     })
-    it('Can draw a new shape - Fisheries, Recreational', () => {
+    it('Can draw a new shape - Fisheries - Recreational', () => {
       cy.contains('New Shape').as('newShape')
       cy.get('@newShape').then(($btn) => {
         {$btn.trigger('click')}
@@ -456,7 +624,7 @@ describe("Survey creation smoke test", () => {
     it("Renders sector specific attributes for second shape - Fisheries - Recreational", () => {
       cy.get('h1').contains('Area Name')
       cy.get(".mt-1 > .block").clear()
-        .type("Big game fishing area.")
+        .type("Sports fishing area.")
       cy.contains('What type of recreational fishing do you do here?')
       cy.contains('What type of species do you fish here?')
         .should('not.exist')
@@ -471,12 +639,7 @@ describe("Survey creation smoke test", () => {
     it('Can finish sector - Fisheries - Recreational', () => {
       cy.contains("Fisheries - Recreational")
       cy.contains("Reef fishing area.")
-      cy.contains("Big game fishing area")
-      
-      cy.get(".space-y-2 > :nth-child(2) > .select-none")
-      //.should('be.visible').then(($el) => {
-      //  {$el.trigger('click')}
-      //})
+      cy.contains("Sports fishing area")
       cy.contains("Finish Sector").as("finishSector")
       cy.get('@finishSector').then(($btn) => {
         {$btn.trigger('click')}
@@ -500,7 +663,7 @@ describe("Survey creation smoke test", () => {
         {$btn.trigger('click')}
       })
     })
-    it('Can draw a polygon - Fisheries - Artisanal/Subsistence', () => {
+    it('Errors when invalid polygon is drawn - Fisheries - Artisanal/Subsistence', () => {
       cy.get('[type = "button"]').contains('Next')
         .should('not.exist')
       cy.get('h4').contains('Fisheries- Artisanal/Subsistence')
@@ -509,8 +672,88 @@ describe("Survey creation smoke test", () => {
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
       //wait for second call to route
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      drawPolygon()
+      drawInvalidPolygon()
+      cy.get('button').contains('Invalid Shape').as('invalidShapeBtn')
+      cy.get('@invalidShapeBtn').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      cy.get('[role="dialog"]').contains('Invalid Shape')
+      cy.get('video').should('be.visible')
+      cy.get('button').contains('Okay').as('okayBtn')
+      cy.get('@okayBtn').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      cy.get('button').contains('Done').as('doneBtn')
+      const stub = cy.stub()  
+      cy.on ('window:alert', stub)
+      cy
+      cy.get('@doneBtn').then(($btn) => {
+        {$btn.trigger('click')}
+        expect(stub.getCall(0)).to.be.calledWith('Please fix problems with your shape first.') 
+      })
     })  
+    it('Can delete invalid shape - Fisheries - Artisanal/Subsistence', () => {
+      //trash icon
+      cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn')
+      const stub = cy.stub()  
+      cy.on ('window:confirm', stub)
+      cy.get('@trashBtn').then(($btn) => {
+        {$btn.trigger('click')}
+        expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?')
+      })
+    })
+    it('Can draw new shape - Fisheries - Artisanal/Subsistence', () => {
+      cy.contains('New Shape').as('newShape')
+      cy.get('@newShape').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      drawPolygon()
+    })
+    it("Renders sector specific attributes - Fisheries - Artisanal/Subsistence", () => {
+      cy.get('h1').contains('Area Name')
+      cy.get(".mt-1 > .block").clear()
+        .type("Grouper fishing area.")
+      cy.contains('What type of recreational fishing do you do here?')
+        .should('not.exist')
+      cy.contains('What species do you fish here?')
+      cy.get('[title="Pole and Line"]')
+        .should('not.exist')
+      cy.get('[title="Yellowfin"]')
+        .should('not.exist')
+      cy.get('[title="Grouper"]').click()
+      cy.get('[style="max-height: 60vh;"] > .w-full').type("Prolific grouper population here.")
+      cy.contains('Save').click()
+    })
+    it('Can finish sector - Fisheries - Recreational', () => {
+      cy.contains("Fisheries- Artisanal/Subsistence")
+      cy.contains("Grouper fishing area.")
+      cy.get(".space-y-2 > :nth-child(2) > .select-none")
+        .should('be.visible').then(($el) => {
+          {$el.trigger('click')}
+        })
+      cy.contains("Finish Sector").as("finishSector")
+      cy.get('@finishSector').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+    })
+    it('Shows completed sectors', () => {
+      cy.get('h1').contains('Your sectors')
+        .should('be.visible')
+      //additional completed sector
+      cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
+        expect ($btn.css('background'))
+        .to
+        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+      })
+      //not yet completed sector
+      cy.get('div').contains("Fisheries- Artisanal/Subsistence").then(($btn) => {
+        expect ($btn.css('background'))
+        .to
+        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+      })
+    })
+  })
+    
     
 
     //  cy.contains("Your sectors")
@@ -518,14 +761,14 @@ describe("Survey creation smoke test", () => {
     //  cy.get("@nextQuestion").should('be.visible').then(($btn) => {
     //    {$btn.trigger('click')}
     //  })
-    //})
-    ////it("Skips to end when answer to additional questions is no", () => {
-    ////  cy.contains('Are you willing to answer a few additional questions about who you are?')
-    ////    .should('be.visible')
-    ////  cy.get('[title="No"]')
-    ////    .contains('No')
-    ////    .should('be.visible')
-    //    .click()
+//
+    ////////it("Skips to end when answer to additional questions is no", () => {
+    //////////  cy.contains('Are you willing to answer a few additional questions about who you are?')
+    ////////    .should('be.visible')
+    //////  cy.get('[title="No"]')
+    ////////    .contains('No')
+    //////    .should('be.visible')
+    ////    .click()
     //  cy.wait('@createResponse').its('response.statusCode').should('eq', 200)
     //  cy.get('h1').contains('Thank You for Responding').should('be.visible')
     //  cy.restoreLocalStorage()
@@ -616,7 +859,7 @@ describe("Survey creation smoke test", () => {
           };
         });
         cy.intercept("https://api.mapbox.com/map-sessions/*").as('loadBasemaps')
-        cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiEvent')
+        cy.intercept('https://api.mapbox.com/v4/*').as('mapboxApiRequest')
         cy.intercept("https://api.mapbox.com/styles/v1/underbluewaters/*").as("apiStyleEvent")
       }) 
       before(() => {
@@ -914,7 +1157,7 @@ describe("Survey creation smoke test", () => {
       //  //drawPolygon()
       //})
 
-  });//
+  //});//
 });//
 //
 //only

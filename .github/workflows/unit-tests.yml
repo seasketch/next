@@ -288,6 +288,8 @@ jobs:
           UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
           NODE_ENV: staging
           GRAPHILE_WORKER_CONCURRENCY: 5
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           npm run build
           npm start &
