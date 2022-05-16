@@ -3,6 +3,7 @@ import { Workbox } from "workbox-window";
 
 export const MESSAGE_TYPES = {
   GET_MANIFEST: "GET_MANIFEST",
+  GET_BUILD: "GET_BUILD",
 };
 
 /**
@@ -38,6 +39,17 @@ class ServiceWorkerWindow {
     return this.wb.messageSW({ type: MESSAGE_TYPES.GET_MANIFEST }) as Promise<
       (PrecacheEntry | string)[]
     >;
+  }
+
+  /**
+   * Get the build ref of the service worker. Useful for comparing worker and
+   * client build. If they do not match, one is out of date.
+   * @returns string
+   */
+  getSWBuild() {
+    return this.wb.messageSW({
+      type: MESSAGE_TYPES.GET_BUILD,
+    }) as Promise<string>;
   }
 }
 

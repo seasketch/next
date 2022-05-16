@@ -21,7 +21,7 @@ self.addEventListener("install", (event) => {
       if (await staticAssetCache.precacheEnabled()) {
         await staticAssetCache.populateCache();
       }
-      self.skipWaiting();
+      skipWaiting();
     })()
   );
 });
@@ -40,6 +40,8 @@ self.addEventListener("message", (event) => {
     self.skipWaiting();
   } else if (event.data && event.data.type === MESSAGE_TYPES.GET_MANIFEST) {
     event.ports[0].postMessage(MANIFEST);
+  } else if (event.data && event.data.type === MESSAGE_TYPES.GET_BUILD) {
+    event.ports[0].postMessage(process.env.REACT_APP_BUILD || "local");
   }
 });
 
