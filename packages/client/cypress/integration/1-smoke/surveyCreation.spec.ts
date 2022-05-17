@@ -394,7 +394,6 @@ describe("Survey creation smoke test", () => {
     it ("Advances to SAP page", () => {
       cy.get('[type = "button"]').then(($btn) => {
         if($btn.html() === "Next") {
-          console.log('yes')
           cy.wrap($btn).as('nextBtn')
           {$btn.trigger('click')}
         }
@@ -410,12 +409,6 @@ describe("Survey creation smoke test", () => {
       cy.get('h4').contains('Fisheries - Commercial, Tuna')
         .should('exist')
         .and('be.visible')
-        //cy.get('@nextBtn').then(($btn) => {
-        //  console.log($btn)
-        //  expect ($btn).to.not.exist
-        //})
-        //.should('not.exist')
-       
       //Check that basemaps are loaded in window
       cy.window().its('mapContext.basemaps').then((maps) => {
         Object.keys(maps).forEach((key) => {
@@ -424,12 +417,8 @@ describe("Survey creation smoke test", () => {
       })
       cy.wait('@mapboxApiRequest').its('response.statusCode').should('eq', 200)
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-      
-        drawPolygon()
-
-        
+      drawPolygon()
       cy.wait('@loadBasemaps').its('response.statusCode').should('eq', 200)
-     
     })
     it('Can view basemap selector', () => {
       cy.get('img').click()
@@ -486,9 +475,6 @@ describe("Survey creation smoke test", () => {
           })
         })
       })
-    })
-    it('Adjusts scale bar after focusing on location', () => {
-      cy.contains('2000 km')
     })
     it('Renders sector specific attributes - Fisheries - Commercial, Tuna', () => {
       cy.get('img').then((imgs) => {
