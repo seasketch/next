@@ -2,12 +2,10 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
-import { xor } from "cypress/types/lodash";
 
 let surveyId: any;
 let authToken: any;
 let formId: any;
-
 
 const FormData = require('form-data')
 const fetch = require('node-fetch')
@@ -83,12 +81,12 @@ const waitOnMapbox = (count) => {
   }
 }
 
-function generateSlug() { 
+const generateSlug = () => { 
   const result = Math.random().toString(36).substring(2,7);
   return result
 }
 
-function checkForNavAndLang() {
+const checkForNavAndLang = () => {
     //navigation and language buttons
     cy.get('[title="Previous Question"]').should('be.visible').and('exist')
     cy.get('[title="Next Question"]').should('be.visible').and('exist')
@@ -121,7 +119,6 @@ const drawInvalidPolygon = () => {
     const el = ary[0]
     return el
   }).as('el')
-  
   cy.get('@el').click(300,300)        
     .click(100, 300)
     .click(150, 200)
