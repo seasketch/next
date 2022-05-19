@@ -77,20 +77,11 @@ const createBasemaps = (id, token, name) => {
 
 const waitOnMapbox = (count) => {
   for (; count; count--) {
-    cy.wait('@mapBoxApiCalls').then((intercepts) => {
+    cy.wait('@mapBoxApiCall').then((intercepts) => {
       expect (intercepts.response.statusCode).to.be.oneOf([200, 204])
     })
   }
 }
-
-    //.then((intercept) => {
-     // x.push(intercept)
-      //if (intercept) {
-      //expect (intercept.response.statusCode).to.be.oneOf([200, 204])
-      //}
-    //})
-
- // }
 
 function generateSlug() { 
   const result = Math.random().toString(36).substring(2,7);
@@ -114,7 +105,6 @@ const drawPolygon = () => {
     const el = ary[0]
     return el
   }).as('el')
-  
   cy.get('@el').click(300,300)        
     .click(300, 100)
     .click(100, 100)
@@ -155,8 +145,6 @@ const drawSecondPolygon = () => {
     .dblclick(250, 250)
 }
 
-
-
 const devices: any = [ "iphone-x", "iphone-5", "macbook-15", "ipad-2"];
 
 describe("Survey creation smoke test", () => {
@@ -176,7 +164,7 @@ describe("Survey creation smoke test", () => {
           req.alias = "getProjectRegion"
         };
       });
-      cy.intercept(/mapbox/).as('mapBoxApiCalls')
+      cy.intercept(/mapbox/).as('mapBoxApiCall')
     });
     before(() => {
       const slug: string = generateSlug();
