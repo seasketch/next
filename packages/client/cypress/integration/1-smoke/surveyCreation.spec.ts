@@ -426,10 +426,7 @@ describe("Survey creation smoke test", () => {
           expect (basemaps[maps[key].name]).to.exist
         })
       })
-      //let count = 12
-      //wait on all calls to Mapbox Api
       waitOnMapbox(11)
-     
       drawPolygon()
     })
     it('Can view basemap selector', () => {
