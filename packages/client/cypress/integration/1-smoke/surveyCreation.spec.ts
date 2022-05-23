@@ -523,7 +523,7 @@ describe("Survey creation smoke test", () => {
       cy.get('[title="Yellowfin"]').click()
       cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
     })
-    it ('Can set area importance using SAP range', () => {
+    it ('Can set area importance using SAP range slider', () => {
       cy.get('h1').contains('How important is this area?').scrollIntoView();
       cy.get('input[type=range]').as('range')
         .should('exist');
