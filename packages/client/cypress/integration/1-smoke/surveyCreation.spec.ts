@@ -12,6 +12,10 @@ const fetch = require('node-fetch')
 
 const basemapNames = ["Maldives Light", "Satellite"]
 
+const handleClick = (event) => {
+  console.log(event)
+}
+
 const basemaps = {
   "Maldives Light": {
     "name": "Maldives Light", 
@@ -144,6 +148,37 @@ const drawSecondPolygon = () => {
 
 const devices: any = [ "iphone-x", "iphone-5", "macbook-15", "ipad-2"];
 
+//function getKeyAndMove(e) {
+//  var key_code = e.which || e.keyCode;
+//  switch (key_code) {
+//      case 37: //left arrow key
+//          moveLeft();
+//          break;
+//      case 38: //Up arrow key
+//          moveUp();
+//          break;
+//      case 39: //right arrow key
+//          moveRight();
+//          break;
+//      case 40: //down arrow key
+//          moveDown();
+//          break;
+//  }
+//}
+function moveLeft(e) {
+  console.log(e.style)
+  //e.style.left = parseInt(e.style.left) - 5 + "px";
+}
+//function moveUp(e) {
+//  e.style.top = parseInt(e.style.top) - 5 + "px";
+//}
+//function moveRight(e) {
+//  e.style.left = parseInt(e.style.left) + 5 + "px";
+//}
+//function moveDown() {
+//  e.style.top = parseInt(e.style.top) + 5 + "px";
+//}
+
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
     beforeEach(() => {
@@ -187,7 +222,6 @@ describe("Survey creation smoke test", () => {
               })
               cy.setLocalStorage("surveyId", resp.makeSurvey.survey.id)
               cy.setLocalStorage("access_token", access_token)
-              cy.saveLocalStorage()
               cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
               cy.wrap(resp.makeSurvey.survey.form.formElements).as('formElements')
               cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
@@ -203,7 +237,11 @@ describe("Survey creation smoke test", () => {
                   cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
                     const SAPFormId = formId + 1
                     cy.createSAPElements(SAPFormId, "Maldives", access_token).then((resp)=> {
+                      console.log(resp)
                       cy.wrap(resp).as('SAPResponse')
+                      let SAPElements = resp.createFormElement.query.form.formElements
+                      cy.setLocalStorage('SAPElements', JSON.stringify(SAPElements))
+                      console.log(resp.createFormElement.query)
                     })
                     const formElements = resp.createFormElement.query.form.formElements
                     const jumpToIds = []
@@ -313,6 +351,7 @@ describe("Survey creation smoke test", () => {
                       let settingsAry = settingsElements[0].concat(resp.createFormElement.query.form.formElements)
                       updateComponentSettings(settingsAry)
                     });
+                    cy.saveLocalStorage()
                   })
                 })
               })
@@ -331,9 +370,9 @@ describe("Survey creation smoke test", () => {
         //cy.getLocalStorage("responseId").then((responseId) => {
         //  cy.deleteResponse
         //})
-        cy.getLocalStorage("token").then((token) => {
-          cy.deleteSurvey(surveyId, token)
-        })
+        //cy.getLocalStorage("token").then((token) => {
+        //  cy.deleteSurvey(surveyId, token)
+        //})
       })
       cy.getLocalStorage("slug").then((slug) => {
         cy.deleteProject(`${slug}`)
@@ -413,7 +452,6 @@ describe("Survey creation smoke test", () => {
       })
       //wait on all calls to Mapbox Api
       waitOnMapbox(11)
-     
       drawPolygon()
     })
     it('Can view basemap selector', () => {
@@ -484,18 +522,40 @@ describe("Survey creation smoke test", () => {
       cy.get('[title="Pole and Line"]').click()
       cy.get('[title="Yellowfin"]').click()
       cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
-      cy.contains('Save').click()
     })
+    it ('Can set area importance using SAP range', () => {
+      cy.get('h1').contains('How important is this area?').scrollIntoView();
+      cy.get('input[type=range]').as('range')
+        .should('exist');
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      cy.get('@range').then(($range) => {
+        // get the DOM node
+        const range = $range[0];
+        //console.log(range)
+        // set the value manually
+        nativeInputValueSetter.call(range, 15);
+        // now dispatch the event
+        //@ts-ignore
+        range.dispatchEvent(new Event('change', { value: 15, bubbles: true }));
+      });
+      cy.get('@range')
+        .should('have.value', 15);
+      cy.contains('Save').click();
+      cy.get('.SAPRangeMini')
+        .should('exist')
+        .and('have.value', 15);
+    });
     it('Can finish sector - Fisheries - Commercial, Tuna', () => {
-      cy.contains("Yellowfin tuna fishing area.")
-      cy.contains("Fisheries - Commercial, Tuna")
+      cy.contains('Fisheries - Commercial, Tuna')
+        .should('be.visible');
+      cy.contains("Yellowfin tuna fishing area.");
       cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
         {$el.trigger('click')}
-      })
+      });
       cy.contains("Next sector").as("nextSector")
       cy.get('@nextSector').then(($btn) => {
         {$btn.trigger('click')}
-      })
+      });
     })
     it('Can draw a polygon - Fisheries - Commercial, Non-Tuna Species', () => {
       cy.get('[type = "button"]').contains('Next')
@@ -739,11 +799,11 @@ describe("Survey creation smoke test", () => {
     //  })
 ////
     ////////////it("Skips to end when answer to additional questions is no", () => {
-    //////////////  cy.contains('Are you willing to answer a few additional questions about who you are?')
-    ////////////    .should('be.visible')
-    //////  cy.get('[title="No"]')
-    //////////    .contains('No')
-    ////////    .should('be.visible')
+    ////////////////  cy.contains('Are you willing to answer a few additional questions about who you are?')
+    //////////////    .should('be.visible')
+    ////////  cy.get('[title="No"]')
+    ////////////    .contains('No')
+    //////////    .should('be.visible')
     //////    .click()
     ////  cy.wait('@createResponse').its('response.statusCode').should('eq', 200)
     //  cy.get('h1').contains('Thank You for Responding').should('be.visible')
