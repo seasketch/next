@@ -721,65 +721,65 @@ describe("Survey creation smoke test", () => {
     })  
     it('Can delete invalid shape - Fisheries - Artisanal/Subsistence', () => {
       //trash icon
-      cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn')
-      const stub = cy.stub()  
-      cy.on ('window:confirm', stub)
+      cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn');
+      const stub = cy.stub();
+      cy.on ('window:confirm', stub);
       cy.get('@trashBtn').then(($btn) => {
         {$btn.trigger('click')}
         expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?')
-      })
-    })
+      });
+    });
     it('Can draw new shape - Fisheries - Artisanal/Subsistence', () => {
-      cy.contains('New Shape').as('newShape')
+      cy.contains('New Shape').as('newShape');
       cy.get('@newShape').then(($btn) => {
         {$btn.trigger('click')}
       })
-      drawPolygon()
+      drawPolygon();
     })
     it("Renders sector specific attributes - Fisheries - Artisanal/Subsistence", () => {
-      cy.get('h1').contains('Area Name')
+      cy.get('h1').contains('Area Name');
       cy.get(".mt-1 > .block").clear()
         .type("Grouper fishing area.")
       cy.contains('What type of recreational fishing do you do here?')
-        .should('not.exist')
-      cy.contains('What species do you fish here?')
+        .should('not.exist');
+      cy.contains('What species do you fish here?');
       cy.get('[title="Pole and Line"]')
-        .should('not.exist')
+        .should('not.exist');
       cy.get('[title="Yellowfin"]')
-        .should('not.exist')
-      cy.get('[title="Grouper"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Prolific grouper population here.")
-      cy.contains('Save').click()
-    })
+        .should('not.exist');
+      cy.get('[title="Grouper"]').click();
+      cy.get('[style="max-height: 60vh;"] > .w-full').type("Prolific grouper population here.");
+      cy.contains('Save').click();
+    });
     it('Can finish sector - Fisheries - Recreational', () => {
-      cy.contains("Fisheries- Artisanal/Subsistence")
-      cy.contains("Grouper fishing area.")
+      cy.contains("Fisheries- Artisanal/Subsistence");
+      cy.contains("Grouper fishing area.");
       cy.get(".space-y-2 > :nth-child(2) > .select-none")
         .should('be.visible').then(($el) => {
           {$el.trigger('click')}
-        })
-      cy.contains("Finish Sector").as("finishSector")
+        });
+      cy.contains("Finish Sector").as("finishSector");
       cy.get('@finishSector').then(($btn) => {
         {$btn.trigger('click')}
-      })
-    })
+      });
+    });
     it('Shows completed sectors', () => {
       cy.get('h1').contains('Your sectors')
-        .should('be.visible')
+        .should('be.visible');
       //additional completed sector
       cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
         expect ($btn.css('background'))
         .to
         .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      })
+      });
       //not yet completed sector
       cy.get('div').contains("Fisheries- Artisanal/Subsistence").then(($btn) => {
         expect ($btn.css('background'))
         .to
         .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      })
-    })
-  })
+      });
+    });
+  });
 
     ////////////it("Skips to end when answer to additional questions is no", () => {
     //////////////////  cy.contains('Are you willing to answer a few additional questions about who you are?')
