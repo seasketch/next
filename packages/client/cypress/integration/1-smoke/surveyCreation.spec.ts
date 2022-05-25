@@ -421,7 +421,7 @@ describe("Survey creation smoke test", () => {
         })
       })
       //wait on all calls to Mapbox Api
-      waitOnMapbox(11)
+      waitOnMapbox(10)
       drawPolygon()
     })
     it('Can view basemap selector', () => {
@@ -533,7 +533,7 @@ describe("Survey creation smoke test", () => {
       cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
         .should('exist')
         .and('be.visible')
-      waitOnMapbox(8)
+      waitOnMapbox(7)
       drawPolygon()
     })
     it("Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species", () => {
@@ -604,7 +604,7 @@ describe("Survey creation smoke test", () => {
       cy.get('h4').contains('Fisheries - Recreational')
         .should('exist')
         .and('be.visible')
-      waitOnMapbox(8)
+      waitOnMapbox(7)
       drawPolygon()
     })
     it("Renders sector specific attributes - Fisheries - Recreational", () => {
@@ -694,7 +694,7 @@ describe("Survey creation smoke test", () => {
       cy.get('h4').contains('Fisheries- Artisanal/Subsistence')
         .should('exist')
         .and('be.visible')
-      waitOnMapbox(8)
+      waitOnMapbox(7)
       drawInvalidPolygon()
       cy.get('button').contains('Invalid Shape').as('invalidShapeBtn')
       cy.get('@invalidShapeBtn').then(($btn) => {
