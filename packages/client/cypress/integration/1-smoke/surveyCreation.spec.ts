@@ -201,28 +201,26 @@ describe("Survey creation smoke test", () => {
                   cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
                     const SAPFormId = formId + 1
                     cy.createSAPElements(SAPFormId, "Maldives", access_token).then((resp)=> {
-                      console.log(resp)
-                      cy.wrap(resp).as('SAPResponse')
+                      cy.wrap(resp).as('SAPResponse');
                       let SAPElements = resp.createFormElement.query.form.formElements
-                      cy.setLocalStorage('SAPElements', JSON.stringify(SAPElements))
-                      console.log(resp.createFormElement.query)
+                      cy.setLocalStorage('SAPElements', JSON.stringify(SAPElements));
                     })
                     const formElements = resp.createFormElement.query.form.formElements
                     const jumpToIds = []
                     //atoll questions
-                    const elementsToUpdate = formElements.slice(5,24)
+                    const elementsToUpdate = formElements.slice(5,24);
                     //YesNo id
-                    elementsToUpdate.push(formElements[30])
+                    elementsToUpdate.push(formElements[30]);
                     for (let i = 0; i < formElements.length; i++) {
                       if (formElements[i].typeId === "SpatialAccessPriorityInput"
                        || formElements[i].typeId === "SaveScreen"
                         ) {
-                        jumpToIds.push(formElements[i].id)
-                      }
-                    }
-                    cy.wrap(jumpToIds[1]).as('sapId')
-                    cy.updateJumpToId(jumpToIds, elementsToUpdate, formId, access_token)
-                    const updateSubToIdElements = []
+                        jumpToIds.push(formElements[i].id);
+                      };
+                    };
+                    cy.wrap(jumpToIds[1]).as('sapId');
+                    cy.updateJumpToId(jumpToIds, elementsToUpdate, formId, access_token);
+                    const updateSubToIdElements = [];
                     formElements.forEach((t) => {
                       if (
                        t.body.content[0].content[0].text === "If you are representing a guesthouse, please provide the name of your establishment:"
@@ -243,10 +241,10 @@ describe("Survey creation smoke test", () => {
                       ) {
                         updateSubToIdElements.push(t)
                       }
-                    })
+                    });
                     cy.get('@sapId').then((id: any) => {
-                      cy.updateSubordinateToId(id, updateSubToIdElements, formId, access_token)
-                    })
+                      cy.updateSubordinateToId(id, updateSubToIdElements, formId, access_token);
+                    });
                     let baseId = 0
                     let ids = []
                     function getIds(baseId) {
@@ -260,21 +258,21 @@ describe("Survey creation smoke test", () => {
                             baseId = formElements[i].id
                             break
                           }
-                        } 
-                        getIds(baseId)
+                        };
+                        getIds(baseId);
                       } else {
                         for(let i=0; i < 20; i++) {
-                          ids.push(baseId++)
-                        }
-                      }
+                          ids.push(baseId++);
+                        };
+                      };
                       return ids
-                    }
-                    let newIds = getIds(baseId)
-                    newIds.push(newIds[19] + 8)
-                    newIds.push(newIds[20] + 1)
+                    };
+                    let newIds = getIds(baseId);
+                    newIds.push(newIds[19] + 8);
+                    newIds.push(newIds[20] + 1);
                     cy.createFormLogicRules(formId, "Maldives", newIds, access_token).then((resp) => {
-                      cy.wrap(resp).as('createFormLogicResponse')
-                    })
+                      cy.wrap(resp).as('createFormLogicResponse');
+                    });
                     const exportIds = {
                       "tuna_gear": 0, 
                       "tuna_species": 1, 
@@ -286,9 +284,9 @@ describe("Survey creation smoke test", () => {
                       "vessel": 7, 
                       "guesthouse_name": 8,
                       "nontuna_sp": 9
-                    }
+                    };
                     const updateComponentSettings = (formElements) => {
-                      let referenceElements = []
+                      let referenceElements = [];
                       formElements.forEach((t) => {
                         //using the exportIds array, if exportId is exist, add exportId: formElement.id to referenceElements
                         if((exportIds[t.exportId]) && (t.exportId !== "tuna_gear")) {
