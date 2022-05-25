@@ -7,14 +7,10 @@ let surveyId: any;
 let authToken: any;
 let formId: any;
 
-const FormData = require('form-data')
-const fetch = require('node-fetch')
+const FormData = require('form-data');
+const fetch = require('node-fetch');
 
-const basemapNames = ["Maldives Light", "Satellite"]
-
-const handleClick = (event) => {
-  console.log(event)
-}
+const basemapNames = ["Maldives Light", "Satellite"];
 
 const basemaps = {
   "Maldives Light": {
@@ -27,10 +23,10 @@ const basemaps = {
     "type": "MAPBOX", 
     "url": "mapbox://styles/mapbox/satellite-streets-v11"
   }
-}
+};
 
 const createBasemaps = (id, token, name) => {
-  const body = new FormData()
+  const body = new FormData();
     body.append(
       'operations',
       JSON.stringify({
@@ -63,8 +59,8 @@ const createBasemaps = (id, token, name) => {
   const file = new File(["basemap_thumbnail"], "basemap_thumbnail.jpg", {
     type: "image/jpeg",
   });
-  body.append('map', JSON.stringify({ 1: ['variables.input.basemap.thumbnail'] }))
-  body.append('1', file)
+  body.append('map', JSON.stringify({ 1: ['variables.input.basemap.thumbnail'] }));
+  body.append('1', file);
   //var xhr = new XMLHttpRequest;
   //xhr.open('POST', 'http://localhost:3857/graphql', true);
   //xhr.send(body);
@@ -75,76 +71,76 @@ const createBasemaps = (id, token, name) => {
       'Authorization': `Bearer ${token}`,
     }, body })
   return fetchResponse
-}
+};
 
 const waitOnMapbox = (count) => {
   for (; count; count--) {
     cy.wait('@mapBoxApiCall').then((intercepts) => {
-      expect (intercepts.response.statusCode).to.be.oneOf([200, 204])
-    })
-  }
-}
+      expect (intercepts.response.statusCode).to.be.oneOf([200, 204]);
+    });
+  };
+};
 
 const generateSlug = () => { 
   const result = Math.random().toString(36).substring(2,7);
   return result
-}
+};
 
 const checkForNavAndLang = () => {
     //navigation and language buttons
-    cy.get('[title="Previous Question"]').should('be.visible').and('exist')
-    cy.get('[title="Next Question"]').should('be.visible').and('exist')
+    cy.get('[title="Previous Question"]').should('be.visible').and('exist');
+    cy.get('[title="Next Question"]').should('be.visible').and('exist');
     cy.get('button.px-3')
-      .should('be.visible')
-}
+      .should('be.visible');
+};
 
 const drawPolygon = () => {
   cy.get('.mapboxgl-canvas').each((t) => {
-    const canvases = []
-    canvases.push(t)
+    const canvases = [];
+    canvases.push(t);
     return canvases
   }).then((ary) => {
     const el = ary[0]
     return el
-  }).as('el')
+  }).as('el');
   cy.get('@el').click(300,300)        
     .click(300, 100)
     .click(100, 100)
     .click(100, 300)
     .dblclick(300, 300)
-}
+};
 
 const drawInvalidPolygon = () => {
   cy.get('.mapboxgl-canvas').each((t) => {
-    const canvases = []
-    canvases.push(t)
+    const canvases = [];
+    canvases.push(t);
     return canvases
   }).then((ary) => {
     const el = ary[0]
     return el
-  }).as('el')
+  }).as('el');
   cy.get('@el').click(300,300)        
     .click(100, 300)
     .click(150, 200)
     .click(50, 200)
     .dblclick(300, 300)
-}
+};
 
 const drawSecondPolygon = () => {
   cy.get('.mapboxgl-canvas').each((t) => {
-    const canvases = []
-    canvases.push(t)
+    const canvases = [];
+    canvases.push(t);
     return canvases
   }).then((ary) => {
     const el = ary[0]
     return el
-  }).as('el')
+  }).as('el');
   cy.get('@el').click(250,250)     
     .click(50, 250)
     .click(50, 50)
     .click(250, 50)
     .dblclick(250, 250)
-}
+};
 
 const devices: any = [ "iphone-x", "iphone-5", "macbook-15", "ipad-2"];
 
@@ -725,8 +721,8 @@ describe("Survey creation smoke test", () => {
       const stub = cy.stub();
       cy.on ('window:confirm', stub);
       cy.get('@trashBtn').then(($btn) => {
-        {$btn.trigger('click')}
-        expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?')
+        {$btn.trigger('click')};
+        expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?');
       });
     });
     it('Can draw new shape - Fisheries - Artisanal/Subsistence', () => {
