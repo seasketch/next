@@ -161,14 +161,14 @@ describe("Survey creation smoke test", () => {
           req.alias = "getProjectRegion"
         };
       });
-      cy.intercept(/mapbox/).as('mapBoxApiCall')
+      cy.intercept(/mapbox/).as('mapBoxApiCall');
     });
     before(() => {
       const slug: string = generateSlug();
-      cy.setLocalStorage("slug", slug)
+      cy.setLocalStorage("slug", slug);
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
-        cy.setLocalStorage("token", access_token)
+        cy.setLocalStorage("token", access_token);
         cy.createProject(
           `Maldives Spatial Planning Test - ${slug}`,
           slug,
@@ -184,21 +184,20 @@ describe("Survey creation smoke test", () => {
             ).then((resp) => {
               basemapNames.forEach((t) => {
                 createBasemaps(projectId, access_token, t)
-              })
-              cy.setLocalStorage("surveyId", resp.makeSurvey.survey.id)
-              cy.setLocalStorage("access_token", access_token)
-              cy.wrap(resp.makeSurvey.survey.form.id).as('formId')
-              cy.wrap(resp.makeSurvey.survey.form.formElements).as('formElements')
-              cy.wrap(resp.makeSurvey.survey.id).as('surveyId')
-              cy.updateSurvey(resp.makeSurvey.survey.id, access_token)
-              cy.get('@formId').then((id) => {
-                formId = id
+              });
+              cy.setLocalStorage("surveyId", resp.makeSurvey.survey.id);
+              cy.setLocalStorage("access_token", access_token);
+              cy.wrap(resp.makeSurvey.survey.form.id).as('formId');
+              cy.wrap(resp.makeSurvey.survey.form.formElements).as('formElements');
+              cy.wrap(resp.makeSurvey.survey.id).as('surveyId');
+              cy.updateSurvey(resp.makeSurvey.survey.id, access_token);
+              cy.get('@formId').then((formId: any) => {
                 cy.deleteFormElements(formId, access_token).then((resp) => {
                   const elementsToUpdate = []
                   resp.deleteFormElement.query.form.formElements.forEach(t => {
-                    elementsToUpdate.push(t)
-                  })
-                  cy.updateFormElements(elementsToUpdate,"Maldives", access_token, formId)
+                    elementsToUpdate.push(t);
+                  });
+                  cy.updateFormElements(elementsToUpdate,"Maldives", access_token, formId);
                   cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
                     const SAPFormId = formId + 1
                     cy.createSAPElements(SAPFormId, "Maldives", access_token).then((resp)=> {
