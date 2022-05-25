@@ -561,7 +561,7 @@ describe("Survey creation smoke test", () => {
         {$btn.trigger('click')}
       })
     })
-    it ('Shows what sectors have been completed', () => {
+    it ('Shows completed sectors - Fisheries - Commercial, Non-Tuna Species', () => {
       cy.get('h1').contains('Your sectors')
       cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
         expect ($btn.css('background')).to.include('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153))')
@@ -619,7 +619,7 @@ describe("Survey creation smoke test", () => {
       cy.get('[style="max-height: 60vh;"] > .w-full').type("Bountiful reef fishing.")
       cy.contains('Save').click()
     })
-    it('Can draw a new shape - Fisheries - Recreational', () => {
+    it('Can draw a second shape - Fisheries - Recreational', () => {
 
       cy.contains('New Shape').as('newShape')
       cy.get('@newShape').then(($btn) => {
@@ -666,6 +666,9 @@ describe("Survey creation smoke test", () => {
       cy.get('@finishSector').then(($btn) => {
         {$btn.trigger('click')}
       })
+      
+    })
+    it ('Shows completed sectors - Fisheries - Recreational', () => {
       cy.get('h1').contains('Your sectors')
         .should('be.visible')
       //additional completed sector
@@ -721,12 +724,27 @@ describe("Survey creation smoke test", () => {
         {$btn.trigger('click')};
         expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?');
       });
-    });
-    it('Can draw new shape - Fisheries - Artisanal/Subsistence', () => {
       cy.contains('New Shape').as('newShape');
       cy.get('@newShape').then(($btn) => {
         {$btn.trigger('click')}
       })
+    });
+    it('Can draw new shape - Fisheries - Artisanal/Subsistence', () => {
+      cy.get('[type = "button"]').then(($btn) => {
+        if ($btn.text().includes('New Shape')) {
+          cy.get('button').contains('New Shape').as('newShapeBtn').then(($btn) => {
+            {$btn.trigger('click', {multiple: true})}
+          });
+        }; 
+      });
+      cy.get('h4').contains('Fisheries - Artisanal/Subsistence')
+        .should('not.exist')
+      cy.contains('Area Name')
+        .should('exist')
+        .and('be.visible')
+      cy.contains('How important is this area?')
+        .should('exist')
+        .and('be.visible')
       drawPolygon();
     })
     it("Renders sector specific attributes - Fisheries - Artisanal/Subsistence", () => {
@@ -782,10 +800,10 @@ describe("Survey creation smoke test", () => {
     ////////////    .should('be.visible')
     ////////    .click()
     ////  cy.wait('@createResponse').its('response.statusCode').should('eq', 200)
-    //  cy.get('h1').contains('Thank You for Responding').should('be.visible')
-    //  cy.restoreLocalStorage()
-    //  cy.getLocalStorage('surveyId').then((id) => {
-    //    cy.getLocalStorage('slug').then((slug) => {
+    ////  cy.get('h1').contains('Thank You for Responding').should('be.visible')
+    ////  cy.restoreLocalStorage()
+    ////  cy.getLocalStorage('surveyId').then((id) => {
+    ////    cy.getLocalStorage('slug').then((slug) => {
     //      cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
     //    })
     //  })
