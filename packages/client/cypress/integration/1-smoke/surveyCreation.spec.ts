@@ -619,8 +619,7 @@ describe("Survey creation smoke test", () => {
       cy.get('[style="max-height: 60vh;"] > .w-full').type("Bountiful reef fishing.")
       cy.contains('Save').click()
     })
-    it('Can draw a second shape - Fisheries - Recreational', () => {
-
+    it('Can draw second shape - Fisheries - Recreational', () => {
       cy.contains('New Shape').as('newShape')
       cy.get('@newShape').then(($btn) => {
         {$btn.trigger('click')}
@@ -632,7 +631,6 @@ describe("Survey creation smoke test", () => {
           });
         }; 
       });
-    
       cy.get('h4').contains('Fisheries - Recreational')
         .should('not.exist')
       cy.contains('Area Name')
@@ -663,12 +661,25 @@ describe("Survey creation smoke test", () => {
       cy.contains("Reef fishing area.")
       cy.contains("Sports fishing area")
       cy.contains("Finish Sector").as("finishSector")
+      cy.get('button').then(($btn) => {
+        if ($btn.text().includes("Finish Sector")) {
+          cy.get('button').contains("Finish Sector").then(($btn) => {
+            {$btn.trigger('click', {multiple: true})}
+          })
+        }
+      })
       cy.get('@finishSector').then(($btn) => {
         {$btn.trigger('click')}
       })
-      
     })
     it ('Shows completed sectors - Fisheries - Recreational', () => {
+      cy.get('button').then(($btn) => {
+        if ($btn.text().includes("Finish Sector")) {
+          cy.get('button').contains("Finish Sector").then(($btn) => {
+            {$btn.trigger('click', {multiple: true})}
+          })
+        }
+      })
       cy.get('h1').contains('Your sectors')
         .should('be.visible')
       //additional completed sector
@@ -774,7 +785,7 @@ describe("Survey creation smoke test", () => {
         {$btn.trigger('click')}
       });
     });
-    it('Shows completed sectors', () => {
+    it('Shows completed sectors - Fisheries - Recreational', () => {
       cy.get('h1').contains('Your sectors')
         .should('be.visible');
       //additional completed sector
@@ -799,7 +810,7 @@ describe("Survey creation smoke test", () => {
     //////////////    .contains('No')
     ////////////    .should('be.visible')
     ////////    .click()
-    ////  cy.wait('@createResponse').its('response.statusCode').should('eq', 200)
+    //  cy.wait('@createResponse').its('response.statusCode').should('eq', 200)
     ////  cy.get('h1').contains('Thank You for Responding').should('be.visible')
     ////  cy.restoreLocalStorage()
     ////  cy.getLocalStorage('surveyId').then((id) => {
