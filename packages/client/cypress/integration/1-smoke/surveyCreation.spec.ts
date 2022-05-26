@@ -335,9 +335,9 @@ describe("Survey creation smoke test", () => {
         //cy.getLocalStorage("responseId").then((responseId) => {
         //  cy.deleteResponse
         //})
-        //cy.getLocalStorage("token").then((token) => {
-        //  cy.deleteSurvey(surveyId, token)
-        //})
+        cy.getLocalStorage("token").then((token) => {
+          cy.deleteSurvey(surveyId, token)
+        })
       })
       cy.getLocalStorage("slug").then((slug) => {
         cy.deleteProject(`${slug}`)
