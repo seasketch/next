@@ -96,6 +96,7 @@ const checkForNavAndLang = () => {
 
 const drawPolygon = () => {
   cy.get('.mapboxgl-canvas').each((t) => {
+    expect (t).to.exist
     const canvases = [];
     canvases.push(t);
     return canvases
@@ -112,6 +113,7 @@ const drawPolygon = () => {
 
 const drawInvalidPolygon = () => {
   cy.get('.mapboxgl-canvas').each((t) => {
+    expect (t).to.exist
     const canvases = [];
     canvases.push(t);
     return canvases
@@ -128,6 +130,7 @@ const drawInvalidPolygon = () => {
 
 const drawSecondPolygon = () => {
   cy.get('.mapboxgl-canvas').each((t) => {
+    expect (t).to.exist
     const canvases = [];
     canvases.push(t);
     return canvases
@@ -482,6 +485,8 @@ describe("Survey creation smoke test", () => {
         imgs[0].click()
       })
       cy.get('h1').contains('Area Name')
+        .should('exist')
+        .and('be.visible')
       cy.get(".mt-1 > .block").scrollIntoView().clear()
         .type("Yellowfin tuna fishing area.")
       cy.contains('What type of gear do you use here?')
@@ -535,6 +540,8 @@ describe("Survey creation smoke test", () => {
     })
     it("Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species", () => {
       cy.get('h1').contains('Area Name')
+        .should('exist')
+        .and('be.visible')
       cy.get(".mt-1 > .block").clear()
         .type("Sea cucumber fishing area.")
       cy.contains('What type of gear do you use here?')
@@ -606,6 +613,8 @@ describe("Survey creation smoke test", () => {
     })
     it("Renders sector specific attributes - Fisheries - Recreational", () => {
       cy.get('h1').contains('Area Name')
+        .should('exist')
+        .and('be.visible')
       cy.get(".mt-1 > .block").clear()
         .type("Reef fishing area.")
       cy.contains('What type of recreational fishing do you do here?')
@@ -642,7 +651,9 @@ describe("Survey creation smoke test", () => {
       drawSecondPolygon();
     });
     it("Renders sector specific attributes for second shape - Fisheries - Recreational", () => {
-      cy.get('h1').contains('Area Name');
+      cy.get('h1').contains('Area Name')
+        .should('exist')
+        .and('be.visible')
       cy.get(".mt-1 > .block").clear()
         .type("Sports fishing area.");
       cy.contains('What type of recreational fishing do you do here?');
@@ -759,7 +770,9 @@ describe("Survey creation smoke test", () => {
       drawPolygon();
     })
     it("Renders sector specific attributes - Fisheries - Artisanal/Subsistence", () => {
-      cy.get('h1').contains('Area Name');
+      cy.get('h1').contains('Area Name')
+        .should('exist')
+        .and('be.visible')
       cy.get(".mt-1 > .block").clear()
         .type("Grouper fishing area.")
       cy.contains('What type of recreational fishing do you do here?')
