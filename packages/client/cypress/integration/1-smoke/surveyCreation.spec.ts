@@ -632,46 +632,46 @@ describe("Survey creation smoke test", () => {
         }; 
       });
       cy.get('h4').contains('Fisheries - Recreational')
-        .should('not.exist')
+        .should('not.exist');
       cy.contains('Area Name')
         .should('exist')
-        .and('be.visible')
+        .and('be.visible');
       cy.contains('How important is this area?')
         .should('exist')
-        .and('be.visible')
-      drawSecondPolygon()
-    })
+        .and('be.visible');
+      drawSecondPolygon();
+    });
     it("Renders sector specific attributes for second shape - Fisheries - Recreational", () => {
-      cy.get('h1').contains('Area Name')
+      cy.get('h1').contains('Area Name');
       cy.get(".mt-1 > .block").clear()
-        .type("Sports fishing area.")
-      cy.contains('What type of recreational fishing do you do here?')
+        .type("Sports fishing area.");
+      cy.contains('What type of recreational fishing do you do here?');
       cy.contains('What type of species do you fish here?')
-        .should('not.exist')
+        .should('not.exist');
       cy.get('[title="Pole and Line"]')
-        .should('not.exist')
+        .should('not.exist');
       cy.get('[title="Yellowfin"]')
-        .should('not.exist')
-      cy.get('[title="Big Game / Sports Fishing"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Exciting sport fishing.")
-      cy.contains('Save').click()
+        .should('not.exist');
+      cy.get('[title="Big Game / Sports Fishing"]').click();
+      cy.get('[style="max-height: 60vh;"] > .w-full').type("Exciting sport fishing.");
+      cy.contains('Save').click();
     })
     it('Can finish sector - Fisheries - Recreational', () => {
-      cy.contains("Fisheries - Recreational")
-      cy.contains("Reef fishing area.")
-      cy.contains("Sports fishing area")
-      cy.contains("Finish Sector").as("finishSector")
+      cy.contains("Fisheries - Recreational");
+      cy.contains("Reef fishing area.");
+      cy.contains("Sports fishing area");
+      cy.contains("Finish Sector").as("finishSector");
       cy.get('button').then(($btn) => {
         if ($btn.text().includes("Finish Sector")) {
           cy.get('button').contains("Finish Sector").then(($btn) => {
-            {$btn.trigger('click', {multiple: true})}
-          })
-        }
-      })
+            {$btn.trigger('click', {multiple: true})};
+          });
+        };
+      });
       cy.get('@finishSector').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-    })
+        {$btn.trigger('click')};
+      });
+    });
     it ('Shows completed sectors - Fisheries - Recreational', () => {
       cy.get('button').then(($btn) => {
         if ($btn.text().includes("Finish Sector")) {
