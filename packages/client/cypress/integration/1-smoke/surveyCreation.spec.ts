@@ -163,6 +163,9 @@ describe("Survey creation smoke test", () => {
         if ((req.body.operationName) && (req.body.operationName === "ProjectRegion")) {
           req.alias = "getProjectRegion"
         };
+        if ((req.body.operationName) && (req.body.operationName === "ProjectMetadata")) {
+          req.alias = "getProjectMetadata"
+        };
       });
       cy.intercept(/mapbox/).as('mapBoxApiCall');
     });
@@ -335,9 +338,9 @@ describe("Survey creation smoke test", () => {
         //cy.getLocalStorage("responseId").then((responseId) => {
         //  cy.deleteResponse
         //})
-        cy.getLocalStorage("token").then((token) => {
-          cy.deleteSurvey(surveyId, token)
-        })
+        //cy.getLocalStorage("token").then((token) => {
+        //  cy.deleteSurvey(surveyId, token)
+        //})
       })
       cy.getLocalStorage("slug").then((slug) => {
         cy.deleteProject(`${slug}`)
@@ -424,66 +427,66 @@ describe("Survey creation smoke test", () => {
       waitOnMapbox(10)
       drawPolygon()
     })
-    it('Can view basemap selector', () => {
-      cy.get('img').click()
-      let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
-      values.forEach((val) => {
-        cy.get('.fixed > .overflow-y-auto').children().contains(val)
-      })
-    })
-    it ('Can show scale bar', () => {
-      cy.get('h4').contains('Show scale bar')
-      cy.get('[role="switch"]').then(($switch) => {
-        {$switch.trigger('click')}
-      })
-      cy.contains('5000 km')
-    })
-    it ('Renders the correct basemap', () => {
-      cy.contains('Maldives Light').as('maldivesLightBasemap')
-      cy.get('@maldivesLightBasemap').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
-      cy.contains('Satellite')
-        .should('not.have.class', 'font-semibold')
-    })
-    it ('Can select different basemap', () => {
-      cy.contains('Satellite').as('satelliteBasemap')
-        cy.get('@satelliteBasemap').then(($btn) => {
-          {$btn.trigger('click')}
-          
-        })
-        .should('have.class', 'font-semibold')   
-      cy.contains('Maldives Light')
-        .should('not.have.class', 'font-semibold')
-    })
-    it('Shows option to focus on location', () => {
-      cy.restoreLocalStorage()
-      cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
-        cy.setLocalStorage("lat", `${center["lat"]}`)
-        cy.setLocalStorage("long", `${center["lng"]}`)
-        cy.getLocalStorage("surveyId").then((id) => {
-          cy.setLocalStorage("surveyId", id)
-        });
-        cy.saveLocalStorage();
-        cy.get('h4').contains('Focus on location').click();
-      });
-    });
-    it('Focuses on location', () => {
-      cy.restoreLocalStorage()
-      cy.getLocalStorage('lat').then((lat) => {
-        cy.getLocalStorage('long').then((lng) => {
-          cy.window().its('mapContext.map.transform._center').then((coords) => {
-            expect (coords["lat"]).to.not.equal(lat)
-            expect (coords["lng"]).to.not.equal(lng)
-          });
-        });
-      });
-    });
+    //it('Can view basemap selector', () => {
+    //  cy.get('img').click()
+    //  let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
+    //  values.forEach((val) => {
+    //    cy.get('.fixed > .overflow-y-auto').children().contains(val)
+    //  })
+    //})
+    //it ('Can show scale bar', () => {
+    //  cy.get('h4').contains('Show scale bar')
+    //  cy.get('[role="switch"]').then(($switch) => {
+    //    {$switch.trigger('click')}
+    //  })
+    //  cy.contains('5000 km')
+    //})
+    //it ('Renders the correct basemap', () => {
+    //  cy.contains('Maldives Light').as('maldivesLightBasemap')
+    //  cy.get('@maldivesLightBasemap').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //  cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
+    //  cy.contains('Satellite')
+    //    .should('not.have.class', 'font-semibold')
+    //})
+    //it ('Can select different basemap', () => {
+    //  cy.contains('Satellite').as('satelliteBasemap')
+    //    cy.get('@satelliteBasemap').then(($btn) => {
+    //      {$btn.trigger('click')}
+    //      
+    //    })
+    //    *.should('have.class', 'font-semibold')   
+    //  cy.contains('Maldives Light')
+    //    .should('not.have.class', 'font-semibold')
+    //})
+    //it('Shows option to focus on location', () => {
+    //  cy.restoreLocalStorage()
+    //  cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
+    //    cy.setLocalStorage("lat", `${center["lat"]}`)
+    //    cy.setLocalStorage("long", `${center["lng"]}`)
+    //    cy.getLocalStorage("surveyId").then((id) => {
+    //      cy.setLocalStorage("surveyId", id)
+    //    });
+    //    cy.saveLocalStorage();
+    //    cy.get('h4').contains('Focus on location').click();
+    //  });
+    //});
+    //it('Focuses on location', () => {
+    //  cy.restoreLocalStorage()
+    //  cy.getLocalStorage('lat').then((lat) => {
+    //    cy.getLocalStorage('long').then((lng) => {
+    //      cy.window().its('mapContext.map.transform._center').then((coords) => {
+    //        expect (coords["lat"]).to.not.equal(lat)
+    //        expect (coords["lng"]).to.not.equal(lng)
+    //      });
+    //    });
+    //  });
+    //});
     it('Renders sector specific attributes - Fisheries - Commercial, Tuna', () => {
-      cy.get('img').then((imgs) => {
-        imgs[0].click()
-      })
+      //cy.get('img').then((imgs) => {
+      //  imgs[0].click()
+      //})
       cy.get('h1').contains('Area Name')
         .should('exist')
         .and('be.visible')
@@ -814,86 +817,162 @@ describe("Survey creation smoke test", () => {
         .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
       });
     });
-  });
-
-    ////////////it("Skips to end when answer to additional questions is no", () => {
-    //////////////////  cy.contains('Are you willing to answer a few additional questions about who you are?')
-    ////////////////    .should('be.visible')
-    //////////  cy.get('[title="No"]')
-    //////////////    .contains('No')
-    ////////////    .should('be.visible')
-    ////////    .click()
-    //  cy.wait('@createResponse').its('response.statusCode').should('eq', 200)
-    ////  cy.get('h1').contains('Thank You for Responding').should('be.visible')
-    ////  cy.restoreLocalStorage()
-    ////  cy.getLocalStorage('surveyId').then((id) => {
-    ////    cy.getLocalStorage('slug').then((slug) => {
-    //      cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
-    //    })
-    //  })
-    //})
-    //it("Can answer additional questions", () => {
-    //  cy.restoreLocalStorage()
-    //  cy.getLocalStorage('surveyId').then((id) => {
-    //    cy.getLocalStorage('slug').then((slug) => {
-    //      cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
-    //    })
-    //    
-    //  })
-    //  cy.get('h1').contains('Are you willing to answer a few additional questions about who you are?')
-    //  cy.contains('Yes').click()
-    //})
-    //it("Can input age", () => {
-    //  cy.contains("Your age")
-    //  cy.get('input').clear().type("30")
-    //  cy.contains('Next').click()
-    //})
-    //it("Can select gender", () => {
-    //  cy.contains("Gender")
-    //  cy.contains("Female").click()
-    //})
-    //it("Can add comments", () => {
-    //  cy.get("textarea").type("My general comments.")
-    //})
-    //it("Records the correct response", () => {
-    //  cy.contains("Complete Submission").as('completeSubmission')
-    //  cy.get('@completeSubmission').should('be.visible').then(($btn) => {
-    //    {$btn.trigger('click')}
-    //  })
-    //  cy.wait("@createResponse").then((req) => {
-    //    const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
-    //    expect (surveyResponseId).to.not.equal(null)
-    //    cy.restoreLocalStorage()
-    //    cy.getLocalStorage("access_token").then((token) => {
-    //      cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
-    //        const data = resp.query.surveyResponse.data
-    //        const ary = []
-    //        Object.entries(data).forEach(([, value]) => {
-    //          ary.push(value)
-    //        })
-    //        const sketchId = (ary[4].collection[0])-1
-    //        expect(ary.length).to.eq(9)
-    //        expect (ary[0].name).to.eq('Test User 1')
-    //        expect (ary[1]).to.eq('test_user_1@seasketch.org')
-    //        expect (ary[2][0]).to.eq('N')
-    //        expect (ary[3][0]).to.eq('Kudafari')
-    //        expect (ary[4].sectors[0]).to.equal("Fisheries - Commercial, Tuna")
-    //        expect (ary[5]).to.eq(true)
-    //        expect (ary[6]).to.eq(30)
-    //        expect (ary[7][0]).to.eq('Female')
-    //        expect (ary[8]).to.eq("My general comments.")
-    //        cy.restoreLocalStorage()
-    //        //cy.getLocalStorage('token').then((token) => {
-    //        //  console.log(token)
-    //        //  cy.deleteSketch(sketchId, token).then((resp)=> {
-    //        //    
-    //        //    console.log(resp)
-    //        //  })
-    //        //})
-    //      })
-    //    })
-    //  })
-    //})
+    it('Can input number of people reflected in response', () => {
+      cy.get('button').contains('Next Question').as('nextQuestionBtn')
+        .should('be.visible')
+        .and('exist')
+        .then(($btn) => {
+          {$btn.trigger('click')}
+        })
+      cy.get('[data-question="yes"]').contains('Please indicate how many people are reflected in this response')
+        .should('be.visible')
+        .and('exist')
+      cy.get('input[type="number"]').as('numberInput')
+        .should('exist');
+      cy.log('A user can use navigation arrows to skip question')
+      cy.get('@numberInput').then(($input) => {
+        expect ($input.val()).to.equal('0')
+      })
+      cy.get('a[title="Next Question"]').click()
+      cy.contains('vessel')
+      cy.get('a[title="Previous Question"]').click()
+      cy.contains('response')
+      cy.log('A user can input number by typing')
+      cy.get('@numberInput').type('4').then(($input) => {
+        expect ($input.val()).to.equal('04')
+      });
+      cy.log('Using substract button to adjust number')
+      cy.get('button[title="Subtract"]')
+        .click()
+        .click();
+      cy.get('@numberInput').then(($input) => {
+        expect ($input.val()).to.equal('2');
+      });
+      cy.log('Using add button to adjust number')
+      cy.get('button[title=Add]')
+        .click()
+      cy.get('@numberInput').then(($input) => {
+        expect ($input.val()).to.equal('3');
+      });
+      cy.get('button').contains('Next').click()
+    });
+    it("Can input name or number of vessel", () => {
+      cy.contains('vessel')
+        .should('exist')
+        .and('be.visible')
+      cy.log('Skipping question without inputting value')
+      cy.get('input').as('vesselInput')
+        .should('be.empty')
+      cy.get('button').contains('Skip Question').click()
+      cy.contains('willing')
+        .should('exist')
+        .and('be.visible')
+      cy.get('a[title="Previous Question"]').click()
+      cy.contains('vessel')
+        .should('be.visible')
+        .and('exist')
+      cy.get('@vesselInput').type("Queen Ann's Revenge")
+      cy.get('@vesselInput').then(($input) => {
+        expect ($input.val()).to.equal("Queen Ann's Revenge");
+      });
+      cy.get('button').contains('Next').click()
+    });
+    it("Skips to end when answer to additional questions is no", () => {
+      cy.contains('Are you willing to answer a few additional questions about who you are?')
+        .should('be.visible');
+      cy.get('[title="No"]')
+        .should('be.visible')
+        .click();
+      cy.wait('@createResponse').its('response.statusCode').should('eq', 200)
+      cy.get('h4').contains('Submitting')
+        .should('not.exist')
+      //cy.wait('@getProjectMetadata')
+      cy.get('h1').contains('Thank You for Responding')
+        .should('be.visible')
+        .and('exist')
+      cy.restoreLocalStorage();
+      cy.getLocalStorage('surveyId').then((id) => {
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`);
+        });
+      });
+    });
+    it("Can answer additional questions", () => {
+      cy.restoreLocalStorage()
+      cy.getLocalStorage('surveyId').then((id) => {
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
+        })
+        
+      })
+      cy.get('h1').contains('additional')
+      cy.contains('Yes').click()
+    })
+//
+    it("Can input age", () => {
+      cy.contains("Your age")
+      cy.get('input').clear().type("30")
+      cy.contains('Next').click()
+    })
+    it("Can select gender", () => {
+      cy.contains("Gender")
+      cy.contains("Female").click()
+    })
+    it("Can add comments", () => {
+      cy.get("textarea").type("My general comments.")
+    })
+    it("Records the correct response", () => {
+      cy.contains("Complete Submission").as('completeSubmission')
+      cy.get('@completeSubmission').should('be.visible').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      cy.wait("@createResponse").then((req) => {
+        console.log(req)
+        const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
+        expect (surveyResponseId).to.not.equal(null)
+        cy.restoreLocalStorage()
+        cy.getLocalStorage("access_token").then((token) => {
+          cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
+            const data = resp.query.surveyResponse.data
+            console.log(resp)
+            const ary = []
+            Object.entries(data).forEach(([, value]) => {
+              ary.push(value)
+            })
+            
+           const sketchId = (ary[4].collection[0])-1
+           expect(ary.length).to.eq(11)
+           console.log(ary)
+           expect (ary[0].name).to.eq('Test User 1')
+           expect (ary[1]).to.eq('test_user_1@seasketch.org')
+           expect (ary[2][0]).to.eq('N')
+           expect (ary[3][0]).to.eq('Kudafari')
+           expect (ary[4].sectors[0]).to.equal("Fisheries - Commercial, Tuna")
+           expect (ary[4].sectors[1]).to.equal("Fisheries - Commercial, Non-Tuna Species")
+           expect (ary[4].sectors[2]).to.equal("Fisheries - Recreational")
+           expect (ary[4].sectors[3]).to.equal("Fisheries- Artisanal/Subsistence")
+           expect (ary[5]).to.eq(3)
+           expect (ary[6]).to.eq("Queen Ann's Revenge")
+           expect (ary[7]).to.eq(true)
+           expect (ary[8]).to.eq(30)
+           expect (ary[9][0]).to.eq("Female")
+           expect (ary[10]).to.eq("My general comments.")
+           
+           //expect (ary[7][0]).to.eq('Female')
+    //     //   expect (ary[8]).to.eq("My general comments.")
+           //cy.restoreLocalStorage()
+           //cy.getLocalStorage('token').then((token) => {
+           //  console.log(token)
+           //  cy.deleteSketch(sketchId, token).then((resp)=> {
+           //    
+           //     console.log(resp)
+           //    })
+           //   })
+            })
+          })
+        })
+      })
+    })
   })
   describe("Visual testing", () => {
     describe("Testing for key elements on mobile devices", () => {
