@@ -23,6 +23,7 @@ query ProjectMetadata($slug: String!) {
   me {
     id
     profile {
+      userId
       fullname
       nickname
       email
@@ -37,6 +38,7 @@ query Me {
   me {
     id
     profile {
+      userId
       fullname
       nickname
       email

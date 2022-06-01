@@ -1,5 +1,5 @@
 import "./wdyr";
-import React, { Suspense } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
 import App from "./App";
@@ -12,6 +12,7 @@ import {
   InMemoryCache,
   split,
   concat,
+  NormalizedCacheObject,
 } from "@apollo/client";
 import { createUploadLink } from "apollo-upload-client";
 import { setContext } from "@apollo/client/link/context";
@@ -23,8 +24,18 @@ import * as Sentry from "@sentry/react";
 import { Integrations } from "@sentry/tracing";
 import { createBrowserHistory } from "history";
 import SW from "./offline/ServiceWorkerWindow";
+import { namedOperations } from "./generated/graphql";
 
 const history = createBrowserHistory();
+
+const loadingFallback = (
+  <div
+    style={{ height: "100vh" }}
+    className="w-full flex min-h-full h-96 justify-center text-center align-middle items-center content-center justify-items-center place-items-center place-content-center"
+  >
+    <Spinner />
+  </div>
+);
 
 if (process.env.REACT_APP_SENTRY_DSN && process.env.REACT_APP_BUILD) {
   Sentry.init({
@@ -65,7 +76,18 @@ function Auth0ProviderWithRouter(props: any) {
 }
 
 function ApolloProviderWithToken(props: any) {
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const {
+    getAccessTokenSilently,
+    getAccessTokenWithPopup,
+    user,
+    isAuthenticated,
+  } = useAuth0();
+  const [
+    client,
+    setClient,
+  ] = useState<ApolloClient<NormalizedCacheObject> | null>(null);
+  const { Survey, ProjectMetadata, SimpleProjectList } = namedOperations.Query;
+
   const httpLink = createUploadLink({
     uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!,
   });
@@ -117,7 +139,7 @@ function ApolloProviderWithToken(props: any) {
     uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(/http/, "ws"),
     options: {
       reconnect: true,
-      // lazy: true,
+      lazy: true,
       connectionParams: async () => {
         const token = await getAccessTokenSilently({
           audience: process.env.REACT_APP_AUTH0_AUDIENCE,
@@ -142,12 +164,29 @@ function ApolloProviderWithToken(props: any) {
     wsLink,
     concat(authMiddleware, httpLink)
   );
-  const client = new ApolloClient({
-    link: splitLink,
-    cache: new InMemoryCache(),
-    connectToDevTools: true,
-  });
-  return <ApolloProvider client={client}>{props.children}</ApolloProvider>;
+
+  useEffect(() => {
+    const cache = new InMemoryCache({
+      typePolicies: {
+        Profile: {
+          keyFields: ["userId"],
+        },
+      },
+    });
+
+    const apolloClient = new ApolloClient({
+      link: splitLink,
+      cache: cache,
+      connectToDevTools: process.env.NODE_ENV === "development",
+    });
+    setClient(apolloClient);
+  }, [splitLink]);
+
+  if (client) {
+    return <ApolloProvider client={client}>{props.children}</ApolloProvider>;
+  } else {
+    return loadingFallback;
+  }
 }
 
 ReactDOM.render(

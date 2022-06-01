@@ -5,7 +5,7 @@ import { Trans, useTranslation } from "react-i18next";
 import DropdownButton from "../components/DropdownButton";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import useStaticAssetCache from "../useStaticAssetCache";
+import useStaticAssetCache from "./useStaticAssetCache";
 import { CacheProgress } from "./CacheStatus";
 
 export default function OfflineCacheStatus() {

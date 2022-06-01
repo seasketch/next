@@ -2,8 +2,16 @@
 /* eslint-disable no-restricted-globals */
 import { clientsClaim, skipWaiting } from "workbox-core";
 import { PrecacheEntry } from "workbox-precaching/_types";
+import { GraphqlQueryCache } from "./offline/GraphqlQueryCache";
+// import GraphqlQueryCache from "./offline/GraphqlQueryCache/simple";
 import { MESSAGE_TYPES } from "./offline/ServiceWorkerWindow";
-import StaticAssetCache from "./StaticAssetCache";
+import StaticAssetCache from "./offline/StaticAssetCache";
+import { strategies } from "./offline/GraphqlQueryCache/strategies";
+
+const graphqlQueryCache = new GraphqlQueryCache(
+  process.env.REACT_APP_GRAPHQL_ENDPOINT,
+  strategies
+);
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: (PrecacheEntry | string)[];
@@ -12,16 +20,15 @@ declare const self: ServiceWorkerGlobalScope & {
 clientsClaim();
 
 const MANIFEST = self.__WB_MANIFEST;
-
 const staticAssetCache = new StaticAssetCache(MANIFEST);
 
 self.addEventListener("install", (event) => {
-  skipWaiting();
   (async () => {
     if (await staticAssetCache.precacheEnabled()) {
       await staticAssetCache.populateCache();
     }
   })();
+  self.skipWaiting();
 });
 
 self.addEventListener("waiting", (event) => {
@@ -40,6 +47,11 @@ self.addEventListener("message", (event) => {
     event.ports[0].postMessage(MANIFEST);
   } else if (event.data && event.data.type === MESSAGE_TYPES.GET_BUILD) {
     event.ports[0].postMessage(process.env.REACT_APP_BUILD || "local");
+  } else if (
+    event.data &&
+    event.data.type === MESSAGE_TYPES.UPDATE_GRAPHQL_STRATEGY_ARGS
+  ) {
+    graphqlQueryCache.updateStrategyArgs();
   }
 });
 
@@ -52,6 +64,8 @@ self.addEventListener("fetch", (event) => {
     staticAssetCache.urlInManifest(url)
   ) {
     event.respondWith(staticAssetCache.handleRequest(url, event));
+  } else if (graphqlQueryCache.isGraphqlRequest(event.request)) {
+    event.respondWith(graphqlQueryCache.handleRequest(url, event));
   } else if (
     url.host === self.location.host &&
     !fileExtensionRegexp.test(url.pathname)

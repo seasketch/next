@@ -4,6 +4,8 @@ import { Workbox } from "workbox-window";
 export const MESSAGE_TYPES = {
   GET_MANIFEST: "GET_MANIFEST",
   GET_BUILD: "GET_BUILD",
+  UPDATE_GRAPHQL_STRATEGY_ARGS: "UPDATE_GRAPHQL_STRATEGY_ARGS",
+  GRAPHQL_CACHE_REVALIDATION: "GRAPHQL_CACHE_REVALIDATION",
 };
 
 /**
@@ -50,6 +52,17 @@ class ServiceWorkerWindow {
     return this.wb.messageSW({
       type: MESSAGE_TYPES.GET_BUILD,
     }) as Promise<string>;
+  }
+
+  /**
+   * Notifies the service worker that changes have been made to persistence
+   * strategy configuration for the GraphqlQueryCache. SW GraphqlQueryCache
+   * should restore these settings from localforage.
+   */
+  updateGraphqlQueryCacheStrategyArgs() {
+    return this.wb.messageSW({
+      type: MESSAGE_TYPES.UPDATE_GRAPHQL_STRATEGY_ARGS,
+    });
   }
 }
 

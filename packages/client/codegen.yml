@@ -14,3 +14,15 @@ generates:
       - named-operations-object
     config:
       withMutationFn: true
+  src/generated/queries.ts:
+    plugins:
+      - typescript
+      - typescript-operations
+      - typescript-react-apollo
+    config:
+      withHooks: false
+      withMutationFn: false
+      withResultType: false
+      withMutationOptionsType: false
+      addDocBlocks: false
+      pureMagicComment: true

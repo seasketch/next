@@ -44,6 +44,7 @@ const mockedProjectMetadata = {
     me: {
       id: 123,
       profile: {
+        userId: 123,
         fullname: "Chad Burt",
         nickname: "underbluewaters",
         email: "chad@underbluewaters.net",
