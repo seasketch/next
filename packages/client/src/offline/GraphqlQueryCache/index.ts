@@ -139,6 +139,13 @@ export class GraphqlQueryCache {
     }
   }
 
+  get enabledByDefault() {
+    return process.env.REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE_BY_DEFAULT
+      ? process.env.REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE_BY_DEFAULT.toUpperCase() ===
+          "TRUE"
+      : false;
+  }
+
   /**
    * If cache is not enabled it will simply pass request through to fetch()
    * @returns Boolean
@@ -147,14 +154,8 @@ export class GraphqlQueryCache {
     if (this.enabled !== undefined) {
       return this.enabled;
     } else {
-      const enabled = await localforage.getItem(ENABLED_KEY);
-      this.enabled = Boolean(
-        enabled ||
-          (process.env.REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE
-            ? process.env.REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE.toUpperCase() ===
-              "TRUE"
-            : false)
-      );
+      const enabled = await localforage.getItem<boolean>(ENABLED_KEY);
+      this.enabled = enabled || this.enabledByDefault;
       return this.enabled;
     }
   }
@@ -176,7 +177,9 @@ export class GraphqlQueryCache {
    * notified that the cache in the main window changed it's settings
    */
   async restoreEnabledState() {
-    this.enabled = Boolean(await localforage.getItem(ENABLED_KEY));
+    this.enabled =
+      (await localforage.getItem<boolean>(ENABLED_KEY)) ||
+      this.enabledByDefault;
   }
 
   /**
@@ -535,7 +538,7 @@ export function staticStrategy(
 export function lruStrategy(
   query: DocumentNode,
   limit: number,
-  options: { swr?: boolean }
+  options?: { swr?: boolean }
 ): LRUStrategy {
   options = options || { swr: false };
   options.swr = options.swr || false;
