@@ -165,7 +165,10 @@ describe("Survey creation smoke test", () => {
         };
         if ((req.body.operationName) && (req.body.operationName === "ProjectMetadata")) {
           req.alias = "getProjectMetadata"
-        };
+        }
+        //else {
+        //  req.alias = "otherRequest"
+        //}
       });
       cy.intercept(/mapbox/).as('mapBoxApiCall');
     });
@@ -399,20 +402,14 @@ describe("Survey creation smoke test", () => {
         if($btn.html() === "Next") {
           cy.wrap($btn).as('nextBtn')
           {$btn.trigger('click')}
-        } else {
-          console.log('no')
         }
       })
     })
     it("Can draw a polygon - Fisheries - Commercial, Tuna", () => {
       cy.get('[type = "button"]').as('nextBtn').then(($btn) => {
         if($btn.html() === "Next") {
-          console.log($btn.html())
-          cy.wrap($btn).as('nextBtn')
           {$btn.trigger('click')}
-        } else {
-          console.log('no')
-        }
+        } 
       })
       cy.get('h4').contains('Fisheries - Commercial, Tuna')
         .should('exist')
@@ -427,66 +424,65 @@ describe("Survey creation smoke test", () => {
       waitOnMapbox(10)
       drawPolygon()
     })
-    //it('Can view basemap selector', () => {
-    //  cy.get('img').click()
-    //  let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
-    //  values.forEach((val) => {
-    //    cy.get('.fixed > .overflow-y-auto').children().contains(val)
-    //  })
-    //})
-    //it ('Can show scale bar', () => {
-    //  cy.get('h4').contains('Show scale bar')
-    //  cy.get('[role="switch"]').then(($switch) => {
-    //    {$switch.trigger('click')}
-    //  })
-    //  cy.contains('5000 km')
-    //})
-    //it ('Renders the correct basemap', () => {
-    //  cy.contains('Maldives Light').as('maldivesLightBasemap')
-    //  cy.get('@maldivesLightBasemap').then(($btn) => {
-    //    {$btn.trigger('click')}
-    //  })
-    //  cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
-    //  cy.contains('Satellite')
-    //    .should('not.have.class', 'font-semibold')
-    //})
-    //it ('Can select different basemap', () => {
-    //  cy.contains('Satellite').as('satelliteBasemap')
-    //    cy.get('@satelliteBasemap').then(($btn) => {
-    //      {$btn.trigger('click')}
-    //      
-    //    })
-    //    *.should('have.class', 'font-semibold')   
-    //  cy.contains('Maldives Light')
-    //    .should('not.have.class', 'font-semibold')
-    //})
-    //it('Shows option to focus on location', () => {
-    //  cy.restoreLocalStorage()
-    //  cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
-    //    cy.setLocalStorage("lat", `${center["lat"]}`)
-    //    cy.setLocalStorage("long", `${center["lng"]}`)
-    //    cy.getLocalStorage("surveyId").then((id) => {
-    //      cy.setLocalStorage("surveyId", id)
-    //    });
-    //    cy.saveLocalStorage();
-    //    cy.get('h4').contains('Focus on location').click();
-    //  });
-    //});
-    //it('Focuses on location', () => {
-    //  cy.restoreLocalStorage()
-    //  cy.getLocalStorage('lat').then((lat) => {
-    //    cy.getLocalStorage('long').then((lng) => {
-    //      cy.window().its('mapContext.map.transform._center').then((coords) => {
-    //        expect (coords["lat"]).to.not.equal(lat)
-    //        expect (coords["lng"]).to.not.equal(lng)
-    //      });
-    //    });
-    //  });
-    //});
+    it('Can view basemap selector', () => {
+      cy.get('img').click()
+      let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
+      values.forEach((val) => {
+        cy.get('.fixed > .overflow-y-auto').children().contains(val)
+      })
+    })
+    it ('Can show scale bar', () => {
+      cy.get('h4').contains('Show scale bar')
+      cy.get('[role="switch"]').then(($switch) => {
+        {$switch.trigger('click')}
+      })
+      cy.contains('5000 km')
+    })
+    it ('Renders the correct basemap', () => {
+      cy.contains('Maldives Light').as('maldivesLightBasemap')
+      cy.get('@maldivesLightBasemap').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
+      cy.contains('Satellite')
+        .should('not.have.class', 'font-semibold')
+    })
+    it ('Can select different basemap', () => {
+      cy.contains('Satellite').as('satelliteBasemap')
+        cy.get('@satelliteBasemap').then(($btn) => {
+          {$btn.trigger('click')}
+        })
+        .should('have.class', 'font-semibold')   
+      cy.contains('Maldives Light')
+        .should('not.have.class', 'font-semibold')
+    })
+    it('Shows option to focus on location', () => {
+      cy.restoreLocalStorage()
+      cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
+        cy.setLocalStorage("lat", `${center["lat"]}`)
+        cy.setLocalStorage("long", `${center["lng"]}`)
+        cy.getLocalStorage("surveyId").then((id) => {
+          cy.setLocalStorage("surveyId", id)
+        });
+        cy.saveLocalStorage();
+        cy.get('h4').contains('Focus on location').click();
+      });
+    });
+    it('Focuses on location', () => {
+      cy.restoreLocalStorage()
+      cy.getLocalStorage('lat').then((lat) => {
+        cy.getLocalStorage('long').then((lng) => {
+          cy.window().its('mapContext.map.transform._center').then((coords) => {
+            expect (coords["lat"]).to.not.equal(lat)
+            expect (coords["lng"]).to.not.equal(lng)
+          });
+        });
+      });
+    });
     it('Renders sector specific attributes - Fisheries - Commercial, Tuna', () => {
-      //cy.get('img').then((imgs) => {
-      //  imgs[0].click()
-      //})
+      cy.get('img').then((imgs) => {
+        imgs[0].click()
+      })
       cy.get('h1').contains('Area Name')
         .should('exist')
         .and('be.visible')
@@ -506,7 +502,6 @@ describe("Survey creation smoke test", () => {
       cy.get('@range').then(($range) => {
         // get the DOM node
         const range = $range[0];
-        //console.log(range)
         // set the value manually
         nativeInputValueSetter.call(range, 15);
         // now dispatch the event
@@ -896,6 +891,7 @@ describe("Survey creation smoke test", () => {
           cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`);
         });
       });
+      //cy.wait('@mapBoxApiCall')
     });
     it("Can answer additional questions", () => {
       cy.restoreLocalStorage()
@@ -905,8 +901,15 @@ describe("Survey creation smoke test", () => {
         })
         
       })
+      cy.wait('@getProjectMetadata')
+        .its('response.statusCode').should('eq', 200)
       cy.get('h1').contains('additional')
-      cy.contains('Yes').click()
+        .should('exist')
+        .and('be.visible')
+      cy.get('[title="Yes"]')
+        .should('exist')
+        .and('be.visible')
+        .click()
     })
 //
     it("Can input age", () => {
@@ -927,53 +930,46 @@ describe("Survey creation smoke test", () => {
         {$btn.trigger('click')}
       })
       cy.wait("@createResponse").then((req) => {
-        console.log(req)
         const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
         expect (surveyResponseId).to.not.equal(null)
         cy.restoreLocalStorage()
         cy.getLocalStorage("access_token").then((token) => {
           cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
             const data = resp.query.surveyResponse.data
-            console.log(resp)
-            const ary = []
+            const responseAry = []
             Object.entries(data).forEach(([, value]) => {
-              ary.push(value)
+              responseAry.push(value)
             })
-            
-           const sketchId = (ary[4].collection[0])-1
-           expect(ary.length).to.eq(11)
-           console.log(ary)
-           expect (ary[0].name).to.eq('Test User 1')
-           expect (ary[1]).to.eq('test_user_1@seasketch.org')
-           expect (ary[2][0]).to.eq('N')
-           expect (ary[3][0]).to.eq('Kudafari')
-           expect (ary[4].sectors[0]).to.equal("Fisheries - Commercial, Tuna")
-           expect (ary[4].sectors[1]).to.equal("Fisheries - Commercial, Non-Tuna Species")
-           expect (ary[4].sectors[2]).to.equal("Fisheries - Recreational")
-           expect (ary[4].sectors[3]).to.equal("Fisheries- Artisanal/Subsistence")
-           expect (ary[5]).to.eq(3)
-           expect (ary[6]).to.eq("Queen Ann's Revenge")
-           expect (ary[7]).to.eq(true)
-           expect (ary[8]).to.eq(30)
-           expect (ary[9][0]).to.eq("Female")
-           expect (ary[10]).to.eq("My general comments.")
-           
-           //expect (ary[7][0]).to.eq('Female')
-    //     //   expect (ary[8]).to.eq("My general comments.")
-           //cy.restoreLocalStorage()
-           //cy.getLocalStorage('token').then((token) => {
-           //  console.log(token)
-           //  cy.deleteSketch(sketchId, token).then((resp)=> {
-           //    
-           //     console.log(resp)
-           //    })
-           //   })
+            const sketchIds = []
+           Object.entries(responseAry[4].collection).forEach(([, value]) => {
+             sketchIds.push(value)
+           })
+           expect(responseAry.length).to.eq(11)
+           sketchIds.forEach((id) => {
+            cy.getSketch(id, token).then((sketch) => {
+              expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
+            })
+           })
+           expect (responseAry[0].name).to.eq('Test User 1')
+           expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
+           expect (responseAry[2][0]).to.eq('N')
+           expect (responseAry[3][0]).to.eq('Kudafari')
+           expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
+           expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
+           expect (responseAry[4].sectors[2]).to.eq("Fisheries - Recreational")
+           expect (responseAry[4].sectors[3]).to.eq("Fisheries- Artisanal/Subsistence")
+           expect (responseAry[5]).to.eq(3)
+           expect (responseAry[6]).to.eq("Queen Ann's Revenge")
+           expect (responseAry[7]).to.eq(true)
+           expect (responseAry[8]).to.eq(30)
+           expect (responseAry[9][0]).to.eq("Female")
+           expect (responseAry[10]).to.eq("My general comments.")
             })
           })
         })
       })
     })
-  })
+  })//
   describe("Visual testing", () => {
     describe("Testing for key elements on mobile devices", () => {
       beforeEach(() => {
