@@ -25,6 +25,9 @@ import { Integrations } from "@sentry/tracing";
 import { createBrowserHistory } from "history";
 import SW from "./offline/ServiceWorkerWindow";
 import { namedOperations } from "./generated/graphql";
+import { GraphqlQueryCache } from "./offline/GraphqlQueryCache";
+import { strategies } from "./offline/GraphqlQueryCache/strategies";
+import { GraphqlQueryCacheContext } from "./offline/GraphqlQueryCache/useGraphqlQueryCache";
 
 const history = createBrowserHistory();
 
@@ -86,6 +89,10 @@ function ApolloProviderWithToken(props: any) {
     client,
     setClient,
   ] = useState<ApolloClient<NormalizedCacheObject> | null>(null);
+  const [
+    graphqlQueryCache,
+    setGraphqlQueryCache,
+  ] = useState<GraphqlQueryCache>();
   const { Survey, ProjectMetadata, SimpleProjectList } = namedOperations.Query;
 
   const httpLink = createUploadLink({
@@ -166,24 +173,41 @@ function ApolloProviderWithToken(props: any) {
   );
 
   useEffect(() => {
-    const cache = new InMemoryCache({
-      typePolicies: {
-        Profile: {
-          keyFields: ["userId"],
+    async function init() {
+      const cache = new InMemoryCache({
+        typePolicies: {
+          Profile: {
+            keyFields: ["userId"],
+          },
         },
-      },
-    });
+      });
 
-    const apolloClient = new ApolloClient({
-      link: splitLink,
-      cache: cache,
-      connectToDevTools: process.env.NODE_ENV === "development",
-    });
-    setClient(apolloClient);
-  }, [splitLink]);
+      const apolloClient = new ApolloClient({
+        link: splitLink,
+        cache: cache,
+        connectToDevTools: process.env.NODE_ENV === "development",
+      });
+      setClient(apolloClient);
+      setGraphqlQueryCache(
+        new GraphqlQueryCache(
+          process.env.REACT_APP_GRAPHQL_ENDPOINT,
+          strategies,
+          apolloClient
+        )
+      );
+    }
 
-  if (client) {
-    return <ApolloProvider client={client}>{props.children}</ApolloProvider>;
+    init().catch(console.error);
+  }, []);
+
+  if (client && graphqlQueryCache) {
+    return (
+      <ApolloProvider client={client}>
+        <GraphqlQueryCacheContext.Provider value={graphqlQueryCache}>
+          {props.children}
+        </GraphqlQueryCacheContext.Provider>
+      </ApolloProvider>
+    );
   } else {
     return loadingFallback;
   }

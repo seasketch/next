@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useContext, useEffect, useState } from "react";
 import { Switch, Route, Redirect } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
@@ -55,7 +55,6 @@ function App() {
   const { user } = useAuth0();
   const { t } = useTranslation(["homepage"]);
   const [error, setError] = useState<Error | null>(null);
-
   useEffect(() => {
     if (user) {
       Sentry.setUser({ email: user.email, id: user.sub });
@@ -207,7 +206,9 @@ function App() {
                   <LazyProjectAdmin />
                 </Route>
                 <Route path="/:slug/app/:sidebar?">
-                  <LazyProjectApp />
+                  <ProjectAccessGate>
+                    <LazyProjectApp />
+                  </ProjectAccessGate>
                 </Route>
                 <Route
                   path="/:slug/surveys/:surveyId"
