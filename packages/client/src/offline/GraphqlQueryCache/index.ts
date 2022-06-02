@@ -38,7 +38,6 @@ export class GraphqlQueryCache {
   strategies: Strategy[];
   strategyArgs: { [key: string]: string[] } = {};
   apolloClient?: ApolloClient<any>;
-  pauseRevalidations: { [queryName: string]: boolean } = {};
 
   constructor(
     endpoint: string,
@@ -79,15 +78,40 @@ export class GraphqlQueryCache {
     this.updateStrategyArgs();
     // Setup swr event listeners
     if ("serviceWorker" in navigator && apolloClient) {
-      navigator.serviceWorker.addEventListener("message", (e) => {
-        if (
-          e.data.type &&
-          e.data.type === MESSAGE_TYPES.GRAPHQL_CACHE_REVALIDATION
-        ) {
-          apolloClient.refetchQueries({
-            include: e.data.queries || [],
-          });
-        }
+      import("../../generated/graphql").then((graphql) => {
+        navigator.serviceWorker.addEventListener("message", async (e) => {
+          if (
+            e.data.type &&
+            e.data.type === MESSAGE_TYPES.GRAPHQL_CACHE_REVALIDATION &&
+            e.data.queryName &&
+            e.data.variables
+          ) {
+            const { queryName, variables } = e.data as {
+              queryName: string;
+              variables: any;
+            };
+            const docs = (graphql as unknown) as {
+              [key: string]: DocumentNode;
+            };
+            if (`${queryName}Document` in docs) {
+              const query = docs[`${queryName}Document`];
+              const cacheKey = this.makeCacheRequest(queryName, variables);
+              const response = await caches.match(cacheKey);
+              if (response) {
+                const { data } = await response.json();
+                if (data) {
+                  apolloClient.cache.writeQuery({
+                    query,
+                    data,
+                    variables,
+                  });
+                }
+              }
+            } else {
+              throw new Error(`Unrecognized query ${queryName}`);
+            }
+          }
+        });
       });
     }
   }
@@ -165,7 +189,7 @@ export class GraphqlQueryCache {
       if (cached) {
         this.putToCaches(strategies, cacheReq, cached.clone());
         if (strategies.find((s) => s.swr === true)) {
-          this.swr(event.request, cacheReq, strategies);
+          this.swr(event.request, cacheReq, variables, strategies);
         }
         return cached;
       } else {
@@ -182,17 +206,10 @@ export class GraphqlQueryCache {
   private async swr(
     request: Request,
     cacheKey: Request,
+    variables: any,
     strategies: Strategy[]
   ) {
     const queryName = strategies[0].queryName;
-    if (this.pauseRevalidations[queryName] === true) {
-      // Use a timeout here so the same query can't be revalidated more
-      // frequently than every 5 seconds
-      setTimeout(() => {
-        this.pauseRevalidations[queryName] = false;
-      }, 5000);
-      return;
-    }
     // 1) fetch in background
     const response = await fetch(request);
     if (response.ok) {
@@ -203,10 +220,10 @@ export class GraphqlQueryCache {
       if (!("serviceWorker" in navigator) && self) {
         const clients = await self.clients.matchAll({ type: "window" });
         for (const client of clients) {
-          this.pauseRevalidations[queryName] = true;
           client.postMessage({
             type: MESSAGE_TYPES.GRAPHQL_CACHE_REVALIDATION,
-            queries: [queryName],
+            queryName,
+            variables,
           });
         }
       }
@@ -299,16 +316,8 @@ export class GraphqlQueryCache {
   }
 }
 
-function isLRU(strategy: Strategy): strategy is LRUStrategy {
-  return strategy.type === "lru";
-}
-
 function isByArgs(strategy: Strategy): strategy is ByArgsStrategy {
   return strategy.type === "byArgs";
-}
-
-function isStatic(strategy: Strategy): strategy is StaticStrategy {
-  return strategy.type === "static";
 }
 
 export function staticStrategy(
