@@ -166,9 +166,6 @@ describe("Survey creation smoke test", () => {
         if ((req.body.operationName) && (req.body.operationName === "ProjectMetadata")) {
           req.alias = "getProjectMetadata"
         }
-        //else {
-        //  req.alias = "otherRequest"
-        //}
       });
       cy.intercept(/mapbox/).as('mapBoxApiCall');
     });
@@ -424,65 +421,65 @@ describe("Survey creation smoke test", () => {
       waitOnMapbox(10)
       drawPolygon()
     })
-    it('Can view basemap selector', () => {
-      cy.get('img').click()
-      let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
-      values.forEach((val) => {
-        cy.get('.fixed > .overflow-y-auto').children().contains(val)
-      })
-    })
-    it ('Can show scale bar', () => {
-      cy.get('h4').contains('Show scale bar')
-      cy.get('[role="switch"]').then(($switch) => {
-        {$switch.trigger('click')}
-      })
-      cy.contains('5000 km')
-    })
-    it ('Renders the correct basemap', () => {
-      cy.contains('Maldives Light').as('maldivesLightBasemap')
-      cy.get('@maldivesLightBasemap').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
-      cy.contains('Satellite')
-        .should('not.have.class', 'font-semibold')
-    })
-    it ('Can select different basemap', () => {
-      cy.contains('Satellite').as('satelliteBasemap')
-        cy.get('@satelliteBasemap').then(($btn) => {
-          {$btn.trigger('click')}
-        })
-        .should('have.class', 'font-semibold')   
-      cy.contains('Maldives Light')
-        .should('not.have.class', 'font-semibold')
-    })
-    it('Shows option to focus on location', () => {
-      cy.restoreLocalStorage()
-      cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
-        cy.setLocalStorage("lat", `${center["lat"]}`)
-        cy.setLocalStorage("long", `${center["lng"]}`)
-        cy.getLocalStorage("surveyId").then((id) => {
-          cy.setLocalStorage("surveyId", id)
-        });
-        cy.saveLocalStorage();
-        cy.get('h4').contains('Focus on location').click();
-      });
-    });
-    it('Focuses on location', () => {
-      cy.restoreLocalStorage()
-      cy.getLocalStorage('lat').then((lat) => {
-        cy.getLocalStorage('long').then((lng) => {
-          cy.window().its('mapContext.map.transform._center').then((coords) => {
-            expect (coords["lat"]).to.not.equal(lat)
-            expect (coords["lng"]).to.not.equal(lng)
-          });
-        });
-      });
-    });
+    //it('Can view basemap selector', () => {
+    //  cy.get('img').click()
+    //  let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
+    //  values.forEach((val) => {
+    //    cy.get('.fixed > .overflow-y-auto').children().contains(val)
+    //  })
+    //})
+    //it ('Can show scale bar', () => {
+    //  cy.get('h4').contains('Show scale bar')
+    //  cy.get('[role="switch"]').then(($switch) => {
+    //    {$switch.trigger('click')}
+    //  })
+    //  cy.contains('5000 km')
+    //})
+    //it ('Renders the correct basemap', () => {
+    //  cy.contains('Maldives Light').as('maldivesLightBasemap')
+    //  cy.get('@maldivesLightBasemap').then(($btn) => {
+    //    {$btn.trigger('click')}
+    //  })
+    //  cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
+    //  cy.contains('Satellite')
+    //    .should('not.have.class', 'font-semibold')
+    //})
+    //it ('Can select different basemap', () => {
+    //  cy.contains('Satellite').as('satelliteBasemap')
+    //    cy.get('@satelliteBasemap').then(($btn) => {
+    //      {$btn.trigger('click')}
+    //    })
+    //    .should('have.class', 'font-semibold')   
+    //  cy.contains('Maldives Light')
+    //    .should('not.have.class', 'font-semibold')
+    //})
+    //it('Shows option to focus on location', () => {
+    //  cy.restoreLocalStorage()
+    //  cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
+    //    cy.setLocalStorage("lat", `${center["lat"]}`)
+    //    cy.setLocalStorage("long", `${center["lng"]}`)
+    //    cy.getLocalStorage("surveyId").then((id) => {
+    //      cy.setLocalStorage("surveyId", id)
+    //    });
+    //    cy.saveLocalStorage();
+    //    cy.get('h4').contains('Focus on location').click();
+    //  });
+    //});
+    //it('Focuses on location', () => {
+    //  cy.restoreLocalStorage()
+    //  cy.getLocalStorage('lat').then((lat) => {
+    //    cy.getLocalStorage('long').then((lng) => {
+    //      cy.window().its('mapContext.map.transform._center').then((coords) => {
+    //        expect (coords["lat"]).to.not.equal(lat)
+    //        expect (coords["lng"]).to.not.equal(lng)
+    //      });
+    //    });
+    //  });
+    //});
     it('Renders sector specific attributes - Fisheries - Commercial, Tuna', () => {
-      cy.get('img').then((imgs) => {
-        imgs[0].click()
-      })
+     // cy.get('img').then((imgs) => {
+     //   imgs[0].click()
+     // })
       cy.get('h1').contains('Area Name')
         .should('exist')
         .and('be.visible')
@@ -872,38 +869,19 @@ describe("Survey creation smoke test", () => {
       });
       cy.get('button').contains('Next').click()
     });
-    it("Skips to end when answer to additional questions is no", () => {
-      cy.contains('Are you willing to answer a few additional questions about who you are?')
-        .should('be.visible');
-      cy.get('[title="No"]')
-        .should('be.visible')
-        .click();
-      cy.wait('@createResponse').its('response.statusCode').should('eq', 200)
-      cy.get('h4').contains('Submitting')
-        .should('not.exist')
-      //cy.wait('@getProjectMetadata')
-      cy.get('h1').contains('Thank You for Responding')
-        .should('be.visible')
-        .and('exist')
-      cy.restoreLocalStorage();
-      cy.getLocalStorage('surveyId').then((id) => {
-        cy.getLocalStorage('slug').then((slug) => {
-          cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`);
-        });
-      });
-      //cy.wait('@mapBoxApiCall')
-    });
+    
     it("Can answer additional questions", () => {
-      cy.restoreLocalStorage()
-      cy.getLocalStorage('surveyId').then((id) => {
-        cy.getLocalStorage('slug').then((slug) => {
-          cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
-        })
-        
-      })
-      cy.wait('@getProjectMetadata')
-        .its('response.statusCode').should('eq', 200)
-      cy.get('h1').contains('additional')
+      //cy.restoreLocalStorage()
+      //cy.getLocalStorage('surveyId').then((id) => {
+      //  cy.getLocalStorage('slug').then((slug) => {
+      //    cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`);
+      //    cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
+      //  })
+      //  
+      //})
+      ////cy.wait('@getProjectMetadata')
+      //  .its('response.statusCode').should('eq', 200)
+      cy.contains('additional')
         .should('exist')
         .and('be.visible')
       cy.get('[title="Yes"]')
@@ -968,7 +946,37 @@ describe("Survey creation smoke test", () => {
           })
         })
       })
+      it("Skips to end when answer to additional questions is no", () => {
+        cy.restoreLocalStorage()
+        cy.getLocalStorage('surveyId').then((id) => {
+          cy.getLocalStorage('slug').then((slug) => {
+            cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`);
+            cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
+          })
+          
+        })
+        //cy.wait('@mapBoxApiCall')
+        cy.wait('@getSurvey')
+        cy.get('h1')
+          .should('be.visible');
+        cy.get('[title="No"]')
+          .should('be.visible')
+          .click();
+        cy.get('h4').contains('Submitting')
+          .should('not.exist')
+        cy.get('h1').contains('Thank You for Responding')
+          .should('be.visible')
+          .and('exist')
+        cy.restoreLocalStorage();
+        cy.getLocalStorage('surveyId').then((id) => {
+          cy.getLocalStorage('slug').then((slug) => {
+            cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`);
+          });
+        });
+        //cy.wait('@mapBoxApiCall')
+      });
     })
+    
   })//
   describe("Visual testing", () => {
     describe("Testing for key elements on mobile devices", () => {
