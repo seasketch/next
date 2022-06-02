@@ -6,6 +6,7 @@ export const MESSAGE_TYPES = {
   GET_BUILD: "GET_BUILD",
   UPDATE_GRAPHQL_STRATEGY_ARGS: "UPDATE_GRAPHQL_STRATEGY_ARGS",
   GRAPHQL_CACHE_REVALIDATION: "GRAPHQL_CACHE_REVALIDATION",
+  UPDATE_GRAPHQL_CACHE_ENABLED: "UPDATE_GRAPHQL_CACHE_ENABLED",
 };
 
 /**
@@ -62,6 +63,16 @@ class ServiceWorkerWindow {
   updateGraphqlQueryCacheStrategyArgs() {
     return this.wb.messageSW({
       type: MESSAGE_TYPES.UPDATE_GRAPHQL_STRATEGY_ARGS,
+    });
+  }
+
+  /**
+   * Notifies service worker to changes in graphql query cache enabled state
+   */
+  updateGraphqlQueryCacheStrategyEnabled(enabled: boolean) {
+    return this.wb.messageSW({
+      type: MESSAGE_TYPES.UPDATE_GRAPHQL_CACHE_ENABLED,
+      enabled,
     });
   }
 }

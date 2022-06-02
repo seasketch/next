@@ -32,6 +32,7 @@ type ByArgsStrategy = {
 type Strategy = StaticStrategy | LRUStrategy | ByArgsStrategy;
 
 const STRATEGY_ARGS_KEY = `graphql-query-cache-strategy-args`;
+const ENABLED_KEY = `graphql-query-cache-enabled`;
 
 /**
  * Saves query results to CacheStorage for use offline or just to improve
@@ -58,12 +59,14 @@ export class GraphqlQueryCache {
   strategies: Strategy[];
   strategyArgs: { [key: string]: string[] } = {};
   apolloClient?: ApolloClient<any>;
+  private enabled?: boolean;
 
   constructor(
     endpoint: string,
     strategies: Strategy[],
     apolloClient?: ApolloClient<any>
   ) {
+    this.restoreEnabledState();
     this.endpoint = endpoint;
     this.strategies = strategies;
     if ("serviceWorker" in navigator && !apolloClient) {
@@ -134,6 +137,46 @@ export class GraphqlQueryCache {
         });
       });
     }
+  }
+
+  /**
+   * If cache is not enabled it will simply pass request through to fetch()
+   * @returns Boolean
+   */
+  async isEnabled() {
+    if (this.enabled !== undefined) {
+      return this.enabled;
+    } else {
+      const enabled = await localforage.getItem(ENABLED_KEY);
+      this.enabled = Boolean(
+        enabled ||
+          (process.env.REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE
+            ? process.env.REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE.toUpperCase() ===
+              "TRUE"
+            : false)
+      );
+      return this.enabled;
+    }
+  }
+
+  /**
+   * Enable or disable the cache
+   * @param enabled Boolean
+   */
+  async setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+    localforage.setItem(ENABLED_KEY, enabled);
+    if ("serviceWorker" in navigator) {
+      ServiceWorkerWindow.updateGraphqlQueryCacheStrategyEnabled(enabled);
+    }
+  }
+
+  /**
+   * Restores active state from browser storage on initialization and when
+   * notified that the cache in the main window changed it's settings
+   */
+  async restoreEnabledState() {
+    this.enabled = Boolean(await localforage.getItem(ENABLED_KEY));
   }
 
   /**
@@ -242,6 +285,9 @@ export class GraphqlQueryCache {
    * @returns Promise<Response>
    */
   async handleRequest(url: URL, event: FetchEvent): Promise<Response> {
+    if (!(await this.isEnabled())) {
+      return fetch(event.request);
+    }
     const {
       operationName,
       variables,
