@@ -490,6 +490,18 @@ export class GraphqlQueryCache {
     // eslint-disable-next-line i18next/no-literal-string
     return `graphql-query-cache-${strategy.queryName}-${strategy.type}`;
   }
+
+  /**
+   * Purges caches for all strategies. Use for user signout
+   */
+  clear() {
+    return Promise.all(
+      this.strategies.map((strategy) => {
+        const cacheName = this.cacheNameForStrategy(strategy);
+        return caches.delete(cacheName);
+      })
+    );
+  }
 }
 
 /**
