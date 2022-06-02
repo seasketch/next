@@ -10,5 +10,6 @@ declare namespace NodeJS {
     REACT_APP_AUTH0_SCOPE: string;
     REACT_APP_PUBLIC_URL: string;
     REACT_APP_GRAPHQL_ENDPOINT: string;
+    REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE_BY_DEFAULT?: string;
   }
 }
