@@ -75,7 +75,7 @@ const createBasemaps = (id, token, name) => {
 
 const waitOnMapbox = (count) => {
   for (; count; count--) {
-    cy.wait('@mapBoxApiCall').then((intercepts) => {
+    cy.wait('@mapboxApiCall').then((intercepts) => {
       expect (intercepts.response.statusCode).to.be.oneOf([200, 204]);
     });
   };
@@ -167,7 +167,7 @@ describe("Survey creation smoke test", () => {
           req.alias = "getProjectMetadata"
         }
       });
-      cy.intercept(/mapbox/).as('mapBoxApiCall');
+      cy.intercept(/mapbox/).as('mapboxApiCall');
     });
     before(() => {
       const slug: string = generateSlug();
@@ -418,7 +418,7 @@ describe("Survey creation smoke test", () => {
         })
       })
       //wait on all calls to Mapbox Api
-      waitOnMapbox(10)
+      waitOnMapbox(9)
       drawPolygon()
     })
     it('Can view basemap selector', () => {
