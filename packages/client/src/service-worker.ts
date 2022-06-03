@@ -52,6 +52,11 @@ self.addEventListener("message", (event) => {
     event.data.type === MESSAGE_TYPES.UPDATE_GRAPHQL_STRATEGY_ARGS
   ) {
     graphqlQueryCache.updateStrategyArgs();
+  } else if (
+    event.data &&
+    event.data.type === MESSAGE_TYPES.UPDATE_GRAPHQL_CACHE_ENABLED
+  ) {
+    graphqlQueryCache.restoreEnabledState();
   }
 });
 
