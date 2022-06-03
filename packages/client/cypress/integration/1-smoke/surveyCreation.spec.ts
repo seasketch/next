@@ -543,10 +543,11 @@ describe("Survey creation smoke test", () => {
         }
       })
       cy.get('button').contains('Next sector').should('not.exist')
+      waitOnMapbox(8)
       cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
         .should('exist')
         .and('be.visible')
-      waitOnMapbox(7)
+      
       drawPolygon()
     })
     it("Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species", () => {
@@ -619,7 +620,7 @@ describe("Survey creation smoke test", () => {
       cy.get('h4').contains('Fisheries - Recreational')
         .should('exist')
         .and('be.visible')
-      waitOnMapbox(7)
+      waitOnMapbox(8)
       drawPolygon()
     })
     it("Renders sector specific attributes - Fisheries - Recreational", () => {
