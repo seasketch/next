@@ -60,6 +60,7 @@ export class GraphqlQueryCache {
   strategyArgs: { [key: string]: string[] } = {};
   apolloClient?: ApolloClient<any>;
   private enabled?: boolean;
+  cachePruningDebounceInterval = process.env.NODE_ENV === "test" ? 1 : 500;
 
   constructor(
     endpoint: string,
@@ -301,14 +302,15 @@ export class GraphqlQueryCache {
       query: string;
     };
     const strategies = this.matchingStrategies(operationName, variables);
-    if (strategies.length && query && query.slice(0, 5) === "query") {
+    if (strategies.length && query && query.trim().slice(0, 5) === "query") {
       const cacheReq = this.makeCacheKey(operationName, variables);
       const cached = await this.matchCache(cacheReq, strategies);
       if (cached) {
-        this.putToCaches(strategies, cacheReq, cached.clone());
-        if (strategies.find((s) => s.swr === true)) {
-          this.swr(event.request, cacheReq, variables, strategies);
-        }
+        this.putToCaches(strategies, cacheReq, cached.clone()).then(() => {
+          if (strategies.find((s) => s.swr === true)) {
+            this.swr(event.request, cacheReq, variables, strategies);
+          }
+        });
         return cached;
       } else {
         const response = await fetch(event.request);
@@ -385,9 +387,7 @@ export class GraphqlQueryCache {
         const cache = await this.openCache(strategy);
         return this.deleteAndPut(cache, cacheReq, response);
       })
-    ).then(() => {
-      this.debouncedPruneCaches();
-    });
+    ).then(this.debouncedPruneCaches);
   }
 
   // This will effectively make each cache an lru queue since
@@ -429,7 +429,11 @@ export class GraphqlQueryCache {
    * Happens after request handling, when caches have already been populated.
    * Used to make sure each cache is under any entry limits.
    */
-  debouncedPruneCaches = debounce(this.pruneCaches, 500);
+  private debouncedPruneCaches = debounce(
+    this.pruneCaches,
+    this.cachePruningDebounceInterval,
+    { maxWait: this.cachePruningDebounceInterval }
+  ).bind(this);
 
   /**
    * Returns the first cached response found in the given strategies. Use as
@@ -464,11 +468,13 @@ export class GraphqlQueryCache {
   private makeCacheKey(operationName: string, variables: any) {
     let cacheKey = `${operationName}`;
     if (variables && Object.keys(variables).length) {
-      cacheKey += `(${canonicalStringify(variables)})`;
+      cacheKey += canonicalStringify(variables).replaceAll(/[^\w\d]/g, "-");
     }
     return new Request(
       // eslint-disable-next-line i18next/no-literal-string
-      `https://graphql-query-cache/${encodeURI(cacheKey)}`
+      `https://graphql-query-cache/${encodeURI(cacheKey)}${
+        process.env.JEST_WORKER_ID || ""
+      }`
     );
   }
 
@@ -488,7 +494,9 @@ export class GraphqlQueryCache {
    */
   cacheNameForStrategy(strategy: Strategy) {
     // eslint-disable-next-line i18next/no-literal-string
-    return `graphql-query-cache-${strategy.queryName}-${strategy.type}`;
+    return `${process.env.JEST_WORKER_ID || ""}graphql-query-cache-${
+      strategy.queryName
+    }-${strategy.type}`;
   }
 
   /**
@@ -496,8 +504,14 @@ export class GraphqlQueryCache {
    */
   clear() {
     return Promise.all(
-      this.strategies.map((strategy) => {
+      this.strategies.map(async (strategy) => {
         const cacheName = this.cacheNameForStrategy(strategy);
+        if (process.env.NODE_ENV === "test") {
+          const cache = await caches.open(cacheName);
+          for (const k of await cache.keys()) {
+            await cache.delete(k);
+          }
+        }
         return caches.delete(cacheName);
       })
     );
