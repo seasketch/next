@@ -13392,6 +13392,25 @@ export type UpdateProjectAccessControlSettingsMutation = (
   )> }
 );
 
+export type ProjectMetadataFragment = (
+  { __typename?: 'Project' }
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
+);
+
+export type ProjectPublicDetailsMetadataFragment = (
+  { __typename?: 'PublicProjectDetail' }
+  & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail' | 'accessStatus'>
+);
+
+export type ProjectMetadataMeFragFragment = (
+  { __typename?: 'User' }
+  & Pick<User, 'id'>
+  & { profile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
+  )> }
+);
+
 export type ProjectMetadataQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13401,17 +13420,13 @@ export type ProjectMetadataQuery = (
   { __typename?: 'Query' }
   & { project?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
+    & ProjectMetadataFragment
   )>, projectPublicDetails?: Maybe<(
     { __typename?: 'PublicProjectDetail' }
-    & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail' | 'accessStatus'>
+    & ProjectPublicDetailsMetadataFragment
   )>, me?: Maybe<(
     { __typename?: 'User' }
-    & Pick<User, 'id'>
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
-    )> }
+    & ProjectMetadataMeFragFragment
   )> }
 );
 
@@ -14363,13 +14378,13 @@ export type SurveyQueryVariables = Exact<{
 
 export type SurveyQuery = (
   { __typename?: 'Query' }
-  & { me?: Maybe<(
+  & { projectPublicDetails?: Maybe<(
+    { __typename?: 'PublicProjectDetail' }
+    & ProjectPublicDetailsMetadataFragment
+  )>, me?: Maybe<(
     { __typename?: 'User' }
     & Pick<User, 'id' | 'isAdmin'>
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'email' | 'fullname'>
-    )> }
+    & ProjectMetadataMeFragFragment
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'name' | 'url'>
@@ -14378,6 +14393,7 @@ export type SurveyQuery = (
       & Pick<GeometryPolygon, 'geojson'>
     ) }
     & MapEssentialsFragment
+    & ProjectMetadataFragment
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & SurveyAppSurveyFragment
@@ -15185,6 +15201,45 @@ export const MapEssentialsFragmentDoc = gql`
   mapboxSecretKey
 }
     ${BasemapDetailsFragmentDoc}`;
+export const ProjectMetadataFragmentDoc = gql`
+    fragment ProjectMetadata on Project {
+  id
+  slug
+  url
+  name
+  description
+  logoLink
+  logoUrl
+  accessControl
+  sessionIsAdmin
+  isFeatured
+}
+    `;
+export const ProjectPublicDetailsMetadataFragmentDoc = gql`
+    fragment ProjectPublicDetailsMetadata on PublicProjectDetail {
+  id
+  accessControl
+  slug
+  name
+  logoUrl
+  supportEmail
+  accessStatus
+}
+    `;
+export const ProjectMetadataMeFragFragmentDoc = gql`
+    fragment ProjectMetadataMeFrag on User {
+  id
+  profile {
+    userId
+    fullname
+    nickname
+    email
+    picture
+    bio
+    affiliations
+  }
+}
+    `;
 export const SurveyListDetailsFragmentDoc = gql`
     fragment SurveyListDetails on Survey {
   id
@@ -18601,40 +18656,18 @@ export type UpdateProjectAccessControlSettingsMutationOptions = Apollo.BaseMutat
 export const ProjectMetadataDocument = gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
-    id
-    slug
-    url
-    name
-    description
-    logoLink
-    logoUrl
-    accessControl
-    sessionIsAdmin
-    isFeatured
+    ...ProjectMetadata
   }
   projectPublicDetails(slug: $slug) {
-    id
-    accessControl
-    slug
-    name
-    logoUrl
-    supportEmail
-    accessStatus
+    ...ProjectPublicDetailsMetadata
   }
   me {
-    id
-    profile {
-      userId
-      fullname
-      nickname
-      email
-      picture
-      bio
-      affiliations
-    }
+    ...ProjectMetadataMeFrag
   }
 }
-    `;
+    ${ProjectMetadataFragmentDoc}
+${ProjectPublicDetailsMetadataFragmentDoc}
+${ProjectMetadataMeFragFragmentDoc}`;
 
 /**
  * __useProjectMetadataQuery__
@@ -20546,14 +20579,13 @@ export type GetFormElementLazyQueryHookResult = ReturnType<typeof useGetFormElem
 export type GetFormElementQueryResult = Apollo.QueryResult<GetFormElementQuery, GetFormElementQueryVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!, $slug: String!) {
+  projectPublicDetails(slug: $slug) {
+    ...ProjectPublicDetailsMetadata
+  }
   me {
     id
     isAdmin
-    profile {
-      userId
-      email
-      fullname
-    }
+    ...ProjectMetadataMeFrag
   }
   currentProject: projectBySlug(slug: $slug) {
     id
@@ -20563,12 +20595,16 @@ export const SurveyDocument = gql`
     region {
       geojson
     }
+    ...ProjectMetadata
   }
   survey(id: $id) {
     ...SurveyAppSurvey
   }
 }
-    ${MapEssentialsFragmentDoc}
+    ${ProjectPublicDetailsMetadataFragmentDoc}
+${ProjectMetadataMeFragFragmentDoc}
+${MapEssentialsFragmentDoc}
+${ProjectMetadataFragmentDoc}
 ${SurveyAppSurveyFragmentDoc}`;
 
 /**
@@ -21833,6 +21869,9 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',
     MapEssentials: 'MapEssentials',
+    ProjectMetadata: 'ProjectMetadata',
+    ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
+    ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

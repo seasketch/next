@@ -13390,6 +13390,25 @@ export type UpdateProjectAccessControlSettingsMutation = (
   )> }
 );
 
+export type ProjectMetadataFragment = (
+  { __typename?: 'Project' }
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
+);
+
+export type ProjectPublicDetailsMetadataFragment = (
+  { __typename?: 'PublicProjectDetail' }
+  & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail' | 'accessStatus'>
+);
+
+export type ProjectMetadataMeFragFragment = (
+  { __typename?: 'User' }
+  & Pick<User, 'id'>
+  & { profile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
+  )> }
+);
+
 export type ProjectMetadataQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13399,17 +13418,13 @@ export type ProjectMetadataQuery = (
   { __typename?: 'Query' }
   & { project?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
+    & ProjectMetadataFragment
   )>, projectPublicDetails?: Maybe<(
     { __typename?: 'PublicProjectDetail' }
-    & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail' | 'accessStatus'>
+    & ProjectPublicDetailsMetadataFragment
   )>, me?: Maybe<(
     { __typename?: 'User' }
-    & Pick<User, 'id'>
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
-    )> }
+    & ProjectMetadataMeFragFragment
   )> }
 );
 
@@ -14361,13 +14376,13 @@ export type SurveyQueryVariables = Exact<{
 
 export type SurveyQuery = (
   { __typename?: 'Query' }
-  & { me?: Maybe<(
+  & { projectPublicDetails?: Maybe<(
+    { __typename?: 'PublicProjectDetail' }
+    & ProjectPublicDetailsMetadataFragment
+  )>, me?: Maybe<(
     { __typename?: 'User' }
     & Pick<User, 'id' | 'isAdmin'>
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'email' | 'fullname'>
-    )> }
+    & ProjectMetadataMeFragFragment
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'name' | 'url'>
@@ -14376,6 +14391,7 @@ export type SurveyQuery = (
       & Pick<GeometryPolygon, 'geojson'>
     ) }
     & MapEssentialsFragment
+    & ProjectMetadataFragment
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & SurveyAppSurveyFragment
@@ -15183,6 +15199,45 @@ export const MapEssentialsFragmentDoc = /*#__PURE__*/ gql`
   mapboxSecretKey
 }
     ${BasemapDetailsFragmentDoc}`;
+export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
+    fragment ProjectMetadata on Project {
+  id
+  slug
+  url
+  name
+  description
+  logoLink
+  logoUrl
+  accessControl
+  sessionIsAdmin
+  isFeatured
+}
+    `;
+export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
+    fragment ProjectPublicDetailsMetadata on PublicProjectDetail {
+  id
+  accessControl
+  slug
+  name
+  logoUrl
+  supportEmail
+  accessStatus
+}
+    `;
+export const ProjectMetadataMeFragFragmentDoc = /*#__PURE__*/ gql`
+    fragment ProjectMetadataMeFrag on User {
+  id
+  profile {
+    userId
+    fullname
+    nickname
+    email
+    picture
+    bio
+    affiliations
+  }
+}
+    `;
 export const SurveyListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyListDetails on Survey {
   id
@@ -16580,40 +16635,18 @@ export const UpdateProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
 export const ProjectMetadataDocument = /*#__PURE__*/ gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
-    id
-    slug
-    url
-    name
-    description
-    logoLink
-    logoUrl
-    accessControl
-    sessionIsAdmin
-    isFeatured
+    ...ProjectMetadata
   }
   projectPublicDetails(slug: $slug) {
-    id
-    accessControl
-    slug
-    name
-    logoUrl
-    supportEmail
-    accessStatus
+    ...ProjectPublicDetailsMetadata
   }
   me {
-    id
-    profile {
-      userId
-      fullname
-      nickname
-      email
-      picture
-      bio
-      affiliations
-    }
+    ...ProjectMetadataMeFrag
   }
 }
-    `;
+    ${ProjectMetadataFragmentDoc}
+${ProjectPublicDetailsMetadataFragmentDoc}
+${ProjectMetadataMeFragFragmentDoc}`;
 export const MeDocument = /*#__PURE__*/ gql`
     query Me {
   me {
@@ -17258,14 +17291,13 @@ export const GetFormElementDocument = /*#__PURE__*/ gql`
     ${FormElementDetailsFragmentDoc}`;
 export const SurveyDocument = /*#__PURE__*/ gql`
     query Survey($id: Int!, $slug: String!) {
+  projectPublicDetails(slug: $slug) {
+    ...ProjectPublicDetailsMetadata
+  }
   me {
     id
     isAdmin
-    profile {
-      userId
-      email
-      fullname
-    }
+    ...ProjectMetadataMeFrag
   }
   currentProject: projectBySlug(slug: $slug) {
     id
@@ -17275,12 +17307,16 @@ export const SurveyDocument = /*#__PURE__*/ gql`
     region {
       geojson
     }
+    ...ProjectMetadata
   }
   survey(id: $id) {
     ...SurveyAppSurvey
   }
 }
-    ${MapEssentialsFragmentDoc}
+    ${ProjectPublicDetailsMetadataFragmentDoc}
+${ProjectMetadataMeFragFragmentDoc}
+${MapEssentialsFragmentDoc}
+${ProjectMetadataFragmentDoc}
 ${SurveyAppSurveyFragmentDoc}`;
 export const CreateResponseDocument = /*#__PURE__*/ gql`
     mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!) {

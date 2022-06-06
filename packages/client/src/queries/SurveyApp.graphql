@@ -73,22 +73,25 @@ fragment SurveyAppSurvey on Survey {
 }
 
 query Survey($id: Int!, $slug: String!) {
+  projectPublicDetails(slug: $slug) {
+    ...ProjectPublicDetailsMetadata
+  }
+
   me {
     id
     isAdmin
-    profile {
-      userId
-      email
-      fullname
-    }
+    ...ProjectMetadataMeFrag
   }
 
   currentProject: projectBySlug(slug: $slug) {
+    id
     name
     url
+    ...MapEssentials
     region {
       geojson
     }
+    ...ProjectMetadata
   }
 
   survey(id: $id) {
@@ -118,22 +121,5 @@ mutation CreateResponse(
     surveyResponse {
       id
     }
-  }
-}
-
-query GetBasemapsAndRegion($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    basemaps {
-      ...BasemapDetails
-    }
-    surveyBasemaps {
-      ...BasemapDetails
-    }
-    region {
-      geojson
-    }
-    mapboxPublicKey
-    mapboxSecretKey
   }
 }

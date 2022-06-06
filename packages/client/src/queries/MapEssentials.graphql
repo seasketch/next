@@ -1,0 +1,20 @@
+fragment MapEssentials on Project {
+  id
+  basemaps {
+    ...BasemapDetails
+  }
+  surveyBasemaps {
+    ...BasemapDetails
+  }
+  region {
+    geojson
+  }
+  mapboxPublicKey
+  mapboxSecretKey
+}
+
+query GetBasemapsAndRegion($slug: String!) {
+  projectBySlug(slug: $slug) {
+    ...MapEssentials
+  }
+}

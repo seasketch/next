@@ -219,10 +219,7 @@ function App() {
                   }}
                 />
                 <Route path="/:slug/surveys/:surveyId/:position/:practice?">
-                  {/* eslint-disable-next-line i18next/no-literal-string */}
-                  <ProjectAccessGate>
-                    <LazySurveyApp />
-                  </ProjectAccessGate>
+                  <LazySurveyApp />
                 </Route>
               </Route>
             </Switch>
