@@ -8654,7 +8654,6 @@ input ProjectPatch {
   """
   logoUrl: Upload
   mapboxPublicKey: String
-  mapboxSecretKey: String
   name: String
   region: GeoJSON
 }

@@ -3893,6 +3893,13 @@ COMMENT ON COLUMN public.projects.deleted_at IS '@omit';
 
 
 --
+-- Name: COLUMN projects.mapbox_secret_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.mapbox_secret_key IS '@omit';
+
+
+--
 -- Name: create_project(text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6954,18 +6961,18 @@ Returns true if the given user is an administrator of the project. Informaiton i
 -- Name: projects_mapbox_secret_key(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.projects_mapbox_secret_key(project public.projects) RETURNS text
-    LANGUAGE sql STABLE SECURITY DEFINER
+CREATE FUNCTION public.projects_mapbox_secret_key(p public.projects) RETURNS text
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    select mapbox_secret_key from projects where projects.id = project.id and session_is_admin(project.id);
+    begin
+      if session_is_admin(p.id) then
+        return (select mapbox_public_key from projects where projects.id = project.id and session_is_admin(project.id));
+      else
+        return '*********'::text;
+        -- raise exception 'Must be project admin';
+      end if;
+    end;
   $$;
-
-
---
--- Name: FUNCTION projects_mapbox_secret_key(project public.projects); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.projects_mapbox_secret_key(project public.projects) IS 'Only available to project admins. Use to query basemaps from a specified account.';
 
 
 --
@@ -15726,11 +15733,19 @@ GRANT SELECT ON TABLE public.projects TO anon;
 
 
 --
+-- Name: COLUMN projects.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.projects TO anon;
+
+
+--
 -- Name: COLUMN projects.name; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(name) ON TABLE public.projects TO anon;
 
 
 --
@@ -15739,6 +15754,21 @@ GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(description) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.legacy_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(legacy_id) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.slug; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(slug) ON TABLE public.projects TO anon;
 
 
 --
@@ -15747,6 +15777,7 @@ GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(access_control) ON TABLE public.projects TO anon;
 
 
 --
@@ -15755,6 +15786,7 @@ GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(is_listed) ON TABLE public.projects TO anon;
 
 
 --
@@ -15763,6 +15795,7 @@ GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(logo_url) ON TABLE public.projects TO anon;
 
 
 --
@@ -15771,6 +15804,7 @@ GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(logo_link) ON TABLE public.projects TO anon;
 
 
 --
@@ -15778,6 +15812,21 @@ GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
+GRANT SELECT(is_featured) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.is_deleted; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_deleted) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.deleted_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(deleted_at) ON TABLE public.projects TO anon;
 
 
 --
@@ -15786,6 +15835,7 @@ GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
 
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(region) ON TABLE public.projects TO anon;
 
 
 --
@@ -15794,6 +15844,7 @@ GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(data_sources_bucket_id) ON TABLE public.projects TO anon;
 
 
 --
@@ -15801,6 +15852,7 @@ GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT SELECT(invite_email_template_text),UPDATE(invite_email_template_text) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(invite_email_template_text) ON TABLE public.projects TO anon;
 
 
 --
@@ -15808,6 +15860,7 @@ GRANT SELECT(invite_email_template_text),UPDATE(invite_email_template_text) ON T
 --
 
 GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(invite_email_subject) ON TABLE public.projects TO anon;
 
 
 --
@@ -15825,6 +15878,13 @@ GRANT SELECT(created_at) ON TABLE public.projects TO anon;
 
 
 --
+-- Name: COLUMN projects.creator_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(creator_id) ON TABLE public.projects TO anon;
+
+
+--
 -- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
 --
 
@@ -15836,6 +15896,7 @@ GRANT UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT UPDATE(mapbox_public_key) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(mapbox_public_key) ON TABLE public.projects TO anon;
 
 
 --
@@ -18580,10 +18641,11 @@ GRANT ALL ON FUNCTION public.projects_is_admin(p public.projects, "userId" integ
 
 
 --
--- Name: FUNCTION projects_mapbox_secret_key(project public.projects); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION projects_mapbox_secret_key(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.projects_mapbox_secret_key(project public.projects) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.projects_mapbox_secret_key(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_mapbox_secret_key(p public.projects) TO anon;
 
 
 --
