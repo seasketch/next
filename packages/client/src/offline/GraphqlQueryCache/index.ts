@@ -318,8 +318,16 @@ export class GraphqlQueryCache {
         return response;
       }
     } else {
-      // If the request is a mutation, just pass it along normally
-      return fetch(event.request);
+      try {
+        // If an unrelated operation, just pass it along normally
+        const response = await fetch(event.request);
+        return response;
+      } catch (e) {
+        // This is will fail only due to a network error, such as being offline
+        // or a CORS issue
+        // TODO: notify client they could be offline
+        return new Response("Failed to fetch", { status: 500 });
+      }
     }
   }
 
@@ -345,26 +353,32 @@ export class GraphqlQueryCache {
     variables: any,
     strategies: Strategy[]
   ) {
-    const queryName = strategies[0].queryName;
-    // 1) fetch in background
-    const response = await fetch(request);
-    if (response.ok) {
-      // 2) update caches for each strategy (all with same query, regardless of swr flag)
-      // make sure to await this operation so the cache is ready for
-      await this.putToCaches(strategies, cacheKey, response);
-      // 3) signal to main window that cache has been updated
-      if (!("serviceWorker" in navigator) && self) {
-        const clients = await self.clients.matchAll({ type: "window" });
-        for (const client of clients) {
-          client.postMessage({
-            type: MESSAGE_TYPES.GRAPHQL_CACHE_REVALIDATION,
-            queryName,
-            variables,
-          });
+    try {
+      const queryName = strategies[0].queryName;
+      // 1) fetch in background
+      const response = await fetch(request);
+      if (response.ok) {
+        // 2) update caches for each strategy (all with same query, regardless of swr flag)
+        // make sure to await this operation so the cache is ready for
+        await this.putToCaches(strategies, cacheKey, response);
+        // 3) signal to main window that cache has been updated
+        if (!("serviceWorker" in navigator) && self) {
+          const clients = await self.clients.matchAll({ type: "window" });
+          for (const client of clients) {
+            client.postMessage({
+              type: MESSAGE_TYPES.GRAPHQL_CACHE_REVALIDATION,
+              queryName,
+              variables,
+            });
+          }
+          // 4) update apollo cache in main window...
+          //    see postmessage handler in constructor
         }
-        // 4) update apollo cache in main window...
-        //    see postmessage handler in constructor
       }
+    } catch (e) {
+      // Not necessary to do anything if offline
+      // TODO: consider notifying the related client that the user may be
+      // offline, or if it's a server error show a toast message
     }
   }
 
