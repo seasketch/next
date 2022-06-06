@@ -1,7 +1,11 @@
 import React, { useState, useEffect, ReactNode } from "react";
 import useDebounce from "../useDebounce";
-import { useUpdateProjectSettingsMutation } from "../generated/graphql";
+import {
+  UpdateProjectSettingsDocument,
+  useUpdateProjectSettingsMutation,
+} from "../generated/graphql";
 import TextInput from "../components/TextInput";
+import { DocumentNode, useMutation } from "@apollo/client";
 
 export default function ProjectAutosaveInput(props: {
   propName: string;
@@ -11,10 +15,15 @@ export default function ProjectAutosaveInput(props: {
   placeholder?: string;
   convertEmptyToNull?: boolean;
   description?: string | ReactNode;
+  mutation?: DocumentNode;
+  additionalVariables?: any;
 }) {
   const [value, setValue] = useState(props.value);
   const debouncedValue = useDebounce(value, 500);
-  const [mutation, mutationStatus] = useUpdateProjectSettingsMutation();
+  const [mutation, mutationStatus] = useMutation(
+    props.mutation || UpdateProjectSettingsDocument
+  );
+  // const [mutation, mutationStatus] = useUpdateProjectSettingsMutation();
   const [changeSinceError, setChangeSinceError] = useState<boolean>(false);
 
   useEffect(() => {
@@ -24,7 +33,7 @@ export default function ProjectAutosaveInput(props: {
         (mutationStatus.error && changeSinceError))
     ) {
       setChangeSinceError(false);
-      const variables: any = { slug: props.slug };
+      const variables: any = { slug: props.slug, ...props.additionalVariables };
       variables[props.propName] =
         debouncedValue.length === 0 ? null : debouncedValue;
       mutation({

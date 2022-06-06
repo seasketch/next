@@ -5467,6 +5467,7 @@ export type Mutation = {
   updateInteractivitySetting?: Maybe<UpdateInteractivitySettingPayload>;
   /** Updates a single `InteractivitySetting` using its globally unique id and a patch. */
   updateInteractivitySettingByNodeId?: Maybe<UpdateInteractivitySettingPayload>;
+  updateMapboxSecretKey?: Maybe<UpdateMapboxSecretKeyPayload>;
   /** Updates a single `OptionalBasemapLayer` using a unique key and a patch. */
   updateOptionalBasemapLayer?: Maybe<UpdateOptionalBasemapLayerPayload>;
   /** Updates a single `OptionalBasemapLayer` using its globally unique id and a patch. */
@@ -6490,6 +6491,12 @@ export type MutationUpdateInteractivitySettingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateInteractivitySettingByNodeIdArgs = {
   input: UpdateInteractivitySettingByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateMapboxSecretKeyArgs = {
+  input: UpdateMapboxSecretKeyInput;
 };
 
 
@@ -7640,7 +7647,6 @@ export type ProjectPatch = {
    */
   logoUrl?: Maybe<Scalars['Upload']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
-  mapboxSecretKey?: Maybe<Scalars['String']>;
   name?: Maybe<Scalars['String']>;
   region?: Maybe<Scalars['GeoJSON']>;
 };
@@ -11005,6 +11011,40 @@ export type UpdateInteractivitySettingPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `updateMapboxSecretKey` mutation. */
+export type UpdateMapboxSecretKeyInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  secret?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateMapboxSecretKey` mutation. */
+export type UpdateMapboxSecretKeyPayload = {
+  __typename?: 'UpdateMapboxSecretKeyPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateMapboxSecretKey` mutation. */
+export type UpdateMapboxSecretKeyPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
 /** All input for the `updateOptionalBasemapLayerByNodeId` mutation. */
 export type UpdateOptionalBasemapLayerByNodeIdInput = {
   /**
@@ -12096,20 +12136,36 @@ export type MapboxApiKeysQuery = (
   )> }
 );
 
-export type UpdateKeysMutationVariables = Exact<{
+export type UpdatePublicKeyMutationVariables = Exact<{
   id: Scalars['Int'];
   public?: Maybe<Scalars['String']>;
-  secret?: Maybe<Scalars['String']>;
 }>;
 
 
-export type UpdateKeysMutation = (
+export type UpdatePublicKeyMutation = (
   { __typename?: 'Mutation' }
   & { updateProject?: Maybe<(
     { __typename?: 'UpdateProjectPayload' }
     & { project?: Maybe<(
       { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
+      & Pick<Project, 'id' | 'mapboxPublicKey'>
+    )> }
+  )> }
+);
+
+export type UpdateSecretKeyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  mapboxSecretKey?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateSecretKeyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateMapboxSecretKey?: Maybe<(
+    { __typename?: 'UpdateMapboxSecretKeyPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'mapboxSecretKey'>
     )> }
   )> }
 );
@@ -13276,6 +13332,34 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type MapEssentialsFragment = (
+  { __typename?: 'Project' }
+  & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
+  & { basemaps?: Maybe<Array<(
+    { __typename?: 'Basemap' }
+    & BasemapDetailsFragment
+  )>>, surveyBasemaps?: Maybe<Array<(
+    { __typename?: 'Basemap' }
+    & BasemapDetailsFragment
+  )>>, region: (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  ) }
+);
+
+export type GetBasemapsAndRegionQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type GetBasemapsAndRegionQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & MapEssentialsFragment
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -14288,11 +14372,12 @@ export type SurveyQuery = (
     )> }
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'name' | 'url'>
+    & Pick<Project, 'id' | 'name' | 'url'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
     ) }
+    & MapEssentialsFragment
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & SurveyAppSurveyFragment
@@ -14318,29 +14403,6 @@ export type CreateResponseMutation = (
       { __typename?: 'SurveyResponse' }
       & Pick<SurveyResponse, 'id'>
     )> }
-  )> }
-);
-
-export type GetBasemapsAndRegionQueryVariables = Exact<{
-  slug: Scalars['String'];
-}>;
-
-
-export type GetBasemapsAndRegionQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
-    & { basemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>>, surveyBasemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>>, region: (
-      { __typename?: 'GeometryPolygon' }
-      & Pick<GeometryPolygon, 'geojson'>
-    ) }
   )> }
 );
 
@@ -14372,7 +14434,6 @@ export type UpdateProjectSettingsMutationVariables = Exact<{
   logoLink?: Maybe<Scalars['String']>;
   isFeatured?: Maybe<Scalars['Boolean']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
-  mapboxSecretKey?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -15108,6 +15169,22 @@ export const BasemapDetailsFragmentDoc = gql`
   surveysOnly
 }
     `;
+export const MapEssentialsFragmentDoc = gql`
+    fragment MapEssentials on Project {
+  id
+  basemaps {
+    ...BasemapDetails
+  }
+  surveyBasemaps {
+    ...BasemapDetails
+  }
+  region {
+    geojson
+  }
+  mapboxPublicKey
+  mapboxSecretKey
+}
+    ${BasemapDetailsFragmentDoc}`;
 export const SurveyListDetailsFragmentDoc = gql`
     fragment SurveyListDetails on Survey {
   id
@@ -15527,47 +15604,80 @@ export function useMapboxApiKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOpti
 export type MapboxApiKeysQueryHookResult = ReturnType<typeof useMapboxApiKeysQuery>;
 export type MapboxApiKeysLazyQueryHookResult = ReturnType<typeof useMapboxApiKeysLazyQuery>;
 export type MapboxApiKeysQueryResult = Apollo.QueryResult<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>;
-export const UpdateKeysDocument = gql`
-    mutation updateKeys($id: Int!, $public: String, $secret: String) {
-  updateProject(
-    input: {id: $id, patch: {mapboxPublicKey: $public, mapboxSecretKey: $secret}}
-  ) {
+export const UpdatePublicKeyDocument = gql`
+    mutation updatePublicKey($id: Int!, $public: String) {
+  updateProject(input: {id: $id, patch: {mapboxPublicKey: $public}}) {
     project {
       id
       mapboxPublicKey
-      mapboxSecretKey
     }
   }
 }
     `;
-export type UpdateKeysMutationFn = Apollo.MutationFunction<UpdateKeysMutation, UpdateKeysMutationVariables>;
+export type UpdatePublicKeyMutationFn = Apollo.MutationFunction<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>;
 
 /**
- * __useUpdateKeysMutation__
+ * __useUpdatePublicKeyMutation__
  *
- * To run a mutation, you first call `useUpdateKeysMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateKeysMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useUpdatePublicKeyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdatePublicKeyMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [updateKeysMutation, { data, loading, error }] = useUpdateKeysMutation({
+ * const [updatePublicKeyMutation, { data, loading, error }] = useUpdatePublicKeyMutation({
  *   variables: {
  *      id: // value for 'id'
  *      public: // value for 'public'
- *      secret: // value for 'secret'
  *   },
  * });
  */
-export function useUpdateKeysMutation(baseOptions?: Apollo.MutationHookOptions<UpdateKeysMutation, UpdateKeysMutationVariables>) {
+export function useUpdatePublicKeyMutation(baseOptions?: Apollo.MutationHookOptions<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<UpdateKeysMutation, UpdateKeysMutationVariables>(UpdateKeysDocument, options);
+        return Apollo.useMutation<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>(UpdatePublicKeyDocument, options);
       }
-export type UpdateKeysMutationHookResult = ReturnType<typeof useUpdateKeysMutation>;
-export type UpdateKeysMutationResult = Apollo.MutationResult<UpdateKeysMutation>;
-export type UpdateKeysMutationOptions = Apollo.BaseMutationOptions<UpdateKeysMutation, UpdateKeysMutationVariables>;
+export type UpdatePublicKeyMutationHookResult = ReturnType<typeof useUpdatePublicKeyMutation>;
+export type UpdatePublicKeyMutationResult = Apollo.MutationResult<UpdatePublicKeyMutation>;
+export type UpdatePublicKeyMutationOptions = Apollo.BaseMutationOptions<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>;
+export const UpdateSecretKeyDocument = gql`
+    mutation updateSecretKey($id: Int!, $mapboxSecretKey: String) {
+  updateMapboxSecretKey(input: {projectId: $id, secret: $mapboxSecretKey}) {
+    project {
+      id
+      mapboxSecretKey
+    }
+  }
+}
+    `;
+export type UpdateSecretKeyMutationFn = Apollo.MutationFunction<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>;
+
+/**
+ * __useUpdateSecretKeyMutation__
+ *
+ * To run a mutation, you first call `useUpdateSecretKeyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSecretKeyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSecretKeyMutation, { data, loading, error }] = useUpdateSecretKeyMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      mapboxSecretKey: // value for 'mapboxSecretKey'
+ *   },
+ * });
+ */
+export function useUpdateSecretKeyMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>(UpdateSecretKeyDocument, options);
+      }
+export type UpdateSecretKeyMutationHookResult = ReturnType<typeof useUpdateSecretKeyMutation>;
+export type UpdateSecretKeyMutationResult = Apollo.MutationResult<UpdateSecretKeyMutation>;
+export type UpdateSecretKeyMutationOptions = Apollo.BaseMutationOptions<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>;
 export const GetAclDocument = gql`
     query GetAcl($nodeId: ID!) {
   aclByNodeId(nodeId: $nodeId) {
@@ -18372,6 +18482,41 @@ export function usePublishTableOfContentsMutation(baseOptions?: Apollo.MutationH
 export type PublishTableOfContentsMutationHookResult = ReturnType<typeof usePublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationResult = Apollo.MutationResult<PublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationOptions = Apollo.BaseMutationOptions<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>;
+export const GetBasemapsAndRegionDocument = gql`
+    query GetBasemapsAndRegion($slug: String!) {
+  projectBySlug(slug: $slug) {
+    ...MapEssentials
+  }
+}
+    ${MapEssentialsFragmentDoc}`;
+
+/**
+ * __useGetBasemapsAndRegionQuery__
+ *
+ * To run a query within a React component, call `useGetBasemapsAndRegionQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetBasemapsAndRegionQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetBasemapsAndRegionQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useGetBasemapsAndRegionQuery(baseOptions: Apollo.QueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
+      }
+export function useGetBasemapsAndRegionLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
+        }
+export type GetBasemapsAndRegionQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionQuery>;
+export type GetBasemapsAndRegionLazyQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionLazyQuery>;
+export type GetBasemapsAndRegionQueryResult = Apollo.QueryResult<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -20411,8 +20556,10 @@ export const SurveyDocument = gql`
     }
   }
   currentProject: projectBySlug(slug: $slug) {
+    id
     name
     url
+    ...MapEssentials
     region {
       geojson
     }
@@ -20421,7 +20568,8 @@ export const SurveyDocument = gql`
     ...SurveyAppSurvey
   }
 }
-    ${SurveyAppSurveyFragmentDoc}`;
+    ${MapEssentialsFragmentDoc}
+${SurveyAppSurveyFragmentDoc}`;
 
 /**
  * __useSurveyQuery__
@@ -20494,52 +20642,6 @@ export function useCreateResponseMutation(baseOptions?: Apollo.MutationHookOptio
 export type CreateResponseMutationHookResult = ReturnType<typeof useCreateResponseMutation>;
 export type CreateResponseMutationResult = Apollo.MutationResult<CreateResponseMutation>;
 export type CreateResponseMutationOptions = Apollo.BaseMutationOptions<CreateResponseMutation, CreateResponseMutationVariables>;
-export const GetBasemapsAndRegionDocument = gql`
-    query GetBasemapsAndRegion($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    basemaps {
-      ...BasemapDetails
-    }
-    surveyBasemaps {
-      ...BasemapDetails
-    }
-    region {
-      geojson
-    }
-    mapboxPublicKey
-    mapboxSecretKey
-  }
-}
-    ${BasemapDetailsFragmentDoc}`;
-
-/**
- * __useGetBasemapsAndRegionQuery__
- *
- * To run a query within a React component, call `useGetBasemapsAndRegionQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetBasemapsAndRegionQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetBasemapsAndRegionQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
-export function useGetBasemapsAndRegionQuery(baseOptions: Apollo.QueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
-      }
-export function useGetBasemapsAndRegionLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
-        }
-export type GetBasemapsAndRegionQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionQuery>;
-export type GetBasemapsAndRegionLazyQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionLazyQuery>;
-export type GetBasemapsAndRegionQueryResult = Apollo.QueryResult<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>;
 export const UpdateProjectNameDocument = gql`
     mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
   updateProjectBySlug(
@@ -20582,9 +20684,9 @@ export type UpdateProjectNameMutationHookResult = ReturnType<typeof useUpdatePro
 export type UpdateProjectNameMutationResult = Apollo.MutationResult<UpdateProjectNameMutation>;
 export type UpdateProjectNameMutationOptions = Apollo.BaseMutationOptions<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>;
 export const UpdateProjectSettingsDocument = gql`
-    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String, $mapboxSecretKey: String) {
+    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String) {
   updateProjectBySlug(
-    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey, mapboxSecretKey: $mapboxSecretKey}}
+    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey}}
   ) {
     clientMutationId
     project {
@@ -20623,7 +20725,6 @@ export type UpdateProjectSettingsMutationFn = Apollo.MutationFunction<UpdateProj
  *      logoLink: // value for 'logoLink'
  *      isFeatured: // value for 'isFeatured'
  *      mapboxPublicKey: // value for 'mapboxPublicKey'
- *      mapboxSecretKey: // value for 'mapboxSecretKey'
  *   },
  * });
  */
@@ -21580,6 +21681,7 @@ export const namedOperations = {
     GetMetadata: 'GetMetadata',
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
+    GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
     ProjectMetadata: 'ProjectMetadata',
     Me: 'Me',
@@ -21598,7 +21700,6 @@ export const namedOperations = {
     AllBasemaps: 'AllBasemaps',
     GetFormElement: 'GetFormElement',
     Survey: 'Survey',
-    GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     UserAdminCounts: 'UserAdminCounts',
     Participants: 'Participants',
     Admins: 'Admins',
@@ -21611,7 +21712,8 @@ export const namedOperations = {
   },
   Mutation: {
     UpdateProjectStorageBucket: 'UpdateProjectStorageBucket',
-    updateKeys: 'updateKeys',
+    updatePublicKey: 'updatePublicKey',
+    updateSecretKey: 'updateSecretKey',
     UpdateAclType: 'UpdateAclType',
     AddGroupToAcl: 'AddGroupToAcl',
     RemoveGroupFromAcl: 'RemoveGroupFromAcl',
@@ -21730,6 +21832,7 @@ export const namedOperations = {
     UpdateComponentSettings: 'UpdateComponentSettings',
     UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',
+    MapEssentials: 'MapEssentials',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

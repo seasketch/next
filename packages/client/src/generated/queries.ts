@@ -5465,6 +5465,7 @@ export type Mutation = {
   updateInteractivitySetting?: Maybe<UpdateInteractivitySettingPayload>;
   /** Updates a single `InteractivitySetting` using its globally unique id and a patch. */
   updateInteractivitySettingByNodeId?: Maybe<UpdateInteractivitySettingPayload>;
+  updateMapboxSecretKey?: Maybe<UpdateMapboxSecretKeyPayload>;
   /** Updates a single `OptionalBasemapLayer` using a unique key and a patch. */
   updateOptionalBasemapLayer?: Maybe<UpdateOptionalBasemapLayerPayload>;
   /** Updates a single `OptionalBasemapLayer` using its globally unique id and a patch. */
@@ -6488,6 +6489,12 @@ export type MutationUpdateInteractivitySettingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateInteractivitySettingByNodeIdArgs = {
   input: UpdateInteractivitySettingByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateMapboxSecretKeyArgs = {
+  input: UpdateMapboxSecretKeyInput;
 };
 
 
@@ -7638,7 +7645,6 @@ export type ProjectPatch = {
    */
   logoUrl?: Maybe<Scalars['Upload']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
-  mapboxSecretKey?: Maybe<Scalars['String']>;
   name?: Maybe<Scalars['String']>;
   region?: Maybe<Scalars['GeoJSON']>;
 };
@@ -11003,6 +11009,40 @@ export type UpdateInteractivitySettingPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `updateMapboxSecretKey` mutation. */
+export type UpdateMapboxSecretKeyInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  secret?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateMapboxSecretKey` mutation. */
+export type UpdateMapboxSecretKeyPayload = {
+  __typename?: 'UpdateMapboxSecretKeyPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateMapboxSecretKey` mutation. */
+export type UpdateMapboxSecretKeyPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
 /** All input for the `updateOptionalBasemapLayerByNodeId` mutation. */
 export type UpdateOptionalBasemapLayerByNodeIdInput = {
   /**
@@ -12094,20 +12134,36 @@ export type MapboxApiKeysQuery = (
   )> }
 );
 
-export type UpdateKeysMutationVariables = Exact<{
+export type UpdatePublicKeyMutationVariables = Exact<{
   id: Scalars['Int'];
   public?: Maybe<Scalars['String']>;
-  secret?: Maybe<Scalars['String']>;
 }>;
 
 
-export type UpdateKeysMutation = (
+export type UpdatePublicKeyMutation = (
   { __typename?: 'Mutation' }
   & { updateProject?: Maybe<(
     { __typename?: 'UpdateProjectPayload' }
     & { project?: Maybe<(
       { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
+      & Pick<Project, 'id' | 'mapboxPublicKey'>
+    )> }
+  )> }
+);
+
+export type UpdateSecretKeyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  mapboxSecretKey?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateSecretKeyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateMapboxSecretKey?: Maybe<(
+    { __typename?: 'UpdateMapboxSecretKeyPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'mapboxSecretKey'>
     )> }
   )> }
 );
@@ -13274,6 +13330,34 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type MapEssentialsFragment = (
+  { __typename?: 'Project' }
+  & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
+  & { basemaps?: Maybe<Array<(
+    { __typename?: 'Basemap' }
+    & BasemapDetailsFragment
+  )>>, surveyBasemaps?: Maybe<Array<(
+    { __typename?: 'Basemap' }
+    & BasemapDetailsFragment
+  )>>, region: (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  ) }
+);
+
+export type GetBasemapsAndRegionQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type GetBasemapsAndRegionQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & MapEssentialsFragment
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -14286,11 +14370,12 @@ export type SurveyQuery = (
     )> }
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'name' | 'url'>
+    & Pick<Project, 'id' | 'name' | 'url'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
     ) }
+    & MapEssentialsFragment
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & SurveyAppSurveyFragment
@@ -14316,29 +14401,6 @@ export type CreateResponseMutation = (
       { __typename?: 'SurveyResponse' }
       & Pick<SurveyResponse, 'id'>
     )> }
-  )> }
-);
-
-export type GetBasemapsAndRegionQueryVariables = Exact<{
-  slug: Scalars['String'];
-}>;
-
-
-export type GetBasemapsAndRegionQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
-    & { basemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>>, surveyBasemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>>, region: (
-      { __typename?: 'GeometryPolygon' }
-      & Pick<GeometryPolygon, 'geojson'>
-    ) }
   )> }
 );
 
@@ -14370,7 +14432,6 @@ export type UpdateProjectSettingsMutationVariables = Exact<{
   logoLink?: Maybe<Scalars['String']>;
   isFeatured?: Maybe<Scalars['Boolean']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
-  mapboxSecretKey?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -15106,6 +15167,22 @@ export const BasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
   surveysOnly
 }
     `;
+export const MapEssentialsFragmentDoc = /*#__PURE__*/ gql`
+    fragment MapEssentials on Project {
+  id
+  basemaps {
+    ...BasemapDetails
+  }
+  surveyBasemaps {
+    ...BasemapDetails
+  }
+  region {
+    geojson
+  }
+  mapboxPublicKey
+  mapboxSecretKey
+}
+    ${BasemapDetailsFragmentDoc}`;
 export const SurveyListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyListDetails on Survey {
   id
@@ -15442,14 +15519,21 @@ export const MapboxApiKeysDocument = /*#__PURE__*/ gql`
   }
 }
     `;
-export const UpdateKeysDocument = /*#__PURE__*/ gql`
-    mutation updateKeys($id: Int!, $public: String, $secret: String) {
-  updateProject(
-    input: {id: $id, patch: {mapboxPublicKey: $public, mapboxSecretKey: $secret}}
-  ) {
+export const UpdatePublicKeyDocument = /*#__PURE__*/ gql`
+    mutation updatePublicKey($id: Int!, $public: String) {
+  updateProject(input: {id: $id, patch: {mapboxPublicKey: $public}}) {
     project {
       id
       mapboxPublicKey
+    }
+  }
+}
+    `;
+export const UpdateSecretKeyDocument = /*#__PURE__*/ gql`
+    mutation updateSecretKey($id: Int!, $mapboxSecretKey: String) {
+  updateMapboxSecretKey(input: {projectId: $id, secret: $mapboxSecretKey}) {
+    project {
+      id
       mapboxSecretKey
     }
   }
@@ -16461,6 +16545,13 @@ export const PublishTableOfContentsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const GetBasemapsAndRegionDocument = /*#__PURE__*/ gql`
+    query GetBasemapsAndRegion($slug: String!) {
+  projectBySlug(slug: $slug) {
+    ...MapEssentials
+  }
+}
+    ${MapEssentialsFragmentDoc}`;
 export const ProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -17177,8 +17268,10 @@ export const SurveyDocument = /*#__PURE__*/ gql`
     }
   }
   currentProject: projectBySlug(slug: $slug) {
+    id
     name
     url
+    ...MapEssentials
     region {
       geojson
     }
@@ -17187,7 +17280,8 @@ export const SurveyDocument = /*#__PURE__*/ gql`
     ...SurveyAppSurvey
   }
 }
-    ${SurveyAppSurveyFragmentDoc}`;
+    ${MapEssentialsFragmentDoc}
+${SurveyAppSurveyFragmentDoc}`;
 export const CreateResponseDocument = /*#__PURE__*/ gql`
     mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!) {
   createSurveyResponse(
@@ -17200,24 +17294,6 @@ export const CreateResponseDocument = /*#__PURE__*/ gql`
   }
 }
     `;
-export const GetBasemapsAndRegionDocument = /*#__PURE__*/ gql`
-    query GetBasemapsAndRegion($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    basemaps {
-      ...BasemapDetails
-    }
-    surveyBasemaps {
-      ...BasemapDetails
-    }
-    region {
-      geojson
-    }
-    mapboxPublicKey
-    mapboxSecretKey
-  }
-}
-    ${BasemapDetailsFragmentDoc}`;
 export const UpdateProjectNameDocument = /*#__PURE__*/ gql`
     mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
   updateProjectBySlug(
@@ -17232,9 +17308,9 @@ export const UpdateProjectNameDocument = /*#__PURE__*/ gql`
 }
     `;
 export const UpdateProjectSettingsDocument = /*#__PURE__*/ gql`
-    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String, $mapboxSecretKey: String) {
+    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String) {
   updateProjectBySlug(
-    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey, mapboxSecretKey: $mapboxSecretKey}}
+    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey}}
   ) {
     clientMutationId
     project {

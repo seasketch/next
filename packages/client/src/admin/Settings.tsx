@@ -14,8 +14,8 @@ import {
   ProjectAccessControlSetting,
   useProjectRegionQuery,
   useUpdateProjectRegionMutation,
-  useUpdateKeysMutation,
   useMapboxApiKeysQuery,
+  UpdateSecretKeyDocument,
 } from "../generated/graphql";
 import ProjectAutosaveInput from "./ProjectAutosaveInput";
 import { useDropzone } from "react-dropzone";
@@ -892,6 +892,7 @@ function MapboxAPIKeys() {
             <ProjectAutosaveInput
               convertEmptyToNull={true}
               propName="mapboxSecretKey"
+              mutation={UpdateSecretKeyDocument}
               description={
                 <Trans ns="admin" key={"mapbox-secret-key"}>
                   Provide a secret key if you would like to list and add
@@ -915,6 +916,7 @@ function MapboxAPIKeys() {
               placeholder={t("sk.12345678910")}
               value={data?.projectBySlug?.mapboxSecretKey || ""}
               slug={slug}
+              additionalVariables={{ id: data?.projectBySlug?.id }}
             />
           </div>
           {validationError && (

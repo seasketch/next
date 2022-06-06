@@ -6,16 +6,19 @@ query MapboxAPIKeys($slug: String!) {
   }
 }
 
-mutation updateKeys($id: Int!, $public: String, $secret: String) {
-  updateProject(
-    input: {
-      id: $id
-      patch: { mapboxPublicKey: $public, mapboxSecretKey: $secret }
-    }
-  ) {
+mutation updatePublicKey($id: Int!, $public: String) {
+  updateProject(input: { id: $id, patch: { mapboxPublicKey: $public } }) {
     project {
       id
       mapboxPublicKey
+    }
+  }
+}
+
+mutation updateSecretKey($id: Int!, $mapboxSecretKey: String) {
+  updateMapboxSecretKey(input: { projectId: $id, secret: $mapboxSecretKey }) {
+    project {
+      id
       mapboxSecretKey
     }
   }

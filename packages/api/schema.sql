@@ -3896,7 +3896,9 @@ COMMENT ON COLUMN public.projects.deleted_at IS '@omit';
 -- Name: COLUMN projects.mapbox_secret_key; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.projects.mapbox_secret_key IS '@omit';
+COMMENT ON COLUMN public.projects.mapbox_secret_key IS '
+@omit
+';
 
 
 --
@@ -6977,6 +6979,13 @@ CREATE FUNCTION public.projects_mapbox_secret_key(p public.projects) RETURNS tex
 
 
 --
+-- Name: FUNCTION projects_mapbox_secret_key(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_mapbox_secret_key(p public.projects) IS '@fieldName mapboxSecretKey';
+
+
+--
 -- Name: projects_my_folders(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9251,6 +9260,26 @@ $$;
 --
 
 COMMENT ON FUNCTION public.unsubscribed("userId" integer) IS '@omit';
+
+
+--
+-- Name: update_mapbox_secret_key(integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_mapbox_secret_key(project_id integer, secret text) RETURNS public.projects
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      p projects;
+    begin
+      if session_is_admin(project_id) then
+        update projects set mapbox_secret_key = secret where projects.id = project_id returning * into p;
+        return p;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -15889,7 +15918,7 @@ GRANT SELECT(creator_id) ON TABLE public.projects TO anon;
 -- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(mapbox_secret_key),UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -22315,6 +22344,14 @@ REVOKE ALL ON FUNCTION public.unlockrows(text) FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.unsubscribed("userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.unsubscribed("userId" integer) TO graphile;
+
+
+--
+-- Name: FUNCTION update_mapbox_secret_key(project_id integer, secret text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_mapbox_secret_key(project_id integer, secret text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_mapbox_secret_key(project_id integer, secret text) TO seasketch_user;
 
 
 --
