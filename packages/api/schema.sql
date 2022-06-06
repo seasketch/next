@@ -6962,16 +6962,17 @@ Returns true if the given user is an administrator of the project. Informaiton i
 --
 
 CREATE FUNCTION public.projects_mapbox_secret_key(p public.projects) RETURNS text
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    begin
-      if session_is_admin(p.id) then
-        return (select mapbox_public_key from projects where projects.id = project.id and session_is_admin(project.id));
-      else
-        return '*********'::text;
-        -- raise exception 'Must be project admin';
-      end if;
-    end;
+    -- begin
+      select mapbox_secret_key from projects where projects.id = p.id and session_is_admin(p.id);
+      -- if session_is_admin(p.id) then
+      --   return (select mapbox_secret_key from projects where projects.id = project.id and session_is_admin(project.id));
+      -- else
+      --   return '*********'::text;
+      --   -- raise exception 'Must be project admin';
+      -- end if;
+    -- end;
   $$;
 
 
