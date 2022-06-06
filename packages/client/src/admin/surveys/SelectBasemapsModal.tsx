@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Switch from "../../components/Switch";
@@ -25,18 +26,22 @@ export default function SelectBasemapsModal(props: {
       setState(state.filter((i) => i !== id));
     }
   }
+  const { slug } = useParams<{ slug: string }>();
 
   const { t } = useTranslation("admin:surveys");
   const { data, loading, error } = useAllBasemapsQuery({
     fetchPolicy: "cache-and-network",
+    variables: {
+      slug,
+    },
   });
   const deleteBasemap = useDelete<DeleteBasemapMutation>(DeleteBasemapDocument);
 
   const basemaps = useMemo(() => {
-    if (data?.currentProject?.basemaps && data.currentProject.surveyBasemaps) {
+    if (data?.projectBySlug?.basemaps && data.projectBySlug.surveyBasemaps) {
       return {
-        project: data.currentProject.basemaps,
-        survey: data.currentProject.surveyBasemaps,
+        project: data.projectBySlug.basemaps,
+        survey: data.projectBySlug.surveyBasemaps,
       };
     }
     return {

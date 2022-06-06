@@ -7,6 +7,7 @@ import {
   Map,
 } from "mapbox-gl";
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useMapContext } from "../../dataLayers/MapContextManager";
 import {
@@ -38,25 +39,31 @@ export default function useMapEssentials({
   /** Will take priority over bounds if set */
   cameraOptions?: CameraOptions;
 }) {
+  const { slug } = useParams<{ slug: string }>();
   const onError = useGlobalErrorHandler();
-  const { data } = useGetBasemapsAndRegionQuery({ onError });
+  const { data } = useGetBasemapsAndRegionQuery({
+    onError,
+    variables: {
+      slug,
+    },
+  });
   const mapContext = useMapContext({ camera: cameraOptions, bounds });
   const [basemaps, setBasemaps] = useState<BasemapDetailsFragment[]>([]);
   bounds =
     bounds ||
-    (data?.currentProject?.region.geojson
-      ? bbox(data.currentProject.region.geojson)
+    (data?.projectBySlug?.region.geojson
+      ? bbox(data.projectBySlug.region.geojson)
       : defaultStartingBounds) ||
     defaultStartingBounds;
 
   const debouncedCamera = useDebounce(cameraOptions, 30);
 
   useEffect(() => {
-    if (mapContext?.manager && data?.currentProject?.basemaps) {
+    if (mapContext?.manager && data?.projectBySlug?.basemaps) {
       let basemaps: BasemapDetailsFragment[] = [];
       const allBasemaps = [
-        ...(data.currentProject.basemaps || []),
-        ...(data.currentProject.surveyBasemaps || []),
+        ...(data.projectBySlug.basemaps || []),
+        ...(data.projectBySlug.surveyBasemaps || []),
       ];
       if (filterBasemapIds && filterBasemapIds.length) {
         basemaps = filterBasemapIds
@@ -65,15 +72,15 @@ export default function useMapEssentials({
       } else {
         basemaps = allBasemaps;
       }
-      if (!basemaps.length && data.currentProject.basemaps.length) {
-        basemaps = [data.currentProject.basemaps[0]];
+      if (!basemaps.length && data.projectBySlug.basemaps.length) {
+        basemaps = [data.projectBySlug.basemaps[0]];
       }
       setBasemaps(basemaps);
       mapContext.manager?.setBasemaps(basemaps);
     }
   }, [
-    data?.currentProject?.basemaps,
-    data?.currentProject?.surveyBasemaps,
+    data?.projectBySlug?.basemaps,
+    data?.projectBySlug?.surveyBasemaps,
     mapContext.manager,
     filterBasemapIds,
   ]);

@@ -515,10 +515,10 @@ export default function SurveyFormEditor({
                 isAdmin: true,
                 isFacilitatedResponse: true,
                 surveySupportsFacilitation: data.survey.showFacilitationOption,
-                projectName: data.currentProject!.name,
-                projectUrl: data.currentProject!.url!,
-                projectBounds: bbox(data.currentProject!.region.geojson),
-                surveyUrl: `${data.currentProject!.url!}/surveys/${
+                projectName: data.projectBySlug!.name,
+                projectUrl: data.projectBySlug!.url!,
+                projectBounds: bbox(data.projectBySlug!.region.geojson),
+                surveyUrl: `${data.projectBySlug!.url!}/surveys/${
                   data.survey.id
                 }`,
               }}

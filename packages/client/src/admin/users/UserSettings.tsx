@@ -80,6 +80,9 @@ function UserSettings() {
     UserSettingsListsDocument,
     {
       pollInterval: 15000,
+      variables: {
+        slug,
+      },
     }
   );
 
@@ -90,24 +93,24 @@ function UserSettings() {
   }>({ invites: [], groups: [], users: [] });
   useEffect(() => {
     if (
-      data?.currentProject &&
-      data?.currentProject?.invitesConnection.nodes &&
-      data?.currentProject?.participants &&
-      data?.currentProject?.groups
+      data?.projectBySlug &&
+      data?.projectBySlug?.invitesConnection.nodes &&
+      data?.projectBySlug?.participants &&
+      data?.projectBySlug?.groups
     ) {
       setLists({
-        invites: [...data.currentProject.invitesConnection.nodes].sort(
+        invites: [...data.projectBySlug.invitesConnection.nodes].sort(
           (a, b) => {
             return (a.fullname || a.email)!.localeCompare(
               b.fullname || b.email
             );
           }
         ),
-        groups: [...data.currentProject.groups].sort((a, b) =>
+        groups: [...data.projectBySlug.groups].sort((a, b) =>
           a.name.localeCompare(b.name)
         ),
         users: [
-          ...[...data.currentProject.participants].sort((a, b) => {
+          ...[...data.projectBySlug.participants].sort((a, b) => {
             return (a.profile?.fullname || a.canonicalEmail)!.localeCompare(
               (b.profile?.fullname || b.canonicalEmail)!
             );
@@ -122,10 +125,10 @@ function UserSettings() {
       });
     }
   }, [
-    data?.currentProject?.invitesConnection,
-    data?.currentProject?.participants,
-    data?.currentProject?.groups,
-    data?.currentProject,
+    data?.projectBySlug?.invitesConnection,
+    data?.projectBySlug?.participants,
+    data?.projectBySlug?.groups,
+    data?.projectBySlug,
   ]);
 
   const sub = useSubscription(ProjectInviteEmailStatusSubscriptionDocument, {
@@ -153,16 +156,16 @@ function UserSettings() {
         loading={loading}
         groups={lists.groups}
         users={lists.users}
-        accessControl={data?.currentProject?.accessControl}
-        projectId={data?.currentProject?.id}
+        accessControl={data?.projectBySlug?.accessControl}
+        projectId={data?.projectBySlug?.id}
       />
       {error && <div className="p-8">{error.message}</div>}
-      {!error && data?.currentProject?.id && (
+      {!error && data?.projectBySlug?.id && (
         <>
           <Route path={`/${slug}/admin/users/participants`}>
             <UserList
               users={lists.users}
-              projectId={data.currentProject.id}
+              projectId={data.projectBySlug.id}
               slug={slug}
               adminsOnly={false}
             />
@@ -170,7 +173,7 @@ function UserSettings() {
           <Route path={`/${slug}/admin/users/admins`}>
             <UserList
               users={lists.users}
-              projectId={data.currentProject.id}
+              projectId={data.projectBySlug.id}
               slug={slug}
               adminsOnly={true}
             />
@@ -180,12 +183,12 @@ function UserSettings() {
             render={(props) => (
               <UserList
                 users={lists.users}
-                projectId={data.currentProject!.id}
+                projectId={data.projectBySlug!.id}
                 slug={slug}
                 adminsOnly={false}
                 groupId={parseInt(props.match.params.groupId!)}
                 groupName={
-                  data?.currentProject?.groups.find(
+                  data?.projectBySlug?.groups.find(
                     (g) => g.id === parseInt(props.match.params.groupId!)
                   )?.name || ""
                 }
@@ -214,7 +217,7 @@ function UserSettings() {
                 <InviteList
                   invites={lists.invites}
                   status={status}
-                  projectId={data.currentProject!.id}
+                  projectId={data.projectBySlug!.id}
                   slug={slug}
                   error={error}
                 />

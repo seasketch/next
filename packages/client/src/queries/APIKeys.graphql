@@ -1,5 +1,5 @@
-query MapboxAPIKeys {
-  currentProject {
+query MapboxAPIKeys($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     mapboxPublicKey
     mapboxSecretKey

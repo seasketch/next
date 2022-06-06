@@ -18,13 +18,14 @@ export default {
   component: ProjectAccessGate,
 } as Meta;
 
-const currentProjectPublicDetails = {
+const projectPublicDetails = {
   id: 123,
   accessControl: ProjectAccessControlSetting.Public,
   slug: "cburt",
   name: "Chad's Project",
   logoUrl: "",
   supportEmail: "chad@underbluewaters.net",
+  accessStatus: ProjectAccessStatus.Granted,
 };
 const project = {
   url: "https://seasketch.org/cburt",
@@ -32,15 +33,14 @@ const project = {
   description: "",
   sessionIsAdmin: false,
   isFeatured: true,
-  ...currentProjectPublicDetails,
+  ...projectPublicDetails,
   supportEmail: undefined,
 };
 
 const mockedProjectMetadata = {
   data: {
     project: { ...project },
-    currentProjectPublicDetails,
-    currentProjectAccessStatus: ProjectAccessStatus.Granted,
+    projectPublicDetails,
     me: {
       id: 123,
       profile: {
@@ -112,8 +112,6 @@ export const Error404 = () => (
       data: {
         ...mockedProjectMetadata.data,
         project: null,
-        currentProjectPublicDetails: null,
-        currentProjectAccessStatus: ProjectAccessStatus.ProjectDoesNotExist,
       },
     }}
   />
@@ -137,7 +135,10 @@ export const DeniedAnon = () => (
     metadata={{
       data: {
         ...mockedProjectMetadata.data,
-        currentProjectAccessStatus: ProjectAccessStatus.DeniedAnon,
+        projectPublicDetails: {
+          ...mockedProjectMetadata.data.projectPublicDetails,
+          accessStatus: ProjectAccessStatus.DeniedAnon,
+        },
       },
     }}
   />
@@ -148,7 +149,10 @@ export const DeniedAdminsOnly = () => (
     metadata={{
       data: {
         ...mockedProjectMetadata.data,
-        currentProjectAccessStatus: ProjectAccessStatus.DeniedAdminsOnly,
+        projectPublicDetails: {
+          ...mockedProjectMetadata.data.projectPublicDetails,
+          accessStatus: ProjectAccessStatus.DeniedAdminsOnly,
+        },
       },
     }}
   />
@@ -163,12 +167,11 @@ export const DeniedAdminsOnlyAndAnon = () => (
           ...project,
           accessControl: ProjectAccessControlSetting.AdminsOnly,
         },
-        currentProjectPublicDetails: {
-          ...currentProjectPublicDetails,
+        projectPublicDetails: {
+          ...projectPublicDetails,
           accessControl: ProjectAccessControlSetting.AdminsOnly,
+          accessStatus: ProjectAccessStatus.DeniedAnon,
         },
-
-        currentProjectAccessStatus: ProjectAccessStatus.DeniedAnon,
       },
     }}
   />
@@ -179,7 +182,10 @@ export const DeniedEmailNotVerified = () => (
     metadata={{
       data: {
         ...mockedProjectMetadata.data,
-        currentProjectAccessStatus: ProjectAccessStatus.DeniedEmailNotVerified,
+        projectPublicDetails: {
+          ...mockedProjectMetadata.data.projectPublicDetails,
+          accessStatus: ProjectAccessStatus.DeniedEmailNotVerified,
+        },
       },
     }}
   />
@@ -190,7 +196,10 @@ export const DeniedInviteOnly = () => (
     metadata={{
       data: {
         ...mockedProjectMetadata.data,
-        currentProjectAccessStatus: ProjectAccessStatus.DeniedNotRequested,
+        projectPublicDetails: {
+          ...mockedProjectMetadata.data.projectPublicDetails,
+          accessStatus: ProjectAccessStatus.DeniedNotRequested,
+        },
       },
     }}
   />
@@ -237,7 +246,10 @@ export const DeniedNotApproved = () => (
     metadata={{
       data: {
         ...mockedProjectMetadata.data,
-        currentProjectAccessStatus: ProjectAccessStatus.DeniedNotApproved,
+        projectPublicDetails: {
+          ...mockedProjectMetadata.data.projectPublicDetails,
+          accessStatus: ProjectAccessStatus.DeniedNotApproved,
+        },
       },
     }}
   />

@@ -768,7 +768,10 @@ function MapboxAPIKeys() {
   const { t, i18n } = useTranslation(["admin"]);
   const onError = useGlobalErrorHandler();
   const { slug } = useParams<{ slug: string }>();
-  const { data, loading, error } = useMapboxApiKeysQuery({ onError });
+  const { data, loading, error } = useMapboxApiKeysQuery({
+    variables: { slug },
+    onError,
+  });
   const [validationError, setValidationError] = useState<string | null>(null);
   const [accountName, setAccount] = useState<{
     public?: string;
@@ -785,8 +788,8 @@ function MapboxAPIKeys() {
     let publicClaims: undefined | MapboxTokeClaims;
     let secretClaims: undefined | MapboxTokeClaims;
     try {
-      if (data?.currentProject?.mapboxPublicKey) {
-        publicClaims = getTokenClaims(data.currentProject.mapboxPublicKey);
+      if (data?.projectBySlug?.mapboxPublicKey) {
+        publicClaims = getTokenClaims(data.projectBySlug.mapboxPublicKey);
         setAccountName("public", publicClaims.u);
       }
     } catch (e) {
@@ -798,8 +801,8 @@ function MapboxAPIKeys() {
       return;
     }
     try {
-      if (data?.currentProject?.mapboxSecretKey) {
-        secretClaims = getTokenClaims(data.currentProject.mapboxSecretKey);
+      if (data?.projectBySlug?.mapboxSecretKey) {
+        secretClaims = getTokenClaims(data.projectBySlug.mapboxSecretKey);
         setAccountName("secret", secretClaims.u);
       }
     } catch (e) {
@@ -826,8 +829,8 @@ function MapboxAPIKeys() {
       setValidationError(null);
     }
   }, [
-    data?.currentProject?.mapboxPublicKey,
-    data?.currentProject?.mapboxSecretKey,
+    data?.projectBySlug?.mapboxPublicKey,
+    data?.projectBySlug?.mapboxSecretKey,
   ]);
 
   if (loading) {
@@ -881,7 +884,7 @@ function MapboxAPIKeys() {
                   )}
                 </div>
               }
-              value={data?.currentProject?.mapboxPublicKey || ""}
+              value={data?.projectBySlug?.mapboxPublicKey || ""}
               slug={slug}
             />
           </div>
@@ -910,7 +913,7 @@ function MapboxAPIKeys() {
                 </div>
               }
               placeholder={t("sk.12345678910")}
-              value={data?.currentProject?.mapboxSecretKey || ""}
+              value={data?.projectBySlug?.mapboxSecretKey || ""}
               slug={slug}
             />
           </div>

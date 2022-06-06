@@ -82,8 +82,13 @@ function SurveyApp() {
   const [backwards, setBackwards] = useState(false);
   const onError = useGlobalErrorHandler();
   const { data, loading } = useSurveyQuery({
-    variables: { id: parseInt(surveyId) },
+    variables: { id: parseInt(surveyId), slug },
     onError,
+    // This could help improve resilience of the app when working offline with a stale cache
+    // ref: https://github.com/apollographql/apollo-cache-persist/issues/323
+    // returnPartialData: true,
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
   });
   const [practiceModalOpen, setPracticeModalOpen] = useState(false);
 
@@ -248,7 +253,7 @@ function SurveyApp() {
     }
   }, [data?.survey?.form?.formElements, position, surveyId]);
 
-  if (!data?.survey?.form?.formElements || !pagingState || loading) {
+  if (!data?.survey?.form?.formElements || !pagingState) {
     return <div></div>;
   } else if (!data?.survey) {
     return <div>{t("Survey not found")}</div>;

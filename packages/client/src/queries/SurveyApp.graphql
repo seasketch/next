@@ -72,21 +72,25 @@ fragment SurveyAppSurvey on Survey {
   }
 }
 
-query Survey($id: Int!) {
+query Survey($id: Int!, $slug: String!) {
   me {
+    id
     isAdmin
     profile {
+      userId
       email
       fullname
     }
   }
-  currentProject {
+
+  currentProject: projectBySlug(slug: $slug) {
     name
     url
     region {
       geojson
     }
   }
+
   survey(id: $id) {
     ...SurveyAppSurvey
   }
@@ -117,8 +121,8 @@ mutation CreateResponse(
   }
 }
 
-query GetBasemapsAndRegion {
-  currentProject {
+query GetBasemapsAndRegion($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     basemaps {
       ...BasemapDetails

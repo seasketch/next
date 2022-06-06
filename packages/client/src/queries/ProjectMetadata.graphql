@@ -11,15 +11,15 @@ query ProjectMetadata($slug: String!) {
     sessionIsAdmin
     isFeatured
   }
-  currentProjectPublicDetails {
+  projectPublicDetails(slug: $slug) {
     id
     accessControl
     slug
     name
     logoUrl
     supportEmail
+    accessStatus
   }
-  currentProjectAccessStatus
   me {
     id
     profile {

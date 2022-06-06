@@ -46,16 +46,20 @@ export default function BasemapMultiSelectInput({
   returnToUrl?: string;
 }) {
   const { t } = useTranslation("admin:surveys");
-  const { data, loading, error, refetch } = useAllBasemapsQuery({});
+  const { slug } = useParams<{ slug: string }>();
+  const { data, loading, error, refetch } = useAllBasemapsQuery({
+    variables: {
+      slug,
+    },
+  });
   const [state, setState] = useState(value || []);
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const { slug } = useParams<{ slug: string }>();
 
   const basemaps = useMemo(() => {
-    if (data?.currentProject?.basemaps && data.currentProject.surveyBasemaps) {
+    if (data?.projectBySlug?.basemaps && data.projectBySlug?.surveyBasemaps) {
       return [
-        ...data.currentProject.basemaps,
-        ...data.currentProject.surveyBasemaps,
+        ...data.projectBySlug?.basemaps,
+        ...data.projectBySlug?.surveyBasemaps,
       ];
     }
     return [];

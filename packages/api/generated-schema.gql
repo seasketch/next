@@ -8771,6 +8771,7 @@ enum ProjectsSharedBasemapsOrderBy {
 
 type PublicProjectDetail {
   accessControl: ProjectAccessControlSetting
+  accessStatus: ProjectAccessStatus
   id: Int
   logoUrl: String
   name: String
@@ -8869,25 +8870,6 @@ type Query implements Node {
     """
     nodeId: ID!
   ): CommunityGuideline
-
-  """
-  The current SeaSketch Project, which is determined by the `referer` or
-  `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
-  
-  """
-  currentProject: Project
-
-  """
-  Use to indicate to a user why they cannot access the given project, if denied.
-  
-  """
-  currentProjectAccessStatus: ProjectAccessStatus
-
-  """
-  Executable by all users and used to display a "gate" should a user arrive directly on a project url without authorization.
-  
-  """
-  currentProjectPublicDetails: PublicProjectDetail
   currentUserIsSuperuser: Boolean!
   dataLayer(id: Int!): DataLayer
   dataLayerByInteractivitySettingsId(interactivitySettingsId: Int!): DataLayer
@@ -9138,6 +9120,7 @@ type Query implements Node {
   ): PostsConnection
   profileByUserId(userId: Int!): Profile
   project(id: Int!): Project
+  projectAccessStatus(pid: Int): ProjectAccessStatus
 
   """Reads a single `Project` using its globally unique `ID`."""
   projectByNodeId(
@@ -9185,6 +9168,7 @@ type Query implements Node {
     """The method to use when ordering `ProjectInviteGroup`."""
     orderBy: [ProjectInviteGroupsOrderBy!] = [NATURAL]
   ): ProjectInviteGroupsConnection
+  projectPublicDetails(slug: String): PublicProjectDetail
 
   """Reads and enables pagination through a set of `Project`."""
   projectsConnection(

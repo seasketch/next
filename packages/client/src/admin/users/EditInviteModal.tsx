@@ -34,13 +34,14 @@ export default function EditInviteModal({
   const { data, loading, error, refetch } = useInviteEditorModalQueryQuery({
     variables: {
       inviteId: id,
+      slug,
     },
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
   });
   useSubscription(ProjectInviteEmailStatusSubscriptionDocument, {
     variables: {
-      projectId: data?.currentProject?.id,
+      projectId: data?.projectBySlug?.id,
     },
     onSubscriptionData: (data) => {
       const invite =
@@ -148,7 +149,7 @@ export default function EditInviteModal({
   });
 
   useEffect(() => {
-    if (data?.currentProject && data.projectInvite) {
+    if (data?.projectBySlug && data.projectInvite) {
       setState({
         email: data.projectInvite.email,
         fullname: data.projectInvite.fullname || "",
@@ -266,7 +267,7 @@ export default function EditInviteModal({
         </>
       }
     >
-      {state && data?.projectInvite && data.currentProject && (
+      {state && data?.projectInvite && data.projectBySlug && (
         <div className="w-full sm:w-auto">
           <div className="max-w-lg mb-4">
             <TextInput
@@ -326,7 +327,7 @@ export default function EditInviteModal({
           <div className="max-w-lg mb-4">
             <GroupMultiSelect
               title={t("Assign Group Membership")}
-              groups={(data?.currentProject?.groups || []).map((g) => ({
+              groups={(data?.projectBySlug?.groups || []).map((g) => ({
                 value: g.id,
                 label: g.name,
               }))}

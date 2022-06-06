@@ -7743,6 +7743,7 @@ export enum ProjectsSharedBasemapsOrderBy {
 export type PublicProjectDetail = {
   __typename?: 'PublicProjectDetail';
   accessControl?: Maybe<ProjectAccessControlSetting>;
+  accessStatus?: Maybe<ProjectAccessStatus>;
   id?: Maybe<Scalars['Int']>;
   logoUrl?: Maybe<Scalars['String']>;
   name?: Maybe<Scalars['String']>;
@@ -7798,15 +7799,6 @@ export type Query = Node & {
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
   communityGuidelineByNodeId?: Maybe<CommunityGuideline>;
-  /**
-   * The current SeaSketch Project, which is determined by the `referer` or
-   * `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
-   */
-  currentProject?: Maybe<Project>;
-  /** Use to indicate to a user why they cannot access the given project, if denied. */
-  currentProjectAccessStatus?: Maybe<ProjectAccessStatus>;
-  /** Executable by all users and used to display a "gate" should a user arrive directly on a project url without authorization. */
-  currentProjectPublicDetails?: Maybe<PublicProjectDetail>;
   currentUserIsSuperuser: Scalars['Boolean'];
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
@@ -7875,6 +7867,7 @@ export type Query = Node & {
   postsConnection?: Maybe<PostsConnection>;
   profileByUserId?: Maybe<Profile>;
   project?: Maybe<Project>;
+  projectAccessStatus?: Maybe<ProjectAccessStatus>;
   /** Reads a single `Project` using its globally unique `ID`. */
   projectByNodeId?: Maybe<Project>;
   projectBySlug?: Maybe<Project>;
@@ -7885,6 +7878,7 @@ export type Query = Node & {
   projectInviteGroupByInviteIdAndGroupId?: Maybe<ProjectInviteGroup>;
   /** Reads and enables pagination through a set of `ProjectInviteGroup`. */
   projectInviteGroupsConnection?: Maybe<ProjectInviteGroupsConnection>;
+  projectPublicDetails?: Maybe<PublicProjectDetail>;
   /** Reads and enables pagination through a set of `Project`. */
   projectsConnection?: Maybe<ProjectsConnection>;
   projectsSharedBasemapByBasemapIdAndProjectId?: Maybe<ProjectsSharedBasemap>;
@@ -8314,6 +8308,12 @@ export type QueryProjectArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryProjectAccessStatusArgs = {
+  pid?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryProjectByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
@@ -8360,6 +8360,12 @@ export type QueryProjectInviteGroupsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryProjectPublicDetailsArgs = {
+  slug?: Maybe<Scalars['String']>;
 };
 
 
@@ -12075,12 +12081,14 @@ export type UpdateBodyFragment = (
   & Pick<FormElement, 'body'>
 );
 
-export type MapboxApiKeysQueryVariables = Exact<{ [key: string]: never; }>;
+export type MapboxApiKeysQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
 
 export type MapboxApiKeysQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
   )> }
@@ -12793,12 +12801,14 @@ export type UpdateInteractivitySettingsLayersMutation = (
   )> }
 );
 
-export type MapboxKeysQueryVariables = Exact<{ [key: string]: never; }>;
+export type MapboxKeysQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
 
 export type MapboxKeysQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
   )> }
@@ -13303,13 +13313,12 @@ export type ProjectMetadataQueryVariables = Exact<{
 
 export type ProjectMetadataQuery = (
   { __typename?: 'Query' }
-  & Pick<Query, 'currentProjectAccessStatus'>
   & { project?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
-  )>, currentProjectPublicDetails?: Maybe<(
+  )>, projectPublicDetails?: Maybe<(
     { __typename?: 'PublicProjectDetail' }
-    & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail'>
+    & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail' | 'accessStatus'>
   )>, me?: Maybe<(
     { __typename?: 'User' }
     & Pick<User, 'id'>
@@ -13552,10 +13561,7 @@ export type SurveyFormEditorDetailsQueryVariables = Exact<{
 
 export type SurveyFormEditorDetailsQuery = (
   { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'name'>
-  )>, formElementTypes?: Maybe<Array<(
+  & { formElementTypes?: Maybe<Array<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
   )>>, survey?: Maybe<(
@@ -13572,7 +13578,7 @@ export type SurveyFormEditorDetailsQuery = (
       )>> }
     )> }
     & SurveyListDetailsFragment
-  )>, currentProject?: Maybe<(
+  )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'name' | 'url'>
     & { region: (
@@ -14189,12 +14195,14 @@ export type UpdateFormElementMapCameraMutation = (
   )> }
 );
 
-export type AllBasemapsQueryVariables = Exact<{ [key: string]: never; }>;
+export type AllBasemapsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
 
 export type AllBasemapsQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
     & { basemaps?: Maybe<Array<(
@@ -14311,12 +14319,14 @@ export type CreateResponseMutation = (
   )> }
 );
 
-export type GetBasemapsAndRegionQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetBasemapsAndRegionQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
 
 export type GetBasemapsAndRegionQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
     & { basemaps?: Maybe<Array<(
@@ -14418,7 +14428,7 @@ export type ParticipantListDetailsFragment = (
   & Pick<User, 'id' | 'bannedFromForums' | 'isAdmin' | 'canonicalEmail'>
   & { profile?: Maybe<(
     { __typename?: 'Profile' }
-    & Pick<Profile, 'email' | 'fullname' | 'nickname' | 'picture'>
+    & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
   )>, groups?: Maybe<Array<(
     { __typename?: 'Group' }
     & Pick<Group, 'id' | 'name'>
@@ -14489,16 +14499,18 @@ export type UserListDetailsFragment = (
     & Pick<Group, 'name' | 'id'>
   )>>, profile?: Maybe<(
     { __typename?: 'Profile' }
-    & Pick<Profile, 'email' | 'fullname' | 'nickname' | 'picture'>
+    & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
   )> }
 );
 
-export type UserSettingsListsQueryVariables = Exact<{ [key: string]: never; }>;
+export type UserSettingsListsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
 
 export type UserSettingsListsQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'accessControl'>
     & { groups: Array<(
@@ -14519,6 +14531,7 @@ export type UserSettingsListsQuery = (
 
 export type UserInfoQueryVariables = Exact<{
   userId: Scalars['Int'];
+  slug: Scalars['String'];
 }>;
 
 
@@ -14535,9 +14548,9 @@ export type UserInfoQuery = (
       & Pick<Group, 'name' | 'id'>
     )>>, profile?: Maybe<(
       { __typename?: 'Profile' }
-      & Pick<Profile, 'affiliations' | 'bio' | 'email' | 'fullname' | 'nickname' | 'picture'>
+      & Pick<Profile, 'userId' | 'affiliations' | 'bio' | 'email' | 'fullname' | 'nickname' | 'picture'>
     )> }
-  )>, currentProject?: Maybe<(
+  )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
     & { groups: Array<(
@@ -14673,12 +14686,13 @@ export type InviteEmailDetailsFragment = (
 
 export type InviteEditorModalQueryQueryVariables = Exact<{
   inviteId: Scalars['Int'];
+  slug: Scalars['String'];
 }>;
 
 
 export type InviteEditorModalQueryQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
     & { groups: Array<(
@@ -14830,6 +14844,7 @@ export type UpdateProfileMutation = (
     { __typename?: 'UpdateProfilePayload' }
     & { profile?: Maybe<(
       { __typename?: 'Profile' }
+      & Pick<Profile, 'userId'>
       & { user?: Maybe<(
         { __typename?: 'User' }
         & Pick<User, 'id'>
@@ -15316,6 +15331,7 @@ export const ParticipantListDetailsFragmentDoc = /*#__PURE__*/ gql`
   bannedFromForums
   isAdmin
   profile {
+    userId
     email
     fullname
     nickname
@@ -15341,6 +15357,7 @@ export const UserListDetailsFragmentDoc = /*#__PURE__*/ gql`
   onboarded
   participationStatus
   profile {
+    userId
     email
     fullname
     nickname
@@ -15417,8 +15434,8 @@ export const UpdateProjectStorageBucketDocument = /*#__PURE__*/ gql`
 }
     `;
 export const MapboxApiKeysDocument = /*#__PURE__*/ gql`
-    query MapboxAPIKeys {
-  currentProject {
+    query MapboxAPIKeys($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     mapboxPublicKey
     mapboxSecretKey
@@ -15962,8 +15979,8 @@ export const UpdateInteractivitySettingsLayersDocument = /*#__PURE__*/ gql`
 }
     `;
 export const MapboxKeysDocument = /*#__PURE__*/ gql`
-    query MapboxKeys {
-  currentProject {
+    query MapboxKeys($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     mapboxPublicKey
     mapboxSecretKey
@@ -16483,15 +16500,15 @@ export const ProjectMetadataDocument = /*#__PURE__*/ gql`
     sessionIsAdmin
     isFeatured
   }
-  currentProjectPublicDetails {
+  projectPublicDetails(slug: $slug) {
     id
     accessControl
     slug
     name
     logoUrl
     supportEmail
+    accessStatus
   }
-  currentProjectAccessStatus
   me {
     id
     profile {
@@ -16629,10 +16646,6 @@ export const SurveyByIdDocument = /*#__PURE__*/ gql`
     ${SurveyListDetailsFragmentDoc}`;
 export const SurveyFormEditorDetailsDocument = /*#__PURE__*/ gql`
     query SurveyFormEditorDetails($id: Int!, $slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    name
-  }
   formElementTypes {
     ...AddFormElementTypeDetails
   }
@@ -16652,7 +16665,7 @@ export const SurveyFormEditorDetailsDocument = /*#__PURE__*/ gql`
       }
     }
   }
-  currentProject {
+  projectBySlug(slug: $slug) {
     id
     name
     url
@@ -17130,8 +17143,8 @@ export const UpdateFormElementMapCameraDocument = /*#__PURE__*/ gql`
 }
     `;
 export const AllBasemapsDocument = /*#__PURE__*/ gql`
-    query AllBasemaps {
-  currentProject {
+    query AllBasemaps($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     basemaps {
       ...BasemapDetails
@@ -17188,8 +17201,8 @@ export const CreateResponseDocument = /*#__PURE__*/ gql`
 }
     `;
 export const GetBasemapsAndRegionDocument = /*#__PURE__*/ gql`
-    query GetBasemapsAndRegion {
-  currentProject {
+    query GetBasemapsAndRegion($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     basemaps {
       ...BasemapDetails
@@ -17298,8 +17311,8 @@ export const GroupMembersDocument = /*#__PURE__*/ gql`
 }
     ${ParticipantListDetailsFragmentDoc}`;
 export const UserSettingsListsDocument = /*#__PURE__*/ gql`
-    query UserSettingsLists {
-  currentProject {
+    query UserSettingsLists($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     groups {
       name
@@ -17319,7 +17332,7 @@ export const UserSettingsListsDocument = /*#__PURE__*/ gql`
     ${InviteDetailsFragmentDoc}
 ${UserListDetailsFragmentDoc}`;
 export const UserInfoDocument = /*#__PURE__*/ gql`
-    query UserInfo($userId: Int!) {
+    query UserInfo($userId: Int!, $slug: String!) {
   user(id: $userId) {
     id
     isAdmin
@@ -17335,6 +17348,7 @@ export const UserInfoDocument = /*#__PURE__*/ gql`
     onboarded
     participationStatus
     profile {
+      userId
       affiliations
       bio
       email
@@ -17343,7 +17357,7 @@ export const UserInfoDocument = /*#__PURE__*/ gql`
       picture
     }
   }
-  currentProject {
+  projectBySlug(slug: $slug) {
     id
     groups {
       name
@@ -17420,8 +17434,8 @@ export const ProjectInvitesDocument = /*#__PURE__*/ gql`
 }
     ${InviteDetailsFragmentDoc}`;
 export const InviteEditorModalQueryDocument = /*#__PURE__*/ gql`
-    query InviteEditorModalQuery($inviteId: Int!) {
-  currentProject {
+    query InviteEditorModalQuery($inviteId: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     groups {
       id
@@ -17528,6 +17542,7 @@ export const UpdateProfileDocument = /*#__PURE__*/ gql`
     input: {userId: $userId, patch: {affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
   ) {
     profile {
+      userId
       user {
         id
         profile {

@@ -45,6 +45,7 @@ export default function ParticipantModal({
   const { data, loading, error } = useUserInfoQuery({
     variables: {
       userId,
+      slug: projectSlug,
     },
   });
   const [
@@ -117,7 +118,7 @@ export default function ParticipantModal({
     >
       {!data?.user && <Spinner />}
 
-      {data?.user && data?.currentProject && (
+      {data?.user && data?.projectBySlug && (
         <div className="md:max-w-lg">
           <UserProfile
             profile={data.user!.profile!}
@@ -166,11 +167,11 @@ export default function ParticipantModal({
             }
             title={t("Administrator Access")}
           />
-          {data.currentProject?.groups && (
+          {data.projectBySlug?.groups && (
             <MutableGroupMembershipField
               userId={userId}
               projectId={projectId}
-              allGroups={data.currentProject.groups}
+              allGroups={data.projectBySlug.groups}
               userGroups={data.user.groups || []}
             />
           )}
