@@ -23,6 +23,9 @@ const MANIFEST = self.__WB_MANIFEST;
 const staticAssetCache = new StaticAssetCache(MANIFEST);
 
 self.addEventListener("install", (event) => {
+  // Ensure stale query data that no longer matches application code are removed
+  graphqlQueryCache.invalidateChangedQuerySchemas();
+  // These can happen in the background, so are not await'd
   (async () => {
     if (await staticAssetCache.precacheEnabled()) {
       await staticAssetCache.populateCache();

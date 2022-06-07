@@ -530,6 +530,37 @@ export class GraphqlQueryCache {
       })
     );
   }
+
+  /**
+   * It would be pretty bad if the app sent a graphql query for certain data,
+   * then received a cache that didn't match that query. Don't let that happen!
+   *
+   * This doesn't need to be checked all the time. It should just be called
+   * within the service worker's install event.
+   */
+  async invalidateChangedQuerySchemas() {
+    let changes = false;
+    const cacheKey = "graphql-query-cache-query-hashes";
+    const hashes =
+      (await localforage.getItem<{ [id: string]: number }>(cacheKey)) || {};
+    for (const strategy of this.strategies) {
+      const id = this.cacheNameForStrategy(strategy);
+      const str = getGqlString(strategy.query);
+      if (!str) {
+        throw new Error("Could not stringify graphql query");
+      }
+      const hash = hashCode(str);
+      if (hashes[id] !== hash) {
+        console.log(`caches for ${id} must be invalidated due to query change`);
+        hashes[id] = hash;
+        caches.delete(id);
+        changes = true;
+      }
+    }
+    if (changes) {
+      await localforage.setItem(cacheKey, hashes);
+    }
+  }
 }
 
 /**
@@ -665,4 +696,24 @@ function operationName(doc: DocumentNode): string {
   } else {
     throw new Error("Could not find OperationDefinition");
   }
+}
+
+function getGqlString(doc: DocumentNode) {
+  return doc.loc && doc.loc.source.body;
+}
+
+/**
+ * Returns a hash code from a string
+ * @param  {String} str The string to hash.
+ * @return {Number}    A 32bit integer
+ * @see http://werxltd.com/wp/2010/05/13/javascript-implementation-of-javas-string-hashcode-method/
+ */
+function hashCode(str: string) {
+  let hash = 0;
+  for (let i = 0, len = str.length; i < len; i++) {
+    let chr = str.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
 }
