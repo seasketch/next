@@ -423,65 +423,65 @@ describe("Survey creation smoke test", () => {
         .should('not.exist')
       drawPolygon()
     })
-    //it('Can view basemap selector', () => {
-    //  cy.get('img').click()
-    //  let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
-    //  values.forEach((val) => {
-    //    cy.get('.fixed > .overflow-y-auto').children().contains(val)
-    //  })
-    //})
-    //it ('Can show scale bar', () => {
-    //  cy.get('h4').contains('Show scale bar')
-    //  cy.get('[role="switch"]').then(($switch) => {
-    //    {$switch.trigger('click')}
-    //  })
-    //  cy.contains('5000 km')
-    //})
-    //it ('Renders the correct basemap', () => {
-    //  cy.contains('Maldives Light').as('maldivesLightBasemap')
-    //  cy.get('@maldivesLightBasemap').then(($btn) => {
-    //    {$btn.trigger('click')}
-    //  })
-    //  cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
-    //  cy.contains('Satellite')
-    //    .should('not.have.class', 'font-semibold')
-    //})
-    //it ('Can select different basemap', () => {
-    //  cy.contains('Satellite').as('satelliteBasemap')
-    //    cy.get('@satelliteBasemap').then(($btn) => {
-    //      {$btn.trigger('click')}
-    //    })
-    //    .should('have.class', 'font-semibold')   
-    //  cy.contains('Maldives Light')
-    //    .should('not.have.class', 'font-semibold')
-    //})
-    //it('Shows option to focus on location', () => {
-    //  cy.restoreLocalStorage()
-    //  cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
-    //    cy.setLocalStorage("lat", `${center["lat"]}`)
-    //    cy.setLocalStorage("long", `${center["lng"]}`)
-    //    cy.getLocalStorage("surveyId").then((id) => {
-    //      cy.setLocalStorage("surveyId", id)
-    //    });
-    //    cy.saveLocalStorage();
-    //    cy.get('h4').contains('Focus on location').click();
-    //  });
-    //});
-    //it('Focuses on location', () => {
-    //  cy.restoreLocalStorage()
-    //  cy.getLocalStorage('lat').then((lat) => {
-    //    cy.getLocalStorage('long').then((lng) => {
-    //      cy.window().its('mapContext.map.transform._center').then((coords) => {
-    //        expect (coords["lat"]).to.not.equal(lat)
-    //        expect (coords["lng"]).to.not.equal(lng)
-    //      });
-    //    });
-    //  });
-    //});
+    it('Can view basemap selector', () => {
+      cy.get('img').click()
+      let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
+      values.forEach((val) => {
+        cy.get('.fixed > .overflow-y-auto').children().contains(val)
+      })
+    })
+    it ('Can show scale bar', () => {
+      cy.get('h4').contains('Show scale bar')
+      cy.get('[role="switch"]').then(($switch) => {
+        {$switch.trigger('click')}
+      })
+      cy.contains('5000 km')
+    })
+    it ('Renders the correct basemap', () => {
+      cy.contains('Maldives Light').as('maldivesLightBasemap')
+      cy.get('@maldivesLightBasemap').then(($btn) => {
+        {$btn.trigger('click')}
+      })
+      cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
+      cy.contains('Satellite')
+        .should('not.have.class', 'font-semibold')
+    })
+    it ('Can select different basemap', () => {
+      cy.contains('Satellite').as('satelliteBasemap')
+        cy.get('@satelliteBasemap').then(($btn) => {
+          {$btn.trigger('click')}
+        })
+        .should('have.class', 'font-semibold')   
+      cy.contains('Maldives Light')
+        .should('not.have.class', 'font-semibold')
+    })
+    it('Shows option to focus on location', () => {
+      cy.restoreLocalStorage()
+      cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
+        cy.setLocalStorage("lat", `${center["lat"]}`)
+        cy.setLocalStorage("long", `${center["lng"]}`)
+        cy.getLocalStorage("surveyId").then((id) => {
+          cy.setLocalStorage("surveyId", id)
+        });
+        cy.saveLocalStorage();
+        cy.get('h4').contains('Focus on location').click();
+      });
+    });
+    it('Focuses on location', () => {
+      cy.restoreLocalStorage()
+      cy.getLocalStorage('lat').then((lat) => {
+        cy.getLocalStorage('long').then((lng) => {
+          cy.window().its('mapContext.map.transform._center').then((coords) => {
+            expect (coords["lat"]).to.not.equal(lat)
+            expect (coords["lng"]).to.not.equal(lng)
+          });
+        });
+      });
+    });
     it('Renders sector specific attributes - Fisheries - Commercial, Tuna', () => {
-      //cy.get('img').then((imgs) => {
-      //  imgs[0].click()
-      //})
+      cy.get('img').then((imgs) => {
+        imgs[0].click()
+      })
       cy.get('h1').contains('Area Name')
         .should('exist')
         .and('be.visible')
@@ -818,34 +818,34 @@ describe("Survey creation smoke test", () => {
       cy.get('[style="max-height: 60vh;"] > .w-full').type("Prolific grouper population here.");
       cy.contains('Save').click();
     });
-    //it('Can finish sector - Fisheries - Recreational', () => {
-    //  cy.contains("Fisheries- Artisanal/Subsistence");
-    //  cy.contains("Grouper fishing area.");
-    //  cy.get(".space-y-2 > :nth-child(2) > .select-none")
-    //    .should('be.visible').then(($el) => {
-    //      {$el.trigger('click')}
-    //    });
-    //  cy.contains("Finish Sector").as("finishSector");
-    //  cy.get('@finishSector').then(($btn) => {
-    //    {$btn.trigger('click')}
-    //  });
-    //});
-    //it('Shows completed sectors - Fisheries - Recreational', () => {
-    //  cy.get('h1').contains('Your sectors')
-    //    .should('be.visible');
-    //  //additional completed sector
-    //  cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
-    //    expect ($btn.css('background'))
-    //    .to
-    //    .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-    //  });
-    //  //not yet completed sector
-    //  cy.get('div').contains("Fisheries- Artisanal/Subsistence").then(($btn) => {
-    //    expect ($btn.css('background'))
-    //    .to
-    //    .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-    //  });
-    //});
+    it('Can finish sector - Fisheries - Recreational', () => {
+      cy.contains("Fisheries- Artisanal/Subsistence");
+      cy.contains("Grouper fishing area.");
+      cy.get(".space-y-2 > :nth-child(2) > .select-none")
+        .should('be.visible').then(($el) => {
+          {$el.trigger('click')}
+        });
+      cy.contains("Finish Sector").as("finishSector");
+      cy.get('@finishSector').then(($btn) => {
+        {$btn.trigger('click')}
+      });
+    });
+    it('Shows completed sectors - Fisheries - Recreational', () => {
+      cy.get('h1').contains('Your sectors')
+        .should('be.visible');
+      //additional completed sector
+      cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
+        expect ($btn.css('background'))
+        .to
+        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+      });
+      //not yet completed sector
+      cy.get('div').contains("Fisheries- Artisanal/Subsistence").then(($btn) => {
+        expect ($btn.css('background'))
+        .to
+        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+      });
+    });
     //it('Can input number of people reflected in response', () => {
     //  cy.get('button').contains('Next Question').as('nextQuestionBtn')
     //    .should('be.visible')
