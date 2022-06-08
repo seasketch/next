@@ -292,6 +292,10 @@ export class GraphqlQueryCache {
     if (!(await this.isEnabled())) {
       return fetch(event.request);
     }
+    if (event.request.headers.get("content-type") !== "application/json") {
+      // multipart form data mutation or query
+      return fetch(event.request);
+    }
     const {
       operationName,
       variables,
@@ -492,6 +496,11 @@ export class GraphqlQueryCache {
     );
   }
 
+  async getCacheStatus(queryName: string, variables: any) {
+    const cacheKey = await this.makeCacheKey(queryName, variables);
+    return !!(await this.matchCache(cacheKey, this.strategies));
+  }
+
   /**
    * Opens the cache for the given strategy
    * @param strategy Strategy
@@ -551,7 +560,9 @@ export class GraphqlQueryCache {
       }
       const hash = hashCode(str);
       if (hashes[id] !== hash) {
-        console.log(`caches for ${id} must be invalidated due to query change`);
+        console.warn(
+          `caches for ${id} must be invalidated due to query change`
+        );
         hashes[id] = hash;
         caches.delete(id);
         changes = true;
