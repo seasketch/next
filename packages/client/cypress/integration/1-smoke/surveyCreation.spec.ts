@@ -12,6 +12,10 @@ const fetch = require('node-fetch');
 
 const basemapNames = ["Maldives Light", "Satellite"];
 
+const handleClick = (event) => {
+  console.log(event)
+}
+
 const basemaps = {
   "Maldives Light": {
     "name": "Maldives Light", 
@@ -146,6 +150,37 @@ const drawSecondPolygon = () => {
 };
 
 const devices: any = [ "iphone-x", "iphone-5", "macbook-15", "ipad-2"];
+
+//function getKeyAndMove(e) {
+//  var key_code = e.which || e.keyCode;
+//  switch (key_code) {
+//      case 37: //left arrow key
+//          moveLeft();
+//          break;
+//      case 38: //Up arrow key
+//          moveUp();
+//          break;
+//      case 39: //right arrow key
+//          moveRight();
+//          break;
+//      case 40: //down arrow key
+//          moveDown();
+//          break;
+//  }
+//}
+function moveLeft(e) {
+  console.log(e.style)
+  //e.style.left = parseInt(e.style.left) - 5 + "px";
+}
+//function moveUp(e) {
+//  e.style.top = parseInt(e.style.top) - 5 + "px";
+//}
+//function moveRight(e) {
+//  e.style.left = parseInt(e.style.left) + 5 + "px";
+//}
+//function moveDown() {
+//  e.style.top = parseInt(e.style.top) + 5 + "px";
+//}
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
