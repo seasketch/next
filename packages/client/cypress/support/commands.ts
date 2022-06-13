@@ -176,6 +176,11 @@ declare global {
         token: string
       );
 
+      getSketch(
+        sketchId: number, 
+        token: string
+      );
+
       deleteSketch(
         sketchId: number, 
         token:string
@@ -1083,6 +1088,30 @@ Cypress.Commands.add("createFormLogicRules", (formId: number, fixtureAlias: stri
      {
       "surveyResponseId": surveyResponseId
       },
+      (token as any)
+    ).then((data) => {
+      Cypress.log(data)
+    })
+  })
+
+  Cypress.Commands.add("getSketch", (sketchId: number, token:string) => {
+    return cy
+      .query(
+        gql`
+          query CypressGetSketch($sketchId: Int!) {
+            sketch (id: $sketchId) {
+              id, 
+              properties, 
+              
+              userGeom {
+        ... on GeometryPolygon {
+          geojson
+        }
+      }
+            }
+          }
+        `,
+      { sketchId: sketchId },
       (token as any)
     ).then((data) => {
       Cypress.log(data)
