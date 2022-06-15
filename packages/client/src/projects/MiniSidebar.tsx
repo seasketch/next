@@ -8,6 +8,7 @@ import {
   SketchingButton,
   ForumsButton,
   AdminButton,
+  SettingsButton,
 } from "./MiniSidebarButtons";
 import { useHistory, useParams } from "react-router-dom";
 import { MenuToggle } from "./MenuToggle";
@@ -75,12 +76,19 @@ export default function MiniSidebar({
         tabIndex={5}
         anySidebarOpen={!!sidebar}
       />
+      <SettingsButton
+        tooltip={t("Account Settings")}
+        sidebarOpen={sidebar === "settings"}
+        onClick={openSidebar("settings")}
+        tabIndex={6}
+        anySidebarOpen={!!sidebar}
+      />
 
       {data?.project?.sessionIsAdmin && (
         <AdminButton
           href={`/${slug}/admin`}
           tooltip={t("Administration")}
-          tabIndex={6}
+          tabIndex={7}
           anySidebarOpen={!!sidebar}
         />
       )}

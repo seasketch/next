@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import localForage from "localforage";
 
 export function useLocalForage<T>(key: string, initialValue: T) {

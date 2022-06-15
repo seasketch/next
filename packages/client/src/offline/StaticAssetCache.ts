@@ -2,8 +2,10 @@ import { PrecacheEntry } from "workbox-precaching/_types";
 import ServiceWorkerWindow from "./ServiceWorkerWindow";
 import localforage from "localforage";
 import pTimeout from "p-timeout";
-
-const PRECACHING_ENABLED_KEY = "ENABLE_STATIC_ASSET_PRECACHING";
+import {
+  ClientCacheSettings,
+  CLIENT_CACHE_SETTINGS_KEY,
+} from "./ClientCacheSettings";
 const STATIC_ASSET_CACHE_NAME = "static-assets";
 type PrecacheManifest = (string | PrecacheEntry)[];
 
@@ -44,15 +46,32 @@ class StaticAssetCache {
    * precached in bulk by the ServiceWorker upon registration.
    */
   async precacheEnabled() {
-    return !!(await localforage.getItem(PRECACHING_ENABLED_KEY));
+    // return !!(await localforage.getItem(PRECACHING_ENABLED_KEY));
+    const settings = await localforage.getItem<string | undefined>(
+      CLIENT_CACHE_SETTINGS_KEY
+    );
+    const defaultCacheSetting = ClientCacheSettings.find(
+      (c) => c.id === "default"
+    )!;
+    if (settings) {
+      const clientCacheSetting = ClientCacheSettings.find(
+        ({ id }) => id === settings
+      );
+      return (
+        clientCacheSetting?.prefetchEnabled ||
+        defaultCacheSetting.prefetchEnabled
+      );
+    } else {
+      return defaultCacheSetting.prefetchEnabled;
+    }
   }
 
-  /**
-   * Enables static asset prefetching upon service worker registration.
-   */
-  setPrecacheEnabled(enable: boolean) {
-    return localforage.setItem(PRECACHING_ENABLED_KEY, enable);
-  }
+  // /**
+  //  * Enables static asset prefetching upon service worker registration.
+  //  */
+  // setPrecacheEnabled(enable: boolean) {
+  //   return localforage.setItem(PRECACHING_ENABLED_KEY, enable);
+  // }
 
   /**
    * Manifest must be set before most Cache operation can be performed.
@@ -256,9 +275,6 @@ class StaticAssetCache {
     if (cacheKey) {
       if (process.env.NODE_ENV === "development" && navigator.onLine && false) {
       } else {
-        if (process.env.NODE_ENV === "development" && !navigator.onLine) {
-          console.warn("Responding from cache since you seem to be offline");
-        }
         const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
         const responseFromCache = await cache.match(cacheKey);
         if (responseFromCache) {

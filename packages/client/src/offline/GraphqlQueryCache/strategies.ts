@@ -1,14 +1,23 @@
 import {
   ProjectMetadataDocument,
-  GetBasemapsDocument,
   SurveyDocument,
 } from "../../generated/queries";
 import { byArgsStrategy, lruStrategy } from ".";
 
-export const strategies = [
-  lruStrategy(ProjectMetadataDocument, 3, { swr: true }),
-  lruStrategy(SurveyDocument, 3, { swr: true }),
-  byArgsStrategy(ProjectMetadataDocument, "selected-offline-projects", {
+export const OFFLINE_SURVEYS_KEY = "selected-offline-surveys";
+
+export const offlineSurveyChoiceStrategy = byArgsStrategy(
+  SurveyDocument,
+  OFFLINE_SURVEYS_KEY,
+  {
     swr: true,
-  }),
+  }
+);
+
+export const surveyLRUStrategy = lruStrategy(SurveyDocument, 3, { swr: true });
+
+export const strategies = [
+  lruStrategy(ProjectMetadataDocument, 5, { swr: true }),
+  surveyLRUStrategy,
+  offlineSurveyChoiceStrategy,
 ];

@@ -28,8 +28,20 @@ export function Card({
   );
 }
 
-export function Header({ children }: { children: ReactNode }) {
+export function Header({
+  children,
+  level,
+}: {
+  children: ReactNode;
+  level?: number;
+}) {
   return (
-    <h1 className="max-w-full sm:max-w-2xl sm:mx-auto text-lg">{children}</h1>
+    <h1
+      className={`max-w-full sm:max-w-2xl sm:mx-auto ${
+        level === 2 ? "text-base" : "text-lg"
+      }`}
+    >
+      {children}
+    </h1>
   );
 }

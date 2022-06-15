@@ -3,10 +3,10 @@
 import { clientsClaim, skipWaiting } from "workbox-core";
 import { PrecacheEntry } from "workbox-precaching/_types";
 import { GraphqlQueryCache } from "./offline/GraphqlQueryCache";
-// import GraphqlQueryCache from "./offline/GraphqlQueryCache/simple";
 import { MESSAGE_TYPES } from "./offline/ServiceWorkerWindow";
 import StaticAssetCache from "./offline/StaticAssetCache";
 import { strategies } from "./offline/GraphqlQueryCache/strategies";
+import * as SurveyAssetCache from "./offline/SurveyAssetCache";
 
 const graphqlQueryCache = new GraphqlQueryCache(
   process.env.REACT_APP_GRAPHQL_ENDPOINT,
@@ -83,5 +83,10 @@ self.addEventListener("fetch", (event) => {
     !fileExtensionRegexp.test(url.pathname)
   ) {
     event.respondWith(staticAssetCache.networkThenIndexHtmlCache(event));
+  } else if (
+    /unsplash/.test(url.host) ||
+    (/consentDocs/.test(url.pathname) && url.host === self.location.host)
+  ) {
+    event.respondWith(SurveyAssetCache.handler(event));
   }
 });

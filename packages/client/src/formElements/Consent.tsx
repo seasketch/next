@@ -107,7 +107,7 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
           />
         ) : props.componentSettings.documentUrl ? (
           <ConsentDocument
-            url={props.componentSettings.documentUrl}
+            url={cloudfrontToSameOrigin(props.componentSettings.documentUrl)}
             label={documentLabel}
             onClick={() => {
               const newValue = {
@@ -536,3 +536,17 @@ function UploadableConsentDocument({
 }
 
 export default Consent;
+
+export function cloudfrontToSameOrigin(urlString: string) {
+  if (
+    navigator.serviceWorker?.controller &&
+    process.env.REACT_APP_CLOUDFRONT_DOCS_DISTRO
+  ) {
+    const url = new URL(urlString);
+    const newUrl = new URL(window.location.toString());
+    newUrl.pathname = url.pathname;
+    return newUrl.toString();
+  } else {
+    return urlString;
+  }
+}

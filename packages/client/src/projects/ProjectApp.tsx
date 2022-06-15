@@ -15,6 +15,12 @@ import Spinner from "../components/Spinner";
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
+const LazyAccountSettingsPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AccountSettings" */ "../auth/AccountSettingsPage"
+    )
+);
 
 export default function ProjectApp() {
   const mapContext = useMapContext({
@@ -34,6 +40,7 @@ export default function ProjectApp() {
     overlays: t("Overlay Layers"),
     sketches: t("Sketching Tools"),
     forums: t("Discussion Forums"),
+    settings: t("Account Settings"),
   };
   const { basemaps, tableOfContentsItems } = useMapData(mapContext);
   const dark = true;
@@ -89,6 +96,24 @@ export default function ProjectApp() {
                     <LazyOverlays
                       items={tableOfContentsItems as TableOfContentsItem[]}
                     />
+                  </motion.div>
+                </Suspense>
+              </Route>
+              <Route path={`/${slug}/app/settings`}>
+                <Suspense
+                  fallback={
+                    <p className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
+                      Loading <Spinner />
+                    </p>
+                  }
+                >
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <LazyAccountSettingsPage />
                   </motion.div>
                 </Suspense>
               </Route>

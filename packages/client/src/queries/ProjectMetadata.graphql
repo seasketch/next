@@ -9,6 +9,7 @@ fragment ProjectMetadata on Project {
   accessControl
   sessionIsAdmin
   isFeatured
+  supportEmail
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {

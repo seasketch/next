@@ -1,6 +1,12 @@
 {
+  "Clear cache": "Clear cache",
   "Publish as template": "Publish as template",
+  "Reload cache": "Reload cache",
+  "Set caching to \"Improved Performance\" or greater to enable prefetching": "Set caching to \"Improved Performance\" or greater to enable prefetching",
+  "Static Asset Cache": "Static Asset Cache",
   "Superuser Settings": "Superuser Settings",
   "Template name": "Template name",
-  "This is the label SeaSketch admins will see when choosing among templates. For ease of maintenance, it's best to publish templates from a single project like<1></1>. Sharing a template won't disable it in the project so... don't let things get weird!": "This is the label SeaSketch admins will see when choosing among templates. For ease of maintenance, it's best to publish templates from a single project like<1></1>. Sharing a template won't disable it in the project so... don't let things get weird!"
+  "This is the label SeaSketch admins will see when choosing among templates. For ease of maintenance, it's best to publish templates from a single project like<1></1>. Sharing a template won't disable it in the project so... don't let things get weird!": "This is the label SeaSketch admins will see when choosing among templates. For ease of maintenance, it's best to publish templates from a single project like<1></1>. Sharing a template won't disable it in the project so... don't let things get weird!",
+  "files": "files",
+  "prefetch enabled": "prefetch enabled"
 }

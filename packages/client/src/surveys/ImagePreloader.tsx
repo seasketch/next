@@ -34,7 +34,7 @@ export default function ImagePreloader({
             return (
               <link
                 key={el.backgroundImage}
-                rel="prefetch"
+                rel="preload"
                 as="image"
                 href={el.backgroundImage + "&w=1280&auto=format,compress"}
                 // @ts-ignore
@@ -64,6 +64,14 @@ export function srcSet(imageUrl: string) {
   return [960, 1280, 1920, 2560]
     .map((rez) => `${imageUrl}&auto=compress&fm=jpg&w=${rez} ${rez}w`)
     .join(", ");
+}
+
+export function srcVariants(imageUrl: string) {
+  return (
+    [960, 1280, 1920, 2560]
+      // eslint-disable-next-line i18next/no-literal-string
+      .map((rez) => `${imageUrl}&auto=compress&fm=jpg&w=${rez}`)
+  );
 }
 
 /**

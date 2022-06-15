@@ -1,0 +1,10 @@
+{
+  "documentCount": "{{count}} document",
+  "documentCount_plural": "{{count}} documents",
+  "imageCount": "{{count}} image",
+  "imageCount_plural": "{{count}} images",
+  "queryCount": "{{count}} query",
+  "queryCount_plural": "{{count}} queries",
+  "questionCount": "{{count}} question",
+  "questionCount_plural": "{{count}} questions"
+}

@@ -13358,6 +13358,23 @@ export type GetBasemapsAndRegionQuery = (
   )> }
 );
 
+export type OfflineSurveysQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type OfflineSurveysQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { surveys: Array<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id' | 'name'>
+    )> }
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13392,7 +13409,7 @@ export type UpdateProjectAccessControlSettingsMutation = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail'>
 );
 
 export type ProjectPublicDetailsMetadataFragment = (
@@ -15211,6 +15228,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   accessControl
   sessionIsAdmin
   isFeatured
+  supportEmail
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -16607,6 +16625,17 @@ export const GetBasemapsAndRegionDocument = /*#__PURE__*/ gql`
   }
 }
     ${MapEssentialsFragmentDoc}`;
+export const OfflineSurveysDocument = /*#__PURE__*/ gql`
+    query OfflineSurveys($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      name
+    }
+  }
+}
+    `;
 export const ProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -17670,3 +17699,198 @@ export const UserIsSuperuserDocument = /*#__PURE__*/ gql`
   currentUserIsSuperuser
 }
     `;
+export const namedOperations = {
+  Query: {
+    ProjectBucketSetting: 'ProjectBucketSetting',
+    MapboxAPIKeys: 'MapboxAPIKeys',
+    GetAcl: 'GetAcl',
+    Groups: 'Groups',
+    VerifyProjectInvite: 'VerifyProjectInvite',
+    GetBasemaps: 'GetBasemaps',
+    GetBasemap: 'GetBasemap',
+    OptionalLayer: 'OptionalLayer',
+    GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
+    GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
+    MapboxKeys: 'MapboxKeys',
+    DraftTableOfContents: 'DraftTableOfContents',
+    layersAndSourcesForItems: 'layersAndSourcesForItems',
+    GetFolder: 'GetFolder',
+    GetLayerItem: 'GetLayerItem',
+    InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',
+    DataSourceUrlProperties: 'DataSourceUrlProperties',
+    GetMetadata: 'GetMetadata',
+    ProjectHostingQuota: 'ProjectHostingQuota',
+    InteractivitySettingsById: 'InteractivitySettingsById',
+    GetBasemapsAndRegion: 'GetBasemapsAndRegion',
+    OfflineSurveys: 'OfflineSurveys',
+    ProjectAccessControlSettings: 'ProjectAccessControlSettings',
+    ProjectMetadata: 'ProjectMetadata',
+    Me: 'Me',
+    ProjectRegion: 'ProjectRegion',
+    GetProjectBySlug: 'GetProjectBySlug',
+    ProjectSlugExists: 'ProjectSlugExists',
+    PublishedTableOfContents: 'PublishedTableOfContents',
+    SimpleProjectList: 'SimpleProjectList',
+    Surveys: 'Surveys',
+    SurveyById: 'SurveyById',
+    SurveyFormEditorDetails: 'SurveyFormEditorDetails',
+    FormElementTypes: 'FormElementTypes',
+    GetPhotos: 'GetPhotos',
+    SurveyResponses: 'SurveyResponses',
+    SurveyMapDetails: 'SurveyMapDetails',
+    AllBasemaps: 'AllBasemaps',
+    GetFormElement: 'GetFormElement',
+    Survey: 'Survey',
+    UserAdminCounts: 'UserAdminCounts',
+    Participants: 'Participants',
+    Admins: 'Admins',
+    GroupMembers: 'GroupMembers',
+    UserSettingsLists: 'UserSettingsLists',
+    UserInfo: 'UserInfo',
+    ProjectInvites: 'ProjectInvites',
+    InviteEditorModalQuery: 'InviteEditorModalQuery',
+    UserIsSuperuser: 'UserIsSuperuser'
+  },
+  Mutation: {
+    UpdateProjectStorageBucket: 'UpdateProjectStorageBucket',
+    updatePublicKey: 'updatePublicKey',
+    updateSecretKey: 'updateSecretKey',
+    UpdateAclType: 'UpdateAclType',
+    AddGroupToAcl: 'AddGroupToAcl',
+    RemoveGroupFromAcl: 'RemoveGroupFromAcl',
+    CreateTableOfContentsItem: 'CreateTableOfContentsItem',
+    CreateArcGISDynamicDataSource: 'CreateArcGISDynamicDataSource',
+    CreateArcGISImageSource: 'CreateArcGISImageSource',
+    CreateSeaSketchVectorSource: 'CreateSeaSketchVectorSource',
+    CreateDataLayer: 'CreateDataLayer',
+    GetOrCreateSprite: 'GetOrCreateSprite',
+    AddImageToSprite: 'AddImageToSprite',
+    ConfirmProjectInvite: 'ConfirmProjectInvite',
+    ResendEmailVerification: 'ResendEmailVerification',
+    RequestInviteOnlyProjectAccess: 'RequestInviteOnlyProjectAccess',
+    CreateBasemap: 'CreateBasemap',
+    UploadBasemap: 'UploadBasemap',
+    UpdateBasemap: 'UpdateBasemap',
+    UpdateBasemapUrl: 'UpdateBasemapUrl',
+    UpdateBasemapLabelsLayer: 'UpdateBasemapLabelsLayer',
+    Toggle3dTerrain: 'Toggle3dTerrain',
+    Set3dTerrain: 'Set3dTerrain',
+    UpdateTerrainExaggeration: 'UpdateTerrainExaggeration',
+    DeleteBasemap: 'DeleteBasemap',
+    UpdateOptionalLayerName: 'UpdateOptionalLayerName',
+    CreateOptionalLayer: 'CreateOptionalLayer',
+    UpdateOptionalLayer: 'UpdateOptionalLayer',
+    DeleteOptionalLayer: 'DeleteOptionalLayer',
+    UpdateOptionalBasemapLayerLayerList: 'UpdateOptionalBasemapLayerLayerList',
+    UpdateOptionalBasemapLayerOptions: 'UpdateOptionalBasemapLayerOptions',
+    UpdateOptionalBasemapLayerMetadata: 'UpdateOptionalBasemapLayerMetadata',
+    UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
+    CreateProject: 'CreateProject',
+    CreateFolder: 'CreateFolder',
+    DeleteBranch: 'DeleteBranch',
+    UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
+    UpdateFolder: 'UpdateFolder',
+    UpdateTableOfContentsItem: 'UpdateTableOfContentsItem',
+    UpdateEnableDownload: 'UpdateEnableDownload',
+    UpdateLayer: 'UpdateLayer',
+    UpdateDataSource: 'UpdateDataSource',
+    UpdateInteractivitySettings: 'UpdateInteractivitySettings',
+    UpdateZIndexes: 'UpdateZIndexes',
+    UpdateRenderUnderType: 'UpdateRenderUnderType',
+    UpdateQueryParameters: 'UpdateQueryParameters',
+    UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
+    UpdateMetadata: 'UpdateMetadata',
+    PublishTableOfContents: 'PublishTableOfContents',
+    updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
+    UpdateProjectRegion: 'UpdateProjectRegion',
+    CreateSurvey: 'CreateSurvey',
+    UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
+    UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',
+    UpdateFormElement: 'UpdateFormElement',
+    UpdateComponentSettings: 'UpdateComponentSettings',
+    UpdateAlternateLanguageSettings: 'UpdateAlternateLanguageSettings',
+    UpdateFormElementBody: 'UpdateFormElementBody',
+    UpdateFormElementOrder: 'UpdateFormElementOrder',
+    AddFormElement: 'AddFormElement',
+    DeleteFormElement: 'DeleteFormElement',
+    UpdateForm: 'UpdateForm',
+    UpdateFormElementBackground: 'UpdateFormElementBackground',
+    SetFormElementBackground: 'SetFormElementBackground',
+    clearFormElementStyle: 'clearFormElementStyle',
+    createLogicRuleForSurvey: 'createLogicRuleForSurvey',
+    UpdateFormLogicRule: 'UpdateFormLogicRule',
+    UpdateLogicCondition: 'UpdateLogicCondition',
+    DeleteLogicCondition: 'DeleteLogicCondition',
+    DeleteLogicRule: 'DeleteLogicRule',
+    AddCondition: 'AddCondition',
+    UpdateSurveyDraftStatus: 'UpdateSurveyDraftStatus',
+    UploadConsentDoc: 'UploadConsentDoc',
+    toggleResponsesPractice: 'toggleResponsesPractice',
+    archiveResponses: 'archiveResponses',
+    modifyAnswers: 'modifyAnswers',
+    copyAppearance: 'copyAppearance',
+    updateFormElementBasemaps: 'updateFormElementBasemaps',
+    updateFormElementMapCamera: 'updateFormElementMapCamera',
+    CreateResponse: 'CreateResponse',
+    UpdateProjectName: 'UpdateProjectName',
+    UpdateProjectSettings: 'UpdateProjectSettings',
+    CreateGroup: 'CreateGroup',
+    toggleAdminAccess: 'toggleAdminAccess',
+    setUserGroups: 'setUserGroups',
+    toggleForumPostingBan: 'toggleForumPostingBan',
+    deleteGroup: 'deleteGroup',
+    createProjectInvites: 'createProjectInvites',
+    UpdateProjectInvite: 'UpdateProjectInvite',
+    DeleteProjectInvite: 'DeleteProjectInvite',
+    SendInvite: 'SendInvite',
+    RenameGroup: 'RenameGroup',
+    SendInvites: 'SendInvites',
+    UpdateProfile: 'UpdateProfile'
+  },
+  Subscription: {
+    ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
+  },
+  Fragment: {
+    UpdateTerrainExaggeration: 'UpdateTerrainExaggeration',
+    NewLabelsLayer: 'NewLabelsLayer',
+    NewTerrain: 'NewTerrain',
+    NewBasemap: 'NewBasemap',
+    NewQueryParameters: 'NewQueryParameters',
+    UpdateHighDPI: 'UpdateHighDPI',
+    UpdateFormat: 'UpdateFormat',
+    NewGLStyle: 'NewGLStyle',
+    NewRenderUnder: 'NewRenderUnder',
+    NewZIndex: 'NewZIndex',
+    NewElement: 'NewElement',
+    LogicRuleEditorFormElement: 'LogicRuleEditorFormElement',
+    LogicRuleEditorRule: 'LogicRuleEditorRule',
+    NewRule: 'NewRule',
+    NewSurvey: 'NewSurvey',
+    NewGroup: 'NewGroup',
+    NewInviteEmail: 'NewInviteEmail',
+    NewLayerOptions: 'NewLayerOptions',
+    UpdateAlternateLanguageSettings: 'UpdateAlternateLanguageSettings',
+    UpdateComponentSettings: 'UpdateComponentSettings',
+    UpdateBody: 'UpdateBody',
+    BasemapDetails: 'BasemapDetails',
+    MapEssentials: 'MapEssentials',
+    ProjectMetadata: 'ProjectMetadata',
+    ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
+    ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
+    SurveyListDetails: 'SurveyListDetails',
+    AddFormElementTypeDetails: 'AddFormElementTypeDetails',
+    FormElementDetails: 'FormElementDetails',
+    SketchClassDetails: 'SketchClassDetails',
+    FormElementFullDetails: 'FormElementFullDetails',
+    LogicRuleDetails: 'LogicRuleDetails',
+    SurveyResponse: 'SurveyResponse',
+    FormElementExtendedDetails: 'FormElementExtendedDetails',
+    SurveyAppRule: 'SurveyAppRule',
+    SurveyAppFormElement: 'SurveyAppFormElement',
+    SurveyAppSurvey: 'SurveyAppSurvey',
+    ParticipantListDetails: 'ParticipantListDetails',
+    UserListDetails: 'UserListDetails',
+    InviteDetails: 'InviteDetails',
+    InviteEmailDetails: 'InviteEmailDetails'
+  }
+}

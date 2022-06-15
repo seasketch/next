@@ -70,11 +70,6 @@ export class GraphqlQueryCache {
     this.restoreEnabledState();
     this.endpoint = endpoint;
     this.strategies = strategies;
-    if ("serviceWorker" in navigator && !apolloClient) {
-      throw new Error(
-        "ApolloClient must be set when using outside a service worker"
-      );
-    }
     this.apolloClient = apolloClient;
     // Validate strategy configuration
     const strategiesByKey: { [key: string]: Strategy } = {};
@@ -497,8 +492,12 @@ export class GraphqlQueryCache {
   }
 
   async getCacheStatus(queryName: string, variables: any) {
+    return !!(await this.getCachedResponse(queryName, variables));
+  }
+
+  async getCachedResponse(queryName: string, variables: any) {
     const cacheKey = await this.makeCacheKey(queryName, variables);
-    return !!(await this.matchCache(cacheKey, this.strategies));
+    return this.matchCache(cacheKey, this.strategies);
   }
 
   /**
@@ -540,6 +539,12 @@ export class GraphqlQueryCache {
     );
   }
 
+  async clearResponse(strategy: Strategy, args: any) {
+    const cache = await this.openCache(strategy);
+    const cacheKey = this.makeCacheKey(strategy.queryName, args);
+    return cache.delete(cacheKey);
+  }
+
   /**
    * It would be pretty bad if the app sent a graphql query for certain data,
    * then received a cache that didn't match that query. Don't let that happen!
@@ -571,6 +576,37 @@ export class GraphqlQueryCache {
     if (changes) {
       await localforage.setItem(cacheKey, hashes);
     }
+  }
+
+  async getState() {
+    const strategyStats: {
+      id: string;
+      type: string;
+      queryName: string;
+      entries: number;
+      bytes: number;
+      limit?: number;
+    }[] = [];
+    for (const strategy of this.strategies) {
+      const { keys, bytes } = await getCacheSize(
+        this.cacheNameForStrategy(strategy)
+      );
+      strategyStats.push({
+        id: this.cacheNameForStrategy(strategy),
+        type: strategy.type,
+        queryName: strategy.queryName,
+        entries: keys,
+        bytes,
+        limit: strategy.type === "lru" ? strategy.limit : undefined,
+      });
+    }
+    return {
+      bytes: strategyStats.reduce((bytes, stats) => {
+        bytes += stats.bytes;
+        return bytes;
+      }, 0),
+      strategies: strategyStats,
+    };
   }
 }
 
@@ -727,4 +763,24 @@ function hashCode(str: string) {
     hash |= 0; // Convert to 32bit integer
   }
   return hash;
+}
+
+export async function getCacheSize(cacheName: string) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  let cacheSize = 0;
+
+  await Promise.all(
+    keys.map(async (key) => {
+      const response = await cache.match(key);
+      if (response) {
+        const blob = await response.blob();
+        cacheSize += blob.size;
+      }
+    })
+  );
+  return {
+    keys: keys.length,
+    bytes: cacheSize,
+  };
 }

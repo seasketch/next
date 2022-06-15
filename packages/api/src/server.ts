@@ -75,6 +75,7 @@ app.use(
       "content-length",
       "x-postgraphile-explain",
       "if-none-match",
+      "pragma",
     ],
     exposedHeaders: ["ETag"],
     maxAge: 600,

@@ -1,0 +1,9 @@
+query OfflineSurveys($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      name
+    }
+  }
+}

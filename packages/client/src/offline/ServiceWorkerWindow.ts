@@ -20,7 +20,7 @@ class ServiceWorkerWindow {
   private wb: Pick<Workbox, "messageSW">;
 
   constructor() {
-    if ("serviceWorker" in navigator) {
+    if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
       const wb = new Workbox("/service-worker.js");
       wb.register();
       this.wb = wb;

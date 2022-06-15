@@ -13,6 +13,7 @@ import logo from "../header/seasketch-logo.png";
 import { useAuth0 } from "@auth0/auth0-react";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import { StatusOfflineIcon } from "@heroicons/react/outline";
 
 export default function FullSidebar({
   open,
@@ -201,12 +202,14 @@ export default function FullSidebar({
                   </svg>
                 }
                 label={t("Account Settings")}
-                onClick={() => history.push("/account-settings")}
+                onClick={chooseSidebar("settings")}
               />
               <a
                 target="_blank"
                 rel="noreferrer"
-                href="mailto:support@seasketch.org"
+                href={`mailto:${
+                  data?.project?.supportEmail || "support@seasketch.org"
+                }`}
                 className="flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full"
                 role="menuitem"
               >

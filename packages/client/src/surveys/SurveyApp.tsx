@@ -50,6 +50,8 @@ import SurveyNavigationButton from "./SurveyNavigationButtons";
 import languages from "../lang/supported";
 import SurveyContextualMap from "./SurveyContextualMap";
 import { ProjectAccessGate } from "../auth/ProjectAccessGate";
+import { useApolloClient } from "@apollo/client";
+import { SurveyDocument } from "../generated/queries";
 
 require("./surveys.css");
 

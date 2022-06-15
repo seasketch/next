@@ -13360,6 +13360,23 @@ export type GetBasemapsAndRegionQuery = (
   )> }
 );
 
+export type OfflineSurveysQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type OfflineSurveysQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { surveys: Array<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id' | 'name'>
+    )> }
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13394,7 +13411,7 @@ export type UpdateProjectAccessControlSettingsMutation = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail'>
 );
 
 export type ProjectPublicDetailsMetadataFragment = (
@@ -15213,6 +15230,7 @@ export const ProjectMetadataFragmentDoc = gql`
   accessControl
   sessionIsAdmin
   isFeatured
+  supportEmail
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = gql`
@@ -18572,6 +18590,45 @@ export function useGetBasemapsAndRegionLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type GetBasemapsAndRegionQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionQuery>;
 export type GetBasemapsAndRegionLazyQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionLazyQuery>;
 export type GetBasemapsAndRegionQueryResult = Apollo.QueryResult<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>;
+export const OfflineSurveysDocument = gql`
+    query OfflineSurveys($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      name
+    }
+  }
+}
+    `;
+
+/**
+ * __useOfflineSurveysQuery__
+ *
+ * To run a query within a React component, call `useOfflineSurveysQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOfflineSurveysQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOfflineSurveysQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useOfflineSurveysQuery(baseOptions: Apollo.QueryHookOptions<OfflineSurveysQuery, OfflineSurveysQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OfflineSurveysQuery, OfflineSurveysQueryVariables>(OfflineSurveysDocument, options);
+      }
+export function useOfflineSurveysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OfflineSurveysQuery, OfflineSurveysQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OfflineSurveysQuery, OfflineSurveysQueryVariables>(OfflineSurveysDocument, options);
+        }
+export type OfflineSurveysQueryHookResult = ReturnType<typeof useOfflineSurveysQuery>;
+export type OfflineSurveysLazyQueryHookResult = ReturnType<typeof useOfflineSurveysLazyQuery>;
+export type OfflineSurveysQueryResult = Apollo.QueryResult<OfflineSurveysQuery, OfflineSurveysQueryVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -21718,6 +21775,7 @@ export const namedOperations = {
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
+    OfflineSurveys: 'OfflineSurveys',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
     ProjectMetadata: 'ProjectMetadata',
     Me: 'Me',
