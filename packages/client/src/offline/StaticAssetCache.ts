@@ -35,7 +35,10 @@ class StaticAssetCache {
   constructor(manifest?: PrecacheManifest) {
     if (manifest) {
       this.setManifest(manifest);
-    } else if ("serviceWorker" in navigator) {
+    } else if (
+      "serviceWorker" in navigator &&
+      navigator.serviceWorker.controller
+    ) {
       this.setManifestFromServiceWorker();
     }
   }
