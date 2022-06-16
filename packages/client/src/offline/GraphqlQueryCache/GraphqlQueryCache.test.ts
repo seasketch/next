@@ -34,7 +34,13 @@ function createMockRequest(json: any) {
     url: ENDPOINT,
     method: "POST",
     headers: {
-      get: (key: string) => undefined,
+      get: (key: string) => {
+        if (key === "content-type") {
+          return "application/json";
+        } else {
+          return "";
+        }
+      },
     },
     clone: () => createMockRequest(json),
     json: () => Promise.resolve(json),
