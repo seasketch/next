@@ -31,14 +31,6 @@ self.addEventListener("install", (event) => {
       await staticAssetCache.populateCache();
     }
   })();
-  self.skipWaiting();
-});
-
-self.addEventListener("waiting", (event) => {
-  console.log(
-    `A new service worker has installed, but it can't activate` +
-      `until all tabs running the current version have fully unloaded.`
-  );
 });
 
 self.addEventListener("activate", () => {
@@ -46,7 +38,7 @@ self.addEventListener("activate", () => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
+  if (event.data && event.data.type === MESSAGE_TYPES.SKIP_WAITING) {
     // This allows the web app to trigger skipWaiting via
     // registration.waiting.postMessage({type: 'SKIP_WAITING'})
     self.skipWaiting();
