@@ -434,20 +434,20 @@ describe("Survey creation smoke test", () => {
              {$btn.trigger('click')}
           })
       })
-      it (`Advances to SAP page - ${device}`, () => {
-        cy.viewport(device)
-        cy.get('button').contains('Next').as('nextBtn')
-        cy.get('@nextBtn').then(($btn) => {
-          {$btn.trigger('click')}
-        })
-        //.click()
-        //cy.get('[type = "button"]').then(($btn) => {
-        //  if($btn.html() === "Next") {
-        //    cy.wrap($btn).as('nextBtn')
-        //    {$btn.trigger('click')}
-        //  }
-        //})
-      })
+      //it (`Advances to SAP page - ${device}`, () => {
+      //  cy.viewport(device)
+      //  cy.get('button').contains('Next').as('nextBtn')
+      //  cy.get('@nextBtn').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  })
+      //  //.click()
+      //  //cy.get('[type = "button"]').then(($btn) => {
+      //  //  if($btn.html() === "Next") {
+      //  //    cy.wrap($btn).as('nextBtn')
+      //  //    {$btn.trigger('click')}
+      //  //  }
+      //  //})
+      //})
       it(`Can draw a polygon - Fisheries - Commercial, Tuna - ${device}`, () => {
         cy.viewport(device)
         cy.get('[type = "button"]').then(($btn) => {
