@@ -450,100 +450,97 @@ describe("Survey creation smoke test", () => {
       })
       it(`Can draw a polygon - Fisheries - Commercial, Tuna - ${device}`, () => {
         cy.viewport(device)
-        //cy.get('[type = "button"]').as('nextBtn').then(($btn) => {
-        //  if ($btn.html() === "Next") {
-        //    console.log($btn.html())
-        //    //{$btn.trigger('click')}
-        //  } 
-        //})
-        cy.get('h4').contains('Fisheries - Commercial, Tuna')
-          .should('exist')
-          .and('be.visible')
+        cy.get('[type = "button"]').then(($btn) => {
+          if ($btn.html() === "Next") {
+            console.log($btn.html())
+            //{$btn.trigger('click')}
+          } 
+        })
+        
+        //polygon path for mobile devices
+        if (device === "iphone-x") {
+          cy.get('h4').contains('Fisheries - Commercial, Tuna')
+            .should('exist')
+            .and('be.visible')
           cy.window().its('mapContext.basemaps').then((maps) => {
             Object.keys(maps).forEach((key) => {
               expect (basemaps[maps[key].name]).to.exist
             })
           })
-        //polygon path for mobile devices
-        if (device === "iphone-x") {
-          console.log('yes')
-          cy.get('button').contains('Begin')
-          .should('exist')
-          .and('be.visible')
-          .as('beginBtn').then(($btn) => {
+          cy.get('[data-cy="button-begin"]')
+            .should('exist')
+            .and('be.visible')
+            .as('beginBtn')
+          cy.get('@beginBtn').then(($btn) => {
             {$btn.trigger('click')}
           })
           waitOnMapbox(5)
-        cy.get('[role="progressbar"]')
-          .should('not.exist')
+          cy.get('[role="progressbar"]')
+            .should('not.exist')
           drawPolygon()
         } 
-        ////Check that basemaps are loaded in window
-        //
-        ////wait on all calls to Mapbox Api
-        //
       })
       
-      it(`Can view basemap selector - ${device}`, () => {
-        cy.viewport(device)
-        cy.get('img').click()
-        let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
-        values.forEach((val) => {
-          cy.get('.fixed > .overflow-y-auto').children().contains(val)
-        })
-        //satellite basemap thumbnail
-        cy.get('img[alt="Satellite basemap"]')
-          .should('be.visible')
-        cy.get('img[alt="Maldives Light basemap"]')
-          .should('be.visible')
-      })
-      it (`Can show scale bar - ${device}`, () => {
-        cy.viewport(device)
-        cy.get('h4').contains('Show scale bar')
-        cy.get('[role="switch"]').then(($switch) => {
-          {$switch.trigger('click')}
-        })
-        cy.get('.mapboxgl-ctrl-scale')
-          .should('be.visible')
-          .as("scaleBar").then((scaleBar) => {
-            cy.setLocalStorage("scale bar", scaleBar.html())
-            cy.saveLocalStorage()
-          })
-      })
-      it (`Renders the correct basemap - ${device}`, () => {
-        cy.viewport(device)
-        cy.contains('Maldives Light').as('maldivesLightBasemap')
-        cy.get('@maldivesLightBasemap').then(($btn) => {
-          {$btn.trigger('click')}
-        })
-        cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
-        cy.contains('Satellite')
-          .should('not.have.class', 'font-semibold')
-      })
-      it (`Can select different basemap - ${device}`, () => {
-        cy.viewport(device)
-        cy.contains('Satellite').as('satelliteBasemap')
-          cy.get('@satelliteBasemap').then(($btn) => {
-            {$btn.trigger('click')}
-          })
-          .should('have.class', 'font-semibold')   
-        cy.contains('Maldives Light')
-          .should('not.have.class', 'font-semibold')
-      })
-      it(`Shows option to focus on location - ${device}`, () => {
-        cy.viewport(device)
-        cy.restoreLocalStorage()
-        cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
-          cy.setLocalStorage("lat", `${center["lat"]}`)
-          cy.setLocalStorage("long", `${center["lng"]}`)
-          cy.getLocalStorage("surveyId").then((id) => {
-            console.log(id)
-            cy.setLocalStorage("surveyId", id)
-          });
-          cy.saveLocalStorage();
-          cy.get('h4').contains('Focus on location').click();
-        });
-      });
+      //it(`Can view basemap selector - ${device}`, () => {
+      //  cy.viewport(device)
+      //  cy.get('img').click()
+      //  let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
+      //  values.forEach((val) => {
+      //    cy.get('.fixed > .overflow-y-auto').children().contains(val)
+      //  })
+      //  //satellite basemap thumbnail
+      //  cy.get('img[alt="Satellite basemap"]')
+      //    .should('be.visible')
+      //  cy.get('img[alt="Maldives Light basemap"]')
+      //    .should('be.visible')
+      //})
+      //it (`Can show scale bar - ${device}`, () => {
+      //  cy.viewport(device)
+      //  cy.get('h4').contains('Show scale bar')
+      //  cy.get('[role="switch"]').then(($switch) => {
+      //    {$switch.trigger('click')}
+      //  })
+      //  cy.get('.mapboxgl-ctrl-scale')
+      //    .should('be.visible')
+      //    .as("scaleBar").then((scaleBar) => {
+      //      cy.setLocalStorage("scale bar", scaleBar.html())
+      //      cy.saveLocalStorage()
+      //    })
+      //})
+      //it (`Renders the correct basemap - ${device}`, () => {
+      //  cy.viewport(device)
+      //  cy.contains('Maldives Light').as('maldivesLightBasemap')
+      //  cy.get('@maldivesLightBasemap').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  })
+      //  cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
+      //  cy.contains('Satellite')
+      //    .should('not.have.class', 'font-semibold')
+      //})
+      //it (`Can select different basemap - ${device}`, () => {
+      //  cy.viewport(device)
+      //  cy.contains('Satellite').as('satelliteBasemap')
+      //    cy.get('@satelliteBasemap').then(($btn) => {
+      //      {$btn.trigger('click')}
+      //    })
+      //    .should('have.class', 'font-semibold')   
+      //  cy.contains('Maldives Light')
+      //    .should('not.have.class', 'font-semibold')
+      //})
+      //it(`Shows option to focus on location - ${device}`, () => {
+      //  cy.viewport(device)
+      //  cy.restoreLocalStorage()
+      //  cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
+      //    cy.setLocalStorage("lat", `${center["lat"]}`)
+      //    cy.setLocalStorage("long", `${center["lng"]}`)
+      //    cy.getLocalStorage("surveyId").then((id) => {
+      //      console.log(id)
+      //      cy.setLocalStorage("surveyId", id)
+      //    });
+      //    cy.saveLocalStorage();
+      //    cy.get('h4').contains('Focus on location').click();
+      //  });
+      //});
       //it(`Focuses on location - ${device}`, () => {
       //  cy.viewport(device)
       //  cy.restoreLocalStorage()
@@ -563,7 +560,7 @@ describe("Survey creation smoke test", () => {
       //    })
       //  })
       //});
-      //it(`Renders sector specific attributes - Fisheries - Commercial, Tuna - - ${device}`, () => {
+      //it(`Renders sector specific attributes - Fisheries - Commercial, Tuna - ${device}`, () => {
       //  cy.viewport(device)
       //  cy.get('img').then((imgs) => {
       //    imgs[0].click()
@@ -611,7 +608,7 @@ describe("Survey creation smoke test", () => {
       //    .should('exist')
       //    .and('have.value', 15);
       //});
-      //it(`Can finish sector - Fisheries - Commercial, Tuna -${device}`, () => {
+      //it(`Can finish sector - Fisheries - Commercial, Tuna - ${device}`, () => {
       //  cy.viewport(device)
       //  cy.contains('Fisheries - Commercial, Tuna')
       //    .should('be.visible');
@@ -639,34 +636,34 @@ describe("Survey creation smoke test", () => {
       //    {$btn.trigger('click')}
       //  });
       //});
-      //it('Can draw a polygon - Fisheries - Commercial, Non-Tuna Species', () => {
-      //  cy.viewport(device)
-      //  let ary = []
-      //  cy.get('button').then(($btn) => {
-      //    //@ts-ignore
-      //    $btn.toArray().forEach((t) => {
-      //      ary.push(t.innerText)
-      //    })
-      //    if (ary.includes('Next sector')) {
-      //      console.log("true")
-      //      cy.get('button').contains('Next sector').then(($btn) => {
-      //        console.log($btn)
-      //        {$btn.trigger('click')}
-//
-      //      })
-      //    }
-      //  })
-      //  cy.get('button').contains('Next sector')
-      //    .should('not.exist')
-      //  if (device === "iphone-x") {
-      //    console.log('yes')
-      //    cy.get('[data-cy="button-begin"]')
-      //    .should('exist')
-      //    .and('be.visible')
-      //    .as('beginBtn').then(($btn) => {
-      //      {$btn.trigger('click')}
-      //    })
-      //    //waitOnMapbox(3)
+      ////it('Can draw a polygon - Fisheries - Commercial, Non-Tuna Species', () => {
+      ////  cy.viewport(device)
+      ////  let ary = []
+      ////  cy.get('button').then(($btn) => {
+      ////    //@ts-ignore
+      ////    $btn.toArray().forEach((t) => {
+      ////      ary.push(t.innerText)
+      ////    })
+      ////    if (ary.includes('Next sector')) {
+      ////      console.log("true")
+      ////      cy.get('button').contains('Next sector').then(($btn) => {
+      ////        console.log($btn)
+      ////        {$btn.trigger('click')}
+////
+      ////      })
+      ////    }
+      ////  })
+      ////  cy.get('button').contains('Next sector')
+      ////    .should('not.exist')
+      ////  if (device === "iphone-x") {
+      ////    console.log('yes')
+      ////    cy.get('[data-cy="button-begin"]')
+      ////    .should('exist')
+      ////    .and('be.visible')
+      ////    .as('beginBtn').then(($btn) => {
+      ////      {$btn.trigger('click')}
+      ////    })
+      ////    //waitOnMapbox(3)
       //    cy.get('[role="progressbar"]')
       //    .should('not.exist')
       //    
