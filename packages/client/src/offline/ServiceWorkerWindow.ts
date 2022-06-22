@@ -7,6 +7,7 @@ export const MESSAGE_TYPES = {
   UPDATE_GRAPHQL_STRATEGY_ARGS: "UPDATE_GRAPHQL_STRATEGY_ARGS",
   GRAPHQL_CACHE_REVALIDATION: "GRAPHQL_CACHE_REVALIDATION",
   UPDATE_GRAPHQL_CACHE_ENABLED: "UPDATE_GRAPHQL_CACHE_ENABLED",
+  SKIP_WAITING: "SKIP_WAITING",
 };
 
 /**
@@ -73,6 +74,12 @@ class ServiceWorkerWindow {
     return this.wb.messageSW({
       type: MESSAGE_TYPES.UPDATE_GRAPHQL_CACHE_ENABLED,
       enabled,
+    });
+  }
+
+  skipWaiting() {
+    this.wb.messageSW({
+      type: MESSAGE_TYPES.SKIP_WAITING,
     });
   }
 }
