@@ -61,9 +61,8 @@ export default function ResponsesMap({
   const [spatialQuestions, setSpatialQuestions] = useState<
     FormElementDetailsFragment[]
   >([]);
-  const [selectedQuestion, setSelectedQuestion] = useState<string | undefined>(
-    undefined
-  );
+  const [selectedQuestion, setSelectedQuestion] =
+    useState<string | undefined>(undefined);
   const responsesQuery = useSurveyResponsesQuery({
     variables: {
       surveyId: surveyId,
@@ -84,7 +83,7 @@ export default function ResponsesMap({
       selectedQuestion &&
       responses?.length &&
       questionId &&
-      map.loaded
+      map.loaded()
     ) {
       // eslint-disable-next-line i18next/no-literal-string
       const sourceId = `${selectedQuestion}-source`;

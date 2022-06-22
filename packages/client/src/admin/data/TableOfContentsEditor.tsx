@@ -43,16 +43,12 @@ export default function TableOfContentsEditor() {
   const projectId = useProjectId();
   const [treeItems, setTreeItems] = useState<ClientTableOfContentsItem[]>([]);
   const [openLayerItemId, setOpenLayerItemId] = useState<number>();
-  const [createNewFolderModalOpen, setCreateNewFolderModalOpen] = useState<
-    boolean
-  >(false);
-  const [itemForDeletion, setItemForDeletion] = useState<
-    ClientTableOfContentsItem
-  >();
-  const [
-    updateChildrenMutation,
-    updateChildrenMutationState,
-  ] = useUpdateTableOfContentsItemChildrenMutation();
+  const [createNewFolderModalOpen, setCreateNewFolderModalOpen] =
+    useState<boolean>(false);
+  const [itemForDeletion, setItemForDeletion] =
+    useState<ClientTableOfContentsItem>();
+  const [updateChildrenMutation, updateChildrenMutationState] =
+    useUpdateTableOfContentsItemChildrenMutation();
   const [expansionState, setExpansionState] = useLocalStorage<{
     [id: number]: boolean;
   }>("toc-editor-expansion-state", {});
