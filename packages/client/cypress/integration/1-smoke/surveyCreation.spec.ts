@@ -957,7 +957,10 @@ describe("Survey creation smoke test", () => {
         cy.viewport(device)
         cy.contains("Your age")
         cy.get('input').clear().type("30")
-        cy.contains('Next').click()
+        cy.contains('Next').as('nextBtn');
+        cy.get('@nextBtn').then(($btn) => {
+          {$btn.trigger('click')}
+        })
       })
       it(`Can select gender - ${device}`, () => {
         cy.viewport(device)
