@@ -71,7 +71,6 @@ import DigitizingMiniMap from "../DigitizingMiniMap";
 import { FormEditorHeader } from "../../admin/surveys/SurveyFormEditor";
 import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
-import set from "lodash.set";
 import { collectText } from "../../admin/surveys/collectText";
 import { ChoiceAdminValueInput } from "../ComboBox";
 import useDebounce from "../../useDebounce";
@@ -160,10 +159,11 @@ const SpatialAccessPriority: FormElementComponent<
   const [miniMap, setMiniMap] = useState<Map | null>(null);
   const [miniMapStyle, setMiniMapStyle] = useState<Style>();
 
-  const [geometryEditingState, setGeometryEditingState] = useState<{
-    isNew: boolean;
-    feature?: Feature<any>;
-  } | null>(null);
+  const [geometryEditingState, setGeometryEditingState] =
+    useState<{
+      isNew: boolean;
+      feature?: Feature<any>;
+    } | null>(null);
   const [responseState, setResponseState] = useState<ResponseState>({
     submissionAttempted: false,
   });
@@ -1615,7 +1615,7 @@ function unArrayifySettings(settings?: SpatialAccessPriorityProps) {
 function unArrayify(values: (number | null | undefined)[]) {
   const pojo: { [key: number]: any } = {};
   for (var i = 0; i < values.length; i++) {
-    if (values[i] !== null || values[i] !== undefined) {
+    if (values[i] !== null && values[i] !== undefined) {
       pojo[i] = values[i];
     }
   }
