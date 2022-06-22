@@ -726,9 +726,13 @@ describe("Survey creation smoke test", () => {
         cy.viewport(device)
         cy.contains("Save").should('not.exist')
         cy.contains('New Shape').as('newShape')
+          .should('exist')
+          .and('be.visible')
         cy.get('@newShape').then(($btn) => {
           {$btn.trigger('click')}
-        })
+        });
+        cy.get('@newShape')
+          .should('not.exist')
         //cy.
         //let ary = []
         //cy.get('button').then(($btn) => {
