@@ -1,21 +1,14 @@
 import React from "react";
 import {
   BanIcon,
-  DocumentTextIcon,
   InboxInIcon,
   KeyIcon,
   MailIcon,
   MailOpenIcon,
   PaperClipIcon,
-  PencilIcon,
   XCircleIcon,
 } from "@heroicons/react/outline";
-import {
-  EmailStatus,
-  InviteEmail,
-  InviteStatus,
-} from "../../generated/graphql";
-import Spinner from "../../components/Spinner";
+import { EmailStatus, InviteStatus } from "../../generated/graphql";
 
 export default function InviteIcon({
   status,

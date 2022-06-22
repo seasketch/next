@@ -1,8 +1,3 @@
-import {
-  LocationMarkerIcon,
-  MapIcon,
-  PlusCircleIcon,
-} from "@heroicons/react/solid";
 import { Feature } from "geojson";
 import { Trans, useTranslation } from "react-i18next";
 import SketchGeometryTypeSelector, {

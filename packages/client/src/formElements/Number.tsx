@@ -7,7 +7,6 @@ import {
   FormElementEditorPortal,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
-import { SurveyStyleContext } from "../surveys/appearance";
 import { MinusIcon, PlusIcon } from "@heroicons/react/outline";
 import NumberInput from "../components/NumberInput";
 import InputBlock from "../components/InputBlock";
@@ -55,7 +54,7 @@ const Number: FormElementComponent<NumberProps, number | null> = (props) => {
     if (props.value === undefined) {
       props.onChange(defaultValue, !!state.errors);
     }
-  }, []);
+  }, [defaultValue, props, state.errors]);
 
   function updateValue(value: string) {
     const results = validate(
@@ -356,7 +355,7 @@ export const NumberCellEditor: CellEditorComponent<
 
   useEffect(() => {
     onChange(val);
-  }, [val]);
+  }, [onChange, val]);
 
   return (
     <input

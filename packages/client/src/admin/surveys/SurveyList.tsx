@@ -1,27 +1,19 @@
-import {
-  CalendarIcon,
-  LocationMarkerIcon,
-  UsersIcon,
-} from "@heroicons/react/solid";
+import { UsersIcon } from "@heroicons/react/solid";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import Badge from "../../components/Badge";
-import {
-  useSurveysQuery,
-  useCreateSurveyMutation,
-} from "../../generated/graphql";
+import { useSurveysQuery } from "../../generated/graphql";
 import useProjectId from "../../useProjectId";
 
 export default function SurveyList() {
   const projectId = useProjectId();
   const { slug } = useParams<{ slug: string }>();
   const { t } = useTranslation("admin:surveys");
-  const { data, loading, error, refetch } = useSurveysQuery({
+  const { data } = useSurveysQuery({
     variables: {
       projectId: projectId!,
     },
   });
-  const [createSurvey, createSurveyState] = useCreateSurveyMutation({});
 
   return (
     <div className="bg-white shadow overflow-hidden sm:rounded-md">

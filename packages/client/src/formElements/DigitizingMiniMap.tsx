@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import mapboxgl, { LngLatLike, Map, MapboxOptions, Style } from "mapbox-gl";
+import mapboxgl, { Map, Style } from "mapbox-gl";
 import { DigitizingDragTarget } from "../draw/useMapboxGLDraw";
 import { motion } from "framer-motion";
-import { useMediaQuery } from "beautiful-react-hooks";
+import useMediaQuery from "beautiful-react-hooks/useMediaQuery";
 
 const ZOOM_MULTIPLIER = 1.18;
 
@@ -46,19 +46,20 @@ export default function DigitizingMiniMap({
         mapInstance?.remove();
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapContainer.current]);
   useEffect(() => {
     if (map) {
       map.setStyle(style, { diff: false });
       map.resize();
     }
-  }, [style]);
+  }, [map, style]);
   useEffect(() => {
     if (map && dragTarget) {
       map.setCenter(dragTarget.center);
       map.setZoom(Math.min(dragTarget.currentZoom * ZOOM_MULTIPLIER, 18));
     }
-  }, [dragTarget]);
+  }, [dragTarget, map]);
   const variant =
     dragTarget && dragTarget.point.y < 175 && dragTarget.point.x < 175
       ? "topRight"

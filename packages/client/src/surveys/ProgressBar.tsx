@@ -1,5 +1,3 @@
-import React, { CSSProperties } from "react";
-
 export default function ProgressBar({
   progress,
   skipAnimation,

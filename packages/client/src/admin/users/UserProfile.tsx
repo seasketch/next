@@ -1,7 +1,5 @@
-import React from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 import { Profile } from "../../generated/graphql";
-import ProfilePhoto from "./ProfilePhoto";
 
 interface ProfileProps {
   profile: Pick<
@@ -12,7 +10,6 @@ interface ProfileProps {
 }
 
 export default function UserProfile({ profile, canonicalEmail }: ProfileProps) {
-  const { t } = useTranslation("admin");
   return (
     <div className="">
       <div className="">

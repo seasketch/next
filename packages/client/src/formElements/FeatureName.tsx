@@ -1,16 +1,13 @@
 import { FlagIcon } from "@heroicons/react/outline";
 import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import InputBlock from "../components/InputBlock";
-import NumberInput from "../components/NumberInput";
-import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
 } from "./FormElement";
-import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
+import { questionBodyFromMarkdown } from "./fromMarkdown";
 
 export type FeatureNameProps = {
   generatedNamePrefix: string;
@@ -33,7 +30,7 @@ const FeatureName: FormElementComponent<FeatureNameProps, string> = (props) => {
     } else if (props.value !== val) {
       setVal(props.value);
     }
-  }, [props.value]);
+  }, [props, props.value, val]);
 
   const [errors, setErrors] = useState(!(val && val.length > 0));
   useEffect(() => {
@@ -46,7 +43,11 @@ const FeatureName: FormElementComponent<FeatureNameProps, string> = (props) => {
           ` ${props.featureNumber.toLocaleString()}`
       );
     }
-  }, [props.componentSettings.generatedNamePrefix, props.editable]);
+  }, [
+    props.componentSettings.generatedNamePrefix,
+    props.editable,
+    props.featureNumber,
+  ]);
 
   return (
     <>

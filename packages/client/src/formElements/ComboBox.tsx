@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   adminValueInputCommonClassNames,
@@ -38,27 +38,31 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
   props
 ) => {
   const { t } = useTranslation("surveys");
-  const items: FormElementOption[] =
-    useLocalizedComponentSetting("options", props) || [];
+  const items: FormElementOption[] = useLocalizedComponentSetting(
+    "options",
+    props
+  );
   const [choices, setChoices] = useState<string[]>(items.map((i) => i.label));
-  const [selectedOption, setSelectedOption] = useState<
-    FormElementOption | undefined | null
-  >();
+  const [selectedOption, setSelectedOption] =
+    useState<FormElementOption | undefined | null>();
   const context = useContext(SurveyContext);
 
   useEffect(() => {
     setChoices(items.map((i) => i.label));
-  }, [context?.lang]);
+  }, [context?.lang, items]);
 
-  function onChange(value: string | null | undefined) {
-    if (value === null) {
-      props.onChange(null, props.isRequired);
-    } else if (value === undefined) {
-      props.onChange(undefined, props.isRequired);
-    } else {
-      props.onChange(value, false);
-    }
-  }
+  const onChange = useCallback(
+    (value: string | null | undefined) => {
+      if (value === null) {
+        props.onChange(null, props.isRequired);
+      } else if (value === undefined) {
+        props.onChange(undefined, props.isRequired);
+      } else {
+        props.onChange(value, false);
+      }
+    },
+    [props]
+  );
 
   const [inputValue, setInputValue] = useState<string>("");
   useEffect(() => {
@@ -69,7 +73,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
     } else {
       setSelectedOption(null);
     }
-  }, [props.value]);
+  }, [items, props.value]);
 
   useEffect(() => {
     if (
@@ -87,7 +91,13 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
       onChange(null);
       setInputValue("");
     }
-  }, [props.componentSettings.autoSelectFirstOptionInList]);
+  }, [
+    items,
+    onChange,
+    props.componentSettings.autoSelectFirstOptionInList,
+    props.editable,
+    props.value,
+  ]);
 
   const style = useContext(SurveyLayoutContext).style;
   const {
@@ -345,7 +355,6 @@ export function ChoiceAdminValueInput({
   componentSettings: any;
   optionsProp?: string;
 }) {
-  const { t } = useTranslation("admin:surveys");
   return (
     <select
       className={`bg-transparent border-none text-center w-full ${adminValueInputCommonClassNames}`}
@@ -355,8 +364,10 @@ export function ChoiceAdminValueInput({
       }}
     >
       {value === null && <option value="NULL"> </option>}
-      {((componentSettings[optionsProp || "options"] ||
-        []) as FormElementOption[])?.map((option) => (
+      {(
+        (componentSettings[optionsProp || "options"] ||
+          []) as FormElementOption[]
+      )?.map((option) => (
         <option key={option.label} value={option.value || option.label}>
           {option.label}
         </option>
@@ -411,7 +422,7 @@ export const SingleSelectCellEditor: CellEditorComponent<
 
   useEffect(() => {
     onChange(val);
-  }, [val]);
+  }, [onChange, val]);
 
   return (
     <select

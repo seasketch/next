@@ -46,7 +46,11 @@ export default function MiniBasemapSelector({
                   : "border-black border-2"
               } rounded m-2 shadow-md`}
             >
-              <img src={b.thumbnail} className="w-12 h-12" />
+              <img
+                alt="basemap preview"
+                src={b.thumbnail}
+                className="w-12 h-12"
+              />
             </button>
           ))}
         </div>

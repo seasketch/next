@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
-import mapboxgl, { AnySourceData, GeoJSONSource, Map, Source } from "mapbox-gl";
+import mapboxgl, { GeoJSONSource, Map } from "mapbox-gl";
 import {
   useProjectBucketSettingQuery,
   useUpdateProjectStorageBucketMutation,
@@ -10,7 +10,7 @@ import { Feature, Point, FeatureCollection } from "geojson";
 import Spinner from "../../components/Spinner";
 
 function DataBucketSettings(props: { className?: string }) {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t } = useTranslation(["admin"]);
   const [map, setMap] = useState<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const { slug } = useParams<{ slug: string }>();
@@ -18,16 +18,18 @@ function DataBucketSettings(props: { className?: string }) {
   const buckets = useProjectBucketSettingQuery({
     variables: { slug },
   });
-  const [
-    mutate,
-    { data, error, loading },
-  ] = useUpdateProjectStorageBucketMutation();
+  const [mutate, { loading }] = useUpdateProjectStorageBucketMutation();
 
   useEffect(() => {
     if (!region && buckets.data?.projectBySlug?.dataSourcesBucket) {
       setRegion(buckets.data.projectBySlug.dataSourcesBucket.url);
     }
-  }, [buckets.data?.projectBySlug?.dataSourcesBucket?.url]);
+  }, [
+    buckets.data?.projectBySlug?.dataSourcesBucket?.url,
+    region,
+    setRegion,
+    buckets.data?.projectBySlug?.dataSourcesBucket,
+  ]);
 
   useEffect(() => {
     mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
@@ -49,7 +51,7 @@ function DataBucketSettings(props: { className?: string }) {
         // @ts-ignore
       });
     }
-  }, [map, mapContainer.current]);
+  }, [map, mapContainer]);
 
   useEffect(() => {
     if (

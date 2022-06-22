@@ -2,9 +2,11 @@
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import Number, { NumberProps } from "./Number";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = questionBodyFromMarkdown(`# How many fingers do you have?`);
 const makeArgs = (componentSettings: NumberProps) => ({
+  ...commonFormElementArgs,
   id: 1,
   body,
   onChange: jest.fn(),

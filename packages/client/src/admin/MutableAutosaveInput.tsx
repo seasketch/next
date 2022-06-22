@@ -1,11 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import useDebounce from "../useDebounce";
-import {
-  useUpdateProjectSettingsMutation,
-  useUpdateTableOfContentsItemMutation,
-} from "../generated/graphql";
 import TextInput from "../components/TextInput";
-import { MutationFunctionOptions, MutationResult } from "@apollo/client";
+import { MutationResult } from "@apollo/client";
 
 export default function MutableAutosaveInput(props: {
   propName: string;
@@ -38,6 +34,7 @@ export default function MutableAutosaveInput(props: {
         variables,
       }).catch((e) => {});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     debouncedValue,
     props.propName,
@@ -51,7 +48,12 @@ export default function MutableAutosaveInput(props: {
     if (changeSinceError === false && mutationStatus.error) {
       setChangeSinceError(true);
     }
-  }, [debouncedValue]);
+  }, [
+    changeSinceError,
+    debouncedValue,
+    mutationStatus.error,
+    setChangeSinceError,
+  ]);
 
   return (
     <TextInput

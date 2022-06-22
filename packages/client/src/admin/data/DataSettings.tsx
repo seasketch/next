@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   Link,
   Route,
@@ -11,7 +11,6 @@ import MapboxMap from "../../components/MapboxMap";
 import LayerAdminSidebar from "./LayerAdminSidebar";
 import { useProjectRegionQuery } from "../../generated/graphql";
 import bbox from "@turf/bbox";
-import { Map } from "mapbox-gl";
 import { MapContext, useMapContext } from "../../dataLayers/MapContextManager";
 import { useTranslation } from "react-i18next";
 const LazyArcGISBrowser = React.lazy(
@@ -26,7 +25,7 @@ export default function DataSettings() {
   const { slug } = useParams<{ slug: string }>();
   const { t } = useTranslation("admin");
   const mapContext = useMapContext({ preferencesKey: "data-settings" });
-  const { data, loading, error } = useProjectRegionQuery({
+  const { data } = useProjectRegionQuery({
     variables: {
       slug,
     },

@@ -1,6 +1,6 @@
-import { ApolloClient, useApolloClient } from "@apollo/client";
+import { useApolloClient } from "@apollo/client";
 import { useAuth0 } from "@auth0/auth0-react";
-import jwt from "jsonwebtoken";
+import jwtDecode from "jwt-decode";
 import { useCallback, useEffect, useState } from "react";
 import { useHistory, useLocation } from "react-router";
 import {
@@ -120,7 +120,7 @@ export function useProjectInviteIngressFlow(): IngressFlowData {
         state: IngressState.Error,
       }));
     } else {
-      const claims = jwt.decode(tokenString) as ProjectInviteTokenClaims;
+      const claims = jwtDecode(tokenString) as ProjectInviteTokenClaims;
       if (!claims) {
         setState((prev) => ({
           ...prev,

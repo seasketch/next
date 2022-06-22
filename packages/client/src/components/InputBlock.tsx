@@ -1,5 +1,5 @@
 import { MutationResult } from "@apollo/client";
-import React, { CSSProperties, FunctionComponent, ReactNode } from "react";
+import { FunctionComponent, ReactNode } from "react";
 import MutationStatusIndicator from "./MutationStatusIndicator";
 
 export interface InputBlockProps {
@@ -11,6 +11,7 @@ export interface InputBlockProps {
   labelType?: "large" | "small";
   flexDirection?: "column" | "row";
   description?: string | ReactNode;
+  children?: ReactNode;
 }
 
 const InputBlock: FunctionComponent<InputBlockProps> = ({

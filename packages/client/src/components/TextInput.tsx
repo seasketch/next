@@ -1,12 +1,5 @@
-import { useRef } from "@storybook/addons";
 import { FieldMetaProps, FormikProps } from "formik";
-import React, {
-  useState,
-  useEffect,
-  KeyboardEvent,
-  ReactElement,
-  TextareaHTMLAttributes,
-} from "react";
+import React, { useState, useEffect, KeyboardEvent, ReactElement } from "react";
 
 export interface TextInputOptions {
   /** Required id of input. Also referenced by labels. */
@@ -46,11 +39,8 @@ export default function TextInput(props: TextInputOptions) {
     onChange,
     state,
     onKeyDown,
-    type,
     textarea,
     field,
-    form,
-    meta,
     autocomplete,
   } = props;
   const [localValue, setLocalValue] = useState<string>(value);
@@ -58,7 +48,7 @@ export default function TextInput(props: TextInputOptions) {
     if (value !== localValue) {
       setLocalValue(value);
     }
-  }, [value]);
+  }, [localValue, value]);
   const [showSaved, setShowSaved] = useState(true);
   let error = props.error;
   const name = props.field?.name ? props.field.name : props.name;
@@ -89,7 +79,7 @@ export default function TextInput(props: TextInputOptions) {
     } else if (state !== "SAVED") {
       setShowSaved(true);
     }
-  }, [state]);
+  }, [showSaved, state]);
 
   const InputTag = textarea
     ? // eslint-disable-next-line i18next/no-literal-string

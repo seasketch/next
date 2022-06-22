@@ -13,7 +13,7 @@ export function useLocalForage<T>(key: string, initialValue: T) {
         console.error(e);
       }
     })();
-  }, [key]);
+  }, [initialValue, key]);
 
   const setValue = (value: T | ((prev: T) => T)) => {
     if (typeof value === "function") {

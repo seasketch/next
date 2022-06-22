@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -13,7 +13,6 @@ import logo from "../header/seasketch-logo.png";
 import { useAuth0 } from "@auth0/auth0-react";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
-import { StatusOfflineIcon } from "@heroicons/react/outline";
 
 export default function FullSidebar({
   open,
@@ -28,7 +27,7 @@ export default function FullSidebar({
   const { t } = useTranslation("sidebar");
   const { slug } = useParams<{ slug: string }>();
   const { loginWithRedirect } = useAuth0();
-  const { data, loading, error, refetch } = useCurrentProjectMetadata();
+  const { data } = useCurrentProjectMetadata();
   const { user, logout } = useAuth0();
   let social: string | false = false;
   if (user?.sub) {

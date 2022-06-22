@@ -1,4 +1,4 @@
-import React, { Suspense, useContext, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { Switch, Route, Redirect } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
@@ -14,7 +14,7 @@ import GlobalErrorHandler, {
 import { HeadProvider, Meta } from "react-head";
 import { useAuth0 } from "@auth0/auth0-react";
 import * as Sentry from "@sentry/react";
-import { CameraOptions } from "mapbox-gl";
+// import { CameraOptions } from "mapbox-gl";
 import { ClientCacheManagerProvider } from "./offline/ClientCacheManager";
 
 const LazyProjectApp = React.lazy(
@@ -65,6 +65,7 @@ function App() {
   }, [user]);
   return (
     <div className="App">
+      {/* @ts-ignore */}
       <HeadProvider>
         <Meta name="theme-color" content="#267588" />
         <Suspense
@@ -147,12 +148,12 @@ function App() {
                     exact
                     path={`/:slug/edit-basemap/:id`}
                     render={(history) => {
-                      const { slug, id } = history.match.params;
+                      const { id } = history.match.params;
                       const search = new URLSearchParams(
                         history.location.search || ""
                       );
                       const encodedCameraOptions = search.get("camera");
-                      let cameraOptions: CameraOptions | undefined = undefined;
+                      let cameraOptions: any | undefined = undefined;
                       if (encodedCameraOptions) {
                         try {
                           const decoded = atob(encodedCameraOptions);

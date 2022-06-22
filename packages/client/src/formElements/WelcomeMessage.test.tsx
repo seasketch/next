@@ -5,6 +5,22 @@ import WelcomeMessage from "./WelcomeMessage";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { SurveyContext } from "./FormElement";
 import { TestSurveyContextValue } from "./testContext";
+import { commonFormElementArgs } from "./testHelpers";
+
+const makeArgs = (componentSettings?: any) => ({
+  ...commonFormElementArgs,
+  id: 1,
+  body,
+  onChange: jest.fn(),
+  onSubmit: jest.fn(),
+  editable: false,
+  isRequired: false,
+  componentSettings: { ...componentSettings },
+  alternateLanguageSettings: {},
+  projectName: "Project A",
+  projectUrl: "https://example.com/a",
+  surveyUrl: "https://example.com/a/surveys/1",
+});
 
 const body = fromMarkdown(`
 # Welcome to the Survey
@@ -17,6 +33,7 @@ test("Component renders with custom body and button text", async () => {
   render(
     <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
       <WelcomeMessage
+        {...makeArgs()}
         body={body}
         id={1}
         onChange={() => null}
@@ -44,6 +61,7 @@ test("Clicking button proceeds to next page of survey", async () => {
   render(
     <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
       <WelcomeMessage
+        {...makeArgs()}
         body={body}
         id={1}
         onChange={onChange}

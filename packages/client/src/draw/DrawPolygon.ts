@@ -32,7 +32,6 @@ function isEventAtCoordinates(
 
 const DrawPolygon = MapboxDraw.modes.draw_polygon;
 
-const _clickAnywhere = DrawPolygon.clickAnywhere;
 const _clickOnVertex = DrawPolygon.clickOnVertex;
 
 // DrawPolygon.clickAnywhere = function (state: any, e: MouseEvent) {

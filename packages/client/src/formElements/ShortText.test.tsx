@@ -1,12 +1,13 @@
 /* eslint-disable i18next/no-literal-string */
-import React from "react";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import ShortText, { ShortTextProps } from "./ShortText";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = questionBodyFromMarkdown(`# What is your name?`);
 const makeArgs = (componentSettings: ShortTextProps) => {
   return {
+    ...commonFormElementArgs,
     body,
     id: 1,
     onChange: jest.fn(),
@@ -27,7 +28,7 @@ test("Component renders with custom body", async () => {
 
 test("Entering text updates the value", async () => {
   const args = makeArgs({});
-  const { onSubmit, onChange } = args;
+  const { onChange } = args;
   render(<ShortText {...args} />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
@@ -39,7 +40,6 @@ test("Entering text updates the value", async () => {
 
 test("Required fields validate input after submission attempt", async () => {
   const args = makeArgs({});
-  const { onSubmit, onChange } = args;
   const { rerender } = render(<ShortText {...args} isRequired={false} />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
@@ -82,7 +82,7 @@ test("minLength", async () => {
 
 test("maxLength", async () => {
   const args = makeArgs({ maxLength: 2 });
-  const { rerender } = render(
+  render(
     <ShortText
       {...args}
       value="Bababhbabhabhabababbdab"

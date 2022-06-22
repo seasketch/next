@@ -10,8 +10,6 @@ import mapboxgl, {
   MapboxOptions,
   AnySourceImpl,
 } from "mapbox-gl";
-// @ts-ignore
-import * as spec from "@mapbox/mapbox-gl-style-spec";
 import {
   createContext,
   Dispatch,
@@ -21,7 +19,6 @@ import {
 } from "react";
 import { BBox, Feature, Polygon } from "geojson";
 import {
-  Basemap,
   BasemapDetailsFragment,
   DataLayer,
   DataSource as GeneratedDataSource,
@@ -496,7 +493,6 @@ class MapContextManager {
       this.internalState.selectedBasemap &&
       this.basemaps[this.internalState.selectedBasemap];
     this.internalState.selectedBasemap = id;
-    const terrainWasEnabled = this.internalState.terrainEnabled;
     const terrainEnabled = this.shouldEnableTerrain();
     const basemap = this.basemaps[id];
     this.setState((prev) => ({
@@ -571,8 +567,8 @@ class MapContextManager {
             }
           : {}),
         prefersTerrainEnabled: this.internalState.prefersTerrainEnabled,
-        basemapOptionalLayerStatePreferences: this.internalState
-          .basemapOptionalLayerStatePreferences,
+        basemapOptionalLayerStatePreferences:
+          this.internalState.basemapOptionalLayerStatePreferences,
       };
       window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
     }
@@ -732,9 +728,8 @@ class MapContextManager {
         };
       } else {
         // @ts-ignore
-        baseStyle.sources![
-          baseStyle.terrain?.source || "terrain-source"
-        ] = newSource;
+        baseStyle.sources![baseStyle.terrain?.source || "terrain-source"] =
+          newSource;
       }
 
       // @ts-ignore
@@ -1422,7 +1417,7 @@ export function useMapContext(options?: MapContextOptions) {
     }
   }
   const [state, setState] = useState<MapContextInterface>(initialState);
-  const { data, loading, error } = useProjectRegionQuery({
+  const { data, error } = useProjectRegionQuery({
     variables: {
       slug,
     },
@@ -1441,6 +1436,7 @@ export function useMapContext(options?: MapContextOptions) {
       manager,
     };
     setState(newState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1450,7 +1446,7 @@ export function useMapContext(options?: MapContextOptions) {
     if (data?.projectBySlug?.region.geojson && state.manager) {
       state.manager.setProjectBounds(data.projectBySlug.region.geojson);
     }
-  }, [data?.projectBySlug, state.manager]);
+  }, [data?.projectBySlug, error, state.manager]);
   return state;
 }
 

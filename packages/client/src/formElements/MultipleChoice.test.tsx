@@ -2,10 +2,12 @@
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import MultipleChoice, { MultipleChoiceProps } from "./MultipleChoice";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = questionBodyFromMarkdown(`# Which option do you prefer?
 `);
 const makeArgs = (componentSettings: MultipleChoiceProps) => ({
+  ...commonFormElementArgs,
   id: 1,
   body,
   onChange: jest.fn(),

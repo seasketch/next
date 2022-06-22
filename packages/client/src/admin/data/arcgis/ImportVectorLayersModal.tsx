@@ -92,7 +92,6 @@ export default function ImportVectorLayersModal(
     }
   }).length;
 
-  const s = importServiceState;
   const onImport = async () => {
     await importService(
       layers!.filter((l) => l.type !== "Raster Layer"),

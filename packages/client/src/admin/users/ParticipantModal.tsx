@@ -1,4 +1,3 @@
-import React from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
@@ -42,16 +41,13 @@ export default function ParticipantModal({
   projectId: number;
 }) {
   const { t } = useTranslation("admin");
-  const { data, loading, error } = useUserInfoQuery({
+  const { data, loading } = useUserInfoQuery({
     variables: {
       userId,
       slug: projectSlug,
     },
   });
-  const [
-    toggleForumPostingBan,
-    toggleForumPostingBanState,
-  ] = useToggleForumPostingBanMutation({
+  const [toggleForumPostingBan] = useToggleForumPostingBanMutation({
     variables: {
       userId,
       projectId: projectId,
@@ -61,14 +57,14 @@ export default function ParticipantModal({
       cache.modify({
         id: userId,
         fields: {
-          bannedFromForums(existingValue, { readField }) {
+          bannedFromForums() {
             return !!result.data?.toggleForumPostingBan?.isBanned;
           },
         },
       });
     },
   });
-  const [toggleAdmin, toggleAdminMutationState] = useToggleAdminAccessMutation({
+  const [toggleAdmin] = useToggleAdminAccessMutation({
     variables: {
       userId,
       projectId: projectId,
@@ -79,7 +75,7 @@ export default function ParticipantModal({
       cache.modify({
         id: userId,
         fields: {
-          isAdmin(existingValue, { readField }) {
+          isAdmin() {
             return !!result.data?.toggleAdminAccess?.isAdmin;
           },
         },

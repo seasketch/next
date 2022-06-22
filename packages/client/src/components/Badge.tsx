@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
-import React, { FunctionComponent } from "react";
+import React, { FunctionComponent, ReactNode } from "react";
 
 export interface BadgeProps {
   variant?: "primary" | "secondary" | "warning" | "error" | "green";
   className?: string;
   style?: React.CSSProperties;
   animate?: boolean;
+  children?: ReactNode;
 }
 
 const colors = {

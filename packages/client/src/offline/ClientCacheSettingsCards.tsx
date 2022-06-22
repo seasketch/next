@@ -1,21 +1,11 @@
 /* eslint-disable i18next/no-literal-string */
 import bytes from "bytes";
-import {
-  ReactNode,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useContext, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Card } from "../components/CenteredCardListLayout";
 import Modal from "../components/Modal";
-import { useLocalForage } from "../useLocalForage";
-import { CacheProgress } from "./CacheStatus";
 import {
   ClientCacheSettings,
-  CLIENT_CACHE_SETTINGS_KEY,
   defaultCacheSetting,
 } from "./ClientCacheSettings";
 import {
@@ -27,8 +17,6 @@ import StaticAssetCacheStatus from "./StaticAssetCacheStatus";
 import { PieChart } from "react-minimal-pie-chart";
 import { schemeTableau10 } from "d3-scale-chromatic";
 import OfflineSurveySelection from "./OfflineSurveySelection";
-import { useParams } from "react-router-dom";
-import useProjectId from "../useProjectId";
 
 function label(id: string) {
   switch (id) {
@@ -184,8 +172,6 @@ function ClientCacheDetailsModal({
   stats?: CacheInformation;
   context: ClientCacheContextValue;
 }) {
-  const [showFiles, setShowFiles] = useState(false);
-  const { t } = useTranslation("cache-settings");
   const quotaPercent =
     context.storageEstimate?.quota && context.storageEstimate.usage
       ? context.storageEstimate.usage / context.storageEstimate.quota

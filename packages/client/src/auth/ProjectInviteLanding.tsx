@@ -1,5 +1,4 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import React, { useEffect } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { useProjectInviteIngressFlow, IngressState } from ".";
 import Button from "../components/Button";

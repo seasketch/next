@@ -1,8 +1,5 @@
-import React from "react";
-import InputBlock from "../../components/InputBlock";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { useSetUserGroupsMutation } from "../../generated/graphql";
-import Select from "react-select";
 import GroupMultiSelect from "./GroupMultiSelect";
 
 interface MutableGroupMembershipFieldProps {

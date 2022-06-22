@@ -1,6 +1,7 @@
 import React, { ReactNode, useContext, useRef, useState } from "react";
 import SortableTree, {
   changeNodeAtPath,
+  ExtendedNodeData,
   FullTree,
   NodeData,
   OnMovePreviousAndNextLocation,
@@ -166,12 +167,19 @@ export default function TableOfContents(props: TableOfContentsProps) {
         onChange={props.onChange}
         treeData={props.nodes}
         onMoveNode={props.onMoveNode}
-        canNodeHaveChildren={(node) => !!node.isFolder}
+        canNodeHaveChildren={(node: ClientTableOfContentsItem) =>
+          !!node.isFolder
+        }
         style={{ height: "auto" }}
         theme={FileExplorerTheme}
-        getNodeKey={(data) => data.node.id}
-        generateNodeProps={(data) => {
-          const layerState = layerStates[data.node.dataLayerId];
+        getNodeKey={(data: ExtendedNodeData<ClientTableOfContentsItem>) =>
+          data.node.id
+        }
+        // @ts-ignore
+        generateNodeProps={(
+          data: ExtendedNodeData<ClientTableOfContentsItem>
+        ) => {
+          const layerState = layerStates[data.node.dataLayerId!];
           const visibility = data.node.isFolder
             ? folderVisibility(
                 data.node as ClientTableOfContentsItem,
@@ -206,7 +214,9 @@ export default function TableOfContents(props: TableOfContentsProps) {
                       ...node,
                       expanded: !node.expanded,
                     }),
-                    getNodeKey: (data: TreeIndex & TreeNode) => data.node.id,
+                    getNodeKey: (
+                      data: TreeIndex & TreeNode<ClientTableOfContentsItem>
+                    ) => data.node.id,
                   });
 
                   props.onChange(newTreeData as ClientTableOfContentsItem[]);
@@ -214,6 +224,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
                   if (props.onVisibilityToggle) {
                     props.onVisibilityToggle({
                       treeData: props.nodes,
+                      // @ts-ignore
                       node: node,
                       // @ts-ignore
                       expanded: !node.expanded,
@@ -259,7 +270,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
             }`,
             icons: [
               <VisibilityCheckbox
-                id={data.node.id}
+                id={toNumericId(data.node.id)}
                 radio={!!inRadioFolder}
                 disabled={
                   data.node.disabled ||
@@ -267,21 +278,19 @@ export default function TableOfContents(props: TableOfContentsProps) {
                 }
                 error={!!layerState?.error}
                 onClick={() => {
-                  let childIds = [];
                   let layerIds = [];
                   if (!data.node.isFolder) {
-                    childIds = [data.node.id];
-                    layerIds = [data.node.dataLayerId];
+                    layerIds = [data.node.dataLayerId!.toString()];
                   } else {
-                    [childIds, layerIds] = getEnabledChildren(
+                    layerIds = getEnabledChildren(
                       data.node as ClientTableOfContentsItem,
 
                       isVisible,
                       layerStates
-                    );
+                    )[1];
                   }
                   if (isVisible) {
-                    manager?.hideLayers(layerIds);
+                    manager?.hideLayers(layerIds.map((id) => id.toString()));
                   } else {
                     // TODO: handle radio siblings
                     if (
@@ -293,21 +302,21 @@ export default function TableOfContents(props: TableOfContentsProps) {
                       for (const sibling of data.parentNode.children.filter(
                         (item) => item.id !== data.node.id
                       )) {
-                        let [childIds, layerIds] = getEnabledChildren(
+                        let layerIds = getEnabledChildren(
                           sibling as ClientTableOfContentsItem,
                           false,
                           layerStates
-                        );
+                        )[1];
                         if (
                           !sibling.isFolder &&
-                          layerStates[sibling.dataLayerId.toString()]?.visible
+                          layerStates[sibling.dataLayerId!.toString()]?.visible
                         ) {
-                          layerIds.push(sibling.dataLayerId);
+                          layerIds.push(sibling.dataLayerId!);
                         }
                         manager?.hideLayers(layerIds.map((n) => n.toString()));
                       }
                     }
-                    manager?.showLayers(layerIds);
+                    manager?.showLayers(layerIds.map((id) => id.toString()));
                   }
                 }}
                 visibility={visibility}
@@ -557,4 +566,12 @@ export function combineBounds(
     a[2] > b[2] ? a[2] : b[2],
     a[3] > b[3] ? a[3] : b[3],
   ];
+}
+
+function toNumericId(id: string | number) {
+  if (typeof id === "string") {
+    return parseInt(id);
+  } else {
+    return id;
+  }
 }

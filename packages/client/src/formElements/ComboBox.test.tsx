@@ -2,10 +2,12 @@
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import ComboBox, { ComboBoxProps } from "./ComboBox";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = questionBodyFromMarkdown(`# Which option do you prefer?
 `);
 const makeArgs = (componentSettings: ComboBoxProps) => ({
+  ...commonFormElementArgs,
   id: 1,
   body,
   onChange: jest.fn(),

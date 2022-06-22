@@ -1,11 +1,13 @@
 import React from "react";
 import Name, { NameProps } from "./Name";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { SurveyContext } from "./FormElement";
 import { TestSurveyContextValue } from "./testContext";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = Name.defaultBody;
 const makeArgs = (componentSettings: NameProps) => ({
+  ...commonFormElementArgs,
   body,
   id: 1,
   onChange: jest.fn(),

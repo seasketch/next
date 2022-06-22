@@ -47,7 +47,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const [jsonErrors, setJsonErrors] = useState<boolean>(false);
   const [resettingStyle, setResettingStyle] = useState(false);
   const [errorResettingStyle, setErrorResettingStyle] = useState<string>();
-  const [createSprite, createSpriteState] = useGetOrCreateSpriteMutation();
+  const [createSprite] = useGetOrCreateSpriteMutation();
   const [addImageToSprite] = useAddImageToSpriteMutation();
   const projectId = useProjectId();
   const { t } = useTranslation("admin");
@@ -82,6 +82,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     } else {
       setStyleErrors([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedStyle]);
 
   return (
@@ -118,7 +119,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         onBeforeChange={(editor, data, value) => {
           setStyle(value);
           try {
-            const s = JSON.parse(value);
+            JSON.parse(value);
             setJsonErrors(false);
           } catch (e) {
             setJsonErrors(true);

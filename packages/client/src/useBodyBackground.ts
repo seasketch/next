@@ -37,5 +37,6 @@ export default function useBodyBackground(
       document.body.style.setProperty("transition", "none");
     }
     return () => document.body.style.setProperty("background", prevBackground);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

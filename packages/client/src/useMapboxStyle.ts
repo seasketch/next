@@ -25,7 +25,7 @@ function useMapboxStyle(styleUrl?: string) {
       loading: true,
     });
     if (styleUrl) {
-      const style = fetchGlStyle(styleUrl)
+      fetchGlStyle(styleUrl)
         .then((style) => {
           if (!cancelled) {
             setState({

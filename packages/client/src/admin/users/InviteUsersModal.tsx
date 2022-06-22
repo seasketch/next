@@ -49,7 +49,7 @@ export default function InviteUsersModal({
     userDetails: [],
     textareaValue: "email,name",
   });
-  const { data, loading, error } = useUserAdminCountsQuery({
+  const { data, loading } = useUserAdminCountsQuery({
     variables: {
       slug,
     },

@@ -4,14 +4,13 @@ import {
   TableIcon,
   TranslateIcon,
 } from "@heroicons/react/outline";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
 import Modal from "../components/Modal";
 import Switch from "../components/Switch";
-import TextInput from "../components/TextInput";
 import LanguageSelector from "../surveys/LanguageSelector";
 import LocalizableTextInput from "../surveys/LocalizableTextInput";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";

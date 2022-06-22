@@ -46,21 +46,17 @@ export default function OptionalBasemapLayerSetLayersModal({
     initialLayers = option.layers || [];
   }
   const [layers, setLayers] = useState<string[]>(initialLayers);
-  const { data, loading, error } = useGetBasemapQuery({
+  const { data, loading } = useGetBasemapQuery({
     variables: {
       id: layer.basemapId,
     },
   });
   const styleRequest = useMapboxStyle(data?.basemap?.url);
   const style = styleRequest.data;
-  const [
-    mutate,
-    mutationState,
-  ] = useUpdateOptionalBasemapLayerLayerListMutation();
-  const [
-    updateOptionsMutation,
-    updateOptionsMutationState,
-  ] = useUpdateOptionalBasemapLayerOptionsMutation();
+  const [mutate, mutationState] =
+    useUpdateOptionalBasemapLayerLayerListMutation();
+  const [updateOptionsMutation, updateOptionsMutationState] =
+    useUpdateOptionalBasemapLayerOptionsMutation();
 
   const onSave = async () => {
     if (optionName) {

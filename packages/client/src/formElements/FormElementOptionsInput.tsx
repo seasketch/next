@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect } from "react";
+import { ReactNode, useContext, useEffect, useMemo } from "react";
 import { useState } from "react";
 import Papa from "papaparse";
 import { Trans, useTranslation } from "react-i18next";
@@ -27,7 +27,9 @@ export default function FormElementOptionsInput({
 }) {
   const context = useContext(SurveyContext);
   const { t } = useTranslation("admin:surveys");
-  let initialValue: FormElementOption[] = (componentSettings || {})[prop] || [];
+  let initialValue: FormElementOption[] = useMemo(() => {
+    return (componentSettings || {})[prop] || [];
+  }, [componentSettings, prop]);
   if (
     context &&
     context.lang.code !== "EN" &&
@@ -44,7 +46,7 @@ export default function FormElementOptionsInput({
 
   useEffect(() => {
     setState(toText(initialValue));
-  }, [context?.lang]);
+  }, [context?.lang, initialValue]);
 
   let valuesSpecified = true;
   if (optionsState.length > 0) {

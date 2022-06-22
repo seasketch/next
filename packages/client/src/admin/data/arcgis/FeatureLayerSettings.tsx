@@ -31,7 +31,7 @@ require("codemirror/mode/javascript/javascript");
 // @ts-ignore
 window.jsonlint = require("jsonlint-mod");
 
-const VECTOR_BYTES_LIMIT = 5_000_000;
+// const VECTOR_BYTES_LIMIT = 5_000_000;
 
 export function FeatureLayerSettings(props: {
   layer: LayerInfo;
@@ -166,7 +166,7 @@ export function FeatureLayerSettings(props: {
       <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
         <h3 className="text-lg leading-6 font-medium text-gray-900">
           {props.layer.name}
-          <a target="_blank" href={props.layer.url}>
+          <a target="_blank" href={props.layer.url} rel="noreferrer">
             <OutgoingLinkIcon />
           </a>
         </h3>
@@ -510,6 +510,7 @@ export function FeatureLayerSettings(props: {
                   className="text-primary-500 hover:underline"
                   target="_blank"
                   href="https://docs.mapbox.com/mapbox-gl-js/style-spec/"
+                  rel="noreferrer"
                 >
                   MapBox GL Styles
                 </a>

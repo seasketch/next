@@ -18,9 +18,7 @@ import {
   FormElementDetailsFragment,
   FormElementLayout,
   Maybe,
-  Sketch,
   SketchClassDetailsFragment,
-  SurveyFormEditorDetailsDocument,
   UpdateFormElementMutation,
   useGetFormElementQuery,
   useUpdateFormElementMutation,
@@ -47,19 +45,18 @@ require("./prosemirror-body.css");
 require("./unreset.css");
 const LazyBodyEditor = lazy(() => import("./BodyEditor"));
 
-export const FormEditorPortalContext = createContext<{
-  container: HTMLDivElement | null;
-  formElementSettings: any;
-  surveyId: number;
-} | null>(null);
+export const FormEditorPortalContext =
+  createContext<{
+    container: HTMLDivElement | null;
+    formElementSettings: any;
+    surveyId: number;
+  } | null>(null);
 
-export const SurveyButtonFooterPortalContext = createContext<HTMLDivElement | null>(
-  null
-);
+export const SurveyButtonFooterPortalContext =
+  createContext<HTMLDivElement | null>(null);
 
-export const SurveyMapPortalContext = createContext<HTMLDivElement | null>(
-  null
-);
+export const SurveyMapPortalContext =
+  createContext<HTMLDivElement | null>(null);
 
 /**
  * Common props that will be supplied to all FormElement React Component
@@ -164,7 +161,7 @@ export function FormElementBody({
         )
       );
     }
-  }, [target, body]);
+  }, [target, body, schema]);
 
   if (editable) {
     return (
@@ -221,10 +218,12 @@ export class FormElementEditorPortal extends Component<{
 }> {
   static contextType = FormEditorPortalContext;
   render() {
+    // @ts-ignore
     const container = this.context?.container;
     if (container) {
       return createPortal(
         <FormElementEditorContainer
+          // @ts-ignore
           surveyId={this.context?.surveyId}
           render={this.props.render}
         />,
@@ -238,6 +237,7 @@ export class FormElementEditorPortal extends Component<{
 
 export const SurveyMapPortal: FunctionComponent<{
   mapContext: MapContextInterface;
+  children?: ReactNode;
 }> = (props) => {
   const portalContext = useContext(SurveyLayoutContext).mapPortal;
   if (portalContext) {
@@ -280,19 +280,11 @@ function FormElementEditorContainer({
 }) {
   const context = useContext(FormEditorPortalContext);
   const onError = useGlobalErrorHandler();
-  const [
-    updateBaseSetting,
-    updateComponentSetting,
-    mutationState,
-  ] = useUpdateFormElement(context?.formElementSettings);
-  const [
-    updateSurvey,
-    updateSurveyState,
-  ] = useUpdateSurveyBaseSettingsMutation();
-  const [
-    updateSketchClass,
-    updateSketchClassState,
-  ] = useUpdateFormElementSketchClassMutation({
+  const [updateBaseSetting, updateComponentSetting] = useUpdateFormElement(
+    context?.formElementSettings
+  );
+  const [updateSurvey] = useUpdateSurveyBaseSettingsMutation();
+  const [updateSketchClass] = useUpdateFormElementSketchClassMutation({
     onError,
   });
   return (
@@ -335,12 +327,10 @@ interface ChildOptionsFactoryProps extends FormElementDetailsFragment {
   child: FormElementDetailsFragment;
 }
 export function ChildOptionsFactory(props: ChildOptionsFactoryProps) {
-  const [
-    updateBaseSetting,
-    updateComponentSetting,
-    updateFormElementState,
-  ] = useUpdateFormElement(props);
-  const { data, loading, error } = useGetFormElementQuery({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [updateBaseSetting, updateComponentSetting] =
+    useUpdateFormElement(props);
+  const { data } = useGetFormElementQuery({
     variables: {
       id: props.id,
     },
@@ -388,10 +378,8 @@ export function useUpdateFormElement(
   MutationResult<UpdateFormElementMutation>
 ] {
   const onError = useGlobalErrorHandler();
-  const [
-    updateFormElement,
-    updateFormElementState,
-  ] = useUpdateFormElementMutation();
+  const [updateFormElement, updateFormElementState] =
+    useUpdateFormElementMutation();
   const updater = (
     variables: Partial<
       Pick<
@@ -434,45 +422,47 @@ export function useUpdateFormElement(
   ) => {
     return (value: any) => updater({ [setting]: value });
   };
-  const updateComponentSetting = (
-    setting: string,
-    currentSettings: FormElementProps<any>,
-    language?: string,
-    alternateLanguageSettings?: any
-  ) => (value: any) => {
-    if (language && !alternateLanguageSettings) {
-      throw new Error(
-        `Specified language ${language} but not current alternateLanguageSettings`
-      );
-    }
+  const updateComponentSetting =
+    (
+      setting: string,
+      currentSettings: FormElementProps<any>,
+      language?: string,
+      alternateLanguageSettings?: any
+    ) =>
+    (value: any) => {
+      if (language && !alternateLanguageSettings) {
+        throw new Error(
+          `Specified language ${language} but not current alternateLanguageSettings`
+        );
+      }
 
-    if (!language || language === "EN") {
-      const newSettings = deepCopy(currentSettings);
-      set(
-        newSettings,
-        setting,
-        value,
-        /\w\./.test(setting) ? Object : undefined
-      );
-      updater({ componentSettings: deepCopy(newSettings) });
-    } else {
-      const newSettings = deepCopy(alternateLanguageSettings[language]);
-      set(
-        newSettings,
-        setting,
-        value,
-        /\w\./.test(setting) ? Object : undefined
-      );
-      updater({
-        alternateLanguageSettings: {
-          ...alternateLanguageSettings,
-          [language]: {
-            ...newSettings,
+      if (!language || language === "EN") {
+        const newSettings = deepCopy(currentSettings);
+        set(
+          newSettings,
+          setting,
+          value,
+          /\w\./.test(setting) ? Object : undefined
+        );
+        updater({ componentSettings: deepCopy(newSettings) });
+      } else {
+        const newSettings = deepCopy(alternateLanguageSettings[language]);
+        set(
+          newSettings,
+          setting,
+          value,
+          /\w\./.test(setting) ? Object : undefined
+        );
+        updater({
+          alternateLanguageSettings: {
+            ...alternateLanguageSettings,
+            [language]: {
+              ...newSettings,
+            },
           },
-        },
-      });
-    }
-  };
+        });
+      }
+    };
   return [updateBaseSetting, updateComponentSetting, updateFormElementState];
 }
 
@@ -595,38 +585,39 @@ export const defaultFormElementIcon = (
   </div>
 );
 
-export const SurveyContext = createContext<{
-  surveyId: number;
-  slug: string;
-  isAdmin: boolean;
-  projectName: string;
-  projectUrl: string;
-  surveyUrl: string;
-  surveySupportsFacilitation: boolean;
-  isFacilitatedResponse: boolean;
-  bestName?: string;
-  bestEmail?: string;
-  projectBounds?: BBox;
-  saveResponse?: () => Promise<
-    FetchResult<
-      CreateResponseMutation,
-      Record<string, any>,
-      Record<string, any>
-    >
-  >;
-  resetResponse?: () => Promise<void>;
-  savingResponse?: boolean;
-  /**
-   * Survey's supported languages
-   * Current languge can be gotten from the useTranslation() hook
-   * */
-  supportedLanguages: string[];
-  lang: LangDetails;
-  setLanguage: (code: string) => void;
-  practiceMode: boolean;
-  togglePracticeMode: (enable: boolean) => void;
-  toggleFacilitation: (enable: boolean) => void;
-} | null>(null);
+export const SurveyContext =
+  createContext<{
+    surveyId: number;
+    slug: string;
+    isAdmin: boolean;
+    projectName: string;
+    projectUrl: string;
+    surveyUrl: string;
+    surveySupportsFacilitation: boolean;
+    isFacilitatedResponse: boolean;
+    bestName?: string;
+    bestEmail?: string;
+    projectBounds?: BBox;
+    saveResponse?: () => Promise<
+      FetchResult<
+        CreateResponseMutation,
+        Record<string, any>,
+        Record<string, any>
+      >
+    >;
+    resetResponse?: () => Promise<void>;
+    savingResponse?: boolean;
+    /**
+     * Survey's supported languages
+     * Current languge can be gotten from the useTranslation() hook
+     * */
+    supportedLanguages: string[];
+    lang: LangDetails;
+    setLanguage: (code: string) => void;
+    practiceMode: boolean;
+    togglePracticeMode: (enable: boolean) => void;
+    toggleFacilitation: (enable: boolean) => void;
+  } | null>(null);
 
 export function getLayout(
   formElement: Pick<
@@ -665,10 +656,10 @@ export function toFeatureCollection(
       }
     }
   }
-  return ({
+  return {
     type: "FeatureCollection",
     features,
-  } as unknown) as FeatureCollection<any, UnsavedSketchProps>;
+  } as unknown as FeatureCollection<any, UnsavedSketchProps>;
 }
 
 export function useLocalizedComponentSetting(

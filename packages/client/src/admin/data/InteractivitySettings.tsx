@@ -1,14 +1,12 @@
-import React, { ReactNode, useEffect, useState } from "react";
-import { useTranslation, Trans } from "react-i18next";
+import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import RadioGroup from "../../components/RadioGroup";
 import Spinner from "../../components/Spinner";
-import TextInput from "../../components/TextInput";
 import {
   InteractivityType,
   useUpdateInteractivitySettingsMutation,
   useInteractivitySettingsByIdQuery,
 } from "../../generated/graphql";
-import MutableAutosaveInput from "../MutableAutosaveInput";
 import * as CodeMirror from "react-codemirror2";
 import "codemirror/lib/codemirror.css";
 import "codemirror/theme/material.css";
@@ -18,10 +16,7 @@ import "codemirror/addon/lint/lint.css";
 import sanitizeHtml from "sanitize-html";
 import Button from "../../components/Button";
 import useSourcePropertyNames from "./useSourcePropertyNames";
-import {
-  ClientBasemap,
-  ClientDataLayer,
-} from "../../dataLayers/MapContextManager";
+import { ClientBasemap } from "../../dataLayers/MapContextManager";
 import SetBasemapInteractivityLayers from "./SetBasemapInteractivityLayers";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
@@ -41,7 +36,7 @@ export default function InteractivitySettings({
   basemap?: ClientBasemap;
 }) {
   const { t } = useTranslation(["admin"]);
-  const { data, loading, error } = useInteractivitySettingsByIdQuery({
+  const { data, loading } = useInteractivitySettingsByIdQuery({
     variables: {
       id,
     },
@@ -67,9 +62,9 @@ export default function InteractivitySettings({
     if (settings && type === undefined) {
       setType(settings.type);
     }
-  }, [settings, type]);
+  }, [settings, type, longTemplate, shortTemplate]);
 
-  const save = () => {
+  const save = useCallback(() => {
     if (settings) {
       mutate({
         variables: {
@@ -80,11 +75,11 @@ export default function InteractivitySettings({
         },
       });
     }
-  };
+  }, [mutate, settings, longTemplate, shortTemplate, type]);
 
   function sanitizeInput(input: string) {
     input = input.replace(/\{\{\{/g, "{{");
-    input = input.replace(/\{\{\&/g, "{{");
+    input = input.replace(/\{\{&/g, "{{");
     input = input.replace(/\}\}\}/g, "}}");
     input = sanitizeHtml(input, {
       allowedAttributes: {
@@ -95,15 +90,15 @@ export default function InteractivitySettings({
     return input;
   }
 
-  const sanitizeShortTemplate = () => {
-    setShortTemplate(sanitizeInput(shortTemplate || ""));
-    save();
-  };
+  // const sanitizeShortTemplate = () => {
+  //   setShortTemplate(sanitizeInput(shortTemplate || ""));
+  //   save();
+  // };
 
-  const sanitizeLongTemplate = () => {
-    setLongTemplate(sanitizeInput(longTemplate || ""));
-    save();
-  };
+  // const sanitizeLongTemplate = () => {
+  //   setLongTemplate(sanitizeInput(longTemplate || ""));
+  //   save();
+  // };
 
   const sanitizeTemplate = (propName: "longTemplate" | "shortTemplate") => {
     if (propName === "longTemplate") {
@@ -118,7 +113,7 @@ export default function InteractivitySettings({
     if (type && settings && type !== settings.type) {
       save();
     }
-  }, [type]);
+  }, [type, save, settings]);
 
   const selectedType = type || settings?.type || InteractivityType.None;
   return (

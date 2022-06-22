@@ -5,11 +5,8 @@ import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Switch from "../../components/Switch";
 import {
-  BasemapDetailsFragmentDoc,
   DeleteBasemapDocument,
-  DeleteBasemapMutation,
   useAllBasemapsQuery,
-  useDeleteBasemapMutation,
 } from "../../generated/graphql";
 import { useDelete } from "../../graphqlHookWrappers";
 
@@ -29,13 +26,13 @@ export default function SelectBasemapsModal(props: {
   const { slug } = useParams<{ slug: string }>();
 
   const { t } = useTranslation("admin:surveys");
-  const { data, loading, error } = useAllBasemapsQuery({
+  const { data } = useAllBasemapsQuery({
     fetchPolicy: "cache-and-network",
     variables: {
       slug,
     },
   });
-  const deleteBasemap = useDelete<DeleteBasemapMutation>(DeleteBasemapDocument);
+  const deleteBasemap = useDelete(DeleteBasemapDocument);
 
   const basemaps = useMemo(() => {
     if (data?.projectBySlug?.basemaps && data.projectBySlug.surveyBasemaps) {
@@ -71,7 +68,11 @@ export default function SelectBasemapsModal(props: {
         )}
         {basemaps.project.map((basemap) => (
           <div key={basemap.id} className="flex items-center space-x-4">
-            <img src={basemap.thumbnail} className="w-12 h-12 rounded shadow" />
+            <img
+              alt="basemap preview"
+              src={basemap.thumbnail}
+              className="w-12 h-12 rounded shadow"
+            />
             <div className="flex-1">{basemap.name}</div>
             <Switch
               className=""
@@ -88,6 +89,7 @@ export default function SelectBasemapsModal(props: {
             {basemaps.survey.map((basemap) => (
               <div key={basemap.id} className="flex items-center space-x-4">
                 <img
+                  alt="basemap preview"
                   src={basemap.thumbnail}
                   className="w-12 h-12 rounded shadow"
                 />

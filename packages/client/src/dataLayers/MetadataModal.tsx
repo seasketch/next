@@ -31,7 +31,7 @@ export default function MetadataModal({
         )
       );
     }
-  }, [target.current, document]);
+  }, [document]);
   return (
     <Modal title={title} onRequestClose={onRequestClose} open={true}>
       <>

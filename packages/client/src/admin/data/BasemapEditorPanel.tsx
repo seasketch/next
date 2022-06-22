@@ -7,7 +7,6 @@ import {
   useGetBasemapQuery,
   useUpdateBasemapMutation,
   useUpdateBasemapLabelsLayerMutation,
-  useToggle3dTerrainMutation,
   useSet3dTerrainMutation,
   useUpdateTerrainExaggerationMutation,
   useUpdateBasemapUrlMutation,
@@ -18,19 +17,15 @@ import { gql, useApolloClient } from "@apollo/client";
 import { useMapboxStyle } from "../../useMapboxStyle";
 import MutableAutosaveInput from "../MutableAutosaveInput";
 import InputBlock from "../../components/InputBlock";
-import Switch from "../../components/Switch";
 import RadioGroup from "../../components/RadioGroup";
-import TextInput from "../../components/TextInput";
 import Button from "../../components/Button";
 import CreateOptionalLayerModal from "./CreateOptionalLayerModal";
-import OptionalBasemapLayerControl from "../../dataLayers/OptionalBasemapLayerControl";
 import OptionalBasemapLayerEditor from "../../dataLayers/OptionalBasemapLayerEditor";
 import useDebounce from "../../useDebounce";
 import InteractivitySettings from "./InteractivitySettings";
 import { ClientBasemap } from "../../dataLayers/MapContextManager";
-import MapboxMap from "../../components/MapboxMap";
 import BasemapEditorPanelMap from "./BasemapEditorMap";
-import { useMediaQuery } from "beautiful-react-hooks";
+import useMediaQuery from "beautiful-react-hooks/useMediaQuery";
 import { Link } from "react-router-dom";
 import { ArrowLeftIcon } from "@heroicons/react/outline";
 
@@ -55,15 +50,13 @@ export default function BasemapEditorPanel({
 }) {
   const [createOptionOpen, setCreateOptionOpen] = useState(false);
   const { t } = useTranslation(["admin"]);
-  const { data, loading, error } = useGetBasemapQuery({
+  const { data } = useGetBasemapQuery({
     variables: {
       id: basemapId,
     },
   });
-  const [
-    updateLabels,
-    updateLabelsState,
-  ] = useUpdateBasemapLabelsLayerMutation();
+  const [updateLabels, updateLabelsState] =
+    useUpdateBasemapLabelsLayerMutation();
   const client = useApolloClient();
   const [mutateItem, mutateItemState] = useUpdateBasemapMutation({});
   const [updateUrl, updateUrlMutationState] = useUpdateBasemapUrlMutation();
@@ -79,7 +72,10 @@ export default function BasemapEditorPanel({
     if (basemap && !exaggeration) {
       setExaggeration(parseFloat(basemap.terrainExaggeration));
     }
-  }, [basemap]);
+  }, [basemap, exaggeration]);
+
+  const [updateExaggeration, updateExaggerationMutationState] =
+    useUpdateTerrainExaggerationMutation();
 
   useEffect(() => {
     if (
@@ -107,11 +103,13 @@ export default function BasemapEditorPanel({
         },
       });
     }
-  }, [debouncedExaggeration, basemap]);
-  const [
+  }, [
+    debouncedExaggeration,
+    basemap,
+    client,
+    exaggeration,
     updateExaggeration,
-    updateExaggerationMutationState,
-  ] = useUpdateTerrainExaggerationMutation();
+  ]);
 
   const mapboxStyle = useMapboxStyle(
     basemap && basemap.type === BasemapType.Mapbox ? basemap.url : undefined
@@ -137,8 +135,8 @@ export default function BasemapEditorPanel({
 
   return (
     <div
-      className={`bg-white z-20 absolute bottom-0 w-128 h-full grid gap-0 shadow-xl ${className} ${
-        showMap ? "w-full" : ""
+      className={`bg-white z-20 absolute bottom-0 h-full grid gap-0 shadow-xl ${className} ${
+        showMap ? "w-full" : "w-128"
       }`}
       style={
         showMap

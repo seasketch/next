@@ -1,15 +1,13 @@
 import { EditorView } from "prosemirror-view";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
-import { MarkType, NodeType, Schema } from "prosemirror-model";
+import { MarkType, Schema } from "prosemirror-model";
 // import { schema } from "./config";
 import { EditorState } from "prosemirror-state";
-import { cursorTo } from "readline";
-import { markActive, marks } from "./utils";
+import { markActive } from "./utils";
 import Modal from "../components/Modal";
 import Button from "../components/Button";
 import TextInput from "../components/TextInput";
-import { link } from "fs";
 import { useTranslation } from "react-i18next";
 
 interface EditorMenuBarProps {
@@ -24,10 +22,11 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const [menuState, setMenuState] = useState<any>({});
   const schema = props.schema;
   const { t } = useTranslation("admin");
-  const [linkModalState, setLinkModalState] = useState<{
-    href: string;
-    title?: string;
-  } | null>(null);
+  const [linkModalState, setLinkModalState] =
+    useState<{
+      href: string;
+      title?: string;
+    } | null>(null);
 
   useEffect(() => {
     if (props.state) {
@@ -55,7 +54,14 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         },
       });
     }
-  }, [props.state]);
+  }, [
+    props.state,
+    schema.marks.em,
+    schema.marks.link,
+    schema.marks.strong,
+    schema.nodes.heading,
+    schema.nodes.paragraph,
+  ]);
 
   return (
     <div
@@ -178,9 +184,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         onClick={(e) => {
           e.preventDefault();
           props.view!.focus();
-          const linkMarks = marks(props.state!, schema.marks.link);
-          // if (linkMarks.length > 1) {
-          //   window.confirm("More than one link selected. Clear these links?");
           if (markActive(props.state!, schema.marks.link)) {
             toggleMark(schema.marks.link)(
               props.view!.state,

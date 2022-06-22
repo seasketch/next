@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
 import languages, { LangDetails } from "../lang/supported";
 
@@ -9,7 +9,7 @@ export default function LanguageSelector(props: {
   button: (onClick: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const { t, i18n } = useTranslation("surveys");
+  const { i18n } = useTranslation("surveys");
   const filteredLanguages = languages.filter(
     (f) =>
       !props.options ||

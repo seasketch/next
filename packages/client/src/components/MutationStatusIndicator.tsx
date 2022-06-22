@@ -19,7 +19,7 @@ export default function MutationStatusIndicator({
     if (changeSinceError === false && mutationStatus.error) {
       setChangeSinceError(true);
     }
-  }, [value]);
+  }, [changeSinceError, mutationStatus.error, value]);
   const state = mutationStatus.called
     ? mutationStatus.loading
       ? "SAVING"
@@ -37,7 +37,7 @@ export default function MutationStatusIndicator({
     } else if (state !== "SAVED") {
       setShowSaved(true);
     }
-  }, [state]);
+  }, [showSaved, state]);
   const error = mutationStatus.error;
   return (
     <div className={`relative w-5 h-5 inline-block ${className}`}>

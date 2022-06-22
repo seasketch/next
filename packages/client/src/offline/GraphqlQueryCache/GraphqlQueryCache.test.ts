@@ -1,17 +1,12 @@
-/* eslint-disable i18next/no-literal-string */
 import { DocumentNode, gql } from "@apollo/client";
 import { OperationDefinitionNode } from "graphql";
 import localforage from "localforage";
-import {
-  byArgsStrategy,
-  GraphqlQueryCache,
-  lruStrategy,
-  staticStrategy,
-} from ".";
+import { GraphqlQueryCache } from "./sw";
 import { SurveyDocument } from "../../generated/graphql";
 import { ProjectMetadataDocument } from "../../generated/queries";
 // @ts-ignore
 import { Cache, CacheStorage, caches } from "cache-polyfill";
+import { byArgsStrategy, lruStrategy, staticStrategy } from "./strategies";
 require("fake-indexeddb/auto");
 
 global.caches = caches;
@@ -64,10 +59,10 @@ function createFetchRequestAndResponse(json: any, responseData: any) {
   fetch.mockImplementation((e: any) => {
     return Promise.resolve(createResponse(responseData));
   });
-  return ({
+  return {
     type: "fetch",
     request: createMockRequest(json),
-  } as unknown) as FetchEvent;
+  } as unknown as FetchEvent;
 }
 
 async function mockGqlRequest(
@@ -136,6 +131,7 @@ test("Can be enabled and disabled by env setting", async () => {
   expect(await cache2.isEnabled()).toBe(true);
 });
 
+// eslint-disable-next-line i18next/no-literal-string
 const ProjectBySlug = gql`
   query ProjectBySlug($slug: String!) {
     projectBySlug(slug: $slug) {

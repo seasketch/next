@@ -38,6 +38,7 @@ export default function MapboxMap(props: OverlayMapProps) {
       mapContext.ready &&
       (props.lazyLoadReady === undefined || props.lazyLoadReady === true)
     ) {
+      const currentRef = mapContainer.current;
       let cancelled = false;
       const container = mapContainer.current;
       mapContext.manager
@@ -64,7 +65,7 @@ export default function MapboxMap(props: OverlayMapProps) {
           }
         });
       return () => {
-        if (container !== mapContainer.current) {
+        if (container !== currentRef) {
           cancelled = true;
         }
       };
@@ -73,9 +74,9 @@ export default function MapboxMap(props: OverlayMapProps) {
     map,
     mapContext.manager,
     mapContext.selectedBasemap,
-    mapContainer.current,
     mapContext.ready,
     props.lazyLoadReady,
+    props,
   ]);
 
   return (

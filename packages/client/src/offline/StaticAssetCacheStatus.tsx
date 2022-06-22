@@ -1,4 +1,4 @@
-import { CogIcon, QuestionMarkCircleIcon } from "@heroicons/react/solid";
+import { CogIcon } from "@heroicons/react/solid";
 import bytes from "bytes";
 import { useContext, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";

@@ -180,7 +180,7 @@ export const marks = {
       {
         tag: "b",
         getAttrs: (node: { style: { fontWeight: string } }) =>
-          node.style.fontWeight != "normal" && null,
+          node.style.fontWeight !== "normal" && null,
       },
       {
         style: "font-weight",

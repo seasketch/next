@@ -2,9 +2,11 @@
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import Email, { EmailProps } from "./Email";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = questionBodyFromMarkdown(`# What is your email?`);
 const makeArgs = (componentSettings: EmailProps) => ({
+  ...commonFormElementArgs,
   id: 1,
   body,
   onChange: jest.fn(),

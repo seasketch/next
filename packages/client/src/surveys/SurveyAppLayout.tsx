@@ -17,7 +17,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 import {
@@ -52,6 +51,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
   onPracticeClick?: () => void;
   navigatingBackwards?: boolean;
   navigation?: ReactNode;
+  children?: ReactNode;
 }> = ({
   practice,
   progress,
@@ -67,7 +67,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
 }) => {
   style = style || defaultStyle;
   const [mapPortal, setMapPortal] = useState<HTMLDivElement | null>(null);
-  const mapPortalRef = useCallback((node) => {
+  const mapPortalRef = useCallback((node: HTMLDivElement | null) => {
     if (node !== null) {
       setMapPortal(node);
     }
@@ -97,14 +97,12 @@ export const SurveyAppLayout: React.FunctionComponent<{
     return () => {
       window.document.documentElement.classList.remove("survey");
     };
-  }, []);
+  }, [embeddedInAdmin]);
 
   const min = style.isSmall ? windowSize.width || 390 : 480;
 
   // eslint-disable-next-line i18next/no-literal-string
   let grid: string;
-  let navPosition: string =
-    "fixed bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
   switch (style.layout) {
     case FormElementLayout.Cover:
       // eslint-disable-next-line i18next/no-literal-string
@@ -112,8 +110,6 @@ export const SurveyAppLayout: React.FunctionComponent<{
         [row2-start] "content content" 100% [row2-end]
         / auto auto
       `;
-      navPosition =
-        "fixed bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
       break;
     case FormElementLayout.MapStacked:
       // eslint-disable-next-line i18next/no-literal-string
@@ -122,8 +118,6 @@ export const SurveyAppLayout: React.FunctionComponent<{
         [row2-start] "map map" 1fr [row2-end]
         / auto auto
       `;
-      navPosition =
-        "fixed bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-5";
       break;
     case FormElementLayout.Left:
       // eslint-disable-next-line i18next/no-literal-string
@@ -131,8 +125,6 @@ export const SurveyAppLayout: React.FunctionComponent<{
         [row1-start] "content hero-image" 100% [row1-end]
         / minmax(${min}px, 1fr) 1fr
       `;
-      navPosition =
-        "fixed bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
       break;
     case FormElementLayout.Right:
       // eslint-disable-next-line i18next/no-literal-string
@@ -140,8 +132,6 @@ export const SurveyAppLayout: React.FunctionComponent<{
         [row1-start] "hero-image content" 100% [row1-end]
         / 1fr minmax(${min}px, 1fr)
       `;
-      navPosition =
-        "fixed bottom-3 right-3 md:right-1/2 md:bottom-6 md:pr-4 lg:bottom-10 lg:pr-8";
       break;
     case FormElementLayout.MapSidebarLeft:
       // eslint-disable-next-line i18next/no-literal-string
@@ -158,8 +148,6 @@ export const SurveyAppLayout: React.FunctionComponent<{
         [row1-start] "map content" auto [row1-end]
         / 2fr minmax(${min}px, 1fr)
       `;
-      navPosition =
-        "fixed bottom-3 left-96 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
       break;
     case FormElementLayout.MapFullscreen:
       // eslint-disable-next-line i18next/no-literal-string
@@ -217,7 +205,11 @@ export const SurveyAppLayout: React.FunctionComponent<{
     <SurveyLayoutContext.Provider value={layoutContext}>
       <SurveyMapPortalContext.Provider value={mapPortal}>
         <SurveyStyleContext.Provider value={style}>
-          <AnimatePresence initial={false} presenceAffectsLayout={false}>
+          <AnimatePresence
+            initial={false}
+            // @ts-ignore
+            presenceAffectsLayout={false}
+          >
             <div
               className={`SurveyAppLayout grid overflow-hidden ${
                 scrollContentArea || fullscreenMapLayout ? "h-full" : ""

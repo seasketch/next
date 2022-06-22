@@ -10,7 +10,7 @@ export default function DeleteTableOfContentsItemModal(props: {
   onRequestClose?: () => void;
   onDelete?: () => void;
 }) {
-  const [mutation, mutationState] = useDeleteBranchMutation();
+  const [mutation] = useDeleteBranchMutation();
   const { t } = useTranslation("admin");
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<Error>();

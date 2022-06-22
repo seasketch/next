@@ -1,11 +1,10 @@
-import React from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 export default function ProfileContextMenu(props?: { itemClassName?: string }) {
   const { user, logout } = useAuth0();
-  const { t, i18n } = useTranslation(["nav"]);
+  const { t } = useTranslation(["nav"]);
   if (!user) {
     return null;
   }
@@ -42,7 +41,7 @@ export default function ProfileContextMenu(props?: { itemClassName?: string }) {
         </Link>
         <a
           target="_blank"
-          rel="nofollow"
+          rel="noreferrer"
           href="mailto:support@seasketch.org"
           className="block px-4 py-2 text-base md:text-sm leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900"
           role="menuitem"

@@ -1,4 +1,4 @@
-import { ApolloClient, gql, useQuery, useSubscription } from "@apollo/client";
+import { ApolloClient, useQuery, useSubscription } from "@apollo/client";
 import React, { useContext, useEffect, useState } from "react";
 import debounce from "lodash.debounce";
 
@@ -131,7 +131,7 @@ function UserSettings() {
     data?.projectBySlug,
   ]);
 
-  const sub = useSubscription(ProjectInviteEmailStatusSubscriptionDocument, {
+  useSubscription(ProjectInviteEmailStatusSubscriptionDocument, {
     onSubscriptionData: (data) => {
       const invite =
         data.subscriptionData.data.projectInviteStateUpdated.invite;

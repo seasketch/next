@@ -1,7 +1,5 @@
 import { useApolloClient } from "@apollo/client";
-import { useAuth0 } from "@auth0/auth0-react";
 import localforage from "localforage";
-import { identity } from "lodash";
 import {
   createContext,
   ReactNode,
@@ -24,7 +22,6 @@ import {
 import { getCacheSize, GraphqlQueryCache } from "./GraphqlQueryCache";
 import {
   offlineSurveyChoiceStrategy,
-  strategies,
   surveyLRUStrategy,
 } from "./GraphqlQueryCache/strategies";
 import useGraphqlQueryCache from "./GraphqlQueryCache/useGraphqlQueryCache";
@@ -99,9 +96,8 @@ export interface ClientCacheContextValue {
   populateOfflineSurveyAssets: (clearFirst: boolean) => Promise<void>;
 }
 
-export const ClientCacheManagerContext = createContext<
-  ClientCacheContextValue | undefined
->(undefined);
+export const ClientCacheManagerContext =
+  createContext<ClientCacheContextValue | undefined>(undefined);
 
 const defaultCacheSetting = ClientCacheSettings.find(
   (l) => l.id === "default"
@@ -132,23 +128,14 @@ export function ClientCacheManagerProvider({
     [setState]
   );
 
-  useEffect(() => {
-    updateStorageStats();
-    localforage.getItem(CLIENT_CACHE_SETTINGS_KEY).then((value) => {
-      const setting = ClientCacheSettings.find(
-        (setting) => setting.id === value
-      );
-      setState(setting || defaultCacheSetting);
-    });
-  }, []);
-
-  const [storageStats, setStorageStats] = useState<
-    | {
-        estimate?: StorageEstimate;
-        error?: string;
-      }
-    | undefined
-  >();
+  const [storageStats, setStorageStats] =
+    useState<
+      | {
+          estimate?: StorageEstimate;
+          error?: string;
+        }
+      | undefined
+    >();
 
   const updateStorageStats = useCallback(async () => {
     if ("storage" in navigator && "estimate" in navigator.storage) {
@@ -172,43 +159,15 @@ export function ClientCacheManagerProvider({
     }
   }, [setStorageStats]);
 
-  const updateCacheInformation = useCallback(async () => {
-    if (!graphqlQueryCache) {
-      throw new Error("GraphqlQueryCache not set");
-    }
-    setUpdatingCacheSizes(true);
-    // Map tiles - TODO: update when proper custom cache is added
-    const mapboxTiles = await getCacheSize("mapbox-tiles");
-    // static assets
-    const staticAssetState = await staticAssetCache.getState();
-    const queries = await graphqlQueryCache.getState();
-    const strategyArgs = await graphqlQueryCache.getStrategyArgs(
-      offlineSurveyChoiceStrategy.key
-    );
-    setUpdatingCacheSizes(false);
-    const stats = {
-      queries,
-      staticAssets: staticAssetState,
-      mapTiles: {
-        bytes: mapboxTiles.bytes,
-        tileCount: mapboxTiles.keys,
-      },
-      selectedSurveyIds: strategyArgs.map((args) => args.id),
-      offlineSurveys: {
-        assets: [],
-        fractionCached: 0,
-        documents: 0,
-        images: 0,
-        queries: 0,
-        questions: 0,
-        loading: true,
-      },
-    } as CacheInformation;
-    setCacheInfo(stats);
-    await updateStorageStats();
-    await updateOfflineSurveyCacheInfoForProject(getSlug());
-    return stats;
-  }, []);
+  useEffect(() => {
+    updateStorageStats();
+    localforage.getItem(CLIENT_CACHE_SETTINGS_KEY).then((value) => {
+      const setting = ClientCacheSettings.find(
+        (setting) => setting.id === value
+      );
+      setState(setting || defaultCacheSetting);
+    });
+  }, [updateStorageStats]);
 
   const populateCache = useCallback(async () => {
     staticAssetCache
@@ -233,7 +192,7 @@ export function ClientCacheManagerProvider({
         });
         updateStorageStats();
       });
-  }, [staticAssetCache]);
+  }, [updateStorageStats]);
 
   const clearStaticAssetCache = useCallback(async () => {
     await staticAssetCache.clearCache();
@@ -242,45 +201,11 @@ export function ClientCacheManagerProvider({
     setCacheInfo((prev) =>
       prev ? { ...prev, staticAssets: cacheState } : undefined
     );
-  }, [staticAssetCache]);
+  }, [updateStorageStats]);
 
   const reloadStaticAssetCache = useCallback(() => {
     clearStaticAssetCache().then(() => setTimeout(() => populateCache(), 200));
-  }, [staticAssetCache]);
-
-  const toggleSurveyOfflineSupport = useCallback(
-    async (id: number, slug: string) => {
-      if (!graphqlQueryCache) {
-        throw new Error("GraphqlQueryCache not set");
-      }
-      let args =
-        (await graphqlQueryCache.getStrategyArgs(
-          offlineSurveyChoiceStrategy.key
-        )) || [];
-      const enabled = Boolean(args.find((arg) => arg.id === id));
-      if (enabled) {
-        args = args.filter((arg) => arg.id !== id);
-      } else {
-        args.push({ id, slug: getSlug() });
-      }
-      await graphqlQueryCache.setStrategyArgs(
-        offlineSurveyChoiceStrategy.key,
-        args
-      );
-      setCacheInfo((prev) => {
-        if (prev) {
-          return {
-            ...prev,
-            selectedSurveyIds: args.map((arg) => arg.id),
-          };
-        } else {
-          return undefined;
-        }
-      });
-      updateOfflineSurveyCacheInfoForProject(slug);
-    },
-    [graphqlQueryCache]
-  );
+  }, [clearStaticAssetCache, populateCache]);
 
   const getAssetsForSelectedSurveys = useCallback(async () => {
     if (!graphqlQueryCache) {
@@ -427,7 +352,41 @@ export function ClientCacheManagerProvider({
         return [];
       }
     },
-    [graphqlQueryCache]
+    [getAssetsForSelectedSurveys, graphqlQueryCache]
+  );
+
+  const toggleSurveyOfflineSupport = useCallback(
+    async (id: number, slug: string) => {
+      if (!graphqlQueryCache) {
+        throw new Error("GraphqlQueryCache not set");
+      }
+      let args =
+        (await graphqlQueryCache.getStrategyArgs(
+          offlineSurveyChoiceStrategy.key
+        )) || [];
+      const enabled = Boolean(args.find((arg) => arg.id === id));
+      if (enabled) {
+        args = args.filter((arg) => arg.id !== id);
+      } else {
+        args.push({ id, slug: getSlug() });
+      }
+      await graphqlQueryCache.setStrategyArgs(
+        offlineSurveyChoiceStrategy.key,
+        args
+      );
+      setCacheInfo((prev) => {
+        if (prev) {
+          return {
+            ...prev,
+            selectedSurveyIds: args.map((arg) => arg.id),
+          };
+        } else {
+          return undefined;
+        }
+      });
+      updateOfflineSurveyCacheInfoForProject(slug);
+    },
+    [graphqlQueryCache, updateOfflineSurveyCacheInfoForProject]
   );
 
   const clearOfflineSurveyAssets = useCallback(async () => {
@@ -579,8 +538,50 @@ export function ClientCacheManagerProvider({
         throw new Error("GraphqlQueryCache not set");
       }
     },
-    [graphqlQueryCache]
+    [clearOfflineSurveyAssets, getAssetsForSelectedSurveys, graphqlQueryCache]
   );
+
+  const updateCacheInformation = useCallback(async () => {
+    if (!graphqlQueryCache) {
+      throw new Error("GraphqlQueryCache not set");
+    }
+    setUpdatingCacheSizes(true);
+    // Map tiles - TODO: update when proper custom cache is added
+    const mapboxTiles = await getCacheSize("mapbox-tiles");
+    // static assets
+    const staticAssetState = await staticAssetCache.getState();
+    const queries = await graphqlQueryCache.getState();
+    const strategyArgs = await graphqlQueryCache.getStrategyArgs(
+      offlineSurveyChoiceStrategy.key
+    );
+    setUpdatingCacheSizes(false);
+    const stats = {
+      queries,
+      staticAssets: staticAssetState,
+      mapTiles: {
+        bytes: mapboxTiles.bytes,
+        tileCount: mapboxTiles.keys,
+      },
+      selectedSurveyIds: strategyArgs.map((args) => args.id),
+      offlineSurveys: {
+        assets: [],
+        fractionCached: 0,
+        documents: 0,
+        images: 0,
+        queries: 0,
+        questions: 0,
+        loading: true,
+      },
+    } as CacheInformation;
+    setCacheInfo(stats);
+    await updateStorageStats();
+    await updateOfflineSurveyCacheInfoForProject(getSlug());
+    return stats;
+  }, [
+    graphqlQueryCache,
+    updateOfflineSurveyCacheInfoForProject,
+    updateStorageStats,
+  ]);
 
   return (
     <ClientCacheManagerContext.Provider

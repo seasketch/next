@@ -1,14 +1,16 @@
 /* eslint-disable i18next/no-literal-string */
 import React from "react";
-import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
+import { questionBodyFromMarkdown } from "./fromMarkdown";
 import YesNo, { YesNoProps } from "./YesNo";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = questionBodyFromMarkdown(`
 # Would you like fries with that?
 `);
 
 const makeArgs = (componentSettings: YesNoProps) => ({
+  ...commonFormElementArgs,
   id: 1,
   body,
   onChange: jest.fn(),

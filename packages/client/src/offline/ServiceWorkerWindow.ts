@@ -7,7 +7,14 @@ export const MESSAGE_TYPES = {
   UPDATE_GRAPHQL_STRATEGY_ARGS: "UPDATE_GRAPHQL_STRATEGY_ARGS",
   GRAPHQL_CACHE_REVALIDATION: "GRAPHQL_CACHE_REVALIDATION",
   UPDATE_GRAPHQL_CACHE_ENABLED: "UPDATE_GRAPHQL_CACHE_ENABLED",
+  SKIP_WAITING: "SKIP_WAITING",
 };
+
+declare const self:
+  | undefined
+  | (ServiceWorkerGlobalScope & {
+      __WB_MANIFEST: (PrecacheEntry | string)[];
+    });
 
 /**
  * Use as a communication channel between the host page and ServiceWorker.
@@ -20,8 +27,8 @@ class ServiceWorkerWindow {
   private wb: Pick<Workbox, "messageSW">;
 
   constructor() {
-    if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-      const wb = new Workbox("/service-worker.js");
+    if ("serviceWorker" in navigator && (!self || !("skipWaiting" in self))) {
+      const wb = new Workbox("/serviceWorker.js");
       wb.register();
       this.wb = wb;
     } else {
@@ -74,6 +81,13 @@ class ServiceWorkerWindow {
       type: MESSAGE_TYPES.UPDATE_GRAPHQL_CACHE_ENABLED,
       enabled,
     });
+  }
+
+  /**
+   * Tell installed ServiceWorker to take control of all clients
+   */
+  skipWaiting() {
+    this.wb.messageSW({ type: MESSAGE_TYPES.SKIP_WAITING });
   }
 }
 

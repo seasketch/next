@@ -1,5 +1,11 @@
-import { useMediaQuery } from "beautiful-react-hooks";
-import { useState, useContext, useRef, FunctionComponent } from "react";
+import useMediaQuery from "beautiful-react-hooks/useMediaQuery";
+import {
+  useState,
+  useContext,
+  useRef,
+  FunctionComponent,
+  ReactNode,
+} from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
 import MapSettingsPopup, { BasemapControl } from "../draw/MapSettingsPopup";
 import { BasemapDetailsFragment } from "../generated/graphql";
@@ -7,6 +13,7 @@ import { BasemapDetailsFragment } from "../generated/graphql";
 const MapPicker: FunctionComponent<{
   basemaps: BasemapDetailsFragment[];
   className?: string;
+  children?: ReactNode;
 }> = ({ basemaps, className, children }) => {
   const [open, setOpen] = useState(false);
   const mapContext = useContext(MapContext);

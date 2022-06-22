@@ -1,21 +1,12 @@
 import {
   FieldRuleOperator,
-  FormElement,
-  FormElementDetailsFragment,
   FormElementFullDetailsFragment,
-  FormLogicCondition,
-  FormLogicRule,
   LogicRuleDetailsFragment,
-  Maybe,
   SketchGeometryType,
 } from "../../generated/graphql";
 import { components } from "../../formElements";
 import ReactFlow, {
-  removeElements,
-  addEdge,
-  MiniMap,
   Controls,
-  Background,
   Elements,
   isNode,
   Position,
@@ -23,13 +14,11 @@ import ReactFlow, {
   ArrowHeadType,
 } from "react-flow-renderer";
 import dagre from "dagre";
-import { collectHeaders, collectQuestion, collectText } from "./collectText";
-import { defaultFormElementIcon } from "../../formElements/FormElement";
+import { collectHeaders, collectQuestion } from "./collectText";
 import { sortFormElements } from "../../formElements/sortFormElements";
 import { FunctionComponent, memo, useMemo } from "react";
 import { OPERATOR_LABELS } from "./LogicRuleEditor";
 import { Trans } from "react-i18next";
-import { Icons } from "../../components/SketchGeometryTypeSelector";
 
 type Rule = LogicRuleDetailsFragment;
 
@@ -50,7 +39,7 @@ export default function SurveyFlowMap({
     } else {
       return [];
     }
-  }, [formElements, rules]);
+  }, [formElements, primaryFormId, rules]);
 
   // const formElements = sortFormElements([
   //   ...(data?.survey?.form?.formElements || []),
@@ -61,6 +50,7 @@ export default function SurveyFlowMap({
   }
   return (
     <ReactFlow
+      // @ts-ignore
       nodeTypes={nodeTypes}
       maxZoom={1.1}
       minZoom={0.1}

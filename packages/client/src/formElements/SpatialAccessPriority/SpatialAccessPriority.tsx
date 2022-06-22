@@ -28,9 +28,7 @@ import BoundsInput from "../../admin/surveys/BoundsInput";
 import useMapEssentials from "../../admin/surveys/useMapEssentials";
 import Button from "../../components/Button";
 import MapboxMap from "../../components/MapboxMap";
-import { Icons } from "../../components/SketchGeometryTypeSelector";
 import {
-  BasemapControl,
   ResetView,
   ShowScaleBar,
   ZoomToFeature,
@@ -43,8 +41,6 @@ import {
   FormElementDetailsFragment,
   FormElementFullDetailsFragment,
   FormElementLayout,
-  SketchGeometryType,
-  useUpdateFormElementMutation,
 } from "../../generated/graphql";
 import FormElementFactory from "../../surveys/FormElementFactory";
 import { SurveyLayoutContext } from "../../surveys/SurveyAppLayout";
@@ -57,7 +53,6 @@ import {
   SurveyContext,
   SurveyMapPortal,
   useLocalizedComponentSetting,
-  useUpdateFormElement,
 } from "../FormElement";
 import { sortFormElements } from "../sortFormElements";
 import FormElementOptionsInput, {
@@ -71,8 +66,6 @@ import DigitizingMiniMap from "../DigitizingMiniMap";
 import { FormEditorHeader } from "../../admin/surveys/SurveyFormEditor";
 import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
-import set from "lodash.set";
-import { collectText } from "../../admin/surveys/collectText";
 import { ChoiceAdminValueInput } from "../ComboBox";
 import useDebounce from "../../useDebounce";
 import Badge from "../../components/Badge";
@@ -160,10 +153,11 @@ const SpatialAccessPriority: FormElementComponent<
   const [miniMap, setMiniMap] = useState<Map | null>(null);
   const [miniMapStyle, setMiniMapStyle] = useState<Style>();
 
-  const [geometryEditingState, setGeometryEditingState] = useState<{
-    isNew: boolean;
-    feature?: Feature<any>;
-  } | null>(null);
+  const [geometryEditingState, setGeometryEditingState] =
+    useState<{
+      isNew: boolean;
+      feature?: Feature<any>;
+    } | null>(null);
   const [responseState, setResponseState] = useState<ResponseState>({
     submissionAttempted: false,
   });
@@ -236,6 +230,7 @@ const SpatialAccessPriority: FormElementComponent<
         ),
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [responseState, geometryEditingState?.isNew]);
 
   function updateResponseState(id: number) {
@@ -256,6 +251,7 @@ const SpatialAccessPriority: FormElementComponent<
   // formElements need to be sorted before display
   const formElements = useMemo<FormElementFullDetailsFragment[]>(() => {
     return sortFormElements(props.sketchClass!.form!.formElements!);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.sketchClass!.form?.formElements]);
 
   /**
@@ -378,6 +374,7 @@ const SpatialAccessPriority: FormElementComponent<
         animate: false,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sector]);
 
   useEffect(() => {
@@ -391,7 +388,7 @@ const SpatialAccessPriority: FormElementComponent<
     if (mapContext.manager?.map) {
       mapContext.manager.map.resize();
     }
-  }, [props.stage, mapContext.manager?.map]);
+  }, [props.stage, mapContext.manager?.map, create]);
 
   useEffect(() => {
     if (selection && geometryEditingState?.isNew !== true) {
@@ -420,7 +417,13 @@ const SpatialAccessPriority: FormElementComponent<
         submissionAttempted: false,
       });
     }
-  }, [selection]);
+  }, [
+    geometryEditingState?.isNew,
+    props,
+    responseState.featureId,
+    selection,
+    style.isSmall,
+  ]);
 
   useEffect(() => {
     if (
@@ -433,7 +436,11 @@ const SpatialAccessPriority: FormElementComponent<
         )!
       );
     }
-  }, [props.value?.sectors, props.componentSettings.sectorOptions]);
+  }, [
+    props.value?.sectors,
+    props.componentSettings.sectorOptions,
+    props.value,
+  ]);
 
   async function updateMiniBasemap() {
     if (miniMap && mapContext.manager && basemaps) {
@@ -452,6 +459,7 @@ const SpatialAccessPriority: FormElementComponent<
 
   useEffect(() => {
     updateMiniBasemap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapContext.selectedBasemap]);
 
   function onClickSave() {
@@ -615,6 +623,7 @@ const SpatialAccessPriority: FormElementComponent<
       <AnimatePresence
         initial={false}
         exitBeforeEnter={true}
+        // @ts-ignore
         presenceAffectsLayout={false}
 
         // onExitComplete={() => {
@@ -1224,7 +1233,6 @@ For each selection, you will be asked to draw and prioritize valued areas.
 `);
 
 SpatialAccessPriority.icon = ({ componentSettings, sketchClass }) => {
-  const Icon = Icons[sketchClass?.geometryType || SketchGeometryType.Polygon];
   return (
     <div className="bg-red-500 w-full h-full font-bold text-center flex justify-center items-center  italic text-white relative">
       <ScaleIcon className="text-white w-5 h-6" />

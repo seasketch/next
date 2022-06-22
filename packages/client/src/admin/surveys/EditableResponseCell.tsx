@@ -1,4 +1,4 @@
-import { CheckIcon, SaveIcon, XIcon } from "@heroicons/react/outline";
+import { CheckIcon, XIcon } from "@heroicons/react/outline";
 import { PencilIcon } from "@heroicons/react/solid";
 import {
   createContext,
@@ -14,17 +14,15 @@ export const CellEditorContext = createContext<{ editing: boolean }>({
   editing: false,
 });
 
-export type CellEditorComponent<
-  ValueType = any,
-  ComponentSettingsType = any
-> = React.FunctionComponent<{
-  value: ValueType;
-  disabled: boolean;
-  onChange: (value: ValueType) => void;
-  onRequestSave: () => void;
-  onRequestCancel: () => void;
-  componentSettings: ComponentSettingsType;
-}>;
+export type CellEditorComponent<ValueType = any, ComponentSettingsType = any> =
+  React.FunctionComponent<{
+    value: ValueType;
+    disabled: boolean;
+    onChange: (value: ValueType) => void;
+    onRequestSave: () => void;
+    onRequestCancel: () => void;
+    componentSettings: ComponentSettingsType;
+  }>;
 
 export type EditorsList = [
   formElementId: number,
@@ -36,6 +34,7 @@ interface EditableResponseCellProps {
   updateValue: (value: any) => Promise<any>;
   onStateChange?: (editing: boolean) => void;
   componentSettings: any;
+  children?: ReactNode;
 }
 
 interface SimpleEditableResponseCellProps {
@@ -45,6 +44,7 @@ interface SimpleEditableResponseCellProps {
   updateValue: (value: any) => Promise<any>;
   onStateChange?: (editing: boolean) => void;
   componentSettings: any;
+  children?: ReactNode;
 }
 
 function isSimple(
@@ -66,7 +66,7 @@ const EditableResponseCell: React.FunctionComponent<
     if (props.onStateChange) {
       props.onStateChange(editing);
     }
-  }, [editing]);
+  }, [editing, props]);
 
   const save = () => {
     if (!saving) {

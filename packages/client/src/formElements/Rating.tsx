@@ -1,6 +1,6 @@
 import { StarIcon } from "@heroicons/react/solid";
 import { useEffect, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 import EditableResponseCell, {
   CellEditorComponent,
 } from "../admin/surveys/EditableResponseCell";
@@ -8,7 +8,6 @@ import {
   adminValueInputCommonClassNames,
   FormElementBody,
   FormElementComponent,
-  FormElementEditorPortal,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 
@@ -20,7 +19,6 @@ export type RatingProps = {
 };
 
 const Rating: FormElementComponent<RatingProps, number> = (props) => {
-  const { t } = useTranslation("surveys");
   const stars = Array.from(Array(props.componentSettings.max || 5).keys()).map(
     (i) => i + 1
   );
@@ -216,7 +214,7 @@ export const RatingCellEditor: CellEditorComponent<
 
   useEffect(() => {
     onChange(val);
-  }, [val]);
+  }, [onChange, val]);
 
   const stars = Array.from(Array(componentSettings.max || 5).keys()).map(
     (i) => i + 1

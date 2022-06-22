@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import Badge from "../components/Badge";
-import Skeleton from "../components/Skeleton";
 import Spinner from "../components/Spinner";
 
 function AssetTypeCount({ label, count }: { label: string; count: number }) {
@@ -39,7 +38,7 @@ function CacheProgress({
         ></div>
       </div>
       <div className="flex text-sm text-gray-500">
-        <p className="flex-1">{description}</p>
+        <div className="flex-1">{description}</div>
         {loading && (
           <div className="overflow-visible h-5 w-1">
             <Spinner className="" />

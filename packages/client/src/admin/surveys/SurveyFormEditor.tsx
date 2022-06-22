@@ -6,14 +6,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/outline";
 import { EyeIcon } from "@heroicons/react/solid";
-import {
-  ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useHistory } from "react-router-dom";
 import Button from "../../components/Button";
@@ -30,7 +23,6 @@ import {
   useUpdateFormElementBackgroundMutation,
   useSetFormElementBackgroundMutation,
   useClearFormElementStyleMutation,
-  FormElement,
   FormElementFullDetailsFragment,
   LogicRuleDetailsFragment,
   useCopyAppearanceMutation,
@@ -44,7 +36,6 @@ import {
   FormEditorPortalContext,
   SurveyButtonFooterPortalContext,
   SurveyContext,
-  SurveyMapPortal,
   useUpdateFormElement,
 } from "../../formElements/FormElement";
 import { sortFormElements } from "../../formElements/sortFormElements";
@@ -67,12 +58,9 @@ import SurveyFlowMap from "./SurveyFlowMap";
 import LogicRuleEditor from "./LogicRuleEditor";
 import { components } from "../../formElements";
 import bbox from "@turf/bbox";
-import { LngLatBoundsLike, LngLatLike } from "mapbox-gl";
 import languages, { LangDetails } from "../../lang/supported";
-import i18n from "../../i18n";
 import SurveyContextualMap from "../../surveys/SurveyContextualMap";
 import BasemapMultiSelectInput from "./BasemapMultiSelectInput";
-import DropdownButton from "../../components/DropdownButton";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -102,14 +90,14 @@ export default function SurveyFormEditor({
   const formElementEditorContainerRef = useRef<HTMLDivElement>(null);
   const onError = useGlobalErrorHandler();
   const auth0 = useAuth0<Auth0User>();
-  const { data, loading, error } = useSurveyFormEditorDetailsQuery({
+  const { data } = useSurveyFormEditorDetailsQuery({
     variables: {
       slug,
       id: surveyId,
     },
   });
   const [imageChooserOpen, setImageChooserOpen] = useState(false);
-  const [updateOrder, updateOrderState] = useUpdateFormElementOrderMutation();
+  const [updateOrder] = useUpdateFormElementOrderMutation();
   const history = useHistory();
   const [values, setValues] = useState<{ [id: number]: any | undefined }>({});
 
@@ -155,12 +143,9 @@ export default function SurveyFormEditor({
         history.location.pathname + "/" + data.survey.form.formElements[0].id
       );
     }
-  }, [data, route]);
+  }, [data, formElementId, history, route]);
 
-  const [
-    updateBackground,
-    updateBackgroundState,
-  ] = useUpdateFormElementBackgroundMutation({
+  const [updateBackground] = useUpdateFormElementBackgroundMutation({
     onError,
     // @ts-ignore
     optimisticResponse: (data) => ({
@@ -173,10 +158,7 @@ export default function SurveyFormEditor({
     }),
   });
 
-  const [
-    setBackground,
-    setBackgroundState,
-  ] = useSetFormElementBackgroundMutation({
+  const [setBackground] = useSetFormElementBackgroundMutation({
     onError,
     // @ts-ignore
     optimisticResponse: (data) => {
@@ -189,7 +171,7 @@ export default function SurveyFormEditor({
     },
   });
 
-  const [clearStyle, clearStyleState] = useClearFormElementStyleMutation({
+  const [clearStyle] = useClearFormElementStyleMutation({
     onError,
     optimisticResponse: (data) => {
       return {
@@ -213,10 +195,7 @@ export default function SurveyFormEditor({
     },
   });
 
-  const [
-    updateBaseSettingsMutation,
-    updateBaseSettingsState,
-  ] = useUpdateSurveyBaseSettingsMutation({
+  const [updateBaseSettingsMutation] = useUpdateSurveyBaseSettingsMutation({
     onError,
   });
   function updateBaseSetting(settings: {
@@ -250,7 +229,7 @@ export default function SurveyFormEditor({
     });
   }
 
-  const [updateForm, updateFormMutationState] = useUpdateFormMutation({
+  const [updateForm] = useUpdateFormMutation({
     onError,
     optimisticResponse: (d) => ({
       __typename: "Mutation",
@@ -266,10 +245,7 @@ export default function SurveyFormEditor({
     }),
   });
 
-  const [
-    deleteFormElement,
-    deleteFormElementState,
-  ] = useDeleteFormElementMutation({
+  const [deleteFormElement] = useDeleteFormElementMutation({
     onError,
   });
 
@@ -297,10 +273,7 @@ export default function SurveyFormEditor({
     }
   }
 
-  const [
-    updateMapSettings,
-    updateMapSettingsState,
-  ] = useUpdateFormElementBasemapsMutation({
+  const [updateMapSettings] = useUpdateFormElementBasemapsMutation({
     onError,
     optimisticResponse: (data) => {
       return {
@@ -327,14 +300,11 @@ export default function SurveyFormEditor({
   let dynamicTextClass = "text-white";
   dynamicTextClass = isDark ? "text-white" : "text-grey-800";
 
-  const [updateElementSetting, updateComponentSetting] = useUpdateFormElement(
-    selectedFormElement!
-  );
+  const [updateElementSetting] = useUpdateFormElement(selectedFormElement!);
   const formId = data?.survey?.form?.id;
 
-  let selectedFormElementParent:
-    | FormElementFullDetailsFragment
-    | undefined = undefined;
+  let selectedFormElementParent: FormElementFullDetailsFragment | undefined =
+    undefined;
   if (selectedFormElement?.formId !== formId) {
     selectedFormElementParent = formElements.find(
       (f) => f.sketchClass?.form?.id === selectedFormElement?.formId
@@ -1450,6 +1420,7 @@ function StageSelect({
 
 export const FormEditorHeader: React.FunctionComponent<{
   className?: string;
+  children?: ReactNode;
 }> = (props) => {
   return (
     <h3

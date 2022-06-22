@@ -1,14 +1,8 @@
 const defaultTheme = require("tailwindcss/defaultTheme");
+const colors = require("tailwindcss/colors");
 
 module.exports = {
-  purge: [
-    "src/**/*.js",
-    "src/**/*.jsx",
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "public/**/*.html",
-  ],
-  darkMode: "media",
+  content: ["./src/**/*.{js,jsx,ts,tsx}", "./public/**/*.html"],
   theme: {
     extend: {
       maxWidth: {
@@ -37,7 +31,7 @@ module.exports = {
       fontFamily: {
         sans: ["Inter var", ...defaultTheme.fontFamily.sans],
       },
-      colors: {
+      colors: ({ theme }) => ({
         primary: {
           300: "rgb(71,163,220)",
           400: "rgb(61,153,210)",
@@ -45,8 +39,8 @@ module.exports = {
           600: "rgb(36, 105, 172)",
         },
         secondary: {
-          300: defaultTheme.colors.gray["500"],
-          500: defaultTheme.colors.gray["800"],
+          300: colors.gray["500"],
+          500: colors.gray["800"],
         },
         "cool-gray": {
           50: "#F9FAFB",
@@ -60,7 +54,7 @@ module.exports = {
           800: "#1F2937",
           900: "#111827",
         },
-      },
+      }),
     },
   },
   variants: {
@@ -79,7 +73,5 @@ module.exports = {
     require("@tailwindcss/forms"),
     require("@tailwindcss/typography"),
     require("@tailwindcss/aspect-ratio"),
-    require("tailwindcss-dir")(),
   ],
-  // plugins: [require("@tailwindcss/ui")],
 };

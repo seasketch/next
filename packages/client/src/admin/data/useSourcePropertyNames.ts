@@ -3,7 +3,7 @@ import {
   useDataSourceUrlPropertiesQuery,
   DataSourceTypes,
 } from "../../generated/graphql";
-import { GeoJSON, FeatureCollection, Feature } from "geojson";
+import { GeoJSON, Feature } from "geojson";
 
 const cache: { [sourceId: number]: string[] } = {};
 
@@ -20,14 +20,8 @@ export default function useSourcePropertyNames(
   useEffect(() => {
     if (!cache[sourceId]) {
       if (propsQuery.data?.dataSource) {
-        const {
-          type,
-          bucketId,
-          objectKey,
-          url,
-          originalSourceUrl,
-          queryParameters,
-        } = propsQuery.data.dataSource;
+        const { type, bucketId, objectKey, url, queryParameters } =
+          propsQuery.data.dataSource;
         if (type === DataSourceTypes.SeasketchVector) {
           fetch(`https://${bucketId}/${objectKey}`)
             .then((r) => r.json())
@@ -85,6 +79,6 @@ export default function useSourcePropertyNames(
         }
       }
     }
-  }, [propsQuery.data]);
+  }, [propsQuery.data, sourceId, sublayer]);
   return names;
 }

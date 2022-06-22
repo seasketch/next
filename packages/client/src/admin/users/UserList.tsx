@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { AutoSizer } from "react-virtualized";
 import { FixedSizeList as List } from "react-window";
 import ParticipantRow from "./ParticipantRow";
@@ -7,15 +7,10 @@ import { Trans, useTranslation } from "react-i18next";
 import ParticipantModal from "./ParticipantModal";
 import Button from "../../components/Button";
 import {
-  AdminsQuery,
-  GroupMembersQuery,
-  ParticipantsQuery,
-  ProjectAccessControlSetting,
   useDeleteGroupMutation,
   useRenameGroupMutation,
   UserListDetailsFragment,
 } from "../../generated/graphql";
-import { DocumentNode, useQuery } from "@apollo/client";
 import { useHistory } from "react-router";
 
 interface UserListProps {
@@ -32,7 +27,7 @@ export default function UserList(props: UserListProps) {
   const { t } = useTranslation("admin");
   const history = useHistory();
 
-  const [deleteGroup, deleteGroupState] = useDeleteGroupMutation({
+  const [deleteGroup] = useDeleteGroupMutation({
     variables: {
       groupId: props.groupId!,
     },
@@ -44,7 +39,7 @@ export default function UserList(props: UserListProps) {
     },
   });
 
-  const [renameGroup, renameGroupState] = useRenameGroupMutation();
+  const [renameGroup] = useRenameGroupMutation();
 
   let participants = props.users;
   if (props.adminsOnly) {

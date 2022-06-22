@@ -1,7 +1,13 @@
-import { useMemo, useState, useEffect, ReactNode, useRef } from "react";
+import {
+  useMemo,
+  useState,
+  useEffect,
+  ReactNode,
+  useRef,
+  useCallback,
+} from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { getAnswers, getDataForExport } from "../../formElements/ExportUtils";
-import { sortFormElements } from "../../formElements/sortFormElements";
+import { getDataForExport } from "../../formElements/ExportUtils";
 import {
   useToggleResponsesPracticeMutation,
   useSurveyResponsesQuery,
@@ -11,17 +17,14 @@ import {
 import {
   useTable,
   useSortBy,
-  useBlockLayout,
   useFlexLayout,
   useResizeColumns,
   Row,
-  Column,
   useGlobalFilter,
   useRowSelect,
   usePagination,
   Cell,
 } from "react-table";
-import { ChevronDownIcon, UploadIcon } from "@heroicons/react/outline";
 import DownloadIcon from "../../components/DownloadIcon";
 import Papa from "papaparse";
 import ExportResponsesModal from "./ExportResponsesModal";
@@ -86,7 +89,7 @@ const FacilitatorEditor: CellEditorComponent<
 
   useEffect(() => {
     onChange(val);
-  }, [val]);
+  }, [onChange, val]);
 
   return (
     <input
@@ -125,7 +128,7 @@ const RespondentEditor: CellEditorComponent<
 
   useEffect(() => {
     onChange(val);
-  }, [val]);
+  }, [onChange, val]);
 
   return (
     <input
@@ -162,7 +165,7 @@ const EmailEditor: CellEditorComponent<string | null | undefined> = ({
 
   useEffect(() => {
     onChange(val);
-  }, [val]);
+  }, [onChange, val]);
 
   return (
     <input
@@ -241,7 +244,6 @@ function filterRows(
 type NameColumn = { name: string | null; email: string | null };
 
 export default function ResponseGrid(props: Props) {
-  const { t } = useTranslation("admin:surveys");
   const [showExportModal, setShowExportModal] = useState(false);
   const { data } = useSurveyResponsesQuery({
     variables: {
@@ -251,21 +253,18 @@ export default function ResponseGrid(props: Props) {
   const survey = data?.survey;
   const [tab, setTab] = useState("responses");
   const onError = useGlobalErrorHandler();
-  const [
-    togglePractice,
-    togglePracticeState,
-  ] = useToggleResponsesPracticeMutation({
-    onError,
-    onCompleted: props.onNewMapTilesRequired,
-  });
-  const [
-    archiveResponses,
-    archiveResponsesState,
-  ] = useArchiveResponsesMutation({
-    onError,
-    onCompleted: props.onNewMapTilesRequired,
-  });
-  const [modifyAnswers, modifyAnwersState] = useModifyAnswersMutation({});
+  const [togglePractice, togglePracticeState] =
+    useToggleResponsesPracticeMutation({
+      onError,
+      onCompleted: props.onNewMapTilesRequired,
+    });
+  const [archiveResponses, archiveResponsesState] = useArchiveResponsesMutation(
+    {
+      onError,
+      onCompleted: props.onNewMapTilesRequired,
+    }
+  );
+  const [modifyAnswers] = useModifyAnswersMutation({});
   const [editingCell, setEditingCell] = useState(false);
   const scrollContainer = useRef<HTMLDivElement | null>(null);
 
@@ -273,36 +272,11 @@ export default function ResponseGrid(props: Props) {
     if (props.onTabChange) {
       props.onTabChange(tab as ResponseGridTabName);
     }
-  }, [tab]);
-
-  useEffect(() => {
-    if (
-      props.highlightedRows.length &&
-      data?.survey?.surveyResponsesConnection.nodes &&
-      scrollContainer.current
-    ) {
-      const index = rows.findIndex(
-        (r) => parseInt(r.id) === props.highlightedRows[0]
-      );
-      if (index > -1) {
-        (scrollContainer.current.childNodes[0] as HTMLDivElement).scrollTop =
-          ITEM_SIZE * index - 100;
-      }
-      toggleAllRowsSelected(false);
-      for (const id of props.highlightedRows) {
-        toggleRowSelected(id.toString(), true);
-      }
-    }
-  }, [props.highlightedRows]);
+  }, [props, tab]);
 
   const rowData = useMemo(() => {
     return survey?.surveyResponsesConnection.nodes || [];
-  }, [
-    survey?.surveyResponsesConnection.nodes,
-    survey?.archivedResponseCount,
-    survey?.practiceResponseCount,
-    survey?.submittedResponseCount,
-  ]);
+  }, [survey?.surveyResponsesConnection.nodes]);
 
   const columns = useMemo(() => {
     const NameElement = (data?.survey?.form?.formElements || []).find(
@@ -530,9 +504,10 @@ export default function ResponseGrid(props: Props) {
                     </span>
                   );
                 }
-                const url = ConsentElement.surveyConsentDocumentsConnection.nodes.find(
-                  (doc) => doc.version === value.docVersion
-                )?.url;
+                const url =
+                  ConsentElement.surveyConsentDocumentsConnection.nodes.find(
+                    (doc) => doc.version === value.docVersion
+                  )?.url;
                 return value?.consented ? (
                   <span>
                     {value.clickedDoc ? (
@@ -598,7 +573,7 @@ export default function ResponseGrid(props: Props) {
         },
       })),
     ];
-  }, [data?.survey]);
+  }, [data?.survey?.form?.formElements, modifyAnswers]);
 
   const defaultColumn = useMemo(
     () => ({
@@ -619,15 +594,16 @@ export default function ResponseGrid(props: Props) {
 
   const getRowId = useMemo(() => (row: any) => row.id, []);
 
-  const globalFilter = useMemo(() => {
-    return (
+  const globalFilter = useCallback(
+    (
       rows: Row<{ isPractice: boolean; archived: boolean }>[],
       columnIds: any,
       selectedTab: ResponseGridTabName
     ) => {
       return filterRows(rows, selectedTab) as Row<any>[];
-    };
-  }, [survey?.surveyResponsesConnection.nodes]);
+    },
+    []
+  );
 
   const tableInstance = useTable(
     {
@@ -697,9 +673,34 @@ export default function ResponseGrid(props: Props) {
     totalColumnsWidth,
     toggleAllRowsSelected,
     toggleRowSelected,
-    filteredFlatRows,
     state: { selectedRowIds },
   } = tableInstance;
+
+  useEffect(() => {
+    if (
+      props.highlightedRows.length &&
+      data?.survey?.surveyResponsesConnection.nodes &&
+      scrollContainer.current
+    ) {
+      const index = rows.findIndex(
+        (r) => parseInt(r.id) === props.highlightedRows[0]
+      );
+      if (index > -1) {
+        (scrollContainer.current.childNodes[0] as HTMLDivElement).scrollTop =
+          ITEM_SIZE * index - 100;
+      }
+      toggleAllRowsSelected(false);
+      for (const id of props.highlightedRows) {
+        toggleRowSelected(id.toString(), true);
+      }
+    }
+  }, [
+    data?.survey?.surveyResponsesConnection.nodes,
+    props.highlightedRows,
+    rows,
+    toggleAllRowsSelected,
+    toggleRowSelected,
+  ]);
 
   useEffect(() => {
     if (props.onSelectionChange) {
@@ -708,11 +709,11 @@ export default function ResponseGrid(props: Props) {
         .map((k) => parseInt(k));
       props.onSelectionChange(selection);
     }
-  }, [selectedRowIds]);
+  }, [props, selectedRowIds]);
 
   useEffect(() => {
     setGlobalFilter(tab);
-  }, [tab]);
+  }, [setGlobalFilter, tab]);
 
   const RenderCellContents = React.memo(
     ({ cell, isSelected }: { cell: Cell<any, any>; isSelected: boolean }) => {
@@ -742,7 +743,7 @@ export default function ResponseGrid(props: Props) {
   );
 
   const RenderRow = React.useCallback(
-    function RenderRow({ index, style }) {
+    function RenderRow({ index, style }: { index: any; style: any }) {
       const row = rows[index];
       prepareRow(row);
       return (
@@ -768,7 +769,7 @@ export default function ResponseGrid(props: Props) {
         </div>
       );
     },
-    [prepareRow, rows, selectedRowIds]
+    [RenderCellContents, prepareRow, rows]
   );
 
   if (!data) {

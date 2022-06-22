@@ -3,13 +3,12 @@ import {
   FormElementTextVariant,
   FormElementLayout,
   FormElementDetailsFragment,
-  Maybe,
   FormElementFullDetailsFragment,
 } from "../generated/graphql";
 import { colord, extend } from "colord";
 import a11yPlugin from "colord/plugins/a11y";
 import { createContext } from "react";
-import { useMediaQuery } from "beautiful-react-hooks";
+import useMediaQuery from "beautiful-react-hooks/useMediaQuery";
 import { components } from "../formElements";
 import { CameraOptions } from "mapbox-gl";
 extend([a11yPlugin]);
@@ -184,7 +183,7 @@ export function surveyBackground(
   color: string
 ) {
   let position = "";
-  image = /data\:/.test(image)
+  image = /data:/.test(image)
     ? // eslint-disable-next-line i18next/no-literal-string
       `url(${image})`
     : // eslint-disable-next-line i18next/no-literal-string

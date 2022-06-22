@@ -53,10 +53,11 @@ import { useTranslation, Trans } from "react-i18next";
 import MiniBasemapSelector from "../MiniBasemapSelector";
 
 export default function ArcGISBrowser() {
-  const [server, setServer] = useState<{
-    location: NormalizedArcGISServerLocation;
-    version: string;
-  }>();
+  const [server, setServer] =
+    useState<{
+      location: NormalizedArcGISServerLocation;
+      version: string;
+    }>();
   const [columns, setColumns] = useState<ArcGISBrowserColumnProps[]>([]);
   const [map, setMap] = useState<Map | null>(null);
   const [selectedMapServer, setSelectedMapServer] = useState<string>();
@@ -68,9 +69,8 @@ export default function ArcGISBrowser() {
     cacheSize: bytes("500mb"),
   });
   const [treeData, setTreeData] = useState<ClientTableOfContentsItem[]>([]);
-  const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
-    selectedMapServer
-  );
+  const [serviceSettings, setServiceSettings] =
+    useArcGISServiceSettings(selectedMapServer);
   const { slug } = useParams<{ slug: string }>();
   const { t } = useTranslation("admin");
   const basemapsData = useGetBasemapsQuery({
@@ -147,6 +147,7 @@ export default function ArcGISBrowser() {
       }
       mapContext.manager.reset(sources, layers);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceData, serviceSettings, mapContext.manager]);
 
   // useEffect(() => {
@@ -203,7 +204,7 @@ export default function ArcGISBrowser() {
         mapContext.manager!.setVisibleLayers(collectedVisibleLayers);
       }, 50);
     }
-  }, [serviceData, mapContext.manager]);
+  }, [serviceData, mapContext.manager, map, serviceSettings?.sourceType]);
 
   const featureLayerSettingsRef = useRef(null);
   const allFeatureLayerIds = (mapServerInfo.data?.layerInfo || [])
@@ -239,7 +240,7 @@ export default function ArcGISBrowser() {
   };
 
   const handleDocumentClick = useCallback(
-    (e) => {
+    (e: any) => {
       if (
         selectedFeatureLayer &&
         e.path.indexOf(featureLayerSettingsRef.current) === -1 &&
@@ -269,7 +270,7 @@ export default function ArcGISBrowser() {
     return () => {
       document.removeEventListener("click", handleDocumentClick);
     };
-  }, [selectedFeatureLayer]);
+  }, [handleDocumentClick, selectedFeatureLayer]);
 
   // Add new catalog column or service column on selection
   const onCatalogItemSelection = (

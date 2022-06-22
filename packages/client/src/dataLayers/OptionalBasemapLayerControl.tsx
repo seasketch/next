@@ -1,19 +1,12 @@
 import Switch from "../components/Switch";
 import InputBlock from "../components/InputBlock";
 import {
-  Basemap,
-  useGetBasemapsQuery,
-  useDeleteBasemapMutation,
-  GetBasemapDocument,
-  useGetProjectBySlugQuery,
-  useCreateOptionalLayerMutation,
   OptionalBasemapLayer,
   OptionalBasemapLayersGroupType,
   useGetOptionalBasemapLayerMetadataQuery,
 } from "../generated/graphql";
 import { useContext, useState } from "react";
 import { MapContext } from "./MapContextManager";
-import { useTranslation, Trans } from "react-i18next";
 import RadioGroup from "../components/RadioGroup";
 import MetadataIcon from "../components/MetadataIcon";
 import MetadataModal from "./MetadataModal";
@@ -35,7 +28,6 @@ export default function OptionalBasemapLayerControl({
   >;
 }) {
   const mapContext = useContext(MapContext);
-  const { t } = useTranslation(["admin"]);
   const [metadataOpen, setMetadataOpen] = useState(false);
 
   let options = layer.options as {
@@ -63,8 +55,6 @@ export default function OptionalBasemapLayerControl({
       onRequestClose={() => setMetadataOpen(false)}
     />
   ) : null;
-
-  const hasMetadata = !!layer.metadata;
 
   if (layer.groupType === OptionalBasemapLayersGroupType.Select) {
     return (

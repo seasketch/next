@@ -1,11 +1,7 @@
-import { CheckIcon, TableIcon } from "@heroicons/react/outline";
+import { TableIcon } from "@heroicons/react/outline";
 import React, { useContext } from "react";
-import { Trans, useTranslation } from "react-i18next";
-import Button from "../components/Button";
-import InputBlock from "../components/InputBlock";
-import Switch from "../components/Switch";
+import { Trans } from "react-i18next";
 import { SurveyStyleContext } from "../surveys/appearance";
-import { ChoiceAdminValueInput } from "./ComboBox";
 import {
   FormElementBody,
   FormElementComponent,
@@ -28,7 +24,6 @@ export type MatrixValue = {
 };
 
 const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
-  const { t } = useTranslation("surveys");
   const context = useContext(SurveyContext);
   const { isSmall } = useContext(SurveyStyleContext);
   const options = useLocalizedComponentSetting(

@@ -1,6 +1,5 @@
 import bytes from "bytes";
 import LRUCache from "lru-cache";
-import cache from "lru-cache";
 import { FeatureCollection } from "geojson";
 import { DataSourceTypes } from "../generated/graphql";
 import { fetchFeatureLayerData } from "mapbox-gl-esri-feature-layers";
@@ -60,9 +59,11 @@ class ArcGISVectorSourceCache {
     this.cacheId = cacheId++;
     this.cacheSize = cacheSize;
     this.cache = new LRUCache({
-      max: cacheSize,
-      length: (item, key) => item.bytes || 0,
-      dispose: (key, item) => {
+      maxSize: cacheSize,
+      sizeCalculation: (item, key) => {
+        return item.bytes || 1;
+      },
+      dispose: (item, key) => {
         const newItem = onDispose(key, item);
         if (newItem) {
           nextTick(() => {
@@ -139,7 +140,7 @@ class ArcGISVectorSourceCache {
       loadedFeatures: 0,
       queryParameters: { ...source.queryParameters },
     };
-    
+
     const promise = new Promise<FeatureCollection>((resolve, reject) => {
       fetchFeatureLayerData(
         source.url!,

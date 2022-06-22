@@ -82,9 +82,9 @@ export default function ProjectApp() {
               <Route path={`/${slug}/app/overlays`}>
                 <Suspense
                   fallback={
-                    <p className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
+                    <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
                       Loading <Spinner />
-                    </p>
+                    </div>
                   }
                 >
                   <motion.div
@@ -102,9 +102,9 @@ export default function ProjectApp() {
               <Route path={`/${slug}/app/settings`}>
                 <Suspense
                   fallback={
-                    <p className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
+                    <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
                       Loading <Spinner />
-                    </p>
+                    </div>
                   }
                 >
                   <motion.div

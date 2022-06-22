@@ -46,7 +46,7 @@ export default function MetadataEditor({
     if (!loading) {
       const doc = startingDocument
         ? Node.fromJSON(schema, startingDocument)
-        : null;
+        : undefined;
       if (doc) {
         setOriginalDoc(doc);
       }
@@ -61,7 +61,8 @@ export default function MetadataEditor({
       // applyDevTools(view.current);
       // return () => view.current!.destroy();
     }
-  }, [loading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, setState]);
 
   return (
     <Modal

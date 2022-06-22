@@ -1,22 +1,18 @@
-import { useAuth0 } from "@auth0/auth0-react";
 import { Feature } from "geojson";
-import { Layer, MapDataEvent, MapMouseEvent, Popup } from "mapbox-gl";
+import { Layer, MapMouseEvent, Popup } from "mapbox-gl";
 import { useEffect, useMemo, useState } from "react";
 import { render } from "react-dom";
 import { Trans } from "react-i18next";
-import Badge from "../../components/Badge";
 import MapboxMap from "../../components/MapboxMap";
-import MapContextManager, {
+import {
   ClientDataLayer,
   ClientDataSource,
   MapContext,
 } from "../../dataLayers/MapContextManager";
 import {
-  DataSource,
   DataSourceTypes,
   FormElementDetailsFragment,
   RenderUnderType,
-  SurveyListDetailsFragment,
   useSurveyMapDetailsQuery,
   useSurveyResponsesQuery,
 } from "../../generated/graphql";
@@ -34,8 +30,6 @@ function getFilter(tab: ResponseGridTabName) {
     return ["all", ["==", "practice", false], ["==", "archived", false]];
   }
 }
-
-const initTime = new Date().getTime();
 
 export default function ResponsesMap({
   surveyId,
@@ -61,9 +55,8 @@ export default function ResponsesMap({
   const [spatialQuestions, setSpatialQuestions] = useState<
     FormElementDetailsFragment[]
   >([]);
-  const [selectedQuestion, setSelectedQuestion] = useState<string | undefined>(
-    undefined
-  );
+  const [selectedQuestion, setSelectedQuestion] =
+    useState<string | undefined>(undefined);
   const responsesQuery = useSurveyResponsesQuery({
     variables: {
       surveyId: surveyId,
@@ -84,11 +77,10 @@ export default function ResponsesMap({
       selectedQuestion &&
       responses?.length &&
       questionId &&
-      map.loaded
+      map.loaded()
     ) {
       // eslint-disable-next-line i18next/no-literal-string
       const sourceId = `${selectedQuestion}-source`;
-      const sourceLayer = "sketches";
 
       for (const response of responses) {
         const collection = response.data[questionId]?.collection || [];
@@ -118,7 +110,9 @@ export default function ResponsesMap({
     essentials.mapContext.manager?.map,
     essentials.mapContext.ready,
     selectedQuestion,
-    essentials.mapContext.manager?.map?.loaded,
+    essentials?.mapContext?.manager?.map?.loaded,
+    responsesQuery.data?.survey?.surveyResponsesConnection?.nodes,
+    spatialQuestions,
   ]);
 
   useEffect(() => {
@@ -135,7 +129,7 @@ export default function ResponsesMap({
         getFilter(filter)
       );
     }
-  }, [filter]);
+  }, [essentials.mapContext.manager?.map, filter, selectedQuestion]);
 
   const NameElement = useMemo(
     () =>
@@ -153,19 +147,19 @@ export default function ResponsesMap({
     [data?.survey?.form?.formElements]
   );
 
-  function getNameOrEmail(data: { [key: string]: any }) {
-    if (NameElement && EmailElement) {
-      return data[NameElement.id]?.name || data[EmailElement.id] || null;
-    } else if (NameElement) {
-      return data[NameElement.id]?.name || null;
-    } else if (EmailElement) {
-      return data[EmailElement.id] || null;
-    }
-    return null;
-  }
-
   useEffect(() => {
     if (essentials.mapContext.manager?.map && selectedQuestion) {
+      function getNameOrEmail(data: { [key: string]: any }) {
+        if (NameElement && EmailElement) {
+          return data[NameElement.id]?.name || data[EmailElement.id] || null;
+        } else if (NameElement) {
+          return data[NameElement.id]?.name || null;
+        } else if (EmailElement) {
+          return data[EmailElement.id] || null;
+        }
+        return null;
+      }
+
       const map = essentials.mapContext.manager.map;
       // Set a timeout in case the style hasn't been updated with the layer yet
       setTimeout(() => {
@@ -266,8 +260,12 @@ export default function ResponsesMap({
       }, 200);
     }
   }, [
+    EmailElement,
+    NameElement,
     essentials.mapContext.manager?.map,
     essentials.mapContext.ready,
+    onClickResponses,
+    responsesQuery.data?.survey?.surveyResponsesConnection?.nodes,
     selectedQuestion,
   ]);
 
@@ -362,7 +360,14 @@ export default function ResponsesMap({
     } else {
       essentials.mapContext.manager?.setVisibleLayers([]);
     }
-  }, [selectedQuestion, mapTileCacheBuster]);
+  }, [
+    selectedQuestion,
+    mapTileCacheBuster,
+    essentials.mapContext.manager,
+    spatialQuestions,
+    surveyId,
+    filter,
+  ]);
 
   return (
     <MapContext.Provider value={essentials.mapContext}>

@@ -1,5 +1,5 @@
-import React, { ReactElement, ReactNode, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import React, { ReactNode } from "react";
+import { motion } from "framer-motion";
 import Spinner from "./Spinner";
 
 interface ModalProps {
@@ -12,6 +12,7 @@ interface ModalProps {
   className?: string;
   zeroPadding?: boolean;
   loading?: boolean;
+  children?: ReactNode;
 }
 
 const Modal: React.FunctionComponent<ModalProps> = ({

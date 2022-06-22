@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useContext,
-} from "react";
+import { useState, useEffect, useCallback, useRef, useContext } from "react";
 import { useParams, Link } from "react-router-dom";
 import TextInput from "../components/TextInput";
 import {
@@ -163,6 +157,7 @@ function BasicSettingsForm(props: {
                     <a
                       className="underline"
                       target="_blank"
+                      rel="noreferrer"
                       href="mailto:support@seasketch.org"
                     >
                       support
@@ -213,17 +208,20 @@ function BasicSettingsForm(props: {
 
 function UploadLogoField(props: { slug: string; logoUrl?: string | null }) {
   const [mutate, mutationState] = useUpdateProjectSettingsMutation();
-  const { t, i18n } = useTranslation(["admin"]);
-  const onDrop = useCallback((acceptedFiles) => {
-    // Do something with the files
-    mutate({
-      variables: {
-        slug: props.slug,
-        logoUrl: acceptedFiles[0],
-      },
-    }).catch((e) => {});
-  }, []);
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+  const { t } = useTranslation(["admin"]);
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      // Do something with the files
+      mutate({
+        variables: {
+          slug: props.slug,
+          logoUrl: acceptedFiles[0],
+        },
+      }).catch((e) => {});
+    },
+    [mutate, props.slug]
+  );
+  const { getRootProps, isDragActive } = useDropzone({ onDrop });
 
   return (
     <>
@@ -237,7 +235,7 @@ function UploadLogoField(props: { slug: string; logoUrl?: string | null }) {
       >
         <span className="h-16 w-16 overflow-hidden text-gray-400 flex items-center">
           {props.logoUrl ? (
-            <img src={props.logoUrl} />
+            <img alt="project logo" src={props.logoUrl} />
           ) : (
             <svg
               className="h-16 w-16"
@@ -298,17 +296,15 @@ function UploadLogoField(props: { slug: string; logoUrl?: string | null }) {
 }
 
 function AccessControlSettings() {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t } = useTranslation(["admin"]);
   const { slug } = useParams<{ slug: string }>();
-  const { data, loading, error } = useProjectAccessControlSettingsQuery({
+  const { data, error } = useProjectAccessControlSettingsQuery({
     variables: {
       slug,
     },
   });
-  const [
-    mutate,
-    mutationState,
-  ] = useUpdateProjectAccessControlSettingsMutation();
+  const [mutate, mutationState] =
+    useUpdateProjectAccessControlSettingsMutation();
   const [accessControl, setAccessControl] = useState<string | null>(null);
   const [isListedOn, setIsListedOn] = useState<boolean | null>(null);
   const updateAccessControl = (type: string) => {
@@ -547,13 +543,13 @@ function AccessControlSettings() {
 }
 
 function MapExtentSettings() {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t } = useTranslation(["admin"]);
   const [map, setMap] = useState<Map | null>(null);
   const [draw, setDraw] = useState<any>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const { slug } = useParams<{ slug: string }>();
   const [drawing, setDrawing] = useState(true);
-  const { data, error, loading } = useProjectRegionQuery({
+  const { data } = useProjectRegionQuery({
     variables: {
       slug,
     },
@@ -624,7 +620,7 @@ function MapExtentSettings() {
         setDrawing(false);
       });
     }
-  }, [map, mapContainer.current]);
+  }, [map, mutate, slug]);
 
   useEffect(() => {
     if (data && map && draw && draw.getAll().features.length === 0) {
@@ -686,7 +682,7 @@ function MapExtentSettings() {
 }
 
 function SuperUserSettings() {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t } = useTranslation(["admin"]);
   const { slug } = useParams<{ slug: string }>();
   const [isFeatured, setIsFeatured] = useState<boolean | null>(null);
   const { data, loading, error } = useCurrentProjectMetadata();
@@ -765,10 +761,10 @@ function SuperUserSettings() {
 }
 
 function MapboxAPIKeys() {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t } = useTranslation(["admin"]);
   const onError = useGlobalErrorHandler();
   const { slug } = useParams<{ slug: string }>();
-  const { data, loading, error } = useMapboxApiKeysQuery({
+  const { data, loading } = useMapboxApiKeysQuery({
     variables: { slug },
     onError,
   });
@@ -831,6 +827,7 @@ function MapboxAPIKeys() {
   }, [
     data?.projectBySlug?.mapboxPublicKey,
     data?.projectBySlug?.mapboxSecretKey,
+    t,
   ]);
 
   if (loading) {
@@ -856,6 +853,7 @@ function MapboxAPIKeys() {
                     className="underline text-primary-500"
                     href="https://docs.mapbox.com/help/getting-started/access-tokens/"
                     target="_blank"
+                    rel="noreferrer"
                   >
                     public access token
                   </a>{" "}
@@ -866,6 +864,7 @@ function MapboxAPIKeys() {
                     className="underline text-primary-500"
                     target="_blank"
                     href="https://www.mapbox.com/pricing#maps"
+                    rel="noreferrer"
                   >
                     generous free tier
                   </a>

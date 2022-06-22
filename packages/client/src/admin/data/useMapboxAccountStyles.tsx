@@ -16,7 +16,7 @@ interface State {
 
 export default function useMapboxAccountStyles() {
   const { slug } = useParams<{ slug: string }>();
-  const { data, loading, error } = useMapboxKeysQuery({
+  const { data, loading } = useMapboxKeysQuery({
     variables: {
       slug,
     },
@@ -97,7 +97,11 @@ export default function useMapboxAccountStyles() {
         publicKey!
       );
     }
-  }, [data?.projectBySlug?.mapboxSecretKey]);
+  }, [
+    data?.projectBySlug?.mapboxPublicKey,
+    data?.projectBySlug?.mapboxSecretKey,
+    fetchData,
+  ]);
 
   return state;
 }

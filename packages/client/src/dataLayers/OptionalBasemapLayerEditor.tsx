@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import Button from "../components/Button";
 import OptionalBasemapLayerControl from "./OptionalBasemapLayerControl";
-import { useTranslation, Trans } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import {
-  OptionalBasemapLayer,
   useUpdateOptionalLayerMutation,
   useDeleteOptionalLayerMutation,
   OptionalBasemapLayersGroupType,
@@ -23,7 +22,7 @@ export default function OptionalBasemapLayerEditor({
 }) {
   const { t } = useTranslation(["admin"]);
   const [mutate, mutationState] = useUpdateOptionalLayerMutation();
-  const [del, deleteState] = useDeleteOptionalLayerMutation();
+  const [del] = useDeleteOptionalLayerMutation();
   const layerRequest = useGetOptionalBasemapLayerQuery({
     variables: {
       id: layerId,
@@ -31,18 +30,13 @@ export default function OptionalBasemapLayerEditor({
   });
   const layer = layerRequest.data?.optionalBasemapLayer;
   const [layersModalOpen, setLayersModalOpen] = useState(false);
-  const [
-    optionalLayerMetadataModalOpen,
-    setOptionalLayerMetadataModalOpen,
-  ] = useState<number | undefined>();
-  const [currentOptionName, setCurrentOptionName] = useState<string | null>(
-    null
-  );
+  const [optionalLayerMetadataModalOpen, setOptionalLayerMetadataModalOpen] =
+    useState<number | undefined>();
+  const [currentOptionName, setCurrentOptionName] =
+    useState<string | null>(null);
   const client = useApolloClient();
-  const [
-    updateOptionsMutation,
-    updateOptionsMutationState,
-  ] = useUpdateOptionalBasemapLayerOptionsMutation();
+  const [updateOptionsMutation] =
+    useUpdateOptionalBasemapLayerOptionsMutation();
 
   if (!layer || layerRequest.loading) {
     return <Spinner />;

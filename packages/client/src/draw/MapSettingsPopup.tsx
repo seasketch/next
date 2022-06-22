@@ -2,20 +2,15 @@ import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/outline";
 import bbox from "@turf/bbox";
 import { AnimatePresence, motion } from "framer-motion";
 import { BBox, Feature, FeatureCollection } from "geojson";
-import {
-  CameraOptions,
-  FreeCameraOptions,
-  LngLatBoundsLike,
-  Map,
-} from "mapbox-gl";
+import { CameraOptions, LngLatBoundsLike, Map } from "mapbox-gl";
 import React, {
   FunctionComponent,
   useState,
-  UIEventHandler,
   useCallback,
   useContext,
   useEffect,
   useRef,
+  ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
@@ -39,6 +34,7 @@ const MapSettingsPopup: FunctionComponent<{
   anchor?: HTMLElement;
   onRequestClose: () => void;
   position?: PopupPosition;
+  children?: ReactNode;
 }> = ({ anchor, onRequestClose, open, children, position }) => {
   const scrollable = useRef<HTMLDivElement | null>(null);
   const [scrollState, setScrollState] = useState({
@@ -47,7 +43,7 @@ const MapSettingsPopup: FunctionComponent<{
   });
 
   const handleScroll = useCallback(
-    (e) => {
+    (e: any) => {
       if (scrollable.current && global.ResizeObserver) {
         const scrollableScrollTop = scrollable.current.scrollTop;
         const contentHeight = scrollable.current.clientHeight;
@@ -58,11 +54,13 @@ const MapSettingsPopup: FunctionComponent<{
         setScrollState({ atBottom, nearTop });
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [scrollable.current]
   );
 
   useEffect(() => {
     handleScroll({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -75,6 +73,7 @@ const MapSettingsPopup: FunctionComponent<{
         observer.disconnect();
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleScroll, scrollable.current]);
 
   const anchorClientRect = anchor?.getBoundingClientRect() || {

@@ -13,6 +13,6 @@ module.exports = {
       "./packages/client/src/**/*.tsx",
       "./packages/client/src/queries/*.graphql",
     ],
-    excludes: ["./src/generated/*"],
+    excludes: ["**/generated/*"],
   },
 };

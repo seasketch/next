@@ -1,5 +1,5 @@
 // Adapted from https://vhudyma-blog.eu/detect-mobile-device-in-react/
-import { useMediaQuery } from "beautiful-react-hooks";
+import useMediaQuery from "beautiful-react-hooks/useMediaQuery";
 import { useState, useEffect } from "react";
 
 function detectMobileTouchDevice() {

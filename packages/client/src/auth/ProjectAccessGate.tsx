@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { ReactNode, useState } from "react";
 import Spinner from "../components/Spinner";
 import {
   ProjectAccessControlSetting,
@@ -17,14 +17,7 @@ import Button from "../components/Button";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AnimatePresence, motion } from "framer-motion";
 import TextInput from "../components/TextInput";
-import {
-  Formik,
-  FormikHelpers,
-  FormikProps,
-  Form,
-  Field,
-  FieldProps,
-} from "formik";
+import { Formik, Form, Field } from "formik";
 import { Persist } from "formik-persist";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import ProfileAvatarUploader from "../components/ProfileAvatarUploader";
@@ -38,23 +31,21 @@ interface ProfileFormValues {
   // picture: string;
 }
 
-export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
-  props
-) => {
+export const ProjectAccessGate: React.FunctionComponent<{
+  admin?: boolean;
+  children?: ReactNode | undefined;
+}> = (props) => {
   const auth0 = useAuth0();
   const onError = useGlobalErrorHandler();
   const { data, loading, error, refetch } = useCurrentProjectMetadata({
     onError,
   });
   const { t } = useTranslation();
-  const [
-    resendVerification,
-    resendVerificationState,
-  ] = useResendEmailVerificationMutation();
+  const [resendVerification, resendVerificationState] =
+    useResendEmailVerificationMutation();
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [madeRequest, setMadeRequest] = useState(false);
   // const [reverseTransition, setReverseTransition] = useState(false);
-  const initialFocusRef = useRef();
   let title = <></>;
   let buttons = <></>;
   let body = <></>;
@@ -71,7 +62,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
     </div>
   );
   const sentIcon = (
-    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 sm:mx-0 sm:h-10 sm:w-10 bg-green-600">
+    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10 bg-green-600">
       <CheckIcon className="h-6 w-6 text-gray-100" />
     </div>
   );
@@ -452,6 +443,7 @@ const DialogContainer: React.FunctionComponent<{
   enterFromRight: boolean;
   exitToLeft: boolean;
   skipAnimation?: boolean;
+  children?: ReactNode | undefined;
 }> = (props) => {
   return (
     <motion.div
@@ -504,10 +496,7 @@ export const ProfileForm = ({
   const [updateProfile, updateProfileState] = useUpdateProfileMutation({
     onError,
   });
-  const [
-    requestAccess,
-    requestAccessState,
-  ] = useRequestInviteOnlyProjectAccessMutation({
+  const [requestAccess] = useRequestInviteOnlyProjectAccessMutation({
     onError,
   });
 

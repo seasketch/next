@@ -1,5 +1,5 @@
 /* eslint-disable i18next/no-literal-string */
-import { useOnlineState } from "beautiful-react-hooks";
+import useOnlineState from "beautiful-react-hooks/useOnlineState";
 import { CacheSettingCards } from "../offline/ClientCacheSettingsCards";
 import useIsSuperuser from "../useIsSuperuser";
 

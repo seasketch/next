@@ -9,7 +9,7 @@ import {
   useUpdateSurveyDraftStatusMutation,
 } from "../../generated/graphql";
 import { useEffect, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 
 export default function SurveyDraftControl({ id }: { id: number }) {
   const { slug } = useParams<{ slug: string }>();
@@ -20,11 +20,10 @@ export default function SurveyDraftControl({ id }: { id: number }) {
       id,
     },
   });
-  const { t } = useTranslation("admin:surveys");
 
   const isDraft =
     data?.survey?.isDisabled !== undefined ? data?.survey?.isDisabled : true;
-  const [mutation, mutationState] = useUpdateSurveyDraftStatusMutation({
+  const [mutation] = useUpdateSurveyDraftStatusMutation({
     onError,
     optimisticResponse: (data) => {
       return {
@@ -80,7 +79,7 @@ export default function SurveyDraftControl({ id }: { id: number }) {
             <div className="flex flex-col w-full">
               <span
                 id="project-type-1-label"
-                className={`block text-sm w-full font-medium flex align-middle ${
+                className={`text-sm w-full font-medium flex align-middle ${
                   !isDraft ? "text-gray-500" : "text-gray-900"
                 }`}
               >
@@ -137,7 +136,7 @@ export default function SurveyDraftControl({ id }: { id: number }) {
             <div className="flex flex-col w-full">
               <span
                 id="project-type-1-label"
-                className={`block text-sm font-medium flex align-middle ${
+                className={`text-sm font-medium flex align-middle ${
                   isDraft ? "text-gray-500" : "text-gray-900"
                 }`}
               >
@@ -187,6 +186,7 @@ export default function SurveyDraftControl({ id }: { id: number }) {
         >
           <div className="m-2 flex flex-col justify-center align-middle">
             <img
+              alt="qr code"
               src={qr}
               onClick={() => downloadURI(qr, "seasketch-survey-qr-code")}
             />

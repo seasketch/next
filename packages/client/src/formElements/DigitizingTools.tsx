@@ -9,11 +9,7 @@ import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
 import { SketchGeometryType } from "../generated/graphql";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  CursorClickIcon,
-  DotsHorizontalIcon,
-  TrashIcon,
-} from "@heroicons/react/outline";
+import { CursorClickIcon, TrashIcon } from "@heroicons/react/outline";
 import useMobileDeviceDetector from "../surveys/useMobileDeviceDetector";
 import { DigitizingState } from "../draw/useMapboxGLDraw";
 import MapSettingsPopup from "../draw/MapSettingsPopup";
@@ -21,6 +17,7 @@ import BowtieInstructions from "../draw/BowtieInstructions";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 
 interface DigitizingInstructionsProps {
+  children?: ReactNode;
   geometryType: SketchGeometryType;
   state: DigitizingState;
   /** Request deletion of selected feature */
@@ -230,7 +227,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="flex-shrink-0 tall:p-2 space-x-2 items-center flex absolute z-10 bottom-0 w-full bg-gray-200 p-1 px-2 space-x-2 rtl:space-x-reverse justify-center">
+        <div className="flex-shrink-0 tall:p-2 items-center flex absolute z-10 bottom-0 w-full bg-gray-200 p-1 px-2 space-x-2 rtl:space-x-reverse justify-center">
           {buttons}
         </div>
       </>

@@ -1,14 +1,6 @@
-import { ApolloCache, gql, useApolloClient } from "@apollo/client";
-import { prepareDataForValidation } from "formik";
+import { ApolloCache, gql } from "@apollo/client";
 import { Map, Style } from "mapbox-gl";
-import React, {
-  CSSProperties,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button";
@@ -18,11 +10,9 @@ import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
 import {
   BasemapType,
-  CursorType,
   useCreateBasemapMutation,
   useUpdateInteractivitySettingsLayersMutation,
   useUpdateInteractivitySettingsMutation,
-  useMapboxKeysQuery,
   BasemapDetailsFragment,
   useUploadBasemapMutation,
 } from "../../generated/graphql";
@@ -151,7 +141,7 @@ export default function CreateBasemapModal({
         },
       });
     },
-    []
+    [projectId]
   );
 
   const [mutate, mutationState] = useCreateBasemapMutation({
@@ -172,8 +162,9 @@ export default function CreateBasemapModal({
     },
   });
   const inputRef = useRef<HTMLInputElement>(null);
+  const onError = useGlobalErrorHandler();
   const onDrop = useCallback(
-    async (acceptedFiles) => {
+    async (acceptedFiles: File[]) => {
       try {
         const style = JSON.parse(await acceptedFiles[0].text());
         // Do something with the files
@@ -182,22 +173,15 @@ export default function CreateBasemapModal({
         onError(e);
       }
     },
-    [upload]
+    [setState, onError]
   );
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+  const { getRootProps, isDragActive } = useDropzone({ onDrop });
 
-  const onError = useGlobalErrorHandler();
-  const [
-    updateInteractivity,
-    updateInteractivityState,
-  ] = useUpdateInteractivitySettingsMutation({
+  const [updateInteractivity] = useUpdateInteractivitySettingsMutation({
     onError,
   });
 
-  const [
-    updateLayers,
-    updateLayersState,
-  ] = useUpdateInteractivitySettingsLayersMutation({
+  const [updateLayers] = useUpdateInteractivitySettingsLayersMutation({
     onError,
   });
   const mapboxStyleInfo = useMapboxStyle(
@@ -211,7 +195,7 @@ export default function CreateBasemapModal({
         name: mapboxStyleInfo.data?.name || "",
       }));
     }
-  }, [mapboxStyleInfo]);
+  }, [mapboxStyleInfo, state.name]);
 
   const mapRef = useRef<Map>();
   const mapDivRef = useRef<HTMLDivElement>(null);
@@ -230,7 +214,7 @@ export default function CreateBasemapModal({
     return () => {
       mapRef.current?.remove();
     };
-  }, [state.mapPreview]);
+  }, [state.mapPreview, state.styleJson, state.url]);
 
   const fuse = useMemo(() => {
     return new Fuse(styles || [], {
@@ -248,7 +232,7 @@ export default function CreateBasemapModal({
     } else {
       return styles || [];
     }
-  }, [query, fuse]);
+  }, [query, fuse, styles]);
 
   const Row = ({
     style,
@@ -270,7 +254,7 @@ export default function CreateBasemapModal({
           }));
         }}
       >
-        <img className="w-12 h-12 rounded" src={image} />
+        <img alt="map preview" className="w-12 h-12 rounded" src={image} />
         <div className="flex-col justify-start text-left">
           <div className="space-x-2">
             <span className="max-w-sm truncate">{name!}</span>
@@ -456,6 +440,7 @@ export default function CreateBasemapModal({
                   className="underline"
                   href="https://docs.mapbox.com/mapbox-gl-js/style-spec/"
                   target="_blank"
+                  rel="noreferrer"
                 >
                   Mapbox Style documents
                 </a>{" "}
@@ -464,6 +449,7 @@ export default function CreateBasemapModal({
                   className="underline"
                   target="_blank"
                   href="https://maputnik.github.io/"
+                  rel="noreferrer"
                 >
                   open source tools
                 </a>

@@ -6,14 +6,13 @@ import EditableResponseCell, {
 import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import InputBlock from "../components/InputBlock";
 import NumberInput from "../components/NumberInput";
-import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
 } from "./FormElement";
-import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
+import { questionBodyFromMarkdown } from "./fromMarkdown";
 
 export type ShortTextProps = {
   minLength?: number;
@@ -218,7 +217,7 @@ export const TextCellEditor: CellEditorComponent<string | null | undefined> = ({
 
   useEffect(() => {
     onChange(val);
-  }, [val]);
+  }, [onChange, val]);
 
   return (
     <input

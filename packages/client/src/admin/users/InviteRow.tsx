@@ -1,9 +1,4 @@
-import Gravatar from "react-gravatar";
 import React from "react";
-import Badge from "../../components/Badge";
-import { Trans } from "react-i18next";
-import { BanIcon, ShieldCheckIcon } from "@heroicons/react/outline";
-import ProfilePhoto from "./ProfilePhoto";
 import { GroupList } from "./ParticipantRow";
 import InviteIcon from "./InviteIcon";
 import Fuse from "fuse.js";

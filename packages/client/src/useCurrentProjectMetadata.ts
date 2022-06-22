@@ -1,8 +1,4 @@
-import {
-  FetchPolicy,
-  QueryOptions,
-  WatchQueryFetchPolicy,
-} from "@apollo/client";
+import { FetchPolicy, WatchQueryFetchPolicy } from "@apollo/client";
 import { useParams } from "react-router-dom";
 import { useProjectMetadataQuery } from "./generated/graphql";
 

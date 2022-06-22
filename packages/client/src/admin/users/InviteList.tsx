@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AutoSizer } from "react-virtualized";
 import { FixedSizeList as List } from "react-window";
 import Skeleton from "../../components/Skeleton";
@@ -16,7 +10,7 @@ import {
   useSendInvitesMutation,
   EmailStatus,
 } from "../../generated/graphql";
-import { useHistory, useParams } from "react-router";
+import { useHistory } from "react-router";
 import InviteRow from "./InviteRow";
 import EditInviteModal from "./EditInviteModal";
 import { SearchIcon } from "@heroicons/react/outline";
@@ -39,7 +33,7 @@ function InviteList(props: Props) {
   const status = props.status;
   let invites = props.invites.filter((i) => status.indexOf(i.status!) !== -1);
 
-  const [sendInvites, sendInvitesState] = useSendInvitesMutation({
+  const [sendInvites] = useSendInvitesMutation({
     variables: {
       ids: invites.map((i) => i.id),
     },
@@ -72,9 +66,8 @@ function InviteList(props: Props) {
   });
   const [query, setQuery] = useState("");
   const searchIndex = useRef<Fuse<InviteDetailsFragment>>();
-  const [searchResults, setSearchResults] = useState<
-    Fuse.FuseResult<InviteDetailsFragment>[]
-  >();
+  const [searchResults, setSearchResults] =
+    useState<Fuse.FuseResult<InviteDetailsFragment>[]>();
 
   useEffect(() => {
     searchIndex.current = new Fuse(invites, {

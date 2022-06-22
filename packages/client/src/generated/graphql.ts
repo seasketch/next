@@ -1,10 +1,11 @@
 import { gql } from '@apollo/client';
 import * as Apollo from '@apollo/client';
 export type Maybe<T> = T | null;
+export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-const defaultOptions =  {}
+const defaultOptions = {} as const;
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: string;
@@ -88,25 +89,25 @@ export type Acl = Node & {
  * template to add ACL features to new types if needed.
  */
 export type AclGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `Acl`. Fields that are set will be updated. */
 export type AclPatch = {
   /** Control whether access control is PUBLIC, ADMINS_ONLY, or GROUP */
-  type?: Maybe<AccessControlListType>;
+  type?: InputMaybe<AccessControlListType>;
 };
 
 /** All input for the `addGroupToAcl` mutation. */
 export type AddGroupToAclInput = {
-  aclId?: Maybe<Scalars['Int']>;
+  aclId?: InputMaybe<Scalars['Int']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  groupId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `addGroupToAcl` mutation. */
@@ -134,9 +135,9 @@ export type AddUserToGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  groupId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `addUserToGroup` mutation. */
@@ -153,13 +154,13 @@ export type AddUserToGroupPayload = {
 
 /** All input for the `addValidChildSketchClass` mutation. */
 export type AddValidChildSketchClassInput = {
-  child?: Maybe<Scalars['Int']>;
+  child?: InputMaybe<Scalars['Int']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  parent?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  parent?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `addValidChildSketchClass` mutation. */
@@ -180,9 +181,9 @@ export type ApproveParticipantInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `approveParticipant` mutation. */
@@ -203,9 +204,9 @@ export type ArchiveResponsesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  makeArchived?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  ids?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
+  makeArchived?: InputMaybe<Scalars['Boolean']>;
 };
 
 /** The output of our `archiveResponses` mutation. */
@@ -288,37 +289,37 @@ export type Basemap = Node & {
 
 
 export type BasemapOptionalBasemapLayersArgs = {
-  condition?: Maybe<OptionalBasemapLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<OptionalBasemapLayersOrderBy>>;
+  condition?: InputMaybe<OptionalBasemapLayerCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<OptionalBasemapLayersOrderBy>>;
 };
 
 
 export type BasemapProjectsSharedBasemapsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectsSharedBasemapCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<ProjectsSharedBasemapCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 
 export type BasemapRelatedFormElementsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 /** A condition to be used against `Basemap` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type BasemapCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `interactivitySettingsId` field. */
-  interactivitySettingsId?: Maybe<Scalars['Int']>;
+  interactivitySettingsId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `Basemap` */
@@ -327,17 +328,17 @@ export type BasemapInput = {
    * Optional attribution to show at the bottom of the map. Will be overriden by
    * the attribution specified in the gl-style in the case of MAPBOX types.
    */
-  attribution?: Maybe<Scalars['String']>;
-  description?: Maybe<Scalars['String']>;
-  id?: Maybe<Scalars['Int']>;
+  attribution?: InputMaybe<Scalars['String']>;
+  description?: InputMaybe<Scalars['String']>;
+  id?: InputMaybe<Scalars['Int']>;
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
    * project which will only be used in surveys.
    */
-  isDisabled?: Maybe<Scalars['Boolean']>;
+  isDisabled?: InputMaybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
-  labelsLayerId?: Maybe<Scalars['String']>;
+  labelsLayerId?: InputMaybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
   name: Scalars['String'];
   /**
@@ -345,23 +346,23 @@ export type BasemapInput = {
    * added to any project. Otherwise it is private to the given proejct. Only
    * superusers can create Shared Basemaps.
    */
-  projectId?: Maybe<Scalars['Int']>;
-  surveysOnly?: Maybe<Scalars['Boolean']>;
-  terrainExaggeration?: Maybe<Scalars['BigFloat']>;
-  terrainMaxZoom?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  surveysOnly?: InputMaybe<Scalars['Boolean']>;
+  terrainExaggeration?: InputMaybe<Scalars['BigFloat']>;
+  terrainMaxZoom?: InputMaybe<Scalars['Int']>;
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
-  terrainOptional?: Maybe<Scalars['Boolean']>;
-  terrainTileSize?: Maybe<Scalars['Int']>;
+  terrainOptional?: InputMaybe<Scalars['Boolean']>;
+  terrainTileSize?: InputMaybe<Scalars['Int']>;
   /**
    * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
    * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
    */
-  terrainUrl?: Maybe<Scalars['String']>;
-  terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
+  terrainUrl?: InputMaybe<Scalars['String']>;
+  terrainVisibilityDefault?: InputMaybe<Scalars['Boolean']>;
   /** Square thumbnail will be used to identify the basemap */
-  thumbnail?: Maybe<Scalars['Upload']>;
+  thumbnail?: InputMaybe<Scalars['Upload']>;
   /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
-  tileSize?: Maybe<Scalars['Int']>;
+  tileSize?: InputMaybe<Scalars['Int']>;
   type: BasemapType;
   /**
    * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
@@ -377,49 +378,49 @@ export type BasemapPatch = {
    * Optional attribution to show at the bottom of the map. Will be overriden by
    * the attribution specified in the gl-style in the case of MAPBOX types.
    */
-  attribution?: Maybe<Scalars['String']>;
-  description?: Maybe<Scalars['String']>;
-  id?: Maybe<Scalars['Int']>;
-  interactivitySettingsId?: Maybe<Scalars['Int']>;
+  attribution?: InputMaybe<Scalars['String']>;
+  description?: InputMaybe<Scalars['String']>;
+  id?: InputMaybe<Scalars['Int']>;
+  interactivitySettingsId?: InputMaybe<Scalars['Int']>;
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
    * project which will only be used in surveys.
    */
-  isDisabled?: Maybe<Scalars['Boolean']>;
+  isDisabled?: InputMaybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
-  labelsLayerId?: Maybe<Scalars['String']>;
+  labelsLayerId?: InputMaybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
-  name?: Maybe<Scalars['String']>;
+  name?: InputMaybe<Scalars['String']>;
   /**
    * If not set, the basemap will be considered a "Shared Basemap" that can be
    * added to any project. Otherwise it is private to the given proejct. Only
    * superusers can create Shared Basemaps.
    */
-  projectId?: Maybe<Scalars['Int']>;
-  surveysOnly?: Maybe<Scalars['Boolean']>;
-  terrainExaggeration?: Maybe<Scalars['BigFloat']>;
-  terrainMaxZoom?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  surveysOnly?: InputMaybe<Scalars['Boolean']>;
+  terrainExaggeration?: InputMaybe<Scalars['BigFloat']>;
+  terrainMaxZoom?: InputMaybe<Scalars['Int']>;
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
-  terrainOptional?: Maybe<Scalars['Boolean']>;
-  terrainTileSize?: Maybe<Scalars['Int']>;
+  terrainOptional?: InputMaybe<Scalars['Boolean']>;
+  terrainTileSize?: InputMaybe<Scalars['Int']>;
   /**
    * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
    * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
    */
-  terrainUrl?: Maybe<Scalars['String']>;
-  terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
+  terrainUrl?: InputMaybe<Scalars['String']>;
+  terrainVisibilityDefault?: InputMaybe<Scalars['Boolean']>;
   /** Square thumbnail will be used to identify the basemap */
-  thumbnail?: Maybe<Scalars['Upload']>;
+  thumbnail?: InputMaybe<Scalars['Upload']>;
   /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
-  tileSize?: Maybe<Scalars['Int']>;
-  type?: Maybe<BasemapType>;
+  tileSize?: InputMaybe<Scalars['Int']>;
+  type?: InputMaybe<BasemapType>;
   /**
    * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
    * mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
    * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
    */
-  url?: Maybe<Scalars['String']>;
+  url?: InputMaybe<Scalars['String']>;
 };
 
 /** SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style. */
@@ -463,16 +464,14 @@ export enum BasemapsOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
-
-
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  formElementId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  formElementId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `clearFormElementStyle` mutation. */
@@ -493,7 +492,7 @@ export type ClearFormElementStylePayload = {
 
 /** The output of our `clearFormElementStyle` mutation. */
 export type ClearFormElementStylePayloadFormElementEdgeArgs = {
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormElementsOrderBy>>;
 };
 
 /**
@@ -516,14 +515,14 @@ export type CommunityGuideline = Node & {
 /** An input for mutations affecting `CommunityGuideline` */
 export type CommunityGuidelineInput = {
   /** JSON contents are expected to be used with a system like DraftJS on the client. */
-  content?: Maybe<Scalars['JSON']>;
+  content?: InputMaybe<Scalars['JSON']>;
   projectId: Scalars['Int'];
 };
 
 /** Represents an update to a `CommunityGuideline`. Fields that are set will be updated. */
 export type CommunityGuidelinePatch = {
   /** JSON contents are expected to be used with a system like DraftJS on the client. */
-  content?: Maybe<Scalars['JSON']>;
+  content?: InputMaybe<Scalars['JSON']>;
 };
 
 /** All input for the `confirmOnboarded` mutation. */
@@ -532,7 +531,7 @@ export type ConfirmOnboardedInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
 };
 
 /** The output of our `confirmOnboarded` mutation. */
@@ -553,7 +552,7 @@ export type ConfirmOnboardedPayload = {
 
 /** The output of our `confirmOnboarded` mutation. */
 export type ConfirmOnboardedPayloadUserEdgeArgs = {
-  orderBy?: Maybe<Array<UsersOrderBy>>;
+  orderBy?: InputMaybe<Array<UsersOrderBy>>;
 };
 
 /** All input for the `confirmProjectInviteWithSurveyToken` mutation. */
@@ -562,8 +561,8 @@ export type ConfirmProjectInviteWithSurveyTokenInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `confirmProjectInviteWithSurveyToken` mutation. */
@@ -585,8 +584,8 @@ export type ConfirmProjectInviteWithVerifiedEmailInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `confirmProjectInviteWithVerifiedEmail` mutation. */
@@ -608,9 +607,9 @@ export type CopyAppearanceInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  copyFromId?: Maybe<Scalars['Int']>;
-  formElementId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  copyFromId?: InputMaybe<Scalars['Int']>;
+  formElementId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `copyAppearance` mutation. */
@@ -631,7 +630,7 @@ export type CopyAppearancePayload = {
 
 /** The output of our `copyAppearance` mutation. */
 export type CopyAppearancePayloadFormElementEdgeArgs = {
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the create `Basemap` mutation. */
@@ -642,7 +641,7 @@ export type CreateBasemapInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
 };
 
 /** The output of our create `Basemap` mutation. */
@@ -668,7 +667,7 @@ export type CreateBasemapPayload = {
 
 /** The output of our create `Basemap` mutation. */
 export type CreateBasemapPayloadBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
 
 /** All input for the create `CommunityGuideline` mutation. */
@@ -677,7 +676,7 @@ export type CreateCommunityGuidelineInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `CommunityGuideline` to be created by this mutation. */
   communityGuideline: CommunityGuidelineInput;
 };
@@ -704,7 +703,7 @@ export type CreateDataLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `DataLayer` to be created by this mutation. */
   dataLayer: DataLayerInput;
 };
@@ -732,7 +731,7 @@ export type CreateDataLayerPayload = {
 
 /** The output of our create `DataLayer` mutation. */
 export type CreateDataLayerPayloadDataLayerEdgeArgs = {
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+  orderBy?: InputMaybe<Array<DataLayersOrderBy>>;
 };
 
 /** All input for the create `DataSource` mutation. */
@@ -741,7 +740,7 @@ export type CreateDataSourceInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `DataSource` to be created by this mutation. */
   dataSource: DataSourceInput;
 };
@@ -765,7 +764,7 @@ export type CreateDataSourcePayload = {
 
 /** The output of our create `DataSource` mutation. */
 export type CreateDataSourcePayloadDataSourceEdgeArgs = {
-  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
+  orderBy?: InputMaybe<Array<DataSourcesOrderBy>>;
 };
 
 /** All input for the create `FormElement` mutation. */
@@ -774,7 +773,7 @@ export type CreateFormElementInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `FormElement` to be created by this mutation. */
   formElement: FormElementInput;
 };
@@ -798,7 +797,7 @@ export type CreateFormElementPayload = {
 
 /** The output of our create `FormElement` mutation. */
 export type CreateFormElementPayloadFormElementEdgeArgs = {
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the create `FormLogicCondition` mutation. */
@@ -807,7 +806,7 @@ export type CreateFormLogicConditionInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `FormLogicCondition` to be created by this mutation. */
   formLogicCondition: FormLogicConditionInput;
 };
@@ -831,7 +830,7 @@ export type CreateFormLogicConditionPayload = {
 
 /** The output of our create `FormLogicCondition` mutation. */
 export type CreateFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicConditionsOrderBy>>;
 };
 
 /** All input for the create `FormLogicRule` mutation. */
@@ -840,7 +839,7 @@ export type CreateFormLogicRuleInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `FormLogicRule` to be created by this mutation. */
   formLogicRule: FormLogicRuleInput;
 };
@@ -864,7 +863,7 @@ export type CreateFormLogicRulePayload = {
 
 /** The output of our create `FormLogicRule` mutation. */
 export type CreateFormLogicRulePayloadFormLogicRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** All input for the `createFormTemplateFromSketchClass` mutation. */
@@ -873,10 +872,10 @@ export type CreateFormTemplateFromSketchClassInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  sketchClassId?: Maybe<Scalars['Int']>;
-  templateName?: Maybe<Scalars['String']>;
-  templateType?: Maybe<FormTemplateType>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  sketchClassId?: InputMaybe<Scalars['Int']>;
+  templateName?: InputMaybe<Scalars['String']>;
+  templateType?: InputMaybe<FormTemplateType>;
 };
 
 /** The output of our `createFormTemplateFromSketchClass` mutation. */
@@ -901,7 +900,7 @@ export type CreateFormTemplateFromSketchClassPayload = {
 
 /** The output of our `createFormTemplateFromSketchClass` mutation. */
 export type CreateFormTemplateFromSketchClassPayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormsOrderBy>>;
 };
 
 /** All input for the `createFormTemplateFromSurvey` mutation. */
@@ -910,10 +909,10 @@ export type CreateFormTemplateFromSurveyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  surveyId?: Maybe<Scalars['Int']>;
-  templateName?: Maybe<Scalars['String']>;
-  templateType?: Maybe<FormTemplateType>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  surveyId?: InputMaybe<Scalars['Int']>;
+  templateName?: InputMaybe<Scalars['String']>;
+  templateType?: InputMaybe<FormTemplateType>;
 };
 
 /** The output of our `createFormTemplateFromSurvey` mutation. */
@@ -938,7 +937,7 @@ export type CreateFormTemplateFromSurveyPayload = {
 
 /** The output of our `createFormTemplateFromSurvey` mutation. */
 export type CreateFormTemplateFromSurveyPayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormsOrderBy>>;
 };
 
 /** All input for the create `Forum` mutation. */
@@ -947,7 +946,7 @@ export type CreateForumInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `Forum` to be created by this mutation. */
   forum: ForumInput;
 };
@@ -973,7 +972,7 @@ export type CreateForumPayload = {
 
 /** The output of our create `Forum` mutation. */
 export type CreateForumPayloadForumEdgeArgs = {
-  orderBy?: Maybe<Array<ForumsOrderBy>>;
+  orderBy?: InputMaybe<Array<ForumsOrderBy>>;
 };
 
 /** All input for the create `Group` mutation. */
@@ -982,7 +981,7 @@ export type CreateGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `Group` to be created by this mutation. */
   group: GroupInput;
 };
@@ -1009,7 +1008,7 @@ export type CreateInteractivitySettingInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `InteractivitySetting` to be created by this mutation. */
   interactivitySetting: InteractivitySettingInput;
 };
@@ -1034,7 +1033,7 @@ export type CreateOptionalBasemapLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `OptionalBasemapLayer` to be created by this mutation. */
   optionalBasemapLayer: OptionalBasemapLayerInput;
 };
@@ -1061,9 +1060,9 @@ export type CreatePostInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  message?: Maybe<Scalars['JSON']>;
-  topicId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  message?: InputMaybe<Scalars['JSON']>;
+  topicId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `createPost` mutation. */
@@ -1086,7 +1085,7 @@ export type CreatePostPayload = {
 
 /** The output of our `createPost` mutation. */
 export type CreatePostPayloadPostEdgeArgs = {
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 /** All input for the `createProject` mutation. */
@@ -1095,7 +1094,7 @@ export type CreateProjectInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   name: Scalars['String'];
   slug: Scalars['String'];
 };
@@ -1106,7 +1105,7 @@ export type CreateProjectInviteGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `ProjectInviteGroup` to be created by this mutation. */
   projectInviteGroup: ProjectInviteGroupInput;
 };
@@ -1134,7 +1133,7 @@ export type CreateProjectInviteGroupPayload = {
 
 /** The output of our create `ProjectInviteGroup` mutation. */
 export type CreateProjectInviteGroupPayloadProjectInviteGroupEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 /** All input for the `createProjectInvites` mutation. */
@@ -1143,12 +1142,12 @@ export type CreateProjectInvitesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupNames?: Maybe<Array<Maybe<Scalars['String']>>>;
-  makeAdmin?: Maybe<Scalars['Boolean']>;
-  projectId?: Maybe<Scalars['Int']>;
-  projectInviteOptions?: Maybe<Array<Maybe<ProjectInviteOptionInput>>>;
-  sendEmailNow?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  groupNames?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
+  makeAdmin?: InputMaybe<Scalars['Boolean']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  projectInviteOptions?: InputMaybe<Array<InputMaybe<ProjectInviteOptionInput>>>;
+  sendEmailNow?: InputMaybe<Scalars['Boolean']>;
 };
 
 /** The output of our `createProjectInvites` mutation. */
@@ -1184,7 +1183,7 @@ export type CreateProjectPayload = {
 
 /** The output of our `createProject` mutation. */
 export type CreateProjectPayloadProjectEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the create `ProjectsSharedBasemap` mutation. */
@@ -1193,7 +1192,7 @@ export type CreateProjectsSharedBasemapInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `ProjectsSharedBasemap` to be created by this mutation. */
   projectsSharedBasemap: ProjectsSharedBasemapInput;
 };
@@ -1219,7 +1218,7 @@ export type CreateProjectsSharedBasemapPayload = {
 
 /** The output of our create `ProjectsSharedBasemap` mutation. */
 export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 /** All input for the create `SketchFolder` mutation. */
@@ -1228,7 +1227,7 @@ export type CreateSketchFolderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `SketchFolder` to be created by this mutation. */
   sketchFolder: SketchFolderInput;
 };
@@ -1252,7 +1251,7 @@ export type CreateSketchFolderPayload = {
 
 /** The output of our create `SketchFolder` mutation. */
 export type CreateSketchFolderPayloadSketchFolderEdgeArgs = {
-  orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchFoldersOrderBy>>;
 };
 
 /** All input for the create `Sketch` mutation. */
@@ -1261,7 +1260,7 @@ export type CreateSketchInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `Sketch` to be created by this mutation. */
   sketch: SketchInput;
 };
@@ -1296,7 +1295,7 @@ export type CreateSurveyInvitedGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `SurveyInvitedGroup` to be created by this mutation. */
   surveyInvitedGroup: SurveyInvitedGroupInput;
 };
@@ -1323,12 +1322,12 @@ export type CreateSurveyInvitesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupNames?: Maybe<Array<Maybe<Scalars['String']>>>;
-  includeProjectInvite?: Maybe<Scalars['Boolean']>;
-  makeAdmin?: Maybe<Scalars['Boolean']>;
-  surveyId?: Maybe<Scalars['Int']>;
-  surveyInviteOptions?: Maybe<Array<Maybe<SurveyInviteOptionsInput>>>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  groupNames?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
+  includeProjectInvite?: InputMaybe<Scalars['Boolean']>;
+  makeAdmin?: InputMaybe<Scalars['Boolean']>;
+  surveyId?: InputMaybe<Scalars['Int']>;
+  surveyInviteOptions?: InputMaybe<Array<InputMaybe<SurveyInviteOptionsInput>>>;
 };
 
 /** The output of our `createSurveyInvites` mutation. */
@@ -1346,15 +1345,15 @@ export type CreateSurveyInvitesPayload = {
 
 /** All input for the `createSurveyJumpRule` mutation. */
 export type CreateSurveyJumpRuleInput = {
-  booleanOperator?: Maybe<FormLogicOperator>;
+  booleanOperator?: InputMaybe<FormLogicOperator>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  formElementId?: Maybe<Scalars['Int']>;
-  jumpToId?: Maybe<Scalars['Int']>;
-  operator?: Maybe<FieldRuleOperator>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  formElementId?: InputMaybe<Scalars['Int']>;
+  jumpToId?: InputMaybe<Scalars['Int']>;
+  operator?: InputMaybe<FieldRuleOperator>;
 };
 
 /** The output of our `createSurveyJumpRule` mutation. */
@@ -1375,22 +1374,22 @@ export type CreateSurveyJumpRulePayload = {
 
 /** The output of our `createSurveyJumpRule` mutation. */
 export type CreateSurveyJumpRulePayloadFormLogicRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** All input for the `createSurveyResponse` mutation. */
 export type CreateSurveyResponseInput = {
-  bypassedSubmissionControl?: Maybe<Scalars['Boolean']>;
+  bypassedSubmissionControl?: InputMaybe<Scalars['Boolean']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  draft?: Maybe<Scalars['Boolean']>;
-  facilitated?: Maybe<Scalars['Boolean']>;
-  practice?: Maybe<Scalars['Boolean']>;
-  responseData?: Maybe<Scalars['JSON']>;
-  surveyId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  draft?: InputMaybe<Scalars['Boolean']>;
+  facilitated?: InputMaybe<Scalars['Boolean']>;
+  practice?: InputMaybe<Scalars['Boolean']>;
+  responseData?: InputMaybe<Scalars['JSON']>;
+  surveyId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `createSurveyResponse` mutation. */
@@ -1413,7 +1412,7 @@ export type CreateSurveyResponsePayload = {
 
 /** The output of our `createSurveyResponse` mutation. */
 export type CreateSurveyResponsePayloadSurveyResponseEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 /** All input for the create `TableOfContentsItem` mutation. */
@@ -1422,7 +1421,7 @@ export type CreateTableOfContentsItemInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The `TableOfContentsItem` to be created by this mutation. */
   tableOfContentsItem: TableOfContentsItemInput;
 };
@@ -1448,7 +1447,7 @@ export type CreateTableOfContentsItemPayload = {
 
 /** The output of our create `TableOfContentsItem` mutation. */
 export type CreateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
-  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+  orderBy?: InputMaybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
 /** All input for the `createTopic` mutation. */
@@ -1457,10 +1456,10 @@ export type CreateTopicInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  forumId?: Maybe<Scalars['Int']>;
-  message?: Maybe<Scalars['JSON']>;
-  title?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  forumId?: InputMaybe<Scalars['Int']>;
+  message?: InputMaybe<Scalars['JSON']>;
+  title?: InputMaybe<Scalars['String']>;
 };
 
 /** The output of our `createTopic` mutation. */
@@ -1483,9 +1482,8 @@ export type CreateTopicPayload = {
 
 /** The output of our `createTopic` mutation. */
 export type CreateTopicPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
-
 
 export enum CursorType {
   Auto = 'AUTO',
@@ -1555,8 +1553,8 @@ export type DataLayer = Node & {
  * associated with a basemap.
  */
 export type DataLayerSpritesArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -1569,13 +1567,13 @@ export type DataLayerSpritesArgs = {
  * associated with a basemap.
  */
 export type DataLayerTableOfContentsItemsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<TableOfContentsItemCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<TableOfContentsItemCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
 /**
@@ -1584,68 +1582,68 @@ export type DataLayerTableOfContentsItemsConnectionArgs = {
  */
 export type DataLayerCondition = {
   /** Checks for equality with the object’s `dataSourceId` field. */
-  dataSourceId?: Maybe<Scalars['Int']>;
+  dataSourceId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `interactivitySettingsId` field. */
-  interactivitySettingsId?: Maybe<Scalars['Int']>;
+  interactivitySettingsId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `DataLayer` */
 export type DataLayerInput = {
   dataSourceId: Scalars['Int'];
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /**
    * JSON array of MapBox GL Style layers. Layers should not specify an id or
    * sourceId. These will be automatically generated at runtime.
    */
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  mapboxGlStyles?: InputMaybe<Scalars['JSON']>;
   projectId: Scalars['Int'];
   /**
    * Determines z-ordering of layer in relation to layers in the basemap. For this
    * functionality to work, layers must be identified in the basemap configuration.
    */
-  renderUnder?: Maybe<RenderUnderType>;
+  renderUnder?: InputMaybe<RenderUnderType>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
-  sourceLayer?: Maybe<Scalars['String']>;
-  spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  sourceLayer?: InputMaybe<Scalars['String']>;
+  spriteIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
    * making image requests.
    */
-  sublayer?: Maybe<Scalars['String']>;
-  zIndex?: Maybe<Scalars['Int']>;
+  sublayer?: InputMaybe<Scalars['String']>;
+  zIndex?: InputMaybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `DataLayer`. Fields that are set will be updated. */
 export type DataLayerPatch = {
-  dataSourceId?: Maybe<Scalars['Int']>;
-  id?: Maybe<Scalars['Int']>;
-  interactivitySettingsId?: Maybe<Scalars['Int']>;
+  dataSourceId?: InputMaybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
+  interactivitySettingsId?: InputMaybe<Scalars['Int']>;
   /**
    * JSON array of MapBox GL Style layers. Layers should not specify an id or
    * sourceId. These will be automatically generated at runtime.
    */
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
-  projectId?: Maybe<Scalars['Int']>;
+  mapboxGlStyles?: InputMaybe<Scalars['JSON']>;
+  projectId?: InputMaybe<Scalars['Int']>;
   /**
    * Determines z-ordering of layer in relation to layers in the basemap. For this
    * functionality to work, layers must be identified in the basemap configuration.
    */
-  renderUnder?: Maybe<RenderUnderType>;
+  renderUnder?: InputMaybe<RenderUnderType>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
-  sourceLayer?: Maybe<Scalars['String']>;
-  spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  sourceLayer?: InputMaybe<Scalars['String']>;
+  spriteIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
    * making image requests.
    */
-  sublayer?: Maybe<Scalars['String']>;
-  zIndex?: Maybe<Scalars['Int']>;
+  sublayer?: InputMaybe<Scalars['String']>;
+  zIndex?: InputMaybe<Scalars['Int']>;
 };
 
 /** A connection to a list of `DataLayer` values. */
@@ -1809,10 +1807,10 @@ export type DataSource = Node & {
   scheme?: Maybe<TileScheme>;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
   supportsDynamicLayers: Scalars['Boolean'];
-  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
-  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
   tileSize?: Maybe<Scalars['Int']>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
   tolerance?: Maybe<Scalars['BigFloat']>;
   /** MapBox GL source type or custom seasketch type. */
@@ -1838,13 +1836,13 @@ export type DataSource = Node & {
  * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
  */
 export type DataSourceDataLayersConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<DataLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<DataLayerCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<DataLayersOrderBy>>;
 };
 
 export enum DataSourceImportTypes {
@@ -1857,7 +1855,7 @@ export enum DataSourceImportTypes {
 /** An input for mutations affecting `DataSource` */
 export type DataSourceInput = {
   /** Contains an attribution to be displayed when the map is shown to a user. */
-  attribution?: Maybe<Scalars['String']>;
+  attribution?: InputMaybe<Scalars['String']>;
   /**
    * An array containing the longitude and latitude of the southwest and northeast
    * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
@@ -1865,17 +1863,17 @@ export type DataSourceInput = {
    * of the given bounds are requested by Mapbox GL. This property can also be used
    * as metadata for non-tiled sources.
    */
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars['BigFloat']>>>;
   /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
-  bucketId?: Maybe<Scalars['String']>;
+  bucketId?: InputMaybe<Scalars['String']>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
    * values produce fewer rendering artifacts near tile edges and slower performance.
    */
-  buffer?: Maybe<Scalars['Int']>;
+  buffer?: InputMaybe<Scalars['Int']>;
   /** SEASKETCH_VECTOR sources only. Approximate size of the geojson source */
-  byteLength?: Maybe<Scalars['Int']>;
+  byteLength?: InputMaybe<Scalars['Int']>;
   /**
    * GeoJSON only.
    *
@@ -1889,88 +1887,88 @@ export type DataSourceInput = {
    *   * point_count Number of original points grouped into this cluster
    *   * point_count_abbreviated An abbreviated point count
    */
-  cluster?: Maybe<Scalars['Boolean']>;
+  cluster?: InputMaybe<Scalars['Boolean']>;
   /**
    * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
    * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
    */
-  clusterMaxZoom?: Maybe<Scalars['Int']>;
+  clusterMaxZoom?: InputMaybe<Scalars['Int']>;
   /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
-  clusterProperties?: Maybe<Scalars['JSON']>;
+  clusterProperties?: InputMaybe<Scalars['JSON']>;
   /**
    * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
    * indicates a radius equal to the width of a tile.
    */
-  clusterRadius?: Maybe<Scalars['Int']>;
+  clusterRadius?: InputMaybe<Scalars['Int']>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
-  coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
-  createdAt?: Maybe<Scalars['Datetime']>;
+  coordinates?: InputMaybe<Array<InputMaybe<Scalars['BigFloat']>>>;
+  createdAt?: InputMaybe<Scalars['Datetime']>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
-  encoding?: Maybe<RasterDemEncoding>;
+  encoding?: InputMaybe<RasterDemEncoding>;
   /**
    * SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a
    * different class of storage that requires a temporary security credential to
    * access. Set during creation and cannot be changed.
    */
-  enhancedSecurity?: Maybe<Scalars['Boolean']>;
+  enhancedSecurity?: InputMaybe<Scalars['Boolean']>;
   /**
    * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
    * the feature.id property will be auto assigned based on its index in the
    * features array, over-writing any previous values.
    */
-  generateId?: Maybe<Scalars['Boolean']>;
+  generateId?: InputMaybe<Scalars['Boolean']>;
   /** Should be used as sourceId in stylesheets. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /**
    * For SeaSketchVector sources, identifies whether the original source comes from
    * a direct upload or a service location like ArcGIS server
    */
-  importType?: Maybe<DataSourceImportTypes>;
+  importType?: InputMaybe<DataSourceImportTypes>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
    */
-  lineMetrics?: Maybe<Scalars['Boolean']>;
+  lineMetrics?: InputMaybe<Scalars['Boolean']>;
   /**
    * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
    * which tiles are available, as in the TileJSON spec. Data from tiles at the
    * maxzoom are used when displaying the map at higher zoom levels.
    */
-  maxzoom?: Maybe<Scalars['Int']>;
+  maxzoom?: InputMaybe<Scalars['Int']>;
   /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
-  minzoom?: Maybe<Scalars['Int']>;
+  minzoom?: InputMaybe<Scalars['Int']>;
   /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
-  objectKey?: Maybe<Scalars['UUID']>;
+  objectKey?: InputMaybe<Scalars['UUID']>;
   /**
    * For SeaSketchVector sources, identifies location of original service that
    * hosted the data, if any. This can be used to update a layer with an updated
    * copy of the data source if necessary.
    */
-  originalSourceUrl?: Maybe<Scalars['String']>;
+  originalSourceUrl?: InputMaybe<Scalars['String']>;
   projectId: Scalars['Int'];
   /**
    * GeoJSON only. A property to use as a feature id (for feature state). Either a
    * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
    */
-  promoteId?: Maybe<Scalars['Boolean']>;
+  promoteId?: InputMaybe<Scalars['Boolean']>;
   /**
    * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
    * querystring parameters that will be added to requests.
    */
-  queryParameters?: Maybe<Scalars['JSON']>;
+  queryParameters?: InputMaybe<Scalars['JSON']>;
   /**
    * For MapBox Vector and Raster sources. Influences the y direction of the tile
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
    */
-  scheme?: Maybe<TileScheme>;
+  scheme?: InputMaybe<TileScheme>;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
-  supportsDynamicLayers?: Maybe<Scalars['Boolean']>;
-  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
-  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
+  supportsDynamicLayers?: InputMaybe<Scalars['Boolean']>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
-  tileSize?: Maybe<Scalars['Int']>;
+  tileSize?: InputMaybe<Scalars['Int']>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
-  tolerance?: Maybe<Scalars['BigFloat']>;
+  tolerance?: InputMaybe<Scalars['BigFloat']>;
   /** MapBox GL source type or custom seasketch type. */
   type: DataSourceTypes;
   /**
@@ -1978,23 +1976,23 @@ export type DataSourceInput = {
    * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
    * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
    */
-  url?: Maybe<Scalars['String']>;
+  url?: InputMaybe<Scalars['String']>;
   /** Video sources only. URLs to video content in order of preferred format. */
-  urls?: Maybe<Array<Maybe<Scalars['String']>>>;
+  urls?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
-  useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+  useDevicePixelRatio?: InputMaybe<Scalars['Boolean']>;
 };
 
 /** Represents an update to a `DataSource`. Fields that are set will be updated. */
 export type DataSourcePatch = {
   /** Contains an attribution to be displayed when the map is shown to a user. */
-  attribution?: Maybe<Scalars['String']>;
+  attribution?: InputMaybe<Scalars['String']>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
    * values produce fewer rendering artifacts near tile edges and slower performance.
    */
-  buffer?: Maybe<Scalars['Int']>;
+  buffer?: InputMaybe<Scalars['Int']>;
   /**
    * GeoJSON only.
    *
@@ -2008,75 +2006,75 @@ export type DataSourcePatch = {
    *   * point_count Number of original points grouped into this cluster
    *   * point_count_abbreviated An abbreviated point count
    */
-  cluster?: Maybe<Scalars['Boolean']>;
+  cluster?: InputMaybe<Scalars['Boolean']>;
   /**
    * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
    * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
    */
-  clusterMaxZoom?: Maybe<Scalars['Int']>;
+  clusterMaxZoom?: InputMaybe<Scalars['Int']>;
   /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
-  clusterProperties?: Maybe<Scalars['JSON']>;
+  clusterProperties?: InputMaybe<Scalars['JSON']>;
   /**
    * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
    * indicates a radius equal to the width of a tile.
    */
-  clusterRadius?: Maybe<Scalars['Int']>;
+  clusterRadius?: InputMaybe<Scalars['Int']>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
-  coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  coordinates?: InputMaybe<Array<InputMaybe<Scalars['BigFloat']>>>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
-  encoding?: Maybe<RasterDemEncoding>;
+  encoding?: InputMaybe<RasterDemEncoding>;
   /**
    * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
    * the feature.id property will be auto assigned based on its index in the
    * features array, over-writing any previous values.
    */
-  generateId?: Maybe<Scalars['Boolean']>;
+  generateId?: InputMaybe<Scalars['Boolean']>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
    */
-  lineMetrics?: Maybe<Scalars['Boolean']>;
+  lineMetrics?: InputMaybe<Scalars['Boolean']>;
   /**
    * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
    * which tiles are available, as in the TileJSON spec. Data from tiles at the
    * maxzoom are used when displaying the map at higher zoom levels.
    */
-  maxzoom?: Maybe<Scalars['Int']>;
+  maxzoom?: InputMaybe<Scalars['Int']>;
   /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
-  minzoom?: Maybe<Scalars['Int']>;
+  minzoom?: InputMaybe<Scalars['Int']>;
   /**
    * GeoJSON only. A property to use as a feature id (for feature state). Either a
    * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
    */
-  promoteId?: Maybe<Scalars['Boolean']>;
+  promoteId?: InputMaybe<Scalars['Boolean']>;
   /**
    * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
    * querystring parameters that will be added to requests.
    */
-  queryParameters?: Maybe<Scalars['JSON']>;
+  queryParameters?: InputMaybe<Scalars['JSON']>;
   /**
    * For MapBox Vector and Raster sources. Influences the y direction of the tile
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
    */
-  scheme?: Maybe<TileScheme>;
+  scheme?: InputMaybe<TileScheme>;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
-  supportsDynamicLayers?: Maybe<Scalars['Boolean']>;
-  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
-  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
+  supportsDynamicLayers?: InputMaybe<Scalars['Boolean']>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
-  tileSize?: Maybe<Scalars['Int']>;
+  tileSize?: InputMaybe<Scalars['Int']>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
-  tolerance?: Maybe<Scalars['BigFloat']>;
+  tolerance?: InputMaybe<Scalars['BigFloat']>;
   /**
    * A URL to a TileJSON resource for tiled sources. For GeoJSON or
    * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
    * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
    */
-  url?: Maybe<Scalars['String']>;
+  url?: InputMaybe<Scalars['String']>;
   /** Video sources only. URLs to video content in order of preferred format. */
-  urls?: Maybe<Array<Maybe<Scalars['String']>>>;
+  urls?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
-  useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+  useDevicePixelRatio?: InputMaybe<Scalars['Boolean']>;
 };
 
 export enum DataSourceTypes {
@@ -2118,13 +2116,13 @@ export type DataSourcesBucket = Node & {
 
 
 export type DataSourcesBucketProjectsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<ProjectCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 /**
@@ -2133,7 +2131,7 @@ export type DataSourcesBucketProjectsConnectionArgs = {
  */
 export type DataSourcesBucketCondition = {
   /** Checks for equality with the object’s `url` field. */
-  url?: Maybe<Scalars['String']>;
+  url?: InputMaybe<Scalars['String']>;
 };
 
 /** A connection to a list of `DataSourcesBucket` values. */
@@ -2187,14 +2185,13 @@ export enum DataSourcesOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
-
 /** All input for the `deleteBasemapByNodeId` mutation. */
 export type DeleteBasemapByNodeIdInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Basemap` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2205,7 +2202,7 @@ export type DeleteBasemapInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2233,7 +2230,7 @@ export type DeleteBasemapPayload = {
 
 /** The output of our delete `Basemap` mutation. */
 export type DeleteBasemapPayloadBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
 
 /** All input for the `deleteCommunityGuidelineByNodeId` mutation. */
@@ -2242,7 +2239,7 @@ export type DeleteCommunityGuidelineByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `CommunityGuideline` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2253,7 +2250,7 @@ export type DeleteCommunityGuidelineInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   projectId: Scalars['Int'];
 };
 
@@ -2280,7 +2277,7 @@ export type DeleteDataLayerByInteractivitySettingsIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   interactivitySettingsId: Scalars['Int'];
 };
 
@@ -2290,7 +2287,7 @@ export type DeleteDataLayerByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `DataLayer` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2301,7 +2298,7 @@ export type DeleteDataLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2329,7 +2326,7 @@ export type DeleteDataLayerPayload = {
 
 /** The output of our delete `DataLayer` mutation. */
 export type DeleteDataLayerPayloadDataLayerEdgeArgs = {
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+  orderBy?: InputMaybe<Array<DataLayersOrderBy>>;
 };
 
 /** All input for the `deleteDataSourceByNodeId` mutation. */
@@ -2338,7 +2335,7 @@ export type DeleteDataSourceByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `DataSource` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2349,7 +2346,7 @@ export type DeleteDataSourceInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** Should be used as sourceId in stylesheets. */
   id: Scalars['Int'];
 };
@@ -2374,7 +2371,7 @@ export type DeleteDataSourcePayload = {
 
 /** The output of our delete `DataSource` mutation. */
 export type DeleteDataSourcePayloadDataSourceEdgeArgs = {
-  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
+  orderBy?: InputMaybe<Array<DataSourcesOrderBy>>;
 };
 
 /** All input for the `deleteFormByNodeId` mutation. */
@@ -2383,7 +2380,7 @@ export type DeleteFormByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Form` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2394,7 +2391,7 @@ export type DeleteFormBySketchClassIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** Related *SketchClass* */
   sketchClassId: Scalars['Int'];
 };
@@ -2405,7 +2402,7 @@ export type DeleteFormBySurveyIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** Related *Survey* */
   surveyId: Scalars['Int'];
 };
@@ -2416,7 +2413,7 @@ export type DeleteFormElementByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `FormElement` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2427,7 +2424,7 @@ export type DeleteFormElementInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2451,7 +2448,7 @@ export type DeleteFormElementPayload = {
 
 /** The output of our delete `FormElement` mutation. */
 export type DeleteFormElementPayloadFormElementEdgeArgs = {
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the `deleteForm` mutation. */
@@ -2460,7 +2457,7 @@ export type DeleteFormInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2470,7 +2467,7 @@ export type DeleteFormLogicConditionByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `FormLogicCondition` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2481,7 +2478,7 @@ export type DeleteFormLogicConditionInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2505,7 +2502,7 @@ export type DeleteFormLogicConditionPayload = {
 
 /** The output of our delete `FormLogicCondition` mutation. */
 export type DeleteFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicConditionsOrderBy>>;
 };
 
 /** All input for the `deleteFormLogicRuleByNodeId` mutation. */
@@ -2514,7 +2511,7 @@ export type DeleteFormLogicRuleByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `FormLogicRule` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2525,7 +2522,7 @@ export type DeleteFormLogicRuleInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2549,7 +2546,7 @@ export type DeleteFormLogicRulePayload = {
 
 /** The output of our delete `FormLogicRule` mutation. */
 export type DeleteFormLogicRulePayloadFormLogicRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** The output of our delete `Form` mutation. */
@@ -2576,7 +2573,7 @@ export type DeleteFormPayload = {
 
 /** The output of our delete `Form` mutation. */
 export type DeleteFormPayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormsOrderBy>>;
 };
 
 /** All input for the `deleteForumByNodeId` mutation. */
@@ -2585,7 +2582,7 @@ export type DeleteForumByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Forum` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2596,7 +2593,7 @@ export type DeleteForumInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2622,7 +2619,7 @@ export type DeleteForumPayload = {
 
 /** The output of our delete `Forum` mutation. */
 export type DeleteForumPayloadForumEdgeArgs = {
-  orderBy?: Maybe<Array<ForumsOrderBy>>;
+  orderBy?: InputMaybe<Array<ForumsOrderBy>>;
 };
 
 /** All input for the `deleteGroupByNodeId` mutation. */
@@ -2631,7 +2628,7 @@ export type DeleteGroupByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Group` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2642,7 +2639,7 @@ export type DeleteGroupByProjectIdAndNameInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** Label for the group. */
   name: Scalars['String'];
   projectId: Scalars['Int'];
@@ -2654,7 +2651,7 @@ export type DeleteGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2681,7 +2678,7 @@ export type DeleteOptionalBasemapLayerByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `OptionalBasemapLayer` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2692,7 +2689,7 @@ export type DeleteOptionalBasemapLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2719,7 +2716,7 @@ export type DeletePostByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Post` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2730,7 +2727,7 @@ export type DeletePostInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2756,7 +2753,7 @@ export type DeletePostPayload = {
 
 /** The output of our delete `Post` mutation. */
 export type DeletePostPayloadPostEdgeArgs = {
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 /** All input for the `deleteProject` mutation. */
@@ -2765,7 +2762,7 @@ export type DeleteProjectInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   projectId: Scalars['Int'];
 };
 
@@ -2775,7 +2772,7 @@ export type DeleteProjectInviteByEmailAndProjectIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** Specified by admin when invite was created. */
   email: Scalars['Email'];
   projectId: Scalars['Int'];
@@ -2787,7 +2784,7 @@ export type DeleteProjectInviteByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `ProjectInvite` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2798,7 +2795,7 @@ export type DeleteProjectInviteGroupByInviteIdAndGroupIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   groupId: Scalars['Int'];
   inviteId: Scalars['Int'];
 };
@@ -2827,7 +2824,7 @@ export type DeleteProjectInviteGroupPayload = {
 
 /** The output of our delete `ProjectInviteGroup` mutation. */
 export type DeleteProjectInviteGroupPayloadProjectInviteGroupEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 /** All input for the `deleteProjectInvite` mutation. */
@@ -2836,7 +2833,7 @@ export type DeleteProjectInviteInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2875,7 +2872,7 @@ export type DeleteProjectPayload = {
 
 /** The output of our `deleteProject` mutation. */
 export type DeleteProjectPayloadProjectEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the `deleteProjectsSharedBasemapByBasemapIdAndProjectId` mutation. */
@@ -2885,7 +2882,7 @@ export type DeleteProjectsSharedBasemapByBasemapIdAndProjectIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   projectId: Scalars['Int'];
 };
 
@@ -2911,7 +2908,7 @@ export type DeleteProjectsSharedBasemapPayload = {
 
 /** The output of our delete `ProjectsSharedBasemap` mutation. */
 export type DeleteProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 /** All input for the `deleteSketchByNodeId` mutation. */
@@ -2920,7 +2917,7 @@ export type DeleteSketchByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Sketch` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2931,7 +2928,7 @@ export type DeleteSketchClassByFormElementIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** If set, this sketch class is only for use in a survey indicated by the form_element. */
   formElementId: Scalars['Int'];
 };
@@ -2942,7 +2939,7 @@ export type DeleteSketchClassByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `SketchClass` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -2953,7 +2950,7 @@ export type DeleteSketchClassInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -2981,7 +2978,7 @@ export type DeleteSketchClassPayload = {
 
 /** The output of our delete `SketchClass` mutation. */
 export type DeleteSketchClassPayloadSketchClassEdgeArgs = {
-  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchClassesOrderBy>>;
 };
 
 /** All input for the `deleteSketchFolderByNodeId` mutation. */
@@ -2990,7 +2987,7 @@ export type DeleteSketchFolderByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `SketchFolder` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -3001,7 +2998,7 @@ export type DeleteSketchFolderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -3025,7 +3022,7 @@ export type DeleteSketchFolderPayload = {
 
 /** The output of our delete `SketchFolder` mutation. */
 export type DeleteSketchFolderPayloadSketchFolderEdgeArgs = {
-  orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchFoldersOrderBy>>;
 };
 
 /** All input for the `deleteSketch` mutation. */
@@ -3034,7 +3031,7 @@ export type DeleteSketchInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -3069,7 +3066,7 @@ export type DeleteSurveyByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Survey` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -3080,7 +3077,7 @@ export type DeleteSurveyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -3090,7 +3087,7 @@ export type DeleteSurveyInviteByEmailAndSurveyIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   email: Scalars['Email'];
   surveyId: Scalars['Int'];
 };
@@ -3101,7 +3098,7 @@ export type DeleteSurveyInviteByEmailInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   email: Scalars['Email'];
 };
 
@@ -3111,7 +3108,7 @@ export type DeleteSurveyInviteByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `SurveyInvite` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -3122,7 +3119,7 @@ export type DeleteSurveyInviteInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -3148,7 +3145,7 @@ export type DeleteSurveyInvitePayload = {
 
 /** The output of our delete `SurveyInvite` mutation. */
 export type DeleteSurveyInvitePayloadSurveyInviteEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyInvitesOrderBy>>;
 };
 
 /** All input for the `deleteSurveyInvitedGroupBySurveyIdAndGroupId` mutation. */
@@ -3157,7 +3154,7 @@ export type DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   groupId: Scalars['Int'];
   surveyId: Scalars['Int'];
 };
@@ -3202,7 +3199,7 @@ export type DeleteSurveyResponseByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `SurveyResponse` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -3213,7 +3210,7 @@ export type DeleteSurveyResponseInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -3239,7 +3236,7 @@ export type DeleteSurveyResponsePayload = {
 
 /** The output of our delete `SurveyResponse` mutation. */
 export type DeleteSurveyResponsePayloadSurveyResponseEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 /** All input for the `deleteTableOfContentsBranch` mutation. */
@@ -3248,8 +3245,8 @@ export type DeleteTableOfContentsBranchInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  tableOfContentsItemId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `deleteTableOfContentsBranch` mutation. */
@@ -3270,7 +3267,7 @@ export type DeleteTopicByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Topic` to be deleted. */
   nodeId: Scalars['ID'];
 };
@@ -3281,7 +3278,7 @@ export type DeleteTopicInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
 };
 
@@ -3307,7 +3304,7 @@ export type DeleteTopicPayload = {
 
 /** The output of our delete `Topic` mutation. */
 export type DeleteTopicPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 /** All input for the `disableForumPosting` mutation. */
@@ -3316,9 +3313,9 @@ export type DisableForumPostingInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `disableForumPosting` mutation. */
@@ -3332,7 +3329,6 @@ export type DisableForumPostingPayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
-
 
 /**
  * Email notification preferences can be read and set by the current user session.
@@ -3372,24 +3368,24 @@ export type EmailNotificationPreference = {
  */
 export type EmailNotificationPreferenceCondition = {
   /** Checks for equality with the object’s `userId` field. */
-  userId?: Maybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `EmailNotificationPreference`. Fields that are set will be updated. */
 export type EmailNotificationPreferencePatch = {
   /** How often users should be notified of SeaSketch project activity. */
-  frequency?: Maybe<EmailSummaryFrequency>;
+  frequency?: InputMaybe<EmailSummaryFrequency>;
   /**
    * If set, users should receive realtime notifications of responses to discussion
    * forum threads for which they are a participant.
    */
-  notifyOnReply?: Maybe<Scalars['Boolean']>;
+  notifyOnReply?: InputMaybe<Scalars['Boolean']>;
   /**
    * If selected, users should receive absolutely no email from SeaSketch. Invite
    * emails should not be sent and their status should be set to UNSUBSCRIBED.
    */
-  unsubscribeAll?: Maybe<Scalars['Boolean']>;
-  userId?: Maybe<Scalars['Int']>;
+  unsubscribeAll?: InputMaybe<Scalars['Boolean']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** A connection to a list of `EmailNotificationPreference` values. */
@@ -3443,9 +3439,9 @@ export type EnableForumPostingInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `enableForumPosting` mutation. */
@@ -3528,8 +3524,8 @@ export type Form = Node & {
  * as an option when creating new forms.
  */
 export type FormFormElementsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -3547,20 +3543,20 @@ export type FormFormElementsArgs = {
  * as an option when creating new forms.
  */
 export type FormLogicRulesArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 /** A condition to be used against `Form` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type FormCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `isTemplate` field. */
-  isTemplate?: Maybe<Scalars['Boolean']>;
+  isTemplate?: InputMaybe<Scalars['Boolean']>;
   /** Checks for equality with the object’s `sketchClassId` field. */
-  sketchClassId?: Maybe<Scalars['Int']>;
+  sketchClassId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `surveyId` field. */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: InputMaybe<Scalars['Int']>;
 };
 
 /**
@@ -3675,23 +3671,23 @@ export type FormElement = Node & {
  * graphile-generated CRUD mutations.
  */
 export type FormElementSurveyConsentDocumentsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<SurveyConsentDocumentCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyConsentDocumentsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<SurveyConsentDocumentCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<SurveyConsentDocumentsOrderBy>>;
 };
 
 /** An input for mutations affecting `FormElement` */
 export type FormElementInput = {
-  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  alternateLanguageSettings?: InputMaybe<Scalars['JSON']>;
   /** Optional background color to transition the form to when this element is displayed. */
-  backgroundColor?: Maybe<Scalars['String']>;
-  backgroundHeight?: Maybe<Scalars['Int']>;
-  backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
-  backgroundWidth?: Maybe<Scalars['Int']>;
+  backgroundColor?: InputMaybe<Scalars['String']>;
+  backgroundHeight?: InputMaybe<Scalars['Int']>;
+  backgroundPalette?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
+  backgroundWidth?: InputMaybe<Scalars['Int']>;
   /**
    * [prosemirror](https://prosemirror.net/) document representing a rich-text
    * question or informational content. Level 1 headers can be assumed to be the
@@ -3701,29 +3697,29 @@ export type FormElementInput = {
    */
   body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
-  componentSettings?: Maybe<Scalars['JSON']>;
-  createdAt?: Maybe<Scalars['Datetime']>;
+  componentSettings?: InputMaybe<Scalars['JSON']>;
+  createdAt?: InputMaybe<Scalars['Datetime']>;
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
    * from the first several characters of the text in FormElement.body.
    */
-  exportId?: Maybe<Scalars['String']>;
+  exportId?: InputMaybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
-  isRequired?: Maybe<Scalars['Boolean']>;
+  isRequired?: InputMaybe<Scalars['Boolean']>;
   /**
    * Used only in surveys. If set, the survey will advance to the page of the
    * specified form element. If null, the survey will simply advance to the next
    * question in the list by `position`.
    */
-  jumpToId?: Maybe<Scalars['Int']>;
+  jumpToId?: InputMaybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
-  layout?: Maybe<FormElementLayout>;
+  layout?: InputMaybe<FormElementLayout>;
   /** IDs for basemaps that should be included in the map view if a map layout is selected */
-  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  mapBasemaps?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
   /**
    * If using a map-based layout, can be used to set the default starting point of the map
    *
@@ -3737,28 +3733,28 @@ export type FormElementInput = {
    * }
    * ```
    */
-  mapCameraOptions?: Maybe<Scalars['JSON']>;
+  mapCameraOptions?: InputMaybe<Scalars['JSON']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
    */
-  position?: Maybe<Scalars['Int']>;
+  position?: InputMaybe<Scalars['Int']>;
   /** Color used to style navigation controls */
-  secondaryColor?: Maybe<Scalars['String']>;
+  secondaryColor?: InputMaybe<Scalars['String']>;
   /**
    * Used for special elements like SpatialAccessPriorityInput to create a sort of
    * sub-form that the parent element controls the rendering of. Will not appear in
    * the form unless the client implementation utilizes something like
    * FormElement.shouldDisplaySubordinateElement to control visibility.
    */
-  subordinateTo?: Maybe<Scalars['Int']>;
+  subordinateTo?: InputMaybe<Scalars['Int']>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
    * set this value based on `background_color`, though admins may wish to manually override.
    */
-  textVariant?: Maybe<FormElementTextVariant>;
+  textVariant?: InputMaybe<FormElementTextVariant>;
   typeId: Scalars['String'];
 };
 
@@ -3776,12 +3772,12 @@ export enum FormElementLayout {
 
 /** Represents an update to a `FormElement`. Fields that are set will be updated. */
 export type FormElementPatch = {
-  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  alternateLanguageSettings?: InputMaybe<Scalars['JSON']>;
   /** Optional background color to transition the form to when this element is displayed. */
-  backgroundColor?: Maybe<Scalars['String']>;
-  backgroundHeight?: Maybe<Scalars['Int']>;
-  backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
-  backgroundWidth?: Maybe<Scalars['Int']>;
+  backgroundColor?: InputMaybe<Scalars['String']>;
+  backgroundHeight?: InputMaybe<Scalars['Int']>;
+  backgroundPalette?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
+  backgroundWidth?: InputMaybe<Scalars['Int']>;
   /**
    * [prosemirror](https://prosemirror.net/) document representing a rich-text
    * question or informational content. Level 1 headers can be assumed to be the
@@ -3789,31 +3785,31 @@ export type FormElementPatch = {
    * administrators. Clients should provide a template that encourages this
    * convention when building forms.
    */
-  body?: Maybe<Scalars['JSON']>;
+  body?: InputMaybe<Scalars['JSON']>;
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
-  componentSettings?: Maybe<Scalars['JSON']>;
-  createdAt?: Maybe<Scalars['Datetime']>;
+  componentSettings?: InputMaybe<Scalars['JSON']>;
+  createdAt?: InputMaybe<Scalars['Datetime']>;
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
    * from the first several characters of the text in FormElement.body.
    */
-  exportId?: Maybe<Scalars['String']>;
+  exportId?: InputMaybe<Scalars['String']>;
   /** Form this field belongs to. */
-  formId?: Maybe<Scalars['Int']>;
-  id?: Maybe<Scalars['Int']>;
+  formId?: InputMaybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
-  isRequired?: Maybe<Scalars['Boolean']>;
+  isRequired?: InputMaybe<Scalars['Boolean']>;
   /**
    * Used only in surveys. If set, the survey will advance to the page of the
    * specified form element. If null, the survey will simply advance to the next
    * question in the list by `position`.
    */
-  jumpToId?: Maybe<Scalars['Int']>;
+  jumpToId?: InputMaybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
-  layout?: Maybe<FormElementLayout>;
+  layout?: InputMaybe<FormElementLayout>;
   /** IDs for basemaps that should be included in the map view if a map layout is selected */
-  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  mapBasemaps?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
   /**
    * If using a map-based layout, can be used to set the default starting point of the map
    *
@@ -3827,29 +3823,29 @@ export type FormElementPatch = {
    * }
    * ```
    */
-  mapCameraOptions?: Maybe<Scalars['JSON']>;
+  mapCameraOptions?: InputMaybe<Scalars['JSON']>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
    */
-  position?: Maybe<Scalars['Int']>;
+  position?: InputMaybe<Scalars['Int']>;
   /** Color used to style navigation controls */
-  secondaryColor?: Maybe<Scalars['String']>;
+  secondaryColor?: InputMaybe<Scalars['String']>;
   /**
    * Used for special elements like SpatialAccessPriorityInput to create a sort of
    * sub-form that the parent element controls the rendering of. Will not appear in
    * the form unless the client implementation utilizes something like
    * FormElement.shouldDisplaySubordinateElement to control visibility.
    */
-  subordinateTo?: Maybe<Scalars['Int']>;
+  subordinateTo?: InputMaybe<Scalars['Int']>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
    * set this value based on `background_color`, though admins may wish to manually override.
    */
-  textVariant?: Maybe<FormElementTextVariant>;
-  typeId?: Maybe<Scalars['String']>;
+  textVariant?: InputMaybe<FormElementTextVariant>;
+  typeId?: InputMaybe<Scalars['String']>;
 };
 
 export enum FormElementTextVariant {
@@ -3902,9 +3898,9 @@ export type FormElementType = Node & {
  */
 export type FormElementTypeCondition = {
   /** Checks for equality with the object’s `componentName` field. */
-  componentName?: Maybe<Scalars['String']>;
+  componentName?: InputMaybe<Scalars['String']>;
   /** Checks for equality with the object’s `label` field. */
-  label?: Maybe<Scalars['String']>;
+  label?: InputMaybe<Scalars['String']>;
 };
 
 /** Methods to use when ordering `FormElementType`. */
@@ -3964,20 +3960,20 @@ export type FormLogicCondition = Node & {
 
 /** An input for mutations affecting `FormLogicCondition` */
 export type FormLogicConditionInput = {
-  id?: Maybe<Scalars['Int']>;
-  operator?: Maybe<FieldRuleOperator>;
+  id?: InputMaybe<Scalars['Int']>;
+  operator?: InputMaybe<FieldRuleOperator>;
   ruleId: Scalars['Int'];
   subjectId: Scalars['Int'];
-  value?: Maybe<Scalars['JSON']>;
+  value?: InputMaybe<Scalars['JSON']>;
 };
 
 /** Represents an update to a `FormLogicCondition`. Fields that are set will be updated. */
 export type FormLogicConditionPatch = {
-  id?: Maybe<Scalars['Int']>;
-  operator?: Maybe<FieldRuleOperator>;
-  ruleId?: Maybe<Scalars['Int']>;
-  subjectId?: Maybe<Scalars['Int']>;
-  value?: Maybe<Scalars['JSON']>;
+  id?: InputMaybe<Scalars['Int']>;
+  operator?: InputMaybe<FieldRuleOperator>;
+  ruleId?: InputMaybe<Scalars['Int']>;
+  subjectId?: InputMaybe<Scalars['Int']>;
+  value?: InputMaybe<Scalars['JSON']>;
 };
 
 /** A `FormLogicCondition` edge in the connection. */
@@ -4027,28 +4023,28 @@ export type FormLogicRule = Node & {
  * preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
  */
 export type FormLogicRuleConditionsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `FormLogicRule` */
 export type FormLogicRuleInput = {
-  booleanOperator?: Maybe<FormLogicOperator>;
+  booleanOperator?: InputMaybe<FormLogicOperator>;
   command: FormLogicCommand;
   formElementId: Scalars['Int'];
-  id?: Maybe<Scalars['Int']>;
-  jumpToId?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
+  jumpToId?: InputMaybe<Scalars['Int']>;
   position: Scalars['Int'];
 };
 
 /** Represents an update to a `FormLogicRule`. Fields that are set will be updated. */
 export type FormLogicRulePatch = {
-  booleanOperator?: Maybe<FormLogicOperator>;
-  command?: Maybe<FormLogicCommand>;
-  formElementId?: Maybe<Scalars['Int']>;
-  id?: Maybe<Scalars['Int']>;
-  jumpToId?: Maybe<Scalars['Int']>;
-  position?: Maybe<Scalars['Int']>;
+  booleanOperator?: InputMaybe<FormLogicOperator>;
+  command?: InputMaybe<FormLogicCommand>;
+  formElementId?: InputMaybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
+  jumpToId?: InputMaybe<Scalars['Int']>;
+  position?: InputMaybe<Scalars['Int']>;
 };
 
 /** A `FormLogicRule` edge in the connection. */
@@ -4071,7 +4067,7 @@ export enum FormLogicRulesOrderBy {
 
 /** Represents an update to a `Form`. Fields that are set will be updated. */
 export type FormPatch = {
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /**
    * SeaSetch superusers can create template forms than can be used when creating
    * SketchClasses or Surveys. These templates can be created using the
@@ -4079,15 +4075,15 @@ export type FormPatch = {
    * mutations. Template forms can be listed with the root-level `templateForms`
    * query.
    */
-  isTemplate?: Maybe<Scalars['Boolean']>;
+  isTemplate?: InputMaybe<Scalars['Boolean']>;
   /** Related *SketchClass* */
-  sketchClassId?: Maybe<Scalars['Int']>;
+  sketchClassId?: InputMaybe<Scalars['Int']>;
   /** Related *Survey* */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: InputMaybe<Scalars['Int']>;
   /** Chosen by superusers upon template creation */
-  templateName?: Maybe<Scalars['String']>;
+  templateName?: InputMaybe<Scalars['String']>;
   /** Indicates which features should use this form as a template */
-  templateType?: Maybe<FormTemplateType>;
+  templateType?: InputMaybe<FormTemplateType>;
 };
 
 /** Indicates which features should use the form as a template */
@@ -4172,21 +4168,21 @@ export type Forum = Node & {
  * posts. Only project administrators can create and configure forums.
  */
 export type ForumTopicsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<TopicCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<TopicCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 /** A condition to be used against `Forum` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ForumCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `Forum` */
@@ -4195,17 +4191,17 @@ export type ForumInput = {
    * Archived forums will only be accessible by project administrators from the
    * admin dashboard. This is an alternative to deleting a forum.
    */
-  archived?: Maybe<Scalars['Boolean']>;
+  archived?: InputMaybe<Scalars['Boolean']>;
   /** Optional description of the forum to be displayed to project users. */
-  description?: Maybe<Scalars['String']>;
-  id?: Maybe<Scalars['Int']>;
+  description?: InputMaybe<Scalars['String']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Title displayed for the forum. */
   name: Scalars['String'];
   /**
    * Sets position of this forum in the listing. Forums should be listed by
    * position in ascending order. Set using `setForumOrder()`
    */
-  position?: Maybe<Scalars['Int']>;
+  position?: InputMaybe<Scalars['Int']>;
   projectId: Scalars['Int'];
 };
 
@@ -4215,16 +4211,16 @@ export type ForumPatch = {
    * Archived forums will only be accessible by project administrators from the
    * admin dashboard. This is an alternative to deleting a forum.
    */
-  archived?: Maybe<Scalars['Boolean']>;
+  archived?: InputMaybe<Scalars['Boolean']>;
   /** Optional description of the forum to be displayed to project users. */
-  description?: Maybe<Scalars['String']>;
+  description?: InputMaybe<Scalars['String']>;
   /** Title displayed for the forum. */
-  name?: Maybe<Scalars['String']>;
+  name?: InputMaybe<Scalars['String']>;
   /**
    * Sets position of this forum in the listing. Forums should be listed by
    * position in ascending order. Set using `setForumOrder()`
    */
-  position?: Maybe<Scalars['Int']>;
+  position?: InputMaybe<Scalars['Int']>;
 };
 
 /** A `Forum` edge in the connection. */
@@ -4246,7 +4242,6 @@ export enum ForumsOrderBy {
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
-
 
 /** All geography XY types implement this interface */
 export type GeographyGeometry = {
@@ -4537,9 +4532,9 @@ export type GrantAdminAccessInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `grantAdminAccess` mutation. */
@@ -4589,10 +4584,10 @@ export type Group = Node & {
  * free to do so.
  */
 export type GroupMembersArgs = {
-  direction?: Maybe<SortByDirection>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<ParticipantSortBy>;
+  direction?: InputMaybe<SortByDirection>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<ParticipantSortBy>;
 };
 
 
@@ -4605,18 +4600,18 @@ export type GroupMembersArgs = {
  * free to do so.
  */
 export type GroupProjectInviteGroupsByGroupIdConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectInviteGroupCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<ProjectInviteGroupCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 /** An input for mutations affecting `Group` */
 export type GroupInput = {
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Label for the group. */
   name: Scalars['String'];
   projectId: Scalars['Int'];
@@ -4624,10 +4619,10 @@ export type GroupInput = {
 
 /** Represents an update to a `Group`. Fields that are set will be updated. */
 export type GroupPatch = {
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Label for the group. */
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  name?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** Methods to use when ordering `Group`. */
@@ -4665,46 +4660,46 @@ export type InteractivitySetting = Node & {
 
 
 export type InteractivitySettingBasemapsByInteractivitySettingsIdConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<BasemapCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<BasemapCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
 
 
 export type InteractivitySettingDataLayersByInteractivitySettingsIdConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<DataLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<DataLayerCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<DataLayersOrderBy>>;
 };
 
 /** An input for mutations affecting `InteractivitySetting` */
 export type InteractivitySettingInput = {
-  cursor?: Maybe<CursorType>;
-  id?: Maybe<Scalars['Int']>;
+  cursor?: InputMaybe<CursorType>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
-  longTemplate?: Maybe<Scalars['String']>;
-  shortTemplate?: Maybe<Scalars['String']>;
-  type?: Maybe<InteractivityType>;
+  layers?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
+  longTemplate?: InputMaybe<Scalars['String']>;
+  shortTemplate?: InputMaybe<Scalars['String']>;
+  type?: InputMaybe<InteractivityType>;
 };
 
 /** Represents an update to a `InteractivitySetting`. Fields that are set will be updated. */
 export type InteractivitySettingPatch = {
-  cursor?: Maybe<CursorType>;
-  id?: Maybe<Scalars['Int']>;
+  cursor?: InputMaybe<CursorType>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
-  longTemplate?: Maybe<Scalars['String']>;
-  shortTemplate?: Maybe<Scalars['String']>;
-  type?: Maybe<InteractivityType>;
+  layers?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
+  longTemplate?: InputMaybe<Scalars['String']>;
+  shortTemplate?: InputMaybe<Scalars['String']>;
+  type?: InputMaybe<InteractivityType>;
 };
 
 export enum InteractivityType {
@@ -4755,13 +4750,13 @@ export type InviteEmail = Node & {
  */
 export type InviteEmailCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectInviteId` field. */
-  projectInviteId?: Maybe<Scalars['Int']>;
+  projectInviteId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `status` field. */
-  status?: Maybe<EmailStatus>;
+  status?: InputMaybe<EmailStatus>;
   /** Checks for equality with the object’s `surveyInviteId` field. */
-  surveyInviteId?: Maybe<Scalars['Int']>;
+  surveyInviteId?: InputMaybe<Scalars['Int']>;
 };
 
 /** Methods to use when ordering `InviteEmail`. */
@@ -4810,15 +4805,14 @@ export enum InviteStatus {
   Unsubscribed = 'UNSUBSCRIBED'
 }
 
-
 /** All input for the `joinProject` mutation. */
 export type JoinProjectInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `joinProject` mutation. */
@@ -4839,8 +4833,8 @@ export type LeaveProjectInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `leaveProject` mutation. */
@@ -4861,8 +4855,8 @@ export type MakeResponseDraftInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  responseId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  responseId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `makeResponseDraft` mutation. */
@@ -4885,7 +4879,7 @@ export type MakeResponseDraftPayload = {
 
 /** The output of our `makeResponseDraft` mutation. */
 export type MakeResponseDraftPayloadSurveyResponseEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 /** All input for the `makeResponsesNotPractice` mutation. */
@@ -4894,8 +4888,8 @@ export type MakeResponsesNotPracticeInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  ids?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
 /** The output of our `makeResponsesNotPractice` mutation. */
@@ -4917,8 +4911,8 @@ export type MakeResponsesPracticeInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  ids?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
 /** The output of our `makeResponsesPractice` mutation. */
@@ -4941,7 +4935,7 @@ export type MakeResponsesPracticePayload = {
 
 /** The output of our `makeResponsesPractice` mutation. */
 export type MakeResponsesPracticePayloadSurveyResponseEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 /** All input for the `makeSketchClass` mutation. */
@@ -4950,10 +4944,10 @@ export type MakeSketchClassInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  templateId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  name?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  templateId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `makeSketchClass` mutation. */
@@ -4978,7 +4972,7 @@ export type MakeSketchClassPayload = {
 
 /** The output of our `makeSketchClass` mutation. */
 export type MakeSketchClassPayloadSketchClassEdgeArgs = {
-  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchClassesOrderBy>>;
 };
 
 /** All input for the `makeSurvey` mutation. */
@@ -4987,10 +4981,10 @@ export type MakeSurveyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  templateId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  name?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  templateId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `makeSurvey` mutation. */
@@ -5014,8 +5008,8 @@ export type MarkTopicAsReadInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  topicId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  topicId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `markTopicAsRead` mutation. */
@@ -5033,13 +5027,13 @@ export type MarkTopicAsReadPayload = {
 
 /** All input for the `modifySurveyAnswers` mutation. */
 export type ModifySurveyAnswersInput = {
-  answers?: Maybe<Scalars['JSON']>;
+  answers?: InputMaybe<Scalars['JSON']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  responseIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  responseIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
 /** The output of our `modifySurveyAnswers` mutation. */
@@ -6114,7 +6108,7 @@ export type MutationGetOrCreateSpriteArgs = {
   pixelRatio: Scalars['Int'];
   projectId: Scalars['Int'];
   smallestImage: Scalars['Upload'];
-  type?: Maybe<Scalars['String']>;
+  type?: InputMaybe<Scalars['String']>;
   width: Scalars['Int'];
 };
 
@@ -6231,7 +6225,7 @@ export type MutationSendSurveyInviteReminderArgs = {
 export type MutationSetFormElementBackgroundArgs = {
   backgroundColor: Scalars['String'];
   backgroundHeight: Scalars['Int'];
-  backgroundPalette: Array<Maybe<Scalars['String']>>;
+  backgroundPalette: Array<InputMaybe<Scalars['String']>>;
   backgroundUrl: Scalars['String'];
   backgroundWidth: Scalars['Int'];
   downloadUrl: Scalars['String'];
@@ -6708,11 +6702,11 @@ export type MutationUploadConsentDocumentArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUploadStyleArgs = {
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   name: Scalars['String'];
   projectId: Scalars['Int'];
   style: Scalars['JSON'];
-  surveysOnly?: Maybe<Scalars['Boolean']>;
+  surveysOnly?: InputMaybe<Scalars['Boolean']>;
   thumb: Scalars['Upload'];
 };
 
@@ -6755,53 +6749,53 @@ export type OptionalBasemapLayer = Node & {
  */
 export type OptionalBasemapLayerCondition = {
   /** Checks for equality with the object’s `basemapId` field. */
-  basemapId?: Maybe<Scalars['Int']>;
+  basemapId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `OptionalBasemapLayer` */
 export type OptionalBasemapLayerInput = {
   basemapId: Scalars['Int'];
-  defaultVisibility?: Maybe<Scalars['Boolean']>;
-  description?: Maybe<Scalars['String']>;
+  defaultVisibility?: InputMaybe<Scalars['Boolean']>;
+  description?: InputMaybe<Scalars['String']>;
   /**
    * Specify RADIO or SELECT if this option should be presented as a group of
    * options. Useful for mutually exclusive views like different years for the same
    * dataset, or a heatmap display of density for multiple species where a single
    * species must be chosen from a list. If left null, the option will be treated as standalone.
    */
-  groupType?: Maybe<OptionalBasemapLayersGroupType>;
-  id?: Maybe<Scalars['Int']>;
+  groupType?: InputMaybe<OptionalBasemapLayersGroupType>;
+  id?: InputMaybe<Scalars['Int']>;
   /** IDs for layers in the gl style that will be toggled by this option. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
+  layers?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
   /** JSON representation of a ProseMirror document with layer metadata. */
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: InputMaybe<Scalars['JSON']>;
   /** Label that will be given in the UI */
   name: Scalars['String'];
-  options?: Maybe<Scalars['JSON']>;
+  options?: InputMaybe<Scalars['JSON']>;
 };
 
 /** Represents an update to a `OptionalBasemapLayer`. Fields that are set will be updated. */
 export type OptionalBasemapLayerPatch = {
-  basemapId?: Maybe<Scalars['Int']>;
-  defaultVisibility?: Maybe<Scalars['Boolean']>;
-  description?: Maybe<Scalars['String']>;
+  basemapId?: InputMaybe<Scalars['Int']>;
+  defaultVisibility?: InputMaybe<Scalars['Boolean']>;
+  description?: InputMaybe<Scalars['String']>;
   /**
    * Specify RADIO or SELECT if this option should be presented as a group of
    * options. Useful for mutually exclusive views like different years for the same
    * dataset, or a heatmap display of density for multiple species where a single
    * species must be chosen from a list. If left null, the option will be treated as standalone.
    */
-  groupType?: Maybe<OptionalBasemapLayersGroupType>;
-  id?: Maybe<Scalars['Int']>;
+  groupType?: InputMaybe<OptionalBasemapLayersGroupType>;
+  id?: InputMaybe<Scalars['Int']>;
   /** IDs for layers in the gl style that will be toggled by this option. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
+  layers?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
   /** JSON representation of a ProseMirror document with layer metadata. */
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: InputMaybe<Scalars['JSON']>;
   /** Label that will be given in the UI */
-  name?: Maybe<Scalars['String']>;
-  options?: Maybe<Scalars['JSON']>;
+  name?: InputMaybe<Scalars['String']>;
+  options?: InputMaybe<Scalars['JSON']>;
 };
 
 export enum OptionalBasemapLayersGroupType {
@@ -6879,9 +6873,9 @@ export type Post = Node & {
 /** A condition to be used against `Post` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type PostCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `topicId` field. */
-  topicId?: Maybe<Scalars['Int']>;
+  topicId?: InputMaybe<Scalars['Int']>;
 };
 
 /** A connection to a list of `Post` values. */
@@ -6941,13 +6935,13 @@ export type Profile = {
 
 /** Represents an update to a `Profile`. Fields that are set will be updated. */
 export type ProfilePatch = {
-  affiliations?: Maybe<Scalars['String']>;
-  bio?: Maybe<Scalars['String']>;
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
-  nickname?: Maybe<Scalars['String']>;
-  picture?: Maybe<Scalars['Upload']>;
-  userId?: Maybe<Scalars['Int']>;
+  affiliations?: InputMaybe<Scalars['String']>;
+  bio?: InputMaybe<Scalars['String']>;
+  email?: InputMaybe<Scalars['Email']>;
+  fullname?: InputMaybe<Scalars['String']>;
+  nickname?: InputMaybe<Scalars['String']>;
+  picture?: InputMaybe<Scalars['Upload']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** A `Profile` edge in the connection. */
@@ -7134,8 +7128,8 @@ export type Project = Node & {
  * needed to drive the application.
  */
 export type ProjectAdminsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7144,8 +7138,8 @@ export type ProjectAdminsArgs = {
  * needed to drive the application.
  */
 export type ProjectBasemapsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7154,13 +7148,13 @@ export type ProjectBasemapsArgs = {
  * needed to drive the application.
  */
 export type ProjectBasemapsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<BasemapCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<BasemapCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
 
 
@@ -7169,9 +7163,9 @@ export type ProjectBasemapsConnectionArgs = {
  * needed to drive the application.
  */
 export type ProjectDataLayersForItemsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  tableOfContentsItemIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  tableOfContentsItemIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
 
@@ -7180,9 +7174,9 @@ export type ProjectDataLayersForItemsArgs = {
  * needed to drive the application.
  */
 export type ProjectDataSourcesForItemsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  tableOfContentsItemIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  tableOfContentsItemIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
 
@@ -7191,8 +7185,8 @@ export type ProjectDataSourcesForItemsArgs = {
  * needed to drive the application.
  */
 export type ProjectDraftTableOfContentsItemsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7201,10 +7195,10 @@ export type ProjectDraftTableOfContentsItemsArgs = {
  * needed to drive the application.
  */
 export type ProjectForumsArgs = {
-  condition?: Maybe<ForumCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ForumsOrderBy>>;
+  condition?: InputMaybe<ForumCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<ForumsOrderBy>>;
 };
 
 
@@ -7213,9 +7207,9 @@ export type ProjectForumsArgs = {
  * needed to drive the application.
  */
 export type ProjectGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<GroupsOrderBy>>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<GroupsOrderBy>>;
 };
 
 
@@ -7224,8 +7218,8 @@ export type ProjectGroupsArgs = {
  * needed to drive the application.
  */
 export type ProjectInviteCountsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7234,14 +7228,14 @@ export type ProjectInviteCountsArgs = {
  * needed to drive the application.
  */
 export type ProjectInvitesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  direction?: Maybe<SortByDirection>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<InviteOrderBy>;
-  statuses?: Maybe<Array<Maybe<InviteStatus>>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  direction?: InputMaybe<SortByDirection>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<InviteOrderBy>;
+  statuses?: InputMaybe<Array<InputMaybe<InviteStatus>>>;
 };
 
 
@@ -7250,7 +7244,7 @@ export type ProjectInvitesConnectionArgs = {
  * needed to drive the application.
  */
 export type ProjectIsAdminArgs = {
-  userId?: Maybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7259,8 +7253,8 @@ export type ProjectIsAdminArgs = {
  * needed to drive the application.
  */
 export type ProjectMyFoldersArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7269,8 +7263,8 @@ export type ProjectMyFoldersArgs = {
  * needed to drive the application.
  */
 export type ProjectMySketchesArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7279,10 +7273,10 @@ export type ProjectMySketchesArgs = {
  * needed to drive the application.
  */
 export type ProjectParticipantsArgs = {
-  direction?: Maybe<SortByDirection>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<ParticipantSortBy>;
+  direction?: InputMaybe<SortByDirection>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<ParticipantSortBy>;
 };
 
 
@@ -7291,8 +7285,8 @@ export type ProjectParticipantsArgs = {
  * needed to drive the application.
  */
 export type ProjectSessionOutstandingSurveyInvitesArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7301,10 +7295,10 @@ export type ProjectSessionOutstandingSurveyInvitesArgs = {
  * needed to drive the application.
  */
 export type ProjectSketchClassesArgs = {
-  condition?: Maybe<SketchClassCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+  condition?: InputMaybe<SketchClassCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<SketchClassesOrderBy>>;
 };
 
 
@@ -7313,10 +7307,10 @@ export type ProjectSketchClassesArgs = {
  * needed to drive the application.
  */
 export type ProjectSpritesArgs = {
-  condition?: Maybe<SpriteCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SpritesOrderBy>>;
+  condition?: InputMaybe<SpriteCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<SpritesOrderBy>>;
 };
 
 
@@ -7325,8 +7319,8 @@ export type ProjectSpritesArgs = {
  * needed to drive the application.
  */
 export type ProjectSurveyBasemapsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7335,10 +7329,10 @@ export type ProjectSurveyBasemapsArgs = {
  * needed to drive the application.
  */
 export type ProjectSurveysArgs = {
-  condition?: Maybe<SurveyCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveysOrderBy>>;
+  condition?: InputMaybe<SurveyCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<SurveysOrderBy>>;
 };
 
 
@@ -7347,8 +7341,8 @@ export type ProjectSurveysArgs = {
  * needed to drive the application.
  */
 export type ProjectTableOfContentsItemsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7357,10 +7351,10 @@ export type ProjectTableOfContentsItemsArgs = {
  * needed to drive the application.
  */
 export type ProjectUnapprovedParticipantsArgs = {
-  direction?: Maybe<SortByDirection>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<ParticipantSortBy>;
+  direction?: InputMaybe<SortByDirection>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<ParticipantSortBy>;
 };
 
 
@@ -7369,8 +7363,8 @@ export type ProjectUnapprovedParticipantsArgs = {
  * needed to drive the application.
  */
 export type ProjectUsersBannedFromForumsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 export enum ProjectAccessControlSetting {
@@ -7392,15 +7386,15 @@ export enum ProjectAccessStatus {
 /** A condition to be used against `Project` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ProjectCondition = {
   /** Checks for equality with the object’s `accessControl` field. */
-  accessControl?: Maybe<ProjectAccessControlSetting>;
+  accessControl?: InputMaybe<ProjectAccessControlSetting>;
   /** Checks for equality with the object’s `dataSourcesBucketId` field. */
-  dataSourcesBucketId?: Maybe<Scalars['String']>;
+  dataSourcesBucketId?: InputMaybe<Scalars['String']>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `isFeatured` field. */
-  isFeatured?: Maybe<Scalars['Boolean']>;
+  isFeatured?: InputMaybe<Scalars['Boolean']>;
   /** Checks for equality with the object’s `slug` field. */
-  slug?: Maybe<Scalars['String']>;
+  slug?: InputMaybe<Scalars['String']>;
 };
 
 /**
@@ -7457,8 +7451,8 @@ export type ProjectInvite = Node & {
  * can be found on the wiki.
  */
 export type ProjectInviteGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -7476,10 +7470,10 @@ export type ProjectInviteGroupsArgs = {
  * can be found on the wiki.
  */
 export type ProjectInviteInviteEmailsArgs = {
-  condition?: Maybe<InviteEmailCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<InviteEmailsOrderBy>>;
+  condition?: InputMaybe<InviteEmailCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<InviteEmailsOrderBy>>;
 };
 
 
@@ -7497,13 +7491,13 @@ export type ProjectInviteInviteEmailsArgs = {
  * can be found on the wiki.
  */
 export type ProjectInviteProjectInviteGroupsByInviteIdConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectInviteGroupCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<ProjectInviteGroupCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 export type ProjectInviteGroup = {
@@ -7522,9 +7516,9 @@ export type ProjectInviteGroup = {
  */
 export type ProjectInviteGroupCondition = {
   /** Checks for equality with the object’s `groupId` field. */
-  groupId?: Maybe<Scalars['Int']>;
+  groupId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `inviteId` field. */
-  inviteId?: Maybe<Scalars['Int']>;
+  inviteId?: InputMaybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `ProjectInviteGroup` */
@@ -7535,8 +7529,8 @@ export type ProjectInviteGroupInput = {
 
 /** Represents an update to a `ProjectInviteGroup`. Fields that are set will be updated. */
 export type ProjectInviteGroupPatch = {
-  groupId?: Maybe<Scalars['Int']>;
-  inviteId?: Maybe<Scalars['Int']>;
+  groupId?: InputMaybe<Scalars['Int']>;
+  inviteId?: InputMaybe<Scalars['Int']>;
 };
 
 /** A connection to a list of `ProjectInviteGroup` values. */
@@ -7572,8 +7566,8 @@ export enum ProjectInviteGroupsOrderBy {
 
 /** An input for mutations affecting `ProjectInviteOption` */
 export type ProjectInviteOptionInput = {
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
+  email?: InputMaybe<Scalars['Email']>;
+  fullname?: InputMaybe<Scalars['String']>;
 };
 
 export type ProjectInviteStateSubscriptionPayload = {
@@ -7626,29 +7620,29 @@ export type ProjectInvitesEdge = {
 /** Represents an update to a `Project`. Fields that are set will be updated. */
 export type ProjectPatch = {
   /** Admins can control whether a project is public, invite-only, or admins-only. */
-  accessControl?: Maybe<ProjectAccessControlSetting>;
-  dataSourcesBucketId?: Maybe<Scalars['String']>;
+  accessControl?: InputMaybe<ProjectAccessControlSetting>;
+  dataSourcesBucketId?: InputMaybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
-  description?: Maybe<Scalars['String']>;
-  inviteEmailSubject?: Maybe<Scalars['String']>;
-  inviteEmailTemplateText?: Maybe<Scalars['String']>;
+  description?: InputMaybe<Scalars['String']>;
+  inviteEmailSubject?: InputMaybe<Scalars['String']>;
+  inviteEmailTemplateText?: InputMaybe<Scalars['String']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
-  isFeatured?: Maybe<Scalars['Boolean']>;
+  isFeatured?: InputMaybe<Scalars['Boolean']>;
   /**
    * Project admins can decide whether their project will be displayed on the
    * public project listing via Query.projectsConnection.
    */
-  isListed?: Maybe<Scalars['Boolean']>;
+  isListed?: InputMaybe<Scalars['Boolean']>;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
-  logoLink?: Maybe<Scalars['String']>;
+  logoLink?: InputMaybe<Scalars['String']>;
   /**
    * URL referencing an image that will be used to represent the project. Will be
    * displayed at 48x48 pixels and must be a public url.
    */
-  logoUrl?: Maybe<Scalars['Upload']>;
-  mapboxPublicKey?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  region?: Maybe<Scalars['GeoJSON']>;
+  logoUrl?: InputMaybe<Scalars['Upload']>;
+  mapboxPublicKey?: InputMaybe<Scalars['String']>;
+  name?: InputMaybe<Scalars['String']>;
+  region?: InputMaybe<Scalars['GeoJSON']>;
 };
 
 /** A connection to a list of `Project` values. */
@@ -7704,7 +7698,7 @@ export type ProjectsSharedBasemap = {
  */
 export type ProjectsSharedBasemapCondition = {
   /** Checks for equality with the object’s `basemapId` field. */
-  basemapId?: Maybe<Scalars['Int']>;
+  basemapId?: InputMaybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `ProjectsSharedBasemap` */
@@ -7715,8 +7709,8 @@ export type ProjectsSharedBasemapInput = {
 
 /** Represents an update to a `ProjectsSharedBasemap`. Fields that are set will be updated. */
 export type ProjectsSharedBasemapPatch = {
-  basemapId?: Maybe<Scalars['Int']>;
-  projectId?: Maybe<Scalars['Int']>;
+  basemapId?: InputMaybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** A connection to a list of `ProjectsSharedBasemap` values. */
@@ -7765,8 +7759,8 @@ export type PublishTableOfContentsInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `publishTableOfContents` mutation. */
@@ -8013,13 +8007,13 @@ export type QueryBasemapByNodeIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryBasemapsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<BasemapCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<BasemapCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
 
 
@@ -8079,13 +8073,13 @@ export type QueryDataSourcesBucketByNodeIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDataSourcesBucketsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<DataSourcesBucketCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<DataSourcesBucketsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<DataSourcesBucketCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<DataSourcesBucketsOrderBy>>;
 };
 
 
@@ -8097,19 +8091,19 @@ export type QueryEmailNotificationPreferenceByUserIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryEmailNotificationPreferencesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<EmailNotificationPreferenceCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<EmailNotificationPreferenceCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<EmailNotificationPreferencesOrderBy>>;
 };
 
 
 /** The root query type which gives access points into the data universe. */
 export type QueryExtractSpriteIdsArgs = {
-  t?: Maybe<Scalars['String']>;
+  t?: InputMaybe<Scalars['String']>;
 };
 
 
@@ -8169,10 +8163,10 @@ export type QueryFormElementTypeByNodeIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormElementTypesArgs = {
-  condition?: Maybe<FormElementTypeCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<FormElementTypesOrderBy>>;
+  condition?: InputMaybe<FormElementTypeCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<FormElementTypesOrderBy>>;
 };
 
 
@@ -8293,13 +8287,13 @@ export type QueryPostByNodeIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryPostsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<PostCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<PostCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 
@@ -8317,7 +8311,7 @@ export type QueryProjectArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectAccessStatusArgs = {
-  pid?: Maybe<Scalars['Int']>;
+  pid?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -8361,31 +8355,31 @@ export type QueryProjectInviteGroupByInviteIdAndGroupIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteGroupsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectInviteGroupCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<ProjectInviteGroupCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectPublicDetailsArgs = {
-  slug?: Maybe<Scalars['String']>;
+  slug?: InputMaybe<Scalars['String']>;
 };
 
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<ProjectCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 
@@ -8398,19 +8392,19 @@ export type QueryProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectsSharedBasemapsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectsSharedBasemapCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<ProjectsSharedBasemapCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySessionIsBannedFromPostingArgs = {
-  pid?: Maybe<Scalars['Int']>;
+  pid?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -8515,13 +8509,13 @@ export type QuerySurveyConsentDocumentByNodeIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyConsentDocumentsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<SurveyConsentDocumentCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyConsentDocumentsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<SurveyConsentDocumentCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<SurveyConsentDocumentsOrderBy>>;
 };
 
 
@@ -8571,13 +8565,13 @@ export type QuerySurveyResponseByNodeIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyResponsesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<SurveyResponseCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<SurveyResponseCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 
@@ -8601,17 +8595,17 @@ export type QueryTableOfContentsItemByNodeIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTemplateFormsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTilebboxArgs = {
-  srid?: Maybe<Scalars['Int']>;
-  x?: Maybe<Scalars['Int']>;
-  y?: Maybe<Scalars['Int']>;
-  z?: Maybe<Scalars['Int']>;
+  srid?: InputMaybe<Scalars['Int']>;
+  x?: InputMaybe<Scalars['Int']>;
+  y?: InputMaybe<Scalars['Int']>;
+  z?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -8629,13 +8623,13 @@ export type QueryTopicByNodeIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTopicsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<TopicCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<TopicCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 
@@ -8669,13 +8663,13 @@ export enum RasterDemEncoding {
 
 /** All input for the `removeGroupFromAcl` mutation. */
 export type RemoveGroupFromAclInput = {
-  aclId?: Maybe<Scalars['Int']>;
+  aclId?: InputMaybe<Scalars['Int']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  groupId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `removeGroupFromAcl` mutation. */
@@ -8703,9 +8697,9 @@ export type RemoveUserFromGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  groupId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `removeUserFromGroup` mutation. */
@@ -8722,13 +8716,13 @@ export type RemoveUserFromGroupPayload = {
 
 /** All input for the `removeValidChildSketchClass` mutation. */
 export type RemoveValidChildSketchClassInput = {
-  child?: Maybe<Scalars['Int']>;
+  child?: InputMaybe<Scalars['Int']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  parent?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  parent?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `removeValidChildSketchClass` mutation. */
@@ -8755,9 +8749,9 @@ export type RevokeAdminAccessInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `revokeAdminAccess` mutation. */
@@ -8778,8 +8772,8 @@ export type SendAllProjectInvitesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `sendAllProjectInvites` mutation. */
@@ -8801,8 +8795,8 @@ export type SendProjectInvitesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  inviteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  inviteIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
 /** The output of our `sendProjectInvites` mutation. */
@@ -8830,8 +8824,8 @@ export type SetFormElementOrderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  elementIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  elementIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
 /** The output of our `setFormElementOrder` mutation. */
@@ -8853,8 +8847,8 @@ export type SetFormLogicRuleOrderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  ruleIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  ruleIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
 /** The output of our `setFormLogicRuleOrder` mutation. */
@@ -8876,8 +8870,8 @@ export type SetForumOrderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  forumIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  forumIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
 /** The output of our `setForumOrder` mutation. */
@@ -8899,9 +8893,9 @@ export type SetPostHiddenByModeratorInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  postId?: Maybe<Scalars['Int']>;
-  value?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  postId?: InputMaybe<Scalars['Int']>;
+  value?: InputMaybe<Scalars['Boolean']>;
 };
 
 /** The output of our `setPostHiddenByModerator` mutation. */
@@ -8924,7 +8918,7 @@ export type SetPostHiddenByModeratorPayload = {
 
 /** The output of our `setPostHiddenByModerator` mutation. */
 export type SetPostHiddenByModeratorPayloadPostEdgeArgs = {
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 /** All input for the `setTopicLocked` mutation. */
@@ -8933,9 +8927,9 @@ export type SetTopicLockedInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  topicId?: Maybe<Scalars['Int']>;
-  value?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  topicId?: InputMaybe<Scalars['Int']>;
+  value?: InputMaybe<Scalars['Boolean']>;
 };
 
 /** The output of our `setTopicLocked` mutation. */
@@ -8958,7 +8952,7 @@ export type SetTopicLockedPayload = {
 
 /** The output of our `setTopicLocked` mutation. */
 export type SetTopicLockedPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 /** All input for the `setTopicSticky` mutation. */
@@ -8967,9 +8961,9 @@ export type SetTopicStickyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  topicId?: Maybe<Scalars['Int']>;
-  value?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  topicId?: InputMaybe<Scalars['Int']>;
+  value?: InputMaybe<Scalars['Boolean']>;
 };
 
 /** The output of our `setTopicSticky` mutation. */
@@ -8992,7 +8986,7 @@ export type SetTopicStickyPayload = {
 
 /** The output of our `setTopicSticky` mutation. */
 export type SetTopicStickyPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 /** All input for the `setUserGroups` mutation. */
@@ -9001,10 +8995,10 @@ export type SetUserGroupsInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groups?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  groups?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `setUserGroups` mutation. */
@@ -9151,8 +9145,8 @@ export type SketchClass = Node & {
 
 /** Sketch Classes act as a schema for sketches drawn by users. */
 export type SketchClassValidChildrenArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 /**
@@ -9161,11 +9155,11 @@ export type SketchClassValidChildrenArgs = {
  */
 export type SketchClassCondition = {
   /** Checks for equality with the object’s `formElementId` field. */
-  formElementId?: Maybe<Scalars['Int']>;
+  formElementId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `SketchClass`. Fields that are set will be updated. */
@@ -9181,33 +9175,33 @@ export type SketchClassPatch = {
    * For CHOOSE_FEATURE geometry types, this field will enable the selction of
    * multiple features.
    */
-  allowMulti?: Maybe<Scalars['Boolean']>;
+  allowMulti?: InputMaybe<Scalars['Boolean']>;
   /** Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry. */
-  geometryType?: Maybe<SketchGeometryType>;
+  geometryType?: InputMaybe<SketchGeometryType>;
   /** Name of the report to be displayed. */
-  geoprocessingClientName?: Maybe<Scalars['String']>;
+  geoprocessingClientName?: InputMaybe<Scalars['String']>;
   /** Endpoint for the client javascript bundle. */
-  geoprocessingClientUrl?: Maybe<Scalars['String']>;
+  geoprocessingClientUrl?: InputMaybe<Scalars['String']>;
   /**
    * Root endpoint of a
    * [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
    * that should be used for reporting.
    */
-  geoprocessingProjectUrl?: Maybe<Scalars['String']>;
+  geoprocessingProjectUrl?: InputMaybe<Scalars['String']>;
   /**
    * If set to true, (non-admin) users should not be able to digitize new features
    * using this sketch class, but they should still be able to access the sketch
    * class in order to render existing sketches of this type.
    */
-  isArchived?: Maybe<Scalars['Boolean']>;
+  isArchived?: InputMaybe<Scalars['Boolean']>;
   /**
    * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
    * render features. Sketches can be styled based on attribute data by using
    * [Expressions](https://docs.mapbox.com/help/glossary/expression/).
    */
-  mapboxGlStyle?: Maybe<Scalars['JSON']>;
+  mapboxGlStyle?: InputMaybe<Scalars['JSON']>;
   /** Label chosen by project admins that is shown to users. */
-  name?: Maybe<Scalars['String']>;
+  name?: InputMaybe<Scalars['String']>;
 };
 
 /** A `SketchClass` edge in the connection. */
@@ -9255,10 +9249,10 @@ export type SketchFolder = Node & {
 /** An input for mutations affecting `SketchFolder` */
 export type SketchFolderInput = {
   /** The parent sketch collection, if any. Folders can only have a single parent entity. */
-  collectionId?: Maybe<Scalars['Int']>;
+  collectionId?: InputMaybe<Scalars['Int']>;
   /** The parent folder, if any. */
-  folderId?: Maybe<Scalars['Int']>;
-  id?: Maybe<Scalars['Int']>;
+  folderId?: InputMaybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   name: Scalars['String'];
   projectId: Scalars['Int'];
   userId: Scalars['Int'];
@@ -9267,13 +9261,13 @@ export type SketchFolderInput = {
 /** Represents an update to a `SketchFolder`. Fields that are set will be updated. */
 export type SketchFolderPatch = {
   /** The parent sketch collection, if any. Folders can only have a single parent entity. */
-  collectionId?: Maybe<Scalars['Int']>;
+  collectionId?: InputMaybe<Scalars['Int']>;
   /** The parent folder, if any. */
-  folderId?: Maybe<Scalars['Int']>;
-  id?: Maybe<Scalars['Int']>;
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  folderId?: InputMaybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
+  name?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** A `SketchFolder` edge in the connection. */
@@ -9306,60 +9300,60 @@ export enum SketchGeometryType {
 
 /** An input for mutations affecting `Sketch` */
 export type SketchInput = {
-  bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
+  bbox?: InputMaybe<Array<InputMaybe<Scalars['Float']>>>;
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
-  collectionId?: Maybe<Scalars['Int']>;
+  collectionId?: InputMaybe<Scalars['Int']>;
   /**
    * If this Sketch started as a copy of another it is tracked here. Eventually
    * SeaSketch may have a means of visualizing how plans are iterated on over time.
    */
-  copyOf?: Maybe<Scalars['Int']>;
+  copyOf?: InputMaybe<Scalars['Int']>;
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
-  folderId?: Maybe<Scalars['Int']>;
-  formElementId?: Maybe<Scalars['Int']>;
+  folderId?: InputMaybe<Scalars['Int']>;
+  formElementId?: InputMaybe<Scalars['Int']>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
    * large and complex, so it may be necessary to access them through a vector tile
    * service or some other optimization.
    */
-  geom?: Maybe<Scalars['GeoJSON']>;
-  id?: Maybe<Scalars['Int']>;
-  mercatorGeometry?: Maybe<Scalars['GeoJSON']>;
+  geom?: InputMaybe<Scalars['GeoJSON']>;
+  id?: InputMaybe<Scalars['Int']>;
+  mercatorGeometry?: InputMaybe<Scalars['GeoJSON']>;
   /** User provided name for the sketch. */
   name: Scalars['String'];
-  numVertices?: Maybe<Scalars['Int']>;
-  properties?: Maybe<Scalars['JSON']>;
-  responseId?: Maybe<Scalars['Int']>;
+  numVertices?: InputMaybe<Scalars['Int']>;
+  properties?: InputMaybe<Scalars['JSON']>;
+  responseId?: InputMaybe<Scalars['Int']>;
   /** SketchClass that defines the behavior of this type of sketch. */
   sketchClassId: Scalars['Int'];
   /**
    * Spatial feature the user directly digitized, without preprocessing. This is
    * the feature that should be used if the Sketch is later edited.
    */
-  userGeom?: Maybe<Scalars['GeoJSON']>;
+  userGeom?: InputMaybe<Scalars['GeoJSON']>;
   /** Owner of the sketch. */
-  userId?: Maybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `Sketch`. Fields that are set will be updated. */
 export type SketchPatch = {
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
-  collectionId?: Maybe<Scalars['Int']>;
+  collectionId?: InputMaybe<Scalars['Int']>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
    * large and complex, so it may be necessary to access them through a vector tile
    * service or some other optimization.
    */
-  geom?: Maybe<Scalars['GeoJSON']>;
+  geom?: InputMaybe<Scalars['GeoJSON']>;
   /** User provided name for the sketch. */
-  name?: Maybe<Scalars['String']>;
+  name?: InputMaybe<Scalars['String']>;
   /**
    * Spatial feature the user directly digitized, without preprocessing. This is
    * the feature that should be used if the Sketch is later edited.
    */
-  userGeom?: Maybe<Scalars['GeoJSON']>;
+  userGeom?: InputMaybe<Scalars['GeoJSON']>;
 };
 
 export enum SortByDirection {
@@ -9397,20 +9391,20 @@ export type Sprite = Node & {
  * sprite, the actual images are in cloud storage referenced by the URL parameter.
  */
 export type SpriteSpriteImagesArgs = {
-  condition?: Maybe<SpriteImageCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SpriteImagesOrderBy>>;
+  condition?: InputMaybe<SpriteImageCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<SpriteImagesOrderBy>>;
 };
 
 /** A condition to be used against `Sprite` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type SpriteCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `md5` field. */
-  md5?: Maybe<Scalars['String']>;
+  md5?: InputMaybe<Scalars['String']>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 export type SpriteImage = {
@@ -9438,7 +9432,7 @@ export type SpriteImage = {
  */
 export type SpriteImageCondition = {
   /** Checks for equality with the object’s `spriteId` field. */
-  spriteId?: Maybe<Scalars['Int']>;
+  spriteId?: InputMaybe<Scalars['Int']>;
 };
 
 /** Methods to use when ordering `SpriteImage`. */
@@ -9533,46 +9527,46 @@ export type Survey = Node & {
 
 
 export type SurveyFormsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<FormCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<FormsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<FormCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<FormsOrderBy>>;
 };
 
 
 export type SurveyInvitedGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
 export type SurveySurveyInvitedGroupsArgs = {
-  condition?: Maybe<SurveyInvitedGroupCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyInvitedGroupsOrderBy>>;
+  condition?: InputMaybe<SurveyInvitedGroupCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<SurveyInvitedGroupsOrderBy>>;
 };
 
 
 export type SurveySurveyInvitesArgs = {
-  condition?: Maybe<SurveyInviteCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
+  condition?: InputMaybe<SurveyInviteCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<SurveyInvitesOrderBy>>;
 };
 
 
 export type SurveySurveyResponsesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<SurveyResponseCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<SurveyResponseCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 export enum SurveyAccessType {
@@ -9583,9 +9577,9 @@ export enum SurveyAccessType {
 /** A condition to be used against `Survey` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type SurveyCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 export type SurveyConsentDocument = Node & {
@@ -9607,9 +9601,9 @@ export type SurveyConsentDocument = Node & {
  */
 export type SurveyConsentDocumentCondition = {
   /** Checks for equality with the object’s `formElementId` field. */
-  formElementId?: Maybe<Scalars['Int']>;
+  formElementId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
 };
 
 /** A connection to a list of `SurveyConsentDocument` values. */
@@ -9669,10 +9663,10 @@ export type SurveyInvite = Node & {
 
 
 export type SurveyInviteInviteEmailsArgs = {
-  condition?: Maybe<InviteEmailCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<InviteEmailsOrderBy>>;
+  condition?: InputMaybe<InviteEmailCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<InviteEmailsOrderBy>>;
 };
 
 /**
@@ -9681,21 +9675,21 @@ export type SurveyInviteInviteEmailsArgs = {
  */
 export type SurveyInviteCondition = {
   /** Checks for equality with the object’s `email` field. */
-  email?: Maybe<Scalars['Email']>;
+  email?: InputMaybe<Scalars['Email']>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `surveyId` field. */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: InputMaybe<Scalars['Int']>;
 };
 
 export type SurveyInviteOptionsInput = {
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
+  email?: InputMaybe<Scalars['Email']>;
+  fullname?: InputMaybe<Scalars['String']>;
 };
 
 /** Represents an update to a `SurveyInvite`. Fields that are set will be updated. */
 export type SurveyInvitePatch = {
-  fullname?: Maybe<Scalars['String']>;
+  fullname?: InputMaybe<Scalars['String']>;
 };
 
 export type SurveyInviteTokenClaims = {
@@ -9728,9 +9722,9 @@ export type SurveyInvitedGroup = {
  */
 export type SurveyInvitedGroupCondition = {
   /** Checks for equality with the object’s `groupId` field. */
-  groupId?: Maybe<Scalars['Int']>;
+  groupId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `surveyId` field. */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: InputMaybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `SurveyInvitedGroup` */
@@ -9773,30 +9767,30 @@ export enum SurveyInvitesOrderBy {
 /** Represents an update to a `Survey`. Fields that are set will be updated. */
 export type SurveyPatch = {
   /** PUBLIC or INVITE_ONLY */
-  accessType?: Maybe<SurveyAccessType>;
+  accessType?: InputMaybe<SurveyAccessType>;
   /** If set, responses that originate from an IP address outside this fence will be flagged. */
-  geofence?: Maybe<Scalars['GeoJSON']>;
-  id?: Maybe<Scalars['Int']>;
+  geofence?: InputMaybe<Scalars['GeoJSON']>;
+  id?: InputMaybe<Scalars['Int']>;
   /**
    * Disabled surveys will not be accessible to non-admins. Invite email sending will
    * be paused.
    */
-  isDisabled?: Maybe<Scalars['Boolean']>;
+  isDisabled?: InputMaybe<Scalars['Boolean']>;
   /**
    * If set, there can only be one response with matching contact information. The
    * app will also discourage multiple submissions from the same browser session.
    */
-  limitToSingleResponse?: Maybe<Scalars['Boolean']>;
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  showFacilitationOption?: Maybe<Scalars['Boolean']>;
-  showProgress?: Maybe<Scalars['Boolean']>;
+  limitToSingleResponse?: InputMaybe<Scalars['Boolean']>;
+  name?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  showFacilitationOption?: InputMaybe<Scalars['Boolean']>;
+  showProgress?: InputMaybe<Scalars['Boolean']>;
   /**
    * Only applicable for public surveys. Show tools to respondants for sharing the
    * survey on social media to encourage responses.
    */
-  showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
-  supportedLanguages?: Maybe<Array<Maybe<Scalars['String']>>>;
+  showSocialMediaButtons?: InputMaybe<Scalars['Boolean']>;
+  supportedLanguages?: InputMaybe<Array<InputMaybe<Scalars['String']>>>;
 };
 
 export type SurveyResponse = Node & {
@@ -9857,22 +9851,22 @@ export type SurveyResponse = Node & {
  */
 export type SurveyResponseCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `surveyId` field. */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `userId` field. */
-  userId?: Maybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `SurveyResponse`. Fields that are set will be updated. */
 export type SurveyResponsePatch = {
-  archived?: Maybe<Scalars['Boolean']>;
+  archived?: InputMaybe<Scalars['Boolean']>;
   /** JSON representation of responses, keyed by the form field export_id */
-  data?: Maybe<Scalars['JSON']>;
+  data?: InputMaybe<Scalars['JSON']>;
   /** Users may save their responses for later editing before submission. After submission they can no longer edit them. */
-  isDraft?: Maybe<Scalars['Boolean']>;
-  isPractice?: Maybe<Scalars['Boolean']>;
-  updatedAt?: Maybe<Scalars['Datetime']>;
+  isDraft?: InputMaybe<Scalars['Boolean']>;
+  isPractice?: InputMaybe<Scalars['Boolean']>;
+  updatedAt?: InputMaybe<Scalars['Datetime']>;
 };
 
 /** A connection to a list of `SurveyResponse` values. */
@@ -9998,41 +9992,41 @@ export type TableOfContentsItem = Node & {
  */
 export type TableOfContentsItemCondition = {
   /** Checks for equality with the object’s `dataLayerId` field. */
-  dataLayerId?: Maybe<Scalars['Int']>;
+  dataLayerId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `isDraft` field. */
-  isDraft?: Maybe<Scalars['Boolean']>;
+  isDraft?: InputMaybe<Scalars['Boolean']>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `TableOfContentsItem` */
 export type TableOfContentsItemInput = {
   /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars['BigFloat']>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
-  dataLayerId?: Maybe<Scalars['Int']>;
-  enableDownload?: Maybe<Scalars['Boolean']>;
-  hideChildren?: Maybe<Scalars['Boolean']>;
+  dataLayerId?: InputMaybe<Scalars['Int']>;
+  enableDownload?: InputMaybe<Scalars['Boolean']>;
+  hideChildren?: InputMaybe<Scalars['Boolean']>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
    * their children. Toggles can only be used to toggle children off
    */
-  isClickOffOnly?: Maybe<Scalars['Boolean']>;
+  isClickOffOnly?: InputMaybe<Scalars['Boolean']>;
   /** If not a folder, the item is a layer-type and must have a data_layer_id */
-  isFolder?: Maybe<Scalars['Boolean']>;
+  isFolder?: InputMaybe<Scalars['Boolean']>;
   /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: InputMaybe<Scalars['JSON']>;
   /**
    * stable_id of the parent folder, if any. This property cannot be changed
    * directly. To rearrange items into folders, use the
    * `updateTableOfContentsItemParent` mutation.
    */
-  parentStableId?: Maybe<Scalars['String']>;
+  parentStableId?: InputMaybe<Scalars['String']>;
   projectId: Scalars['Int'];
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
-  showRadioChildren?: Maybe<Scalars['Boolean']>;
+  showRadioChildren?: InputMaybe<Scalars['Boolean']>;
   /**
    * The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme)
    * should be used with a custom alphabet that excludes dashes and has a lenght of
@@ -10049,22 +10043,22 @@ export type TableOfContentsItemInput = {
 /** Represents an update to a `TableOfContentsItem`. Fields that are set will be updated. */
 export type TableOfContentsItemPatch = {
   /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars['BigFloat']>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
-  dataLayerId?: Maybe<Scalars['Int']>;
-  enableDownload?: Maybe<Scalars['Boolean']>;
-  hideChildren?: Maybe<Scalars['Boolean']>;
+  dataLayerId?: InputMaybe<Scalars['Int']>;
+  enableDownload?: InputMaybe<Scalars['Boolean']>;
+  hideChildren?: InputMaybe<Scalars['Boolean']>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
    * their children. Toggles can only be used to toggle children off
    */
-  isClickOffOnly?: Maybe<Scalars['Boolean']>;
+  isClickOffOnly?: InputMaybe<Scalars['Boolean']>;
   /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: InputMaybe<Scalars['JSON']>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
-  showRadioChildren?: Maybe<Scalars['Boolean']>;
+  showRadioChildren?: InputMaybe<Scalars['Boolean']>;
   /** Name used in the table of contents rendering */
-  title?: Maybe<Scalars['String']>;
+  title?: InputMaybe<Scalars['String']>;
 };
 
 /** A connection to a list of `TableOfContentsItem` values. */
@@ -10115,9 +10109,9 @@ export type ToggleAdminAccessInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `toggleAdminAccess` mutation. */
@@ -10139,9 +10133,9 @@ export type ToggleForumPostingBanInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `toggleForumPostingBan` mutation. */
@@ -10163,9 +10157,9 @@ export type ToggleResponsesPracticeInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  isPractice?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  ids?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
+  isPractice?: InputMaybe<Scalars['Boolean']>;
 };
 
 /** The output of our `toggleResponsesPractice` mutation. */
@@ -10213,21 +10207,21 @@ export type Topic = Node & {
 
 
 export type TopicPostsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<PostCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<PostCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 /** A condition to be used against `Topic` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type TopicCondition = {
   /** Checks for equality with the object’s `forumId` field. */
-  forumId?: Maybe<Scalars['Int']>;
+  forumId?: InputMaybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `Topic`. Fields that are set will be updated. */
@@ -10237,15 +10231,15 @@ export type TopicPatch = {
    *
    * Can be toggled by project admins using `setTopicLocked()` mutation.
    */
-  locked?: Maybe<Scalars['Boolean']>;
+  locked?: InputMaybe<Scalars['Boolean']>;
   /**
    * Sticky topics will be listed at the topic of the forum.
    *
    * Can be toggled by project admins using `setTopicSticky()` mutation.
    */
-  sticky?: Maybe<Scalars['Boolean']>;
+  sticky?: InputMaybe<Scalars['Boolean']>;
   /** Title displayed in the topics listing. Can be updated in the first 5 minutes after creation. */
-  title?: Maybe<Scalars['String']>;
+  title?: InputMaybe<Scalars['String']>;
 };
 
 /** A connection to a list of `Topic` values. */
@@ -10281,7 +10275,6 @@ export enum TopicsOrderBy {
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
-
 
 export type UnsplashLinks = {
   __typename?: 'UnsplashLinks';
@@ -10337,7 +10330,7 @@ export type UpdateAclByBasemapIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** An object where the defined keys will be set on the `Acl` being updated. */
   patch: AclPatch;
 };
@@ -10348,7 +10341,7 @@ export type UpdateAclByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Acl` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Acl` being updated. */
@@ -10361,7 +10354,7 @@ export type UpdateAclBySketchClassIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** An object where the defined keys will be set on the `Acl` being updated. */
   patch: AclPatch;
   sketchClassId: Scalars['Int'];
@@ -10373,7 +10366,7 @@ export type UpdateAclByTableOfContentsItemIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** An object where the defined keys will be set on the `Acl` being updated. */
   patch: AclPatch;
   tableOfContentsItemId: Scalars['Int'];
@@ -10385,7 +10378,7 @@ export type UpdateAclInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Acl` being updated. */
   patch: AclPatch;
@@ -10417,7 +10410,7 @@ export type UpdateBasemapByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Basemap` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Basemap` being updated. */
@@ -10430,7 +10423,7 @@ export type UpdateBasemapInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Basemap` being updated. */
   patch: BasemapPatch;
@@ -10459,7 +10452,7 @@ export type UpdateBasemapPayload = {
 
 /** The output of our update `Basemap` mutation. */
 export type UpdateBasemapPayloadBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
 
 /** All input for the `updateCommunityGuidelineByNodeId` mutation. */
@@ -10468,7 +10461,7 @@ export type UpdateCommunityGuidelineByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `CommunityGuideline` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `CommunityGuideline` being updated. */
@@ -10481,7 +10474,7 @@ export type UpdateCommunityGuidelineInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** An object where the defined keys will be set on the `CommunityGuideline` being updated. */
   patch: CommunityGuidelinePatch;
   projectId: Scalars['Int'];
@@ -10509,7 +10502,7 @@ export type UpdateDataLayerByInteractivitySettingsIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   interactivitySettingsId: Scalars['Int'];
   /** An object where the defined keys will be set on the `DataLayer` being updated. */
   patch: DataLayerPatch;
@@ -10521,7 +10514,7 @@ export type UpdateDataLayerByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `DataLayer` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `DataLayer` being updated. */
@@ -10534,7 +10527,7 @@ export type UpdateDataLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `DataLayer` being updated. */
   patch: DataLayerPatch;
@@ -10563,7 +10556,7 @@ export type UpdateDataLayerPayload = {
 
 /** The output of our update `DataLayer` mutation. */
 export type UpdateDataLayerPayloadDataLayerEdgeArgs = {
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+  orderBy?: InputMaybe<Array<DataLayersOrderBy>>;
 };
 
 /** All input for the `updateDataSourceByNodeId` mutation. */
@@ -10572,7 +10565,7 @@ export type UpdateDataSourceByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `DataSource` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `DataSource` being updated. */
@@ -10585,7 +10578,7 @@ export type UpdateDataSourceInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** Should be used as sourceId in stylesheets. */
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `DataSource` being updated. */
@@ -10611,7 +10604,7 @@ export type UpdateDataSourcePayload = {
 
 /** The output of our update `DataSource` mutation. */
 export type UpdateDataSourcePayloadDataSourceEdgeArgs = {
-  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
+  orderBy?: InputMaybe<Array<DataSourcesOrderBy>>;
 };
 
 /** All input for the `updateEmailNotificationPreferenceByUserId` mutation. */
@@ -10620,7 +10613,7 @@ export type UpdateEmailNotificationPreferenceByUserIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** An object where the defined keys will be set on the `EmailNotificationPreference` being updated. */
   patch: EmailNotificationPreferencePatch;
   userId: Scalars['Int'];
@@ -10647,7 +10640,7 @@ export type UpdateEmailNotificationPreferencePayload = {
 
 /** The output of our update `EmailNotificationPreference` mutation. */
 export type UpdateEmailNotificationPreferencePayloadEmailNotificationPreferenceEdgeArgs = {
-  orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
+  orderBy?: InputMaybe<Array<EmailNotificationPreferencesOrderBy>>;
 };
 
 /** All input for the `updateFormByNodeId` mutation. */
@@ -10656,7 +10649,7 @@ export type UpdateFormByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Form` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Form` being updated. */
@@ -10669,7 +10662,7 @@ export type UpdateFormBySketchClassIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** An object where the defined keys will be set on the `Form` being updated. */
   patch: FormPatch;
   /** Related *SketchClass* */
@@ -10682,7 +10675,7 @@ export type UpdateFormBySurveyIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** An object where the defined keys will be set on the `Form` being updated. */
   patch: FormPatch;
   /** Related *Survey* */
@@ -10695,7 +10688,7 @@ export type UpdateFormElementByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `FormElement` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `FormElement` being updated. */
@@ -10708,7 +10701,7 @@ export type UpdateFormElementInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `FormElement` being updated. */
   patch: FormElementPatch;
@@ -10733,7 +10726,7 @@ export type UpdateFormElementPayload = {
 
 /** The output of our update `FormElement` mutation. */
 export type UpdateFormElementPayloadFormElementEdgeArgs = {
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the `updateForm` mutation. */
@@ -10742,7 +10735,7 @@ export type UpdateFormInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Form` being updated. */
   patch: FormPatch;
@@ -10754,7 +10747,7 @@ export type UpdateFormLogicConditionByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `FormLogicCondition` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `FormLogicCondition` being updated. */
@@ -10767,7 +10760,7 @@ export type UpdateFormLogicConditionInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `FormLogicCondition` being updated. */
   patch: FormLogicConditionPatch;
@@ -10792,7 +10785,7 @@ export type UpdateFormLogicConditionPayload = {
 
 /** The output of our update `FormLogicCondition` mutation. */
 export type UpdateFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicConditionsOrderBy>>;
 };
 
 /** All input for the `updateFormLogicRuleByNodeId` mutation. */
@@ -10801,7 +10794,7 @@ export type UpdateFormLogicRuleByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `FormLogicRule` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `FormLogicRule` being updated. */
@@ -10814,7 +10807,7 @@ export type UpdateFormLogicRuleInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `FormLogicRule` being updated. */
   patch: FormLogicRulePatch;
@@ -10839,7 +10832,7 @@ export type UpdateFormLogicRulePayload = {
 
 /** The output of our update `FormLogicRule` mutation. */
 export type UpdateFormLogicRulePayloadFormLogicRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** The output of our update `Form` mutation. */
@@ -10865,7 +10858,7 @@ export type UpdateFormPayload = {
 
 /** The output of our update `Form` mutation. */
 export type UpdateFormPayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormsOrderBy>>;
 };
 
 /** All input for the `updateForumByNodeId` mutation. */
@@ -10874,7 +10867,7 @@ export type UpdateForumByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Forum` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Forum` being updated. */
@@ -10887,7 +10880,7 @@ export type UpdateForumInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Forum` being updated. */
   patch: ForumPatch;
@@ -10914,7 +10907,7 @@ export type UpdateForumPayload = {
 
 /** The output of our update `Forum` mutation. */
 export type UpdateForumPayloadForumEdgeArgs = {
-  orderBy?: Maybe<Array<ForumsOrderBy>>;
+  orderBy?: InputMaybe<Array<ForumsOrderBy>>;
 };
 
 /** All input for the `updateGroupByNodeId` mutation. */
@@ -10923,7 +10916,7 @@ export type UpdateGroupByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Group` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Group` being updated. */
@@ -10936,7 +10929,7 @@ export type UpdateGroupByProjectIdAndNameInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** Label for the group. */
   name: Scalars['String'];
   /** An object where the defined keys will be set on the `Group` being updated. */
@@ -10950,7 +10943,7 @@ export type UpdateGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Group` being updated. */
   patch: GroupPatch;
@@ -10978,7 +10971,7 @@ export type UpdateInteractivitySettingByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `InteractivitySetting` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `InteractivitySetting` being updated. */
@@ -10991,7 +10984,7 @@ export type UpdateInteractivitySettingInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `InteractivitySetting` being updated. */
   patch: InteractivitySettingPatch;
@@ -11017,9 +11010,9 @@ export type UpdateMapboxSecretKeyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  secret?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  projectId?: InputMaybe<Scalars['Int']>;
+  secret?: InputMaybe<Scalars['String']>;
 };
 
 /** The output of our `updateMapboxSecretKey` mutation. */
@@ -11042,7 +11035,7 @@ export type UpdateMapboxSecretKeyPayload = {
 
 /** The output of our `updateMapboxSecretKey` mutation. */
 export type UpdateMapboxSecretKeyPayloadProjectEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the `updateOptionalBasemapLayerByNodeId` mutation. */
@@ -11051,7 +11044,7 @@ export type UpdateOptionalBasemapLayerByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `OptionalBasemapLayer` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `OptionalBasemapLayer` being updated. */
@@ -11064,7 +11057,7 @@ export type UpdateOptionalBasemapLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `OptionalBasemapLayer` being updated. */
   patch: OptionalBasemapLayerPatch;
@@ -11092,9 +11085,9 @@ export type UpdatePostInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  message?: Maybe<Scalars['JSON']>;
-  postId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  message?: InputMaybe<Scalars['JSON']>;
+  postId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `updatePost` mutation. */
@@ -11117,7 +11110,7 @@ export type UpdatePostPayload = {
 
 /** The output of our `updatePost` mutation. */
 export type UpdatePostPayloadPostEdgeArgs = {
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 /** All input for the `updateProfileByUserId` mutation. */
@@ -11126,7 +11119,7 @@ export type UpdateProfileByUserIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** An object where the defined keys will be set on the `Profile` being updated. */
   patch: ProfilePatch;
   userId: Scalars['Int'];
@@ -11153,7 +11146,7 @@ export type UpdateProfilePayload = {
 
 /** The output of our update `Profile` mutation. */
 export type UpdateProfilePayloadProfileEdgeArgs = {
-  orderBy?: Maybe<Array<ProfilesOrderBy>>;
+  orderBy?: InputMaybe<Array<ProfilesOrderBy>>;
 };
 
 /** All input for the `updateProjectByNodeId` mutation. */
@@ -11162,7 +11155,7 @@ export type UpdateProjectByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Project` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Project` being updated. */
@@ -11175,7 +11168,7 @@ export type UpdateProjectBySlugInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** An object where the defined keys will be set on the `Project` being updated. */
   patch: ProjectPatch;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
@@ -11188,7 +11181,7 @@ export type UpdateProjectInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Project` being updated. */
   patch: ProjectPatch;
@@ -11200,7 +11193,7 @@ export type UpdateProjectInviteGroupByInviteIdAndGroupIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   groupId: Scalars['Int'];
   inviteId: Scalars['Int'];
   /** An object where the defined keys will be set on the `ProjectInviteGroup` being updated. */
@@ -11230,7 +11223,7 @@ export type UpdateProjectInviteGroupPayload = {
 
 /** The output of our update `ProjectInviteGroup` mutation. */
 export type UpdateProjectInviteGroupPayloadProjectInviteGroupEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 /** All input for the `updateProjectInvite` mutation. */
@@ -11239,12 +11232,12 @@ export type UpdateProjectInviteInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  email?: Maybe<Scalars['String']>;
-  fullname?: Maybe<Scalars['String']>;
-  groups?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  inviteId?: Maybe<Scalars['Int']>;
-  makeAdmin?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  email?: InputMaybe<Scalars['String']>;
+  fullname?: InputMaybe<Scalars['String']>;
+  groups?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
+  inviteId?: InputMaybe<Scalars['Int']>;
+  makeAdmin?: InputMaybe<Scalars['Boolean']>;
 };
 
 /** The output of our `updateProjectInvite` mutation. */
@@ -11281,7 +11274,7 @@ export type UpdateProjectPayload = {
 
 /** The output of our update `Project` mutation. */
 export type UpdateProjectPayloadProjectEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the `updateProjectsSharedBasemapByBasemapIdAndProjectId` mutation. */
@@ -11291,7 +11284,7 @@ export type UpdateProjectsSharedBasemapByBasemapIdAndProjectIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** An object where the defined keys will be set on the `ProjectsSharedBasemap` being updated. */
   patch: ProjectsSharedBasemapPatch;
   projectId: Scalars['Int'];
@@ -11318,7 +11311,7 @@ export type UpdateProjectsSharedBasemapPayload = {
 
 /** The output of our update `ProjectsSharedBasemap` mutation. */
 export type UpdateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 /** All input for the `updateSketchByNodeId` mutation. */
@@ -11327,7 +11320,7 @@ export type UpdateSketchByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Sketch` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Sketch` being updated. */
@@ -11340,7 +11333,7 @@ export type UpdateSketchClassByFormElementIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** If set, this sketch class is only for use in a survey indicated by the form_element. */
   formElementId: Scalars['Int'];
   /** An object where the defined keys will be set on the `SketchClass` being updated. */
@@ -11353,7 +11346,7 @@ export type UpdateSketchClassByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `SketchClass` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `SketchClass` being updated. */
@@ -11366,7 +11359,7 @@ export type UpdateSketchClassInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `SketchClass` being updated. */
   patch: SketchClassPatch;
@@ -11395,7 +11388,7 @@ export type UpdateSketchClassPayload = {
 
 /** The output of our update `SketchClass` mutation. */
 export type UpdateSketchClassPayloadSketchClassEdgeArgs = {
-  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchClassesOrderBy>>;
 };
 
 /** All input for the `updateSketchFolderByNodeId` mutation. */
@@ -11404,7 +11397,7 @@ export type UpdateSketchFolderByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `SketchFolder` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `SketchFolder` being updated. */
@@ -11417,7 +11410,7 @@ export type UpdateSketchFolderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `SketchFolder` being updated. */
   patch: SketchFolderPatch;
@@ -11442,7 +11435,7 @@ export type UpdateSketchFolderPayload = {
 
 /** The output of our update `SketchFolder` mutation. */
 export type UpdateSketchFolderPayloadSketchFolderEdgeArgs = {
-  orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchFoldersOrderBy>>;
 };
 
 /** All input for the `updateSketch` mutation. */
@@ -11451,7 +11444,7 @@ export type UpdateSketchInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Sketch` being updated. */
   patch: SketchPatch;
@@ -11487,7 +11480,7 @@ export type UpdateSurveyByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Survey` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Survey` being updated. */
@@ -11500,7 +11493,7 @@ export type UpdateSurveyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Survey` being updated. */
   patch: SurveyPatch;
@@ -11512,7 +11505,7 @@ export type UpdateSurveyInviteByEmailAndSurveyIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   email: Scalars['Email'];
   /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
   patch: SurveyInvitePatch;
@@ -11525,7 +11518,7 @@ export type UpdateSurveyInviteByEmailInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   email: Scalars['Email'];
   /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
   patch: SurveyInvitePatch;
@@ -11537,7 +11530,7 @@ export type UpdateSurveyInviteByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `SurveyInvite` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
@@ -11550,7 +11543,7 @@ export type UpdateSurveyInviteInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
   patch: SurveyInvitePatch;
@@ -11577,7 +11570,7 @@ export type UpdateSurveyInvitePayload = {
 
 /** The output of our update `SurveyInvite` mutation. */
 export type UpdateSurveyInvitePayloadSurveyInviteEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyInvitesOrderBy>>;
 };
 
 /** All input for the `updateSurveyInvitedGroups` mutation. */
@@ -11586,9 +11579,9 @@ export type UpdateSurveyInvitedGroupsInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  surveyId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  groupIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
+  surveyId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `updateSurveyInvitedGroups` mutation. */
@@ -11626,7 +11619,7 @@ export type UpdateSurveyResponseByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `SurveyResponse` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `SurveyResponse` being updated. */
@@ -11639,7 +11632,7 @@ export type UpdateSurveyResponseInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `SurveyResponse` being updated. */
   patch: SurveyResponsePatch;
@@ -11666,7 +11659,7 @@ export type UpdateSurveyResponsePayload = {
 
 /** The output of our update `SurveyResponse` mutation. */
 export type UpdateSurveyResponsePayloadSurveyResponseEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 /** All input for the `updateTableOfContentsItemByDataLayerId` mutation. */
@@ -11675,7 +11668,7 @@ export type UpdateTableOfContentsItemByDataLayerIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId: Scalars['Int'];
   /** An object where the defined keys will be set on the `TableOfContentsItem` being updated. */
@@ -11688,7 +11681,7 @@ export type UpdateTableOfContentsItemByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `TableOfContentsItem` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `TableOfContentsItem` being updated. */
@@ -11697,13 +11690,13 @@ export type UpdateTableOfContentsItemByNodeIdInput = {
 
 /** All input for the `updateTableOfContentsItemChildren` mutation. */
 export type UpdateTableOfContentsItemChildrenInput = {
-  childIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  childIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  parentId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  parentId?: InputMaybe<Scalars['Int']>;
 };
 
 /** The output of our `updateTableOfContentsItemChildren` mutation. */
@@ -11725,7 +11718,7 @@ export type UpdateTableOfContentsItemInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `TableOfContentsItem` being updated. */
   patch: TableOfContentsItemPatch;
@@ -11752,7 +11745,7 @@ export type UpdateTableOfContentsItemPayload = {
 
 /** The output of our update `TableOfContentsItem` mutation. */
 export type UpdateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
-  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+  orderBy?: InputMaybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
 /** All input for the `updateTopicByNodeId` mutation. */
@@ -11761,7 +11754,7 @@ export type UpdateTopicByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `Topic` to be updated. */
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Topic` being updated. */
@@ -11774,7 +11767,7 @@ export type UpdateTopicInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Topic` being updated. */
   patch: TopicPatch;
@@ -11801,7 +11794,7 @@ export type UpdateTopicPayload = {
 
 /** The output of our update `Topic` mutation. */
 export type UpdateTopicPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 /** All input for the `updateZIndexes` mutation. */
@@ -11810,8 +11803,8 @@ export type UpdateZIndexesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  dataLayerIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  dataLayerIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
 /** The output of our `updateZIndexes` mutation. */
@@ -11826,7 +11819,6 @@ export type UpdateZIndexesPayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
-
 
 /**
  * The SeaSketch User type is quite sparse since authentication is handled by Auth0
@@ -11889,13 +11881,13 @@ export type User = Node & {
  * used to accept project invite tokens.
  */
 export type UserEmailNotificationPreferencesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<EmailNotificationPreferenceCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
+  after?: InputMaybe<Scalars['Cursor']>;
+  before?: InputMaybe<Scalars['Cursor']>;
+  condition?: InputMaybe<EmailNotificationPreferenceCondition>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<Array<EmailNotificationPreferencesOrderBy>>;
 };
 
 
@@ -11909,8 +11901,8 @@ export type UserEmailNotificationPreferencesConnectionArgs = {
  * used to accept project invite tokens.
  */
 export type UserGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -11924,7 +11916,7 @@ export type UserGroupsArgs = {
  * used to accept project invite tokens.
  */
 export type UserParticipationStatusArgs = {
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
 };
 
 /** A `User` edge in the connection. */
@@ -11945,56 +11937,12 @@ export enum UsersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
-export type UpdateTerrainExaggerationFragment = (
-  { __typename?: 'Basemap' }
-  & Pick<Basemap, 'terrainExaggeration'>
-);
-
-export type NewLabelsLayerFragment = (
-  { __typename?: 'Basemap' }
-  & Pick<Basemap, 'labelsLayerId'>
-);
-
-export type NewTerrainFragment = (
-  { __typename?: 'Basemap' }
-  & Pick<Basemap, 'terrainUrl' | 'terrainOptional' | 'terrainVisibilityDefault'>
-);
-
-export type NewBasemapFragment = (
-  { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'projectId' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'terrainExaggeration' | 'terrainOptional' | 'url' | 'type' | 'tileSize' | 'thumbnail' | 'terrainUrl' | 'terrainTileSize' | 'surveysOnly'>
-);
-
 export type ProjectBucketSettingQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type ProjectBucketSettingQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename: 'Project' }
-    & Pick<Project, 'id'>
-    & { dataSourcesBucket?: Maybe<(
-      { __typename?: 'DataSourcesBucket' }
-      & Pick<DataSourcesBucket, 'url' | 'region' | 'name'>
-      & { location: (
-        { __typename?: 'GeometryPoint' }
-        & Pick<GeometryPoint, 'geojson'>
-      ) }
-    )> }
-  )>, dataSourcesBucketsConnection?: Maybe<(
-    { __typename?: 'DataSourcesBucketsConnection' }
-    & { nodes: Array<(
-      { __typename?: 'DataSourcesBucket' }
-      & Pick<DataSourcesBucket, 'url' | 'name' | 'region'>
-      & { location: (
-        { __typename?: 'GeometryPoint' }
-        & Pick<GeometryPoint, 'geojson'>
-      ) }
-    )> }
-  )> }
-);
+export type ProjectBucketSettingQuery = { __typename?: 'Query', projectBySlug?: { __typename: 'Project', id: number, dataSourcesBucket?: { __typename?: 'DataSourcesBucket', url: string, region: string, name: string, location: { __typename?: 'GeometryPoint', geojson?: any | null } } | null } | null, dataSourcesBucketsConnection?: { __typename?: 'DataSourcesBucketsConnection', nodes: Array<{ __typename?: 'DataSourcesBucket', url: string, name: string, region: string, location: { __typename?: 'GeometryPoint', geojson?: any | null } }> } | null };
 
 export type UpdateProjectStorageBucketMutationVariables = Exact<{
   slug: Scalars['String'];
@@ -12002,190 +11950,41 @@ export type UpdateProjectStorageBucketMutationVariables = Exact<{
 }>;
 
 
-export type UpdateProjectStorageBucketMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & Pick<UpdateProjectPayload, 'clientMutationId'>
-    & { project?: Maybe<(
-      { __typename: 'Project' }
-      & Pick<Project, 'id'>
-      & { dataSourcesBucket?: Maybe<(
-        { __typename?: 'DataSourcesBucket' }
-        & Pick<DataSourcesBucket, 'url' | 'region' | 'name'>
-      )> }
-    )> }
-  )> }
-);
+export type UpdateProjectStorageBucketMutation = { __typename?: 'Mutation', updateProjectBySlug?: { __typename?: 'UpdateProjectPayload', clientMutationId?: string | null, project?: { __typename: 'Project', id: number, dataSourcesBucket?: { __typename?: 'DataSourcesBucket', url: string, region: string, name: string } | null } | null } | null };
 
-export type NewQueryParametersFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'queryParameters'>
-);
+export type LogicRuleEditorFormElementFragment = { __typename?: 'FormElement', id: number, body: any, typeId: string, formId: number, jumpToId?: number | null, componentSettings: any, exportId?: string | null, isRequired: boolean, type?: { __typename?: 'FormElementType', supportedOperators: Array<FieldRuleOperator | null>, isInput: boolean } | null };
 
-export type UpdateHighDpiFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'useDevicePixelRatio'>
-);
-
-export type UpdateFormatFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'queryParameters'>
-);
-
-export type NewGlStyleFragment = (
-  { __typename?: 'DataLayer' }
-  & Pick<DataLayer, 'mapboxGlStyles'>
-);
-
-export type NewRenderUnderFragment = (
-  { __typename?: 'DataLayer' }
-  & Pick<DataLayer, 'renderUnder'>
-);
-
-export type NewZIndexFragment = (
-  { __typename?: 'DataLayer' }
-  & Pick<DataLayer, 'zIndex'>
-);
-
-export type NewElementFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
-  & { type?: Maybe<(
-    { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators'>
-  )> }
-);
-
-export type LogicRuleEditorFormElementFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'body' | 'typeId' | 'formId' | 'jumpToId' | 'componentSettings' | 'exportId' | 'isRequired'>
-  & { type?: Maybe<(
-    { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'supportedOperators' | 'isInput'>
-  )> }
-);
-
-export type LogicRuleEditorRuleFragment = (
-  { __typename?: 'FormLogicRule' }
-  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
-  & { conditions?: Maybe<Array<(
-    { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
-  )>> }
-);
-
-export type NewRuleFragment = (
-  { __typename?: 'FormLogicRule' }
-  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
-  & { conditions?: Maybe<Array<(
-    { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
-  )>> }
-);
-
-export type NewSurveyFragment = (
-  { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId'>
-  & { invitedGroups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
-);
-
-export type NewGroupFragment = (
-  { __typename?: 'Group' }
-  & Pick<Group, 'id' | 'projectId' | 'name'>
-);
-
-export type NewInviteEmailFragment = (
-  { __typename?: 'InviteEmail' }
-  & Pick<InviteEmail, 'id' | 'toAddress' | 'createdAt' | 'status' | 'tokenExpiresAt' | 'error' | 'updatedAt'>
-);
-
-export type NewLayerOptionsFragment = (
-  { __typename?: 'OptionalBasemapLayer' }
-  & Pick<OptionalBasemapLayer, 'options'>
-);
-
-export type UpdateAlternateLanguageSettingsFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'alternateLanguageSettings'>
-);
-
-export type UpdateComponentSettingsFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'componentSettings'>
-);
-
-export type UpdateBodyFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body'>
-);
+export type LogicRuleEditorRuleFragment = { __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, formElementId: number, id: number, jumpToId?: number | null, position: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, ruleId: number, subjectId: number, value?: any | null }> | null };
 
 export type MapboxApiKeysQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type MapboxApiKeysQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
-  )> }
-);
+export type MapboxApiKeysQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, mapboxPublicKey?: string | null, mapboxSecretKey?: string | null } | null };
 
 export type UpdatePublicKeyMutationVariables = Exact<{
   id: Scalars['Int'];
-  public?: Maybe<Scalars['String']>;
+  public?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdatePublicKeyMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProject?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'mapboxPublicKey'>
-    )> }
-  )> }
-);
+export type UpdatePublicKeyMutation = { __typename?: 'Mutation', updateProject?: { __typename?: 'UpdateProjectPayload', project?: { __typename?: 'Project', id: number, mapboxPublicKey?: string | null } | null } | null };
 
 export type UpdateSecretKeyMutationVariables = Exact<{
   id: Scalars['Int'];
-  mapboxSecretKey?: Maybe<Scalars['String']>;
+  mapboxSecretKey?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateSecretKeyMutation = (
-  { __typename?: 'Mutation' }
-  & { updateMapboxSecretKey?: Maybe<(
-    { __typename?: 'UpdateMapboxSecretKeyPayload' }
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'mapboxSecretKey'>
-    )> }
-  )> }
-);
+export type UpdateSecretKeyMutation = { __typename?: 'Mutation', updateMapboxSecretKey?: { __typename?: 'UpdateMapboxSecretKeyPayload', project?: { __typename?: 'Project', id: number, mapboxSecretKey?: string | null } | null } | null };
 
 export type GetAclQueryVariables = Exact<{
   nodeId: Scalars['ID'];
 }>;
 
 
-export type GetAclQuery = (
-  { __typename?: 'Query' }
-  & { aclByNodeId?: Maybe<(
-    { __typename?: 'Acl' }
-    & Pick<Acl, 'id' | 'nodeId' | 'type'>
-    & { groups?: Maybe<Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name' | 'memberCount'>
-    )>> }
-  )> }
-);
+export type GetAclQuery = { __typename?: 'Query', aclByNodeId?: { __typename?: 'Acl', id: number, nodeId: string, type: AccessControlListType, groups?: Array<{ __typename?: 'Group', id: number, name: string, memberCount?: number | null }> | null } | null };
 
 export type UpdateAclTypeMutationVariables = Exact<{
   nodeId: Scalars['ID'];
@@ -12193,16 +11992,7 @@ export type UpdateAclTypeMutationVariables = Exact<{
 }>;
 
 
-export type UpdateAclTypeMutation = (
-  { __typename?: 'Mutation' }
-  & { updateAclByNodeId?: Maybe<(
-    { __typename?: 'UpdateAclPayload' }
-    & { acl?: Maybe<(
-      { __typename?: 'Acl' }
-      & Pick<Acl, 'id' | 'nodeId' | 'type'>
-    )> }
-  )> }
-);
+export type UpdateAclTypeMutation = { __typename?: 'Mutation', updateAclByNodeId?: { __typename?: 'UpdateAclPayload', acl?: { __typename?: 'Acl', id: number, nodeId: string, type: AccessControlListType } | null } | null };
 
 export type AddGroupToAclMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -12210,19 +12000,7 @@ export type AddGroupToAclMutationVariables = Exact<{
 }>;
 
 
-export type AddGroupToAclMutation = (
-  { __typename?: 'Mutation' }
-  & { addGroupToAcl?: Maybe<(
-    { __typename?: 'AddGroupToAclPayload' }
-    & { acl?: Maybe<(
-      { __typename?: 'Acl' }
-      & { groups?: Maybe<Array<(
-        { __typename?: 'Group' }
-        & Pick<Group, 'id' | 'name'>
-      )>> }
-    )> }
-  )> }
-);
+export type AddGroupToAclMutation = { __typename?: 'Mutation', addGroupToAcl?: { __typename?: 'AddGroupToAclPayload', acl?: { __typename?: 'Acl', groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null } | null } | null };
 
 export type RemoveGroupFromAclMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -12230,147 +12008,76 @@ export type RemoveGroupFromAclMutationVariables = Exact<{
 }>;
 
 
-export type RemoveGroupFromAclMutation = (
-  { __typename?: 'Mutation' }
-  & { removeGroupFromAcl?: Maybe<(
-    { __typename?: 'RemoveGroupFromAclPayload' }
-    & { acl?: Maybe<(
-      { __typename?: 'Acl' }
-      & { groups?: Maybe<Array<(
-        { __typename?: 'Group' }
-        & Pick<Group, 'id' | 'name'>
-      )>> }
-    )> }
-  )> }
-);
+export type RemoveGroupFromAclMutation = { __typename?: 'Mutation', removeGroupFromAcl?: { __typename?: 'RemoveGroupFromAclPayload', acl?: { __typename?: 'Acl', groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null } | null } | null };
 
 export type GroupsQueryVariables = Exact<{
   projectSlug: Scalars['String'];
 }>;
 
 
-export type GroupsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { groups: Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name' | 'memberCount'>
-    )> }
-  )> }
-);
+export type GroupsQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, groups: Array<{ __typename?: 'Group', id: number, name: string, memberCount?: number | null }> } | null };
 
 export type CreateTableOfContentsItemMutationVariables = Exact<{
   title: Scalars['String'];
   stableId: Scalars['String'];
   projectId: Scalars['Int'];
   isFolder: Scalars['Boolean'];
-  parentStableId?: Maybe<Scalars['String']>;
-  metadata?: Maybe<Scalars['JSON']>;
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
-  dataLayerId?: Maybe<Scalars['Int']>;
+  parentStableId?: InputMaybe<Scalars['String']>;
+  metadata?: InputMaybe<Scalars['JSON']>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars['BigFloat']>> | InputMaybe<Scalars['BigFloat']>>;
+  dataLayerId?: InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type CreateTableOfContentsItemMutation = (
-  { __typename?: 'Mutation' }
-  & { createTableOfContentsItem?: Maybe<(
-    { __typename?: 'CreateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'metadata' | 'bounds' | 'dataLayerId'>
-    )> }
-  )> }
-);
+export type CreateTableOfContentsItemMutation = { __typename?: 'Mutation', createTableOfContentsItem?: { __typename?: 'CreateTableOfContentsItemPayload', tableOfContentsItem?: { __typename?: 'TableOfContentsItem', id: number, title: string, stableId: string, projectId: number, parentStableId?: string | null, isClickOffOnly: boolean, isDraft: boolean, isFolder: boolean, metadata?: any | null, bounds?: Array<any | null> | null, dataLayerId?: number | null } | null } | null };
 
 export type CreateArcGisDynamicDataSourceMutationVariables = Exact<{
   projectId: Scalars['Int'];
   url: Scalars['String'];
-  attribution?: Maybe<Scalars['String']>;
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
-  queryParameters?: Maybe<Scalars['JSON']>;
+  attribution?: InputMaybe<Scalars['String']>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars['BigFloat']>> | InputMaybe<Scalars['BigFloat']>>;
+  queryParameters?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
-export type CreateArcGisDynamicDataSourceMutation = (
-  { __typename?: 'Mutation' }
-  & { createDataSource?: Maybe<(
-    { __typename?: 'CreateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'projectId' | 'type' | 'url'>
-    )> }
-  )> }
-);
+export type CreateArcGisDynamicDataSourceMutation = { __typename?: 'Mutation', createDataSource?: { __typename?: 'CreateDataSourcePayload', dataSource?: { __typename?: 'DataSource', id: number, projectId: number, type: DataSourceTypes, url?: string | null } | null } | null };
 
 export type CreateArcGisImageSourceMutationVariables = Exact<{
   projectId: Scalars['Int'];
   url: Scalars['String'];
-  attribution?: Maybe<Scalars['String']>;
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
-  queryParameters?: Maybe<Scalars['JSON']>;
-  enableHighDPI?: Maybe<Scalars['Boolean']>;
+  attribution?: InputMaybe<Scalars['String']>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars['BigFloat']>> | InputMaybe<Scalars['BigFloat']>>;
+  queryParameters?: InputMaybe<Scalars['JSON']>;
+  enableHighDPI?: InputMaybe<Scalars['Boolean']>;
   supportsDynamicLayers: Scalars['Boolean'];
 }>;
 
 
-export type CreateArcGisImageSourceMutation = (
-  { __typename?: 'Mutation' }
-  & { createDataSource?: Maybe<(
-    { __typename?: 'CreateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'url'>
-    )> }
-  )> }
-);
+export type CreateArcGisImageSourceMutation = { __typename?: 'Mutation', createDataSource?: { __typename?: 'CreateDataSourcePayload', dataSource?: { __typename?: 'DataSource', id: number, url?: string | null } | null } | null };
 
 export type CreateSeaSketchVectorSourceMutationVariables = Exact<{
   projectId: Scalars['Int'];
-  attribution?: Maybe<Scalars['String']>;
-  bounds: Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>;
+  attribution?: InputMaybe<Scalars['String']>;
+  bounds: Array<InputMaybe<Scalars['BigFloat']>> | InputMaybe<Scalars['BigFloat']>;
   byteLength: Scalars['Int'];
-  originalSourceUrl?: Maybe<Scalars['String']>;
+  originalSourceUrl?: InputMaybe<Scalars['String']>;
   importType: DataSourceImportTypes;
   enhancedSecurity: Scalars['Boolean'];
 }>;
 
 
-export type CreateSeaSketchVectorSourceMutation = (
-  { __typename?: 'Mutation' }
-  & { createDataSource?: Maybe<(
-    { __typename?: 'CreateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'projectId' | 'type' | 'url' | 'presignedUploadUrl' | 'bucketId' | 'enhancedSecurity' | 'objectKey'>
-    )> }
-  )> }
-);
+export type CreateSeaSketchVectorSourceMutation = { __typename?: 'Mutation', createDataSource?: { __typename?: 'CreateDataSourcePayload', dataSource?: { __typename?: 'DataSource', id: number, projectId: number, type: DataSourceTypes, url?: string | null, presignedUploadUrl?: string | null, bucketId?: string | null, enhancedSecurity?: boolean | null, objectKey?: any | null } | null } | null };
 
 export type CreateDataLayerMutationVariables = Exact<{
   projectId: Scalars['Int'];
   dataSourceId: Scalars['Int'];
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
-  renderUnder?: Maybe<RenderUnderType>;
-  sublayer?: Maybe<Scalars['String']>;
+  mapboxGlStyles?: InputMaybe<Scalars['JSON']>;
+  renderUnder?: InputMaybe<RenderUnderType>;
+  sublayer?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type CreateDataLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { createDataLayer?: Maybe<(
-    { __typename?: 'CreateDataLayerPayload' }
-    & { dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'dataSourceId' | 'zIndex'>
-      & { interactivitySettings?: Maybe<(
-        { __typename?: 'InteractivitySetting' }
-        & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type'>
-      )> }
-    )> }
-  )> }
-);
+export type CreateDataLayerMutation = { __typename?: 'Mutation', createDataLayer?: { __typename?: 'CreateDataLayerPayload', dataLayer?: { __typename?: 'DataLayer', id: number, dataSourceId: number, zIndex: number, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null } | null } | null };
 
 export type GetOrCreateSpriteMutationVariables = Exact<{
   height: Scalars['Int'];
@@ -12381,17 +12088,7 @@ export type GetOrCreateSpriteMutationVariables = Exact<{
 }>;
 
 
-export type GetOrCreateSpriteMutation = (
-  { __typename?: 'Mutation' }
-  & { getOrCreateSprite?: Maybe<(
-    { __typename?: 'Sprite' }
-    & Pick<Sprite, 'id' | 'md5' | 'projectId' | 'type'>
-    & { spriteImages: Array<(
-      { __typename?: 'SpriteImage' }
-      & Pick<SpriteImage, 'spriteId' | 'height' | 'pixelRatio' | 'url' | 'width'>
-    )> }
-  )> }
-);
+export type GetOrCreateSpriteMutation = { __typename?: 'Mutation', getOrCreateSprite?: { __typename?: 'Sprite', id: number, md5: string, projectId: number, type?: SpriteType | null, spriteImages: Array<{ __typename?: 'SpriteImage', spriteId: number, height: number, pixelRatio: number, url: string, width: number }> } | null };
 
 export type AddImageToSpriteMutationVariables = Exact<{
   spriteId: Scalars['Int'];
@@ -12402,180 +12099,82 @@ export type AddImageToSpriteMutationVariables = Exact<{
 }>;
 
 
-export type AddImageToSpriteMutation = (
-  { __typename?: 'Mutation' }
-  & { addImageToSprite?: Maybe<(
-    { __typename?: 'Sprite' }
-    & Pick<Sprite, 'id' | 'md5' | 'projectId' | 'type'>
-    & { spriteImages: Array<(
-      { __typename?: 'SpriteImage' }
-      & Pick<SpriteImage, 'spriteId' | 'height' | 'pixelRatio' | 'url' | 'width'>
-    )> }
-  )> }
-);
+export type AddImageToSpriteMutation = { __typename?: 'Mutation', addImageToSprite?: { __typename?: 'Sprite', id: number, md5: string, projectId: number, type?: SpriteType | null, spriteImages: Array<{ __typename?: 'SpriteImage', spriteId: number, height: number, pixelRatio: number, url: string, width: number }> } | null };
 
 export type VerifyProjectInviteQueryVariables = Exact<{
   token: Scalars['String'];
 }>;
 
 
-export type VerifyProjectInviteQuery = (
-  { __typename?: 'Query' }
-  & { verifyProjectInvite?: Maybe<(
-    { __typename?: 'ProjectInviteTokenVerificationResults' }
-    & Pick<ProjectInviteTokenVerificationResults, 'error' | 'existingAccount'>
-    & { claims?: Maybe<(
-      { __typename?: 'ProjectInviteTokenClaims' }
-      & Pick<ProjectInviteTokenClaims, 'admin' | 'email' | 'fullname' | 'inviteId' | 'projectId' | 'wasUsed' | 'projectSlug'>
-    )> }
-  )> }
-);
+export type VerifyProjectInviteQuery = { __typename?: 'Query', verifyProjectInvite?: { __typename?: 'ProjectInviteTokenVerificationResults', error?: string | null, existingAccount?: boolean | null, claims?: { __typename?: 'ProjectInviteTokenClaims', admin: boolean, email: string, fullname?: string | null, inviteId: number, projectId: number, wasUsed: boolean, projectSlug: string } | null } | null };
 
 export type ConfirmProjectInviteMutationVariables = Exact<{
   token: Scalars['String'];
 }>;
 
 
-export type ConfirmProjectInviteMutation = (
-  { __typename?: 'Mutation' }
-  & { confirmProjectInvite?: Maybe<(
-    { __typename?: 'ProjectInviteTokenClaims' }
-    & Pick<ProjectInviteTokenClaims, 'admin' | 'email' | 'fullname' | 'inviteId' | 'projectId' | 'projectName' | 'wasUsed' | 'projectSlug'>
-  )> }
-);
+export type ConfirmProjectInviteMutation = { __typename?: 'Mutation', confirmProjectInvite?: { __typename?: 'ProjectInviteTokenClaims', admin: boolean, email: string, fullname?: string | null, inviteId: number, projectId: number, projectName: string, wasUsed: boolean, projectSlug: string } | null };
 
 export type ResendEmailVerificationMutationVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ResendEmailVerificationMutation = (
-  { __typename?: 'Mutation' }
-  & { resendVerificationEmail: (
-    { __typename?: 'SendVerificationEmailResults' }
-    & Pick<SendVerificationEmailResults, 'success' | 'error'>
-  ) }
-);
+export type ResendEmailVerificationMutation = { __typename?: 'Mutation', resendVerificationEmail: { __typename?: 'SendVerificationEmailResults', success: boolean, error?: string | null } };
 
 export type RequestInviteOnlyProjectAccessMutationVariables = Exact<{
   projectId: Scalars['Int'];
 }>;
 
 
-export type RequestInviteOnlyProjectAccessMutation = (
-  { __typename?: 'Mutation' }
-  & { joinProject?: Maybe<(
-    { __typename?: 'JoinProjectPayload' }
-    & Pick<JoinProjectPayload, 'clientMutationId'>
-  )> }
-);
+export type RequestInviteOnlyProjectAccessMutation = { __typename?: 'Mutation', joinProject?: { __typename?: 'JoinProjectPayload', clientMutationId?: string | null } | null };
 
-export type BasemapDetailsFragment = (
-  { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly'>
-  & { interactivitySettings?: Maybe<(
-    { __typename?: 'InteractivitySetting' }
-    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-  )>, optionalBasemapLayers: Array<(
-    { __typename?: 'OptionalBasemapLayer' }
-    & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
-  )> }
-);
+export type BasemapDetailsFragment = { __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> };
 
 export type GetBasemapsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type GetBasemapsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { surveyBasemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>>, basemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>> }
-  )> }
-);
+export type GetBasemapsQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, surveyBasemaps?: Array<{ __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> }> | null, basemaps?: Array<{ __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> }> | null } | null };
 
 export type CreateBasemapMutationVariables = Exact<{
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars['Int']>;
   name: Scalars['String'];
   thumbnail: Scalars['Upload'];
-  tileSize?: Maybe<Scalars['Int']>;
+  tileSize?: InputMaybe<Scalars['Int']>;
   type: BasemapType;
   url: Scalars['String'];
-  surveysOnly?: Maybe<Scalars['Boolean']>;
+  surveysOnly?: InputMaybe<Scalars['Boolean']>;
 }>;
 
 
-export type CreateBasemapMutation = (
-  { __typename?: 'Mutation' }
-  & { createBasemap?: Maybe<(
-    { __typename?: 'CreateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )> }
-  )> }
-);
+export type CreateBasemapMutation = { __typename?: 'Mutation', createBasemap?: { __typename?: 'CreateBasemapPayload', basemap?: { __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> } | null } | null };
 
 export type UploadBasemapMutationVariables = Exact<{
   projectId: Scalars['Int'];
   name: Scalars['String'];
   thumbnail: Scalars['Upload'];
-  existingId?: Maybe<Scalars['Int']>;
+  existingId?: InputMaybe<Scalars['Int']>;
   style: Scalars['JSON'];
-  surveysOnly?: Maybe<Scalars['Boolean']>;
+  surveysOnly?: InputMaybe<Scalars['Boolean']>;
 }>;
 
 
-export type UploadBasemapMutation = (
-  { __typename?: 'Mutation' }
-  & { uploadStyle: (
-    { __typename?: 'Basemap' }
-    & BasemapDetailsFragment
-  ) }
-);
+export type UploadBasemapMutation = { __typename?: 'Mutation', uploadStyle: { __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> } };
 
 export type GetBasemapQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type GetBasemapQuery = (
-  { __typename?: 'Query' }
-  & { basemap?: Maybe<(
-    { __typename?: 'Basemap' }
-    & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
-    & { interactivitySettings?: Maybe<(
-      { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-    )>, optionalBasemapLayers: Array<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
-    )> }
-  )> }
-);
+export type GetBasemapQuery = { __typename?: 'Query', basemap?: { __typename?: 'Basemap', id: number, attribution?: string | null, description?: string | null, labelsLayerId?: string | null, name: string, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, id: number, layers: Array<string | null>, metadata?: any | null, name: string }> } | null };
 
 export type UpdateBasemapMutationVariables = Exact<{
   id: Scalars['Int'];
-  name?: Maybe<Scalars['String']>;
+  name?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateBasemapMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'name' | 'id'>
-    )> }
-  )> }
-);
+export type UpdateBasemapMutation = { __typename?: 'Mutation', updateBasemap?: { __typename?: 'UpdateBasemapPayload', basemap?: { __typename?: 'Basemap', name: string, id: number } | null } | null };
 
 export type UpdateBasemapUrlMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -12583,69 +12182,33 @@ export type UpdateBasemapUrlMutationVariables = Exact<{
 }>;
 
 
-export type UpdateBasemapUrlMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'url' | 'id'>
-    )> }
-  )> }
-);
+export type UpdateBasemapUrlMutation = { __typename?: 'Mutation', updateBasemap?: { __typename?: 'UpdateBasemapPayload', basemap?: { __typename?: 'Basemap', url: string, id: number } | null } | null };
 
 export type UpdateBasemapLabelsLayerMutationVariables = Exact<{
   id: Scalars['Int'];
-  layer?: Maybe<Scalars['String']>;
+  layer?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateBasemapLabelsLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'labelsLayerId'>
-    )> }
-  )> }
-);
+export type UpdateBasemapLabelsLayerMutation = { __typename?: 'Mutation', updateBasemap?: { __typename?: 'UpdateBasemapPayload', basemap?: { __typename?: 'Basemap', id: number, labelsLayerId?: string | null } | null } | null };
 
 export type Toggle3dTerrainMutationVariables = Exact<{
   id: Scalars['Int'];
-  terrainUrl?: Maybe<Scalars['String']>;
+  terrainUrl?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type Toggle3dTerrainMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'terrainUrl'>
-    )> }
-  )> }
-);
+export type Toggle3dTerrainMutation = { __typename?: 'Mutation', updateBasemap?: { __typename?: 'UpdateBasemapPayload', basemap?: { __typename?: 'Basemap', id: number, terrainUrl?: string | null } | null } | null };
 
 export type Set3dTerrainMutationVariables = Exact<{
   id: Scalars['Int'];
-  terrainUrl?: Maybe<Scalars['String']>;
-  terrainOptional?: Maybe<Scalars['Boolean']>;
-  terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
+  terrainUrl?: InputMaybe<Scalars['String']>;
+  terrainOptional?: InputMaybe<Scalars['Boolean']>;
+  terrainVisibilityDefault?: InputMaybe<Scalars['Boolean']>;
 }>;
 
 
-export type Set3dTerrainMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'terrainUrl' | 'terrainVisibilityDefault' | 'terrainOptional'>
-    )> }
-  )> }
-);
+export type Set3dTerrainMutation = { __typename?: 'Mutation', updateBasemap?: { __typename?: 'UpdateBasemapPayload', basemap?: { __typename?: 'Basemap', id: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, terrainOptional: boolean } | null } | null };
 
 export type UpdateTerrainExaggerationMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -12653,45 +12216,21 @@ export type UpdateTerrainExaggerationMutationVariables = Exact<{
 }>;
 
 
-export type UpdateTerrainExaggerationMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'terrainExaggeration'>
-    )> }
-  )> }
-);
+export type UpdateTerrainExaggerationMutation = { __typename?: 'Mutation', updateBasemap?: { __typename?: 'UpdateBasemapPayload', basemap?: { __typename?: 'Basemap', id: number, terrainExaggeration: any } | null } | null };
 
 export type DeleteBasemapMutationVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type DeleteBasemapMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteBasemap?: Maybe<(
-    { __typename?: 'DeleteBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id'>
-    )> }
-  )> }
-);
+export type DeleteBasemapMutation = { __typename?: 'Mutation', deleteBasemap?: { __typename?: 'DeleteBasemapPayload', basemap?: { __typename?: 'Basemap', id: number } | null } | null };
 
 export type OptionalLayerQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type OptionalLayerQuery = (
-  { __typename?: 'Query' }
-  & { optionalBasemapLayer?: Maybe<(
-    { __typename?: 'OptionalBasemapLayer' }
-    & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
-  )> }
-);
+export type OptionalLayerQuery = { __typename?: 'Query', optionalBasemapLayer?: { __typename?: 'OptionalBasemapLayer', id: number, basemapId: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string } | null };
 
 export type UpdateOptionalLayerNameMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -12699,88 +12238,43 @@ export type UpdateOptionalLayerNameMutationVariables = Exact<{
 }>;
 
 
-export type UpdateOptionalLayerNameMutation = (
-  { __typename?: 'Mutation' }
-  & { updateOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'name'>
-    )> }
-  )> }
-);
+export type UpdateOptionalLayerNameMutation = { __typename?: 'Mutation', updateOptionalBasemapLayer?: { __typename?: 'UpdateOptionalBasemapLayerPayload', optionalBasemapLayer?: { __typename?: 'OptionalBasemapLayer', id: number, name: string } | null } | null };
 
 export type CreateOptionalLayerMutationVariables = Exact<{
   name: Scalars['String'];
   basemapId: Scalars['Int'];
-  groupType?: Maybe<OptionalBasemapLayersGroupType>;
-  options?: Maybe<Scalars['JSON']>;
+  groupType?: InputMaybe<OptionalBasemapLayersGroupType>;
+  options?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
-export type CreateOptionalLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { createOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'CreateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
-    )> }
-  )> }
-);
+export type CreateOptionalLayerMutation = { __typename?: 'Mutation', createOptionalBasemapLayer?: { __typename?: 'CreateOptionalBasemapLayerPayload', optionalBasemapLayer?: { __typename?: 'OptionalBasemapLayer', id: number, basemapId: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string } | null } | null };
 
 export type UpdateOptionalLayerMutationVariables = Exact<{
   id: Scalars['Int'];
-  name?: Maybe<Scalars['String']>;
-  description?: Maybe<Scalars['String']>;
-  defaultVisibility?: Maybe<Scalars['Boolean']>;
-  metadata?: Maybe<Scalars['JSON']>;
+  name?: InputMaybe<Scalars['String']>;
+  description?: InputMaybe<Scalars['String']>;
+  defaultVisibility?: InputMaybe<Scalars['Boolean']>;
+  metadata?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
-export type UpdateOptionalLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { updateOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'name' | 'description' | 'id' | 'defaultVisibility' | 'metadata'>
-    )> }
-  )> }
-);
+export type UpdateOptionalLayerMutation = { __typename?: 'Mutation', updateOptionalBasemapLayer?: { __typename?: 'UpdateOptionalBasemapLayerPayload', optionalBasemapLayer?: { __typename?: 'OptionalBasemapLayer', name: string, description?: string | null, id: number, defaultVisibility: boolean, metadata?: any | null } | null } | null };
 
 export type DeleteOptionalLayerMutationVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type DeleteOptionalLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'DeleteOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id'>
-    )> }
-  )> }
-);
+export type DeleteOptionalLayerMutation = { __typename?: 'Mutation', deleteOptionalBasemapLayer?: { __typename?: 'DeleteOptionalBasemapLayerPayload', optionalBasemapLayer?: { __typename?: 'OptionalBasemapLayer', id: number } | null } | null };
 
 export type UpdateOptionalBasemapLayerLayerListMutationVariables = Exact<{
   id: Scalars['Int'];
-  layers?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
+  layers?: InputMaybe<Array<InputMaybe<Scalars['String']>> | InputMaybe<Scalars['String']>>;
 }>;
 
 
-export type UpdateOptionalBasemapLayerLayerListMutation = (
-  { __typename?: 'Mutation' }
-  & { updateOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'layers'>
-    )> }
-  )> }
-);
+export type UpdateOptionalBasemapLayerLayerListMutation = { __typename?: 'Mutation', updateOptionalBasemapLayer?: { __typename?: 'UpdateOptionalBasemapLayerPayload', optionalBasemapLayer?: { __typename?: 'OptionalBasemapLayer', id: number, layers: Array<string | null> } | null } | null };
 
 export type UpdateOptionalBasemapLayerOptionsMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -12788,89 +12282,44 @@ export type UpdateOptionalBasemapLayerOptionsMutationVariables = Exact<{
 }>;
 
 
-export type UpdateOptionalBasemapLayerOptionsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'options'>
-    )> }
-  )> }
-);
+export type UpdateOptionalBasemapLayerOptionsMutation = { __typename?: 'Mutation', updateOptionalBasemapLayer?: { __typename?: 'UpdateOptionalBasemapLayerPayload', optionalBasemapLayer?: { __typename?: 'OptionalBasemapLayer', id: number, options?: any | null } | null } | null };
 
 export type GetOptionalBasemapLayerQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type GetOptionalBasemapLayerQuery = (
-  { __typename?: 'Query' }
-  & { optionalBasemapLayer?: Maybe<(
-    { __typename?: 'OptionalBasemapLayer' }
-    & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'name' | 'description' | 'defaultVisibility' | 'groupType' | 'layers' | 'metadata' | 'options'>
-  )> }
-);
+export type GetOptionalBasemapLayerQuery = { __typename?: 'Query', optionalBasemapLayer?: { __typename?: 'OptionalBasemapLayer', id: number, basemapId: number, name: string, description?: string | null, defaultVisibility: boolean, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, options?: any | null } | null };
 
 export type GetOptionalBasemapLayerMetadataQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type GetOptionalBasemapLayerMetadataQuery = (
-  { __typename?: 'Query' }
-  & { optionalBasemapLayer?: Maybe<(
-    { __typename?: 'OptionalBasemapLayer' }
-    & Pick<OptionalBasemapLayer, 'id' | 'metadata'>
-  )> }
-);
+export type GetOptionalBasemapLayerMetadataQuery = { __typename?: 'Query', optionalBasemapLayer?: { __typename?: 'OptionalBasemapLayer', id: number, metadata?: any | null } | null };
 
 export type UpdateOptionalBasemapLayerMetadataMutationVariables = Exact<{
   id: Scalars['Int'];
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
-export type UpdateOptionalBasemapLayerMetadataMutation = (
-  { __typename?: 'Mutation' }
-  & { updateOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'metadata'>
-    )> }
-  )> }
-);
+export type UpdateOptionalBasemapLayerMetadataMutation = { __typename?: 'Mutation', updateOptionalBasemapLayer?: { __typename?: 'UpdateOptionalBasemapLayerPayload', optionalBasemapLayer?: { __typename?: 'OptionalBasemapLayer', id: number, metadata?: any | null } | null } | null };
 
 export type UpdateInteractivitySettingsLayersMutationVariables = Exact<{
   id: Scalars['Int'];
-  layers?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
+  layers?: InputMaybe<Array<InputMaybe<Scalars['String']>> | InputMaybe<Scalars['String']>>;
 }>;
 
 
-export type UpdateInteractivitySettingsLayersMutation = (
-  { __typename?: 'Mutation' }
-  & { updateInteractivitySetting?: Maybe<(
-    { __typename?: 'UpdateInteractivitySettingPayload' }
-    & { interactivitySetting?: Maybe<(
-      { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'layers' | 'id'>
-    )> }
-  )> }
-);
+export type UpdateInteractivitySettingsLayersMutation = { __typename?: 'Mutation', updateInteractivitySetting?: { __typename?: 'UpdateInteractivitySettingPayload', interactivitySetting?: { __typename?: 'InteractivitySetting', layers?: Array<string | null> | null, id: number } | null } | null };
 
 export type MapboxKeysQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type MapboxKeysQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
-  )> }
-);
+export type MapboxKeysQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, mapboxPublicKey?: string | null, mapboxSecretKey?: string | null } | null };
 
 export type CreateProjectMutationVariables = Exact<{
   name: Scalars['String'];
@@ -12878,353 +12327,152 @@ export type CreateProjectMutationVariables = Exact<{
 }>;
 
 
-export type CreateProjectMutation = (
-  { __typename?: 'Mutation' }
-  & { createProject?: Maybe<(
-    { __typename?: 'CreateProjectPayload' }
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'url' | 'slug'>
-    )> }
-  )> }
-);
+export type CreateProjectMutation = { __typename?: 'Mutation', createProject?: { __typename?: 'CreateProjectPayload', project?: { __typename?: 'Project', id: number, url?: string | null, slug: string } | null } | null };
 
 export type DraftTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type DraftTableOfContentsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { draftTableOfContentsItems?: Maybe<Array<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren' | 'bounds' | 'sortIndex' | 'hideChildren' | 'enableDownload'>
-      & { acl?: Maybe<(
-        { __typename?: 'Acl' }
-        & Pick<Acl, 'id' | 'type'>
-      )> }
-    )>> }
-  )> }
-);
+export type DraftTableOfContentsQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, draftTableOfContentsItems?: Array<{ __typename?: 'TableOfContentsItem', id: number, dataLayerId?: number | null, title: string, isClickOffOnly: boolean, isFolder: boolean, stableId: string, parentStableId?: string | null, showRadioChildren: boolean, bounds?: Array<any | null> | null, sortIndex: number, hideChildren: boolean, enableDownload: boolean, acl?: { __typename?: 'Acl', id: number, type: AccessControlListType } | null }> | null } | null };
 
 export type LayersAndSourcesForItemsQueryVariables = Exact<{
   slug: Scalars['String'];
-  tableOfContentsItemIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  tableOfContentsItemIds: Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type LayersAndSourcesForItemsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { dataSourcesForItems?: Maybe<Array<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
-    )>>, dataLayersForItems?: Maybe<Array<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
-      & { interactivitySettings?: Maybe<(
-        { __typename?: 'InteractivitySetting' }
-        & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type'>
-      )>, sprites?: Maybe<Array<(
-        { __typename?: 'Sprite' }
-        & Pick<Sprite, 'id' | 'type'>
-        & { spriteImages: Array<(
-          { __typename?: 'SpriteImage' }
-          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
-        )> }
-      )>> }
-    )>> }
-  )> }
-);
+export type LayersAndSourcesForItemsQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, dataSourcesForItems?: Array<{ __typename?: 'DataSource', attribution?: string | null, bounds?: Array<any | null> | null, bucketId?: string | null, buffer?: number | null, byteLength?: number | null, cluster?: boolean | null, clusterMaxZoom?: number | null, clusterProperties?: any | null, clusterRadius?: number | null, coordinates?: Array<any | null> | null, createdAt: any, encoding?: RasterDemEncoding | null, enhancedSecurity?: boolean | null, id: number, importType?: DataSourceImportTypes | null, lineMetrics?: boolean | null, maxzoom?: number | null, minzoom?: number | null, objectKey?: any | null, originalSourceUrl?: string | null, queryParameters?: any | null, scheme?: TileScheme | null, tiles?: Array<string | null> | null, tileSize?: number | null, tolerance?: any | null, type: DataSourceTypes, url?: string | null, urls?: Array<string | null> | null, useDevicePixelRatio?: boolean | null, supportsDynamicLayers: boolean }> | null, dataLayersForItems?: Array<{ __typename?: 'DataLayer', zIndex: number, dataSourceId: number, id: number, mapboxGlStyles?: any | null, renderUnder: RenderUnderType, sourceLayer?: string | null, sublayer?: string | null, interactivitySettings?: { __typename?: 'InteractivitySetting', id: number, cursor: CursorType, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, sprites?: Array<{ __typename?: 'Sprite', id: number, type?: SpriteType | null, spriteImages: Array<{ __typename?: 'SpriteImage', pixelRatio: number, height: number, width: number, url: string }> }> | null }> | null } | null };
 
 export type CreateFolderMutationVariables = Exact<{
   title: Scalars['String'];
   stableId: Scalars['String'];
   projectId: Scalars['Int'];
-  parentStableId?: Maybe<Scalars['String']>;
-  isClickOffOnly?: Maybe<Scalars['Boolean']>;
-  showRadioChildren?: Maybe<Scalars['Boolean']>;
-  hideChildren?: Maybe<Scalars['Boolean']>;
+  parentStableId?: InputMaybe<Scalars['String']>;
+  isClickOffOnly?: InputMaybe<Scalars['Boolean']>;
+  showRadioChildren?: InputMaybe<Scalars['Boolean']>;
+  hideChildren?: InputMaybe<Scalars['Boolean']>;
 }>;
 
 
-export type CreateFolderMutation = (
-  { __typename?: 'Mutation' }
-  & { createTableOfContentsItem?: Maybe<(
-    { __typename?: 'CreateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'showRadioChildren' | 'sortIndex' | 'hideChildren' | 'enableDownload'>
-    )> }
-  )> }
-);
+export type CreateFolderMutation = { __typename?: 'Mutation', createTableOfContentsItem?: { __typename?: 'CreateTableOfContentsItemPayload', tableOfContentsItem?: { __typename?: 'TableOfContentsItem', id: number, title: string, stableId: string, projectId: number, parentStableId?: string | null, isClickOffOnly: boolean, isDraft: boolean, isFolder: boolean, showRadioChildren: boolean, sortIndex: number, hideChildren: boolean, enableDownload: boolean } | null } | null };
 
 export type DeleteBranchMutationVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type DeleteBranchMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteTableOfContentsBranch?: Maybe<(
-    { __typename?: 'DeleteTableOfContentsBranchPayload' }
-    & Pick<DeleteTableOfContentsBranchPayload, 'clientMutationId'>
-  )> }
-);
+export type DeleteBranchMutation = { __typename?: 'Mutation', deleteTableOfContentsBranch?: { __typename?: 'DeleteTableOfContentsBranchPayload', clientMutationId?: string | null } | null };
 
 export type UpdateTableOfContentsItemChildrenMutationVariables = Exact<{
-  id?: Maybe<Scalars['Int']>;
-  childIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars['Int']>;
+  childIds: Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type UpdateTableOfContentsItemChildrenMutation = (
-  { __typename?: 'Mutation' }
-  & { updateTableOfContentsItemChildren?: Maybe<(
-    { __typename?: 'UpdateTableOfContentsItemChildrenPayload' }
-    & { tableOfContentsItems?: Maybe<Array<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'sortIndex' | 'parentStableId'>
-    )>> }
-  )> }
-);
+export type UpdateTableOfContentsItemChildrenMutation = { __typename?: 'Mutation', updateTableOfContentsItemChildren?: { __typename?: 'UpdateTableOfContentsItemChildrenPayload', tableOfContentsItems?: Array<{ __typename?: 'TableOfContentsItem', id: number, sortIndex: number, parentStableId?: string | null }> | null } | null };
 
 export type GetFolderQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type GetFolderQuery = (
-  { __typename?: 'Query' }
-  & { tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'isClickOffOnly' | 'showRadioChildren' | 'title' | 'hideChildren'>
-  )> }
-);
+export type GetFolderQuery = { __typename?: 'Query', tableOfContentsItem?: { __typename?: 'TableOfContentsItem', id: number, bounds?: Array<any | null> | null, isClickOffOnly: boolean, showRadioChildren: boolean, title: string, hideChildren: boolean } | null };
 
 export type UpdateFolderMutationVariables = Exact<{
   id: Scalars['Int'];
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
-  isClickOffOnly?: Maybe<Scalars['Boolean']>;
-  showRadioChildren?: Maybe<Scalars['Boolean']>;
-  title?: Maybe<Scalars['String']>;
-  hideChildren?: Maybe<Scalars['Boolean']>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars['BigFloat']>> | InputMaybe<Scalars['BigFloat']>>;
+  isClickOffOnly?: InputMaybe<Scalars['Boolean']>;
+  showRadioChildren?: InputMaybe<Scalars['Boolean']>;
+  title?: InputMaybe<Scalars['String']>;
+  hideChildren?: InputMaybe<Scalars['Boolean']>;
 }>;
 
 
-export type UpdateFolderMutation = (
-  { __typename?: 'Mutation' }
-  & { updateTableOfContentsItem?: Maybe<(
-    { __typename?: 'UpdateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'isClickOffOnly' | 'showRadioChildren' | 'hideChildren' | 'title'>
-    )> }
-  )> }
-);
+export type UpdateFolderMutation = { __typename?: 'Mutation', updateTableOfContentsItem?: { __typename?: 'UpdateTableOfContentsItemPayload', tableOfContentsItem?: { __typename?: 'TableOfContentsItem', id: number, bounds?: Array<any | null> | null, isClickOffOnly: boolean, showRadioChildren: boolean, hideChildren: boolean, title: string } | null } | null };
 
 export type GetLayerItemQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type GetLayerItemQuery = (
-  { __typename?: 'Query' }
-  & { tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload'>
-    & { acl?: Maybe<(
-      { __typename?: 'Acl' }
-      & Pick<Acl, 'nodeId' | 'id' | 'type'>
-      & { groups?: Maybe<Array<(
-        { __typename?: 'Group' }
-        & Pick<Group, 'id' | 'name'>
-      )>> }
-    )>, dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'dataSourceId'>
-      & { sprites?: Maybe<Array<(
-        { __typename?: 'Sprite' }
-        & Pick<Sprite, 'id' | 'type'>
-        & { spriteImages: Array<(
-          { __typename?: 'SpriteImage' }
-          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
-        )> }
-      )>>, dataSource?: Maybe<(
-        { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
-      )> }
-    )> }
-  )> }
-);
+export type GetLayerItemQuery = { __typename?: 'Query', tableOfContentsItem?: { __typename?: 'TableOfContentsItem', id: number, bounds?: Array<any | null> | null, dataLayerId?: number | null, metadata?: any | null, parentStableId?: string | null, projectId: number, stableId: string, title: string, enableDownload: boolean, acl?: { __typename?: 'Acl', nodeId: string, id: number, type: AccessControlListType, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null } | null, dataLayer?: { __typename?: 'DataLayer', id: number, zIndex: number, mapboxGlStyles?: any | null, interactivitySettingsId: number, renderUnder: RenderUnderType, sourceLayer?: string | null, sublayer?: string | null, dataSourceId: number, sprites?: Array<{ __typename?: 'Sprite', id: number, type?: SpriteType | null, spriteImages: Array<{ __typename?: 'SpriteImage', pixelRatio: number, height: number, width: number, url: string }> }> | null, dataSource?: { __typename?: 'DataSource', id: number, attribution?: string | null, bounds?: Array<any | null> | null, bucketId?: string | null, buffer?: number | null, byteLength?: number | null, cluster?: boolean | null, clusterMaxZoom?: number | null, clusterProperties?: any | null, clusterRadius?: number | null, coordinates?: Array<any | null> | null, createdAt: any, encoding?: RasterDemEncoding | null, enhancedSecurity?: boolean | null, generateId?: boolean | null, importType?: DataSourceImportTypes | null, lineMetrics?: boolean | null, maxzoom?: number | null, minzoom?: number | null, objectKey?: any | null, originalSourceUrl?: string | null, promoteId?: boolean | null, queryParameters?: any | null, scheme?: TileScheme | null, tiles?: Array<string | null> | null, tileSize?: number | null, tolerance?: any | null, type: DataSourceTypes, url?: string | null, urls?: Array<string | null> | null, useDevicePixelRatio?: boolean | null, supportsDynamicLayers: boolean } | null } | null } | null };
 
 export type UpdateTableOfContentsItemMutationVariables = Exact<{
   id: Scalars['Int'];
-  title?: Maybe<Scalars['String']>;
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
-  metadata?: Maybe<Scalars['JSON']>;
+  title?: InputMaybe<Scalars['String']>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars['BigFloat']>> | InputMaybe<Scalars['BigFloat']>>;
+  metadata?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
-export type UpdateTableOfContentsItemMutation = (
-  { __typename?: 'Mutation' }
-  & { updateTableOfContentsItem?: Maybe<(
-    { __typename?: 'UpdateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'metadata' | 'title'>
-    )> }
-  )> }
-);
+export type UpdateTableOfContentsItemMutation = { __typename?: 'Mutation', updateTableOfContentsItem?: { __typename?: 'UpdateTableOfContentsItemPayload', tableOfContentsItem?: { __typename?: 'TableOfContentsItem', id: number, bounds?: Array<any | null> | null, metadata?: any | null, title: string } | null } | null };
 
 export type UpdateEnableDownloadMutationVariables = Exact<{
   id: Scalars['Int'];
-  enableDownload?: Maybe<Scalars['Boolean']>;
+  enableDownload?: InputMaybe<Scalars['Boolean']>;
 }>;
 
 
-export type UpdateEnableDownloadMutation = (
-  { __typename?: 'Mutation' }
-  & { updateTableOfContentsItem?: Maybe<(
-    { __typename?: 'UpdateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'enableDownload'>
-    )> }
-  )> }
-);
+export type UpdateEnableDownloadMutation = { __typename?: 'Mutation', updateTableOfContentsItem?: { __typename?: 'UpdateTableOfContentsItemPayload', tableOfContentsItem?: { __typename?: 'TableOfContentsItem', id: number, enableDownload: boolean } | null } | null };
 
 export type UpdateLayerMutationVariables = Exact<{
   id: Scalars['Int'];
-  renderUnder?: Maybe<RenderUnderType>;
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
-  sublayer?: Maybe<Scalars['String']>;
+  renderUnder?: InputMaybe<RenderUnderType>;
+  mapboxGlStyles?: InputMaybe<Scalars['JSON']>;
+  sublayer?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { updateDataLayer?: Maybe<(
-    { __typename?: 'UpdateDataLayerPayload' }
-    & { dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'renderUnder' | 'mapboxGlStyles' | 'sublayer'>
-      & { sprites?: Maybe<Array<(
-        { __typename?: 'Sprite' }
-        & Pick<Sprite, 'id' | 'type'>
-        & { spriteImages: Array<(
-          { __typename?: 'SpriteImage' }
-          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
-        )> }
-      )>> }
-    )> }
-  )> }
-);
+export type UpdateLayerMutation = { __typename?: 'Mutation', updateDataLayer?: { __typename?: 'UpdateDataLayerPayload', dataLayer?: { __typename?: 'DataLayer', id: number, zIndex: number, renderUnder: RenderUnderType, mapboxGlStyles?: any | null, sublayer?: string | null, sprites?: Array<{ __typename?: 'Sprite', id: number, type?: SpriteType | null, spriteImages: Array<{ __typename?: 'SpriteImage', pixelRatio: number, height: number, width: number, url: string }> }> | null } | null } | null };
 
 export type UpdateDataSourceMutationVariables = Exact<{
   id: Scalars['Int'];
-  attribution?: Maybe<Scalars['String']>;
+  attribution?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateDataSourceMutation = (
-  { __typename?: 'Mutation' }
-  & { updateDataSource?: Maybe<(
-    { __typename?: 'UpdateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
-    )> }
-  )> }
-);
+export type UpdateDataSourceMutation = { __typename?: 'Mutation', updateDataSource?: { __typename?: 'UpdateDataSourcePayload', dataSource?: { __typename?: 'DataSource', id: number, attribution?: string | null, bounds?: Array<any | null> | null, bucketId?: string | null, buffer?: number | null, byteLength?: number | null, cluster?: boolean | null, clusterMaxZoom?: number | null, clusterProperties?: any | null, clusterRadius?: number | null, coordinates?: Array<any | null> | null, createdAt: any, encoding?: RasterDemEncoding | null, enhancedSecurity?: boolean | null, generateId?: boolean | null, importType?: DataSourceImportTypes | null, lineMetrics?: boolean | null, maxzoom?: number | null, minzoom?: number | null, objectKey?: any | null, originalSourceUrl?: string | null, promoteId?: boolean | null, queryParameters?: any | null, scheme?: TileScheme | null, tiles?: Array<string | null> | null, tileSize?: number | null, tolerance?: any | null, type: DataSourceTypes, url?: string | null, urls?: Array<string | null> | null, useDevicePixelRatio?: boolean | null, supportsDynamicLayers: boolean } | null } | null };
 
 export type InteractivitySettingsForLayerQueryVariables = Exact<{
   layerId: Scalars['Int'];
 }>;
 
 
-export type InteractivitySettingsForLayerQuery = (
-  { __typename?: 'Query' }
-  & { dataLayer?: Maybe<(
-    { __typename?: 'DataLayer' }
-    & Pick<DataLayer, 'id' | 'sourceLayer'>
-    & { interactivitySettings?: Maybe<(
-      { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type'>
-    )> }
-  )> }
-);
+export type InteractivitySettingsForLayerQuery = { __typename?: 'Query', dataLayer?: { __typename?: 'DataLayer', id: number, sourceLayer?: string | null, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null } | null };
 
 export type UpdateInteractivitySettingsMutationVariables = Exact<{
   id: Scalars['Int'];
-  type?: Maybe<InteractivityType>;
-  cursor?: Maybe<CursorType>;
-  longTemplate?: Maybe<Scalars['String']>;
-  shortTemplate?: Maybe<Scalars['String']>;
+  type?: InputMaybe<InteractivityType>;
+  cursor?: InputMaybe<CursorType>;
+  longTemplate?: InputMaybe<Scalars['String']>;
+  shortTemplate?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateInteractivitySettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateInteractivitySetting?: Maybe<(
-    { __typename?: 'UpdateInteractivitySettingPayload' }
-    & { interactivitySetting?: Maybe<(
-      { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'id' | 'type' | 'cursor' | 'longTemplate' | 'shortTemplate'>
-    )> }
-  )> }
-);
+export type UpdateInteractivitySettingsMutation = { __typename?: 'Mutation', updateInteractivitySetting?: { __typename?: 'UpdateInteractivitySettingPayload', interactivitySetting?: { __typename?: 'InteractivitySetting', id: number, type: InteractivityType, cursor: CursorType, longTemplate?: string | null, shortTemplate?: string | null } | null } | null };
 
 export type DataSourceUrlPropertiesQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type DataSourceUrlPropertiesQuery = (
-  { __typename?: 'Query' }
-  & { dataSource?: Maybe<(
-    { __typename?: 'DataSource' }
-    & Pick<DataSource, 'id' | 'type' | 'bucketId' | 'objectKey' | 'url' | 'originalSourceUrl' | 'queryParameters'>
-  )> }
-);
+export type DataSourceUrlPropertiesQuery = { __typename?: 'Query', dataSource?: { __typename?: 'DataSource', id: number, type: DataSourceTypes, bucketId?: string | null, objectKey?: any | null, url?: string | null, originalSourceUrl?: string | null, queryParameters?: any | null } | null };
 
 export type UpdateZIndexesMutationVariables = Exact<{
-  dataLayerIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  dataLayerIds: Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type UpdateZIndexesMutation = (
-  { __typename?: 'Mutation' }
-  & { updateZIndexes?: Maybe<(
-    { __typename?: 'UpdateZIndexesPayload' }
-    & { dataLayers?: Maybe<Array<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex'>
-    )>> }
-  )> }
-);
+export type UpdateZIndexesMutation = { __typename?: 'Mutation', updateZIndexes?: { __typename?: 'UpdateZIndexesPayload', dataLayers?: Array<{ __typename?: 'DataLayer', id: number, zIndex: number }> | null } | null };
 
 export type UpdateRenderUnderTypeMutationVariables = Exact<{
   layerId: Scalars['Int'];
-  renderUnder?: Maybe<RenderUnderType>;
+  renderUnder?: InputMaybe<RenderUnderType>;
 }>;
 
 
-export type UpdateRenderUnderTypeMutation = (
-  { __typename?: 'Mutation' }
-  & { updateDataLayer?: Maybe<(
-    { __typename?: 'UpdateDataLayerPayload' }
-    & { dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'renderUnder'>
-    )> }
-  )> }
-);
+export type UpdateRenderUnderTypeMutation = { __typename?: 'Mutation', updateDataLayer?: { __typename?: 'UpdateDataLayerPayload', dataLayer?: { __typename?: 'DataLayer', id: number, renderUnder: RenderUnderType } | null } | null };
 
 export type UpdateQueryParametersMutationVariables = Exact<{
   sourceId: Scalars['Int'];
@@ -13232,16 +12480,7 @@ export type UpdateQueryParametersMutationVariables = Exact<{
 }>;
 
 
-export type UpdateQueryParametersMutation = (
-  { __typename?: 'Mutation' }
-  & { updateDataSource?: Maybe<(
-    { __typename?: 'UpdateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'queryParameters'>
-    )> }
-  )> }
-);
+export type UpdateQueryParametersMutation = { __typename?: 'Mutation', updateDataSource?: { __typename?: 'UpdateDataSourcePayload', dataSource?: { __typename?: 'DataSource', id: number, queryParameters?: any | null } | null } | null };
 
 export type UpdateEnableHighDpiRequestsMutationVariables = Exact<{
   sourceId: Scalars['Int'];
@@ -13249,29 +12488,14 @@ export type UpdateEnableHighDpiRequestsMutationVariables = Exact<{
 }>;
 
 
-export type UpdateEnableHighDpiRequestsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateDataSource?: Maybe<(
-    { __typename?: 'UpdateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'useDevicePixelRatio'>
-    )> }
-  )> }
-);
+export type UpdateEnableHighDpiRequestsMutation = { __typename?: 'Mutation', updateDataSource?: { __typename?: 'UpdateDataSourcePayload', dataSource?: { __typename?: 'DataSource', id: number, useDevicePixelRatio?: boolean | null } | null } | null };
 
 export type GetMetadataQueryVariables = Exact<{
   itemId: Scalars['Int'];
 }>;
 
 
-export type GetMetadataQuery = (
-  { __typename?: 'Query' }
-  & { tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'metadata'>
-  )> }
-);
+export type GetMetadataQuery = { __typename?: 'Query', tableOfContentsItem?: { __typename?: 'TableOfContentsItem', id: number, metadata?: any | null } | null };
 
 export type UpdateMetadataMutationVariables = Exact<{
   itemId: Scalars['Int'];
@@ -13279,205 +12503,85 @@ export type UpdateMetadataMutationVariables = Exact<{
 }>;
 
 
-export type UpdateMetadataMutation = (
-  { __typename?: 'Mutation' }
-  & { updateTableOfContentsItem?: Maybe<(
-    { __typename?: 'UpdateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'metadata'>
-    )> }
-  )> }
-);
+export type UpdateMetadataMutation = { __typename?: 'Mutation', updateTableOfContentsItem?: { __typename?: 'UpdateTableOfContentsItemPayload', tableOfContentsItem?: { __typename?: 'TableOfContentsItem', id: number, metadata?: any | null } | null } | null };
 
 export type ProjectHostingQuotaQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type ProjectHostingQuotaQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'dataHostingQuota' | 'dataHostingQuotaUsed'>
-  )> }
-);
+export type ProjectHostingQuotaQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, dataHostingQuota?: number | null, dataHostingQuotaUsed?: number | null } | null };
 
 export type InteractivitySettingsByIdQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type InteractivitySettingsByIdQuery = (
-  { __typename?: 'Query' }
-  & { interactivitySetting?: Maybe<(
-    { __typename?: 'InteractivitySetting' }
-    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-  )> }
-);
+export type InteractivitySettingsByIdQuery = { __typename?: 'Query', interactivitySetting?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null };
 
 export type PublishTableOfContentsMutationVariables = Exact<{
   projectId: Scalars['Int'];
 }>;
 
 
-export type PublishTableOfContentsMutation = (
-  { __typename?: 'Mutation' }
-  & { publishTableOfContents?: Maybe<(
-    { __typename?: 'PublishTableOfContentsPayload' }
-    & { tableOfContentsItems?: Maybe<Array<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id'>
-    )>> }
-  )> }
-);
+export type PublishTableOfContentsMutation = { __typename?: 'Mutation', publishTableOfContents?: { __typename?: 'PublishTableOfContentsPayload', tableOfContentsItems?: Array<{ __typename?: 'TableOfContentsItem', id: number }> | null } | null };
 
-export type MapEssentialsFragment = (
-  { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
-  & { basemaps?: Maybe<Array<(
-    { __typename?: 'Basemap' }
-    & BasemapDetailsFragment
-  )>>, surveyBasemaps?: Maybe<Array<(
-    { __typename?: 'Basemap' }
-    & BasemapDetailsFragment
-  )>>, region: (
-    { __typename?: 'GeometryPolygon' }
-    & Pick<GeometryPolygon, 'geojson'>
-  ) }
-);
+export type MapEssentialsFragment = { __typename?: 'Project', id: number, mapboxPublicKey?: string | null, mapboxSecretKey?: string | null, basemaps?: Array<{ __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> }> | null, surveyBasemaps?: Array<{ __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> }> | null, region: { __typename?: 'GeometryPolygon', geojson?: any | null } };
 
 export type GetBasemapsAndRegionQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type GetBasemapsAndRegionQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & MapEssentialsFragment
-  )> }
-);
+export type GetBasemapsAndRegionQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, mapboxPublicKey?: string | null, mapboxSecretKey?: string | null, basemaps?: Array<{ __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> }> | null, surveyBasemaps?: Array<{ __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> }> | null, region: { __typename?: 'GeometryPolygon', geojson?: any | null } } | null };
 
 export type OfflineSurveysQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type OfflineSurveysQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { surveys: Array<(
-      { __typename?: 'Survey' }
-      & Pick<Survey, 'id' | 'name'>
-    )> }
-  )> }
-);
+export type OfflineSurveysQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, surveys: Array<{ __typename?: 'Survey', id: number, name: string }> } | null };
 
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type ProjectAccessControlSettingsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename: 'Project' }
-    & Pick<Project, 'id' | 'accessControl' | 'isListed'>
-  )> }
-);
+export type ProjectAccessControlSettingsQuery = { __typename?: 'Query', projectBySlug?: { __typename: 'Project', id: number, accessControl: ProjectAccessControlSetting, isListed: boolean } | null };
 
 export type UpdateProjectAccessControlSettingsMutationVariables = Exact<{
   slug: Scalars['String'];
-  accessControl?: Maybe<ProjectAccessControlSetting>;
-  isListed?: Maybe<Scalars['Boolean']>;
+  accessControl?: InputMaybe<ProjectAccessControlSetting>;
+  isListed?: InputMaybe<Scalars['Boolean']>;
 }>;
 
 
-export type UpdateProjectAccessControlSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & Pick<UpdateProjectPayload, 'clientMutationId'>
-    & { project?: Maybe<(
-      { __typename: 'Project' }
-      & Pick<Project, 'id' | 'accessControl' | 'isListed'>
-    )> }
-  )> }
-);
+export type UpdateProjectAccessControlSettingsMutation = { __typename?: 'Mutation', updateProjectBySlug?: { __typename?: 'UpdateProjectPayload', clientMutationId?: string | null, project?: { __typename: 'Project', id: number, accessControl: ProjectAccessControlSetting, isListed: boolean } | null } | null };
 
-export type ProjectMetadataFragment = (
-  { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail'>
-);
+export type ProjectMetadataFragment = { __typename?: 'Project', id: number, slug: string, url?: string | null, name: string, description?: string | null, logoLink?: string | null, logoUrl?: string | null, accessControl: ProjectAccessControlSetting, sessionIsAdmin?: boolean | null, isFeatured: boolean, supportEmail: string };
 
-export type ProjectPublicDetailsMetadataFragment = (
-  { __typename?: 'PublicProjectDetail' }
-  & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail' | 'accessStatus'>
-);
+export type ProjectPublicDetailsMetadataFragment = { __typename?: 'PublicProjectDetail', id?: number | null, accessControl?: ProjectAccessControlSetting | null, slug?: string | null, name?: string | null, logoUrl?: string | null, supportEmail?: string | null, accessStatus?: ProjectAccessStatus | null };
 
-export type ProjectMetadataMeFragFragment = (
-  { __typename?: 'User' }
-  & Pick<User, 'id'>
-  & { profile?: Maybe<(
-    { __typename?: 'Profile' }
-    & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
-  )> }
-);
+export type ProjectMetadataMeFragFragment = { __typename?: 'User', id: number, profile?: { __typename?: 'Profile', userId: number, fullname?: string | null, nickname?: string | null, email?: any | null, picture?: string | null, bio?: string | null, affiliations?: string | null } | null };
 
 export type ProjectMetadataQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type ProjectMetadataQuery = (
-  { __typename?: 'Query' }
-  & { project?: Maybe<(
-    { __typename?: 'Project' }
-    & ProjectMetadataFragment
-  )>, projectPublicDetails?: Maybe<(
-    { __typename?: 'PublicProjectDetail' }
-    & ProjectPublicDetailsMetadataFragment
-  )>, me?: Maybe<(
-    { __typename?: 'User' }
-    & ProjectMetadataMeFragFragment
-  )> }
-);
+export type ProjectMetadataQuery = { __typename?: 'Query', project?: { __typename?: 'Project', id: number, slug: string, url?: string | null, name: string, description?: string | null, logoLink?: string | null, logoUrl?: string | null, accessControl: ProjectAccessControlSetting, sessionIsAdmin?: boolean | null, isFeatured: boolean, supportEmail: string } | null, projectPublicDetails?: { __typename?: 'PublicProjectDetail', id?: number | null, accessControl?: ProjectAccessControlSetting | null, slug?: string | null, name?: string | null, logoUrl?: string | null, supportEmail?: string | null, accessStatus?: ProjectAccessStatus | null } | null, me?: { __typename?: 'User', id: number, profile?: { __typename?: 'Profile', userId: number, fullname?: string | null, nickname?: string | null, email?: any | null, picture?: string | null, bio?: string | null, affiliations?: string | null } | null } | null };
 
 export type MeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MeQuery = (
-  { __typename?: 'Query' }
-  & { me?: Maybe<(
-    { __typename?: 'User' }
-    & Pick<User, 'id'>
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
-    )> }
-  )> }
-);
+export type MeQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: number, profile?: { __typename?: 'Profile', userId: number, fullname?: string | null, nickname?: string | null, email?: any | null, picture?: string | null, bio?: string | null, affiliations?: string | null } | null } | null };
 
 export type ProjectRegionQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type ProjectRegionQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename: 'Project' }
-    & Pick<Project, 'id'>
-    & { region: (
-      { __typename?: 'GeometryPolygon' }
-      & Pick<GeometryPolygon, 'geojson'>
-    ) }
-  )> }
-);
+export type ProjectRegionQuery = { __typename?: 'Query', projectBySlug?: { __typename: 'Project', id: number, region: { __typename?: 'GeometryPolygon', geojson?: any | null } } | null };
 
 export type UpdateProjectRegionMutationVariables = Exact<{
   slug: Scalars['String'];
@@ -13485,191 +12589,71 @@ export type UpdateProjectRegionMutationVariables = Exact<{
 }>;
 
 
-export type UpdateProjectRegionMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & Pick<UpdateProjectPayload, 'clientMutationId'>
-    & { project?: Maybe<(
-      { __typename: 'Project' }
-      & Pick<Project, 'id'>
-      & { region: (
-        { __typename?: 'GeometryPolygon' }
-        & Pick<GeometryPolygon, 'geojson'>
-      ) }
-    )> }
-  )> }
-);
+export type UpdateProjectRegionMutation = { __typename?: 'Mutation', updateProjectBySlug?: { __typename?: 'UpdateProjectPayload', clientMutationId?: string | null, project?: { __typename: 'Project', id: number, region: { __typename?: 'GeometryPolygon', geojson?: any | null } } | null } | null };
 
 export type GetProjectBySlugQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type GetProjectBySlugQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'name'>
-  )> }
-);
+export type GetProjectBySlugQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, name: string } | null };
 
 export type ProjectSlugExistsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type ProjectSlugExistsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-  )> }
-);
+export type ProjectSlugExistsQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number } | null };
 
 export type PublishedTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type PublishedTableOfContentsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { tableOfContentsItems?: Maybe<Array<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title'>
-      & { acl?: Maybe<(
-        { __typename?: 'Acl' }
-        & Pick<Acl, 'id' | 'type'>
-      )> }
-    )>> }
-  )> }
-);
+export type PublishedTableOfContentsQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, tableOfContentsItems?: Array<{ __typename?: 'TableOfContentsItem', id: number, bounds?: Array<any | null> | null, dataLayerId?: number | null, enableDownload: boolean, hideChildren: boolean, isClickOffOnly: boolean, isFolder: boolean, parentStableId?: string | null, showRadioChildren: boolean, sortIndex: number, stableId: string, title: string, acl?: { __typename?: 'Acl', id: number, type: AccessControlListType } | null }> | null } | null };
 
 export type SimpleProjectListQueryVariables = Exact<{
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type SimpleProjectListQuery = (
-  { __typename?: 'Query' }
-  & { projectsConnection?: Maybe<(
-    { __typename?: 'ProjectsConnection' }
-    & { nodes: Array<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name' | 'slug' | 'description' | 'url'>
-    )> }
-  )> }
-);
+export type SimpleProjectListQuery = { __typename?: 'Query', projectsConnection?: { __typename?: 'ProjectsConnection', nodes: Array<{ __typename?: 'Project', id: number, name: string, slug: string, description?: string | null, url?: string | null }> } | null };
 
-export type SurveyListDetailsFragment = (
-  { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
-  & { invitedGroups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
-);
+export type SurveyListDetailsFragment = { __typename?: 'Survey', id: number, accessType: SurveyAccessType, showProgress: boolean, isDisabled: boolean, limitToSingleResponse: boolean, name: string, submittedResponseCount?: number | null, practiceResponseCount?: number | null, projectId: number, isTemplate?: boolean | null, showFacilitationOption: boolean, supportedLanguages: Array<string | null>, invitedGroups?: Array<{ __typename?: 'Group', id: number, name: string }> | null };
 
 export type SurveysQueryVariables = Exact<{
   projectId: Scalars['Int'];
 }>;
 
 
-export type SurveysQuery = (
-  { __typename?: 'Query' }
-  & { project?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { surveys: Array<(
-      { __typename?: 'Survey' }
-      & SurveyListDetailsFragment
-    )> }
-  )> }
-);
+export type SurveysQuery = { __typename?: 'Query', project?: { __typename?: 'Project', id: number, surveys: Array<{ __typename?: 'Survey', id: number, accessType: SurveyAccessType, showProgress: boolean, isDisabled: boolean, limitToSingleResponse: boolean, name: string, submittedResponseCount?: number | null, practiceResponseCount?: number | null, projectId: number, isTemplate?: boolean | null, showFacilitationOption: boolean, supportedLanguages: Array<string | null>, invitedGroups?: Array<{ __typename?: 'Group', id: number, name: string }> | null }> } | null };
 
 export type CreateSurveyMutationVariables = Exact<{
   name: Scalars['String'];
   projectId: Scalars['Int'];
-  templateId?: Maybe<Scalars['Int']>;
+  templateId?: InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type CreateSurveyMutation = (
-  { __typename?: 'Mutation' }
-  & { makeSurvey?: Maybe<(
-    { __typename?: 'MakeSurveyPayload' }
-    & { survey?: Maybe<(
-      { __typename?: 'Survey' }
-      & SurveyListDetailsFragment
-    )> }
-  )> }
-);
+export type CreateSurveyMutation = { __typename?: 'Mutation', makeSurvey?: { __typename?: 'MakeSurveyPayload', survey?: { __typename?: 'Survey', id: number, accessType: SurveyAccessType, showProgress: boolean, isDisabled: boolean, limitToSingleResponse: boolean, name: string, submittedResponseCount?: number | null, practiceResponseCount?: number | null, projectId: number, isTemplate?: boolean | null, showFacilitationOption: boolean, supportedLanguages: Array<string | null>, invitedGroups?: Array<{ __typename?: 'Group', id: number, name: string }> | null } | null } | null };
 
 export type SurveyByIdQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type SurveyByIdQuery = (
-  { __typename?: 'Query' }
-  & { survey?: Maybe<(
-    { __typename?: 'Survey' }
-    & Pick<Survey, 'isSpatial'>
-    & SurveyListDetailsFragment
-  )> }
-);
+export type SurveyByIdQuery = { __typename?: 'Query', survey?: { __typename?: 'Survey', isSpatial?: boolean | null, id: number, accessType: SurveyAccessType, showProgress: boolean, isDisabled: boolean, limitToSingleResponse: boolean, name: string, submittedResponseCount?: number | null, practiceResponseCount?: number | null, projectId: number, isTemplate?: boolean | null, showFacilitationOption: boolean, supportedLanguages: Array<string | null>, invitedGroups?: Array<{ __typename?: 'Group', id: number, name: string }> | null } | null };
 
-export type AddFormElementTypeDetailsFragment = (
-  { __typename?: 'FormElementType' }
-  & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators' | 'isSpatial' | 'allowedLayouts'>
-);
+export type AddFormElementTypeDetailsFragment = { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null };
 
-export type FormElementDetailsFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
-  & { type?: Maybe<(
-    { __typename?: 'FormElementType' }
-    & AddFormElementTypeDetailsFragment
-  )> }
-);
+export type FormElementDetailsFragment = { __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null };
 
-export type SketchClassDetailsFragment = (
-  { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'allowMulti'>
-  & { form?: Maybe<(
-    { __typename?: 'Form' }
-    & Pick<Form, 'id'>
-    & { formElements?: Maybe<Array<(
-      { __typename?: 'FormElement' }
-      & FormElementDetailsFragment
-    )>>, logicRules?: Maybe<Array<(
-      { __typename?: 'FormLogicRule' }
-      & LogicRuleDetailsFragment
-    )>> }
-  )> }
-);
+export type SketchClassDetailsFragment = { __typename?: 'SketchClass', id: number, mapboxGlStyle?: any | null, formElementId?: number | null, geometryType: SketchGeometryType, geoprocessingClientName?: string | null, geoprocessingClientUrl?: string | null, geoprocessingProjectUrl?: string | null, allowMulti: boolean, form?: { __typename?: 'Form', id: number, formElements?: Array<{ __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null }> | null, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, id: number, jumpToId?: number | null, position: number, formElementId: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, value?: any | null, subjectId: number, ruleId: number }> | null }> | null } | null };
 
-export type FormElementFullDetailsFragment = (
-  { __typename?: 'FormElement' }
-  & { sketchClass?: Maybe<(
-    { __typename?: 'SketchClass' }
-    & SketchClassDetailsFragment
-  )> }
-  & FormElementDetailsFragment
-);
+export type FormElementFullDetailsFragment = { __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, sketchClass?: { __typename?: 'SketchClass', id: number, mapboxGlStyle?: any | null, formElementId?: number | null, geometryType: SketchGeometryType, geoprocessingClientName?: string | null, geoprocessingClientUrl?: string | null, geoprocessingProjectUrl?: string | null, allowMulti: boolean, form?: { __typename?: 'Form', id: number, formElements?: Array<{ __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null }> | null, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, id: number, jumpToId?: number | null, position: number, formElementId: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, value?: any | null, subjectId: number, ruleId: number }> | null }> | null } | null } | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null };
 
-export type LogicRuleDetailsFragment = (
-  { __typename?: 'FormLogicRule' }
-  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
-  & { conditions?: Maybe<Array<(
-    { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
-  )>> }
-);
+export type LogicRuleDetailsFragment = { __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, id: number, jumpToId?: number | null, position: number, formElementId: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, value?: any | null, subjectId: number, ruleId: number }> | null };
 
 export type SurveyFormEditorDetailsQueryVariables = Exact<{
   id: Scalars['Int'];
@@ -13677,143 +12661,65 @@ export type SurveyFormEditorDetailsQueryVariables = Exact<{
 }>;
 
 
-export type SurveyFormEditorDetailsQuery = (
-  { __typename?: 'Query' }
-  & { formElementTypes?: Maybe<Array<(
-    { __typename?: 'FormElementType' }
-    & AddFormElementTypeDetailsFragment
-  )>>, survey?: Maybe<(
-    { __typename?: 'Survey' }
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id' | 'isTemplate' | 'surveyId' | 'templateName' | 'templateType'>
-      & { formElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & FormElementFullDetailsFragment
-      )>>, logicRules?: Maybe<Array<(
-        { __typename?: 'FormLogicRule' }
-        & LogicRuleDetailsFragment
-      )>> }
-    )> }
-    & SurveyListDetailsFragment
-  )>, projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'name' | 'url'>
-    & { region: (
-      { __typename?: 'GeometryPolygon' }
-      & Pick<GeometryPolygon, 'geojson'>
-    ) }
-  )> }
-);
+export type SurveyFormEditorDetailsQuery = { __typename?: 'Query', formElementTypes?: Array<{ __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null }> | null, survey?: { __typename?: 'Survey', id: number, accessType: SurveyAccessType, showProgress: boolean, isDisabled: boolean, limitToSingleResponse: boolean, name: string, submittedResponseCount?: number | null, practiceResponseCount?: number | null, projectId: number, isTemplate?: boolean | null, showFacilitationOption: boolean, supportedLanguages: Array<string | null>, form?: { __typename?: 'Form', id: number, isTemplate: boolean, surveyId?: number | null, templateName?: string | null, templateType?: FormTemplateType | null, formElements?: Array<{ __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, sketchClass?: { __typename?: 'SketchClass', id: number, mapboxGlStyle?: any | null, formElementId?: number | null, geometryType: SketchGeometryType, geoprocessingClientName?: string | null, geoprocessingClientUrl?: string | null, geoprocessingProjectUrl?: string | null, allowMulti: boolean, form?: { __typename?: 'Form', id: number, formElements?: Array<{ __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null }> | null, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, id: number, jumpToId?: number | null, position: number, formElementId: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, value?: any | null, subjectId: number, ruleId: number }> | null }> | null } | null } | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null }> | null, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, id: number, jumpToId?: number | null, position: number, formElementId: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, value?: any | null, subjectId: number, ruleId: number }> | null }> | null } | null, invitedGroups?: Array<{ __typename?: 'Group', id: number, name: string }> | null } | null, projectBySlug?: { __typename?: 'Project', id: number, name: string, url?: string | null, region: { __typename?: 'GeometryPolygon', geojson?: any | null } } | null };
 
 export type FormElementTypesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type FormElementTypesQuery = (
-  { __typename?: 'Query' }
-  & { formElementTypes?: Maybe<Array<(
-    { __typename?: 'FormElementType' }
-    & AddFormElementTypeDetailsFragment
-  )>> }
-);
+export type FormElementTypesQuery = { __typename?: 'Query', formElementTypes?: Array<{ __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null }> | null };
 
 export type UpdateSurveyBaseSettingsMutationVariables = Exact<{
   id: Scalars['Int'];
-  showProgress?: Maybe<Scalars['Boolean']>;
-  showFacilitationOption?: Maybe<Scalars['Boolean']>;
-  supportedLanguages?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
+  showProgress?: InputMaybe<Scalars['Boolean']>;
+  showFacilitationOption?: InputMaybe<Scalars['Boolean']>;
+  supportedLanguages?: InputMaybe<Array<InputMaybe<Scalars['String']>> | InputMaybe<Scalars['String']>>;
 }>;
 
 
-export type UpdateSurveyBaseSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateSurvey?: Maybe<(
-    { __typename?: 'UpdateSurveyPayload' }
-    & { survey?: Maybe<(
-      { __typename?: 'Survey' }
-      & Pick<Survey, 'id' | 'showProgress' | 'showFacilitationOption' | 'supportedLanguages'>
-    )> }
-  )> }
-);
+export type UpdateSurveyBaseSettingsMutation = { __typename?: 'Mutation', updateSurvey?: { __typename?: 'UpdateSurveyPayload', survey?: { __typename?: 'Survey', id: number, showProgress: boolean, showFacilitationOption: boolean, supportedLanguages: Array<string | null> } | null } | null };
 
 export type UpdateFormElementSketchClassMutationVariables = Exact<{
   id: Scalars['Int'];
-  geometryType?: Maybe<SketchGeometryType>;
-  allowMulti?: Maybe<Scalars['Boolean']>;
-  mapboxGlStyle?: Maybe<Scalars['JSON']>;
-  geoprocessingClientName?: Maybe<Scalars['String']>;
-  geoprocessingClientUrl?: Maybe<Scalars['String']>;
-  geoprocessingProjectUrl?: Maybe<Scalars['String']>;
+  geometryType?: InputMaybe<SketchGeometryType>;
+  allowMulti?: InputMaybe<Scalars['Boolean']>;
+  mapboxGlStyle?: InputMaybe<Scalars['JSON']>;
+  geoprocessingClientName?: InputMaybe<Scalars['String']>;
+  geoprocessingClientUrl?: InputMaybe<Scalars['String']>;
+  geoprocessingProjectUrl?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateFormElementSketchClassMutation = (
-  { __typename?: 'Mutation' }
-  & { updateSketchClass?: Maybe<(
-    { __typename?: 'UpdateSketchClassPayload' }
-    & { sketchClass?: Maybe<(
-      { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'id' | 'geometryType' | 'allowMulti' | 'mapboxGlStyle' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
-    )> }
-  )> }
-);
+export type UpdateFormElementSketchClassMutation = { __typename?: 'Mutation', updateSketchClass?: { __typename?: 'UpdateSketchClassPayload', sketchClass?: { __typename?: 'SketchClass', id: number, geometryType: SketchGeometryType, allowMulti: boolean, mapboxGlStyle?: any | null, geoprocessingClientName?: string | null, geoprocessingClientUrl?: string | null, geoprocessingProjectUrl?: string | null } | null } | null };
 
 export type UpdateFormElementMutationVariables = Exact<{
   id: Scalars['Int'];
-  isRequired?: Maybe<Scalars['Boolean']>;
-  body?: Maybe<Scalars['JSON']>;
-  exportId?: Maybe<Scalars['String']>;
-  componentSettings?: Maybe<Scalars['JSON']>;
-  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
-  jumpToId?: Maybe<Scalars['Int']>;
-  typeId?: Maybe<Scalars['String']>;
+  isRequired?: InputMaybe<Scalars['Boolean']>;
+  body?: InputMaybe<Scalars['JSON']>;
+  exportId?: InputMaybe<Scalars['String']>;
+  componentSettings?: InputMaybe<Scalars['JSON']>;
+  alternateLanguageSettings?: InputMaybe<Scalars['JSON']>;
+  jumpToId?: InputMaybe<Scalars['Int']>;
+  typeId?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateFormElementMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'isRequired' | 'body' | 'exportId' | 'componentSettings' | 'alternateLanguageSettings' | 'jumpToId' | 'typeId'>
-    )> }
-  )> }
-);
+export type UpdateFormElementMutation = { __typename?: 'Mutation', updateFormElement?: { __typename?: 'UpdateFormElementPayload', formElement?: { __typename?: 'FormElement', id: number, isRequired: boolean, body: any, exportId?: string | null, componentSettings: any, alternateLanguageSettings: any, jumpToId?: number | null, typeId: string } | null } | null };
 
 export type UpdateComponentSettingsMutationVariables = Exact<{
   id: Scalars['Int'];
-  componentSettings?: Maybe<Scalars['JSON']>;
+  componentSettings?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
-export type UpdateComponentSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'componentSettings'>
-    )> }
-  )> }
-);
+export type UpdateComponentSettingsMutation = { __typename?: 'Mutation', updateFormElement?: { __typename?: 'UpdateFormElementPayload', formElement?: { __typename?: 'FormElement', id: number, componentSettings: any } | null } | null };
 
 export type UpdateAlternateLanguageSettingsMutationVariables = Exact<{
   id: Scalars['Int'];
-  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  alternateLanguageSettings?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
-export type UpdateAlternateLanguageSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'alternateLanguageSettings'>
-    )> }
-  )> }
-);
+export type UpdateAlternateLanguageSettingsMutation = { __typename?: 'Mutation', updateFormElement?: { __typename?: 'UpdateFormElementPayload', formElement?: { __typename?: 'FormElement', id: number, alternateLanguageSettings: any } | null } | null };
 
 export type UpdateFormElementBodyMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -13821,140 +12727,63 @@ export type UpdateFormElementBodyMutationVariables = Exact<{
 }>;
 
 
-export type UpdateFormElementBodyMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'body'>
-    )> }
-  )> }
-);
+export type UpdateFormElementBodyMutation = { __typename?: 'Mutation', updateFormElement?: { __typename?: 'UpdateFormElementPayload', formElement?: { __typename?: 'FormElement', id: number, body: any } | null } | null };
 
 export type UpdateFormElementOrderMutationVariables = Exact<{
-  elementIds?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+  elementIds?: InputMaybe<Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>>;
 }>;
 
 
-export type UpdateFormElementOrderMutation = (
-  { __typename?: 'Mutation' }
-  & { setFormElementOrder?: Maybe<(
-    { __typename?: 'SetFormElementOrderPayload' }
-    & { formElements?: Maybe<Array<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'position'>
-    )>> }
-  )> }
-);
+export type UpdateFormElementOrderMutation = { __typename?: 'Mutation', setFormElementOrder?: { __typename?: 'SetFormElementOrderPayload', formElements?: Array<{ __typename?: 'FormElement', id: number, position: number }> | null } | null };
 
 export type AddFormElementMutationVariables = Exact<{
   body: Scalars['JSON'];
   componentSettings: Scalars['JSON'];
   formId: Scalars['Int'];
   componentType: Scalars['String'];
-  position?: Maybe<Scalars['Int']>;
-  exportId?: Maybe<Scalars['String']>;
-  subordinateTo?: Maybe<Scalars['Int']>;
+  position?: InputMaybe<Scalars['Int']>;
+  exportId?: InputMaybe<Scalars['String']>;
+  subordinateTo?: InputMaybe<Scalars['Int']>;
   isRequired: Scalars['Boolean'];
 }>;
 
 
-export type AddFormElementMutation = (
-  { __typename?: 'Mutation' }
-  & { createFormElement?: Maybe<(
-    { __typename?: 'CreateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & FormElementFullDetailsFragment
-    )> }
-  )> }
-);
+export type AddFormElementMutation = { __typename?: 'Mutation', createFormElement?: { __typename?: 'CreateFormElementPayload', formElement?: { __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, sketchClass?: { __typename?: 'SketchClass', id: number, mapboxGlStyle?: any | null, formElementId?: number | null, geometryType: SketchGeometryType, geoprocessingClientName?: string | null, geoprocessingClientUrl?: string | null, geoprocessingProjectUrl?: string | null, allowMulti: boolean, form?: { __typename?: 'Form', id: number, formElements?: Array<{ __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null }> | null, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, id: number, jumpToId?: number | null, position: number, formElementId: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, value?: any | null, subjectId: number, ruleId: number }> | null }> | null } | null } | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null } | null } | null };
 
 export type DeleteFormElementMutationVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type DeleteFormElementMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteFormElement?: Maybe<(
-    { __typename?: 'DeleteFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id'>
-    )> }
-  )> }
-);
+export type DeleteFormElementMutation = { __typename?: 'Mutation', deleteFormElement?: { __typename?: 'DeleteFormElementPayload', formElement?: { __typename?: 'FormElement', id: number } | null } | null };
 
 export type UpdateFormMutationVariables = Exact<{
   id: Scalars['Int'];
-  isTemplate?: Maybe<Scalars['Boolean']>;
-  templateName?: Maybe<Scalars['String']>;
+  isTemplate?: InputMaybe<Scalars['Boolean']>;
+  templateName?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateFormMutation = (
-  { __typename?: 'Mutation' }
-  & { updateForm?: Maybe<(
-    { __typename?: 'UpdateFormPayload' }
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id' | 'isTemplate' | 'templateName'>
-    )> }
-  )> }
-);
+export type UpdateFormMutation = { __typename?: 'Mutation', updateForm?: { __typename?: 'UpdateFormPayload', form?: { __typename?: 'Form', id: number, isTemplate: boolean, templateName?: string | null } | null } | null };
 
 export type GetPhotosQueryVariables = Exact<{
   query: Scalars['String'];
 }>;
 
 
-export type GetPhotosQuery = (
-  { __typename?: 'Query' }
-  & { getUnsplashPhotos: (
-    { __typename?: 'UnsplashSearchResult' }
-    & { results: Array<(
-      { __typename?: 'UnsplashPhoto' }
-      & Pick<UnsplashPhoto, 'blur_hash' | 'color' | 'description' | 'height' | 'width' | 'id'>
-      & { links: (
-        { __typename?: 'UnsplashPhotoLinks' }
-        & Pick<UnsplashPhotoLinks, 'download_location'>
-      ), urls: (
-        { __typename?: 'UnsplashUrls' }
-        & Pick<UnsplashUrls, 'full' | 'raw' | 'regular' | 'small' | 'thumb'>
-      ), user: (
-        { __typename?: 'UnsplashUser' }
-        & Pick<UnsplashUser, 'id' | 'name' | 'username'>
-        & { links: (
-          { __typename?: 'UnsplashLinks' }
-          & Pick<UnsplashLinks, 'html'>
-        ) }
-      ) }
-    )> }
-  ) }
-);
+export type GetPhotosQuery = { __typename?: 'Query', getUnsplashPhotos: { __typename?: 'UnsplashSearchResult', results: Array<{ __typename?: 'UnsplashPhoto', blur_hash?: string | null, color: string, description?: string | null, height: number, width: number, id: string, links: { __typename?: 'UnsplashPhotoLinks', download_location: string }, urls: { __typename?: 'UnsplashUrls', full: string, raw: string, regular: string, small: string, thumb: string }, user: { __typename?: 'UnsplashUser', id: string, name: string, username: string, links: { __typename?: 'UnsplashLinks', html: string } } }> } };
 
 export type UpdateFormElementBackgroundMutationVariables = Exact<{
   id: Scalars['Int'];
-  backgroundColor?: Maybe<Scalars['String']>;
-  secondaryColor?: Maybe<Scalars['String']>;
-  backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
-  textVariant?: Maybe<FormElementTextVariant>;
-  layout?: Maybe<FormElementLayout>;
+  backgroundColor?: InputMaybe<Scalars['String']>;
+  secondaryColor?: InputMaybe<Scalars['String']>;
+  backgroundPalette?: InputMaybe<Array<InputMaybe<Scalars['String']>> | InputMaybe<Scalars['String']>>;
+  textVariant?: InputMaybe<FormElementTextVariant>;
+  layout?: InputMaybe<FormElementLayout>;
 }>;
 
 
-export type UpdateFormElementBackgroundMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl'>
-    )> }
-  )> }
-);
+export type UpdateFormElementBackgroundMutation = { __typename?: 'Mutation', updateFormElement?: { __typename?: 'UpdateFormElementPayload', formElement?: { __typename?: 'FormElement', id: number, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorName?: string | null, unsplashAuthorUrl?: string | null } | null } | null };
 
 export type SetFormElementBackgroundMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -13962,7 +12791,7 @@ export type SetFormElementBackgroundMutationVariables = Exact<{
   secondaryColor: Scalars['String'];
   backgroundUrl: Scalars['String'];
   downloadUrl: Scalars['String'];
-  backgroundPalette: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
+  backgroundPalette: Array<InputMaybe<Scalars['String']>> | InputMaybe<Scalars['String']>;
   unsplashAuthorUrl: Scalars['String'];
   unsplashAuthorName: Scalars['String'];
   backgroundWidth: Scalars['Int'];
@@ -13970,29 +12799,14 @@ export type SetFormElementBackgroundMutationVariables = Exact<{
 }>;
 
 
-export type SetFormElementBackgroundMutation = (
-  { __typename?: 'Mutation' }
-  & { setFormElementBackground: (
-    { __typename?: 'FormElement' }
-    & Pick<FormElement, 'id' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight'>
-  ) }
-);
+export type SetFormElementBackgroundMutation = { __typename?: 'Mutation', setFormElementBackground: { __typename?: 'FormElement', id: number, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, backgroundPalette?: Array<string | null> | null, unsplashAuthorName?: string | null, unsplashAuthorUrl?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null } };
 
 export type ClearFormElementStyleMutationVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type ClearFormElementStyleMutation = (
-  { __typename?: 'Mutation' }
-  & { clearFormElementStyle?: Maybe<(
-    { __typename?: 'ClearFormElementStylePayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'backgroundColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'textVariant' | 'secondaryColor' | 'layout'>
-    )> }
-  )> }
-);
+export type ClearFormElementStyleMutation = { __typename?: 'Mutation', clearFormElementStyle?: { __typename?: 'ClearFormElementStylePayload', formElement?: { __typename?: 'FormElement', id: number, backgroundColor?: string | null, backgroundImage?: string | null, backgroundPalette?: Array<string | null> | null, unsplashAuthorName?: string | null, unsplashAuthorUrl?: string | null, textVariant: FormElementTextVariant, secondaryColor?: string | null, layout?: FormElementLayout | null } | null } | null };
 
 export type CreateLogicRuleForSurveyMutationVariables = Exact<{
   formElementId: Scalars['Int'];
@@ -14001,109 +12815,51 @@ export type CreateLogicRuleForSurveyMutationVariables = Exact<{
 }>;
 
 
-export type CreateLogicRuleForSurveyMutation = (
-  { __typename?: 'Mutation' }
-  & { createSurveyJumpRule?: Maybe<(
-    { __typename?: 'CreateSurveyJumpRulePayload' }
-    & { formLogicRule?: Maybe<(
-      { __typename?: 'FormLogicRule' }
-      & Pick<FormLogicRule, 'id' | 'position' | 'booleanOperator' | 'command' | 'formElementId' | 'jumpToId'>
-      & { conditions?: Maybe<Array<(
-        { __typename?: 'FormLogicCondition' }
-        & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
-      )>> }
-    )> }
-  )> }
-);
+export type CreateLogicRuleForSurveyMutation = { __typename?: 'Mutation', createSurveyJumpRule?: { __typename?: 'CreateSurveyJumpRulePayload', formLogicRule?: { __typename?: 'FormLogicRule', id: number, position: number, booleanOperator: FormLogicOperator, command: FormLogicCommand, formElementId: number, jumpToId?: number | null, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, ruleId: number, subjectId: number, value?: any | null }> | null } | null } | null };
 
 export type UpdateFormLogicRuleMutationVariables = Exact<{
   id: Scalars['Int'];
-  jumpToId?: Maybe<Scalars['Int']>;
-  booleanOperator?: Maybe<FormLogicOperator>;
-  formElementId?: Maybe<Scalars['Int']>;
+  jumpToId?: InputMaybe<Scalars['Int']>;
+  booleanOperator?: InputMaybe<FormLogicOperator>;
+  formElementId?: InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type UpdateFormLogicRuleMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormLogicRule?: Maybe<(
-    { __typename?: 'UpdateFormLogicRulePayload' }
-    & { formLogicRule?: Maybe<(
-      { __typename?: 'FormLogicRule' }
-      & Pick<FormLogicRule, 'id' | 'booleanOperator' | 'command' | 'jumpToId' | 'position' | 'formElementId'>
-    )> }
-  )> }
-);
+export type UpdateFormLogicRuleMutation = { __typename?: 'Mutation', updateFormLogicRule?: { __typename?: 'UpdateFormLogicRulePayload', formLogicRule?: { __typename?: 'FormLogicRule', id: number, booleanOperator: FormLogicOperator, command: FormLogicCommand, jumpToId?: number | null, position: number, formElementId: number } | null } | null };
 
 export type UpdateLogicConditionMutationVariables = Exact<{
   id: Scalars['Int'];
-  operator?: Maybe<FieldRuleOperator>;
-  value?: Maybe<Scalars['JSON']>;
-  subjectId?: Maybe<Scalars['Int']>;
+  operator?: InputMaybe<FieldRuleOperator>;
+  value?: InputMaybe<Scalars['JSON']>;
+  subjectId?: InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type UpdateLogicConditionMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormLogicCondition?: Maybe<(
-    { __typename?: 'UpdateFormLogicConditionPayload' }
-    & { formLogicCondition?: Maybe<(
-      { __typename?: 'FormLogicCondition' }
-      & Pick<FormLogicCondition, 'id' | 'ruleId' | 'operator' | 'subjectId' | 'value'>
-    )> }
-  )> }
-);
+export type UpdateLogicConditionMutation = { __typename?: 'Mutation', updateFormLogicCondition?: { __typename?: 'UpdateFormLogicConditionPayload', formLogicCondition?: { __typename?: 'FormLogicCondition', id: number, ruleId: number, operator: FieldRuleOperator, subjectId: number, value?: any | null } | null } | null };
 
 export type DeleteLogicConditionMutationVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type DeleteLogicConditionMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteFormLogicCondition?: Maybe<(
-    { __typename?: 'DeleteFormLogicConditionPayload' }
-    & { formLogicCondition?: Maybe<(
-      { __typename?: 'FormLogicCondition' }
-      & Pick<FormLogicCondition, 'id' | 'ruleId'>
-    )> }
-  )> }
-);
+export type DeleteLogicConditionMutation = { __typename?: 'Mutation', deleteFormLogicCondition?: { __typename?: 'DeleteFormLogicConditionPayload', formLogicCondition?: { __typename?: 'FormLogicCondition', id: number, ruleId: number } | null } | null };
 
 export type DeleteLogicRuleMutationVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type DeleteLogicRuleMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteFormLogicRule?: Maybe<(
-    { __typename?: 'DeleteFormLogicRulePayload' }
-    & { formLogicRule?: Maybe<(
-      { __typename?: 'FormLogicRule' }
-      & Pick<FormLogicRule, 'id' | 'formElementId'>
-    )> }
-  )> }
-);
+export type DeleteLogicRuleMutation = { __typename?: 'Mutation', deleteFormLogicRule?: { __typename?: 'DeleteFormLogicRulePayload', formLogicRule?: { __typename?: 'FormLogicRule', id: number, formElementId: number } | null } | null };
 
 export type AddConditionMutationVariables = Exact<{
   operator: FieldRuleOperator;
   ruleId: Scalars['Int'];
   subjectId: Scalars['Int'];
-  value?: Maybe<Scalars['JSON']>;
+  value?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
-export type AddConditionMutation = (
-  { __typename?: 'Mutation' }
-  & { createFormLogicCondition?: Maybe<(
-    { __typename?: 'CreateFormLogicConditionPayload' }
-    & { formLogicCondition?: Maybe<(
-      { __typename?: 'FormLogicCondition' }
-      & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
-    )> }
-  )> }
-);
+export type AddConditionMutation = { __typename?: 'Mutation', createFormLogicCondition?: { __typename?: 'CreateFormLogicConditionPayload', formLogicCondition?: { __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, ruleId: number, subjectId: number, value?: any | null } | null } | null };
 
 export type UpdateSurveyDraftStatusMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -14111,16 +12867,7 @@ export type UpdateSurveyDraftStatusMutationVariables = Exact<{
 }>;
 
 
-export type UpdateSurveyDraftStatusMutation = (
-  { __typename?: 'Mutation' }
-  & { updateSurvey?: Maybe<(
-    { __typename?: 'UpdateSurveyPayload' }
-    & { survey?: Maybe<(
-      { __typename?: 'Survey' }
-      & Pick<Survey, 'id' | 'isDisabled'>
-    )> }
-  )> }
-);
+export type UpdateSurveyDraftStatusMutation = { __typename?: 'Mutation', updateSurvey?: { __typename?: 'UpdateSurveyPayload', survey?: { __typename?: 'Survey', id: number, isDisabled: boolean } | null } | null };
 
 export type UploadConsentDocMutationVariables = Exact<{
   document: Scalars['Upload'];
@@ -14129,138 +12876,49 @@ export type UploadConsentDocMutationVariables = Exact<{
 }>;
 
 
-export type UploadConsentDocMutation = (
-  { __typename?: 'Mutation' }
-  & { uploadConsentDocument: (
-    { __typename?: 'FormElement' }
-    & Pick<FormElement, 'id' | 'componentSettings'>
-  ) }
-);
+export type UploadConsentDocMutation = { __typename?: 'Mutation', uploadConsentDocument: { __typename?: 'FormElement', id: number, componentSettings: any } };
 
-export type SurveyResponseFragment = (
-  { __typename?: 'SurveyResponse' }
-  & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent' | 'archived' | 'lastUpdatedByEmail'>
-);
+export type SurveyResponseFragment = { __typename?: 'SurveyResponse', id: number, surveyId: number, bypassedDuplicateSubmissionControl: boolean, updatedAt?: any | null, accountEmail?: string | null, userId?: number | null, createdAt: any, data: any, isDuplicateEntry: boolean, isDuplicateIp: boolean, isPractice: boolean, isUnrecognizedUserAgent: boolean, archived: boolean, lastUpdatedByEmail?: string | null };
 
-export type FormElementExtendedDetailsFragment = (
-  { __typename?: 'FormElement' }
-  & { surveyConsentDocumentsConnection: (
-    { __typename?: 'SurveyConsentDocumentsConnection' }
-    & { nodes: Array<(
-      { __typename?: 'SurveyConsentDocument' }
-      & Pick<SurveyConsentDocument, 'url' | 'version'>
-    )> }
-  ) }
-  & FormElementDetailsFragment
-);
+export type FormElementExtendedDetailsFragment = { __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, surveyConsentDocumentsConnection: { __typename?: 'SurveyConsentDocumentsConnection', nodes: Array<{ __typename?: 'SurveyConsentDocument', url: string, version: number }> }, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null };
 
 export type SurveyResponsesQueryVariables = Exact<{
   surveyId: Scalars['Int'];
 }>;
 
 
-export type SurveyResponsesQuery = (
-  { __typename?: 'Query' }
-  & { survey?: Maybe<(
-    { __typename?: 'Survey' }
-    & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & { formElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & FormElementExtendedDetailsFragment
-      )>>, logicRules?: Maybe<Array<(
-        { __typename?: 'FormLogicRule' }
-        & SurveyAppRuleFragment
-      )>> }
-    )>, surveyResponsesConnection: (
-      { __typename?: 'SurveyResponsesConnection' }
-      & { nodes: Array<(
-        { __typename?: 'SurveyResponse' }
-        & SurveyResponseFragment
-      )> }
-    ) }
-  )> }
-);
+export type SurveyResponsesQuery = { __typename?: 'Query', survey?: { __typename?: 'Survey', id: number, practiceResponseCount?: number | null, archivedResponseCount?: number | null, submittedResponseCount?: number | null, form?: { __typename?: 'Form', formElements?: Array<{ __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, surveyConsentDocumentsConnection: { __typename?: 'SurveyConsentDocumentsConnection', nodes: Array<{ __typename?: 'SurveyConsentDocument', url: string, version: number }> }, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null }> | null, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, formElementId: number, id: number, jumpToId?: number | null, position: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, ruleId: number, subjectId: number, value?: any | null }> | null }> | null } | null, surveyResponsesConnection: { __typename?: 'SurveyResponsesConnection', nodes: Array<{ __typename?: 'SurveyResponse', id: number, surveyId: number, bypassedDuplicateSubmissionControl: boolean, updatedAt?: any | null, accountEmail?: string | null, userId?: number | null, createdAt: any, data: any, isDuplicateEntry: boolean, isDuplicateIp: boolean, isPractice: boolean, isUnrecognizedUserAgent: boolean, archived: boolean, lastUpdatedByEmail?: string | null }> } } | null };
 
 export type SurveyMapDetailsQueryVariables = Exact<{
   surveyId: Scalars['Int'];
 }>;
 
 
-export type SurveyMapDetailsQuery = (
-  { __typename?: 'Query' }
-  & { survey?: Maybe<(
-    { __typename?: 'Survey' }
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id'>
-      & { formElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & FormElementDetailsFragment
-      )>> }
-    )> }
-  )> }
-);
+export type SurveyMapDetailsQuery = { __typename?: 'Query', survey?: { __typename?: 'Survey', form?: { __typename?: 'Form', id: number, formElements?: Array<{ __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null }> | null } | null } | null };
 
 export type ToggleResponsesPracticeMutationVariables = Exact<{
-  ids?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
-  isPractice?: Maybe<Scalars['Boolean']>;
+  ids?: InputMaybe<Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>>;
+  isPractice?: InputMaybe<Scalars['Boolean']>;
 }>;
 
 
-export type ToggleResponsesPracticeMutation = (
-  { __typename?: 'Mutation' }
-  & { toggleResponsesPractice?: Maybe<(
-    { __typename?: 'ToggleResponsesPracticePayload' }
-    & { surveyResponses?: Maybe<Array<(
-      { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id' | 'isPractice' | 'archived' | 'lastUpdatedByEmail'>
-      & { survey?: Maybe<(
-        { __typename?: 'Survey' }
-        & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
-      )> }
-    )>> }
-  )> }
-);
+export type ToggleResponsesPracticeMutation = { __typename?: 'Mutation', toggleResponsesPractice?: { __typename?: 'ToggleResponsesPracticePayload', surveyResponses?: Array<{ __typename?: 'SurveyResponse', id: number, isPractice: boolean, archived: boolean, lastUpdatedByEmail?: string | null, survey?: { __typename?: 'Survey', id: number, practiceResponseCount?: number | null, archivedResponseCount?: number | null, submittedResponseCount?: number | null } | null }> | null } | null };
 
 export type ArchiveResponsesMutationVariables = Exact<{
-  ids?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
-  makeArchived?: Maybe<Scalars['Boolean']>;
+  ids?: InputMaybe<Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>>;
+  makeArchived?: InputMaybe<Scalars['Boolean']>;
 }>;
 
 
-export type ArchiveResponsesMutation = (
-  { __typename?: 'Mutation' }
-  & { archiveResponses?: Maybe<(
-    { __typename?: 'ArchiveResponsesPayload' }
-    & { surveyResponses?: Maybe<Array<(
-      { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id' | 'isPractice' | 'archived' | 'lastUpdatedByEmail'>
-      & { survey?: Maybe<(
-        { __typename?: 'Survey' }
-        & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
-      )> }
-    )>> }
-  )> }
-);
+export type ArchiveResponsesMutation = { __typename?: 'Mutation', archiveResponses?: { __typename?: 'ArchiveResponsesPayload', surveyResponses?: Array<{ __typename?: 'SurveyResponse', id: number, isPractice: boolean, archived: boolean, lastUpdatedByEmail?: string | null, survey?: { __typename?: 'Survey', id: number, practiceResponseCount?: number | null, archivedResponseCount?: number | null, submittedResponseCount?: number | null } | null }> | null } | null };
 
 export type ModifyAnswersMutationVariables = Exact<{
-  responseIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
-  answers?: Maybe<Scalars['JSON']>;
+  responseIds: Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>;
+  answers?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
-export type ModifyAnswersMutation = (
-  { __typename?: 'Mutation' }
-  & { modifySurveyAnswers?: Maybe<(
-    { __typename?: 'ModifySurveyAnswersPayload' }
-    & { surveyResponses?: Maybe<Array<(
-      { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id' | 'data' | 'updatedAt' | 'lastUpdatedByEmail'>
-    )>> }
-  )> }
-);
+export type ModifyAnswersMutation = { __typename?: 'Mutation', modifySurveyAnswers?: { __typename?: 'ModifySurveyAnswersPayload', surveyResponses?: Array<{ __typename?: 'SurveyResponse', id: number, data: any, updatedAt?: any | null, lastUpdatedByEmail?: string | null }> | null } | null };
 
 export type CopyAppearanceMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -14268,124 +12926,43 @@ export type CopyAppearanceMutationVariables = Exact<{
 }>;
 
 
-export type CopyAppearanceMutation = (
-  { __typename?: 'Mutation' }
-  & { copyAppearance?: Maybe<(
-    { __typename?: 'CopyAppearancePayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'backgroundImage' | 'backgroundColor' | 'secondaryColor' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundHeight' | 'backgroundWidth' | 'layout' | 'textVariant'>
-    )> }
-  )> }
-);
+export type CopyAppearanceMutation = { __typename?: 'Mutation', copyAppearance?: { __typename?: 'CopyAppearancePayload', formElement?: { __typename?: 'FormElement', id: number, backgroundImage?: string | null, backgroundColor?: string | null, secondaryColor?: string | null, backgroundPalette?: Array<string | null> | null, unsplashAuthorName?: string | null, unsplashAuthorUrl?: string | null, backgroundHeight?: number | null, backgroundWidth?: number | null, layout?: FormElementLayout | null, textVariant: FormElementTextVariant } | null } | null };
 
 export type UpdateFormElementBasemapsMutationVariables = Exact<{
   id: Scalars['Int'];
-  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+  mapBasemaps?: InputMaybe<Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>>;
 }>;
 
 
-export type UpdateFormElementBasemapsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'mapBasemaps'>
-    )> }
-  )> }
-);
+export type UpdateFormElementBasemapsMutation = { __typename?: 'Mutation', updateFormElement?: { __typename?: 'UpdateFormElementPayload', formElement?: { __typename?: 'FormElement', id: number, mapBasemaps?: Array<number | null> | null } | null } | null };
 
 export type UpdateFormElementMapCameraMutationVariables = Exact<{
   id: Scalars['Int'];
-  mapCameraOptions?: Maybe<Scalars['JSON']>;
+  mapCameraOptions?: InputMaybe<Scalars['JSON']>;
 }>;
 
 
-export type UpdateFormElementMapCameraMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'mapCameraOptions'>
-    )> }
-  )> }
-);
+export type UpdateFormElementMapCameraMutation = { __typename?: 'Mutation', updateFormElement?: { __typename?: 'UpdateFormElementPayload', formElement?: { __typename?: 'FormElement', id: number, mapCameraOptions?: any | null } | null } | null };
 
 export type AllBasemapsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type AllBasemapsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { basemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>>, surveyBasemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & { relatedFormElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & Pick<FormElement, 'id'>
-      )>> }
-      & BasemapDetailsFragment
-    )>> }
-  )> }
-);
+export type AllBasemapsQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, basemaps?: Array<{ __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> }> | null, surveyBasemaps?: Array<{ __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, relatedFormElements?: Array<{ __typename?: 'FormElement', id: number }> | null, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> }> | null } | null };
 
 export type GetFormElementQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type GetFormElementQuery = (
-  { __typename?: 'Query' }
-  & { formElement?: Maybe<(
-    { __typename?: 'FormElement' }
-    & FormElementDetailsFragment
-  )> }
-);
+export type GetFormElementQuery = { __typename?: 'Query', formElement?: { __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null } | null };
 
-export type SurveyAppRuleFragment = (
-  { __typename?: 'FormLogicRule' }
-  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
-  & { conditions?: Maybe<Array<(
-    { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
-  )>> }
-);
+export type SurveyAppRuleFragment = { __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, formElementId: number, id: number, jumpToId?: number | null, position: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, ruleId: number, subjectId: number, value?: any | null }> | null };
 
-export type SurveyAppFormElementFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
-  & { type?: Maybe<(
-    { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
-  )>, sketchClass?: Maybe<(
-    { __typename?: 'SketchClass' }
-    & SketchClassDetailsFragment
-  )> }
-);
+export type SurveyAppFormElementFragment = { __typename?: 'FormElement', id: number, componentSettings: any, alternateLanguageSettings: any, body: any, isRequired: boolean, isInput?: boolean | null, position: number, typeId: string, formId: number, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, textVariant: FormElementTextVariant, unsplashAuthorName?: string | null, unsplashAuthorUrl?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, jumpToId?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null, supportedOperators: Array<FieldRuleOperator | null>, isHidden: boolean } | null, sketchClass?: { __typename?: 'SketchClass', id: number, mapboxGlStyle?: any | null, formElementId?: number | null, geometryType: SketchGeometryType, geoprocessingClientName?: string | null, geoprocessingClientUrl?: string | null, geoprocessingProjectUrl?: string | null, allowMulti: boolean, form?: { __typename?: 'Form', id: number, formElements?: Array<{ __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null }> | null, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, id: number, jumpToId?: number | null, position: number, formElementId: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, value?: any | null, subjectId: number, ruleId: number }> | null }> | null } | null } | null };
 
-export type SurveyAppSurveyFragment = (
-  { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption' | 'supportedLanguages'>
-  & { form?: Maybe<(
-    { __typename?: 'Form' }
-    & Pick<Form, 'id'>
-    & { logicRules?: Maybe<Array<(
-      { __typename?: 'FormLogicRule' }
-      & SurveyAppRuleFragment
-    )>>, formElements?: Maybe<Array<(
-      { __typename?: 'FormElement' }
-      & SurveyAppFormElementFragment
-    )>> }
-  )> }
-);
+export type SurveyAppSurveyFragment = { __typename?: 'Survey', id: number, name: string, accessType: SurveyAccessType, isDisabled: boolean, showProgress: boolean, showFacilitationOption: boolean, supportedLanguages: Array<string | null>, form?: { __typename?: 'Form', id: number, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, formElementId: number, id: number, jumpToId?: number | null, position: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, ruleId: number, subjectId: number, value?: any | null }> | null }> | null, formElements?: Array<{ __typename?: 'FormElement', id: number, componentSettings: any, alternateLanguageSettings: any, body: any, isRequired: boolean, isInput?: boolean | null, position: number, typeId: string, formId: number, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, textVariant: FormElementTextVariant, unsplashAuthorName?: string | null, unsplashAuthorUrl?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, jumpToId?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null, supportedOperators: Array<FieldRuleOperator | null>, isHidden: boolean } | null, sketchClass?: { __typename?: 'SketchClass', id: number, mapboxGlStyle?: any | null, formElementId?: number | null, geometryType: SketchGeometryType, geoprocessingClientName?: string | null, geoprocessingClientUrl?: string | null, geoprocessingProjectUrl?: string | null, allowMulti: boolean, form?: { __typename?: 'Form', id: number, formElements?: Array<{ __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null }> | null, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, id: number, jumpToId?: number | null, position: number, formElementId: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, value?: any | null, subjectId: number, ruleId: number }> | null }> | null } | null } | null }> | null } | null };
 
 export type SurveyQueryVariables = Exact<{
   id: Scalars['Int'];
@@ -14393,29 +12970,7 @@ export type SurveyQueryVariables = Exact<{
 }>;
 
 
-export type SurveyQuery = (
-  { __typename?: 'Query' }
-  & { projectPublicDetails?: Maybe<(
-    { __typename?: 'PublicProjectDetail' }
-    & ProjectPublicDetailsMetadataFragment
-  )>, me?: Maybe<(
-    { __typename?: 'User' }
-    & Pick<User, 'id' | 'isAdmin'>
-    & ProjectMetadataMeFragFragment
-  )>, currentProject?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'name' | 'url'>
-    & { region: (
-      { __typename?: 'GeometryPolygon' }
-      & Pick<GeometryPolygon, 'geojson'>
-    ) }
-    & MapEssentialsFragment
-    & ProjectMetadataFragment
-  )>, survey?: Maybe<(
-    { __typename?: 'Survey' }
-    & SurveyAppSurveyFragment
-  )> }
-);
+export type SurveyQuery = { __typename?: 'Query', projectPublicDetails?: { __typename?: 'PublicProjectDetail', id?: number | null, accessControl?: ProjectAccessControlSetting | null, slug?: string | null, name?: string | null, logoUrl?: string | null, supportEmail?: string | null, accessStatus?: ProjectAccessStatus | null } | null, me?: { __typename?: 'User', id: number, isAdmin?: boolean | null, profile?: { __typename?: 'Profile', userId: number, fullname?: string | null, nickname?: string | null, email?: any | null, picture?: string | null, bio?: string | null, affiliations?: string | null } | null } | null, currentProject?: { __typename?: 'Project', id: number, name: string, url?: string | null, mapboxPublicKey?: string | null, mapboxSecretKey?: string | null, slug: string, description?: string | null, logoLink?: string | null, logoUrl?: string | null, accessControl: ProjectAccessControlSetting, sessionIsAdmin?: boolean | null, isFeatured: boolean, supportEmail: string, region: { __typename?: 'GeometryPolygon', geojson?: any | null }, basemaps?: Array<{ __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> }> | null, surveyBasemaps?: Array<{ __typename?: 'Basemap', id: number, attribution?: string | null, labelsLayerId?: string | null, name: string, description?: string | null, projectId?: number | null, terrainExaggeration: any, terrainMaxZoom: number, terrainOptional: boolean, terrainTileSize: number, terrainUrl?: string | null, terrainVisibilityDefault: boolean, thumbnail: string, tileSize: number, type: BasemapType, url: string, surveysOnly: boolean, interactivitySettings?: { __typename?: 'InteractivitySetting', cursor: CursorType, id: number, layers?: Array<string | null> | null, longTemplate?: string | null, shortTemplate?: string | null, type: InteractivityType } | null, optionalBasemapLayers: Array<{ __typename?: 'OptionalBasemapLayer', basemapId: number, id: number, defaultVisibility: boolean, description?: string | null, options?: any | null, groupType: OptionalBasemapLayersGroupType, layers: Array<string | null>, metadata?: any | null, name: string }> }> | null } | null, survey?: { __typename?: 'Survey', id: number, name: string, accessType: SurveyAccessType, isDisabled: boolean, showProgress: boolean, showFacilitationOption: boolean, supportedLanguages: Array<string | null>, form?: { __typename?: 'Form', id: number, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, formElementId: number, id: number, jumpToId?: number | null, position: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, ruleId: number, subjectId: number, value?: any | null }> | null }> | null, formElements?: Array<{ __typename?: 'FormElement', id: number, componentSettings: any, alternateLanguageSettings: any, body: any, isRequired: boolean, isInput?: boolean | null, position: number, typeId: string, formId: number, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, textVariant: FormElementTextVariant, unsplashAuthorName?: string | null, unsplashAuthorUrl?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, jumpToId?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null, supportedOperators: Array<FieldRuleOperator | null>, isHidden: boolean } | null, sketchClass?: { __typename?: 'SketchClass', id: number, mapboxGlStyle?: any | null, formElementId?: number | null, geometryType: SketchGeometryType, geoprocessingClientName?: string | null, geoprocessingClientUrl?: string | null, geoprocessingProjectUrl?: string | null, allowMulti: boolean, form?: { __typename?: 'Form', id: number, formElements?: Array<{ __typename?: 'FormElement', body: any, componentSettings: any, alternateLanguageSettings: any, exportId?: string | null, formId: number, id: number, isRequired: boolean, position: number, jumpToId?: number | null, isInput?: boolean | null, typeId: string, backgroundColor?: string | null, secondaryColor?: string | null, backgroundImage?: string | null, layout?: FormElementLayout | null, backgroundPalette?: Array<string | null> | null, textVariant: FormElementTextVariant, unsplashAuthorUrl?: string | null, unsplashAuthorName?: string | null, backgroundWidth?: number | null, backgroundHeight?: number | null, subordinateTo?: number | null, mapBasemaps?: Array<number | null> | null, mapCameraOptions?: any | null, type?: { __typename?: 'FormElementType', componentName: string, isHidden: boolean, isInput: boolean, isSingleUseOnly: boolean, isSurveysOnly: boolean, label: string, supportedOperators: Array<FieldRuleOperator | null>, isSpatial: boolean, allowedLayouts?: Array<FormElementLayout | null> | null } | null }> | null, logicRules?: Array<{ __typename?: 'FormLogicRule', booleanOperator: FormLogicOperator, command: FormLogicCommand, id: number, jumpToId?: number | null, position: number, formElementId: number, conditions?: Array<{ __typename?: 'FormLogicCondition', id: number, operator: FieldRuleOperator, value?: any | null, subjectId: number, ruleId: number }> | null }> | null } | null } | null }> | null } | null } | null };
 
 export type CreateResponseMutationVariables = Exact<{
   surveyId: Scalars['Int'];
@@ -14427,80 +12982,37 @@ export type CreateResponseMutationVariables = Exact<{
 }>;
 
 
-export type CreateResponseMutation = (
-  { __typename?: 'Mutation' }
-  & { createSurveyResponse?: Maybe<(
-    { __typename?: 'CreateSurveyResponsePayload' }
-    & Pick<CreateSurveyResponsePayload, 'clientMutationId'>
-    & { surveyResponse?: Maybe<(
-      { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id'>
-    )> }
-  )> }
-);
+export type CreateResponseMutation = { __typename?: 'Mutation', createSurveyResponse?: { __typename?: 'CreateSurveyResponsePayload', clientMutationId?: string | null, surveyResponse?: { __typename?: 'SurveyResponse', id: number } | null } | null };
 
 export type UpdateProjectNameMutationVariables = Exact<{
   name: Scalars['String'];
   slug: Scalars['String'];
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateProjectNameMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & Pick<UpdateProjectPayload, 'clientMutationId'>
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name'>
-    )> }
-  )> }
-);
+export type UpdateProjectNameMutation = { __typename?: 'Mutation', updateProjectBySlug?: { __typename?: 'UpdateProjectPayload', clientMutationId?: string | null, project?: { __typename?: 'Project', id: number, name: string } | null } | null };
 
 export type UpdateProjectSettingsMutationVariables = Exact<{
   slug: Scalars['String'];
-  clientMutationId?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  description?: Maybe<Scalars['String']>;
-  logoUrl?: Maybe<Scalars['Upload']>;
-  logoLink?: Maybe<Scalars['String']>;
-  isFeatured?: Maybe<Scalars['Boolean']>;
-  mapboxPublicKey?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars['String']>;
+  name?: InputMaybe<Scalars['String']>;
+  description?: InputMaybe<Scalars['String']>;
+  logoUrl?: InputMaybe<Scalars['Upload']>;
+  logoLink?: InputMaybe<Scalars['String']>;
+  isFeatured?: InputMaybe<Scalars['Boolean']>;
+  mapboxPublicKey?: InputMaybe<Scalars['String']>;
 }>;
 
 
-export type UpdateProjectSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & Pick<UpdateProjectPayload, 'clientMutationId'>
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'logoLink' | 'mapboxPublicKey' | 'mapboxSecretKey' | 'isFeatured'>
-    )> }
-  )> }
-);
+export type UpdateProjectSettingsMutation = { __typename?: 'Mutation', updateProjectBySlug?: { __typename?: 'UpdateProjectPayload', clientMutationId?: string | null, project?: { __typename?: 'Project', id: number, name: string, description?: string | null, logoUrl?: string | null, logoLink?: string | null, mapboxPublicKey?: string | null, mapboxSecretKey?: string | null, isFeatured: boolean } | null } | null };
 
 export type UserAdminCountsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type UserAdminCountsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'accessControl' | 'participantCount' | 'adminCount' | 'unapprovedParticipantCount'>
-    & { inviteCounts?: Maybe<Array<(
-      { __typename?: 'InviteStat' }
-      & Pick<InviteStat, 'count' | 'status'>
-    )>>, groups: Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name' | 'memberCount'>
-    )> }
-  )> }
-);
+export type UserAdminCountsQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, accessControl: ProjectAccessControlSetting, participantCount?: number | null, adminCount?: number | null, unapprovedParticipantCount?: number | null, inviteCounts?: Array<{ __typename?: 'InviteStat', count?: number | null, status?: InviteStatus | null }> | null, groups: Array<{ __typename?: 'Group', id: number, name: string, memberCount?: number | null }> } | null };
 
 export type CreateGroupMutationVariables = Exact<{
   projectId: Scalars['Int'];
@@ -14508,122 +13020,45 @@ export type CreateGroupMutationVariables = Exact<{
 }>;
 
 
-export type CreateGroupMutation = (
-  { __typename?: 'Mutation' }
-  & { createGroup?: Maybe<(
-    { __typename?: 'CreateGroupPayload' }
-    & { group?: Maybe<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name' | 'projectId'>
-    )> }
-  )> }
-);
+export type CreateGroupMutation = { __typename?: 'Mutation', createGroup?: { __typename?: 'CreateGroupPayload', group?: { __typename?: 'Group', id: number, name: string, projectId: number } | null } | null };
 
-export type ParticipantListDetailsFragment = (
-  { __typename?: 'User' }
-  & Pick<User, 'id' | 'bannedFromForums' | 'isAdmin' | 'canonicalEmail'>
-  & { profile?: Maybe<(
-    { __typename?: 'Profile' }
-    & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
-  )>, groups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
-);
+export type ParticipantListDetailsFragment = { __typename?: 'User', id: number, bannedFromForums?: boolean | null, isAdmin?: boolean | null, canonicalEmail?: string | null, profile?: { __typename?: 'Profile', userId: number, email?: any | null, fullname?: string | null, nickname?: string | null, picture?: string | null } | null, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null };
 
 export type ParticipantsQueryVariables = Exact<{
   slug: Scalars['String'];
-  offset?: Maybe<Scalars['Int']>;
-  first?: Maybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type ParticipantsQuery = (
-  { __typename?: 'Query' }
-  & { root?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { participants?: Maybe<Array<(
-      { __typename?: 'User' }
-      & ParticipantListDetailsFragment
-    )>> }
-  )> }
-);
+export type ParticipantsQuery = { __typename?: 'Query', root?: { __typename?: 'Project', id: number, participants?: Array<{ __typename?: 'User', id: number, bannedFromForums?: boolean | null, isAdmin?: boolean | null, canonicalEmail?: string | null, profile?: { __typename?: 'Profile', userId: number, email?: any | null, fullname?: string | null, nickname?: string | null, picture?: string | null } | null, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null }> | null } | null };
 
 export type AdminsQueryVariables = Exact<{
   slug: Scalars['String'];
-  offset?: Maybe<Scalars['Int']>;
-  first?: Maybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type AdminsQuery = (
-  { __typename?: 'Query' }
-  & { root?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { participants?: Maybe<Array<(
-      { __typename?: 'User' }
-      & ParticipantListDetailsFragment
-    )>> }
-  )> }
-);
+export type AdminsQuery = { __typename?: 'Query', root?: { __typename?: 'Project', id: number, participants?: Array<{ __typename?: 'User', id: number, bannedFromForums?: boolean | null, isAdmin?: boolean | null, canonicalEmail?: string | null, profile?: { __typename?: 'Profile', userId: number, email?: any | null, fullname?: string | null, nickname?: string | null, picture?: string | null } | null, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null }> | null } | null };
 
 export type GroupMembersQueryVariables = Exact<{
   groupId: Scalars['Int'];
-  offset?: Maybe<Scalars['Int']>;
-  first?: Maybe<Scalars['Int']>;
+  offset?: InputMaybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type GroupMembersQuery = (
-  { __typename?: 'Query' }
-  & { root?: Maybe<(
-    { __typename?: 'Group' }
-    & { participants?: Maybe<Array<(
-      { __typename?: 'User' }
-      & ParticipantListDetailsFragment
-    )>> }
-  )> }
-);
+export type GroupMembersQuery = { __typename?: 'Query', root?: { __typename?: 'Group', participants?: Array<{ __typename?: 'User', id: number, bannedFromForums?: boolean | null, isAdmin?: boolean | null, canonicalEmail?: string | null, profile?: { __typename?: 'Profile', userId: number, email?: any | null, fullname?: string | null, nickname?: string | null, picture?: string | null } | null, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null }> | null } | null };
 
-export type UserListDetailsFragment = (
-  { __typename?: 'User' }
-  & Pick<User, 'id' | 'isAdmin' | 'canonicalEmail' | 'bannedFromForums' | 'onboarded' | 'participationStatus'>
-  & { groups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'name' | 'id'>
-  )>>, profile?: Maybe<(
-    { __typename?: 'Profile' }
-    & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
-  )> }
-);
+export type UserListDetailsFragment = { __typename?: 'User', id: number, isAdmin?: boolean | null, canonicalEmail?: string | null, bannedFromForums?: boolean | null, onboarded?: any | null, participationStatus?: ParticipationStatus | null, groups?: Array<{ __typename?: 'Group', name: string, id: number }> | null, profile?: { __typename?: 'Profile', userId: number, email?: any | null, fullname?: string | null, nickname?: string | null, picture?: string | null } | null };
 
 export type UserSettingsListsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type UserSettingsListsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'accessControl'>
-    & { groups: Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'name' | 'id'>
-    )>, invitesConnection: (
-      { __typename?: 'ProjectInvitesConnection' }
-      & { nodes: Array<(
-        { __typename?: 'ProjectInvite' }
-        & InviteDetailsFragment
-      )> }
-    ), participants?: Maybe<Array<(
-      { __typename?: 'User' }
-      & UserListDetailsFragment
-    )>> }
-  )> }
-);
+export type UserSettingsListsQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, accessControl: ProjectAccessControlSetting, groups: Array<{ __typename?: 'Group', name: string, id: number }>, invitesConnection: { __typename?: 'ProjectInvitesConnection', nodes: Array<{ __typename?: 'ProjectInvite', createdAt: any, email: any, fullname?: string | null, id: number, status?: InviteStatus | null, makeAdmin: boolean, wasUsed: boolean, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null }> }, participants?: Array<{ __typename?: 'User', id: number, isAdmin?: boolean | null, canonicalEmail?: string | null, bannedFromForums?: boolean | null, onboarded?: any | null, participationStatus?: ParticipationStatus | null, groups?: Array<{ __typename?: 'Group', name: string, id: number }> | null, profile?: { __typename?: 'Profile', userId: number, email?: any | null, fullname?: string | null, nickname?: string | null, picture?: string | null } | null }> | null } | null };
 
 export type UserInfoQueryVariables = Exact<{
   userId: Scalars['Int'];
@@ -14631,30 +13066,7 @@ export type UserInfoQueryVariables = Exact<{
 }>;
 
 
-export type UserInfoQuery = (
-  { __typename?: 'Query' }
-  & { user?: Maybe<(
-    { __typename?: 'User' }
-    & Pick<User, 'id' | 'isAdmin' | 'canonicalEmail' | 'bannedFromForums' | 'onboarded' | 'participationStatus'>
-    & { emailNotificationPreference?: Maybe<(
-      { __typename?: 'EmailNotificationPreference' }
-      & Pick<EmailNotificationPreference, 'unsubscribeAll'>
-    )>, groups?: Maybe<Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'name' | 'id'>
-    )>>, profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'affiliations' | 'bio' | 'email' | 'fullname' | 'nickname' | 'picture'>
-    )> }
-  )>, projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { groups: Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'name' | 'id'>
-    )> }
-  )> }
-);
+export type UserInfoQuery = { __typename?: 'Query', user?: { __typename?: 'User', id: number, isAdmin?: boolean | null, canonicalEmail?: string | null, bannedFromForums?: boolean | null, onboarded?: any | null, participationStatus?: ParticipationStatus | null, emailNotificationPreference?: { __typename?: 'EmailNotificationPreference', unsubscribeAll: boolean } | null, groups?: Array<{ __typename?: 'Group', name: string, id: number }> | null, profile?: { __typename?: 'Profile', userId: number, affiliations?: string | null, bio?: string | null, email?: any | null, fullname?: string | null, nickname?: string | null, picture?: string | null } | null } | null, projectBySlug?: { __typename?: 'Project', id: number, groups: Array<{ __typename?: 'Group', name: string, id: number }> } | null };
 
 export type ToggleAdminAccessMutationVariables = Exact<{
   userId: Scalars['Int'];
@@ -14662,29 +13074,16 @@ export type ToggleAdminAccessMutationVariables = Exact<{
 }>;
 
 
-export type ToggleAdminAccessMutation = (
-  { __typename?: 'Mutation' }
-  & { toggleAdminAccess?: Maybe<(
-    { __typename?: 'ToggleAdminAccessPayload' }
-    & Pick<ToggleAdminAccessPayload, 'clientMutationId'>
-    & { isAdmin: ToggleAdminAccessPayload['boolean'] }
-  )> }
-);
+export type ToggleAdminAccessMutation = { __typename?: 'Mutation', toggleAdminAccess?: { __typename?: 'ToggleAdminAccessPayload', clientMutationId?: string | null, isAdmin?: boolean | null } | null };
 
 export type SetUserGroupsMutationVariables = Exact<{
   userId: Scalars['Int'];
   projectId: Scalars['Int'];
-  groupIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  groupIds: Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type SetUserGroupsMutation = (
-  { __typename?: 'Mutation' }
-  & { setUserGroups?: Maybe<(
-    { __typename?: 'SetUserGroupsPayload' }
-    & { groupIds: SetUserGroupsPayload['integers'] }
-  )> }
-);
+export type SetUserGroupsMutation = { __typename?: 'Mutation', setUserGroups?: { __typename?: 'SetUserGroupsPayload', groupIds?: Array<number | null> | null } | null };
 
 export type ToggleForumPostingBanMutationVariables = Exact<{
   userId: Scalars['Int'];
@@ -14692,93 +13091,40 @@ export type ToggleForumPostingBanMutationVariables = Exact<{
 }>;
 
 
-export type ToggleForumPostingBanMutation = (
-  { __typename?: 'Mutation' }
-  & { toggleForumPostingBan?: Maybe<(
-    { __typename?: 'ToggleForumPostingBanPayload' }
-    & { isBanned: ToggleForumPostingBanPayload['boolean'] }
-  )> }
-);
+export type ToggleForumPostingBanMutation = { __typename?: 'Mutation', toggleForumPostingBan?: { __typename?: 'ToggleForumPostingBanPayload', isBanned?: boolean | null } | null };
 
 export type DeleteGroupMutationVariables = Exact<{
   groupId: Scalars['Int'];
 }>;
 
 
-export type DeleteGroupMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteGroup?: Maybe<(
-    { __typename?: 'DeleteGroupPayload' }
-    & { group?: Maybe<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id'>
-    )> }
-  )> }
-);
+export type DeleteGroupMutation = { __typename?: 'Mutation', deleteGroup?: { __typename?: 'DeleteGroupPayload', group?: { __typename?: 'Group', id: number } | null } | null };
 
 export type CreateProjectInvitesMutationVariables = Exact<{
   projectId: Scalars['Int'];
   makeAdmin: Scalars['Boolean'];
-  groupNames: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
-  userDetails: Array<Maybe<ProjectInviteOptionInput>> | Maybe<ProjectInviteOptionInput>;
+  groupNames: Array<InputMaybe<Scalars['String']>> | InputMaybe<Scalars['String']>;
+  userDetails: Array<InputMaybe<ProjectInviteOptionInput>> | InputMaybe<ProjectInviteOptionInput>;
   sendEmailNow: Scalars['Boolean'];
 }>;
 
 
-export type CreateProjectInvitesMutation = (
-  { __typename?: 'Mutation' }
-  & { createProjectInvites?: Maybe<(
-    { __typename?: 'CreateProjectInvitesPayload' }
-    & { projectInvites?: Maybe<Array<(
-      { __typename?: 'ProjectInvite' }
-      & InviteDetailsFragment
-    )>> }
-  )> }
-);
+export type CreateProjectInvitesMutation = { __typename?: 'Mutation', createProjectInvites?: { __typename?: 'CreateProjectInvitesPayload', projectInvites?: Array<{ __typename?: 'ProjectInvite', createdAt: any, email: any, fullname?: string | null, id: number, status?: InviteStatus | null, makeAdmin: boolean, wasUsed: boolean, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null }> | null } | null };
 
-export type InviteDetailsFragment = (
-  { __typename?: 'ProjectInvite' }
-  & Pick<ProjectInvite, 'createdAt' | 'email' | 'fullname' | 'id' | 'status' | 'makeAdmin' | 'wasUsed'>
-  & { groups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
-);
+export type InviteDetailsFragment = { __typename?: 'ProjectInvite', createdAt: any, email: any, fullname?: string | null, id: number, status?: InviteStatus | null, makeAdmin: boolean, wasUsed: boolean, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null };
 
 export type ProjectInvitesQueryVariables = Exact<{
   projectId: Scalars['Int'];
-  status?: Maybe<Array<Maybe<InviteStatus>> | Maybe<InviteStatus>>;
-  orderBy?: Maybe<InviteOrderBy>;
-  cursor?: Maybe<Scalars['Cursor']>;
-  limit?: Maybe<Scalars['Int']>;
+  status?: InputMaybe<Array<InputMaybe<InviteStatus>> | InputMaybe<InviteStatus>>;
+  orderBy?: InputMaybe<InviteOrderBy>;
+  cursor?: InputMaybe<Scalars['Cursor']>;
+  limit?: InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type ProjectInvitesQuery = (
-  { __typename?: 'Query' }
-  & { project?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { invitesConnection: (
-      { __typename?: 'ProjectInvitesConnection' }
-      & { edges: Array<(
-        { __typename?: 'ProjectInvitesEdge' }
-        & { node: (
-          { __typename?: 'ProjectInvite' }
-          & InviteDetailsFragment
-        ) }
-      )>, pageInfo: (
-        { __typename?: 'PageInfo' }
-        & Pick<PageInfo, 'hasNextPage' | 'endCursor'>
-      ) }
-    ) }
-  )> }
-);
+export type ProjectInvitesQuery = { __typename?: 'Query', project?: { __typename?: 'Project', id: number, invitesConnection: { __typename?: 'ProjectInvitesConnection', edges: Array<{ __typename?: 'ProjectInvitesEdge', node: { __typename?: 'ProjectInvite', createdAt: any, email: any, fullname?: string | null, id: number, status?: InviteStatus | null, makeAdmin: boolean, wasUsed: boolean, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null } }>, pageInfo: { __typename?: 'PageInfo', hasNextPage: boolean, endCursor?: any | null } } } | null };
 
-export type InviteEmailDetailsFragment = (
-  { __typename?: 'InviteEmail' }
-  & Pick<InviteEmail, 'id' | 'toAddress' | 'createdAt' | 'status' | 'tokenExpiresAt' | 'error' | 'updatedAt'>
-);
+export type InviteEmailDetailsFragment = { __typename?: 'InviteEmail', id: number, toAddress: any, createdAt: any, status: EmailStatus, tokenExpiresAt?: any | null, error?: string | null, updatedAt?: any | null };
 
 export type InviteEditorModalQueryQueryVariables = Exact<{
   inviteId: Scalars['Int'];
@@ -14786,90 +13132,32 @@ export type InviteEditorModalQueryQueryVariables = Exact<{
 }>;
 
 
-export type InviteEditorModalQueryQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { groups: Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name'>
-    )> }
-  )>, projectInvite?: Maybe<(
-    { __typename?: 'ProjectInvite' }
-    & Pick<ProjectInvite, 'id' | 'makeAdmin' | 'email' | 'fullname' | 'status' | 'wasUsed'>
-    & { groups?: Maybe<Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name'>
-    )>>, inviteEmails: Array<(
-      { __typename?: 'InviteEmail' }
-      & InviteEmailDetailsFragment
-    )> }
-  )> }
-);
+export type InviteEditorModalQueryQuery = { __typename?: 'Query', projectBySlug?: { __typename?: 'Project', id: number, groups: Array<{ __typename?: 'Group', id: number, name: string }> } | null, projectInvite?: { __typename?: 'ProjectInvite', id: number, makeAdmin: boolean, email: any, fullname?: string | null, status?: InviteStatus | null, wasUsed: boolean, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null, inviteEmails: Array<{ __typename?: 'InviteEmail', id: number, toAddress: any, createdAt: any, status: EmailStatus, tokenExpiresAt?: any | null, error?: string | null, updatedAt?: any | null }> } | null };
 
 export type UpdateProjectInviteMutationVariables = Exact<{
   id: Scalars['Int'];
   makeAdmin: Scalars['Boolean'];
   email: Scalars['String'];
-  fullname?: Maybe<Scalars['String']>;
-  groups: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  fullname?: InputMaybe<Scalars['String']>;
+  groups: Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type UpdateProjectInviteMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectInvite?: Maybe<(
-    { __typename?: 'UpdateProjectInvitePayload' }
-    & { projectInvite?: Maybe<(
-      { __typename?: 'ProjectInvite' }
-      & Pick<ProjectInvite, 'id' | 'makeAdmin' | 'email' | 'fullname'>
-      & { groups?: Maybe<Array<(
-        { __typename?: 'Group' }
-        & Pick<Group, 'id' | 'name'>
-      )>>, inviteEmails: Array<(
-        { __typename?: 'InviteEmail' }
-        & InviteEmailDetailsFragment
-      )> }
-    )> }
-  )> }
-);
+export type UpdateProjectInviteMutation = { __typename?: 'Mutation', updateProjectInvite?: { __typename?: 'UpdateProjectInvitePayload', projectInvite?: { __typename?: 'ProjectInvite', id: number, makeAdmin: boolean, email: any, fullname?: string | null, groups?: Array<{ __typename?: 'Group', id: number, name: string }> | null, inviteEmails: Array<{ __typename?: 'InviteEmail', id: number, toAddress: any, createdAt: any, status: EmailStatus, tokenExpiresAt?: any | null, error?: string | null, updatedAt?: any | null }> } | null } | null };
 
 export type DeleteProjectInviteMutationVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type DeleteProjectInviteMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteProjectInvite?: Maybe<(
-    { __typename?: 'DeleteProjectInvitePayload' }
-    & { projectInvite?: Maybe<(
-      { __typename?: 'ProjectInvite' }
-      & Pick<ProjectInvite, 'id'>
-    )> }
-  )> }
-);
+export type DeleteProjectInviteMutation = { __typename?: 'Mutation', deleteProjectInvite?: { __typename?: 'DeleteProjectInvitePayload', projectInvite?: { __typename?: 'ProjectInvite', id: number } | null } | null };
 
 export type SendInviteMutationVariables = Exact<{
   id: Scalars['Int'];
 }>;
 
 
-export type SendInviteMutation = (
-  { __typename?: 'Mutation' }
-  & { sendProjectInvites?: Maybe<(
-    { __typename?: 'SendProjectInvitesPayload' }
-    & { inviteEmails?: Maybe<Array<(
-      { __typename?: 'InviteEmail' }
-      & { projectInvite?: Maybe<(
-        { __typename?: 'ProjectInvite' }
-        & Pick<ProjectInvite, 'id' | 'status'>
-      )> }
-      & InviteEmailDetailsFragment
-    )>> }
-  )> }
-);
+export type SendInviteMutation = { __typename?: 'Mutation', sendProjectInvites?: { __typename?: 'SendProjectInvitesPayload', inviteEmails?: Array<{ __typename?: 'InviteEmail', id: number, toAddress: any, createdAt: any, status: EmailStatus, tokenExpiresAt?: any | null, error?: string | null, updatedAt?: any | null, projectInvite?: { __typename?: 'ProjectInvite', id: number, status?: InviteStatus | null } | null }> | null } | null };
 
 export type RenameGroupMutationVariables = Exact<{
   id: Scalars['Int'];
@@ -14877,189 +13165,38 @@ export type RenameGroupMutationVariables = Exact<{
 }>;
 
 
-export type RenameGroupMutation = (
-  { __typename?: 'Mutation' }
-  & { updateGroup?: Maybe<(
-    { __typename?: 'UpdateGroupPayload' }
-    & { group?: Maybe<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name'>
-    )> }
-  )> }
-);
+export type RenameGroupMutation = { __typename?: 'Mutation', updateGroup?: { __typename?: 'UpdateGroupPayload', group?: { __typename?: 'Group', id: number, name: string } | null } | null };
 
 export type SendInvitesMutationVariables = Exact<{
-  ids: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  ids: Array<InputMaybe<Scalars['Int']>> | InputMaybe<Scalars['Int']>;
 }>;
 
 
-export type SendInvitesMutation = (
-  { __typename?: 'Mutation' }
-  & { sendProjectInvites?: Maybe<(
-    { __typename?: 'SendProjectInvitesPayload' }
-    & { inviteEmails?: Maybe<Array<(
-      { __typename?: 'InviteEmail' }
-      & Pick<InviteEmail, 'projectInviteId'>
-      & { projectInvite?: Maybe<(
-        { __typename?: 'ProjectInvite' }
-        & Pick<ProjectInvite, 'id' | 'status'>
-      )> }
-      & InviteEmailDetailsFragment
-    )>> }
-  )> }
-);
+export type SendInvitesMutation = { __typename?: 'Mutation', sendProjectInvites?: { __typename?: 'SendProjectInvitesPayload', inviteEmails?: Array<{ __typename?: 'InviteEmail', projectInviteId?: number | null, id: number, toAddress: any, createdAt: any, status: EmailStatus, tokenExpiresAt?: any | null, error?: string | null, updatedAt?: any | null, projectInvite?: { __typename?: 'ProjectInvite', id: number, status?: InviteStatus | null } | null }> | null } | null };
 
 export type ProjectInviteEmailStatusSubscriptionSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ProjectInviteEmailStatusSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { projectInviteStateUpdated?: Maybe<(
-    { __typename?: 'ProjectInviteStateSubscriptionPayload' }
-    & { invite?: Maybe<(
-      { __typename?: 'ProjectInvite' }
-      & Pick<ProjectInvite, 'status'>
-      & { opaqueId: ProjectInvite['id'] }
-    )> }
-  )> }
-);
+export type ProjectInviteEmailStatusSubscriptionSubscription = { __typename?: 'Subscription', projectInviteStateUpdated?: { __typename?: 'ProjectInviteStateSubscriptionPayload', invite?: { __typename?: 'ProjectInvite', status?: InviteStatus | null, opaqueId: number } | null } | null };
 
 export type UpdateProfileMutationVariables = Exact<{
   userId: Scalars['Int'];
-  affiliations?: Maybe<Scalars['String']>;
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
-  nickname?: Maybe<Scalars['String']>;
-  picture?: Maybe<Scalars['Upload']>;
+  affiliations?: InputMaybe<Scalars['String']>;
+  email?: InputMaybe<Scalars['Email']>;
+  fullname?: InputMaybe<Scalars['String']>;
+  nickname?: InputMaybe<Scalars['String']>;
+  picture?: InputMaybe<Scalars['Upload']>;
 }>;
 
 
-export type UpdateProfileMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProfileByUserId?: Maybe<(
-    { __typename?: 'UpdateProfilePayload' }
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'userId'>
-      & { user?: Maybe<(
-        { __typename?: 'User' }
-        & Pick<User, 'id'>
-        & { profile?: Maybe<(
-          { __typename?: 'Profile' }
-          & Pick<Profile, 'picture'>
-        )> }
-      )> }
-    )> }
-  )> }
-);
+export type UpdateProfileMutation = { __typename?: 'Mutation', updateProfileByUserId?: { __typename?: 'UpdateProfilePayload', profile?: { __typename?: 'Profile', userId: number, user?: { __typename?: 'User', id: number, profile?: { __typename?: 'Profile', picture?: string | null } | null } | null } | null } | null };
 
 export type UserIsSuperuserQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type UserIsSuperuserQuery = (
-  { __typename?: 'Query' }
-  & Pick<Query, 'currentUserIsSuperuser'>
-);
+export type UserIsSuperuserQuery = { __typename?: 'Query', currentUserIsSuperuser: boolean };
 
-export const UpdateTerrainExaggerationFragmentDoc = gql`
-    fragment UpdateTerrainExaggeration on Basemap {
-  terrainExaggeration
-}
-    `;
-export const NewLabelsLayerFragmentDoc = gql`
-    fragment NewLabelsLayer on Basemap {
-  labelsLayerId
-}
-    `;
-export const NewTerrainFragmentDoc = gql`
-    fragment NewTerrain on Basemap {
-  terrainUrl
-  terrainOptional
-  terrainVisibilityDefault
-}
-    `;
-export const NewBasemapFragmentDoc = gql`
-    fragment NewBasemap on Basemap {
-  id
-  projectId
-  attribution
-  description
-  labelsLayerId
-  name
-  terrainExaggeration
-  terrainOptional
-  url
-  type
-  tileSize
-  thumbnail
-  terrainUrl
-  terrainTileSize
-  surveysOnly
-}
-    `;
-export const NewQueryParametersFragmentDoc = gql`
-    fragment NewQueryParameters on DataSource {
-  queryParameters
-}
-    `;
-export const UpdateHighDpiFragmentDoc = gql`
-    fragment UpdateHighDPI on DataSource {
-  useDevicePixelRatio
-}
-    `;
-export const UpdateFormatFragmentDoc = gql`
-    fragment UpdateFormat on DataSource {
-  queryParameters
-}
-    `;
-export const NewGlStyleFragmentDoc = gql`
-    fragment NewGLStyle on DataLayer {
-  mapboxGlStyles
-}
-    `;
-export const NewRenderUnderFragmentDoc = gql`
-    fragment NewRenderUnder on DataLayer {
-  renderUnder
-}
-    `;
-export const NewZIndexFragmentDoc = gql`
-    fragment NewZIndex on DataLayer {
-  zIndex
-}
-    `;
-export const NewElementFragmentDoc = gql`
-    fragment NewElement on FormElement {
-  body
-  componentSettings
-  exportId
-  formId
-  id
-  isRequired
-  position
-  jumpToId
-  type {
-    componentName
-    isHidden
-    isInput
-    isSingleUseOnly
-    isSurveysOnly
-    label
-    supportedOperators
-  }
-  typeId
-  backgroundColor
-  secondaryColor
-  backgroundImage
-  layout
-  backgroundPalette
-  textVariant
-  unsplashAuthorUrl
-  unsplashAuthorName
-  backgroundWidth
-  backgroundHeight
-}
-    `;
-export const LogicRuleEditorFormElementFragmentDoc = gql`
+export const LogicRuleEditorFormElementFragmentDoc = /*#__PURE__*/ gql`
     fragment LogicRuleEditorFormElement on FormElement {
   id
   body
@@ -15075,7 +13212,7 @@ export const LogicRuleEditorFormElementFragmentDoc = gql`
   }
 }
     `;
-export const LogicRuleEditorRuleFragmentDoc = gql`
+export const LogicRuleEditorRuleFragmentDoc = /*#__PURE__*/ gql`
     fragment LogicRuleEditorRule on FormLogicRule {
   booleanOperator
   command
@@ -15092,77 +13229,7 @@ export const LogicRuleEditorRuleFragmentDoc = gql`
   }
 }
     `;
-export const NewRuleFragmentDoc = gql`
-    fragment NewRule on FormLogicRule {
-  booleanOperator
-  command
-  id
-  jumpToId
-  position
-  formElementId
-  conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
-  }
-}
-    `;
-export const NewSurveyFragmentDoc = gql`
-    fragment NewSurvey on Survey {
-  id
-  accessType
-  invitedGroups {
-    id
-    name
-  }
-  isDisabled
-  limitToSingleResponse
-  name
-  submittedResponseCount
-  projectId
-}
-    `;
-export const NewGroupFragmentDoc = gql`
-    fragment NewGroup on Group {
-  id
-  projectId
-  name
-}
-    `;
-export const NewInviteEmailFragmentDoc = gql`
-    fragment NewInviteEmail on InviteEmail {
-  id
-  toAddress
-  createdAt
-  status
-  tokenExpiresAt
-  error
-  updatedAt
-}
-    `;
-export const NewLayerOptionsFragmentDoc = gql`
-    fragment NewLayerOptions on OptionalBasemapLayer {
-  options
-}
-    `;
-export const UpdateAlternateLanguageSettingsFragmentDoc = gql`
-    fragment UpdateAlternateLanguageSettings on FormElement {
-  alternateLanguageSettings
-}
-    `;
-export const UpdateComponentSettingsFragmentDoc = gql`
-    fragment UpdateComponentSettings on FormElement {
-  componentSettings
-}
-    `;
-export const UpdateBodyFragmentDoc = gql`
-    fragment UpdateBody on FormElement {
-  body
-}
-    `;
-export const BasemapDetailsFragmentDoc = gql`
+export const BasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment BasemapDetails on Basemap {
   id
   attribution
@@ -15202,7 +13269,7 @@ export const BasemapDetailsFragmentDoc = gql`
   surveysOnly
 }
     `;
-export const MapEssentialsFragmentDoc = gql`
+export const MapEssentialsFragmentDoc = /*#__PURE__*/ gql`
     fragment MapEssentials on Project {
   id
   basemaps {
@@ -15218,7 +13285,7 @@ export const MapEssentialsFragmentDoc = gql`
   mapboxSecretKey
 }
     ${BasemapDetailsFragmentDoc}`;
-export const ProjectMetadataFragmentDoc = gql`
+export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
     fragment ProjectMetadata on Project {
   id
   slug
@@ -15233,7 +13300,7 @@ export const ProjectMetadataFragmentDoc = gql`
   supportEmail
 }
     `;
-export const ProjectPublicDetailsMetadataFragmentDoc = gql`
+export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
     fragment ProjectPublicDetailsMetadata on PublicProjectDetail {
   id
   accessControl
@@ -15244,7 +13311,7 @@ export const ProjectPublicDetailsMetadataFragmentDoc = gql`
   accessStatus
 }
     `;
-export const ProjectMetadataMeFragFragmentDoc = gql`
+export const ProjectMetadataMeFragFragmentDoc = /*#__PURE__*/ gql`
     fragment ProjectMetadataMeFrag on User {
   id
   profile {
@@ -15258,7 +13325,7 @@ export const ProjectMetadataMeFragFragmentDoc = gql`
   }
 }
     `;
-export const SurveyListDetailsFragmentDoc = gql`
+export const SurveyListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyListDetails on Survey {
   id
   accessType
@@ -15278,7 +13345,7 @@ export const SurveyListDetailsFragmentDoc = gql`
   supportedLanguages
 }
     `;
-export const AddFormElementTypeDetailsFragmentDoc = gql`
+export const AddFormElementTypeDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment AddFormElementTypeDetails on FormElementType {
   componentName
   isHidden
@@ -15291,7 +13358,7 @@ export const AddFormElementTypeDetailsFragmentDoc = gql`
   allowedLayouts
 }
     `;
-export const FormElementDetailsFragmentDoc = gql`
+export const FormElementDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment FormElementDetails on FormElement {
   body
   componentSettings
@@ -15322,7 +13389,7 @@ export const FormElementDetailsFragmentDoc = gql`
   mapCameraOptions
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
-export const LogicRuleDetailsFragmentDoc = gql`
+export const LogicRuleDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment LogicRuleDetails on FormLogicRule {
   booleanOperator
   command
@@ -15339,7 +13406,7 @@ export const LogicRuleDetailsFragmentDoc = gql`
   }
 }
     `;
-export const SketchClassDetailsFragmentDoc = gql`
+export const SketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchClassDetails on SketchClass {
   id
   mapboxGlStyle
@@ -15361,7 +13428,7 @@ export const SketchClassDetailsFragmentDoc = gql`
 }
     ${FormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
-export const FormElementFullDetailsFragmentDoc = gql`
+export const FormElementFullDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment FormElementFullDetails on FormElement {
   ...FormElementDetails
   sketchClass {
@@ -15370,7 +13437,7 @@ export const FormElementFullDetailsFragmentDoc = gql`
 }
     ${FormElementDetailsFragmentDoc}
 ${SketchClassDetailsFragmentDoc}`;
-export const SurveyResponseFragmentDoc = gql`
+export const SurveyResponseFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyResponse on SurveyResponse {
   id
   surveyId
@@ -15388,7 +13455,7 @@ export const SurveyResponseFragmentDoc = gql`
   lastUpdatedByEmail
 }
     `;
-export const FormElementExtendedDetailsFragmentDoc = gql`
+export const FormElementExtendedDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment FormElementExtendedDetails on FormElement {
   ...FormElementDetails
   surveyConsentDocumentsConnection {
@@ -15399,7 +13466,7 @@ export const FormElementExtendedDetailsFragmentDoc = gql`
   }
 }
     ${FormElementDetailsFragmentDoc}`;
-export const SurveyAppRuleFragmentDoc = gql`
+export const SurveyAppRuleFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyAppRule on FormLogicRule {
   booleanOperator
   command
@@ -15416,7 +13483,7 @@ export const SurveyAppRuleFragmentDoc = gql`
   position
 }
     `;
-export const SurveyAppFormElementFragmentDoc = gql`
+export const SurveyAppFormElementFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyAppFormElement on FormElement {
   id
   componentSettings
@@ -15456,7 +13523,7 @@ export const SurveyAppFormElementFragmentDoc = gql`
   mapCameraOptions
 }
     ${SketchClassDetailsFragmentDoc}`;
-export const SurveyAppSurveyFragmentDoc = gql`
+export const SurveyAppSurveyFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyAppSurvey on Survey {
   id
   name
@@ -15477,7 +13544,7 @@ export const SurveyAppSurveyFragmentDoc = gql`
 }
     ${SurveyAppRuleFragmentDoc}
 ${SurveyAppFormElementFragmentDoc}`;
-export const ParticipantListDetailsFragmentDoc = gql`
+export const ParticipantListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ParticipantListDetails on User {
   id
   bannedFromForums
@@ -15496,7 +13563,7 @@ export const ParticipantListDetailsFragmentDoc = gql`
   canonicalEmail
 }
     `;
-export const UserListDetailsFragmentDoc = gql`
+export const UserListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment UserListDetails on User {
   id
   isAdmin
@@ -15517,7 +13584,7 @@ export const UserListDetailsFragmentDoc = gql`
   }
 }
     `;
-export const InviteDetailsFragmentDoc = gql`
+export const InviteDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment InviteDetails on ProjectInvite {
   createdAt
   email
@@ -15532,7 +13599,7 @@ export const InviteDetailsFragmentDoc = gql`
   wasUsed
 }
     `;
-export const InviteEmailDetailsFragmentDoc = gql`
+export const InviteEmailDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment InviteEmailDetails on InviteEmail {
   id
   toAddress
@@ -15543,7 +13610,7 @@ export const InviteEmailDetailsFragmentDoc = gql`
   updatedAt
 }
     `;
-export const ProjectBucketSettingDocument = gql`
+export const ProjectBucketSettingDocument = /*#__PURE__*/ gql`
     query ProjectBucketSetting($slug: String!) {
   projectBySlug(slug: $slug) {
     __typename
@@ -15569,23 +13636,6 @@ export const ProjectBucketSettingDocument = gql`
   }
 }
     `;
-
-/**
- * __useProjectBucketSettingQuery__
- *
- * To run a query within a React component, call `useProjectBucketSettingQuery` and pass it any options that fit your needs.
- * When your component renders, `useProjectBucketSettingQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useProjectBucketSettingQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useProjectBucketSettingQuery(baseOptions: Apollo.QueryHookOptions<ProjectBucketSettingQuery, ProjectBucketSettingQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<ProjectBucketSettingQuery, ProjectBucketSettingQueryVariables>(ProjectBucketSettingDocument, options);
@@ -15597,7 +13647,7 @@ export function useProjectBucketSettingLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type ProjectBucketSettingQueryHookResult = ReturnType<typeof useProjectBucketSettingQuery>;
 export type ProjectBucketSettingLazyQueryHookResult = ReturnType<typeof useProjectBucketSettingLazyQuery>;
 export type ProjectBucketSettingQueryResult = Apollo.QueryResult<ProjectBucketSettingQuery, ProjectBucketSettingQueryVariables>;
-export const UpdateProjectStorageBucketDocument = gql`
+export const UpdateProjectStorageBucketDocument = /*#__PURE__*/ gql`
     mutation UpdateProjectStorageBucket($slug: String!, $bucket: String!) {
   updateProjectBySlug(input: {slug: $slug, patch: {dataSourcesBucketId: $bucket}}) {
     clientMutationId
@@ -15614,25 +13664,6 @@ export const UpdateProjectStorageBucketDocument = gql`
 }
     `;
 export type UpdateProjectStorageBucketMutationFn = Apollo.MutationFunction<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>;
-
-/**
- * __useUpdateProjectStorageBucketMutation__
- *
- * To run a mutation, you first call `useUpdateProjectStorageBucketMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateProjectStorageBucketMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateProjectStorageBucketMutation, { data, loading, error }] = useUpdateProjectStorageBucketMutation({
- *   variables: {
- *      slug: // value for 'slug'
- *      bucket: // value for 'bucket'
- *   },
- * });
- */
 export function useUpdateProjectStorageBucketMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>(UpdateProjectStorageBucketDocument, options);
@@ -15640,7 +13671,7 @@ export function useUpdateProjectStorageBucketMutation(baseOptions?: Apollo.Mutat
 export type UpdateProjectStorageBucketMutationHookResult = ReturnType<typeof useUpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationResult = Apollo.MutationResult<UpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationOptions = Apollo.BaseMutationOptions<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>;
-export const MapboxApiKeysDocument = gql`
+export const MapboxApiKeysDocument = /*#__PURE__*/ gql`
     query MapboxAPIKeys($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -15649,23 +13680,6 @@ export const MapboxApiKeysDocument = gql`
   }
 }
     `;
-
-/**
- * __useMapboxApiKeysQuery__
- *
- * To run a query within a React component, call `useMapboxApiKeysQuery` and pass it any options that fit your needs.
- * When your component renders, `useMapboxApiKeysQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useMapboxApiKeysQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useMapboxApiKeysQuery(baseOptions: Apollo.QueryHookOptions<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>(MapboxApiKeysDocument, options);
@@ -15677,7 +13691,7 @@ export function useMapboxApiKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOpti
 export type MapboxApiKeysQueryHookResult = ReturnType<typeof useMapboxApiKeysQuery>;
 export type MapboxApiKeysLazyQueryHookResult = ReturnType<typeof useMapboxApiKeysLazyQuery>;
 export type MapboxApiKeysQueryResult = Apollo.QueryResult<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>;
-export const UpdatePublicKeyDocument = gql`
+export const UpdatePublicKeyDocument = /*#__PURE__*/ gql`
     mutation updatePublicKey($id: Int!, $public: String) {
   updateProject(input: {id: $id, patch: {mapboxPublicKey: $public}}) {
     project {
@@ -15688,25 +13702,6 @@ export const UpdatePublicKeyDocument = gql`
 }
     `;
 export type UpdatePublicKeyMutationFn = Apollo.MutationFunction<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>;
-
-/**
- * __useUpdatePublicKeyMutation__
- *
- * To run a mutation, you first call `useUpdatePublicKeyMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdatePublicKeyMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updatePublicKeyMutation, { data, loading, error }] = useUpdatePublicKeyMutation({
- *   variables: {
- *      id: // value for 'id'
- *      public: // value for 'public'
- *   },
- * });
- */
 export function useUpdatePublicKeyMutation(baseOptions?: Apollo.MutationHookOptions<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>(UpdatePublicKeyDocument, options);
@@ -15714,7 +13709,7 @@ export function useUpdatePublicKeyMutation(baseOptions?: Apollo.MutationHookOpti
 export type UpdatePublicKeyMutationHookResult = ReturnType<typeof useUpdatePublicKeyMutation>;
 export type UpdatePublicKeyMutationResult = Apollo.MutationResult<UpdatePublicKeyMutation>;
 export type UpdatePublicKeyMutationOptions = Apollo.BaseMutationOptions<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>;
-export const UpdateSecretKeyDocument = gql`
+export const UpdateSecretKeyDocument = /*#__PURE__*/ gql`
     mutation updateSecretKey($id: Int!, $mapboxSecretKey: String) {
   updateMapboxSecretKey(input: {projectId: $id, secret: $mapboxSecretKey}) {
     project {
@@ -15725,25 +13720,6 @@ export const UpdateSecretKeyDocument = gql`
 }
     `;
 export type UpdateSecretKeyMutationFn = Apollo.MutationFunction<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>;
-
-/**
- * __useUpdateSecretKeyMutation__
- *
- * To run a mutation, you first call `useUpdateSecretKeyMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateSecretKeyMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateSecretKeyMutation, { data, loading, error }] = useUpdateSecretKeyMutation({
- *   variables: {
- *      id: // value for 'id'
- *      mapboxSecretKey: // value for 'mapboxSecretKey'
- *   },
- * });
- */
 export function useUpdateSecretKeyMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>(UpdateSecretKeyDocument, options);
@@ -15751,7 +13727,7 @@ export function useUpdateSecretKeyMutation(baseOptions?: Apollo.MutationHookOpti
 export type UpdateSecretKeyMutationHookResult = ReturnType<typeof useUpdateSecretKeyMutation>;
 export type UpdateSecretKeyMutationResult = Apollo.MutationResult<UpdateSecretKeyMutation>;
 export type UpdateSecretKeyMutationOptions = Apollo.BaseMutationOptions<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>;
-export const GetAclDocument = gql`
+export const GetAclDocument = /*#__PURE__*/ gql`
     query GetAcl($nodeId: ID!) {
   aclByNodeId(nodeId: $nodeId) {
     id
@@ -15765,23 +13741,6 @@ export const GetAclDocument = gql`
   }
 }
     `;
-
-/**
- * __useGetAclQuery__
- *
- * To run a query within a React component, call `useGetAclQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetAclQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetAclQuery({
- *   variables: {
- *      nodeId: // value for 'nodeId'
- *   },
- * });
- */
 export function useGetAclQuery(baseOptions: Apollo.QueryHookOptions<GetAclQuery, GetAclQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetAclQuery, GetAclQueryVariables>(GetAclDocument, options);
@@ -15793,7 +13752,7 @@ export function useGetAclLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Get
 export type GetAclQueryHookResult = ReturnType<typeof useGetAclQuery>;
 export type GetAclLazyQueryHookResult = ReturnType<typeof useGetAclLazyQuery>;
 export type GetAclQueryResult = Apollo.QueryResult<GetAclQuery, GetAclQueryVariables>;
-export const UpdateAclTypeDocument = gql`
+export const UpdateAclTypeDocument = /*#__PURE__*/ gql`
     mutation UpdateAclType($nodeId: ID!, $type: AccessControlListType!) {
   updateAclByNodeId(input: {nodeId: $nodeId, patch: {type: $type}}) {
     acl {
@@ -15805,25 +13764,6 @@ export const UpdateAclTypeDocument = gql`
 }
     `;
 export type UpdateAclTypeMutationFn = Apollo.MutationFunction<UpdateAclTypeMutation, UpdateAclTypeMutationVariables>;
-
-/**
- * __useUpdateAclTypeMutation__
- *
- * To run a mutation, you first call `useUpdateAclTypeMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateAclTypeMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateAclTypeMutation, { data, loading, error }] = useUpdateAclTypeMutation({
- *   variables: {
- *      nodeId: // value for 'nodeId'
- *      type: // value for 'type'
- *   },
- * });
- */
 export function useUpdateAclTypeMutation(baseOptions?: Apollo.MutationHookOptions<UpdateAclTypeMutation, UpdateAclTypeMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateAclTypeMutation, UpdateAclTypeMutationVariables>(UpdateAclTypeDocument, options);
@@ -15831,7 +13771,7 @@ export function useUpdateAclTypeMutation(baseOptions?: Apollo.MutationHookOption
 export type UpdateAclTypeMutationHookResult = ReturnType<typeof useUpdateAclTypeMutation>;
 export type UpdateAclTypeMutationResult = Apollo.MutationResult<UpdateAclTypeMutation>;
 export type UpdateAclTypeMutationOptions = Apollo.BaseMutationOptions<UpdateAclTypeMutation, UpdateAclTypeMutationVariables>;
-export const AddGroupToAclDocument = gql`
+export const AddGroupToAclDocument = /*#__PURE__*/ gql`
     mutation AddGroupToAcl($id: Int!, $groupId: Int!) {
   addGroupToAcl(input: {aclId: $id, groupId: $groupId}) {
     acl {
@@ -15844,25 +13784,6 @@ export const AddGroupToAclDocument = gql`
 }
     `;
 export type AddGroupToAclMutationFn = Apollo.MutationFunction<AddGroupToAclMutation, AddGroupToAclMutationVariables>;
-
-/**
- * __useAddGroupToAclMutation__
- *
- * To run a mutation, you first call `useAddGroupToAclMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useAddGroupToAclMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [addGroupToAclMutation, { data, loading, error }] = useAddGroupToAclMutation({
- *   variables: {
- *      id: // value for 'id'
- *      groupId: // value for 'groupId'
- *   },
- * });
- */
 export function useAddGroupToAclMutation(baseOptions?: Apollo.MutationHookOptions<AddGroupToAclMutation, AddGroupToAclMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<AddGroupToAclMutation, AddGroupToAclMutationVariables>(AddGroupToAclDocument, options);
@@ -15870,7 +13791,7 @@ export function useAddGroupToAclMutation(baseOptions?: Apollo.MutationHookOption
 export type AddGroupToAclMutationHookResult = ReturnType<typeof useAddGroupToAclMutation>;
 export type AddGroupToAclMutationResult = Apollo.MutationResult<AddGroupToAclMutation>;
 export type AddGroupToAclMutationOptions = Apollo.BaseMutationOptions<AddGroupToAclMutation, AddGroupToAclMutationVariables>;
-export const RemoveGroupFromAclDocument = gql`
+export const RemoveGroupFromAclDocument = /*#__PURE__*/ gql`
     mutation RemoveGroupFromAcl($id: Int!, $groupId: Int!) {
   removeGroupFromAcl(input: {aclId: $id, groupId: $groupId}) {
     acl {
@@ -15883,25 +13804,6 @@ export const RemoveGroupFromAclDocument = gql`
 }
     `;
 export type RemoveGroupFromAclMutationFn = Apollo.MutationFunction<RemoveGroupFromAclMutation, RemoveGroupFromAclMutationVariables>;
-
-/**
- * __useRemoveGroupFromAclMutation__
- *
- * To run a mutation, you first call `useRemoveGroupFromAclMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useRemoveGroupFromAclMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [removeGroupFromAclMutation, { data, loading, error }] = useRemoveGroupFromAclMutation({
- *   variables: {
- *      id: // value for 'id'
- *      groupId: // value for 'groupId'
- *   },
- * });
- */
 export function useRemoveGroupFromAclMutation(baseOptions?: Apollo.MutationHookOptions<RemoveGroupFromAclMutation, RemoveGroupFromAclMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<RemoveGroupFromAclMutation, RemoveGroupFromAclMutationVariables>(RemoveGroupFromAclDocument, options);
@@ -15909,7 +13811,7 @@ export function useRemoveGroupFromAclMutation(baseOptions?: Apollo.MutationHookO
 export type RemoveGroupFromAclMutationHookResult = ReturnType<typeof useRemoveGroupFromAclMutation>;
 export type RemoveGroupFromAclMutationResult = Apollo.MutationResult<RemoveGroupFromAclMutation>;
 export type RemoveGroupFromAclMutationOptions = Apollo.BaseMutationOptions<RemoveGroupFromAclMutation, RemoveGroupFromAclMutationVariables>;
-export const GroupsDocument = gql`
+export const GroupsDocument = /*#__PURE__*/ gql`
     query Groups($projectSlug: String!) {
   projectBySlug(slug: $projectSlug) {
     id
@@ -15921,23 +13823,6 @@ export const GroupsDocument = gql`
   }
 }
     `;
-
-/**
- * __useGroupsQuery__
- *
- * To run a query within a React component, call `useGroupsQuery` and pass it any options that fit your needs.
- * When your component renders, `useGroupsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGroupsQuery({
- *   variables: {
- *      projectSlug: // value for 'projectSlug'
- *   },
- * });
- */
 export function useGroupsQuery(baseOptions: Apollo.QueryHookOptions<GroupsQuery, GroupsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GroupsQuery, GroupsQueryVariables>(GroupsDocument, options);
@@ -15949,7 +13834,7 @@ export function useGroupsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Gro
 export type GroupsQueryHookResult = ReturnType<typeof useGroupsQuery>;
 export type GroupsLazyQueryHookResult = ReturnType<typeof useGroupsLazyQuery>;
 export type GroupsQueryResult = Apollo.QueryResult<GroupsQuery, GroupsQueryVariables>;
-export const CreateTableOfContentsItemDocument = gql`
+export const CreateTableOfContentsItemDocument = /*#__PURE__*/ gql`
     mutation CreateTableOfContentsItem($title: String!, $stableId: String!, $projectId: Int!, $isFolder: Boolean!, $parentStableId: String, $metadata: JSON, $bounds: [BigFloat], $dataLayerId: Int) {
   createTableOfContentsItem(
     input: {tableOfContentsItem: {title: $title, stableId: $stableId, projectId: $projectId, parentStableId: $parentStableId, metadata: $metadata, bounds: $bounds, dataLayerId: $dataLayerId, isFolder: $isFolder}}
@@ -15971,31 +13856,6 @@ export const CreateTableOfContentsItemDocument = gql`
 }
     `;
 export type CreateTableOfContentsItemMutationFn = Apollo.MutationFunction<CreateTableOfContentsItemMutation, CreateTableOfContentsItemMutationVariables>;
-
-/**
- * __useCreateTableOfContentsItemMutation__
- *
- * To run a mutation, you first call `useCreateTableOfContentsItemMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateTableOfContentsItemMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createTableOfContentsItemMutation, { data, loading, error }] = useCreateTableOfContentsItemMutation({
- *   variables: {
- *      title: // value for 'title'
- *      stableId: // value for 'stableId'
- *      projectId: // value for 'projectId'
- *      isFolder: // value for 'isFolder'
- *      parentStableId: // value for 'parentStableId'
- *      metadata: // value for 'metadata'
- *      bounds: // value for 'bounds'
- *      dataLayerId: // value for 'dataLayerId'
- *   },
- * });
- */
 export function useCreateTableOfContentsItemMutation(baseOptions?: Apollo.MutationHookOptions<CreateTableOfContentsItemMutation, CreateTableOfContentsItemMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateTableOfContentsItemMutation, CreateTableOfContentsItemMutationVariables>(CreateTableOfContentsItemDocument, options);
@@ -16003,7 +13863,7 @@ export function useCreateTableOfContentsItemMutation(baseOptions?: Apollo.Mutati
 export type CreateTableOfContentsItemMutationHookResult = ReturnType<typeof useCreateTableOfContentsItemMutation>;
 export type CreateTableOfContentsItemMutationResult = Apollo.MutationResult<CreateTableOfContentsItemMutation>;
 export type CreateTableOfContentsItemMutationOptions = Apollo.BaseMutationOptions<CreateTableOfContentsItemMutation, CreateTableOfContentsItemMutationVariables>;
-export const CreateArcGisDynamicDataSourceDocument = gql`
+export const CreateArcGisDynamicDataSourceDocument = /*#__PURE__*/ gql`
     mutation CreateArcGISDynamicDataSource($projectId: Int!, $url: String!, $attribution: String, $bounds: [BigFloat], $queryParameters: JSON) {
   createDataSource(
     input: {dataSource: {projectId: $projectId, type: ARCGIS_VECTOR, url: $url, attribution: $attribution, bounds: $bounds, queryParameters: $queryParameters}}
@@ -16018,28 +13878,6 @@ export const CreateArcGisDynamicDataSourceDocument = gql`
 }
     `;
 export type CreateArcGisDynamicDataSourceMutationFn = Apollo.MutationFunction<CreateArcGisDynamicDataSourceMutation, CreateArcGisDynamicDataSourceMutationVariables>;
-
-/**
- * __useCreateArcGisDynamicDataSourceMutation__
- *
- * To run a mutation, you first call `useCreateArcGisDynamicDataSourceMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateArcGisDynamicDataSourceMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createArcGisDynamicDataSourceMutation, { data, loading, error }] = useCreateArcGisDynamicDataSourceMutation({
- *   variables: {
- *      projectId: // value for 'projectId'
- *      url: // value for 'url'
- *      attribution: // value for 'attribution'
- *      bounds: // value for 'bounds'
- *      queryParameters: // value for 'queryParameters'
- *   },
- * });
- */
 export function useCreateArcGisDynamicDataSourceMutation(baseOptions?: Apollo.MutationHookOptions<CreateArcGisDynamicDataSourceMutation, CreateArcGisDynamicDataSourceMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateArcGisDynamicDataSourceMutation, CreateArcGisDynamicDataSourceMutationVariables>(CreateArcGisDynamicDataSourceDocument, options);
@@ -16047,7 +13885,7 @@ export function useCreateArcGisDynamicDataSourceMutation(baseOptions?: Apollo.Mu
 export type CreateArcGisDynamicDataSourceMutationHookResult = ReturnType<typeof useCreateArcGisDynamicDataSourceMutation>;
 export type CreateArcGisDynamicDataSourceMutationResult = Apollo.MutationResult<CreateArcGisDynamicDataSourceMutation>;
 export type CreateArcGisDynamicDataSourceMutationOptions = Apollo.BaseMutationOptions<CreateArcGisDynamicDataSourceMutation, CreateArcGisDynamicDataSourceMutationVariables>;
-export const CreateArcGisImageSourceDocument = gql`
+export const CreateArcGisImageSourceDocument = /*#__PURE__*/ gql`
     mutation CreateArcGISImageSource($projectId: Int!, $url: String!, $attribution: String, $bounds: [BigFloat], $queryParameters: JSON, $enableHighDPI: Boolean, $supportsDynamicLayers: Boolean!) {
   createDataSource(
     input: {dataSource: {projectId: $projectId, type: ARCGIS_DYNAMIC_MAPSERVER, url: $url, attribution: $attribution, bounds: $bounds, queryParameters: $queryParameters, useDevicePixelRatio: $enableHighDPI, supportsDynamicLayers: $supportsDynamicLayers}}
@@ -16060,30 +13898,6 @@ export const CreateArcGisImageSourceDocument = gql`
 }
     `;
 export type CreateArcGisImageSourceMutationFn = Apollo.MutationFunction<CreateArcGisImageSourceMutation, CreateArcGisImageSourceMutationVariables>;
-
-/**
- * __useCreateArcGisImageSourceMutation__
- *
- * To run a mutation, you first call `useCreateArcGisImageSourceMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateArcGisImageSourceMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createArcGisImageSourceMutation, { data, loading, error }] = useCreateArcGisImageSourceMutation({
- *   variables: {
- *      projectId: // value for 'projectId'
- *      url: // value for 'url'
- *      attribution: // value for 'attribution'
- *      bounds: // value for 'bounds'
- *      queryParameters: // value for 'queryParameters'
- *      enableHighDPI: // value for 'enableHighDPI'
- *      supportsDynamicLayers: // value for 'supportsDynamicLayers'
- *   },
- * });
- */
 export function useCreateArcGisImageSourceMutation(baseOptions?: Apollo.MutationHookOptions<CreateArcGisImageSourceMutation, CreateArcGisImageSourceMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateArcGisImageSourceMutation, CreateArcGisImageSourceMutationVariables>(CreateArcGisImageSourceDocument, options);
@@ -16091,7 +13905,7 @@ export function useCreateArcGisImageSourceMutation(baseOptions?: Apollo.Mutation
 export type CreateArcGisImageSourceMutationHookResult = ReturnType<typeof useCreateArcGisImageSourceMutation>;
 export type CreateArcGisImageSourceMutationResult = Apollo.MutationResult<CreateArcGisImageSourceMutation>;
 export type CreateArcGisImageSourceMutationOptions = Apollo.BaseMutationOptions<CreateArcGisImageSourceMutation, CreateArcGisImageSourceMutationVariables>;
-export const CreateSeaSketchVectorSourceDocument = gql`
+export const CreateSeaSketchVectorSourceDocument = /*#__PURE__*/ gql`
     mutation CreateSeaSketchVectorSource($projectId: Int!, $attribution: String, $bounds: [BigFloat]!, $byteLength: Int!, $originalSourceUrl: String, $importType: DataSourceImportTypes!, $enhancedSecurity: Boolean!) {
   createDataSource(
     input: {dataSource: {projectId: $projectId, type: SEASKETCH_VECTOR, attribution: $attribution, bounds: $bounds, byteLength: $byteLength, originalSourceUrl: $originalSourceUrl, importType: $importType, enhancedSecurity: $enhancedSecurity}}
@@ -16110,30 +13924,6 @@ export const CreateSeaSketchVectorSourceDocument = gql`
 }
     `;
 export type CreateSeaSketchVectorSourceMutationFn = Apollo.MutationFunction<CreateSeaSketchVectorSourceMutation, CreateSeaSketchVectorSourceMutationVariables>;
-
-/**
- * __useCreateSeaSketchVectorSourceMutation__
- *
- * To run a mutation, you first call `useCreateSeaSketchVectorSourceMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateSeaSketchVectorSourceMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createSeaSketchVectorSourceMutation, { data, loading, error }] = useCreateSeaSketchVectorSourceMutation({
- *   variables: {
- *      projectId: // value for 'projectId'
- *      attribution: // value for 'attribution'
- *      bounds: // value for 'bounds'
- *      byteLength: // value for 'byteLength'
- *      originalSourceUrl: // value for 'originalSourceUrl'
- *      importType: // value for 'importType'
- *      enhancedSecurity: // value for 'enhancedSecurity'
- *   },
- * });
- */
 export function useCreateSeaSketchVectorSourceMutation(baseOptions?: Apollo.MutationHookOptions<CreateSeaSketchVectorSourceMutation, CreateSeaSketchVectorSourceMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateSeaSketchVectorSourceMutation, CreateSeaSketchVectorSourceMutationVariables>(CreateSeaSketchVectorSourceDocument, options);
@@ -16141,7 +13931,7 @@ export function useCreateSeaSketchVectorSourceMutation(baseOptions?: Apollo.Muta
 export type CreateSeaSketchVectorSourceMutationHookResult = ReturnType<typeof useCreateSeaSketchVectorSourceMutation>;
 export type CreateSeaSketchVectorSourceMutationResult = Apollo.MutationResult<CreateSeaSketchVectorSourceMutation>;
 export type CreateSeaSketchVectorSourceMutationOptions = Apollo.BaseMutationOptions<CreateSeaSketchVectorSourceMutation, CreateSeaSketchVectorSourceMutationVariables>;
-export const CreateDataLayerDocument = gql`
+export const CreateDataLayerDocument = /*#__PURE__*/ gql`
     mutation CreateDataLayer($projectId: Int!, $dataSourceId: Int!, $mapboxGlStyles: JSON, $renderUnder: RenderUnderType, $sublayer: String) {
   createDataLayer(
     input: {dataLayer: {projectId: $projectId, dataSourceId: $dataSourceId, mapboxGlStyles: $mapboxGlStyles, renderUnder: $renderUnder, sublayer: $sublayer}}
@@ -16162,28 +13952,6 @@ export const CreateDataLayerDocument = gql`
 }
     `;
 export type CreateDataLayerMutationFn = Apollo.MutationFunction<CreateDataLayerMutation, CreateDataLayerMutationVariables>;
-
-/**
- * __useCreateDataLayerMutation__
- *
- * To run a mutation, you first call `useCreateDataLayerMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateDataLayerMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createDataLayerMutation, { data, loading, error }] = useCreateDataLayerMutation({
- *   variables: {
- *      projectId: // value for 'projectId'
- *      dataSourceId: // value for 'dataSourceId'
- *      mapboxGlStyles: // value for 'mapboxGlStyles'
- *      renderUnder: // value for 'renderUnder'
- *      sublayer: // value for 'sublayer'
- *   },
- * });
- */
 export function useCreateDataLayerMutation(baseOptions?: Apollo.MutationHookOptions<CreateDataLayerMutation, CreateDataLayerMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateDataLayerMutation, CreateDataLayerMutationVariables>(CreateDataLayerDocument, options);
@@ -16191,7 +13959,7 @@ export function useCreateDataLayerMutation(baseOptions?: Apollo.MutationHookOpti
 export type CreateDataLayerMutationHookResult = ReturnType<typeof useCreateDataLayerMutation>;
 export type CreateDataLayerMutationResult = Apollo.MutationResult<CreateDataLayerMutation>;
 export type CreateDataLayerMutationOptions = Apollo.BaseMutationOptions<CreateDataLayerMutation, CreateDataLayerMutationVariables>;
-export const GetOrCreateSpriteDocument = gql`
+export const GetOrCreateSpriteDocument = /*#__PURE__*/ gql`
     mutation GetOrCreateSprite($height: Int!, $width: Int!, $pixelRatio: Int!, $projectId: Int!, $smallestImage: Upload!) {
   getOrCreateSprite(
     height: $height
@@ -16215,28 +13983,6 @@ export const GetOrCreateSpriteDocument = gql`
 }
     `;
 export type GetOrCreateSpriteMutationFn = Apollo.MutationFunction<GetOrCreateSpriteMutation, GetOrCreateSpriteMutationVariables>;
-
-/**
- * __useGetOrCreateSpriteMutation__
- *
- * To run a mutation, you first call `useGetOrCreateSpriteMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useGetOrCreateSpriteMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [getOrCreateSpriteMutation, { data, loading, error }] = useGetOrCreateSpriteMutation({
- *   variables: {
- *      height: // value for 'height'
- *      width: // value for 'width'
- *      pixelRatio: // value for 'pixelRatio'
- *      projectId: // value for 'projectId'
- *      smallestImage: // value for 'smallestImage'
- *   },
- * });
- */
 export function useGetOrCreateSpriteMutation(baseOptions?: Apollo.MutationHookOptions<GetOrCreateSpriteMutation, GetOrCreateSpriteMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<GetOrCreateSpriteMutation, GetOrCreateSpriteMutationVariables>(GetOrCreateSpriteDocument, options);
@@ -16244,7 +13990,7 @@ export function useGetOrCreateSpriteMutation(baseOptions?: Apollo.MutationHookOp
 export type GetOrCreateSpriteMutationHookResult = ReturnType<typeof useGetOrCreateSpriteMutation>;
 export type GetOrCreateSpriteMutationResult = Apollo.MutationResult<GetOrCreateSpriteMutation>;
 export type GetOrCreateSpriteMutationOptions = Apollo.BaseMutationOptions<GetOrCreateSpriteMutation, GetOrCreateSpriteMutationVariables>;
-export const AddImageToSpriteDocument = gql`
+export const AddImageToSpriteDocument = /*#__PURE__*/ gql`
     mutation AddImageToSprite($spriteId: Int!, $width: Int!, $height: Int!, $pixelRatio: Int!, $image: Upload!) {
   addImageToSprite(
     height: $height
@@ -16268,28 +14014,6 @@ export const AddImageToSpriteDocument = gql`
 }
     `;
 export type AddImageToSpriteMutationFn = Apollo.MutationFunction<AddImageToSpriteMutation, AddImageToSpriteMutationVariables>;
-
-/**
- * __useAddImageToSpriteMutation__
- *
- * To run a mutation, you first call `useAddImageToSpriteMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useAddImageToSpriteMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [addImageToSpriteMutation, { data, loading, error }] = useAddImageToSpriteMutation({
- *   variables: {
- *      spriteId: // value for 'spriteId'
- *      width: // value for 'width'
- *      height: // value for 'height'
- *      pixelRatio: // value for 'pixelRatio'
- *      image: // value for 'image'
- *   },
- * });
- */
 export function useAddImageToSpriteMutation(baseOptions?: Apollo.MutationHookOptions<AddImageToSpriteMutation, AddImageToSpriteMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<AddImageToSpriteMutation, AddImageToSpriteMutationVariables>(AddImageToSpriteDocument, options);
@@ -16297,7 +14021,7 @@ export function useAddImageToSpriteMutation(baseOptions?: Apollo.MutationHookOpt
 export type AddImageToSpriteMutationHookResult = ReturnType<typeof useAddImageToSpriteMutation>;
 export type AddImageToSpriteMutationResult = Apollo.MutationResult<AddImageToSpriteMutation>;
 export type AddImageToSpriteMutationOptions = Apollo.BaseMutationOptions<AddImageToSpriteMutation, AddImageToSpriteMutationVariables>;
-export const VerifyProjectInviteDocument = gql`
+export const VerifyProjectInviteDocument = /*#__PURE__*/ gql`
     query VerifyProjectInvite($token: String!) {
   verifyProjectInvite(token: $token) {
     claims {
@@ -16314,23 +14038,6 @@ export const VerifyProjectInviteDocument = gql`
   }
 }
     `;
-
-/**
- * __useVerifyProjectInviteQuery__
- *
- * To run a query within a React component, call `useVerifyProjectInviteQuery` and pass it any options that fit your needs.
- * When your component renders, `useVerifyProjectInviteQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useVerifyProjectInviteQuery({
- *   variables: {
- *      token: // value for 'token'
- *   },
- * });
- */
 export function useVerifyProjectInviteQuery(baseOptions: Apollo.QueryHookOptions<VerifyProjectInviteQuery, VerifyProjectInviteQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<VerifyProjectInviteQuery, VerifyProjectInviteQueryVariables>(VerifyProjectInviteDocument, options);
@@ -16342,7 +14049,7 @@ export function useVerifyProjectInviteLazyQuery(baseOptions?: Apollo.LazyQueryHo
 export type VerifyProjectInviteQueryHookResult = ReturnType<typeof useVerifyProjectInviteQuery>;
 export type VerifyProjectInviteLazyQueryHookResult = ReturnType<typeof useVerifyProjectInviteLazyQuery>;
 export type VerifyProjectInviteQueryResult = Apollo.QueryResult<VerifyProjectInviteQuery, VerifyProjectInviteQueryVariables>;
-export const ConfirmProjectInviteDocument = gql`
+export const ConfirmProjectInviteDocument = /*#__PURE__*/ gql`
     mutation ConfirmProjectInvite($token: String!) {
   confirmProjectInvite(token: $token) {
     admin
@@ -16357,24 +14064,6 @@ export const ConfirmProjectInviteDocument = gql`
 }
     `;
 export type ConfirmProjectInviteMutationFn = Apollo.MutationFunction<ConfirmProjectInviteMutation, ConfirmProjectInviteMutationVariables>;
-
-/**
- * __useConfirmProjectInviteMutation__
- *
- * To run a mutation, you first call `useConfirmProjectInviteMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useConfirmProjectInviteMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [confirmProjectInviteMutation, { data, loading, error }] = useConfirmProjectInviteMutation({
- *   variables: {
- *      token: // value for 'token'
- *   },
- * });
- */
 export function useConfirmProjectInviteMutation(baseOptions?: Apollo.MutationHookOptions<ConfirmProjectInviteMutation, ConfirmProjectInviteMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<ConfirmProjectInviteMutation, ConfirmProjectInviteMutationVariables>(ConfirmProjectInviteDocument, options);
@@ -16382,7 +14071,7 @@ export function useConfirmProjectInviteMutation(baseOptions?: Apollo.MutationHoo
 export type ConfirmProjectInviteMutationHookResult = ReturnType<typeof useConfirmProjectInviteMutation>;
 export type ConfirmProjectInviteMutationResult = Apollo.MutationResult<ConfirmProjectInviteMutation>;
 export type ConfirmProjectInviteMutationOptions = Apollo.BaseMutationOptions<ConfirmProjectInviteMutation, ConfirmProjectInviteMutationVariables>;
-export const ResendEmailVerificationDocument = gql`
+export const ResendEmailVerificationDocument = /*#__PURE__*/ gql`
     mutation ResendEmailVerification {
   resendVerificationEmail {
     success
@@ -16391,23 +14080,6 @@ export const ResendEmailVerificationDocument = gql`
 }
     `;
 export type ResendEmailVerificationMutationFn = Apollo.MutationFunction<ResendEmailVerificationMutation, ResendEmailVerificationMutationVariables>;
-
-/**
- * __useResendEmailVerificationMutation__
- *
- * To run a mutation, you first call `useResendEmailVerificationMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useResendEmailVerificationMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [resendEmailVerificationMutation, { data, loading, error }] = useResendEmailVerificationMutation({
- *   variables: {
- *   },
- * });
- */
 export function useResendEmailVerificationMutation(baseOptions?: Apollo.MutationHookOptions<ResendEmailVerificationMutation, ResendEmailVerificationMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<ResendEmailVerificationMutation, ResendEmailVerificationMutationVariables>(ResendEmailVerificationDocument, options);
@@ -16415,7 +14087,7 @@ export function useResendEmailVerificationMutation(baseOptions?: Apollo.Mutation
 export type ResendEmailVerificationMutationHookResult = ReturnType<typeof useResendEmailVerificationMutation>;
 export type ResendEmailVerificationMutationResult = Apollo.MutationResult<ResendEmailVerificationMutation>;
 export type ResendEmailVerificationMutationOptions = Apollo.BaseMutationOptions<ResendEmailVerificationMutation, ResendEmailVerificationMutationVariables>;
-export const RequestInviteOnlyProjectAccessDocument = gql`
+export const RequestInviteOnlyProjectAccessDocument = /*#__PURE__*/ gql`
     mutation RequestInviteOnlyProjectAccess($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
     clientMutationId
@@ -16423,24 +14095,6 @@ export const RequestInviteOnlyProjectAccessDocument = gql`
 }
     `;
 export type RequestInviteOnlyProjectAccessMutationFn = Apollo.MutationFunction<RequestInviteOnlyProjectAccessMutation, RequestInviteOnlyProjectAccessMutationVariables>;
-
-/**
- * __useRequestInviteOnlyProjectAccessMutation__
- *
- * To run a mutation, you first call `useRequestInviteOnlyProjectAccessMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useRequestInviteOnlyProjectAccessMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [requestInviteOnlyProjectAccessMutation, { data, loading, error }] = useRequestInviteOnlyProjectAccessMutation({
- *   variables: {
- *      projectId: // value for 'projectId'
- *   },
- * });
- */
 export function useRequestInviteOnlyProjectAccessMutation(baseOptions?: Apollo.MutationHookOptions<RequestInviteOnlyProjectAccessMutation, RequestInviteOnlyProjectAccessMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<RequestInviteOnlyProjectAccessMutation, RequestInviteOnlyProjectAccessMutationVariables>(RequestInviteOnlyProjectAccessDocument, options);
@@ -16448,7 +14102,7 @@ export function useRequestInviteOnlyProjectAccessMutation(baseOptions?: Apollo.M
 export type RequestInviteOnlyProjectAccessMutationHookResult = ReturnType<typeof useRequestInviteOnlyProjectAccessMutation>;
 export type RequestInviteOnlyProjectAccessMutationResult = Apollo.MutationResult<RequestInviteOnlyProjectAccessMutation>;
 export type RequestInviteOnlyProjectAccessMutationOptions = Apollo.BaseMutationOptions<RequestInviteOnlyProjectAccessMutation, RequestInviteOnlyProjectAccessMutationVariables>;
-export const GetBasemapsDocument = gql`
+export const GetBasemapsDocument = /*#__PURE__*/ gql`
     query GetBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -16461,23 +14115,6 @@ export const GetBasemapsDocument = gql`
   }
 }
     ${BasemapDetailsFragmentDoc}`;
-
-/**
- * __useGetBasemapsQuery__
- *
- * To run a query within a React component, call `useGetBasemapsQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetBasemapsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetBasemapsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useGetBasemapsQuery(baseOptions: Apollo.QueryHookOptions<GetBasemapsQuery, GetBasemapsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetBasemapsQuery, GetBasemapsQueryVariables>(GetBasemapsDocument, options);
@@ -16489,7 +14126,7 @@ export function useGetBasemapsLazyQuery(baseOptions?: Apollo.LazyQueryHookOption
 export type GetBasemapsQueryHookResult = ReturnType<typeof useGetBasemapsQuery>;
 export type GetBasemapsLazyQueryHookResult = ReturnType<typeof useGetBasemapsLazyQuery>;
 export type GetBasemapsQueryResult = Apollo.QueryResult<GetBasemapsQuery, GetBasemapsQueryVariables>;
-export const CreateBasemapDocument = gql`
+export const CreateBasemapDocument = /*#__PURE__*/ gql`
     mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean) {
   createBasemap(
     input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly}}
@@ -16501,30 +14138,6 @@ export const CreateBasemapDocument = gql`
 }
     ${BasemapDetailsFragmentDoc}`;
 export type CreateBasemapMutationFn = Apollo.MutationFunction<CreateBasemapMutation, CreateBasemapMutationVariables>;
-
-/**
- * __useCreateBasemapMutation__
- *
- * To run a mutation, you first call `useCreateBasemapMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateBasemapMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createBasemapMutation, { data, loading, error }] = useCreateBasemapMutation({
- *   variables: {
- *      projectId: // value for 'projectId'
- *      name: // value for 'name'
- *      thumbnail: // value for 'thumbnail'
- *      tileSize: // value for 'tileSize'
- *      type: // value for 'type'
- *      url: // value for 'url'
- *      surveysOnly: // value for 'surveysOnly'
- *   },
- * });
- */
 export function useCreateBasemapMutation(baseOptions?: Apollo.MutationHookOptions<CreateBasemapMutation, CreateBasemapMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateBasemapMutation, CreateBasemapMutationVariables>(CreateBasemapDocument, options);
@@ -16532,7 +14145,7 @@ export function useCreateBasemapMutation(baseOptions?: Apollo.MutationHookOption
 export type CreateBasemapMutationHookResult = ReturnType<typeof useCreateBasemapMutation>;
 export type CreateBasemapMutationResult = Apollo.MutationResult<CreateBasemapMutation>;
 export type CreateBasemapMutationOptions = Apollo.BaseMutationOptions<CreateBasemapMutation, CreateBasemapMutationVariables>;
-export const UploadBasemapDocument = gql`
+export const UploadBasemapDocument = /*#__PURE__*/ gql`
     mutation UploadBasemap($projectId: Int!, $name: String!, $thumbnail: Upload!, $existingId: Int, $style: JSON!, $surveysOnly: Boolean) {
   uploadStyle(
     thumb: $thumbnail
@@ -16547,29 +14160,6 @@ export const UploadBasemapDocument = gql`
 }
     ${BasemapDetailsFragmentDoc}`;
 export type UploadBasemapMutationFn = Apollo.MutationFunction<UploadBasemapMutation, UploadBasemapMutationVariables>;
-
-/**
- * __useUploadBasemapMutation__
- *
- * To run a mutation, you first call `useUploadBasemapMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUploadBasemapMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [uploadBasemapMutation, { data, loading, error }] = useUploadBasemapMutation({
- *   variables: {
- *      projectId: // value for 'projectId'
- *      name: // value for 'name'
- *      thumbnail: // value for 'thumbnail'
- *      existingId: // value for 'existingId'
- *      style: // value for 'style'
- *      surveysOnly: // value for 'surveysOnly'
- *   },
- * });
- */
 export function useUploadBasemapMutation(baseOptions?: Apollo.MutationHookOptions<UploadBasemapMutation, UploadBasemapMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UploadBasemapMutation, UploadBasemapMutationVariables>(UploadBasemapDocument, options);
@@ -16577,7 +14167,7 @@ export function useUploadBasemapMutation(baseOptions?: Apollo.MutationHookOption
 export type UploadBasemapMutationHookResult = ReturnType<typeof useUploadBasemapMutation>;
 export type UploadBasemapMutationResult = Apollo.MutationResult<UploadBasemapMutation>;
 export type UploadBasemapMutationOptions = Apollo.BaseMutationOptions<UploadBasemapMutation, UploadBasemapMutationVariables>;
-export const GetBasemapDocument = gql`
+export const GetBasemapDocument = /*#__PURE__*/ gql`
     query GetBasemap($id: Int!) {
   basemap(id: $id) {
     id
@@ -16618,23 +14208,6 @@ export const GetBasemapDocument = gql`
   }
 }
     `;
-
-/**
- * __useGetBasemapQuery__
- *
- * To run a query within a React component, call `useGetBasemapQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetBasemapQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetBasemapQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useGetBasemapQuery(baseOptions: Apollo.QueryHookOptions<GetBasemapQuery, GetBasemapQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetBasemapQuery, GetBasemapQueryVariables>(GetBasemapDocument, options);
@@ -16646,7 +14219,7 @@ export function useGetBasemapLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions
 export type GetBasemapQueryHookResult = ReturnType<typeof useGetBasemapQuery>;
 export type GetBasemapLazyQueryHookResult = ReturnType<typeof useGetBasemapLazyQuery>;
 export type GetBasemapQueryResult = Apollo.QueryResult<GetBasemapQuery, GetBasemapQueryVariables>;
-export const UpdateBasemapDocument = gql`
+export const UpdateBasemapDocument = /*#__PURE__*/ gql`
     mutation UpdateBasemap($id: Int!, $name: String) {
   updateBasemap(input: {id: $id, patch: {name: $name}}) {
     basemap {
@@ -16657,25 +14230,6 @@ export const UpdateBasemapDocument = gql`
 }
     `;
 export type UpdateBasemapMutationFn = Apollo.MutationFunction<UpdateBasemapMutation, UpdateBasemapMutationVariables>;
-
-/**
- * __useUpdateBasemapMutation__
- *
- * To run a mutation, you first call `useUpdateBasemapMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateBasemapMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateBasemapMutation, { data, loading, error }] = useUpdateBasemapMutation({
- *   variables: {
- *      id: // value for 'id'
- *      name: // value for 'name'
- *   },
- * });
- */
 export function useUpdateBasemapMutation(baseOptions?: Apollo.MutationHookOptions<UpdateBasemapMutation, UpdateBasemapMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateBasemapMutation, UpdateBasemapMutationVariables>(UpdateBasemapDocument, options);
@@ -16683,7 +14237,7 @@ export function useUpdateBasemapMutation(baseOptions?: Apollo.MutationHookOption
 export type UpdateBasemapMutationHookResult = ReturnType<typeof useUpdateBasemapMutation>;
 export type UpdateBasemapMutationResult = Apollo.MutationResult<UpdateBasemapMutation>;
 export type UpdateBasemapMutationOptions = Apollo.BaseMutationOptions<UpdateBasemapMutation, UpdateBasemapMutationVariables>;
-export const UpdateBasemapUrlDocument = gql`
+export const UpdateBasemapUrlDocument = /*#__PURE__*/ gql`
     mutation UpdateBasemapUrl($id: Int!, $url: String!) {
   updateBasemap(input: {id: $id, patch: {url: $url}}) {
     basemap {
@@ -16694,25 +14248,6 @@ export const UpdateBasemapUrlDocument = gql`
 }
     `;
 export type UpdateBasemapUrlMutationFn = Apollo.MutationFunction<UpdateBasemapUrlMutation, UpdateBasemapUrlMutationVariables>;
-
-/**
- * __useUpdateBasemapUrlMutation__
- *
- * To run a mutation, you first call `useUpdateBasemapUrlMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateBasemapUrlMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateBasemapUrlMutation, { data, loading, error }] = useUpdateBasemapUrlMutation({
- *   variables: {
- *      id: // value for 'id'
- *      url: // value for 'url'
- *   },
- * });
- */
 export function useUpdateBasemapUrlMutation(baseOptions?: Apollo.MutationHookOptions<UpdateBasemapUrlMutation, UpdateBasemapUrlMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateBasemapUrlMutation, UpdateBasemapUrlMutationVariables>(UpdateBasemapUrlDocument, options);
@@ -16720,7 +14255,7 @@ export function useUpdateBasemapUrlMutation(baseOptions?: Apollo.MutationHookOpt
 export type UpdateBasemapUrlMutationHookResult = ReturnType<typeof useUpdateBasemapUrlMutation>;
 export type UpdateBasemapUrlMutationResult = Apollo.MutationResult<UpdateBasemapUrlMutation>;
 export type UpdateBasemapUrlMutationOptions = Apollo.BaseMutationOptions<UpdateBasemapUrlMutation, UpdateBasemapUrlMutationVariables>;
-export const UpdateBasemapLabelsLayerDocument = gql`
+export const UpdateBasemapLabelsLayerDocument = /*#__PURE__*/ gql`
     mutation UpdateBasemapLabelsLayer($id: Int!, $layer: String) {
   updateBasemap(input: {id: $id, patch: {labelsLayerId: $layer}}) {
     basemap {
@@ -16731,25 +14266,6 @@ export const UpdateBasemapLabelsLayerDocument = gql`
 }
     `;
 export type UpdateBasemapLabelsLayerMutationFn = Apollo.MutationFunction<UpdateBasemapLabelsLayerMutation, UpdateBasemapLabelsLayerMutationVariables>;
-
-/**
- * __useUpdateBasemapLabelsLayerMutation__
- *
- * To run a mutation, you first call `useUpdateBasemapLabelsLayerMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateBasemapLabelsLayerMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateBasemapLabelsLayerMutation, { data, loading, error }] = useUpdateBasemapLabelsLayerMutation({
- *   variables: {
- *      id: // value for 'id'
- *      layer: // value for 'layer'
- *   },
- * });
- */
 export function useUpdateBasemapLabelsLayerMutation(baseOptions?: Apollo.MutationHookOptions<UpdateBasemapLabelsLayerMutation, UpdateBasemapLabelsLayerMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateBasemapLabelsLayerMutation, UpdateBasemapLabelsLayerMutationVariables>(UpdateBasemapLabelsLayerDocument, options);
@@ -16757,7 +14273,7 @@ export function useUpdateBasemapLabelsLayerMutation(baseOptions?: Apollo.Mutatio
 export type UpdateBasemapLabelsLayerMutationHookResult = ReturnType<typeof useUpdateBasemapLabelsLayerMutation>;
 export type UpdateBasemapLabelsLayerMutationResult = Apollo.MutationResult<UpdateBasemapLabelsLayerMutation>;
 export type UpdateBasemapLabelsLayerMutationOptions = Apollo.BaseMutationOptions<UpdateBasemapLabelsLayerMutation, UpdateBasemapLabelsLayerMutationVariables>;
-export const Toggle3dTerrainDocument = gql`
+export const Toggle3dTerrainDocument = /*#__PURE__*/ gql`
     mutation Toggle3dTerrain($id: Int!, $terrainUrl: String) {
   updateBasemap(input: {id: $id, patch: {terrainUrl: $terrainUrl}}) {
     basemap {
@@ -16768,25 +14284,6 @@ export const Toggle3dTerrainDocument = gql`
 }
     `;
 export type Toggle3dTerrainMutationFn = Apollo.MutationFunction<Toggle3dTerrainMutation, Toggle3dTerrainMutationVariables>;
-
-/**
- * __useToggle3dTerrainMutation__
- *
- * To run a mutation, you first call `useToggle3dTerrainMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useToggle3dTerrainMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [toggle3dTerrainMutation, { data, loading, error }] = useToggle3dTerrainMutation({
- *   variables: {
- *      id: // value for 'id'
- *      terrainUrl: // value for 'terrainUrl'
- *   },
- * });
- */
 export function useToggle3dTerrainMutation(baseOptions?: Apollo.MutationHookOptions<Toggle3dTerrainMutation, Toggle3dTerrainMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<Toggle3dTerrainMutation, Toggle3dTerrainMutationVariables>(Toggle3dTerrainDocument, options);
@@ -16794,7 +14291,7 @@ export function useToggle3dTerrainMutation(baseOptions?: Apollo.MutationHookOpti
 export type Toggle3dTerrainMutationHookResult = ReturnType<typeof useToggle3dTerrainMutation>;
 export type Toggle3dTerrainMutationResult = Apollo.MutationResult<Toggle3dTerrainMutation>;
 export type Toggle3dTerrainMutationOptions = Apollo.BaseMutationOptions<Toggle3dTerrainMutation, Toggle3dTerrainMutationVariables>;
-export const Set3dTerrainDocument = gql`
+export const Set3dTerrainDocument = /*#__PURE__*/ gql`
     mutation Set3dTerrain($id: Int!, $terrainUrl: String, $terrainOptional: Boolean, $terrainVisibilityDefault: Boolean) {
   updateBasemap(
     input: {id: $id, patch: {terrainUrl: $terrainUrl, terrainOptional: $terrainOptional, terrainVisibilityDefault: $terrainVisibilityDefault}}
@@ -16809,27 +14306,6 @@ export const Set3dTerrainDocument = gql`
 }
     `;
 export type Set3dTerrainMutationFn = Apollo.MutationFunction<Set3dTerrainMutation, Set3dTerrainMutationVariables>;
-
-/**
- * __useSet3dTerrainMutation__
- *
- * To run a mutation, you first call `useSet3dTerrainMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useSet3dTerrainMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [set3dTerrainMutation, { data, loading, error }] = useSet3dTerrainMutation({
- *   variables: {
- *      id: // value for 'id'
- *      terrainUrl: // value for 'terrainUrl'
- *      terrainOptional: // value for 'terrainOptional'
- *      terrainVisibilityDefault: // value for 'terrainVisibilityDefault'
- *   },
- * });
- */
 export function useSet3dTerrainMutation(baseOptions?: Apollo.MutationHookOptions<Set3dTerrainMutation, Set3dTerrainMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<Set3dTerrainMutation, Set3dTerrainMutationVariables>(Set3dTerrainDocument, options);
@@ -16837,7 +14313,7 @@ export function useSet3dTerrainMutation(baseOptions?: Apollo.MutationHookOptions
 export type Set3dTerrainMutationHookResult = ReturnType<typeof useSet3dTerrainMutation>;
 export type Set3dTerrainMutationResult = Apollo.MutationResult<Set3dTerrainMutation>;
 export type Set3dTerrainMutationOptions = Apollo.BaseMutationOptions<Set3dTerrainMutation, Set3dTerrainMutationVariables>;
-export const UpdateTerrainExaggerationDocument = gql`
+export const UpdateTerrainExaggerationDocument = /*#__PURE__*/ gql`
     mutation UpdateTerrainExaggeration($id: Int!, $terrainExaggeration: BigFloat!) {
   updateBasemap(
     input: {id: $id, patch: {terrainExaggeration: $terrainExaggeration}}
@@ -16850,25 +14326,6 @@ export const UpdateTerrainExaggerationDocument = gql`
 }
     `;
 export type UpdateTerrainExaggerationMutationFn = Apollo.MutationFunction<UpdateTerrainExaggerationMutation, UpdateTerrainExaggerationMutationVariables>;
-
-/**
- * __useUpdateTerrainExaggerationMutation__
- *
- * To run a mutation, you first call `useUpdateTerrainExaggerationMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateTerrainExaggerationMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateTerrainExaggerationMutation, { data, loading, error }] = useUpdateTerrainExaggerationMutation({
- *   variables: {
- *      id: // value for 'id'
- *      terrainExaggeration: // value for 'terrainExaggeration'
- *   },
- * });
- */
 export function useUpdateTerrainExaggerationMutation(baseOptions?: Apollo.MutationHookOptions<UpdateTerrainExaggerationMutation, UpdateTerrainExaggerationMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateTerrainExaggerationMutation, UpdateTerrainExaggerationMutationVariables>(UpdateTerrainExaggerationDocument, options);
@@ -16876,7 +14333,7 @@ export function useUpdateTerrainExaggerationMutation(baseOptions?: Apollo.Mutati
 export type UpdateTerrainExaggerationMutationHookResult = ReturnType<typeof useUpdateTerrainExaggerationMutation>;
 export type UpdateTerrainExaggerationMutationResult = Apollo.MutationResult<UpdateTerrainExaggerationMutation>;
 export type UpdateTerrainExaggerationMutationOptions = Apollo.BaseMutationOptions<UpdateTerrainExaggerationMutation, UpdateTerrainExaggerationMutationVariables>;
-export const DeleteBasemapDocument = gql`
+export const DeleteBasemapDocument = /*#__PURE__*/ gql`
     mutation DeleteBasemap($id: Int!) {
   deleteBasemap(input: {id: $id}) {
     basemap {
@@ -16886,24 +14343,6 @@ export const DeleteBasemapDocument = gql`
 }
     `;
 export type DeleteBasemapMutationFn = Apollo.MutationFunction<DeleteBasemapMutation, DeleteBasemapMutationVariables>;
-
-/**
- * __useDeleteBasemapMutation__
- *
- * To run a mutation, you first call `useDeleteBasemapMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useDeleteBasemapMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [deleteBasemapMutation, { data, loading, error }] = useDeleteBasemapMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useDeleteBasemapMutation(baseOptions?: Apollo.MutationHookOptions<DeleteBasemapMutation, DeleteBasemapMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<DeleteBasemapMutation, DeleteBasemapMutationVariables>(DeleteBasemapDocument, options);
@@ -16911,7 +14350,7 @@ export function useDeleteBasemapMutation(baseOptions?: Apollo.MutationHookOption
 export type DeleteBasemapMutationHookResult = ReturnType<typeof useDeleteBasemapMutation>;
 export type DeleteBasemapMutationResult = Apollo.MutationResult<DeleteBasemapMutation>;
 export type DeleteBasemapMutationOptions = Apollo.BaseMutationOptions<DeleteBasemapMutation, DeleteBasemapMutationVariables>;
-export const OptionalLayerDocument = gql`
+export const OptionalLayerDocument = /*#__PURE__*/ gql`
     query OptionalLayer($id: Int!) {
   optionalBasemapLayer(id: $id) {
     id
@@ -16926,23 +14365,6 @@ export const OptionalLayerDocument = gql`
   }
 }
     `;
-
-/**
- * __useOptionalLayerQuery__
- *
- * To run a query within a React component, call `useOptionalLayerQuery` and pass it any options that fit your needs.
- * When your component renders, `useOptionalLayerQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useOptionalLayerQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useOptionalLayerQuery(baseOptions: Apollo.QueryHookOptions<OptionalLayerQuery, OptionalLayerQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<OptionalLayerQuery, OptionalLayerQueryVariables>(OptionalLayerDocument, options);
@@ -16954,7 +14376,7 @@ export function useOptionalLayerLazyQuery(baseOptions?: Apollo.LazyQueryHookOpti
 export type OptionalLayerQueryHookResult = ReturnType<typeof useOptionalLayerQuery>;
 export type OptionalLayerLazyQueryHookResult = ReturnType<typeof useOptionalLayerLazyQuery>;
 export type OptionalLayerQueryResult = Apollo.QueryResult<OptionalLayerQuery, OptionalLayerQueryVariables>;
-export const UpdateOptionalLayerNameDocument = gql`
+export const UpdateOptionalLayerNameDocument = /*#__PURE__*/ gql`
     mutation UpdateOptionalLayerName($id: Int!, $name: String!) {
   updateOptionalBasemapLayer(input: {id: $id, patch: {name: $name}}) {
     optionalBasemapLayer {
@@ -16965,25 +14387,6 @@ export const UpdateOptionalLayerNameDocument = gql`
 }
     `;
 export type UpdateOptionalLayerNameMutationFn = Apollo.MutationFunction<UpdateOptionalLayerNameMutation, UpdateOptionalLayerNameMutationVariables>;
-
-/**
- * __useUpdateOptionalLayerNameMutation__
- *
- * To run a mutation, you first call `useUpdateOptionalLayerNameMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateOptionalLayerNameMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateOptionalLayerNameMutation, { data, loading, error }] = useUpdateOptionalLayerNameMutation({
- *   variables: {
- *      id: // value for 'id'
- *      name: // value for 'name'
- *   },
- * });
- */
 export function useUpdateOptionalLayerNameMutation(baseOptions?: Apollo.MutationHookOptions<UpdateOptionalLayerNameMutation, UpdateOptionalLayerNameMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateOptionalLayerNameMutation, UpdateOptionalLayerNameMutationVariables>(UpdateOptionalLayerNameDocument, options);
@@ -16991,7 +14394,7 @@ export function useUpdateOptionalLayerNameMutation(baseOptions?: Apollo.Mutation
 export type UpdateOptionalLayerNameMutationHookResult = ReturnType<typeof useUpdateOptionalLayerNameMutation>;
 export type UpdateOptionalLayerNameMutationResult = Apollo.MutationResult<UpdateOptionalLayerNameMutation>;
 export type UpdateOptionalLayerNameMutationOptions = Apollo.BaseMutationOptions<UpdateOptionalLayerNameMutation, UpdateOptionalLayerNameMutationVariables>;
-export const CreateOptionalLayerDocument = gql`
+export const CreateOptionalLayerDocument = /*#__PURE__*/ gql`
     mutation CreateOptionalLayer($name: String!, $basemapId: Int!, $groupType: OptionalBasemapLayersGroupType, $options: JSON) {
   createOptionalBasemapLayer(
     input: {optionalBasemapLayer: {name: $name, basemapId: $basemapId, groupType: $groupType, options: $options}}
@@ -17011,27 +14414,6 @@ export const CreateOptionalLayerDocument = gql`
 }
     `;
 export type CreateOptionalLayerMutationFn = Apollo.MutationFunction<CreateOptionalLayerMutation, CreateOptionalLayerMutationVariables>;
-
-/**
- * __useCreateOptionalLayerMutation__
- *
- * To run a mutation, you first call `useCreateOptionalLayerMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateOptionalLayerMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createOptionalLayerMutation, { data, loading, error }] = useCreateOptionalLayerMutation({
- *   variables: {
- *      name: // value for 'name'
- *      basemapId: // value for 'basemapId'
- *      groupType: // value for 'groupType'
- *      options: // value for 'options'
- *   },
- * });
- */
 export function useCreateOptionalLayerMutation(baseOptions?: Apollo.MutationHookOptions<CreateOptionalLayerMutation, CreateOptionalLayerMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateOptionalLayerMutation, CreateOptionalLayerMutationVariables>(CreateOptionalLayerDocument, options);
@@ -17039,7 +14421,7 @@ export function useCreateOptionalLayerMutation(baseOptions?: Apollo.MutationHook
 export type CreateOptionalLayerMutationHookResult = ReturnType<typeof useCreateOptionalLayerMutation>;
 export type CreateOptionalLayerMutationResult = Apollo.MutationResult<CreateOptionalLayerMutation>;
 export type CreateOptionalLayerMutationOptions = Apollo.BaseMutationOptions<CreateOptionalLayerMutation, CreateOptionalLayerMutationVariables>;
-export const UpdateOptionalLayerDocument = gql`
+export const UpdateOptionalLayerDocument = /*#__PURE__*/ gql`
     mutation UpdateOptionalLayer($id: Int!, $name: String, $description: String, $defaultVisibility: Boolean, $metadata: JSON) {
   updateOptionalBasemapLayer(
     input: {id: $id, patch: {name: $name, description: $description, defaultVisibility: $defaultVisibility, metadata: $metadata}}
@@ -17055,28 +14437,6 @@ export const UpdateOptionalLayerDocument = gql`
 }
     `;
 export type UpdateOptionalLayerMutationFn = Apollo.MutationFunction<UpdateOptionalLayerMutation, UpdateOptionalLayerMutationVariables>;
-
-/**
- * __useUpdateOptionalLayerMutation__
- *
- * To run a mutation, you first call `useUpdateOptionalLayerMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateOptionalLayerMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateOptionalLayerMutation, { data, loading, error }] = useUpdateOptionalLayerMutation({
- *   variables: {
- *      id: // value for 'id'
- *      name: // value for 'name'
- *      description: // value for 'description'
- *      defaultVisibility: // value for 'defaultVisibility'
- *      metadata: // value for 'metadata'
- *   },
- * });
- */
 export function useUpdateOptionalLayerMutation(baseOptions?: Apollo.MutationHookOptions<UpdateOptionalLayerMutation, UpdateOptionalLayerMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateOptionalLayerMutation, UpdateOptionalLayerMutationVariables>(UpdateOptionalLayerDocument, options);
@@ -17084,7 +14444,7 @@ export function useUpdateOptionalLayerMutation(baseOptions?: Apollo.MutationHook
 export type UpdateOptionalLayerMutationHookResult = ReturnType<typeof useUpdateOptionalLayerMutation>;
 export type UpdateOptionalLayerMutationResult = Apollo.MutationResult<UpdateOptionalLayerMutation>;
 export type UpdateOptionalLayerMutationOptions = Apollo.BaseMutationOptions<UpdateOptionalLayerMutation, UpdateOptionalLayerMutationVariables>;
-export const DeleteOptionalLayerDocument = gql`
+export const DeleteOptionalLayerDocument = /*#__PURE__*/ gql`
     mutation DeleteOptionalLayer($id: Int!) {
   deleteOptionalBasemapLayer(input: {id: $id}) {
     optionalBasemapLayer {
@@ -17094,24 +14454,6 @@ export const DeleteOptionalLayerDocument = gql`
 }
     `;
 export type DeleteOptionalLayerMutationFn = Apollo.MutationFunction<DeleteOptionalLayerMutation, DeleteOptionalLayerMutationVariables>;
-
-/**
- * __useDeleteOptionalLayerMutation__
- *
- * To run a mutation, you first call `useDeleteOptionalLayerMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useDeleteOptionalLayerMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [deleteOptionalLayerMutation, { data, loading, error }] = useDeleteOptionalLayerMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useDeleteOptionalLayerMutation(baseOptions?: Apollo.MutationHookOptions<DeleteOptionalLayerMutation, DeleteOptionalLayerMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<DeleteOptionalLayerMutation, DeleteOptionalLayerMutationVariables>(DeleteOptionalLayerDocument, options);
@@ -17119,7 +14461,7 @@ export function useDeleteOptionalLayerMutation(baseOptions?: Apollo.MutationHook
 export type DeleteOptionalLayerMutationHookResult = ReturnType<typeof useDeleteOptionalLayerMutation>;
 export type DeleteOptionalLayerMutationResult = Apollo.MutationResult<DeleteOptionalLayerMutation>;
 export type DeleteOptionalLayerMutationOptions = Apollo.BaseMutationOptions<DeleteOptionalLayerMutation, DeleteOptionalLayerMutationVariables>;
-export const UpdateOptionalBasemapLayerLayerListDocument = gql`
+export const UpdateOptionalBasemapLayerLayerListDocument = /*#__PURE__*/ gql`
     mutation UpdateOptionalBasemapLayerLayerList($id: Int!, $layers: [String]) {
   updateOptionalBasemapLayer(input: {id: $id, patch: {layers: $layers}}) {
     optionalBasemapLayer {
@@ -17130,25 +14472,6 @@ export const UpdateOptionalBasemapLayerLayerListDocument = gql`
 }
     `;
 export type UpdateOptionalBasemapLayerLayerListMutationFn = Apollo.MutationFunction<UpdateOptionalBasemapLayerLayerListMutation, UpdateOptionalBasemapLayerLayerListMutationVariables>;
-
-/**
- * __useUpdateOptionalBasemapLayerLayerListMutation__
- *
- * To run a mutation, you first call `useUpdateOptionalBasemapLayerLayerListMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateOptionalBasemapLayerLayerListMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateOptionalBasemapLayerLayerListMutation, { data, loading, error }] = useUpdateOptionalBasemapLayerLayerListMutation({
- *   variables: {
- *      id: // value for 'id'
- *      layers: // value for 'layers'
- *   },
- * });
- */
 export function useUpdateOptionalBasemapLayerLayerListMutation(baseOptions?: Apollo.MutationHookOptions<UpdateOptionalBasemapLayerLayerListMutation, UpdateOptionalBasemapLayerLayerListMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateOptionalBasemapLayerLayerListMutation, UpdateOptionalBasemapLayerLayerListMutationVariables>(UpdateOptionalBasemapLayerLayerListDocument, options);
@@ -17156,7 +14479,7 @@ export function useUpdateOptionalBasemapLayerLayerListMutation(baseOptions?: Apo
 export type UpdateOptionalBasemapLayerLayerListMutationHookResult = ReturnType<typeof useUpdateOptionalBasemapLayerLayerListMutation>;
 export type UpdateOptionalBasemapLayerLayerListMutationResult = Apollo.MutationResult<UpdateOptionalBasemapLayerLayerListMutation>;
 export type UpdateOptionalBasemapLayerLayerListMutationOptions = Apollo.BaseMutationOptions<UpdateOptionalBasemapLayerLayerListMutation, UpdateOptionalBasemapLayerLayerListMutationVariables>;
-export const UpdateOptionalBasemapLayerOptionsDocument = gql`
+export const UpdateOptionalBasemapLayerOptionsDocument = /*#__PURE__*/ gql`
     mutation UpdateOptionalBasemapLayerOptions($id: Int!, $options: JSON!) {
   updateOptionalBasemapLayer(input: {id: $id, patch: {options: $options}}) {
     optionalBasemapLayer {
@@ -17167,25 +14490,6 @@ export const UpdateOptionalBasemapLayerOptionsDocument = gql`
 }
     `;
 export type UpdateOptionalBasemapLayerOptionsMutationFn = Apollo.MutationFunction<UpdateOptionalBasemapLayerOptionsMutation, UpdateOptionalBasemapLayerOptionsMutationVariables>;
-
-/**
- * __useUpdateOptionalBasemapLayerOptionsMutation__
- *
- * To run a mutation, you first call `useUpdateOptionalBasemapLayerOptionsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateOptionalBasemapLayerOptionsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateOptionalBasemapLayerOptionsMutation, { data, loading, error }] = useUpdateOptionalBasemapLayerOptionsMutation({
- *   variables: {
- *      id: // value for 'id'
- *      options: // value for 'options'
- *   },
- * });
- */
 export function useUpdateOptionalBasemapLayerOptionsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateOptionalBasemapLayerOptionsMutation, UpdateOptionalBasemapLayerOptionsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateOptionalBasemapLayerOptionsMutation, UpdateOptionalBasemapLayerOptionsMutationVariables>(UpdateOptionalBasemapLayerOptionsDocument, options);
@@ -17193,7 +14497,7 @@ export function useUpdateOptionalBasemapLayerOptionsMutation(baseOptions?: Apoll
 export type UpdateOptionalBasemapLayerOptionsMutationHookResult = ReturnType<typeof useUpdateOptionalBasemapLayerOptionsMutation>;
 export type UpdateOptionalBasemapLayerOptionsMutationResult = Apollo.MutationResult<UpdateOptionalBasemapLayerOptionsMutation>;
 export type UpdateOptionalBasemapLayerOptionsMutationOptions = Apollo.BaseMutationOptions<UpdateOptionalBasemapLayerOptionsMutation, UpdateOptionalBasemapLayerOptionsMutationVariables>;
-export const GetOptionalBasemapLayerDocument = gql`
+export const GetOptionalBasemapLayerDocument = /*#__PURE__*/ gql`
     query GetOptionalBasemapLayer($id: Int!) {
   optionalBasemapLayer(id: $id) {
     id
@@ -17208,23 +14512,6 @@ export const GetOptionalBasemapLayerDocument = gql`
   }
 }
     `;
-
-/**
- * __useGetOptionalBasemapLayerQuery__
- *
- * To run a query within a React component, call `useGetOptionalBasemapLayerQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetOptionalBasemapLayerQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetOptionalBasemapLayerQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useGetOptionalBasemapLayerQuery(baseOptions: Apollo.QueryHookOptions<GetOptionalBasemapLayerQuery, GetOptionalBasemapLayerQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetOptionalBasemapLayerQuery, GetOptionalBasemapLayerQueryVariables>(GetOptionalBasemapLayerDocument, options);
@@ -17236,7 +14523,7 @@ export function useGetOptionalBasemapLayerLazyQuery(baseOptions?: Apollo.LazyQue
 export type GetOptionalBasemapLayerQueryHookResult = ReturnType<typeof useGetOptionalBasemapLayerQuery>;
 export type GetOptionalBasemapLayerLazyQueryHookResult = ReturnType<typeof useGetOptionalBasemapLayerLazyQuery>;
 export type GetOptionalBasemapLayerQueryResult = Apollo.QueryResult<GetOptionalBasemapLayerQuery, GetOptionalBasemapLayerQueryVariables>;
-export const GetOptionalBasemapLayerMetadataDocument = gql`
+export const GetOptionalBasemapLayerMetadataDocument = /*#__PURE__*/ gql`
     query GetOptionalBasemapLayerMetadata($id: Int!) {
   optionalBasemapLayer(id: $id) {
     id
@@ -17244,23 +14531,6 @@ export const GetOptionalBasemapLayerMetadataDocument = gql`
   }
 }
     `;
-
-/**
- * __useGetOptionalBasemapLayerMetadataQuery__
- *
- * To run a query within a React component, call `useGetOptionalBasemapLayerMetadataQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetOptionalBasemapLayerMetadataQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetOptionalBasemapLayerMetadataQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useGetOptionalBasemapLayerMetadataQuery(baseOptions: Apollo.QueryHookOptions<GetOptionalBasemapLayerMetadataQuery, GetOptionalBasemapLayerMetadataQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetOptionalBasemapLayerMetadataQuery, GetOptionalBasemapLayerMetadataQueryVariables>(GetOptionalBasemapLayerMetadataDocument, options);
@@ -17272,7 +14542,7 @@ export function useGetOptionalBasemapLayerMetadataLazyQuery(baseOptions?: Apollo
 export type GetOptionalBasemapLayerMetadataQueryHookResult = ReturnType<typeof useGetOptionalBasemapLayerMetadataQuery>;
 export type GetOptionalBasemapLayerMetadataLazyQueryHookResult = ReturnType<typeof useGetOptionalBasemapLayerMetadataLazyQuery>;
 export type GetOptionalBasemapLayerMetadataQueryResult = Apollo.QueryResult<GetOptionalBasemapLayerMetadataQuery, GetOptionalBasemapLayerMetadataQueryVariables>;
-export const UpdateOptionalBasemapLayerMetadataDocument = gql`
+export const UpdateOptionalBasemapLayerMetadataDocument = /*#__PURE__*/ gql`
     mutation UpdateOptionalBasemapLayerMetadata($id: Int!, $metadata: JSON) {
   updateOptionalBasemapLayer(input: {id: $id, patch: {metadata: $metadata}}) {
     optionalBasemapLayer {
@@ -17283,25 +14553,6 @@ export const UpdateOptionalBasemapLayerMetadataDocument = gql`
 }
     `;
 export type UpdateOptionalBasemapLayerMetadataMutationFn = Apollo.MutationFunction<UpdateOptionalBasemapLayerMetadataMutation, UpdateOptionalBasemapLayerMetadataMutationVariables>;
-
-/**
- * __useUpdateOptionalBasemapLayerMetadataMutation__
- *
- * To run a mutation, you first call `useUpdateOptionalBasemapLayerMetadataMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateOptionalBasemapLayerMetadataMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateOptionalBasemapLayerMetadataMutation, { data, loading, error }] = useUpdateOptionalBasemapLayerMetadataMutation({
- *   variables: {
- *      id: // value for 'id'
- *      metadata: // value for 'metadata'
- *   },
- * });
- */
 export function useUpdateOptionalBasemapLayerMetadataMutation(baseOptions?: Apollo.MutationHookOptions<UpdateOptionalBasemapLayerMetadataMutation, UpdateOptionalBasemapLayerMetadataMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateOptionalBasemapLayerMetadataMutation, UpdateOptionalBasemapLayerMetadataMutationVariables>(UpdateOptionalBasemapLayerMetadataDocument, options);
@@ -17309,7 +14560,7 @@ export function useUpdateOptionalBasemapLayerMetadataMutation(baseOptions?: Apol
 export type UpdateOptionalBasemapLayerMetadataMutationHookResult = ReturnType<typeof useUpdateOptionalBasemapLayerMetadataMutation>;
 export type UpdateOptionalBasemapLayerMetadataMutationResult = Apollo.MutationResult<UpdateOptionalBasemapLayerMetadataMutation>;
 export type UpdateOptionalBasemapLayerMetadataMutationOptions = Apollo.BaseMutationOptions<UpdateOptionalBasemapLayerMetadataMutation, UpdateOptionalBasemapLayerMetadataMutationVariables>;
-export const UpdateInteractivitySettingsLayersDocument = gql`
+export const UpdateInteractivitySettingsLayersDocument = /*#__PURE__*/ gql`
     mutation UpdateInteractivitySettingsLayers($id: Int!, $layers: [String]) {
   updateInteractivitySetting(input: {id: $id, patch: {layers: $layers}}) {
     interactivitySetting {
@@ -17320,25 +14571,6 @@ export const UpdateInteractivitySettingsLayersDocument = gql`
 }
     `;
 export type UpdateInteractivitySettingsLayersMutationFn = Apollo.MutationFunction<UpdateInteractivitySettingsLayersMutation, UpdateInteractivitySettingsLayersMutationVariables>;
-
-/**
- * __useUpdateInteractivitySettingsLayersMutation__
- *
- * To run a mutation, you first call `useUpdateInteractivitySettingsLayersMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateInteractivitySettingsLayersMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateInteractivitySettingsLayersMutation, { data, loading, error }] = useUpdateInteractivitySettingsLayersMutation({
- *   variables: {
- *      id: // value for 'id'
- *      layers: // value for 'layers'
- *   },
- * });
- */
 export function useUpdateInteractivitySettingsLayersMutation(baseOptions?: Apollo.MutationHookOptions<UpdateInteractivitySettingsLayersMutation, UpdateInteractivitySettingsLayersMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateInteractivitySettingsLayersMutation, UpdateInteractivitySettingsLayersMutationVariables>(UpdateInteractivitySettingsLayersDocument, options);
@@ -17346,7 +14578,7 @@ export function useUpdateInteractivitySettingsLayersMutation(baseOptions?: Apoll
 export type UpdateInteractivitySettingsLayersMutationHookResult = ReturnType<typeof useUpdateInteractivitySettingsLayersMutation>;
 export type UpdateInteractivitySettingsLayersMutationResult = Apollo.MutationResult<UpdateInteractivitySettingsLayersMutation>;
 export type UpdateInteractivitySettingsLayersMutationOptions = Apollo.BaseMutationOptions<UpdateInteractivitySettingsLayersMutation, UpdateInteractivitySettingsLayersMutationVariables>;
-export const MapboxKeysDocument = gql`
+export const MapboxKeysDocument = /*#__PURE__*/ gql`
     query MapboxKeys($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -17355,23 +14587,6 @@ export const MapboxKeysDocument = gql`
   }
 }
     `;
-
-/**
- * __useMapboxKeysQuery__
- *
- * To run a query within a React component, call `useMapboxKeysQuery` and pass it any options that fit your needs.
- * When your component renders, `useMapboxKeysQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useMapboxKeysQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useMapboxKeysQuery(baseOptions: Apollo.QueryHookOptions<MapboxKeysQuery, MapboxKeysQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<MapboxKeysQuery, MapboxKeysQueryVariables>(MapboxKeysDocument, options);
@@ -17383,7 +14598,7 @@ export function useMapboxKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions
 export type MapboxKeysQueryHookResult = ReturnType<typeof useMapboxKeysQuery>;
 export type MapboxKeysLazyQueryHookResult = ReturnType<typeof useMapboxKeysLazyQuery>;
 export type MapboxKeysQueryResult = Apollo.QueryResult<MapboxKeysQuery, MapboxKeysQueryVariables>;
-export const CreateProjectDocument = gql`
+export const CreateProjectDocument = /*#__PURE__*/ gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
     project {
@@ -17395,25 +14610,6 @@ export const CreateProjectDocument = gql`
 }
     `;
 export type CreateProjectMutationFn = Apollo.MutationFunction<CreateProjectMutation, CreateProjectMutationVariables>;
-
-/**
- * __useCreateProjectMutation__
- *
- * To run a mutation, you first call `useCreateProjectMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateProjectMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createProjectMutation, { data, loading, error }] = useCreateProjectMutation({
- *   variables: {
- *      name: // value for 'name'
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useCreateProjectMutation(baseOptions?: Apollo.MutationHookOptions<CreateProjectMutation, CreateProjectMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateProjectMutation, CreateProjectMutationVariables>(CreateProjectDocument, options);
@@ -17421,7 +14617,7 @@ export function useCreateProjectMutation(baseOptions?: Apollo.MutationHookOption
 export type CreateProjectMutationHookResult = ReturnType<typeof useCreateProjectMutation>;
 export type CreateProjectMutationResult = Apollo.MutationResult<CreateProjectMutation>;
 export type CreateProjectMutationOptions = Apollo.BaseMutationOptions<CreateProjectMutation, CreateProjectMutationVariables>;
-export const DraftTableOfContentsDocument = gql`
+export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -17446,23 +14642,6 @@ export const DraftTableOfContentsDocument = gql`
   }
 }
     `;
-
-/**
- * __useDraftTableOfContentsQuery__
- *
- * To run a query within a React component, call `useDraftTableOfContentsQuery` and pass it any options that fit your needs.
- * When your component renders, `useDraftTableOfContentsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useDraftTableOfContentsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useDraftTableOfContentsQuery(baseOptions: Apollo.QueryHookOptions<DraftTableOfContentsQuery, DraftTableOfContentsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<DraftTableOfContentsQuery, DraftTableOfContentsQueryVariables>(DraftTableOfContentsDocument, options);
@@ -17474,7 +14653,7 @@ export function useDraftTableOfContentsLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type DraftTableOfContentsQueryHookResult = ReturnType<typeof useDraftTableOfContentsQuery>;
 export type DraftTableOfContentsLazyQueryHookResult = ReturnType<typeof useDraftTableOfContentsLazyQuery>;
 export type DraftTableOfContentsQueryResult = Apollo.QueryResult<DraftTableOfContentsQuery, DraftTableOfContentsQueryVariables>;
-export const LayersAndSourcesForItemsDocument = gql`
+export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
     query layersAndSourcesForItems($slug: String!, $tableOfContentsItemIds: [Int]!) {
   projectBySlug(slug: $slug) {
     id
@@ -17539,24 +14718,6 @@ export const LayersAndSourcesForItemsDocument = gql`
   }
 }
     `;
-
-/**
- * __useLayersAndSourcesForItemsQuery__
- *
- * To run a query within a React component, call `useLayersAndSourcesForItemsQuery` and pass it any options that fit your needs.
- * When your component renders, `useLayersAndSourcesForItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useLayersAndSourcesForItemsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *      tableOfContentsItemIds: // value for 'tableOfContentsItemIds'
- *   },
- * });
- */
 export function useLayersAndSourcesForItemsQuery(baseOptions: Apollo.QueryHookOptions<LayersAndSourcesForItemsQuery, LayersAndSourcesForItemsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<LayersAndSourcesForItemsQuery, LayersAndSourcesForItemsQueryVariables>(LayersAndSourcesForItemsDocument, options);
@@ -17568,7 +14729,7 @@ export function useLayersAndSourcesForItemsLazyQuery(baseOptions?: Apollo.LazyQu
 export type LayersAndSourcesForItemsQueryHookResult = ReturnType<typeof useLayersAndSourcesForItemsQuery>;
 export type LayersAndSourcesForItemsLazyQueryHookResult = ReturnType<typeof useLayersAndSourcesForItemsLazyQuery>;
 export type LayersAndSourcesForItemsQueryResult = Apollo.QueryResult<LayersAndSourcesForItemsQuery, LayersAndSourcesForItemsQueryVariables>;
-export const CreateFolderDocument = gql`
+export const CreateFolderDocument = /*#__PURE__*/ gql`
     mutation CreateFolder($title: String!, $stableId: String!, $projectId: Int!, $parentStableId: String, $isClickOffOnly: Boolean, $showRadioChildren: Boolean, $hideChildren: Boolean) {
   createTableOfContentsItem(
     input: {tableOfContentsItem: {title: $title, stableId: $stableId, projectId: $projectId, parentStableId: $parentStableId, isFolder: true, isClickOffOnly: $isClickOffOnly, showRadioChildren: $showRadioChildren, hideChildren: $hideChildren}}
@@ -17592,30 +14753,6 @@ export const CreateFolderDocument = gql`
 }
     `;
 export type CreateFolderMutationFn = Apollo.MutationFunction<CreateFolderMutation, CreateFolderMutationVariables>;
-
-/**
- * __useCreateFolderMutation__
- *
- * To run a mutation, you first call `useCreateFolderMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateFolderMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createFolderMutation, { data, loading, error }] = useCreateFolderMutation({
- *   variables: {
- *      title: // value for 'title'
- *      stableId: // value for 'stableId'
- *      projectId: // value for 'projectId'
- *      parentStableId: // value for 'parentStableId'
- *      isClickOffOnly: // value for 'isClickOffOnly'
- *      showRadioChildren: // value for 'showRadioChildren'
- *      hideChildren: // value for 'hideChildren'
- *   },
- * });
- */
 export function useCreateFolderMutation(baseOptions?: Apollo.MutationHookOptions<CreateFolderMutation, CreateFolderMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateFolderMutation, CreateFolderMutationVariables>(CreateFolderDocument, options);
@@ -17623,7 +14760,7 @@ export function useCreateFolderMutation(baseOptions?: Apollo.MutationHookOptions
 export type CreateFolderMutationHookResult = ReturnType<typeof useCreateFolderMutation>;
 export type CreateFolderMutationResult = Apollo.MutationResult<CreateFolderMutation>;
 export type CreateFolderMutationOptions = Apollo.BaseMutationOptions<CreateFolderMutation, CreateFolderMutationVariables>;
-export const DeleteBranchDocument = gql`
+export const DeleteBranchDocument = /*#__PURE__*/ gql`
     mutation DeleteBranch($id: Int!) {
   deleteTableOfContentsBranch(input: {tableOfContentsItemId: $id}) {
     clientMutationId
@@ -17631,24 +14768,6 @@ export const DeleteBranchDocument = gql`
 }
     `;
 export type DeleteBranchMutationFn = Apollo.MutationFunction<DeleteBranchMutation, DeleteBranchMutationVariables>;
-
-/**
- * __useDeleteBranchMutation__
- *
- * To run a mutation, you first call `useDeleteBranchMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useDeleteBranchMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [deleteBranchMutation, { data, loading, error }] = useDeleteBranchMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useDeleteBranchMutation(baseOptions?: Apollo.MutationHookOptions<DeleteBranchMutation, DeleteBranchMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<DeleteBranchMutation, DeleteBranchMutationVariables>(DeleteBranchDocument, options);
@@ -17656,7 +14775,7 @@ export function useDeleteBranchMutation(baseOptions?: Apollo.MutationHookOptions
 export type DeleteBranchMutationHookResult = ReturnType<typeof useDeleteBranchMutation>;
 export type DeleteBranchMutationResult = Apollo.MutationResult<DeleteBranchMutation>;
 export type DeleteBranchMutationOptions = Apollo.BaseMutationOptions<DeleteBranchMutation, DeleteBranchMutationVariables>;
-export const UpdateTableOfContentsItemChildrenDocument = gql`
+export const UpdateTableOfContentsItemChildrenDocument = /*#__PURE__*/ gql`
     mutation UpdateTableOfContentsItemChildren($id: Int, $childIds: [Int]!) {
   updateTableOfContentsItemChildren(input: {parentId: $id, childIds: $childIds}) {
     tableOfContentsItems {
@@ -17668,25 +14787,6 @@ export const UpdateTableOfContentsItemChildrenDocument = gql`
 }
     `;
 export type UpdateTableOfContentsItemChildrenMutationFn = Apollo.MutationFunction<UpdateTableOfContentsItemChildrenMutation, UpdateTableOfContentsItemChildrenMutationVariables>;
-
-/**
- * __useUpdateTableOfContentsItemChildrenMutation__
- *
- * To run a mutation, you first call `useUpdateTableOfContentsItemChildrenMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateTableOfContentsItemChildrenMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateTableOfContentsItemChildrenMutation, { data, loading, error }] = useUpdateTableOfContentsItemChildrenMutation({
- *   variables: {
- *      id: // value for 'id'
- *      childIds: // value for 'childIds'
- *   },
- * });
- */
 export function useUpdateTableOfContentsItemChildrenMutation(baseOptions?: Apollo.MutationHookOptions<UpdateTableOfContentsItemChildrenMutation, UpdateTableOfContentsItemChildrenMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateTableOfContentsItemChildrenMutation, UpdateTableOfContentsItemChildrenMutationVariables>(UpdateTableOfContentsItemChildrenDocument, options);
@@ -17694,7 +14794,7 @@ export function useUpdateTableOfContentsItemChildrenMutation(baseOptions?: Apoll
 export type UpdateTableOfContentsItemChildrenMutationHookResult = ReturnType<typeof useUpdateTableOfContentsItemChildrenMutation>;
 export type UpdateTableOfContentsItemChildrenMutationResult = Apollo.MutationResult<UpdateTableOfContentsItemChildrenMutation>;
 export type UpdateTableOfContentsItemChildrenMutationOptions = Apollo.BaseMutationOptions<UpdateTableOfContentsItemChildrenMutation, UpdateTableOfContentsItemChildrenMutationVariables>;
-export const GetFolderDocument = gql`
+export const GetFolderDocument = /*#__PURE__*/ gql`
     query GetFolder($id: Int!) {
   tableOfContentsItem(id: $id) {
     id
@@ -17706,23 +14806,6 @@ export const GetFolderDocument = gql`
   }
 }
     `;
-
-/**
- * __useGetFolderQuery__
- *
- * To run a query within a React component, call `useGetFolderQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetFolderQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetFolderQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useGetFolderQuery(baseOptions: Apollo.QueryHookOptions<GetFolderQuery, GetFolderQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetFolderQuery, GetFolderQueryVariables>(GetFolderDocument, options);
@@ -17734,7 +14817,7 @@ export function useGetFolderLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<
 export type GetFolderQueryHookResult = ReturnType<typeof useGetFolderQuery>;
 export type GetFolderLazyQueryHookResult = ReturnType<typeof useGetFolderLazyQuery>;
 export type GetFolderQueryResult = Apollo.QueryResult<GetFolderQuery, GetFolderQueryVariables>;
-export const UpdateFolderDocument = gql`
+export const UpdateFolderDocument = /*#__PURE__*/ gql`
     mutation UpdateFolder($id: Int!, $bounds: [BigFloat], $isClickOffOnly: Boolean, $showRadioChildren: Boolean, $title: String, $hideChildren: Boolean) {
   updateTableOfContentsItem(
     input: {id: $id, patch: {bounds: $bounds, isClickOffOnly: $isClickOffOnly, showRadioChildren: $showRadioChildren, title: $title, hideChildren: $hideChildren}}
@@ -17751,29 +14834,6 @@ export const UpdateFolderDocument = gql`
 }
     `;
 export type UpdateFolderMutationFn = Apollo.MutationFunction<UpdateFolderMutation, UpdateFolderMutationVariables>;
-
-/**
- * __useUpdateFolderMutation__
- *
- * To run a mutation, you first call `useUpdateFolderMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateFolderMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateFolderMutation, { data, loading, error }] = useUpdateFolderMutation({
- *   variables: {
- *      id: // value for 'id'
- *      bounds: // value for 'bounds'
- *      isClickOffOnly: // value for 'isClickOffOnly'
- *      showRadioChildren: // value for 'showRadioChildren'
- *      title: // value for 'title'
- *      hideChildren: // value for 'hideChildren'
- *   },
- * });
- */
 export function useUpdateFolderMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFolderMutation, UpdateFolderMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateFolderMutation, UpdateFolderMutationVariables>(UpdateFolderDocument, options);
@@ -17781,7 +14841,7 @@ export function useUpdateFolderMutation(baseOptions?: Apollo.MutationHookOptions
 export type UpdateFolderMutationHookResult = ReturnType<typeof useUpdateFolderMutation>;
 export type UpdateFolderMutationResult = Apollo.MutationResult<UpdateFolderMutation>;
 export type UpdateFolderMutationOptions = Apollo.BaseMutationOptions<UpdateFolderMutation, UpdateFolderMutationVariables>;
-export const GetLayerItemDocument = gql`
+export const GetLayerItemDocument = /*#__PURE__*/ gql`
     query GetLayerItem($id: Int!) {
   tableOfContentsItem(id: $id) {
     id
@@ -17859,23 +14919,6 @@ export const GetLayerItemDocument = gql`
   }
 }
     `;
-
-/**
- * __useGetLayerItemQuery__
- *
- * To run a query within a React component, call `useGetLayerItemQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetLayerItemQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetLayerItemQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useGetLayerItemQuery(baseOptions: Apollo.QueryHookOptions<GetLayerItemQuery, GetLayerItemQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetLayerItemQuery, GetLayerItemQueryVariables>(GetLayerItemDocument, options);
@@ -17887,7 +14930,7 @@ export function useGetLayerItemLazyQuery(baseOptions?: Apollo.LazyQueryHookOptio
 export type GetLayerItemQueryHookResult = ReturnType<typeof useGetLayerItemQuery>;
 export type GetLayerItemLazyQueryHookResult = ReturnType<typeof useGetLayerItemLazyQuery>;
 export type GetLayerItemQueryResult = Apollo.QueryResult<GetLayerItemQuery, GetLayerItemQueryVariables>;
-export const UpdateTableOfContentsItemDocument = gql`
+export const UpdateTableOfContentsItemDocument = /*#__PURE__*/ gql`
     mutation UpdateTableOfContentsItem($id: Int!, $title: String, $bounds: [BigFloat], $metadata: JSON) {
   updateTableOfContentsItem(
     input: {id: $id, patch: {title: $title, bounds: $bounds, metadata: $metadata}}
@@ -17902,27 +14945,6 @@ export const UpdateTableOfContentsItemDocument = gql`
 }
     `;
 export type UpdateTableOfContentsItemMutationFn = Apollo.MutationFunction<UpdateTableOfContentsItemMutation, UpdateTableOfContentsItemMutationVariables>;
-
-/**
- * __useUpdateTableOfContentsItemMutation__
- *
- * To run a mutation, you first call `useUpdateTableOfContentsItemMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateTableOfContentsItemMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateTableOfContentsItemMutation, { data, loading, error }] = useUpdateTableOfContentsItemMutation({
- *   variables: {
- *      id: // value for 'id'
- *      title: // value for 'title'
- *      bounds: // value for 'bounds'
- *      metadata: // value for 'metadata'
- *   },
- * });
- */
 export function useUpdateTableOfContentsItemMutation(baseOptions?: Apollo.MutationHookOptions<UpdateTableOfContentsItemMutation, UpdateTableOfContentsItemMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateTableOfContentsItemMutation, UpdateTableOfContentsItemMutationVariables>(UpdateTableOfContentsItemDocument, options);
@@ -17930,7 +14952,7 @@ export function useUpdateTableOfContentsItemMutation(baseOptions?: Apollo.Mutati
 export type UpdateTableOfContentsItemMutationHookResult = ReturnType<typeof useUpdateTableOfContentsItemMutation>;
 export type UpdateTableOfContentsItemMutationResult = Apollo.MutationResult<UpdateTableOfContentsItemMutation>;
 export type UpdateTableOfContentsItemMutationOptions = Apollo.BaseMutationOptions<UpdateTableOfContentsItemMutation, UpdateTableOfContentsItemMutationVariables>;
-export const UpdateEnableDownloadDocument = gql`
+export const UpdateEnableDownloadDocument = /*#__PURE__*/ gql`
     mutation UpdateEnableDownload($id: Int!, $enableDownload: Boolean) {
   updateTableOfContentsItem(
     input: {id: $id, patch: {enableDownload: $enableDownload}}
@@ -17943,25 +14965,6 @@ export const UpdateEnableDownloadDocument = gql`
 }
     `;
 export type UpdateEnableDownloadMutationFn = Apollo.MutationFunction<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>;
-
-/**
- * __useUpdateEnableDownloadMutation__
- *
- * To run a mutation, you first call `useUpdateEnableDownloadMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateEnableDownloadMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateEnableDownloadMutation, { data, loading, error }] = useUpdateEnableDownloadMutation({
- *   variables: {
- *      id: // value for 'id'
- *      enableDownload: // value for 'enableDownload'
- *   },
- * });
- */
 export function useUpdateEnableDownloadMutation(baseOptions?: Apollo.MutationHookOptions<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>(UpdateEnableDownloadDocument, options);
@@ -17969,7 +14972,7 @@ export function useUpdateEnableDownloadMutation(baseOptions?: Apollo.MutationHoo
 export type UpdateEnableDownloadMutationHookResult = ReturnType<typeof useUpdateEnableDownloadMutation>;
 export type UpdateEnableDownloadMutationResult = Apollo.MutationResult<UpdateEnableDownloadMutation>;
 export type UpdateEnableDownloadMutationOptions = Apollo.BaseMutationOptions<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>;
-export const UpdateLayerDocument = gql`
+export const UpdateLayerDocument = /*#__PURE__*/ gql`
     mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String) {
   updateDataLayer(
     input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer}}
@@ -17995,27 +14998,6 @@ export const UpdateLayerDocument = gql`
 }
     `;
 export type UpdateLayerMutationFn = Apollo.MutationFunction<UpdateLayerMutation, UpdateLayerMutationVariables>;
-
-/**
- * __useUpdateLayerMutation__
- *
- * To run a mutation, you first call `useUpdateLayerMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateLayerMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateLayerMutation, { data, loading, error }] = useUpdateLayerMutation({
- *   variables: {
- *      id: // value for 'id'
- *      renderUnder: // value for 'renderUnder'
- *      mapboxGlStyles: // value for 'mapboxGlStyles'
- *      sublayer: // value for 'sublayer'
- *   },
- * });
- */
 export function useUpdateLayerMutation(baseOptions?: Apollo.MutationHookOptions<UpdateLayerMutation, UpdateLayerMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateLayerMutation, UpdateLayerMutationVariables>(UpdateLayerDocument, options);
@@ -18023,7 +15005,7 @@ export function useUpdateLayerMutation(baseOptions?: Apollo.MutationHookOptions<
 export type UpdateLayerMutationHookResult = ReturnType<typeof useUpdateLayerMutation>;
 export type UpdateLayerMutationResult = Apollo.MutationResult<UpdateLayerMutation>;
 export type UpdateLayerMutationOptions = Apollo.BaseMutationOptions<UpdateLayerMutation, UpdateLayerMutationVariables>;
-export const UpdateDataSourceDocument = gql`
+export const UpdateDataSourceDocument = /*#__PURE__*/ gql`
     mutation UpdateDataSource($id: Int!, $attribution: String) {
   updateDataSource(input: {id: $id, patch: {attribution: $attribution}}) {
     dataSource {
@@ -18064,25 +15046,6 @@ export const UpdateDataSourceDocument = gql`
 }
     `;
 export type UpdateDataSourceMutationFn = Apollo.MutationFunction<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>;
-
-/**
- * __useUpdateDataSourceMutation__
- *
- * To run a mutation, you first call `useUpdateDataSourceMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateDataSourceMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateDataSourceMutation, { data, loading, error }] = useUpdateDataSourceMutation({
- *   variables: {
- *      id: // value for 'id'
- *      attribution: // value for 'attribution'
- *   },
- * });
- */
 export function useUpdateDataSourceMutation(baseOptions?: Apollo.MutationHookOptions<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>(UpdateDataSourceDocument, options);
@@ -18090,7 +15053,7 @@ export function useUpdateDataSourceMutation(baseOptions?: Apollo.MutationHookOpt
 export type UpdateDataSourceMutationHookResult = ReturnType<typeof useUpdateDataSourceMutation>;
 export type UpdateDataSourceMutationResult = Apollo.MutationResult<UpdateDataSourceMutation>;
 export type UpdateDataSourceMutationOptions = Apollo.BaseMutationOptions<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>;
-export const InteractivitySettingsForLayerDocument = gql`
+export const InteractivitySettingsForLayerDocument = /*#__PURE__*/ gql`
     query InteractivitySettingsForLayer($layerId: Int!) {
   dataLayer(id: $layerId) {
     id
@@ -18105,23 +15068,6 @@ export const InteractivitySettingsForLayerDocument = gql`
   }
 }
     `;
-
-/**
- * __useInteractivitySettingsForLayerQuery__
- *
- * To run a query within a React component, call `useInteractivitySettingsForLayerQuery` and pass it any options that fit your needs.
- * When your component renders, `useInteractivitySettingsForLayerQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useInteractivitySettingsForLayerQuery({
- *   variables: {
- *      layerId: // value for 'layerId'
- *   },
- * });
- */
 export function useInteractivitySettingsForLayerQuery(baseOptions: Apollo.QueryHookOptions<InteractivitySettingsForLayerQuery, InteractivitySettingsForLayerQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<InteractivitySettingsForLayerQuery, InteractivitySettingsForLayerQueryVariables>(InteractivitySettingsForLayerDocument, options);
@@ -18133,7 +15079,7 @@ export function useInteractivitySettingsForLayerLazyQuery(baseOptions?: Apollo.L
 export type InteractivitySettingsForLayerQueryHookResult = ReturnType<typeof useInteractivitySettingsForLayerQuery>;
 export type InteractivitySettingsForLayerLazyQueryHookResult = ReturnType<typeof useInteractivitySettingsForLayerLazyQuery>;
 export type InteractivitySettingsForLayerQueryResult = Apollo.QueryResult<InteractivitySettingsForLayerQuery, InteractivitySettingsForLayerQueryVariables>;
-export const UpdateInteractivitySettingsDocument = gql`
+export const UpdateInteractivitySettingsDocument = /*#__PURE__*/ gql`
     mutation UpdateInteractivitySettings($id: Int!, $type: InteractivityType, $cursor: CursorType, $longTemplate: String, $shortTemplate: String) {
   updateInteractivitySetting(
     input: {id: $id, patch: {type: $type, cursor: $cursor, longTemplate: $longTemplate, shortTemplate: $shortTemplate}}
@@ -18149,28 +15095,6 @@ export const UpdateInteractivitySettingsDocument = gql`
 }
     `;
 export type UpdateInteractivitySettingsMutationFn = Apollo.MutationFunction<UpdateInteractivitySettingsMutation, UpdateInteractivitySettingsMutationVariables>;
-
-/**
- * __useUpdateInteractivitySettingsMutation__
- *
- * To run a mutation, you first call `useUpdateInteractivitySettingsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateInteractivitySettingsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateInteractivitySettingsMutation, { data, loading, error }] = useUpdateInteractivitySettingsMutation({
- *   variables: {
- *      id: // value for 'id'
- *      type: // value for 'type'
- *      cursor: // value for 'cursor'
- *      longTemplate: // value for 'longTemplate'
- *      shortTemplate: // value for 'shortTemplate'
- *   },
- * });
- */
 export function useUpdateInteractivitySettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateInteractivitySettingsMutation, UpdateInteractivitySettingsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateInteractivitySettingsMutation, UpdateInteractivitySettingsMutationVariables>(UpdateInteractivitySettingsDocument, options);
@@ -18178,7 +15102,7 @@ export function useUpdateInteractivitySettingsMutation(baseOptions?: Apollo.Muta
 export type UpdateInteractivitySettingsMutationHookResult = ReturnType<typeof useUpdateInteractivitySettingsMutation>;
 export type UpdateInteractivitySettingsMutationResult = Apollo.MutationResult<UpdateInteractivitySettingsMutation>;
 export type UpdateInteractivitySettingsMutationOptions = Apollo.BaseMutationOptions<UpdateInteractivitySettingsMutation, UpdateInteractivitySettingsMutationVariables>;
-export const DataSourceUrlPropertiesDocument = gql`
+export const DataSourceUrlPropertiesDocument = /*#__PURE__*/ gql`
     query DataSourceUrlProperties($id: Int!) {
   dataSource(id: $id) {
     id
@@ -18191,23 +15115,6 @@ export const DataSourceUrlPropertiesDocument = gql`
   }
 }
     `;
-
-/**
- * __useDataSourceUrlPropertiesQuery__
- *
- * To run a query within a React component, call `useDataSourceUrlPropertiesQuery` and pass it any options that fit your needs.
- * When your component renders, `useDataSourceUrlPropertiesQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useDataSourceUrlPropertiesQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useDataSourceUrlPropertiesQuery(baseOptions: Apollo.QueryHookOptions<DataSourceUrlPropertiesQuery, DataSourceUrlPropertiesQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<DataSourceUrlPropertiesQuery, DataSourceUrlPropertiesQueryVariables>(DataSourceUrlPropertiesDocument, options);
@@ -18219,7 +15126,7 @@ export function useDataSourceUrlPropertiesLazyQuery(baseOptions?: Apollo.LazyQue
 export type DataSourceUrlPropertiesQueryHookResult = ReturnType<typeof useDataSourceUrlPropertiesQuery>;
 export type DataSourceUrlPropertiesLazyQueryHookResult = ReturnType<typeof useDataSourceUrlPropertiesLazyQuery>;
 export type DataSourceUrlPropertiesQueryResult = Apollo.QueryResult<DataSourceUrlPropertiesQuery, DataSourceUrlPropertiesQueryVariables>;
-export const UpdateZIndexesDocument = gql`
+export const UpdateZIndexesDocument = /*#__PURE__*/ gql`
     mutation UpdateZIndexes($dataLayerIds: [Int]!) {
   updateZIndexes(input: {dataLayerIds: $dataLayerIds}) {
     dataLayers {
@@ -18230,24 +15137,6 @@ export const UpdateZIndexesDocument = gql`
 }
     `;
 export type UpdateZIndexesMutationFn = Apollo.MutationFunction<UpdateZIndexesMutation, UpdateZIndexesMutationVariables>;
-
-/**
- * __useUpdateZIndexesMutation__
- *
- * To run a mutation, you first call `useUpdateZIndexesMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateZIndexesMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateZIndexesMutation, { data, loading, error }] = useUpdateZIndexesMutation({
- *   variables: {
- *      dataLayerIds: // value for 'dataLayerIds'
- *   },
- * });
- */
 export function useUpdateZIndexesMutation(baseOptions?: Apollo.MutationHookOptions<UpdateZIndexesMutation, UpdateZIndexesMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateZIndexesMutation, UpdateZIndexesMutationVariables>(UpdateZIndexesDocument, options);
@@ -18255,7 +15144,7 @@ export function useUpdateZIndexesMutation(baseOptions?: Apollo.MutationHookOptio
 export type UpdateZIndexesMutationHookResult = ReturnType<typeof useUpdateZIndexesMutation>;
 export type UpdateZIndexesMutationResult = Apollo.MutationResult<UpdateZIndexesMutation>;
 export type UpdateZIndexesMutationOptions = Apollo.BaseMutationOptions<UpdateZIndexesMutation, UpdateZIndexesMutationVariables>;
-export const UpdateRenderUnderTypeDocument = gql`
+export const UpdateRenderUnderTypeDocument = /*#__PURE__*/ gql`
     mutation UpdateRenderUnderType($layerId: Int!, $renderUnder: RenderUnderType) {
   updateDataLayer(input: {id: $layerId, patch: {renderUnder: $renderUnder}}) {
     dataLayer {
@@ -18266,25 +15155,6 @@ export const UpdateRenderUnderTypeDocument = gql`
 }
     `;
 export type UpdateRenderUnderTypeMutationFn = Apollo.MutationFunction<UpdateRenderUnderTypeMutation, UpdateRenderUnderTypeMutationVariables>;
-
-/**
- * __useUpdateRenderUnderTypeMutation__
- *
- * To run a mutation, you first call `useUpdateRenderUnderTypeMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateRenderUnderTypeMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateRenderUnderTypeMutation, { data, loading, error }] = useUpdateRenderUnderTypeMutation({
- *   variables: {
- *      layerId: // value for 'layerId'
- *      renderUnder: // value for 'renderUnder'
- *   },
- * });
- */
 export function useUpdateRenderUnderTypeMutation(baseOptions?: Apollo.MutationHookOptions<UpdateRenderUnderTypeMutation, UpdateRenderUnderTypeMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateRenderUnderTypeMutation, UpdateRenderUnderTypeMutationVariables>(UpdateRenderUnderTypeDocument, options);
@@ -18292,7 +15162,7 @@ export function useUpdateRenderUnderTypeMutation(baseOptions?: Apollo.MutationHo
 export type UpdateRenderUnderTypeMutationHookResult = ReturnType<typeof useUpdateRenderUnderTypeMutation>;
 export type UpdateRenderUnderTypeMutationResult = Apollo.MutationResult<UpdateRenderUnderTypeMutation>;
 export type UpdateRenderUnderTypeMutationOptions = Apollo.BaseMutationOptions<UpdateRenderUnderTypeMutation, UpdateRenderUnderTypeMutationVariables>;
-export const UpdateQueryParametersDocument = gql`
+export const UpdateQueryParametersDocument = /*#__PURE__*/ gql`
     mutation UpdateQueryParameters($sourceId: Int!, $queryParameters: JSON!) {
   updateDataSource(
     input: {id: $sourceId, patch: {queryParameters: $queryParameters}}
@@ -18305,25 +15175,6 @@ export const UpdateQueryParametersDocument = gql`
 }
     `;
 export type UpdateQueryParametersMutationFn = Apollo.MutationFunction<UpdateQueryParametersMutation, UpdateQueryParametersMutationVariables>;
-
-/**
- * __useUpdateQueryParametersMutation__
- *
- * To run a mutation, you first call `useUpdateQueryParametersMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateQueryParametersMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateQueryParametersMutation, { data, loading, error }] = useUpdateQueryParametersMutation({
- *   variables: {
- *      sourceId: // value for 'sourceId'
- *      queryParameters: // value for 'queryParameters'
- *   },
- * });
- */
 export function useUpdateQueryParametersMutation(baseOptions?: Apollo.MutationHookOptions<UpdateQueryParametersMutation, UpdateQueryParametersMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateQueryParametersMutation, UpdateQueryParametersMutationVariables>(UpdateQueryParametersDocument, options);
@@ -18331,7 +15182,7 @@ export function useUpdateQueryParametersMutation(baseOptions?: Apollo.MutationHo
 export type UpdateQueryParametersMutationHookResult = ReturnType<typeof useUpdateQueryParametersMutation>;
 export type UpdateQueryParametersMutationResult = Apollo.MutationResult<UpdateQueryParametersMutation>;
 export type UpdateQueryParametersMutationOptions = Apollo.BaseMutationOptions<UpdateQueryParametersMutation, UpdateQueryParametersMutationVariables>;
-export const UpdateEnableHighDpiRequestsDocument = gql`
+export const UpdateEnableHighDpiRequestsDocument = /*#__PURE__*/ gql`
     mutation UpdateEnableHighDPIRequests($sourceId: Int!, $useDevicePixelRatio: Boolean!) {
   updateDataSource(
     input: {id: $sourceId, patch: {useDevicePixelRatio: $useDevicePixelRatio}}
@@ -18344,25 +15195,6 @@ export const UpdateEnableHighDpiRequestsDocument = gql`
 }
     `;
 export type UpdateEnableHighDpiRequestsMutationFn = Apollo.MutationFunction<UpdateEnableHighDpiRequestsMutation, UpdateEnableHighDpiRequestsMutationVariables>;
-
-/**
- * __useUpdateEnableHighDpiRequestsMutation__
- *
- * To run a mutation, you first call `useUpdateEnableHighDpiRequestsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateEnableHighDpiRequestsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateEnableHighDpiRequestsMutation, { data, loading, error }] = useUpdateEnableHighDpiRequestsMutation({
- *   variables: {
- *      sourceId: // value for 'sourceId'
- *      useDevicePixelRatio: // value for 'useDevicePixelRatio'
- *   },
- * });
- */
 export function useUpdateEnableHighDpiRequestsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateEnableHighDpiRequestsMutation, UpdateEnableHighDpiRequestsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateEnableHighDpiRequestsMutation, UpdateEnableHighDpiRequestsMutationVariables>(UpdateEnableHighDpiRequestsDocument, options);
@@ -18370,7 +15202,7 @@ export function useUpdateEnableHighDpiRequestsMutation(baseOptions?: Apollo.Muta
 export type UpdateEnableHighDpiRequestsMutationHookResult = ReturnType<typeof useUpdateEnableHighDpiRequestsMutation>;
 export type UpdateEnableHighDpiRequestsMutationResult = Apollo.MutationResult<UpdateEnableHighDpiRequestsMutation>;
 export type UpdateEnableHighDpiRequestsMutationOptions = Apollo.BaseMutationOptions<UpdateEnableHighDpiRequestsMutation, UpdateEnableHighDpiRequestsMutationVariables>;
-export const GetMetadataDocument = gql`
+export const GetMetadataDocument = /*#__PURE__*/ gql`
     query GetMetadata($itemId: Int!) {
   tableOfContentsItem(id: $itemId) {
     id
@@ -18378,23 +15210,6 @@ export const GetMetadataDocument = gql`
   }
 }
     `;
-
-/**
- * __useGetMetadataQuery__
- *
- * To run a query within a React component, call `useGetMetadataQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetMetadataQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetMetadataQuery({
- *   variables: {
- *      itemId: // value for 'itemId'
- *   },
- * });
- */
 export function useGetMetadataQuery(baseOptions: Apollo.QueryHookOptions<GetMetadataQuery, GetMetadataQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetMetadataQuery, GetMetadataQueryVariables>(GetMetadataDocument, options);
@@ -18406,7 +15221,7 @@ export function useGetMetadataLazyQuery(baseOptions?: Apollo.LazyQueryHookOption
 export type GetMetadataQueryHookResult = ReturnType<typeof useGetMetadataQuery>;
 export type GetMetadataLazyQueryHookResult = ReturnType<typeof useGetMetadataLazyQuery>;
 export type GetMetadataQueryResult = Apollo.QueryResult<GetMetadataQuery, GetMetadataQueryVariables>;
-export const UpdateMetadataDocument = gql`
+export const UpdateMetadataDocument = /*#__PURE__*/ gql`
     mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
   updateTableOfContentsItem(input: {id: $itemId, patch: {metadata: $metadata}}) {
     tableOfContentsItem {
@@ -18417,25 +15232,6 @@ export const UpdateMetadataDocument = gql`
 }
     `;
 export type UpdateMetadataMutationFn = Apollo.MutationFunction<UpdateMetadataMutation, UpdateMetadataMutationVariables>;
-
-/**
- * __useUpdateMetadataMutation__
- *
- * To run a mutation, you first call `useUpdateMetadataMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateMetadataMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateMetadataMutation, { data, loading, error }] = useUpdateMetadataMutation({
- *   variables: {
- *      itemId: // value for 'itemId'
- *      metadata: // value for 'metadata'
- *   },
- * });
- */
 export function useUpdateMetadataMutation(baseOptions?: Apollo.MutationHookOptions<UpdateMetadataMutation, UpdateMetadataMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateMetadataMutation, UpdateMetadataMutationVariables>(UpdateMetadataDocument, options);
@@ -18443,7 +15239,7 @@ export function useUpdateMetadataMutation(baseOptions?: Apollo.MutationHookOptio
 export type UpdateMetadataMutationHookResult = ReturnType<typeof useUpdateMetadataMutation>;
 export type UpdateMetadataMutationResult = Apollo.MutationResult<UpdateMetadataMutation>;
 export type UpdateMetadataMutationOptions = Apollo.BaseMutationOptions<UpdateMetadataMutation, UpdateMetadataMutationVariables>;
-export const ProjectHostingQuotaDocument = gql`
+export const ProjectHostingQuotaDocument = /*#__PURE__*/ gql`
     query ProjectHostingQuota($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -18452,23 +15248,6 @@ export const ProjectHostingQuotaDocument = gql`
   }
 }
     `;
-
-/**
- * __useProjectHostingQuotaQuery__
- *
- * To run a query within a React component, call `useProjectHostingQuotaQuery` and pass it any options that fit your needs.
- * When your component renders, `useProjectHostingQuotaQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useProjectHostingQuotaQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useProjectHostingQuotaQuery(baseOptions: Apollo.QueryHookOptions<ProjectHostingQuotaQuery, ProjectHostingQuotaQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<ProjectHostingQuotaQuery, ProjectHostingQuotaQueryVariables>(ProjectHostingQuotaDocument, options);
@@ -18480,7 +15259,7 @@ export function useProjectHostingQuotaLazyQuery(baseOptions?: Apollo.LazyQueryHo
 export type ProjectHostingQuotaQueryHookResult = ReturnType<typeof useProjectHostingQuotaQuery>;
 export type ProjectHostingQuotaLazyQueryHookResult = ReturnType<typeof useProjectHostingQuotaLazyQuery>;
 export type ProjectHostingQuotaQueryResult = Apollo.QueryResult<ProjectHostingQuotaQuery, ProjectHostingQuotaQueryVariables>;
-export const InteractivitySettingsByIdDocument = gql`
+export const InteractivitySettingsByIdDocument = /*#__PURE__*/ gql`
     query InteractivitySettingsById($id: Int!) {
   interactivitySetting(id: $id) {
     cursor
@@ -18492,23 +15271,6 @@ export const InteractivitySettingsByIdDocument = gql`
   }
 }
     `;
-
-/**
- * __useInteractivitySettingsByIdQuery__
- *
- * To run a query within a React component, call `useInteractivitySettingsByIdQuery` and pass it any options that fit your needs.
- * When your component renders, `useInteractivitySettingsByIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useInteractivitySettingsByIdQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useInteractivitySettingsByIdQuery(baseOptions: Apollo.QueryHookOptions<InteractivitySettingsByIdQuery, InteractivitySettingsByIdQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<InteractivitySettingsByIdQuery, InteractivitySettingsByIdQueryVariables>(InteractivitySettingsByIdDocument, options);
@@ -18520,7 +15282,7 @@ export function useInteractivitySettingsByIdLazyQuery(baseOptions?: Apollo.LazyQ
 export type InteractivitySettingsByIdQueryHookResult = ReturnType<typeof useInteractivitySettingsByIdQuery>;
 export type InteractivitySettingsByIdLazyQueryHookResult = ReturnType<typeof useInteractivitySettingsByIdLazyQuery>;
 export type InteractivitySettingsByIdQueryResult = Apollo.QueryResult<InteractivitySettingsByIdQuery, InteractivitySettingsByIdQueryVariables>;
-export const PublishTableOfContentsDocument = gql`
+export const PublishTableOfContentsDocument = /*#__PURE__*/ gql`
     mutation PublishTableOfContents($projectId: Int!) {
   publishTableOfContents(input: {projectId: $projectId}) {
     tableOfContentsItems {
@@ -18530,24 +15292,6 @@ export const PublishTableOfContentsDocument = gql`
 }
     `;
 export type PublishTableOfContentsMutationFn = Apollo.MutationFunction<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>;
-
-/**
- * __usePublishTableOfContentsMutation__
- *
- * To run a mutation, you first call `usePublishTableOfContentsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `usePublishTableOfContentsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [publishTableOfContentsMutation, { data, loading, error }] = usePublishTableOfContentsMutation({
- *   variables: {
- *      projectId: // value for 'projectId'
- *   },
- * });
- */
 export function usePublishTableOfContentsMutation(baseOptions?: Apollo.MutationHookOptions<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>(PublishTableOfContentsDocument, options);
@@ -18555,30 +15299,13 @@ export function usePublishTableOfContentsMutation(baseOptions?: Apollo.MutationH
 export type PublishTableOfContentsMutationHookResult = ReturnType<typeof usePublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationResult = Apollo.MutationResult<PublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationOptions = Apollo.BaseMutationOptions<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>;
-export const GetBasemapsAndRegionDocument = gql`
+export const GetBasemapsAndRegionDocument = /*#__PURE__*/ gql`
     query GetBasemapsAndRegion($slug: String!) {
   projectBySlug(slug: $slug) {
     ...MapEssentials
   }
 }
     ${MapEssentialsFragmentDoc}`;
-
-/**
- * __useGetBasemapsAndRegionQuery__
- *
- * To run a query within a React component, call `useGetBasemapsAndRegionQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetBasemapsAndRegionQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetBasemapsAndRegionQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useGetBasemapsAndRegionQuery(baseOptions: Apollo.QueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
@@ -18590,7 +15317,7 @@ export function useGetBasemapsAndRegionLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type GetBasemapsAndRegionQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionQuery>;
 export type GetBasemapsAndRegionLazyQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionLazyQuery>;
 export type GetBasemapsAndRegionQueryResult = Apollo.QueryResult<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>;
-export const OfflineSurveysDocument = gql`
+export const OfflineSurveysDocument = /*#__PURE__*/ gql`
     query OfflineSurveys($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -18601,23 +15328,6 @@ export const OfflineSurveysDocument = gql`
   }
 }
     `;
-
-/**
- * __useOfflineSurveysQuery__
- *
- * To run a query within a React component, call `useOfflineSurveysQuery` and pass it any options that fit your needs.
- * When your component renders, `useOfflineSurveysQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useOfflineSurveysQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useOfflineSurveysQuery(baseOptions: Apollo.QueryHookOptions<OfflineSurveysQuery, OfflineSurveysQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<OfflineSurveysQuery, OfflineSurveysQueryVariables>(OfflineSurveysDocument, options);
@@ -18629,7 +15339,7 @@ export function useOfflineSurveysLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type OfflineSurveysQueryHookResult = ReturnType<typeof useOfflineSurveysQuery>;
 export type OfflineSurveysLazyQueryHookResult = ReturnType<typeof useOfflineSurveysLazyQuery>;
 export type OfflineSurveysQueryResult = Apollo.QueryResult<OfflineSurveysQuery, OfflineSurveysQueryVariables>;
-export const ProjectAccessControlSettingsDocument = gql`
+export const ProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
     __typename
@@ -18639,23 +15349,6 @@ export const ProjectAccessControlSettingsDocument = gql`
   }
 }
     `;
-
-/**
- * __useProjectAccessControlSettingsQuery__
- *
- * To run a query within a React component, call `useProjectAccessControlSettingsQuery` and pass it any options that fit your needs.
- * When your component renders, `useProjectAccessControlSettingsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useProjectAccessControlSettingsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useProjectAccessControlSettingsQuery(baseOptions: Apollo.QueryHookOptions<ProjectAccessControlSettingsQuery, ProjectAccessControlSettingsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<ProjectAccessControlSettingsQuery, ProjectAccessControlSettingsQueryVariables>(ProjectAccessControlSettingsDocument, options);
@@ -18667,7 +15360,7 @@ export function useProjectAccessControlSettingsLazyQuery(baseOptions?: Apollo.La
 export type ProjectAccessControlSettingsQueryHookResult = ReturnType<typeof useProjectAccessControlSettingsQuery>;
 export type ProjectAccessControlSettingsLazyQueryHookResult = ReturnType<typeof useProjectAccessControlSettingsLazyQuery>;
 export type ProjectAccessControlSettingsQueryResult = Apollo.QueryResult<ProjectAccessControlSettingsQuery, ProjectAccessControlSettingsQueryVariables>;
-export const UpdateProjectAccessControlSettingsDocument = gql`
+export const UpdateProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
     mutation updateProjectAccessControlSettings($slug: String!, $accessControl: ProjectAccessControlSetting, $isListed: Boolean) {
   updateProjectBySlug(
     input: {slug: $slug, patch: {accessControl: $accessControl, isListed: $isListed}}
@@ -18683,26 +15376,6 @@ export const UpdateProjectAccessControlSettingsDocument = gql`
 }
     `;
 export type UpdateProjectAccessControlSettingsMutationFn = Apollo.MutationFunction<UpdateProjectAccessControlSettingsMutation, UpdateProjectAccessControlSettingsMutationVariables>;
-
-/**
- * __useUpdateProjectAccessControlSettingsMutation__
- *
- * To run a mutation, you first call `useUpdateProjectAccessControlSettingsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateProjectAccessControlSettingsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateProjectAccessControlSettingsMutation, { data, loading, error }] = useUpdateProjectAccessControlSettingsMutation({
- *   variables: {
- *      slug: // value for 'slug'
- *      accessControl: // value for 'accessControl'
- *      isListed: // value for 'isListed'
- *   },
- * });
- */
 export function useUpdateProjectAccessControlSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectAccessControlSettingsMutation, UpdateProjectAccessControlSettingsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateProjectAccessControlSettingsMutation, UpdateProjectAccessControlSettingsMutationVariables>(UpdateProjectAccessControlSettingsDocument, options);
@@ -18710,7 +15383,7 @@ export function useUpdateProjectAccessControlSettingsMutation(baseOptions?: Apol
 export type UpdateProjectAccessControlSettingsMutationHookResult = ReturnType<typeof useUpdateProjectAccessControlSettingsMutation>;
 export type UpdateProjectAccessControlSettingsMutationResult = Apollo.MutationResult<UpdateProjectAccessControlSettingsMutation>;
 export type UpdateProjectAccessControlSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateProjectAccessControlSettingsMutation, UpdateProjectAccessControlSettingsMutationVariables>;
-export const ProjectMetadataDocument = gql`
+export const ProjectMetadataDocument = /*#__PURE__*/ gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
     ...ProjectMetadata
@@ -18725,23 +15398,6 @@ export const ProjectMetadataDocument = gql`
     ${ProjectMetadataFragmentDoc}
 ${ProjectPublicDetailsMetadataFragmentDoc}
 ${ProjectMetadataMeFragFragmentDoc}`;
-
-/**
- * __useProjectMetadataQuery__
- *
- * To run a query within a React component, call `useProjectMetadataQuery` and pass it any options that fit your needs.
- * When your component renders, `useProjectMetadataQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useProjectMetadataQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useProjectMetadataQuery(baseOptions: Apollo.QueryHookOptions<ProjectMetadataQuery, ProjectMetadataQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<ProjectMetadataQuery, ProjectMetadataQueryVariables>(ProjectMetadataDocument, options);
@@ -18753,7 +15409,7 @@ export function useProjectMetadataLazyQuery(baseOptions?: Apollo.LazyQueryHookOp
 export type ProjectMetadataQueryHookResult = ReturnType<typeof useProjectMetadataQuery>;
 export type ProjectMetadataLazyQueryHookResult = ReturnType<typeof useProjectMetadataLazyQuery>;
 export type ProjectMetadataQueryResult = Apollo.QueryResult<ProjectMetadataQuery, ProjectMetadataQueryVariables>;
-export const MeDocument = gql`
+export const MeDocument = /*#__PURE__*/ gql`
     query Me {
   me {
     id
@@ -18769,22 +15425,6 @@ export const MeDocument = gql`
   }
 }
     `;
-
-/**
- * __useMeQuery__
- *
- * To run a query within a React component, call `useMeQuery` and pass it any options that fit your needs.
- * When your component renders, `useMeQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useMeQuery({
- *   variables: {
- *   },
- * });
- */
 export function useMeQuery(baseOptions?: Apollo.QueryHookOptions<MeQuery, MeQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<MeQuery, MeQueryVariables>(MeDocument, options);
@@ -18796,7 +15436,7 @@ export function useMeLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MeQuery
 export type MeQueryHookResult = ReturnType<typeof useMeQuery>;
 export type MeLazyQueryHookResult = ReturnType<typeof useMeLazyQuery>;
 export type MeQueryResult = Apollo.QueryResult<MeQuery, MeQueryVariables>;
-export const ProjectRegionDocument = gql`
+export const ProjectRegionDocument = /*#__PURE__*/ gql`
     query ProjectRegion($slug: String!) {
   projectBySlug(slug: $slug) {
     __typename
@@ -18807,23 +15447,6 @@ export const ProjectRegionDocument = gql`
   }
 }
     `;
-
-/**
- * __useProjectRegionQuery__
- *
- * To run a query within a React component, call `useProjectRegionQuery` and pass it any options that fit your needs.
- * When your component renders, `useProjectRegionQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useProjectRegionQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useProjectRegionQuery(baseOptions: Apollo.QueryHookOptions<ProjectRegionQuery, ProjectRegionQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<ProjectRegionQuery, ProjectRegionQueryVariables>(ProjectRegionDocument, options);
@@ -18835,7 +15458,7 @@ export function useProjectRegionLazyQuery(baseOptions?: Apollo.LazyQueryHookOpti
 export type ProjectRegionQueryHookResult = ReturnType<typeof useProjectRegionQuery>;
 export type ProjectRegionLazyQueryHookResult = ReturnType<typeof useProjectRegionLazyQuery>;
 export type ProjectRegionQueryResult = Apollo.QueryResult<ProjectRegionQuery, ProjectRegionQueryVariables>;
-export const UpdateProjectRegionDocument = gql`
+export const UpdateProjectRegionDocument = /*#__PURE__*/ gql`
     mutation UpdateProjectRegion($slug: String!, $region: GeoJSON!) {
   updateProjectBySlug(input: {slug: $slug, patch: {region: $region}}) {
     clientMutationId
@@ -18850,25 +15473,6 @@ export const UpdateProjectRegionDocument = gql`
 }
     `;
 export type UpdateProjectRegionMutationFn = Apollo.MutationFunction<UpdateProjectRegionMutation, UpdateProjectRegionMutationVariables>;
-
-/**
- * __useUpdateProjectRegionMutation__
- *
- * To run a mutation, you first call `useUpdateProjectRegionMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateProjectRegionMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateProjectRegionMutation, { data, loading, error }] = useUpdateProjectRegionMutation({
- *   variables: {
- *      slug: // value for 'slug'
- *      region: // value for 'region'
- *   },
- * });
- */
 export function useUpdateProjectRegionMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectRegionMutation, UpdateProjectRegionMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateProjectRegionMutation, UpdateProjectRegionMutationVariables>(UpdateProjectRegionDocument, options);
@@ -18876,7 +15480,7 @@ export function useUpdateProjectRegionMutation(baseOptions?: Apollo.MutationHook
 export type UpdateProjectRegionMutationHookResult = ReturnType<typeof useUpdateProjectRegionMutation>;
 export type UpdateProjectRegionMutationResult = Apollo.MutationResult<UpdateProjectRegionMutation>;
 export type UpdateProjectRegionMutationOptions = Apollo.BaseMutationOptions<UpdateProjectRegionMutation, UpdateProjectRegionMutationVariables>;
-export const GetProjectBySlugDocument = gql`
+export const GetProjectBySlugDocument = /*#__PURE__*/ gql`
     query GetProjectBySlug($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -18884,23 +15488,6 @@ export const GetProjectBySlugDocument = gql`
   }
 }
     `;
-
-/**
- * __useGetProjectBySlugQuery__
- *
- * To run a query within a React component, call `useGetProjectBySlugQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetProjectBySlugQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetProjectBySlugQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useGetProjectBySlugQuery(baseOptions: Apollo.QueryHookOptions<GetProjectBySlugQuery, GetProjectBySlugQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetProjectBySlugQuery, GetProjectBySlugQueryVariables>(GetProjectBySlugDocument, options);
@@ -18912,30 +15499,13 @@ export function useGetProjectBySlugLazyQuery(baseOptions?: Apollo.LazyQueryHookO
 export type GetProjectBySlugQueryHookResult = ReturnType<typeof useGetProjectBySlugQuery>;
 export type GetProjectBySlugLazyQueryHookResult = ReturnType<typeof useGetProjectBySlugLazyQuery>;
 export type GetProjectBySlugQueryResult = Apollo.QueryResult<GetProjectBySlugQuery, GetProjectBySlugQueryVariables>;
-export const ProjectSlugExistsDocument = gql`
+export const ProjectSlugExistsDocument = /*#__PURE__*/ gql`
     query ProjectSlugExists($slug: String!) {
   projectBySlug(slug: $slug) {
     id
   }
 }
     `;
-
-/**
- * __useProjectSlugExistsQuery__
- *
- * To run a query within a React component, call `useProjectSlugExistsQuery` and pass it any options that fit your needs.
- * When your component renders, `useProjectSlugExistsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useProjectSlugExistsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useProjectSlugExistsQuery(baseOptions: Apollo.QueryHookOptions<ProjectSlugExistsQuery, ProjectSlugExistsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<ProjectSlugExistsQuery, ProjectSlugExistsQueryVariables>(ProjectSlugExistsDocument, options);
@@ -18947,7 +15517,7 @@ export function useProjectSlugExistsLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type ProjectSlugExistsQueryHookResult = ReturnType<typeof useProjectSlugExistsQuery>;
 export type ProjectSlugExistsLazyQueryHookResult = ReturnType<typeof useProjectSlugExistsLazyQuery>;
 export type ProjectSlugExistsQueryResult = Apollo.QueryResult<ProjectSlugExistsQuery, ProjectSlugExistsQueryVariables>;
-export const PublishedTableOfContentsDocument = gql`
+export const PublishedTableOfContentsDocument = /*#__PURE__*/ gql`
     query PublishedTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -18972,23 +15542,6 @@ export const PublishedTableOfContentsDocument = gql`
   }
 }
     `;
-
-/**
- * __usePublishedTableOfContentsQuery__
- *
- * To run a query within a React component, call `usePublishedTableOfContentsQuery` and pass it any options that fit your needs.
- * When your component renders, `usePublishedTableOfContentsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = usePublishedTableOfContentsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function usePublishedTableOfContentsQuery(baseOptions: Apollo.QueryHookOptions<PublishedTableOfContentsQuery, PublishedTableOfContentsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<PublishedTableOfContentsQuery, PublishedTableOfContentsQueryVariables>(PublishedTableOfContentsDocument, options);
@@ -19000,7 +15553,7 @@ export function usePublishedTableOfContentsLazyQuery(baseOptions?: Apollo.LazyQu
 export type PublishedTableOfContentsQueryHookResult = ReturnType<typeof usePublishedTableOfContentsQuery>;
 export type PublishedTableOfContentsLazyQueryHookResult = ReturnType<typeof usePublishedTableOfContentsLazyQuery>;
 export type PublishedTableOfContentsQueryResult = Apollo.QueryResult<PublishedTableOfContentsQuery, PublishedTableOfContentsQueryVariables>;
-export const SimpleProjectListDocument = gql`
+export const SimpleProjectListDocument = /*#__PURE__*/ gql`
     query SimpleProjectList($first: Int, $offset: Int) {
   projectsConnection(first: $first, offset: $offset) {
     nodes {
@@ -19013,24 +15566,6 @@ export const SimpleProjectListDocument = gql`
   }
 }
     `;
-
-/**
- * __useSimpleProjectListQuery__
- *
- * To run a query within a React component, call `useSimpleProjectListQuery` and pass it any options that fit your needs.
- * When your component renders, `useSimpleProjectListQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useSimpleProjectListQuery({
- *   variables: {
- *      first: // value for 'first'
- *      offset: // value for 'offset'
- *   },
- * });
- */
 export function useSimpleProjectListQuery(baseOptions?: Apollo.QueryHookOptions<SimpleProjectListQuery, SimpleProjectListQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<SimpleProjectListQuery, SimpleProjectListQueryVariables>(SimpleProjectListDocument, options);
@@ -19042,7 +15577,7 @@ export function useSimpleProjectListLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type SimpleProjectListQueryHookResult = ReturnType<typeof useSimpleProjectListQuery>;
 export type SimpleProjectListLazyQueryHookResult = ReturnType<typeof useSimpleProjectListLazyQuery>;
 export type SimpleProjectListQueryResult = Apollo.QueryResult<SimpleProjectListQuery, SimpleProjectListQueryVariables>;
-export const SurveysDocument = gql`
+export const SurveysDocument = /*#__PURE__*/ gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
     id
@@ -19052,23 +15587,6 @@ export const SurveysDocument = gql`
   }
 }
     ${SurveyListDetailsFragmentDoc}`;
-
-/**
- * __useSurveysQuery__
- *
- * To run a query within a React component, call `useSurveysQuery` and pass it any options that fit your needs.
- * When your component renders, `useSurveysQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useSurveysQuery({
- *   variables: {
- *      projectId: // value for 'projectId'
- *   },
- * });
- */
 export function useSurveysQuery(baseOptions: Apollo.QueryHookOptions<SurveysQuery, SurveysQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<SurveysQuery, SurveysQueryVariables>(SurveysDocument, options);
@@ -19080,7 +15598,7 @@ export function useSurveysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Su
 export type SurveysQueryHookResult = ReturnType<typeof useSurveysQuery>;
 export type SurveysLazyQueryHookResult = ReturnType<typeof useSurveysLazyQuery>;
 export type SurveysQueryResult = Apollo.QueryResult<SurveysQuery, SurveysQueryVariables>;
-export const CreateSurveyDocument = gql`
+export const CreateSurveyDocument = /*#__PURE__*/ gql`
     mutation CreateSurvey($name: String!, $projectId: Int!, $templateId: Int) {
   makeSurvey(input: {projectId: $projectId, name: $name, templateId: $templateId}) {
     survey {
@@ -19090,26 +15608,6 @@ export const CreateSurveyDocument = gql`
 }
     ${SurveyListDetailsFragmentDoc}`;
 export type CreateSurveyMutationFn = Apollo.MutationFunction<CreateSurveyMutation, CreateSurveyMutationVariables>;
-
-/**
- * __useCreateSurveyMutation__
- *
- * To run a mutation, you first call `useCreateSurveyMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateSurveyMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createSurveyMutation, { data, loading, error }] = useCreateSurveyMutation({
- *   variables: {
- *      name: // value for 'name'
- *      projectId: // value for 'projectId'
- *      templateId: // value for 'templateId'
- *   },
- * });
- */
 export function useCreateSurveyMutation(baseOptions?: Apollo.MutationHookOptions<CreateSurveyMutation, CreateSurveyMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateSurveyMutation, CreateSurveyMutationVariables>(CreateSurveyDocument, options);
@@ -19117,7 +15615,7 @@ export function useCreateSurveyMutation(baseOptions?: Apollo.MutationHookOptions
 export type CreateSurveyMutationHookResult = ReturnType<typeof useCreateSurveyMutation>;
 export type CreateSurveyMutationResult = Apollo.MutationResult<CreateSurveyMutation>;
 export type CreateSurveyMutationOptions = Apollo.BaseMutationOptions<CreateSurveyMutation, CreateSurveyMutationVariables>;
-export const SurveyByIdDocument = gql`
+export const SurveyByIdDocument = /*#__PURE__*/ gql`
     query SurveyById($id: Int!) {
   survey(id: $id) {
     ...SurveyListDetails
@@ -19125,23 +15623,6 @@ export const SurveyByIdDocument = gql`
   }
 }
     ${SurveyListDetailsFragmentDoc}`;
-
-/**
- * __useSurveyByIdQuery__
- *
- * To run a query within a React component, call `useSurveyByIdQuery` and pass it any options that fit your needs.
- * When your component renders, `useSurveyByIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useSurveyByIdQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useSurveyByIdQuery(baseOptions: Apollo.QueryHookOptions<SurveyByIdQuery, SurveyByIdQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<SurveyByIdQuery, SurveyByIdQueryVariables>(SurveyByIdDocument, options);
@@ -19153,7 +15634,7 @@ export function useSurveyByIdLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions
 export type SurveyByIdQueryHookResult = ReturnType<typeof useSurveyByIdQuery>;
 export type SurveyByIdLazyQueryHookResult = ReturnType<typeof useSurveyByIdLazyQuery>;
 export type SurveyByIdQueryResult = Apollo.QueryResult<SurveyByIdQuery, SurveyByIdQueryVariables>;
-export const SurveyFormEditorDetailsDocument = gql`
+export const SurveyFormEditorDetailsDocument = /*#__PURE__*/ gql`
     query SurveyFormEditorDetails($id: Int!, $slug: String!) {
   formElementTypes {
     ...AddFormElementTypeDetails
@@ -19187,24 +15668,6 @@ export const SurveyFormEditorDetailsDocument = gql`
 ${SurveyListDetailsFragmentDoc}
 ${FormElementFullDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
-
-/**
- * __useSurveyFormEditorDetailsQuery__
- *
- * To run a query within a React component, call `useSurveyFormEditorDetailsQuery` and pass it any options that fit your needs.
- * When your component renders, `useSurveyFormEditorDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useSurveyFormEditorDetailsQuery({
- *   variables: {
- *      id: // value for 'id'
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useSurveyFormEditorDetailsQuery(baseOptions: Apollo.QueryHookOptions<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>(SurveyFormEditorDetailsDocument, options);
@@ -19216,29 +15679,13 @@ export function useSurveyFormEditorDetailsLazyQuery(baseOptions?: Apollo.LazyQue
 export type SurveyFormEditorDetailsQueryHookResult = ReturnType<typeof useSurveyFormEditorDetailsQuery>;
 export type SurveyFormEditorDetailsLazyQueryHookResult = ReturnType<typeof useSurveyFormEditorDetailsLazyQuery>;
 export type SurveyFormEditorDetailsQueryResult = Apollo.QueryResult<SurveyFormEditorDetailsQuery, SurveyFormEditorDetailsQueryVariables>;
-export const FormElementTypesDocument = gql`
+export const FormElementTypesDocument = /*#__PURE__*/ gql`
     query FormElementTypes {
   formElementTypes {
     ...AddFormElementTypeDetails
   }
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
-
-/**
- * __useFormElementTypesQuery__
- *
- * To run a query within a React component, call `useFormElementTypesQuery` and pass it any options that fit your needs.
- * When your component renders, `useFormElementTypesQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useFormElementTypesQuery({
- *   variables: {
- *   },
- * });
- */
 export function useFormElementTypesQuery(baseOptions?: Apollo.QueryHookOptions<FormElementTypesQuery, FormElementTypesQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<FormElementTypesQuery, FormElementTypesQueryVariables>(FormElementTypesDocument, options);
@@ -19250,7 +15697,7 @@ export function useFormElementTypesLazyQuery(baseOptions?: Apollo.LazyQueryHookO
 export type FormElementTypesQueryHookResult = ReturnType<typeof useFormElementTypesQuery>;
 export type FormElementTypesLazyQueryHookResult = ReturnType<typeof useFormElementTypesLazyQuery>;
 export type FormElementTypesQueryResult = Apollo.QueryResult<FormElementTypesQuery, FormElementTypesQueryVariables>;
-export const UpdateSurveyBaseSettingsDocument = gql`
+export const UpdateSurveyBaseSettingsDocument = /*#__PURE__*/ gql`
     mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean, $showFacilitationOption: Boolean, $supportedLanguages: [String]) {
   updateSurvey(
     input: {id: $id, patch: {showProgress: $showProgress, showFacilitationOption: $showFacilitationOption, supportedLanguages: $supportedLanguages}}
@@ -19265,27 +15712,6 @@ export const UpdateSurveyBaseSettingsDocument = gql`
 }
     `;
 export type UpdateSurveyBaseSettingsMutationFn = Apollo.MutationFunction<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>;
-
-/**
- * __useUpdateSurveyBaseSettingsMutation__
- *
- * To run a mutation, you first call `useUpdateSurveyBaseSettingsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateSurveyBaseSettingsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateSurveyBaseSettingsMutation, { data, loading, error }] = useUpdateSurveyBaseSettingsMutation({
- *   variables: {
- *      id: // value for 'id'
- *      showProgress: // value for 'showProgress'
- *      showFacilitationOption: // value for 'showFacilitationOption'
- *      supportedLanguages: // value for 'supportedLanguages'
- *   },
- * });
- */
 export function useUpdateSurveyBaseSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>(UpdateSurveyBaseSettingsDocument, options);
@@ -19293,7 +15719,7 @@ export function useUpdateSurveyBaseSettingsMutation(baseOptions?: Apollo.Mutatio
 export type UpdateSurveyBaseSettingsMutationHookResult = ReturnType<typeof useUpdateSurveyBaseSettingsMutation>;
 export type UpdateSurveyBaseSettingsMutationResult = Apollo.MutationResult<UpdateSurveyBaseSettingsMutation>;
 export type UpdateSurveyBaseSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateSurveyBaseSettingsMutation, UpdateSurveyBaseSettingsMutationVariables>;
-export const UpdateFormElementSketchClassDocument = gql`
+export const UpdateFormElementSketchClassDocument = /*#__PURE__*/ gql`
     mutation UpdateFormElementSketchClass($id: Int!, $geometryType: SketchGeometryType, $allowMulti: Boolean, $mapboxGlStyle: JSON, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
   updateSketchClass(
     input: {id: $id, patch: {geometryType: $geometryType, allowMulti: $allowMulti, mapboxGlStyle: $mapboxGlStyle, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
@@ -19311,30 +15737,6 @@ export const UpdateFormElementSketchClassDocument = gql`
 }
     `;
 export type UpdateFormElementSketchClassMutationFn = Apollo.MutationFunction<UpdateFormElementSketchClassMutation, UpdateFormElementSketchClassMutationVariables>;
-
-/**
- * __useUpdateFormElementSketchClassMutation__
- *
- * To run a mutation, you first call `useUpdateFormElementSketchClassMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateFormElementSketchClassMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateFormElementSketchClassMutation, { data, loading, error }] = useUpdateFormElementSketchClassMutation({
- *   variables: {
- *      id: // value for 'id'
- *      geometryType: // value for 'geometryType'
- *      allowMulti: // value for 'allowMulti'
- *      mapboxGlStyle: // value for 'mapboxGlStyle'
- *      geoprocessingClientName: // value for 'geoprocessingClientName'
- *      geoprocessingClientUrl: // value for 'geoprocessingClientUrl'
- *      geoprocessingProjectUrl: // value for 'geoprocessingProjectUrl'
- *   },
- * });
- */
 export function useUpdateFormElementSketchClassMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementSketchClassMutation, UpdateFormElementSketchClassMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateFormElementSketchClassMutation, UpdateFormElementSketchClassMutationVariables>(UpdateFormElementSketchClassDocument, options);
@@ -19342,7 +15744,7 @@ export function useUpdateFormElementSketchClassMutation(baseOptions?: Apollo.Mut
 export type UpdateFormElementSketchClassMutationHookResult = ReturnType<typeof useUpdateFormElementSketchClassMutation>;
 export type UpdateFormElementSketchClassMutationResult = Apollo.MutationResult<UpdateFormElementSketchClassMutation>;
 export type UpdateFormElementSketchClassMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementSketchClassMutation, UpdateFormElementSketchClassMutationVariables>;
-export const UpdateFormElementDocument = gql`
+export const UpdateFormElementDocument = /*#__PURE__*/ gql`
     mutation UpdateFormElement($id: Int!, $isRequired: Boolean, $body: JSON, $exportId: String, $componentSettings: JSON, $alternateLanguageSettings: JSON, $jumpToId: Int, $typeId: String) {
   updateFormElement(
     input: {id: $id, patch: {isRequired: $isRequired, body: $body, exportId: $exportId, componentSettings: $componentSettings, jumpToId: $jumpToId, typeId: $typeId, alternateLanguageSettings: $alternateLanguageSettings}}
@@ -19361,31 +15763,6 @@ export const UpdateFormElementDocument = gql`
 }
     `;
 export type UpdateFormElementMutationFn = Apollo.MutationFunction<UpdateFormElementMutation, UpdateFormElementMutationVariables>;
-
-/**
- * __useUpdateFormElementMutation__
- *
- * To run a mutation, you first call `useUpdateFormElementMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateFormElementMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateFormElementMutation, { data, loading, error }] = useUpdateFormElementMutation({
- *   variables: {
- *      id: // value for 'id'
- *      isRequired: // value for 'isRequired'
- *      body: // value for 'body'
- *      exportId: // value for 'exportId'
- *      componentSettings: // value for 'componentSettings'
- *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
- *      jumpToId: // value for 'jumpToId'
- *      typeId: // value for 'typeId'
- *   },
- * });
- */
 export function useUpdateFormElementMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementMutation, UpdateFormElementMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateFormElementMutation, UpdateFormElementMutationVariables>(UpdateFormElementDocument, options);
@@ -19393,7 +15770,7 @@ export function useUpdateFormElementMutation(baseOptions?: Apollo.MutationHookOp
 export type UpdateFormElementMutationHookResult = ReturnType<typeof useUpdateFormElementMutation>;
 export type UpdateFormElementMutationResult = Apollo.MutationResult<UpdateFormElementMutation>;
 export type UpdateFormElementMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementMutation, UpdateFormElementMutationVariables>;
-export const UpdateComponentSettingsDocument = gql`
+export const UpdateComponentSettingsDocument = /*#__PURE__*/ gql`
     mutation UpdateComponentSettings($id: Int!, $componentSettings: JSON) {
   updateFormElement(
     input: {id: $id, patch: {componentSettings: $componentSettings}}
@@ -19406,25 +15783,6 @@ export const UpdateComponentSettingsDocument = gql`
 }
     `;
 export type UpdateComponentSettingsMutationFn = Apollo.MutationFunction<UpdateComponentSettingsMutation, UpdateComponentSettingsMutationVariables>;
-
-/**
- * __useUpdateComponentSettingsMutation__
- *
- * To run a mutation, you first call `useUpdateComponentSettingsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateComponentSettingsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateComponentSettingsMutation, { data, loading, error }] = useUpdateComponentSettingsMutation({
- *   variables: {
- *      id: // value for 'id'
- *      componentSettings: // value for 'componentSettings'
- *   },
- * });
- */
 export function useUpdateComponentSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateComponentSettingsMutation, UpdateComponentSettingsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateComponentSettingsMutation, UpdateComponentSettingsMutationVariables>(UpdateComponentSettingsDocument, options);
@@ -19432,7 +15790,7 @@ export function useUpdateComponentSettingsMutation(baseOptions?: Apollo.Mutation
 export type UpdateComponentSettingsMutationHookResult = ReturnType<typeof useUpdateComponentSettingsMutation>;
 export type UpdateComponentSettingsMutationResult = Apollo.MutationResult<UpdateComponentSettingsMutation>;
 export type UpdateComponentSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateComponentSettingsMutation, UpdateComponentSettingsMutationVariables>;
-export const UpdateAlternateLanguageSettingsDocument = gql`
+export const UpdateAlternateLanguageSettingsDocument = /*#__PURE__*/ gql`
     mutation UpdateAlternateLanguageSettings($id: Int!, $alternateLanguageSettings: JSON) {
   updateFormElement(
     input: {id: $id, patch: {alternateLanguageSettings: $alternateLanguageSettings}}
@@ -19445,25 +15803,6 @@ export const UpdateAlternateLanguageSettingsDocument = gql`
 }
     `;
 export type UpdateAlternateLanguageSettingsMutationFn = Apollo.MutationFunction<UpdateAlternateLanguageSettingsMutation, UpdateAlternateLanguageSettingsMutationVariables>;
-
-/**
- * __useUpdateAlternateLanguageSettingsMutation__
- *
- * To run a mutation, you first call `useUpdateAlternateLanguageSettingsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateAlternateLanguageSettingsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateAlternateLanguageSettingsMutation, { data, loading, error }] = useUpdateAlternateLanguageSettingsMutation({
- *   variables: {
- *      id: // value for 'id'
- *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
- *   },
- * });
- */
 export function useUpdateAlternateLanguageSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateAlternateLanguageSettingsMutation, UpdateAlternateLanguageSettingsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateAlternateLanguageSettingsMutation, UpdateAlternateLanguageSettingsMutationVariables>(UpdateAlternateLanguageSettingsDocument, options);
@@ -19471,7 +15810,7 @@ export function useUpdateAlternateLanguageSettingsMutation(baseOptions?: Apollo.
 export type UpdateAlternateLanguageSettingsMutationHookResult = ReturnType<typeof useUpdateAlternateLanguageSettingsMutation>;
 export type UpdateAlternateLanguageSettingsMutationResult = Apollo.MutationResult<UpdateAlternateLanguageSettingsMutation>;
 export type UpdateAlternateLanguageSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateAlternateLanguageSettingsMutation, UpdateAlternateLanguageSettingsMutationVariables>;
-export const UpdateFormElementBodyDocument = gql`
+export const UpdateFormElementBodyDocument = /*#__PURE__*/ gql`
     mutation UpdateFormElementBody($id: Int!, $body: JSON!) {
   updateFormElement(input: {id: $id, patch: {body: $body}}) {
     formElement {
@@ -19482,25 +15821,6 @@ export const UpdateFormElementBodyDocument = gql`
 }
     `;
 export type UpdateFormElementBodyMutationFn = Apollo.MutationFunction<UpdateFormElementBodyMutation, UpdateFormElementBodyMutationVariables>;
-
-/**
- * __useUpdateFormElementBodyMutation__
- *
- * To run a mutation, you first call `useUpdateFormElementBodyMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateFormElementBodyMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateFormElementBodyMutation, { data, loading, error }] = useUpdateFormElementBodyMutation({
- *   variables: {
- *      id: // value for 'id'
- *      body: // value for 'body'
- *   },
- * });
- */
 export function useUpdateFormElementBodyMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementBodyMutation, UpdateFormElementBodyMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateFormElementBodyMutation, UpdateFormElementBodyMutationVariables>(UpdateFormElementBodyDocument, options);
@@ -19508,7 +15828,7 @@ export function useUpdateFormElementBodyMutation(baseOptions?: Apollo.MutationHo
 export type UpdateFormElementBodyMutationHookResult = ReturnType<typeof useUpdateFormElementBodyMutation>;
 export type UpdateFormElementBodyMutationResult = Apollo.MutationResult<UpdateFormElementBodyMutation>;
 export type UpdateFormElementBodyMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementBodyMutation, UpdateFormElementBodyMutationVariables>;
-export const UpdateFormElementOrderDocument = gql`
+export const UpdateFormElementOrderDocument = /*#__PURE__*/ gql`
     mutation UpdateFormElementOrder($elementIds: [Int]) {
   setFormElementOrder(input: {elementIds: $elementIds}) {
     formElements {
@@ -19519,24 +15839,6 @@ export const UpdateFormElementOrderDocument = gql`
 }
     `;
 export type UpdateFormElementOrderMutationFn = Apollo.MutationFunction<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>;
-
-/**
- * __useUpdateFormElementOrderMutation__
- *
- * To run a mutation, you first call `useUpdateFormElementOrderMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateFormElementOrderMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateFormElementOrderMutation, { data, loading, error }] = useUpdateFormElementOrderMutation({
- *   variables: {
- *      elementIds: // value for 'elementIds'
- *   },
- * });
- */
 export function useUpdateFormElementOrderMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>(UpdateFormElementOrderDocument, options);
@@ -19544,7 +15846,7 @@ export function useUpdateFormElementOrderMutation(baseOptions?: Apollo.MutationH
 export type UpdateFormElementOrderMutationHookResult = ReturnType<typeof useUpdateFormElementOrderMutation>;
 export type UpdateFormElementOrderMutationResult = Apollo.MutationResult<UpdateFormElementOrderMutation>;
 export type UpdateFormElementOrderMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementOrderMutation, UpdateFormElementOrderMutationVariables>;
-export const AddFormElementDocument = gql`
+export const AddFormElementDocument = /*#__PURE__*/ gql`
     mutation AddFormElement($body: JSON!, $componentSettings: JSON!, $formId: Int!, $componentType: String!, $position: Int, $exportId: String, $subordinateTo: Int, $isRequired: Boolean!) {
   createFormElement(
     input: {formElement: {body: $body, componentSettings: $componentSettings, formId: $formId, isRequired: $isRequired, typeId: $componentType, position: $position, exportId: $exportId, subordinateTo: $subordinateTo}}
@@ -19556,31 +15858,6 @@ export const AddFormElementDocument = gql`
 }
     ${FormElementFullDetailsFragmentDoc}`;
 export type AddFormElementMutationFn = Apollo.MutationFunction<AddFormElementMutation, AddFormElementMutationVariables>;
-
-/**
- * __useAddFormElementMutation__
- *
- * To run a mutation, you first call `useAddFormElementMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useAddFormElementMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [addFormElementMutation, { data, loading, error }] = useAddFormElementMutation({
- *   variables: {
- *      body: // value for 'body'
- *      componentSettings: // value for 'componentSettings'
- *      formId: // value for 'formId'
- *      componentType: // value for 'componentType'
- *      position: // value for 'position'
- *      exportId: // value for 'exportId'
- *      subordinateTo: // value for 'subordinateTo'
- *      isRequired: // value for 'isRequired'
- *   },
- * });
- */
 export function useAddFormElementMutation(baseOptions?: Apollo.MutationHookOptions<AddFormElementMutation, AddFormElementMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<AddFormElementMutation, AddFormElementMutationVariables>(AddFormElementDocument, options);
@@ -19588,7 +15865,7 @@ export function useAddFormElementMutation(baseOptions?: Apollo.MutationHookOptio
 export type AddFormElementMutationHookResult = ReturnType<typeof useAddFormElementMutation>;
 export type AddFormElementMutationResult = Apollo.MutationResult<AddFormElementMutation>;
 export type AddFormElementMutationOptions = Apollo.BaseMutationOptions<AddFormElementMutation, AddFormElementMutationVariables>;
-export const DeleteFormElementDocument = gql`
+export const DeleteFormElementDocument = /*#__PURE__*/ gql`
     mutation DeleteFormElement($id: Int!) {
   deleteFormElement(input: {id: $id}) {
     formElement {
@@ -19598,24 +15875,6 @@ export const DeleteFormElementDocument = gql`
 }
     `;
 export type DeleteFormElementMutationFn = Apollo.MutationFunction<DeleteFormElementMutation, DeleteFormElementMutationVariables>;
-
-/**
- * __useDeleteFormElementMutation__
- *
- * To run a mutation, you first call `useDeleteFormElementMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useDeleteFormElementMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [deleteFormElementMutation, { data, loading, error }] = useDeleteFormElementMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useDeleteFormElementMutation(baseOptions?: Apollo.MutationHookOptions<DeleteFormElementMutation, DeleteFormElementMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<DeleteFormElementMutation, DeleteFormElementMutationVariables>(DeleteFormElementDocument, options);
@@ -19623,7 +15882,7 @@ export function useDeleteFormElementMutation(baseOptions?: Apollo.MutationHookOp
 export type DeleteFormElementMutationHookResult = ReturnType<typeof useDeleteFormElementMutation>;
 export type DeleteFormElementMutationResult = Apollo.MutationResult<DeleteFormElementMutation>;
 export type DeleteFormElementMutationOptions = Apollo.BaseMutationOptions<DeleteFormElementMutation, DeleteFormElementMutationVariables>;
-export const UpdateFormDocument = gql`
+export const UpdateFormDocument = /*#__PURE__*/ gql`
     mutation UpdateForm($id: Int!, $isTemplate: Boolean, $templateName: String) {
   updateForm(
     input: {id: $id, patch: {isTemplate: $isTemplate, templateName: $templateName}}
@@ -19637,26 +15896,6 @@ export const UpdateFormDocument = gql`
 }
     `;
 export type UpdateFormMutationFn = Apollo.MutationFunction<UpdateFormMutation, UpdateFormMutationVariables>;
-
-/**
- * __useUpdateFormMutation__
- *
- * To run a mutation, you first call `useUpdateFormMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateFormMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateFormMutation, { data, loading, error }] = useUpdateFormMutation({
- *   variables: {
- *      id: // value for 'id'
- *      isTemplate: // value for 'isTemplate'
- *      templateName: // value for 'templateName'
- *   },
- * });
- */
 export function useUpdateFormMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormMutation, UpdateFormMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateFormMutation, UpdateFormMutationVariables>(UpdateFormDocument, options);
@@ -19664,7 +15903,7 @@ export function useUpdateFormMutation(baseOptions?: Apollo.MutationHookOptions<U
 export type UpdateFormMutationHookResult = ReturnType<typeof useUpdateFormMutation>;
 export type UpdateFormMutationResult = Apollo.MutationResult<UpdateFormMutation>;
 export type UpdateFormMutationOptions = Apollo.BaseMutationOptions<UpdateFormMutation, UpdateFormMutationVariables>;
-export const GetPhotosDocument = gql`
+export const GetPhotosDocument = /*#__PURE__*/ gql`
     query GetPhotos($query: String!) {
   getUnsplashPhotos(query: $query) {
     results {
@@ -19696,23 +15935,6 @@ export const GetPhotosDocument = gql`
   }
 }
     `;
-
-/**
- * __useGetPhotosQuery__
- *
- * To run a query within a React component, call `useGetPhotosQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetPhotosQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetPhotosQuery({
- *   variables: {
- *      query: // value for 'query'
- *   },
- * });
- */
 export function useGetPhotosQuery(baseOptions: Apollo.QueryHookOptions<GetPhotosQuery, GetPhotosQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetPhotosQuery, GetPhotosQueryVariables>(GetPhotosDocument, options);
@@ -19724,7 +15946,7 @@ export function useGetPhotosLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<
 export type GetPhotosQueryHookResult = ReturnType<typeof useGetPhotosQuery>;
 export type GetPhotosLazyQueryHookResult = ReturnType<typeof useGetPhotosLazyQuery>;
 export type GetPhotosQueryResult = Apollo.QueryResult<GetPhotosQuery, GetPhotosQueryVariables>;
-export const UpdateFormElementBackgroundDocument = gql`
+export const UpdateFormElementBackgroundDocument = /*#__PURE__*/ gql`
     mutation UpdateFormElementBackground($id: Int!, $backgroundColor: String, $secondaryColor: String, $backgroundPalette: [String], $textVariant: FormElementTextVariant, $layout: FormElementLayout) {
   updateFormElement(
     input: {id: $id, patch: {backgroundColor: $backgroundColor, secondaryColor: $secondaryColor, backgroundPalette: $backgroundPalette, textVariant: $textVariant, layout: $layout}}
@@ -19744,29 +15966,6 @@ export const UpdateFormElementBackgroundDocument = gql`
 }
     `;
 export type UpdateFormElementBackgroundMutationFn = Apollo.MutationFunction<UpdateFormElementBackgroundMutation, UpdateFormElementBackgroundMutationVariables>;
-
-/**
- * __useUpdateFormElementBackgroundMutation__
- *
- * To run a mutation, you first call `useUpdateFormElementBackgroundMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateFormElementBackgroundMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateFormElementBackgroundMutation, { data, loading, error }] = useUpdateFormElementBackgroundMutation({
- *   variables: {
- *      id: // value for 'id'
- *      backgroundColor: // value for 'backgroundColor'
- *      secondaryColor: // value for 'secondaryColor'
- *      backgroundPalette: // value for 'backgroundPalette'
- *      textVariant: // value for 'textVariant'
- *      layout: // value for 'layout'
- *   },
- * });
- */
 export function useUpdateFormElementBackgroundMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementBackgroundMutation, UpdateFormElementBackgroundMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateFormElementBackgroundMutation, UpdateFormElementBackgroundMutationVariables>(UpdateFormElementBackgroundDocument, options);
@@ -19774,7 +15973,7 @@ export function useUpdateFormElementBackgroundMutation(baseOptions?: Apollo.Muta
 export type UpdateFormElementBackgroundMutationHookResult = ReturnType<typeof useUpdateFormElementBackgroundMutation>;
 export type UpdateFormElementBackgroundMutationResult = Apollo.MutationResult<UpdateFormElementBackgroundMutation>;
 export type UpdateFormElementBackgroundMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementBackgroundMutation, UpdateFormElementBackgroundMutationVariables>;
-export const SetFormElementBackgroundDocument = gql`
+export const SetFormElementBackgroundDocument = /*#__PURE__*/ gql`
     mutation SetFormElementBackground($id: Int!, $backgroundColor: String!, $secondaryColor: String!, $backgroundUrl: String!, $downloadUrl: String!, $backgroundPalette: [String]!, $unsplashAuthorUrl: String!, $unsplashAuthorName: String!, $backgroundWidth: Int!, $backgroundHeight: Int!) {
   setFormElementBackground(
     backgroundColor: $backgroundColor
@@ -19801,33 +16000,6 @@ export const SetFormElementBackgroundDocument = gql`
 }
     `;
 export type SetFormElementBackgroundMutationFn = Apollo.MutationFunction<SetFormElementBackgroundMutation, SetFormElementBackgroundMutationVariables>;
-
-/**
- * __useSetFormElementBackgroundMutation__
- *
- * To run a mutation, you first call `useSetFormElementBackgroundMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useSetFormElementBackgroundMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [setFormElementBackgroundMutation, { data, loading, error }] = useSetFormElementBackgroundMutation({
- *   variables: {
- *      id: // value for 'id'
- *      backgroundColor: // value for 'backgroundColor'
- *      secondaryColor: // value for 'secondaryColor'
- *      backgroundUrl: // value for 'backgroundUrl'
- *      downloadUrl: // value for 'downloadUrl'
- *      backgroundPalette: // value for 'backgroundPalette'
- *      unsplashAuthorUrl: // value for 'unsplashAuthorUrl'
- *      unsplashAuthorName: // value for 'unsplashAuthorName'
- *      backgroundWidth: // value for 'backgroundWidth'
- *      backgroundHeight: // value for 'backgroundHeight'
- *   },
- * });
- */
 export function useSetFormElementBackgroundMutation(baseOptions?: Apollo.MutationHookOptions<SetFormElementBackgroundMutation, SetFormElementBackgroundMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<SetFormElementBackgroundMutation, SetFormElementBackgroundMutationVariables>(SetFormElementBackgroundDocument, options);
@@ -19835,7 +16007,7 @@ export function useSetFormElementBackgroundMutation(baseOptions?: Apollo.Mutatio
 export type SetFormElementBackgroundMutationHookResult = ReturnType<typeof useSetFormElementBackgroundMutation>;
 export type SetFormElementBackgroundMutationResult = Apollo.MutationResult<SetFormElementBackgroundMutation>;
 export type SetFormElementBackgroundMutationOptions = Apollo.BaseMutationOptions<SetFormElementBackgroundMutation, SetFormElementBackgroundMutationVariables>;
-export const ClearFormElementStyleDocument = gql`
+export const ClearFormElementStyleDocument = /*#__PURE__*/ gql`
     mutation clearFormElementStyle($id: Int!) {
   clearFormElementStyle(input: {formElementId: $id}) {
     formElement {
@@ -19853,24 +16025,6 @@ export const ClearFormElementStyleDocument = gql`
 }
     `;
 export type ClearFormElementStyleMutationFn = Apollo.MutationFunction<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>;
-
-/**
- * __useClearFormElementStyleMutation__
- *
- * To run a mutation, you first call `useClearFormElementStyleMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useClearFormElementStyleMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [clearFormElementStyleMutation, { data, loading, error }] = useClearFormElementStyleMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useClearFormElementStyleMutation(baseOptions?: Apollo.MutationHookOptions<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>(ClearFormElementStyleDocument, options);
@@ -19878,7 +16032,7 @@ export function useClearFormElementStyleMutation(baseOptions?: Apollo.MutationHo
 export type ClearFormElementStyleMutationHookResult = ReturnType<typeof useClearFormElementStyleMutation>;
 export type ClearFormElementStyleMutationResult = Apollo.MutationResult<ClearFormElementStyleMutation>;
 export type ClearFormElementStyleMutationOptions = Apollo.BaseMutationOptions<ClearFormElementStyleMutation, ClearFormElementStyleMutationVariables>;
-export const CreateLogicRuleForSurveyDocument = gql`
+export const CreateLogicRuleForSurveyDocument = /*#__PURE__*/ gql`
     mutation createLogicRuleForSurvey($formElementId: Int!, $operator: FieldRuleOperator!, $jumpToId: Int!) {
   createSurveyJumpRule(
     input: {formElementId: $formElementId, booleanOperator: OR, jumpToId: $jumpToId, operator: $operator}
@@ -19902,26 +16056,6 @@ export const CreateLogicRuleForSurveyDocument = gql`
 }
     `;
 export type CreateLogicRuleForSurveyMutationFn = Apollo.MutationFunction<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>;
-
-/**
- * __useCreateLogicRuleForSurveyMutation__
- *
- * To run a mutation, you first call `useCreateLogicRuleForSurveyMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateLogicRuleForSurveyMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createLogicRuleForSurveyMutation, { data, loading, error }] = useCreateLogicRuleForSurveyMutation({
- *   variables: {
- *      formElementId: // value for 'formElementId'
- *      operator: // value for 'operator'
- *      jumpToId: // value for 'jumpToId'
- *   },
- * });
- */
 export function useCreateLogicRuleForSurveyMutation(baseOptions?: Apollo.MutationHookOptions<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>(CreateLogicRuleForSurveyDocument, options);
@@ -19929,7 +16063,7 @@ export function useCreateLogicRuleForSurveyMutation(baseOptions?: Apollo.Mutatio
 export type CreateLogicRuleForSurveyMutationHookResult = ReturnType<typeof useCreateLogicRuleForSurveyMutation>;
 export type CreateLogicRuleForSurveyMutationResult = Apollo.MutationResult<CreateLogicRuleForSurveyMutation>;
 export type CreateLogicRuleForSurveyMutationOptions = Apollo.BaseMutationOptions<CreateLogicRuleForSurveyMutation, CreateLogicRuleForSurveyMutationVariables>;
-export const UpdateFormLogicRuleDocument = gql`
+export const UpdateFormLogicRuleDocument = /*#__PURE__*/ gql`
     mutation UpdateFormLogicRule($id: Int!, $jumpToId: Int, $booleanOperator: FormLogicOperator, $formElementId: Int) {
   updateFormLogicRule(
     input: {id: $id, patch: {jumpToId: $jumpToId, booleanOperator: $booleanOperator, formElementId: $formElementId}}
@@ -19946,27 +16080,6 @@ export const UpdateFormLogicRuleDocument = gql`
 }
     `;
 export type UpdateFormLogicRuleMutationFn = Apollo.MutationFunction<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>;
-
-/**
- * __useUpdateFormLogicRuleMutation__
- *
- * To run a mutation, you first call `useUpdateFormLogicRuleMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateFormLogicRuleMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateFormLogicRuleMutation, { data, loading, error }] = useUpdateFormLogicRuleMutation({
- *   variables: {
- *      id: // value for 'id'
- *      jumpToId: // value for 'jumpToId'
- *      booleanOperator: // value for 'booleanOperator'
- *      formElementId: // value for 'formElementId'
- *   },
- * });
- */
 export function useUpdateFormLogicRuleMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>(UpdateFormLogicRuleDocument, options);
@@ -19974,7 +16087,7 @@ export function useUpdateFormLogicRuleMutation(baseOptions?: Apollo.MutationHook
 export type UpdateFormLogicRuleMutationHookResult = ReturnType<typeof useUpdateFormLogicRuleMutation>;
 export type UpdateFormLogicRuleMutationResult = Apollo.MutationResult<UpdateFormLogicRuleMutation>;
 export type UpdateFormLogicRuleMutationOptions = Apollo.BaseMutationOptions<UpdateFormLogicRuleMutation, UpdateFormLogicRuleMutationVariables>;
-export const UpdateLogicConditionDocument = gql`
+export const UpdateLogicConditionDocument = /*#__PURE__*/ gql`
     mutation UpdateLogicCondition($id: Int!, $operator: FieldRuleOperator, $value: JSON, $subjectId: Int) {
   updateFormLogicCondition(
     input: {id: $id, patch: {operator: $operator, value: $value, subjectId: $subjectId}}
@@ -19990,27 +16103,6 @@ export const UpdateLogicConditionDocument = gql`
 }
     `;
 export type UpdateLogicConditionMutationFn = Apollo.MutationFunction<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>;
-
-/**
- * __useUpdateLogicConditionMutation__
- *
- * To run a mutation, you first call `useUpdateLogicConditionMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateLogicConditionMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateLogicConditionMutation, { data, loading, error }] = useUpdateLogicConditionMutation({
- *   variables: {
- *      id: // value for 'id'
- *      operator: // value for 'operator'
- *      value: // value for 'value'
- *      subjectId: // value for 'subjectId'
- *   },
- * });
- */
 export function useUpdateLogicConditionMutation(baseOptions?: Apollo.MutationHookOptions<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>(UpdateLogicConditionDocument, options);
@@ -20018,7 +16110,7 @@ export function useUpdateLogicConditionMutation(baseOptions?: Apollo.MutationHoo
 export type UpdateLogicConditionMutationHookResult = ReturnType<typeof useUpdateLogicConditionMutation>;
 export type UpdateLogicConditionMutationResult = Apollo.MutationResult<UpdateLogicConditionMutation>;
 export type UpdateLogicConditionMutationOptions = Apollo.BaseMutationOptions<UpdateLogicConditionMutation, UpdateLogicConditionMutationVariables>;
-export const DeleteLogicConditionDocument = gql`
+export const DeleteLogicConditionDocument = /*#__PURE__*/ gql`
     mutation DeleteLogicCondition($id: Int!) {
   deleteFormLogicCondition(input: {id: $id}) {
     formLogicCondition {
@@ -20029,24 +16121,6 @@ export const DeleteLogicConditionDocument = gql`
 }
     `;
 export type DeleteLogicConditionMutationFn = Apollo.MutationFunction<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>;
-
-/**
- * __useDeleteLogicConditionMutation__
- *
- * To run a mutation, you first call `useDeleteLogicConditionMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useDeleteLogicConditionMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [deleteLogicConditionMutation, { data, loading, error }] = useDeleteLogicConditionMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useDeleteLogicConditionMutation(baseOptions?: Apollo.MutationHookOptions<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>(DeleteLogicConditionDocument, options);
@@ -20054,7 +16128,7 @@ export function useDeleteLogicConditionMutation(baseOptions?: Apollo.MutationHoo
 export type DeleteLogicConditionMutationHookResult = ReturnType<typeof useDeleteLogicConditionMutation>;
 export type DeleteLogicConditionMutationResult = Apollo.MutationResult<DeleteLogicConditionMutation>;
 export type DeleteLogicConditionMutationOptions = Apollo.BaseMutationOptions<DeleteLogicConditionMutation, DeleteLogicConditionMutationVariables>;
-export const DeleteLogicRuleDocument = gql`
+export const DeleteLogicRuleDocument = /*#__PURE__*/ gql`
     mutation DeleteLogicRule($id: Int!) {
   deleteFormLogicRule(input: {id: $id}) {
     formLogicRule {
@@ -20065,24 +16139,6 @@ export const DeleteLogicRuleDocument = gql`
 }
     `;
 export type DeleteLogicRuleMutationFn = Apollo.MutationFunction<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>;
-
-/**
- * __useDeleteLogicRuleMutation__
- *
- * To run a mutation, you first call `useDeleteLogicRuleMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useDeleteLogicRuleMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [deleteLogicRuleMutation, { data, loading, error }] = useDeleteLogicRuleMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useDeleteLogicRuleMutation(baseOptions?: Apollo.MutationHookOptions<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>(DeleteLogicRuleDocument, options);
@@ -20090,7 +16146,7 @@ export function useDeleteLogicRuleMutation(baseOptions?: Apollo.MutationHookOpti
 export type DeleteLogicRuleMutationHookResult = ReturnType<typeof useDeleteLogicRuleMutation>;
 export type DeleteLogicRuleMutationResult = Apollo.MutationResult<DeleteLogicRuleMutation>;
 export type DeleteLogicRuleMutationOptions = Apollo.BaseMutationOptions<DeleteLogicRuleMutation, DeleteLogicRuleMutationVariables>;
-export const AddConditionDocument = gql`
+export const AddConditionDocument = /*#__PURE__*/ gql`
     mutation AddCondition($operator: FieldRuleOperator!, $ruleId: Int!, $subjectId: Int!, $value: JSON) {
   createFormLogicCondition(
     input: {formLogicCondition: {operator: $operator, ruleId: $ruleId, subjectId: $subjectId, value: $value}}
@@ -20106,27 +16162,6 @@ export const AddConditionDocument = gql`
 }
     `;
 export type AddConditionMutationFn = Apollo.MutationFunction<AddConditionMutation, AddConditionMutationVariables>;
-
-/**
- * __useAddConditionMutation__
- *
- * To run a mutation, you first call `useAddConditionMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useAddConditionMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [addConditionMutation, { data, loading, error }] = useAddConditionMutation({
- *   variables: {
- *      operator: // value for 'operator'
- *      ruleId: // value for 'ruleId'
- *      subjectId: // value for 'subjectId'
- *      value: // value for 'value'
- *   },
- * });
- */
 export function useAddConditionMutation(baseOptions?: Apollo.MutationHookOptions<AddConditionMutation, AddConditionMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<AddConditionMutation, AddConditionMutationVariables>(AddConditionDocument, options);
@@ -20134,7 +16169,7 @@ export function useAddConditionMutation(baseOptions?: Apollo.MutationHookOptions
 export type AddConditionMutationHookResult = ReturnType<typeof useAddConditionMutation>;
 export type AddConditionMutationResult = Apollo.MutationResult<AddConditionMutation>;
 export type AddConditionMutationOptions = Apollo.BaseMutationOptions<AddConditionMutation, AddConditionMutationVariables>;
-export const UpdateSurveyDraftStatusDocument = gql`
+export const UpdateSurveyDraftStatusDocument = /*#__PURE__*/ gql`
     mutation UpdateSurveyDraftStatus($id: Int!, $isDisabled: Boolean!) {
   updateSurvey(input: {id: $id, patch: {isDisabled: $isDisabled}}) {
     survey {
@@ -20145,25 +16180,6 @@ export const UpdateSurveyDraftStatusDocument = gql`
 }
     `;
 export type UpdateSurveyDraftStatusMutationFn = Apollo.MutationFunction<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>;
-
-/**
- * __useUpdateSurveyDraftStatusMutation__
- *
- * To run a mutation, you first call `useUpdateSurveyDraftStatusMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateSurveyDraftStatusMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateSurveyDraftStatusMutation, { data, loading, error }] = useUpdateSurveyDraftStatusMutation({
- *   variables: {
- *      id: // value for 'id'
- *      isDisabled: // value for 'isDisabled'
- *   },
- * });
- */
 export function useUpdateSurveyDraftStatusMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>(UpdateSurveyDraftStatusDocument, options);
@@ -20171,7 +16187,7 @@ export function useUpdateSurveyDraftStatusMutation(baseOptions?: Apollo.Mutation
 export type UpdateSurveyDraftStatusMutationHookResult = ReturnType<typeof useUpdateSurveyDraftStatusMutation>;
 export type UpdateSurveyDraftStatusMutationResult = Apollo.MutationResult<UpdateSurveyDraftStatusMutation>;
 export type UpdateSurveyDraftStatusMutationOptions = Apollo.BaseMutationOptions<UpdateSurveyDraftStatusMutation, UpdateSurveyDraftStatusMutationVariables>;
-export const UploadConsentDocDocument = gql`
+export const UploadConsentDocDocument = /*#__PURE__*/ gql`
     mutation UploadConsentDoc($document: Upload!, $formElementId: Int!, $version: Int!) {
   uploadConsentDocument(
     document: $document
@@ -20184,26 +16200,6 @@ export const UploadConsentDocDocument = gql`
 }
     `;
 export type UploadConsentDocMutationFn = Apollo.MutationFunction<UploadConsentDocMutation, UploadConsentDocMutationVariables>;
-
-/**
- * __useUploadConsentDocMutation__
- *
- * To run a mutation, you first call `useUploadConsentDocMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUploadConsentDocMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [uploadConsentDocMutation, { data, loading, error }] = useUploadConsentDocMutation({
- *   variables: {
- *      document: // value for 'document'
- *      formElementId: // value for 'formElementId'
- *      version: // value for 'version'
- *   },
- * });
- */
 export function useUploadConsentDocMutation(baseOptions?: Apollo.MutationHookOptions<UploadConsentDocMutation, UploadConsentDocMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UploadConsentDocMutation, UploadConsentDocMutationVariables>(UploadConsentDocDocument, options);
@@ -20211,7 +16207,7 @@ export function useUploadConsentDocMutation(baseOptions?: Apollo.MutationHookOpt
 export type UploadConsentDocMutationHookResult = ReturnType<typeof useUploadConsentDocMutation>;
 export type UploadConsentDocMutationResult = Apollo.MutationResult<UploadConsentDocMutation>;
 export type UploadConsentDocMutationOptions = Apollo.BaseMutationOptions<UploadConsentDocMutation, UploadConsentDocMutationVariables>;
-export const SurveyResponsesDocument = gql`
+export const SurveyResponsesDocument = /*#__PURE__*/ gql`
     query SurveyResponses($surveyId: Int!) {
   survey(id: $surveyId) {
     form {
@@ -20236,23 +16232,6 @@ export const SurveyResponsesDocument = gql`
     ${FormElementExtendedDetailsFragmentDoc}
 ${SurveyAppRuleFragmentDoc}
 ${SurveyResponseFragmentDoc}`;
-
-/**
- * __useSurveyResponsesQuery__
- *
- * To run a query within a React component, call `useSurveyResponsesQuery` and pass it any options that fit your needs.
- * When your component renders, `useSurveyResponsesQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useSurveyResponsesQuery({
- *   variables: {
- *      surveyId: // value for 'surveyId'
- *   },
- * });
- */
 export function useSurveyResponsesQuery(baseOptions: Apollo.QueryHookOptions<SurveyResponsesQuery, SurveyResponsesQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<SurveyResponsesQuery, SurveyResponsesQueryVariables>(SurveyResponsesDocument, options);
@@ -20264,7 +16243,7 @@ export function useSurveyResponsesLazyQuery(baseOptions?: Apollo.LazyQueryHookOp
 export type SurveyResponsesQueryHookResult = ReturnType<typeof useSurveyResponsesQuery>;
 export type SurveyResponsesLazyQueryHookResult = ReturnType<typeof useSurveyResponsesLazyQuery>;
 export type SurveyResponsesQueryResult = Apollo.QueryResult<SurveyResponsesQuery, SurveyResponsesQueryVariables>;
-export const SurveyMapDetailsDocument = gql`
+export const SurveyMapDetailsDocument = /*#__PURE__*/ gql`
     query SurveyMapDetails($surveyId: Int!) {
   survey(id: $surveyId) {
     form {
@@ -20276,23 +16255,6 @@ export const SurveyMapDetailsDocument = gql`
   }
 }
     ${FormElementDetailsFragmentDoc}`;
-
-/**
- * __useSurveyMapDetailsQuery__
- *
- * To run a query within a React component, call `useSurveyMapDetailsQuery` and pass it any options that fit your needs.
- * When your component renders, `useSurveyMapDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useSurveyMapDetailsQuery({
- *   variables: {
- *      surveyId: // value for 'surveyId'
- *   },
- * });
- */
 export function useSurveyMapDetailsQuery(baseOptions: Apollo.QueryHookOptions<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>(SurveyMapDetailsDocument, options);
@@ -20304,7 +16266,7 @@ export function useSurveyMapDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookO
 export type SurveyMapDetailsQueryHookResult = ReturnType<typeof useSurveyMapDetailsQuery>;
 export type SurveyMapDetailsLazyQueryHookResult = ReturnType<typeof useSurveyMapDetailsLazyQuery>;
 export type SurveyMapDetailsQueryResult = Apollo.QueryResult<SurveyMapDetailsQuery, SurveyMapDetailsQueryVariables>;
-export const ToggleResponsesPracticeDocument = gql`
+export const ToggleResponsesPracticeDocument = /*#__PURE__*/ gql`
     mutation toggleResponsesPractice($ids: [Int], $isPractice: Boolean) {
   toggleResponsesPractice(input: {ids: $ids, isPractice: $isPractice}) {
     surveyResponses {
@@ -20323,25 +16285,6 @@ export const ToggleResponsesPracticeDocument = gql`
 }
     `;
 export type ToggleResponsesPracticeMutationFn = Apollo.MutationFunction<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>;
-
-/**
- * __useToggleResponsesPracticeMutation__
- *
- * To run a mutation, you first call `useToggleResponsesPracticeMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useToggleResponsesPracticeMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [toggleResponsesPracticeMutation, { data, loading, error }] = useToggleResponsesPracticeMutation({
- *   variables: {
- *      ids: // value for 'ids'
- *      isPractice: // value for 'isPractice'
- *   },
- * });
- */
 export function useToggleResponsesPracticeMutation(baseOptions?: Apollo.MutationHookOptions<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>(ToggleResponsesPracticeDocument, options);
@@ -20349,7 +16292,7 @@ export function useToggleResponsesPracticeMutation(baseOptions?: Apollo.Mutation
 export type ToggleResponsesPracticeMutationHookResult = ReturnType<typeof useToggleResponsesPracticeMutation>;
 export type ToggleResponsesPracticeMutationResult = Apollo.MutationResult<ToggleResponsesPracticeMutation>;
 export type ToggleResponsesPracticeMutationOptions = Apollo.BaseMutationOptions<ToggleResponsesPracticeMutation, ToggleResponsesPracticeMutationVariables>;
-export const ArchiveResponsesDocument = gql`
+export const ArchiveResponsesDocument = /*#__PURE__*/ gql`
     mutation archiveResponses($ids: [Int], $makeArchived: Boolean) {
   archiveResponses(input: {ids: $ids, makeArchived: $makeArchived}) {
     surveyResponses {
@@ -20368,25 +16311,6 @@ export const ArchiveResponsesDocument = gql`
 }
     `;
 export type ArchiveResponsesMutationFn = Apollo.MutationFunction<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>;
-
-/**
- * __useArchiveResponsesMutation__
- *
- * To run a mutation, you first call `useArchiveResponsesMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useArchiveResponsesMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [archiveResponsesMutation, { data, loading, error }] = useArchiveResponsesMutation({
- *   variables: {
- *      ids: // value for 'ids'
- *      makeArchived: // value for 'makeArchived'
- *   },
- * });
- */
 export function useArchiveResponsesMutation(baseOptions?: Apollo.MutationHookOptions<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>(ArchiveResponsesDocument, options);
@@ -20394,7 +16318,7 @@ export function useArchiveResponsesMutation(baseOptions?: Apollo.MutationHookOpt
 export type ArchiveResponsesMutationHookResult = ReturnType<typeof useArchiveResponsesMutation>;
 export type ArchiveResponsesMutationResult = Apollo.MutationResult<ArchiveResponsesMutation>;
 export type ArchiveResponsesMutationOptions = Apollo.BaseMutationOptions<ArchiveResponsesMutation, ArchiveResponsesMutationVariables>;
-export const ModifyAnswersDocument = gql`
+export const ModifyAnswersDocument = /*#__PURE__*/ gql`
     mutation modifyAnswers($responseIds: [Int]!, $answers: JSON) {
   modifySurveyAnswers(input: {responseIds: $responseIds, answers: $answers}) {
     surveyResponses {
@@ -20407,25 +16331,6 @@ export const ModifyAnswersDocument = gql`
 }
     `;
 export type ModifyAnswersMutationFn = Apollo.MutationFunction<ModifyAnswersMutation, ModifyAnswersMutationVariables>;
-
-/**
- * __useModifyAnswersMutation__
- *
- * To run a mutation, you first call `useModifyAnswersMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useModifyAnswersMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [modifyAnswersMutation, { data, loading, error }] = useModifyAnswersMutation({
- *   variables: {
- *      responseIds: // value for 'responseIds'
- *      answers: // value for 'answers'
- *   },
- * });
- */
 export function useModifyAnswersMutation(baseOptions?: Apollo.MutationHookOptions<ModifyAnswersMutation, ModifyAnswersMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<ModifyAnswersMutation, ModifyAnswersMutationVariables>(ModifyAnswersDocument, options);
@@ -20433,7 +16338,7 @@ export function useModifyAnswersMutation(baseOptions?: Apollo.MutationHookOption
 export type ModifyAnswersMutationHookResult = ReturnType<typeof useModifyAnswersMutation>;
 export type ModifyAnswersMutationResult = Apollo.MutationResult<ModifyAnswersMutation>;
 export type ModifyAnswersMutationOptions = Apollo.BaseMutationOptions<ModifyAnswersMutation, ModifyAnswersMutationVariables>;
-export const CopyAppearanceDocument = gql`
+export const CopyAppearanceDocument = /*#__PURE__*/ gql`
     mutation copyAppearance($id: Int!, $copyFrom: Int!) {
   copyAppearance(input: {formElementId: $id, copyFromId: $copyFrom}) {
     formElement {
@@ -20453,25 +16358,6 @@ export const CopyAppearanceDocument = gql`
 }
     `;
 export type CopyAppearanceMutationFn = Apollo.MutationFunction<CopyAppearanceMutation, CopyAppearanceMutationVariables>;
-
-/**
- * __useCopyAppearanceMutation__
- *
- * To run a mutation, you first call `useCopyAppearanceMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCopyAppearanceMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [copyAppearanceMutation, { data, loading, error }] = useCopyAppearanceMutation({
- *   variables: {
- *      id: // value for 'id'
- *      copyFrom: // value for 'copyFrom'
- *   },
- * });
- */
 export function useCopyAppearanceMutation(baseOptions?: Apollo.MutationHookOptions<CopyAppearanceMutation, CopyAppearanceMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CopyAppearanceMutation, CopyAppearanceMutationVariables>(CopyAppearanceDocument, options);
@@ -20479,7 +16365,7 @@ export function useCopyAppearanceMutation(baseOptions?: Apollo.MutationHookOptio
 export type CopyAppearanceMutationHookResult = ReturnType<typeof useCopyAppearanceMutation>;
 export type CopyAppearanceMutationResult = Apollo.MutationResult<CopyAppearanceMutation>;
 export type CopyAppearanceMutationOptions = Apollo.BaseMutationOptions<CopyAppearanceMutation, CopyAppearanceMutationVariables>;
-export const UpdateFormElementBasemapsDocument = gql`
+export const UpdateFormElementBasemapsDocument = /*#__PURE__*/ gql`
     mutation updateFormElementBasemaps($id: Int!, $mapBasemaps: [Int]) {
   updateFormElement(input: {id: $id, patch: {mapBasemaps: $mapBasemaps}}) {
     formElement {
@@ -20490,25 +16376,6 @@ export const UpdateFormElementBasemapsDocument = gql`
 }
     `;
 export type UpdateFormElementBasemapsMutationFn = Apollo.MutationFunction<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>;
-
-/**
- * __useUpdateFormElementBasemapsMutation__
- *
- * To run a mutation, you first call `useUpdateFormElementBasemapsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateFormElementBasemapsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateFormElementBasemapsMutation, { data, loading, error }] = useUpdateFormElementBasemapsMutation({
- *   variables: {
- *      id: // value for 'id'
- *      mapBasemaps: // value for 'mapBasemaps'
- *   },
- * });
- */
 export function useUpdateFormElementBasemapsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>(UpdateFormElementBasemapsDocument, options);
@@ -20516,7 +16383,7 @@ export function useUpdateFormElementBasemapsMutation(baseOptions?: Apollo.Mutati
 export type UpdateFormElementBasemapsMutationHookResult = ReturnType<typeof useUpdateFormElementBasemapsMutation>;
 export type UpdateFormElementBasemapsMutationResult = Apollo.MutationResult<UpdateFormElementBasemapsMutation>;
 export type UpdateFormElementBasemapsMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementBasemapsMutation, UpdateFormElementBasemapsMutationVariables>;
-export const UpdateFormElementMapCameraDocument = gql`
+export const UpdateFormElementMapCameraDocument = /*#__PURE__*/ gql`
     mutation updateFormElementMapCamera($id: Int!, $mapCameraOptions: JSON) {
   updateFormElement(
     input: {id: $id, patch: {mapCameraOptions: $mapCameraOptions}}
@@ -20529,25 +16396,6 @@ export const UpdateFormElementMapCameraDocument = gql`
 }
     `;
 export type UpdateFormElementMapCameraMutationFn = Apollo.MutationFunction<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>;
-
-/**
- * __useUpdateFormElementMapCameraMutation__
- *
- * To run a mutation, you first call `useUpdateFormElementMapCameraMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateFormElementMapCameraMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateFormElementMapCameraMutation, { data, loading, error }] = useUpdateFormElementMapCameraMutation({
- *   variables: {
- *      id: // value for 'id'
- *      mapCameraOptions: // value for 'mapCameraOptions'
- *   },
- * });
- */
 export function useUpdateFormElementMapCameraMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>(UpdateFormElementMapCameraDocument, options);
@@ -20555,7 +16403,7 @@ export function useUpdateFormElementMapCameraMutation(baseOptions?: Apollo.Mutat
 export type UpdateFormElementMapCameraMutationHookResult = ReturnType<typeof useUpdateFormElementMapCameraMutation>;
 export type UpdateFormElementMapCameraMutationResult = Apollo.MutationResult<UpdateFormElementMapCameraMutation>;
 export type UpdateFormElementMapCameraMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>;
-export const AllBasemapsDocument = gql`
+export const AllBasemapsDocument = /*#__PURE__*/ gql`
     query AllBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -20571,23 +16419,6 @@ export const AllBasemapsDocument = gql`
   }
 }
     ${BasemapDetailsFragmentDoc}`;
-
-/**
- * __useAllBasemapsQuery__
- *
- * To run a query within a React component, call `useAllBasemapsQuery` and pass it any options that fit your needs.
- * When your component renders, `useAllBasemapsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useAllBasemapsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useAllBasemapsQuery(baseOptions: Apollo.QueryHookOptions<AllBasemapsQuery, AllBasemapsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<AllBasemapsQuery, AllBasemapsQueryVariables>(AllBasemapsDocument, options);
@@ -20599,30 +16430,13 @@ export function useAllBasemapsLazyQuery(baseOptions?: Apollo.LazyQueryHookOption
 export type AllBasemapsQueryHookResult = ReturnType<typeof useAllBasemapsQuery>;
 export type AllBasemapsLazyQueryHookResult = ReturnType<typeof useAllBasemapsLazyQuery>;
 export type AllBasemapsQueryResult = Apollo.QueryResult<AllBasemapsQuery, AllBasemapsQueryVariables>;
-export const GetFormElementDocument = gql`
+export const GetFormElementDocument = /*#__PURE__*/ gql`
     query GetFormElement($id: Int!) {
   formElement(id: $id) {
     ...FormElementDetails
   }
 }
     ${FormElementDetailsFragmentDoc}`;
-
-/**
- * __useGetFormElementQuery__
- *
- * To run a query within a React component, call `useGetFormElementQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetFormElementQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetFormElementQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useGetFormElementQuery(baseOptions: Apollo.QueryHookOptions<GetFormElementQuery, GetFormElementQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GetFormElementQuery, GetFormElementQueryVariables>(GetFormElementDocument, options);
@@ -20634,7 +16448,7 @@ export function useGetFormElementLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type GetFormElementQueryHookResult = ReturnType<typeof useGetFormElementQuery>;
 export type GetFormElementLazyQueryHookResult = ReturnType<typeof useGetFormElementLazyQuery>;
 export type GetFormElementQueryResult = Apollo.QueryResult<GetFormElementQuery, GetFormElementQueryVariables>;
-export const SurveyDocument = gql`
+export const SurveyDocument = /*#__PURE__*/ gql`
     query Survey($id: Int!, $slug: String!) {
   projectPublicDetails(slug: $slug) {
     ...ProjectPublicDetailsMetadata
@@ -20663,24 +16477,6 @@ ${ProjectMetadataMeFragFragmentDoc}
 ${MapEssentialsFragmentDoc}
 ${ProjectMetadataFragmentDoc}
 ${SurveyAppSurveyFragmentDoc}`;
-
-/**
- * __useSurveyQuery__
- *
- * To run a query within a React component, call `useSurveyQuery` and pass it any options that fit your needs.
- * When your component renders, `useSurveyQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useSurveyQuery({
- *   variables: {
- *      id: // value for 'id'
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useSurveyQuery(baseOptions: Apollo.QueryHookOptions<SurveyQuery, SurveyQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<SurveyQuery, SurveyQueryVariables>(SurveyDocument, options);
@@ -20692,7 +16488,7 @@ export function useSurveyLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Sur
 export type SurveyQueryHookResult = ReturnType<typeof useSurveyQuery>;
 export type SurveyLazyQueryHookResult = ReturnType<typeof useSurveyLazyQuery>;
 export type SurveyQueryResult = Apollo.QueryResult<SurveyQuery, SurveyQueryVariables>;
-export const CreateResponseDocument = gql`
+export const CreateResponseDocument = /*#__PURE__*/ gql`
     mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!) {
   createSurveyResponse(
     input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice}
@@ -20705,29 +16501,6 @@ export const CreateResponseDocument = gql`
 }
     `;
 export type CreateResponseMutationFn = Apollo.MutationFunction<CreateResponseMutation, CreateResponseMutationVariables>;
-
-/**
- * __useCreateResponseMutation__
- *
- * To run a mutation, you first call `useCreateResponseMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateResponseMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createResponseMutation, { data, loading, error }] = useCreateResponseMutation({
- *   variables: {
- *      surveyId: // value for 'surveyId'
- *      isDraft: // value for 'isDraft'
- *      bypassedDuplicateSubmissionControl: // value for 'bypassedDuplicateSubmissionControl'
- *      responseData: // value for 'responseData'
- *      facilitated: // value for 'facilitated'
- *      practice: // value for 'practice'
- *   },
- * });
- */
 export function useCreateResponseMutation(baseOptions?: Apollo.MutationHookOptions<CreateResponseMutation, CreateResponseMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateResponseMutation, CreateResponseMutationVariables>(CreateResponseDocument, options);
@@ -20735,7 +16508,7 @@ export function useCreateResponseMutation(baseOptions?: Apollo.MutationHookOptio
 export type CreateResponseMutationHookResult = ReturnType<typeof useCreateResponseMutation>;
 export type CreateResponseMutationResult = Apollo.MutationResult<CreateResponseMutation>;
 export type CreateResponseMutationOptions = Apollo.BaseMutationOptions<CreateResponseMutation, CreateResponseMutationVariables>;
-export const UpdateProjectNameDocument = gql`
+export const UpdateProjectNameDocument = /*#__PURE__*/ gql`
     mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
   updateProjectBySlug(
     input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name}}
@@ -20749,26 +16522,6 @@ export const UpdateProjectNameDocument = gql`
 }
     `;
 export type UpdateProjectNameMutationFn = Apollo.MutationFunction<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>;
-
-/**
- * __useUpdateProjectNameMutation__
- *
- * To run a mutation, you first call `useUpdateProjectNameMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateProjectNameMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateProjectNameMutation, { data, loading, error }] = useUpdateProjectNameMutation({
- *   variables: {
- *      name: // value for 'name'
- *      slug: // value for 'slug'
- *      clientMutationId: // value for 'clientMutationId'
- *   },
- * });
- */
 export function useUpdateProjectNameMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>(UpdateProjectNameDocument, options);
@@ -20776,7 +16529,7 @@ export function useUpdateProjectNameMutation(baseOptions?: Apollo.MutationHookOp
 export type UpdateProjectNameMutationHookResult = ReturnType<typeof useUpdateProjectNameMutation>;
 export type UpdateProjectNameMutationResult = Apollo.MutationResult<UpdateProjectNameMutation>;
 export type UpdateProjectNameMutationOptions = Apollo.BaseMutationOptions<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>;
-export const UpdateProjectSettingsDocument = gql`
+export const UpdateProjectSettingsDocument = /*#__PURE__*/ gql`
     mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String) {
   updateProjectBySlug(
     input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey}}
@@ -20796,31 +16549,6 @@ export const UpdateProjectSettingsDocument = gql`
 }
     `;
 export type UpdateProjectSettingsMutationFn = Apollo.MutationFunction<UpdateProjectSettingsMutation, UpdateProjectSettingsMutationVariables>;
-
-/**
- * __useUpdateProjectSettingsMutation__
- *
- * To run a mutation, you first call `useUpdateProjectSettingsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateProjectSettingsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateProjectSettingsMutation, { data, loading, error }] = useUpdateProjectSettingsMutation({
- *   variables: {
- *      slug: // value for 'slug'
- *      clientMutationId: // value for 'clientMutationId'
- *      name: // value for 'name'
- *      description: // value for 'description'
- *      logoUrl: // value for 'logoUrl'
- *      logoLink: // value for 'logoLink'
- *      isFeatured: // value for 'isFeatured'
- *      mapboxPublicKey: // value for 'mapboxPublicKey'
- *   },
- * });
- */
 export function useUpdateProjectSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectSettingsMutation, UpdateProjectSettingsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateProjectSettingsMutation, UpdateProjectSettingsMutationVariables>(UpdateProjectSettingsDocument, options);
@@ -20828,7 +16556,7 @@ export function useUpdateProjectSettingsMutation(baseOptions?: Apollo.MutationHo
 export type UpdateProjectSettingsMutationHookResult = ReturnType<typeof useUpdateProjectSettingsMutation>;
 export type UpdateProjectSettingsMutationResult = Apollo.MutationResult<UpdateProjectSettingsMutation>;
 export type UpdateProjectSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateProjectSettingsMutation, UpdateProjectSettingsMutationVariables>;
-export const UserAdminCountsDocument = gql`
+export const UserAdminCountsDocument = /*#__PURE__*/ gql`
     query UserAdminCounts($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -20848,23 +16576,6 @@ export const UserAdminCountsDocument = gql`
   }
 }
     `;
-
-/**
- * __useUserAdminCountsQuery__
- *
- * To run a query within a React component, call `useUserAdminCountsQuery` and pass it any options that fit your needs.
- * When your component renders, `useUserAdminCountsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useUserAdminCountsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useUserAdminCountsQuery(baseOptions: Apollo.QueryHookOptions<UserAdminCountsQuery, UserAdminCountsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<UserAdminCountsQuery, UserAdminCountsQueryVariables>(UserAdminCountsDocument, options);
@@ -20876,7 +16587,7 @@ export function useUserAdminCountsLazyQuery(baseOptions?: Apollo.LazyQueryHookOp
 export type UserAdminCountsQueryHookResult = ReturnType<typeof useUserAdminCountsQuery>;
 export type UserAdminCountsLazyQueryHookResult = ReturnType<typeof useUserAdminCountsLazyQuery>;
 export type UserAdminCountsQueryResult = Apollo.QueryResult<UserAdminCountsQuery, UserAdminCountsQueryVariables>;
-export const CreateGroupDocument = gql`
+export const CreateGroupDocument = /*#__PURE__*/ gql`
     mutation CreateGroup($projectId: Int!, $name: String!) {
   createGroup(input: {group: {name: $name, projectId: $projectId}}) {
     group {
@@ -20888,25 +16599,6 @@ export const CreateGroupDocument = gql`
 }
     `;
 export type CreateGroupMutationFn = Apollo.MutationFunction<CreateGroupMutation, CreateGroupMutationVariables>;
-
-/**
- * __useCreateGroupMutation__
- *
- * To run a mutation, you first call `useCreateGroupMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateGroupMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createGroupMutation, { data, loading, error }] = useCreateGroupMutation({
- *   variables: {
- *      projectId: // value for 'projectId'
- *      name: // value for 'name'
- *   },
- * });
- */
 export function useCreateGroupMutation(baseOptions?: Apollo.MutationHookOptions<CreateGroupMutation, CreateGroupMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateGroupMutation, CreateGroupMutationVariables>(CreateGroupDocument, options);
@@ -20914,7 +16606,7 @@ export function useCreateGroupMutation(baseOptions?: Apollo.MutationHookOptions<
 export type CreateGroupMutationHookResult = ReturnType<typeof useCreateGroupMutation>;
 export type CreateGroupMutationResult = Apollo.MutationResult<CreateGroupMutation>;
 export type CreateGroupMutationOptions = Apollo.BaseMutationOptions<CreateGroupMutation, CreateGroupMutationVariables>;
-export const ParticipantsDocument = gql`
+export const ParticipantsDocument = /*#__PURE__*/ gql`
     query Participants($slug: String!, $offset: Int, $first: Int) {
   root: projectBySlug(slug: $slug) {
     id
@@ -20924,25 +16616,6 @@ export const ParticipantsDocument = gql`
   }
 }
     ${ParticipantListDetailsFragmentDoc}`;
-
-/**
- * __useParticipantsQuery__
- *
- * To run a query within a React component, call `useParticipantsQuery` and pass it any options that fit your needs.
- * When your component renders, `useParticipantsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useParticipantsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *      offset: // value for 'offset'
- *      first: // value for 'first'
- *   },
- * });
- */
 export function useParticipantsQuery(baseOptions: Apollo.QueryHookOptions<ParticipantsQuery, ParticipantsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<ParticipantsQuery, ParticipantsQueryVariables>(ParticipantsDocument, options);
@@ -20954,7 +16627,7 @@ export function useParticipantsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptio
 export type ParticipantsQueryHookResult = ReturnType<typeof useParticipantsQuery>;
 export type ParticipantsLazyQueryHookResult = ReturnType<typeof useParticipantsLazyQuery>;
 export type ParticipantsQueryResult = Apollo.QueryResult<ParticipantsQuery, ParticipantsQueryVariables>;
-export const AdminsDocument = gql`
+export const AdminsDocument = /*#__PURE__*/ gql`
     query Admins($slug: String!, $offset: Int, $first: Int) {
   root: projectBySlug(slug: $slug) {
     id
@@ -20964,25 +16637,6 @@ export const AdminsDocument = gql`
   }
 }
     ${ParticipantListDetailsFragmentDoc}`;
-
-/**
- * __useAdminsQuery__
- *
- * To run a query within a React component, call `useAdminsQuery` and pass it any options that fit your needs.
- * When your component renders, `useAdminsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useAdminsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *      offset: // value for 'offset'
- *      first: // value for 'first'
- *   },
- * });
- */
 export function useAdminsQuery(baseOptions: Apollo.QueryHookOptions<AdminsQuery, AdminsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<AdminsQuery, AdminsQueryVariables>(AdminsDocument, options);
@@ -20994,7 +16648,7 @@ export function useAdminsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<Adm
 export type AdminsQueryHookResult = ReturnType<typeof useAdminsQuery>;
 export type AdminsLazyQueryHookResult = ReturnType<typeof useAdminsLazyQuery>;
 export type AdminsQueryResult = Apollo.QueryResult<AdminsQuery, AdminsQueryVariables>;
-export const GroupMembersDocument = gql`
+export const GroupMembersDocument = /*#__PURE__*/ gql`
     query GroupMembers($groupId: Int!, $offset: Int, $first: Int) {
   root: group(id: $groupId) {
     participants: members(offset: $offset, first: $first) {
@@ -21003,25 +16657,6 @@ export const GroupMembersDocument = gql`
   }
 }
     ${ParticipantListDetailsFragmentDoc}`;
-
-/**
- * __useGroupMembersQuery__
- *
- * To run a query within a React component, call `useGroupMembersQuery` and pass it any options that fit your needs.
- * When your component renders, `useGroupMembersQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGroupMembersQuery({
- *   variables: {
- *      groupId: // value for 'groupId'
- *      offset: // value for 'offset'
- *      first: // value for 'first'
- *   },
- * });
- */
 export function useGroupMembersQuery(baseOptions: Apollo.QueryHookOptions<GroupMembersQuery, GroupMembersQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GroupMembersQuery, GroupMembersQueryVariables>(GroupMembersDocument, options);
@@ -21033,7 +16668,7 @@ export function useGroupMembersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptio
 export type GroupMembersQueryHookResult = ReturnType<typeof useGroupMembersQuery>;
 export type GroupMembersLazyQueryHookResult = ReturnType<typeof useGroupMembersLazyQuery>;
 export type GroupMembersQueryResult = Apollo.QueryResult<GroupMembersQuery, GroupMembersQueryVariables>;
-export const UserSettingsListsDocument = gql`
+export const UserSettingsListsDocument = /*#__PURE__*/ gql`
     query UserSettingsLists($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -21054,23 +16689,6 @@ export const UserSettingsListsDocument = gql`
 }
     ${InviteDetailsFragmentDoc}
 ${UserListDetailsFragmentDoc}`;
-
-/**
- * __useUserSettingsListsQuery__
- *
- * To run a query within a React component, call `useUserSettingsListsQuery` and pass it any options that fit your needs.
- * When your component renders, `useUserSettingsListsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useUserSettingsListsQuery({
- *   variables: {
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useUserSettingsListsQuery(baseOptions: Apollo.QueryHookOptions<UserSettingsListsQuery, UserSettingsListsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<UserSettingsListsQuery, UserSettingsListsQueryVariables>(UserSettingsListsDocument, options);
@@ -21082,7 +16700,7 @@ export function useUserSettingsListsLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type UserSettingsListsQueryHookResult = ReturnType<typeof useUserSettingsListsQuery>;
 export type UserSettingsListsLazyQueryHookResult = ReturnType<typeof useUserSettingsListsLazyQuery>;
 export type UserSettingsListsQueryResult = Apollo.QueryResult<UserSettingsListsQuery, UserSettingsListsQueryVariables>;
-export const UserInfoDocument = gql`
+export const UserInfoDocument = /*#__PURE__*/ gql`
     query UserInfo($userId: Int!, $slug: String!) {
   user(id: $userId) {
     id
@@ -21117,24 +16735,6 @@ export const UserInfoDocument = gql`
   }
 }
     `;
-
-/**
- * __useUserInfoQuery__
- *
- * To run a query within a React component, call `useUserInfoQuery` and pass it any options that fit your needs.
- * When your component renders, `useUserInfoQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useUserInfoQuery({
- *   variables: {
- *      userId: // value for 'userId'
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useUserInfoQuery(baseOptions: Apollo.QueryHookOptions<UserInfoQuery, UserInfoQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<UserInfoQuery, UserInfoQueryVariables>(UserInfoDocument, options);
@@ -21146,7 +16746,7 @@ export function useUserInfoLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<U
 export type UserInfoQueryHookResult = ReturnType<typeof useUserInfoQuery>;
 export type UserInfoLazyQueryHookResult = ReturnType<typeof useUserInfoLazyQuery>;
 export type UserInfoQueryResult = Apollo.QueryResult<UserInfoQuery, UserInfoQueryVariables>;
-export const ToggleAdminAccessDocument = gql`
+export const ToggleAdminAccessDocument = /*#__PURE__*/ gql`
     mutation toggleAdminAccess($userId: Int!, $projectId: Int!) {
   toggleAdminAccess(input: {projectId: $projectId, userId: $userId}) {
     clientMutationId
@@ -21155,25 +16755,6 @@ export const ToggleAdminAccessDocument = gql`
 }
     `;
 export type ToggleAdminAccessMutationFn = Apollo.MutationFunction<ToggleAdminAccessMutation, ToggleAdminAccessMutationVariables>;
-
-/**
- * __useToggleAdminAccessMutation__
- *
- * To run a mutation, you first call `useToggleAdminAccessMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useToggleAdminAccessMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [toggleAdminAccessMutation, { data, loading, error }] = useToggleAdminAccessMutation({
- *   variables: {
- *      userId: // value for 'userId'
- *      projectId: // value for 'projectId'
- *   },
- * });
- */
 export function useToggleAdminAccessMutation(baseOptions?: Apollo.MutationHookOptions<ToggleAdminAccessMutation, ToggleAdminAccessMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<ToggleAdminAccessMutation, ToggleAdminAccessMutationVariables>(ToggleAdminAccessDocument, options);
@@ -21181,7 +16762,7 @@ export function useToggleAdminAccessMutation(baseOptions?: Apollo.MutationHookOp
 export type ToggleAdminAccessMutationHookResult = ReturnType<typeof useToggleAdminAccessMutation>;
 export type ToggleAdminAccessMutationResult = Apollo.MutationResult<ToggleAdminAccessMutation>;
 export type ToggleAdminAccessMutationOptions = Apollo.BaseMutationOptions<ToggleAdminAccessMutation, ToggleAdminAccessMutationVariables>;
-export const SetUserGroupsDocument = gql`
+export const SetUserGroupsDocument = /*#__PURE__*/ gql`
     mutation setUserGroups($userId: Int!, $projectId: Int!, $groupIds: [Int]!) {
   setUserGroups(
     input: {userId: $userId, projectId: $projectId, groups: $groupIds}
@@ -21191,26 +16772,6 @@ export const SetUserGroupsDocument = gql`
 }
     `;
 export type SetUserGroupsMutationFn = Apollo.MutationFunction<SetUserGroupsMutation, SetUserGroupsMutationVariables>;
-
-/**
- * __useSetUserGroupsMutation__
- *
- * To run a mutation, you first call `useSetUserGroupsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useSetUserGroupsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [setUserGroupsMutation, { data, loading, error }] = useSetUserGroupsMutation({
- *   variables: {
- *      userId: // value for 'userId'
- *      projectId: // value for 'projectId'
- *      groupIds: // value for 'groupIds'
- *   },
- * });
- */
 export function useSetUserGroupsMutation(baseOptions?: Apollo.MutationHookOptions<SetUserGroupsMutation, SetUserGroupsMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<SetUserGroupsMutation, SetUserGroupsMutationVariables>(SetUserGroupsDocument, options);
@@ -21218,7 +16779,7 @@ export function useSetUserGroupsMutation(baseOptions?: Apollo.MutationHookOption
 export type SetUserGroupsMutationHookResult = ReturnType<typeof useSetUserGroupsMutation>;
 export type SetUserGroupsMutationResult = Apollo.MutationResult<SetUserGroupsMutation>;
 export type SetUserGroupsMutationOptions = Apollo.BaseMutationOptions<SetUserGroupsMutation, SetUserGroupsMutationVariables>;
-export const ToggleForumPostingBanDocument = gql`
+export const ToggleForumPostingBanDocument = /*#__PURE__*/ gql`
     mutation toggleForumPostingBan($userId: Int!, $projectId: Int!) {
   toggleForumPostingBan(input: {userId: $userId, projectId: $projectId}) {
     isBanned: boolean
@@ -21226,25 +16787,6 @@ export const ToggleForumPostingBanDocument = gql`
 }
     `;
 export type ToggleForumPostingBanMutationFn = Apollo.MutationFunction<ToggleForumPostingBanMutation, ToggleForumPostingBanMutationVariables>;
-
-/**
- * __useToggleForumPostingBanMutation__
- *
- * To run a mutation, you first call `useToggleForumPostingBanMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useToggleForumPostingBanMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [toggleForumPostingBanMutation, { data, loading, error }] = useToggleForumPostingBanMutation({
- *   variables: {
- *      userId: // value for 'userId'
- *      projectId: // value for 'projectId'
- *   },
- * });
- */
 export function useToggleForumPostingBanMutation(baseOptions?: Apollo.MutationHookOptions<ToggleForumPostingBanMutation, ToggleForumPostingBanMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<ToggleForumPostingBanMutation, ToggleForumPostingBanMutationVariables>(ToggleForumPostingBanDocument, options);
@@ -21252,7 +16794,7 @@ export function useToggleForumPostingBanMutation(baseOptions?: Apollo.MutationHo
 export type ToggleForumPostingBanMutationHookResult = ReturnType<typeof useToggleForumPostingBanMutation>;
 export type ToggleForumPostingBanMutationResult = Apollo.MutationResult<ToggleForumPostingBanMutation>;
 export type ToggleForumPostingBanMutationOptions = Apollo.BaseMutationOptions<ToggleForumPostingBanMutation, ToggleForumPostingBanMutationVariables>;
-export const DeleteGroupDocument = gql`
+export const DeleteGroupDocument = /*#__PURE__*/ gql`
     mutation deleteGroup($groupId: Int!) {
   deleteGroup(input: {id: $groupId}) {
     group {
@@ -21262,24 +16804,6 @@ export const DeleteGroupDocument = gql`
 }
     `;
 export type DeleteGroupMutationFn = Apollo.MutationFunction<DeleteGroupMutation, DeleteGroupMutationVariables>;
-
-/**
- * __useDeleteGroupMutation__
- *
- * To run a mutation, you first call `useDeleteGroupMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useDeleteGroupMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [deleteGroupMutation, { data, loading, error }] = useDeleteGroupMutation({
- *   variables: {
- *      groupId: // value for 'groupId'
- *   },
- * });
- */
 export function useDeleteGroupMutation(baseOptions?: Apollo.MutationHookOptions<DeleteGroupMutation, DeleteGroupMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<DeleteGroupMutation, DeleteGroupMutationVariables>(DeleteGroupDocument, options);
@@ -21287,7 +16811,7 @@ export function useDeleteGroupMutation(baseOptions?: Apollo.MutationHookOptions<
 export type DeleteGroupMutationHookResult = ReturnType<typeof useDeleteGroupMutation>;
 export type DeleteGroupMutationResult = Apollo.MutationResult<DeleteGroupMutation>;
 export type DeleteGroupMutationOptions = Apollo.BaseMutationOptions<DeleteGroupMutation, DeleteGroupMutationVariables>;
-export const CreateProjectInvitesDocument = gql`
+export const CreateProjectInvitesDocument = /*#__PURE__*/ gql`
     mutation createProjectInvites($projectId: Int!, $makeAdmin: Boolean!, $groupNames: [String]!, $userDetails: [ProjectInviteOptionInput]!, $sendEmailNow: Boolean!) {
   createProjectInvites(
     input: {projectId: $projectId, makeAdmin: $makeAdmin, groupNames: $groupNames, projectInviteOptions: $userDetails, sendEmailNow: $sendEmailNow}
@@ -21299,28 +16823,6 @@ export const CreateProjectInvitesDocument = gql`
 }
     ${InviteDetailsFragmentDoc}`;
 export type CreateProjectInvitesMutationFn = Apollo.MutationFunction<CreateProjectInvitesMutation, CreateProjectInvitesMutationVariables>;
-
-/**
- * __useCreateProjectInvitesMutation__
- *
- * To run a mutation, you first call `useCreateProjectInvitesMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreateProjectInvitesMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createProjectInvitesMutation, { data, loading, error }] = useCreateProjectInvitesMutation({
- *   variables: {
- *      projectId: // value for 'projectId'
- *      makeAdmin: // value for 'makeAdmin'
- *      groupNames: // value for 'groupNames'
- *      userDetails: // value for 'userDetails'
- *      sendEmailNow: // value for 'sendEmailNow'
- *   },
- * });
- */
 export function useCreateProjectInvitesMutation(baseOptions?: Apollo.MutationHookOptions<CreateProjectInvitesMutation, CreateProjectInvitesMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<CreateProjectInvitesMutation, CreateProjectInvitesMutationVariables>(CreateProjectInvitesDocument, options);
@@ -21328,7 +16830,7 @@ export function useCreateProjectInvitesMutation(baseOptions?: Apollo.MutationHoo
 export type CreateProjectInvitesMutationHookResult = ReturnType<typeof useCreateProjectInvitesMutation>;
 export type CreateProjectInvitesMutationResult = Apollo.MutationResult<CreateProjectInvitesMutation>;
 export type CreateProjectInvitesMutationOptions = Apollo.BaseMutationOptions<CreateProjectInvitesMutation, CreateProjectInvitesMutationVariables>;
-export const ProjectInvitesDocument = gql`
+export const ProjectInvitesDocument = /*#__PURE__*/ gql`
     query ProjectInvites($projectId: Int!, $status: [InviteStatus], $orderBy: InviteOrderBy, $cursor: Cursor, $limit: Int) {
   project(id: $projectId) {
     id
@@ -21351,27 +16853,6 @@ export const ProjectInvitesDocument = gql`
   }
 }
     ${InviteDetailsFragmentDoc}`;
-
-/**
- * __useProjectInvitesQuery__
- *
- * To run a query within a React component, call `useProjectInvitesQuery` and pass it any options that fit your needs.
- * When your component renders, `useProjectInvitesQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useProjectInvitesQuery({
- *   variables: {
- *      projectId: // value for 'projectId'
- *      status: // value for 'status'
- *      orderBy: // value for 'orderBy'
- *      cursor: // value for 'cursor'
- *      limit: // value for 'limit'
- *   },
- * });
- */
 export function useProjectInvitesQuery(baseOptions: Apollo.QueryHookOptions<ProjectInvitesQuery, ProjectInvitesQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<ProjectInvitesQuery, ProjectInvitesQueryVariables>(ProjectInvitesDocument, options);
@@ -21383,7 +16864,7 @@ export function useProjectInvitesLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type ProjectInvitesQueryHookResult = ReturnType<typeof useProjectInvitesQuery>;
 export type ProjectInvitesLazyQueryHookResult = ReturnType<typeof useProjectInvitesLazyQuery>;
 export type ProjectInvitesQueryResult = Apollo.QueryResult<ProjectInvitesQuery, ProjectInvitesQueryVariables>;
-export const InviteEditorModalQueryDocument = gql`
+export const InviteEditorModalQueryDocument = /*#__PURE__*/ gql`
     query InviteEditorModalQuery($inviteId: Int!, $slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -21409,24 +16890,6 @@ export const InviteEditorModalQueryDocument = gql`
   }
 }
     ${InviteEmailDetailsFragmentDoc}`;
-
-/**
- * __useInviteEditorModalQueryQuery__
- *
- * To run a query within a React component, call `useInviteEditorModalQueryQuery` and pass it any options that fit your needs.
- * When your component renders, `useInviteEditorModalQueryQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useInviteEditorModalQueryQuery({
- *   variables: {
- *      inviteId: // value for 'inviteId'
- *      slug: // value for 'slug'
- *   },
- * });
- */
 export function useInviteEditorModalQueryQuery(baseOptions: Apollo.QueryHookOptions<InviteEditorModalQueryQuery, InviteEditorModalQueryQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<InviteEditorModalQueryQuery, InviteEditorModalQueryQueryVariables>(InviteEditorModalQueryDocument, options);
@@ -21438,7 +16901,7 @@ export function useInviteEditorModalQueryLazyQuery(baseOptions?: Apollo.LazyQuer
 export type InviteEditorModalQueryQueryHookResult = ReturnType<typeof useInviteEditorModalQueryQuery>;
 export type InviteEditorModalQueryLazyQueryHookResult = ReturnType<typeof useInviteEditorModalQueryLazyQuery>;
 export type InviteEditorModalQueryQueryResult = Apollo.QueryResult<InviteEditorModalQueryQuery, InviteEditorModalQueryQueryVariables>;
-export const UpdateProjectInviteDocument = gql`
+export const UpdateProjectInviteDocument = /*#__PURE__*/ gql`
     mutation UpdateProjectInvite($id: Int!, $makeAdmin: Boolean!, $email: String!, $fullname: String, $groups: [Int]!) {
   updateProjectInvite(
     input: {inviteId: $id, makeAdmin: $makeAdmin, email: $email, groups: $groups, fullname: $fullname}
@@ -21460,28 +16923,6 @@ export const UpdateProjectInviteDocument = gql`
 }
     ${InviteEmailDetailsFragmentDoc}`;
 export type UpdateProjectInviteMutationFn = Apollo.MutationFunction<UpdateProjectInviteMutation, UpdateProjectInviteMutationVariables>;
-
-/**
- * __useUpdateProjectInviteMutation__
- *
- * To run a mutation, you first call `useUpdateProjectInviteMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateProjectInviteMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateProjectInviteMutation, { data, loading, error }] = useUpdateProjectInviteMutation({
- *   variables: {
- *      id: // value for 'id'
- *      makeAdmin: // value for 'makeAdmin'
- *      email: // value for 'email'
- *      fullname: // value for 'fullname'
- *      groups: // value for 'groups'
- *   },
- * });
- */
 export function useUpdateProjectInviteMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProjectInviteMutation, UpdateProjectInviteMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateProjectInviteMutation, UpdateProjectInviteMutationVariables>(UpdateProjectInviteDocument, options);
@@ -21489,7 +16930,7 @@ export function useUpdateProjectInviteMutation(baseOptions?: Apollo.MutationHook
 export type UpdateProjectInviteMutationHookResult = ReturnType<typeof useUpdateProjectInviteMutation>;
 export type UpdateProjectInviteMutationResult = Apollo.MutationResult<UpdateProjectInviteMutation>;
 export type UpdateProjectInviteMutationOptions = Apollo.BaseMutationOptions<UpdateProjectInviteMutation, UpdateProjectInviteMutationVariables>;
-export const DeleteProjectInviteDocument = gql`
+export const DeleteProjectInviteDocument = /*#__PURE__*/ gql`
     mutation DeleteProjectInvite($id: Int!) {
   deleteProjectInvite(input: {id: $id}) {
     projectInvite {
@@ -21499,24 +16940,6 @@ export const DeleteProjectInviteDocument = gql`
 }
     `;
 export type DeleteProjectInviteMutationFn = Apollo.MutationFunction<DeleteProjectInviteMutation, DeleteProjectInviteMutationVariables>;
-
-/**
- * __useDeleteProjectInviteMutation__
- *
- * To run a mutation, you first call `useDeleteProjectInviteMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useDeleteProjectInviteMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [deleteProjectInviteMutation, { data, loading, error }] = useDeleteProjectInviteMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useDeleteProjectInviteMutation(baseOptions?: Apollo.MutationHookOptions<DeleteProjectInviteMutation, DeleteProjectInviteMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<DeleteProjectInviteMutation, DeleteProjectInviteMutationVariables>(DeleteProjectInviteDocument, options);
@@ -21524,7 +16947,7 @@ export function useDeleteProjectInviteMutation(baseOptions?: Apollo.MutationHook
 export type DeleteProjectInviteMutationHookResult = ReturnType<typeof useDeleteProjectInviteMutation>;
 export type DeleteProjectInviteMutationResult = Apollo.MutationResult<DeleteProjectInviteMutation>;
 export type DeleteProjectInviteMutationOptions = Apollo.BaseMutationOptions<DeleteProjectInviteMutation, DeleteProjectInviteMutationVariables>;
-export const SendInviteDocument = gql`
+export const SendInviteDocument = /*#__PURE__*/ gql`
     mutation SendInvite($id: Int!) {
   sendProjectInvites(input: {inviteIds: [$id]}) {
     inviteEmails {
@@ -21538,24 +16961,6 @@ export const SendInviteDocument = gql`
 }
     ${InviteEmailDetailsFragmentDoc}`;
 export type SendInviteMutationFn = Apollo.MutationFunction<SendInviteMutation, SendInviteMutationVariables>;
-
-/**
- * __useSendInviteMutation__
- *
- * To run a mutation, you first call `useSendInviteMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useSendInviteMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [sendInviteMutation, { data, loading, error }] = useSendInviteMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
 export function useSendInviteMutation(baseOptions?: Apollo.MutationHookOptions<SendInviteMutation, SendInviteMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<SendInviteMutation, SendInviteMutationVariables>(SendInviteDocument, options);
@@ -21563,7 +16968,7 @@ export function useSendInviteMutation(baseOptions?: Apollo.MutationHookOptions<S
 export type SendInviteMutationHookResult = ReturnType<typeof useSendInviteMutation>;
 export type SendInviteMutationResult = Apollo.MutationResult<SendInviteMutation>;
 export type SendInviteMutationOptions = Apollo.BaseMutationOptions<SendInviteMutation, SendInviteMutationVariables>;
-export const RenameGroupDocument = gql`
+export const RenameGroupDocument = /*#__PURE__*/ gql`
     mutation RenameGroup($id: Int!, $name: String!) {
   updateGroup(input: {id: $id, patch: {name: $name}}) {
     group {
@@ -21574,25 +16979,6 @@ export const RenameGroupDocument = gql`
 }
     `;
 export type RenameGroupMutationFn = Apollo.MutationFunction<RenameGroupMutation, RenameGroupMutationVariables>;
-
-/**
- * __useRenameGroupMutation__
- *
- * To run a mutation, you first call `useRenameGroupMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useRenameGroupMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [renameGroupMutation, { data, loading, error }] = useRenameGroupMutation({
- *   variables: {
- *      id: // value for 'id'
- *      name: // value for 'name'
- *   },
- * });
- */
 export function useRenameGroupMutation(baseOptions?: Apollo.MutationHookOptions<RenameGroupMutation, RenameGroupMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<RenameGroupMutation, RenameGroupMutationVariables>(RenameGroupDocument, options);
@@ -21600,7 +16986,7 @@ export function useRenameGroupMutation(baseOptions?: Apollo.MutationHookOptions<
 export type RenameGroupMutationHookResult = ReturnType<typeof useRenameGroupMutation>;
 export type RenameGroupMutationResult = Apollo.MutationResult<RenameGroupMutation>;
 export type RenameGroupMutationOptions = Apollo.BaseMutationOptions<RenameGroupMutation, RenameGroupMutationVariables>;
-export const SendInvitesDocument = gql`
+export const SendInvitesDocument = /*#__PURE__*/ gql`
     mutation SendInvites($ids: [Int]!) {
   sendProjectInvites(input: {inviteIds: $ids}) {
     inviteEmails {
@@ -21615,24 +17001,6 @@ export const SendInvitesDocument = gql`
 }
     ${InviteEmailDetailsFragmentDoc}`;
 export type SendInvitesMutationFn = Apollo.MutationFunction<SendInvitesMutation, SendInvitesMutationVariables>;
-
-/**
- * __useSendInvitesMutation__
- *
- * To run a mutation, you first call `useSendInvitesMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useSendInvitesMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [sendInvitesMutation, { data, loading, error }] = useSendInvitesMutation({
- *   variables: {
- *      ids: // value for 'ids'
- *   },
- * });
- */
 export function useSendInvitesMutation(baseOptions?: Apollo.MutationHookOptions<SendInvitesMutation, SendInvitesMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<SendInvitesMutation, SendInvitesMutationVariables>(SendInvitesDocument, options);
@@ -21640,7 +17008,7 @@ export function useSendInvitesMutation(baseOptions?: Apollo.MutationHookOptions<
 export type SendInvitesMutationHookResult = ReturnType<typeof useSendInvitesMutation>;
 export type SendInvitesMutationResult = Apollo.MutationResult<SendInvitesMutation>;
 export type SendInvitesMutationOptions = Apollo.BaseMutationOptions<SendInvitesMutation, SendInvitesMutationVariables>;
-export const ProjectInviteEmailStatusSubscriptionDocument = gql`
+export const ProjectInviteEmailStatusSubscriptionDocument = /*#__PURE__*/ gql`
     subscription ProjectInviteEmailStatusSubscription {
   projectInviteStateUpdated {
     invite {
@@ -21650,29 +17018,13 @@ export const ProjectInviteEmailStatusSubscriptionDocument = gql`
   }
 }
     `;
-
-/**
- * __useProjectInviteEmailStatusSubscriptionSubscription__
- *
- * To run a query within a React component, call `useProjectInviteEmailStatusSubscriptionSubscription` and pass it any options that fit your needs.
- * When your component renders, `useProjectInviteEmailStatusSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useProjectInviteEmailStatusSubscriptionSubscription({
- *   variables: {
- *   },
- * });
- */
 export function useProjectInviteEmailStatusSubscriptionSubscription(baseOptions?: Apollo.SubscriptionHookOptions<ProjectInviteEmailStatusSubscriptionSubscription, ProjectInviteEmailStatusSubscriptionSubscriptionVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useSubscription<ProjectInviteEmailStatusSubscriptionSubscription, ProjectInviteEmailStatusSubscriptionSubscriptionVariables>(ProjectInviteEmailStatusSubscriptionDocument, options);
       }
 export type ProjectInviteEmailStatusSubscriptionSubscriptionHookResult = ReturnType<typeof useProjectInviteEmailStatusSubscriptionSubscription>;
 export type ProjectInviteEmailStatusSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ProjectInviteEmailStatusSubscriptionSubscription>;
-export const UpdateProfileDocument = gql`
+export const UpdateProfileDocument = /*#__PURE__*/ gql`
     mutation UpdateProfile($userId: Int!, $affiliations: String, $email: Email, $fullname: String, $nickname: String, $picture: Upload) {
   updateProfileByUserId(
     input: {userId: $userId, patch: {affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
@@ -21690,29 +17042,6 @@ export const UpdateProfileDocument = gql`
 }
     `;
 export type UpdateProfileMutationFn = Apollo.MutationFunction<UpdateProfileMutation, UpdateProfileMutationVariables>;
-
-/**
- * __useUpdateProfileMutation__
- *
- * To run a mutation, you first call `useUpdateProfileMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateProfileMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateProfileMutation, { data, loading, error }] = useUpdateProfileMutation({
- *   variables: {
- *      userId: // value for 'userId'
- *      affiliations: // value for 'affiliations'
- *      email: // value for 'email'
- *      fullname: // value for 'fullname'
- *      nickname: // value for 'nickname'
- *      picture: // value for 'picture'
- *   },
- * });
- */
 export function useUpdateProfileMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProfileMutation, UpdateProfileMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useMutation<UpdateProfileMutation, UpdateProfileMutationVariables>(UpdateProfileDocument, options);
@@ -21720,27 +17049,11 @@ export function useUpdateProfileMutation(baseOptions?: Apollo.MutationHookOption
 export type UpdateProfileMutationHookResult = ReturnType<typeof useUpdateProfileMutation>;
 export type UpdateProfileMutationResult = Apollo.MutationResult<UpdateProfileMutation>;
 export type UpdateProfileMutationOptions = Apollo.BaseMutationOptions<UpdateProfileMutation, UpdateProfileMutationVariables>;
-export const UserIsSuperuserDocument = gql`
+export const UserIsSuperuserDocument = /*#__PURE__*/ gql`
     query UserIsSuperuser {
   currentUserIsSuperuser
 }
     `;
-
-/**
- * __useUserIsSuperuserQuery__
- *
- * To run a query within a React component, call `useUserIsSuperuserQuery` and pass it any options that fit your needs.
- * When your component renders, `useUserIsSuperuserQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useUserIsSuperuserQuery({
- *   variables: {
- *   },
- * });
- */
 export function useUserIsSuperuserQuery(baseOptions?: Apollo.QueryHookOptions<UserIsSuperuserQuery, UserIsSuperuserQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<UserIsSuperuserQuery, UserIsSuperuserQueryVariables>(UserIsSuperuserDocument, options);
@@ -21904,27 +17217,8 @@ export const namedOperations = {
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
   },
   Fragment: {
-    UpdateTerrainExaggeration: 'UpdateTerrainExaggeration',
-    NewLabelsLayer: 'NewLabelsLayer',
-    NewTerrain: 'NewTerrain',
-    NewBasemap: 'NewBasemap',
-    NewQueryParameters: 'NewQueryParameters',
-    UpdateHighDPI: 'UpdateHighDPI',
-    UpdateFormat: 'UpdateFormat',
-    NewGLStyle: 'NewGLStyle',
-    NewRenderUnder: 'NewRenderUnder',
-    NewZIndex: 'NewZIndex',
-    NewElement: 'NewElement',
     LogicRuleEditorFormElement: 'LogicRuleEditorFormElement',
     LogicRuleEditorRule: 'LogicRuleEditorRule',
-    NewRule: 'NewRule',
-    NewSurvey: 'NewSurvey',
-    NewGroup: 'NewGroup',
-    NewInviteEmail: 'NewInviteEmail',
-    NewLayerOptions: 'NewLayerOptions',
-    UpdateAlternateLanguageSettings: 'UpdateAlternateLanguageSettings',
-    UpdateComponentSettings: 'UpdateComponentSettings',
-    UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',
     MapEssentials: 'MapEssentials',
     ProjectMetadata: 'ProjectMetadata',

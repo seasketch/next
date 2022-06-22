@@ -18,7 +18,7 @@ export interface ArcGISBrowserColumnProps {
 }
 
 export function ArcGISBrowserColumn(props: ArcGISBrowserColumnProps) {
-  const { catalogInfo, error, loading } = useCatalogItems(props.url);
+  const { catalogInfo, loading } = useCatalogItems(props.url);
   const [selectedItem, setSelectedItem] = useState<CatalogItem>();
   const updateSelection = (item: CatalogItem) => {
     setSelectedItem(item);

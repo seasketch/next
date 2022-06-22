@@ -1,20 +1,17 @@
-import react, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import {
   MailIcon,
   ExclamationIcon,
   IdentificationIcon,
-  PencilIcon,
   PaperClipIcon,
 } from "@heroicons/react/outline";
 import { UserGroupIcon } from "@heroicons/react/solid";
 import Button from "../../components/Button";
 import NavSidebar, { NavSidebarItem } from "../../components/NavSidebar";
 import {
-  useUserAdminCountsQuery,
   Maybe,
-  InviteStatus,
   ProjectAccessControlSetting,
   InviteDetailsFragment,
   Group,

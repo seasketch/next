@@ -31,7 +31,7 @@ export default function EditInviteModal({
   onRequestClose: () => void;
 }) {
   const { t } = useTranslation("admin");
-  const { data, loading, error, refetch } = useInviteEditorModalQueryQuery({
+  const { data, refetch } = useInviteEditorModalQueryQuery({
     variables: {
       inviteId: id,
       slug,
@@ -51,14 +51,15 @@ export default function EditInviteModal({
       }
     },
   });
-  const [state, setState] = useState<{
-    fullname: string;
-    email: string;
-    groups: { id: number; name: string }[];
-    makeAdmin: boolean;
-    error?: string;
-    hasChanged: boolean;
-  }>();
+  const [state, setState] =
+    useState<{
+      fullname: string;
+      email: string;
+      groups: { id: number; name: string }[];
+      makeAdmin: boolean;
+      error?: string;
+      hasChanged: boolean;
+    }>();
   const [expandedEmails, setExpandedEmails] = useState<{
     [id: number]: boolean;
   }>({});

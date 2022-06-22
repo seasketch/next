@@ -1,10 +1,11 @@
-import React from "react";
+import React, { ReactNode } from "react";
 import { motion } from "framer-motion";
 
 const ProjectAppSidebar: React.FunctionComponent<{
   title: string;
   onClose: () => void;
   dark: boolean;
+  children?: ReactNode;
 }> = (props) => {
   return (
     <motion.div

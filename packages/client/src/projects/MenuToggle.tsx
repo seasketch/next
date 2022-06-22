@@ -1,6 +1,4 @@
-import * as React from "react";
-import { motion, MotionProps } from "framer-motion";
-import { Props } from "framer-motion/types/types";
+import { motion } from "framer-motion";
 
 const Path = (props: any) => (
   <motion.path

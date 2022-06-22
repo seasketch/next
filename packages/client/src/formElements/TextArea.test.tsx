@@ -3,10 +3,12 @@ import React from "react";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import TextArea, { TextAreaProps } from "./TextArea";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = questionBodyFromMarkdown(`# Tell us about yourself`);
 
 const makeArgs = (componentSettings: TextAreaProps) => ({
+  ...commonFormElementArgs,
   id: 1,
   body,
   onChange: jest.fn(),

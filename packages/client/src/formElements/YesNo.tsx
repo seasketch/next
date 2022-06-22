@@ -141,7 +141,7 @@ export const YesNoCellEditor: CellEditorComponent<
 
   useEffect(() => {
     onChange(val);
-  }, [val]);
+  }, [onChange, val]);
 
   return (
     <select

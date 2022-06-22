@@ -33,7 +33,7 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
     if ((val === null || val === undefined) && context?.bestEmail) {
       props.onChange(context.bestEmail, false);
     }
-  }, [context?.bestEmail]);
+  }, [context?.bestEmail, props, val]);
 
   const placeholder = useLocalizedComponentSetting("placeholder", props);
 
@@ -111,7 +111,9 @@ Email.defaultBody = questionBodyFromMarkdown(`
 Email.defaultExportId = "email";
 
 // via https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/email#basic_validation
-const regexp = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+const regexp =
+  // eslint-disable-next-line no-useless-escape
+  /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
 function validate(text: string | undefined, required: boolean) {
   if (required && (!text || text.length < 1)) {

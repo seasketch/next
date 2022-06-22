@@ -5,10 +5,7 @@ import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { components } from "../../formElements";
-import {
-  adminValueInputCommonClassNames,
-  defaultFormElementIcon,
-} from "../../formElements/FormElement";
+import { adminValueInputCommonClassNames } from "../../formElements/FormElement";
 import {
   FieldRuleOperator,
   Form,
@@ -16,7 +13,6 @@ import {
   FormLogicCondition,
   FormLogicOperator,
   LogicRuleEditorRuleFragment,
-  LogicRuleEditorFormElementFragment,
   useCreateLogicRuleForSurveyMutation,
   useUpdateFormElementMutation,
   useUpdateFormLogicRuleMutation,
@@ -32,6 +28,11 @@ import { useCreate, useDelete } from "../../graphqlHookWrappers";
 import { collectHeaders, collectQuestion } from "./collectText";
 
 type FE = FormElementFullDetailsFragment;
+enum FormElementSelectMode {
+  JumpTo,
+  SubjectId,
+  DefaultNext,
+}
 
 export default function LogicRuleEditor({
   rules,
@@ -57,10 +58,7 @@ export default function LogicRuleEditor({
     );
     parentFormElementId = parent?.id || null;
   }
-  const [
-    initializeRule,
-    initializeRuleState,
-  ] = useCreateLogicRuleForSurveyMutation({
+  const [initializeRule] = useCreateLogicRuleForSurveyMutation({
     onError,
     optimisticResponse: (data) => ({
       __typename: "Mutation",
@@ -121,14 +119,11 @@ export default function LogicRuleEditor({
       }
     },
   });
-  const [
-    updateFormElement,
-    updateFormElementState,
-  ] = useUpdateFormElementMutation({
+  const [updateFormElement] = useUpdateFormElementMutation({
     onError,
   });
 
-  const [updateRule, updateRuleState] = useUpdateFormLogicRuleMutation({
+  const [updateRule] = useUpdateFormLogicRuleMutation({
     onError,
     // @ts-ignore
     optimisticResponse: (data) => ({
@@ -144,10 +139,7 @@ export default function LogicRuleEditor({
     }),
   });
 
-  const [
-    updateCondition,
-    updateConditionState,
-  ] = useUpdateLogicConditionMutation({
+  const [updateCondition] = useUpdateLogicConditionMutation({
     onError,
     // @ts-ignore
     optimisticResponse: (data) => {
@@ -481,12 +473,6 @@ export default function LogicRuleEditor({
   );
 }
 
-enum FormElementSelectMode {
-  JumpTo,
-  SubjectId,
-  DefaultNext,
-}
-
 function FormElementSelect({
   formElements,
   currentFormElementId,
@@ -623,18 +609,4 @@ export function AdminValueInput({
       />
     );
   }
-}
-
-function FormElementListItem({ formElement }: { formElement: FE }) {
-  const icon = components[formElement.typeId].icon || defaultFormElementIcon;
-  return (
-    <div className="flex items-center">
-      <div className="w-5 h-5 rounded m-1 overflow-hidden flex-shrink-0">
-        {icon}
-      </div>
-      <p className="truncate">
-        {collectQuestion(formElement.body) || collectHeaders(formElement.body)}
-      </p>
-    </div>
-  );
 }

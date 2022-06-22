@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
-import TextInput from "../../components/TextInput";
 import {
   useGetLayerItemQuery,
   useUpdateTableOfContentsItemMutation,
   useUpdateDataSourceMutation,
   RenderUnderType,
   useUpdateLayerMutation,
-  AccessControlListType,
   DataSourceTypes,
   DataSourceImportTypes,
   useUpdateEnableDownloadMutation,
@@ -14,13 +12,11 @@ import {
   useUpdateEnableHighDpiRequestsMutation,
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
-import TableOfContentsItemAutosaveInput from "./TableOfContentsItemAutosaveInput";
 import Spinner from "../../components/Spinner";
 import MutableAutosaveInput from "../MutableAutosaveInput";
-import RadioGroup, { MutableRadioGroup } from "../../components/RadioGroup";
+import { MutableRadioGroup } from "../../components/RadioGroup";
 import AccessControlListEditor from "../../components/AccessControlListEditor";
 import bytes from "bytes";
-import Button from "../../components/Button";
 import slugify from "slugify";
 import Switch from "../../components/Switch";
 import InteractivitySettings from "./InteractivitySettings";
@@ -39,30 +35,22 @@ export default function LayerTableOfContentsItemEditor(
   props: LayerTableOfContentsItemEditorProps
 ) {
   const { t } = useTranslation(["admin"]);
-  const { data, loading, error } = useGetLayerItemQuery({
+  const { data } = useGetLayerItemQuery({
     variables: {
       id: props.itemId,
     },
   });
   const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation();
   const [mutateSource, mutateSourceState] = useUpdateDataSourceMutation();
-  const [
-    updateQueryParameters,
-    updateQueryParametersState,
-  ] = useUpdateQueryParametersMutation();
+  const [updateQueryParameters, updateQueryParametersState] =
+    useUpdateQueryParametersMutation();
   const [mutateLayer, mutateLayerState] = useUpdateLayerMutation();
-  const [
-    updateGLStyleMutation,
-    updateGLStyleMutationState,
-  ] = useUpdateLayerMutation();
-  const [
-    updateEnableDownload,
-    updateEnableDownloadState,
-  ] = useUpdateEnableDownloadMutation();
-  const [
-    updateEnableHighDpiRequests,
-    updateEnableHighDpiRequestsState,
-  ] = useUpdateEnableHighDpiRequestsMutation();
+  const [updateGLStyleMutation, updateGLStyleMutationState] =
+    useUpdateLayerMutation();
+  const [updateEnableDownload, updateEnableDownloadState] =
+    useUpdateEnableDownloadMutation();
+  const [updateEnableHighDpiRequests] =
+    useUpdateEnableHighDpiRequestsMutation();
 
   const item = data?.tableOfContentsItem;
   const [downloadEnabled, setDownloadEnabled] = useState<boolean>();
@@ -88,7 +76,13 @@ export default function LayerTableOfContentsItemEditor(
         },
       });
     }
-  }, [downloadEnabled, item?.enableDownload]);
+  }, [
+    downloadEnabled,
+    item,
+    item?.enableDownload,
+    updateEnableDownload,
+    updateEnableDownloadState.loading,
+  ]);
 
   useEffect(() => {
     if (debouncedStyle) {
@@ -102,7 +96,7 @@ export default function LayerTableOfContentsItemEditor(
         },
       });
     }
-  }, [debouncedStyle]);
+  }, [debouncedStyle, layer, updateGLStyleMutation]);
 
   return (
     <div
@@ -204,6 +198,7 @@ export default function LayerTableOfContentsItemEditor(
                               target="_blank"
                               className="text-primary-600 underline"
                               href={source?.originalSourceUrl}
+                              rel="noreferrer"
                             >
                               {source?.originalSourceUrl
                                 .replace("https://", "")
@@ -280,6 +275,7 @@ export default function LayerTableOfContentsItemEditor(
                             target="_blank"
                             className="text-primary-600 underline"
                             href={source.url!}
+                            rel="noreferrer"
                           >
                             {source
                               .url!.replace("https://", "")
@@ -312,6 +308,7 @@ export default function LayerTableOfContentsItemEditor(
                             target="_blank"
                             className="text-primary-600 underline"
                             href={source.url!}
+                            rel="noreferrer"
                           >
                             {source
                               .url!.replace("https://", "")
@@ -564,6 +561,7 @@ export default function LayerTableOfContentsItemEditor(
                       className="underline text-primary-500"
                       href="https://docs.mapbox.com/mapbox-gl-js/style-spec/layers/"
                       target="_blank"
+                      rel="noreferrer"
                     >
                       MapBox GL Style Layers
                     </a>

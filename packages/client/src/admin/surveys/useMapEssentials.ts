@@ -1,11 +1,6 @@
 import bbox from "@turf/bbox";
 import { BBox } from "geojson";
-import {
-  CameraOptions,
-  FreeCameraOptions,
-  LngLatBoundsLike,
-  Map,
-} from "mapbox-gl";
+import { CameraOptions } from "mapbox-gl";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -17,10 +12,7 @@ import {
 import useDebounce from "../../useDebounce";
 
 export const defaultStartingBounds = [
-  -119.91579655058345,
-  33.87415760617607,
-  -119.24033098014716,
-  34.2380902987356,
+  -119.91579655058345, 33.87415760617607, -119.24033098014716, 34.2380902987356,
 ] as BBox;
 
 /**
@@ -92,7 +84,7 @@ export default function useMapEssentials({
         ...debouncedCamera,
       });
     }
-  }, [debouncedCamera]);
+  }, [debouncedCamera, mapContext.manager?.map]);
 
   return { basemaps, mapContext, bounds, cameraOptions };
 }

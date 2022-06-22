@@ -1,8 +1,13 @@
-import { gql } from '@apollo/client';
+import { gql } from "@apollo/client";
 export type Maybe<T> = T | null;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
+export type InputMaybe<T> = Maybe<T>;
+export type Exact<T extends { [key: string]: unknown }> = {
+  [K in keyof T]: T[K];
+};
+export type MakeOptional<T, K extends keyof T> = Omit<T, K> &
+  { [SubKey in K]?: Maybe<T[SubKey]> };
+export type MakeMaybe<T, K extends keyof T> = Omit<T, K> &
+  { [SubKey in K]: Maybe<T[SubKey]> };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: string;
@@ -37,9 +42,9 @@ export type Scalars = {
 };
 
 export enum AccessControlListType {
-  AdminsOnly = 'ADMINS_ONLY',
-  Group = 'GROUP',
-  Public = 'PUBLIC'
+  AdminsOnly = "ADMINS_ONLY",
+  Group = "GROUP",
+  Public = "PUBLIC",
 }
 
 /**
@@ -53,27 +58,26 @@ export enum AccessControlListType {
  * template to add ACL features to new types if needed.
  */
 export type Acl = Node & {
-  __typename?: 'Acl';
+  __typename?: "Acl";
   /** Reads a single `Basemap` that is related to this `Acl`. */
   basemap?: Maybe<Basemap>;
-  basemapId?: Maybe<Scalars['Int']>;
-  forumIdRead?: Maybe<Scalars['Int']>;
-  forumIdWrite?: Maybe<Scalars['Int']>;
+  basemapId?: Maybe<Scalars["Int"]>;
+  forumIdRead?: Maybe<Scalars["Int"]>;
+  forumIdWrite?: Maybe<Scalars["Int"]>;
   /** Reads and enables pagination through a set of `Group`. */
   groups?: Maybe<Array<Group>>;
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Reads a single `SketchClass` that is related to this `Acl`. */
   sketchClass?: Maybe<SketchClass>;
-  sketchClassId?: Maybe<Scalars['Int']>;
+  sketchClassId?: Maybe<Scalars["Int"]>;
   /** Reads a single `TableOfContentsItem` that is related to this `Acl`. */
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
+  tableOfContentsItemId?: Maybe<Scalars["Int"]>;
   /** Control whether access control is PUBLIC, ADMINS_ONLY, or GROUP */
   type: AccessControlListType;
 };
-
 
 /**
  * Access Control Lists can be associated with SketchClasses, Forums, and
@@ -86,30 +90,30 @@ export type Acl = Node & {
  * template to add ACL features to new types if needed.
  */
 export type AclGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
 
 /** Represents an update to a `Acl`. Fields that are set will be updated. */
 export type AclPatch = {
   /** Control whether access control is PUBLIC, ADMINS_ONLY, or GROUP */
-  type?: Maybe<AccessControlListType>;
+  type?: InputMaybe<AccessControlListType>;
 };
 
 /** All input for the `addGroupToAcl` mutation. */
 export type AddGroupToAclInput = {
-  aclId?: Maybe<Scalars['Int']>;
+  aclId?: InputMaybe<Scalars["Int"]>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groupId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `addGroupToAcl` mutation. */
 export type AddGroupToAclPayload = {
-  __typename?: 'AddGroupToAclPayload';
+  __typename?: "AddGroupToAclPayload";
   acl?: Maybe<Acl>;
   /** Reads a single `Basemap` that is related to this `Acl`. */
   basemap?: Maybe<Basemap>;
@@ -117,7 +121,7 @@ export type AddGroupToAclPayload = {
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `SketchClass` that is related to this `Acl`. */
@@ -132,42 +136,42 @@ export type AddUserToGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groupId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `addUserToGroup` mutation. */
 export type AddUserToGroupPayload = {
-  __typename?: 'AddUserToGroupPayload';
+  __typename?: "AddUserToGroupPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
 /** All input for the `addValidChildSketchClass` mutation. */
 export type AddValidChildSketchClassInput = {
-  child?: Maybe<Scalars['Int']>;
+  child?: InputMaybe<Scalars["Int"]>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  parent?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  parent?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `addValidChildSketchClass` mutation. */
 export type AddValidChildSketchClassPayload = {
-  __typename?: 'AddValidChildSketchClassPayload';
+  __typename?: "AddValidChildSketchClassPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -178,19 +182,19 @@ export type ApproveParticipantInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `approveParticipant` mutation. */
 export type ApproveParticipantPayload = {
-  __typename?: 'ApproveParticipantPayload';
+  __typename?: "ApproveParticipantPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -201,50 +205,50 @@ export type ArchiveResponsesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  makeArchived?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  ids?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
+  makeArchived?: InputMaybe<Scalars["Boolean"]>;
 };
 
 /** The output of our `archiveResponses` mutation. */
 export type ArchiveResponsesPayload = {
-  __typename?: 'ArchiveResponsesPayload';
+  __typename?: "ArchiveResponsesPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   surveyResponses?: Maybe<Array<SurveyResponse>>;
 };
 
 export type Basemap = Node & {
-  __typename?: 'Basemap';
+  __typename?: "Basemap";
   /** Reads a single `Acl` that is related to this `Basemap`. */
   acl?: Maybe<Acl>;
   /**
    * Optional attribution to show at the bottom of the map. Will be overriden by
    * the attribution specified in the gl-style in the case of MAPBOX types.
    */
-  attribution?: Maybe<Scalars['String']>;
-  description?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  attribution?: Maybe<Scalars["String"]>;
+  description?: Maybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
-  interactivitySettingsId: Scalars['Int'];
+  interactivitySettingsId: Scalars["Int"];
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
    * project which will only be used in surveys.
    */
-  isDisabled: Scalars['Boolean'];
+  isDisabled: Scalars["Boolean"];
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
-  labelsLayerId?: Maybe<Scalars['String']>;
+  labelsLayerId?: Maybe<Scalars["String"]>;
   /** Label shown in the basemap picker interface */
-  name: Scalars['String'];
+  name: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Reads and enables pagination through a set of `OptionalBasemapLayer`. */
   optionalBasemapLayers: Array<OptionalBasemapLayer>;
   /** Reads a single `Project` that is related to this `Basemap`. */
@@ -254,69 +258,66 @@ export type Basemap = Node & {
    * added to any project. Otherwise it is private to the given proejct. Only
    * superusers can create Shared Basemaps.
    */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars["Int"]>;
   /** Reads and enables pagination through a set of `ProjectsSharedBasemap`. */
   projectsSharedBasemapsConnection: ProjectsSharedBasemapsConnection;
   /** Reads and enables pagination through a set of `FormElement`. */
   relatedFormElements?: Maybe<Array<FormElement>>;
-  surveysOnly: Scalars['Boolean'];
-  terrainExaggeration: Scalars['BigFloat'];
-  terrainMaxZoom: Scalars['Int'];
+  surveysOnly: Scalars["Boolean"];
+  terrainExaggeration: Scalars["BigFloat"];
+  terrainMaxZoom: Scalars["Int"];
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
-  terrainOptional: Scalars['Boolean'];
-  terrainTileSize: Scalars['Int'];
+  terrainOptional: Scalars["Boolean"];
+  terrainTileSize: Scalars["Int"];
   /**
    * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
    * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
    */
-  terrainUrl?: Maybe<Scalars['String']>;
-  terrainVisibilityDefault: Scalars['Boolean'];
+  terrainUrl?: Maybe<Scalars["String"]>;
+  terrainVisibilityDefault: Scalars["Boolean"];
   /** Square thumbnail will be used to identify the basemap */
-  thumbnail: Scalars['String'];
+  thumbnail: Scalars["String"];
   /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
-  tileSize: Scalars['Int'];
+  tileSize: Scalars["Int"];
   type: BasemapType;
   /**
    * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
    * mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
    * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
    */
-  url: Scalars['String'];
+  url: Scalars["String"];
 };
-
 
 export type BasemapOptionalBasemapLayersArgs = {
-  condition?: Maybe<OptionalBasemapLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<OptionalBasemapLayersOrderBy>>;
+  condition?: InputMaybe<OptionalBasemapLayerCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<OptionalBasemapLayersOrderBy>>;
 };
-
 
 export type BasemapProjectsSharedBasemapsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectsSharedBasemapCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<ProjectsSharedBasemapCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
-
 export type BasemapRelatedFormElementsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A condition to be used against `Basemap` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type BasemapCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `interactivitySettingsId` field. */
-  interactivitySettingsId?: Maybe<Scalars['Int']>;
+  interactivitySettingsId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** An input for mutations affecting `Basemap` */
@@ -325,48 +326,48 @@ export type BasemapInput = {
    * Optional attribution to show at the bottom of the map. Will be overriden by
    * the attribution specified in the gl-style in the case of MAPBOX types.
    */
-  attribution?: Maybe<Scalars['String']>;
-  description?: Maybe<Scalars['String']>;
-  id?: Maybe<Scalars['Int']>;
+  attribution?: InputMaybe<Scalars["String"]>;
+  description?: InputMaybe<Scalars["String"]>;
+  id?: InputMaybe<Scalars["Int"]>;
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
    * project which will only be used in surveys.
    */
-  isDisabled?: Maybe<Scalars['Boolean']>;
+  isDisabled?: InputMaybe<Scalars["Boolean"]>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
-  labelsLayerId?: Maybe<Scalars['String']>;
+  labelsLayerId?: InputMaybe<Scalars["String"]>;
   /** Label shown in the basemap picker interface */
-  name: Scalars['String'];
+  name: Scalars["String"];
   /**
    * If not set, the basemap will be considered a "Shared Basemap" that can be
    * added to any project. Otherwise it is private to the given proejct. Only
    * superusers can create Shared Basemaps.
    */
-  projectId?: Maybe<Scalars['Int']>;
-  surveysOnly?: Maybe<Scalars['Boolean']>;
-  terrainExaggeration?: Maybe<Scalars['BigFloat']>;
-  terrainMaxZoom?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  surveysOnly?: InputMaybe<Scalars["Boolean"]>;
+  terrainExaggeration?: InputMaybe<Scalars["BigFloat"]>;
+  terrainMaxZoom?: InputMaybe<Scalars["Int"]>;
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
-  terrainOptional?: Maybe<Scalars['Boolean']>;
-  terrainTileSize?: Maybe<Scalars['Int']>;
+  terrainOptional?: InputMaybe<Scalars["Boolean"]>;
+  terrainTileSize?: InputMaybe<Scalars["Int"]>;
   /**
    * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
    * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
    */
-  terrainUrl?: Maybe<Scalars['String']>;
-  terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
+  terrainUrl?: InputMaybe<Scalars["String"]>;
+  terrainVisibilityDefault?: InputMaybe<Scalars["Boolean"]>;
   /** Square thumbnail will be used to identify the basemap */
-  thumbnail?: Maybe<Scalars['Upload']>;
+  thumbnail?: InputMaybe<Scalars["Upload"]>;
   /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
-  tileSize?: Maybe<Scalars['Int']>;
+  tileSize?: InputMaybe<Scalars["Int"]>;
   type: BasemapType;
   /**
    * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
    * mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
    * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
    */
-  url: Scalars['String'];
+  url: Scalars["String"];
 };
 
 /** Represents an update to a `Basemap`. Fields that are set will be updated. */
@@ -375,60 +376,60 @@ export type BasemapPatch = {
    * Optional attribution to show at the bottom of the map. Will be overriden by
    * the attribution specified in the gl-style in the case of MAPBOX types.
    */
-  attribution?: Maybe<Scalars['String']>;
-  description?: Maybe<Scalars['String']>;
-  id?: Maybe<Scalars['Int']>;
-  interactivitySettingsId?: Maybe<Scalars['Int']>;
+  attribution?: InputMaybe<Scalars["String"]>;
+  description?: InputMaybe<Scalars["String"]>;
+  id?: InputMaybe<Scalars["Int"]>;
+  interactivitySettingsId?: InputMaybe<Scalars["Int"]>;
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
    * project which will only be used in surveys.
    */
-  isDisabled?: Maybe<Scalars['Boolean']>;
+  isDisabled?: InputMaybe<Scalars["Boolean"]>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
-  labelsLayerId?: Maybe<Scalars['String']>;
+  labelsLayerId?: InputMaybe<Scalars["String"]>;
   /** Label shown in the basemap picker interface */
-  name?: Maybe<Scalars['String']>;
+  name?: InputMaybe<Scalars["String"]>;
   /**
    * If not set, the basemap will be considered a "Shared Basemap" that can be
    * added to any project. Otherwise it is private to the given proejct. Only
    * superusers can create Shared Basemaps.
    */
-  projectId?: Maybe<Scalars['Int']>;
-  surveysOnly?: Maybe<Scalars['Boolean']>;
-  terrainExaggeration?: Maybe<Scalars['BigFloat']>;
-  terrainMaxZoom?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  surveysOnly?: InputMaybe<Scalars["Boolean"]>;
+  terrainExaggeration?: InputMaybe<Scalars["BigFloat"]>;
+  terrainMaxZoom?: InputMaybe<Scalars["Int"]>;
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
-  terrainOptional?: Maybe<Scalars['Boolean']>;
-  terrainTileSize?: Maybe<Scalars['Int']>;
+  terrainOptional?: InputMaybe<Scalars["Boolean"]>;
+  terrainTileSize?: InputMaybe<Scalars["Int"]>;
   /**
    * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
    * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
    */
-  terrainUrl?: Maybe<Scalars['String']>;
-  terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
+  terrainUrl?: InputMaybe<Scalars["String"]>;
+  terrainVisibilityDefault?: InputMaybe<Scalars["Boolean"]>;
   /** Square thumbnail will be used to identify the basemap */
-  thumbnail?: Maybe<Scalars['Upload']>;
+  thumbnail?: InputMaybe<Scalars["Upload"]>;
   /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
-  tileSize?: Maybe<Scalars['Int']>;
-  type?: Maybe<BasemapType>;
+  tileSize?: InputMaybe<Scalars["Int"]>;
+  type?: InputMaybe<BasemapType>;
   /**
    * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
    * mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
    * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
    */
-  url?: Maybe<Scalars['String']>;
+  url?: InputMaybe<Scalars["String"]>;
 };
 
 /** SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style. */
 export enum BasemapType {
-  Mapbox = 'MAPBOX',
-  RasterUrlTemplate = 'RASTER_URL_TEMPLATE'
+  Mapbox = "MAPBOX",
+  RasterUrlTemplate = "RASTER_URL_TEMPLATE",
 }
 
 /** A connection to a list of `Basemap` values. */
 export type BasemapsConnection = {
-  __typename?: 'BasemapsConnection';
+  __typename?: "BasemapsConnection";
   /** A list of edges which contains the `Basemap` and cursor to aid in pagination. */
   edges: Array<BasemapsEdge>;
   /** A list of `Basemap` objects. */
@@ -436,32 +437,30 @@ export type BasemapsConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `Basemap` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `Basemap` edge in the connection. */
 export type BasemapsEdge = {
-  __typename?: 'BasemapsEdge';
+  __typename?: "BasemapsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `Basemap` at the end of the edge. */
   node: Basemap;
 };
 
 /** Methods to use when ordering `Basemap`. */
 export enum BasemapsOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  InteractivitySettingsIdAsc = 'INTERACTIVITY_SETTINGS_ID_ASC',
-  InteractivitySettingsIdDesc = 'INTERACTIVITY_SETTINGS_ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  InteractivitySettingsIdAsc = "INTERACTIVITY_SETTINGS_ID_ASC",
+  InteractivitySettingsIdDesc = "INTERACTIVITY_SETTINGS_ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  ProjectIdAsc = "PROJECT_ID_ASC",
+  ProjectIdDesc = "PROJECT_ID_DESC",
 }
-
-
 
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
@@ -469,18 +468,18 @@ export type ClearFormElementStyleInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  formElementId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  formElementId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `clearFormElementStyle` mutation. */
 export type ClearFormElementStylePayload = {
-  __typename?: 'ClearFormElementStylePayload';
+  __typename?: "ClearFormElementStylePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
   formElementEdge?: Maybe<FormElementsEdge>;
@@ -488,10 +487,9 @@ export type ClearFormElementStylePayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our `clearFormElementStyle` mutation. */
 export type ClearFormElementStylePayloadFormElementEdgeArgs = {
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormElementsOrderBy>>;
 };
 
 /**
@@ -501,27 +499,27 @@ export type ClearFormElementStylePayloadFormElementEdgeArgs = {
  * community standards.
  */
 export type CommunityGuideline = Node & {
-  __typename?: 'CommunityGuideline';
+  __typename?: "CommunityGuideline";
   /** JSON contents are expected to be used with a system like DraftJS on the client. */
-  content: Scalars['JSON'];
+  content: Scalars["JSON"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Reads a single `Project` that is related to this `CommunityGuideline`. */
   project?: Maybe<Project>;
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
 };
 
 /** An input for mutations affecting `CommunityGuideline` */
 export type CommunityGuidelineInput = {
   /** JSON contents are expected to be used with a system like DraftJS on the client. */
-  content?: Maybe<Scalars['JSON']>;
-  projectId: Scalars['Int'];
+  content?: InputMaybe<Scalars["JSON"]>;
+  projectId: Scalars["Int"];
 };
 
 /** Represents an update to a `CommunityGuideline`. Fields that are set will be updated. */
 export type CommunityGuidelinePatch = {
   /** JSON contents are expected to be used with a system like DraftJS on the client. */
-  content?: Maybe<Scalars['JSON']>;
+  content?: InputMaybe<Scalars["JSON"]>;
 };
 
 /** All input for the `confirmOnboarded` mutation. */
@@ -530,17 +528,17 @@ export type ConfirmOnboardedInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
 };
 
 /** The output of our `confirmOnboarded` mutation. */
 export type ConfirmOnboardedPayload = {
-  __typename?: 'ConfirmOnboardedPayload';
+  __typename?: "ConfirmOnboardedPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   user?: Maybe<User>;
@@ -548,10 +546,9 @@ export type ConfirmOnboardedPayload = {
   userEdge?: Maybe<UsersEdge>;
 };
 
-
 /** The output of our `confirmOnboarded` mutation. */
 export type ConfirmOnboardedPayloadUserEdgeArgs = {
-  orderBy?: Maybe<Array<UsersOrderBy>>;
+  orderBy?: InputMaybe<Array<UsersOrderBy>>;
 };
 
 /** All input for the `confirmProjectInviteWithSurveyToken` mutation. */
@@ -560,19 +557,19 @@ export type ConfirmProjectInviteWithSurveyTokenInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `confirmProjectInviteWithSurveyToken` mutation. */
 export type ConfirmProjectInviteWithSurveyTokenPayload = {
-  __typename?: 'ConfirmProjectInviteWithSurveyTokenPayload';
+  __typename?: "ConfirmProjectInviteWithSurveyTokenPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  integer?: Maybe<Scalars['Int']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  integer?: Maybe<Scalars["Int"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -583,19 +580,19 @@ export type ConfirmProjectInviteWithVerifiedEmailInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `confirmProjectInviteWithVerifiedEmail` mutation. */
 export type ConfirmProjectInviteWithVerifiedEmailPayload = {
-  __typename?: 'ConfirmProjectInviteWithVerifiedEmailPayload';
+  __typename?: "ConfirmProjectInviteWithVerifiedEmailPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  integer?: Maybe<Scalars['Int']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  integer?: Maybe<Scalars["Int"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -606,19 +603,19 @@ export type CopyAppearanceInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  copyFromId?: Maybe<Scalars['Int']>;
-  formElementId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  copyFromId?: InputMaybe<Scalars["Int"]>;
+  formElementId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `copyAppearance` mutation. */
 export type CopyAppearancePayload = {
-  __typename?: 'CopyAppearancePayload';
+  __typename?: "CopyAppearancePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
   formElementEdge?: Maybe<FormElementsEdge>;
@@ -626,10 +623,9 @@ export type CopyAppearancePayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our `copyAppearance` mutation. */
 export type CopyAppearancePayloadFormElementEdgeArgs = {
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the create `Basemap` mutation. */
@@ -640,12 +636,12 @@ export type CreateBasemapInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
 };
 
 /** The output of our create `Basemap` mutation. */
 export type CreateBasemapPayload = {
-  __typename?: 'CreateBasemapPayload';
+  __typename?: "CreateBasemapPayload";
   /** The `Basemap` that was created by this mutation. */
   basemap?: Maybe<Basemap>;
   /** An edge for our `Basemap`. May be used by Relay 1. */
@@ -654,7 +650,7 @@ export type CreateBasemapPayload = {
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
   /** Reads a single `Project` that is related to this `Basemap`. */
@@ -663,10 +659,9 @@ export type CreateBasemapPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our create `Basemap` mutation. */
 export type CreateBasemapPayloadBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
 
 /** All input for the create `CommunityGuideline` mutation. */
@@ -675,19 +670,19 @@ export type CreateCommunityGuidelineInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `CommunityGuideline` to be created by this mutation. */
   communityGuideline: CommunityGuidelineInput;
 };
 
 /** The output of our create `CommunityGuideline` mutation. */
 export type CreateCommunityGuidelinePayload = {
-  __typename?: 'CreateCommunityGuidelinePayload';
+  __typename?: "CreateCommunityGuidelinePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `CommunityGuideline` that was created by this mutation. */
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `Project` that is related to this `CommunityGuideline`. */
@@ -702,19 +697,19 @@ export type CreateDataLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `DataLayer` to be created by this mutation. */
   dataLayer: DataLayerInput;
 };
 
 /** The output of our create `DataLayer` mutation. */
 export type CreateDataLayerPayload = {
-  __typename?: 'CreateDataLayerPayload';
+  __typename?: "CreateDataLayerPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `DataLayer` that was created by this mutation. */
   dataLayer?: Maybe<DataLayer>;
   /** An edge for our `DataLayer`. May be used by Relay 1. */
@@ -727,10 +722,9 @@ export type CreateDataLayerPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our create `DataLayer` mutation. */
 export type CreateDataLayerPayloadDataLayerEdgeArgs = {
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+  orderBy?: InputMaybe<Array<DataLayersOrderBy>>;
 };
 
 /** All input for the create `DataSource` mutation. */
@@ -739,19 +733,19 @@ export type CreateDataSourceInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `DataSource` to be created by this mutation. */
   dataSource: DataSourceInput;
 };
 
 /** The output of our create `DataSource` mutation. */
 export type CreateDataSourcePayload = {
-  __typename?: 'CreateDataSourcePayload';
+  __typename?: "CreateDataSourcePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `DataSource` that was created by this mutation. */
   dataSource?: Maybe<DataSource>;
   /** An edge for our `DataSource`. May be used by Relay 1. */
@@ -760,10 +754,9 @@ export type CreateDataSourcePayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our create `DataSource` mutation. */
 export type CreateDataSourcePayloadDataSourceEdgeArgs = {
-  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
+  orderBy?: InputMaybe<Array<DataSourcesOrderBy>>;
 };
 
 /** All input for the create `FormElement` mutation. */
@@ -772,19 +765,19 @@ export type CreateFormElementInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `FormElement` to be created by this mutation. */
   formElement: FormElementInput;
 };
 
 /** The output of our create `FormElement` mutation. */
 export type CreateFormElementPayload = {
-  __typename?: 'CreateFormElementPayload';
+  __typename?: "CreateFormElementPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `FormElement` that was created by this mutation. */
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
@@ -793,10 +786,9 @@ export type CreateFormElementPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our create `FormElement` mutation. */
 export type CreateFormElementPayloadFormElementEdgeArgs = {
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the create `FormLogicCondition` mutation. */
@@ -805,19 +797,19 @@ export type CreateFormLogicConditionInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `FormLogicCondition` to be created by this mutation. */
   formLogicCondition: FormLogicConditionInput;
 };
 
 /** The output of our create `FormLogicCondition` mutation. */
 export type CreateFormLogicConditionPayload = {
-  __typename?: 'CreateFormLogicConditionPayload';
+  __typename?: "CreateFormLogicConditionPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `FormLogicCondition` that was created by this mutation. */
   formLogicCondition?: Maybe<FormLogicCondition>;
   /** An edge for our `FormLogicCondition`. May be used by Relay 1. */
@@ -826,10 +818,9 @@ export type CreateFormLogicConditionPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our create `FormLogicCondition` mutation. */
 export type CreateFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicConditionsOrderBy>>;
 };
 
 /** All input for the create `FormLogicRule` mutation. */
@@ -838,19 +829,19 @@ export type CreateFormLogicRuleInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `FormLogicRule` to be created by this mutation. */
   formLogicRule: FormLogicRuleInput;
 };
 
 /** The output of our create `FormLogicRule` mutation. */
 export type CreateFormLogicRulePayload = {
-  __typename?: 'CreateFormLogicRulePayload';
+  __typename?: "CreateFormLogicRulePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `FormLogicRule` that was created by this mutation. */
   formLogicRule?: Maybe<FormLogicRule>;
   /** An edge for our `FormLogicRule`. May be used by Relay 1. */
@@ -859,10 +850,9 @@ export type CreateFormLogicRulePayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our create `FormLogicRule` mutation. */
 export type CreateFormLogicRulePayloadFormLogicRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** All input for the `createFormTemplateFromSketchClass` mutation. */
@@ -871,20 +861,20 @@ export type CreateFormTemplateFromSketchClassInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  sketchClassId?: Maybe<Scalars['Int']>;
-  templateName?: Maybe<Scalars['String']>;
-  templateType?: Maybe<FormTemplateType>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  sketchClassId?: InputMaybe<Scalars["Int"]>;
+  templateName?: InputMaybe<Scalars["String"]>;
+  templateType?: InputMaybe<FormTemplateType>;
 };
 
 /** The output of our `createFormTemplateFromSketchClass` mutation. */
 export type CreateFormTemplateFromSketchClassPayload = {
-  __typename?: 'CreateFormTemplateFromSketchClassPayload';
+  __typename?: "CreateFormTemplateFromSketchClassPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   form?: Maybe<Form>;
   /** An edge for our `Form`. May be used by Relay 1. */
   formEdge?: Maybe<FormsEdge>;
@@ -896,10 +886,9 @@ export type CreateFormTemplateFromSketchClassPayload = {
   survey?: Maybe<Survey>;
 };
 
-
 /** The output of our `createFormTemplateFromSketchClass` mutation. */
 export type CreateFormTemplateFromSketchClassPayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormsOrderBy>>;
 };
 
 /** All input for the `createFormTemplateFromSurvey` mutation. */
@@ -908,20 +897,20 @@ export type CreateFormTemplateFromSurveyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  surveyId?: Maybe<Scalars['Int']>;
-  templateName?: Maybe<Scalars['String']>;
-  templateType?: Maybe<FormTemplateType>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  surveyId?: InputMaybe<Scalars["Int"]>;
+  templateName?: InputMaybe<Scalars["String"]>;
+  templateType?: InputMaybe<FormTemplateType>;
 };
 
 /** The output of our `createFormTemplateFromSurvey` mutation. */
 export type CreateFormTemplateFromSurveyPayload = {
-  __typename?: 'CreateFormTemplateFromSurveyPayload';
+  __typename?: "CreateFormTemplateFromSurveyPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   form?: Maybe<Form>;
   /** An edge for our `Form`. May be used by Relay 1. */
   formEdge?: Maybe<FormsEdge>;
@@ -933,10 +922,9 @@ export type CreateFormTemplateFromSurveyPayload = {
   survey?: Maybe<Survey>;
 };
 
-
 /** The output of our `createFormTemplateFromSurvey` mutation. */
 export type CreateFormTemplateFromSurveyPayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormsOrderBy>>;
 };
 
 /** All input for the create `Forum` mutation. */
@@ -945,19 +933,19 @@ export type CreateForumInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `Forum` to be created by this mutation. */
   forum: ForumInput;
 };
 
 /** The output of our create `Forum` mutation. */
 export type CreateForumPayload = {
-  __typename?: 'CreateForumPayload';
+  __typename?: "CreateForumPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `Forum` that was created by this mutation. */
   forum?: Maybe<Forum>;
   /** An edge for our `Forum`. May be used by Relay 1. */
@@ -968,10 +956,9 @@ export type CreateForumPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our create `Forum` mutation. */
 export type CreateForumPayloadForumEdgeArgs = {
-  orderBy?: Maybe<Array<ForumsOrderBy>>;
+  orderBy?: InputMaybe<Array<ForumsOrderBy>>;
 };
 
 /** All input for the create `Group` mutation. */
@@ -980,19 +967,19 @@ export type CreateGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `Group` to be created by this mutation. */
   group: GroupInput;
 };
 
 /** The output of our create `Group` mutation. */
 export type CreateGroupPayload = {
-  __typename?: 'CreateGroupPayload';
+  __typename?: "CreateGroupPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `Group` that was created by this mutation. */
   group?: Maybe<Group>;
   /** Reads a single `Project` that is related to this `Group`. */
@@ -1007,19 +994,19 @@ export type CreateInteractivitySettingInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `InteractivitySetting` to be created by this mutation. */
   interactivitySetting: InteractivitySettingInput;
 };
 
 /** The output of our create `InteractivitySetting` mutation. */
 export type CreateInteractivitySettingPayload = {
-  __typename?: 'CreateInteractivitySettingPayload';
+  __typename?: "CreateInteractivitySettingPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `InteractivitySetting` that was created by this mutation. */
   interactivitySetting?: Maybe<InteractivitySetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -1032,21 +1019,21 @@ export type CreateOptionalBasemapLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `OptionalBasemapLayer` to be created by this mutation. */
   optionalBasemapLayer: OptionalBasemapLayerInput;
 };
 
 /** The output of our create `OptionalBasemapLayer` mutation. */
 export type CreateOptionalBasemapLayerPayload = {
-  __typename?: 'CreateOptionalBasemapLayerPayload';
+  __typename?: "CreateOptionalBasemapLayerPayload";
   /** Reads a single `Basemap` that is related to this `OptionalBasemapLayer`. */
   basemap?: Maybe<Basemap>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `OptionalBasemapLayer` that was created by this mutation. */
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -1059,19 +1046,19 @@ export type CreatePostInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  message?: Maybe<Scalars['JSON']>;
-  topicId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  message?: InputMaybe<Scalars["JSON"]>;
+  topicId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `createPost` mutation. */
 export type CreatePostPayload = {
-  __typename?: 'CreatePostPayload';
+  __typename?: "CreatePostPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   post?: Maybe<Post>;
   /** An edge for our `Post`. May be used by Relay 1. */
   postEdge?: Maybe<PostsEdge>;
@@ -1081,10 +1068,9 @@ export type CreatePostPayload = {
   topic?: Maybe<Topic>;
 };
 
-
 /** The output of our `createPost` mutation. */
 export type CreatePostPayloadPostEdgeArgs = {
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 /** All input for the `createProject` mutation. */
@@ -1093,9 +1079,9 @@ export type CreateProjectInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  name: Scalars['String'];
-  slug: Scalars['String'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  name: Scalars["String"];
+  slug: Scalars["String"];
 };
 
 /** All input for the create `ProjectInviteGroup` mutation. */
@@ -1104,19 +1090,19 @@ export type CreateProjectInviteGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `ProjectInviteGroup` to be created by this mutation. */
   projectInviteGroup: ProjectInviteGroupInput;
 };
 
 /** The output of our create `ProjectInviteGroup` mutation. */
 export type CreateProjectInviteGroupPayload = {
-  __typename?: 'CreateProjectInviteGroupPayload';
+  __typename?: "CreateProjectInviteGroupPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Group` that is related to this `ProjectInviteGroup`. */
   group?: Maybe<Group>;
   /** Reads a single `ProjectInvite` that is related to this `ProjectInviteGroup`. */
@@ -1129,10 +1115,9 @@ export type CreateProjectInviteGroupPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our create `ProjectInviteGroup` mutation. */
 export type CreateProjectInviteGroupPayloadProjectInviteGroupEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 /** All input for the `createProjectInvites` mutation. */
@@ -1141,22 +1126,24 @@ export type CreateProjectInvitesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupNames?: Maybe<Array<Maybe<Scalars['String']>>>;
-  makeAdmin?: Maybe<Scalars['Boolean']>;
-  projectId?: Maybe<Scalars['Int']>;
-  projectInviteOptions?: Maybe<Array<Maybe<ProjectInviteOptionInput>>>;
-  sendEmailNow?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groupNames?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
+  makeAdmin?: InputMaybe<Scalars["Boolean"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  projectInviteOptions?: InputMaybe<
+    Array<InputMaybe<ProjectInviteOptionInput>>
+  >;
+  sendEmailNow?: InputMaybe<Scalars["Boolean"]>;
 };
 
 /** The output of our `createProjectInvites` mutation. */
 export type CreateProjectInvitesPayload = {
-  __typename?: 'CreateProjectInvitesPayload';
+  __typename?: "CreateProjectInvitesPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   projectInvites?: Maybe<Array<ProjectInvite>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
@@ -1164,12 +1151,12 @@ export type CreateProjectInvitesPayload = {
 
 /** The output of our `createProject` mutation. */
 export type CreateProjectPayload = {
-  __typename?: 'CreateProjectPayload';
+  __typename?: "CreateProjectPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
   dataSourcesBucket?: Maybe<DataSourcesBucket>;
   project?: Maybe<Project>;
@@ -1179,10 +1166,9 @@ export type CreateProjectPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our `createProject` mutation. */
 export type CreateProjectPayloadProjectEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the create `ProjectsSharedBasemap` mutation. */
@@ -1191,21 +1177,21 @@ export type CreateProjectsSharedBasemapInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `ProjectsSharedBasemap` to be created by this mutation. */
   projectsSharedBasemap: ProjectsSharedBasemapInput;
 };
 
 /** The output of our create `ProjectsSharedBasemap` mutation. */
 export type CreateProjectsSharedBasemapPayload = {
-  __typename?: 'CreateProjectsSharedBasemapPayload';
+  __typename?: "CreateProjectsSharedBasemapPayload";
   /** Reads a single `Basemap` that is related to this `ProjectsSharedBasemap`. */
   basemap?: Maybe<Basemap>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `ProjectsSharedBasemap` that was created by this mutation. */
   projectsSharedBasemap?: Maybe<ProjectsSharedBasemap>;
   /** An edge for our `ProjectsSharedBasemap`. May be used by Relay 1. */
@@ -1214,10 +1200,9 @@ export type CreateProjectsSharedBasemapPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our create `ProjectsSharedBasemap` mutation. */
 export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 /** All input for the create `SketchFolder` mutation. */
@@ -1226,19 +1211,19 @@ export type CreateSketchFolderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `SketchFolder` to be created by this mutation. */
   sketchFolder: SketchFolderInput;
 };
 
 /** The output of our create `SketchFolder` mutation. */
 export type CreateSketchFolderPayload = {
-  __typename?: 'CreateSketchFolderPayload';
+  __typename?: "CreateSketchFolderPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `SketchFolder` that was created by this mutation. */
@@ -1247,10 +1232,9 @@ export type CreateSketchFolderPayload = {
   sketchFolderEdge?: Maybe<SketchFoldersEdge>;
 };
 
-
 /** The output of our create `SketchFolder` mutation. */
 export type CreateSketchFolderPayloadSketchFolderEdgeArgs = {
-  orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchFoldersOrderBy>>;
 };
 
 /** All input for the create `Sketch` mutation. */
@@ -1259,19 +1243,19 @@ export type CreateSketchInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `Sketch` to be created by this mutation. */
   sketch: SketchInput;
 };
 
 /** The output of our create `Sketch` mutation. */
 export type CreateSketchPayload = {
-  __typename?: 'CreateSketchPayload';
+  __typename?: "CreateSketchPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   collection?: Maybe<Sketch>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
@@ -1294,19 +1278,19 @@ export type CreateSurveyInvitedGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `SurveyInvitedGroup` to be created by this mutation. */
   surveyInvitedGroup: SurveyInvitedGroupInput;
 };
 
 /** The output of our create `SurveyInvitedGroup` mutation. */
 export type CreateSurveyInvitedGroupPayload = {
-  __typename?: 'CreateSurveyInvitedGroupPayload';
+  __typename?: "CreateSurveyInvitedGroupPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyInvitedGroup`. */
@@ -1321,22 +1305,22 @@ export type CreateSurveyInvitesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupNames?: Maybe<Array<Maybe<Scalars['String']>>>;
-  includeProjectInvite?: Maybe<Scalars['Boolean']>;
-  makeAdmin?: Maybe<Scalars['Boolean']>;
-  surveyId?: Maybe<Scalars['Int']>;
-  surveyInviteOptions?: Maybe<Array<Maybe<SurveyInviteOptionsInput>>>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groupNames?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
+  includeProjectInvite?: InputMaybe<Scalars["Boolean"]>;
+  makeAdmin?: InputMaybe<Scalars["Boolean"]>;
+  surveyId?: InputMaybe<Scalars["Int"]>;
+  surveyInviteOptions?: InputMaybe<Array<InputMaybe<SurveyInviteOptionsInput>>>;
 };
 
 /** The output of our `createSurveyInvites` mutation. */
 export type CreateSurveyInvitesPayload = {
-  __typename?: 'CreateSurveyInvitesPayload';
+  __typename?: "CreateSurveyInvitesPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   surveyInvites?: Maybe<Array<SurveyInvite>>;
@@ -1344,25 +1328,25 @@ export type CreateSurveyInvitesPayload = {
 
 /** All input for the `createSurveyJumpRule` mutation. */
 export type CreateSurveyJumpRuleInput = {
-  booleanOperator?: Maybe<FormLogicOperator>;
+  booleanOperator?: InputMaybe<FormLogicOperator>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  formElementId?: Maybe<Scalars['Int']>;
-  jumpToId?: Maybe<Scalars['Int']>;
-  operator?: Maybe<FieldRuleOperator>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  formElementId?: InputMaybe<Scalars["Int"]>;
+  jumpToId?: InputMaybe<Scalars["Int"]>;
+  operator?: InputMaybe<FieldRuleOperator>;
 };
 
 /** The output of our `createSurveyJumpRule` mutation. */
 export type CreateSurveyJumpRulePayload = {
-  __typename?: 'CreateSurveyJumpRulePayload';
+  __typename?: "CreateSurveyJumpRulePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   formLogicRule?: Maybe<FormLogicRule>;
   /** An edge for our `FormLogicRule`. May be used by Relay 1. */
   formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
@@ -1370,35 +1354,34 @@ export type CreateSurveyJumpRulePayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our `createSurveyJumpRule` mutation. */
 export type CreateSurveyJumpRulePayloadFormLogicRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** All input for the `createSurveyResponse` mutation. */
 export type CreateSurveyResponseInput = {
-  bypassedSubmissionControl?: Maybe<Scalars['Boolean']>;
+  bypassedSubmissionControl?: InputMaybe<Scalars["Boolean"]>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  draft?: Maybe<Scalars['Boolean']>;
-  facilitated?: Maybe<Scalars['Boolean']>;
-  practice?: Maybe<Scalars['Boolean']>;
-  responseData?: Maybe<Scalars['JSON']>;
-  surveyId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  draft?: InputMaybe<Scalars["Boolean"]>;
+  facilitated?: InputMaybe<Scalars["Boolean"]>;
+  practice?: InputMaybe<Scalars["Boolean"]>;
+  responseData?: InputMaybe<Scalars["JSON"]>;
+  surveyId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `createSurveyResponse` mutation. */
 export type CreateSurveyResponsePayload = {
-  __typename?: 'CreateSurveyResponsePayload';
+  __typename?: "CreateSurveyResponsePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyResponse`. */
@@ -1408,10 +1391,9 @@ export type CreateSurveyResponsePayload = {
   surveyResponseEdge?: Maybe<SurveyResponsesEdge>;
 };
 
-
 /** The output of our `createSurveyResponse` mutation. */
 export type CreateSurveyResponsePayloadSurveyResponseEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 /** All input for the create `TableOfContentsItem` mutation. */
@@ -1420,19 +1402,19 @@ export type CreateTableOfContentsItemInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The `TableOfContentsItem` to be created by this mutation. */
   tableOfContentsItem: TableOfContentsItemInput;
 };
 
 /** The output of our create `TableOfContentsItem` mutation. */
 export type CreateTableOfContentsItemPayload = {
-  __typename?: 'CreateTableOfContentsItemPayload';
+  __typename?: "CreateTableOfContentsItemPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
   dataLayer?: Maybe<DataLayer>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -1443,10 +1425,9 @@ export type CreateTableOfContentsItemPayload = {
   tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
 };
 
-
 /** The output of our create `TableOfContentsItem` mutation. */
 export type CreateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
-  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+  orderBy?: InputMaybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
 /** All input for the `createTopic` mutation. */
@@ -1455,20 +1436,20 @@ export type CreateTopicInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  forumId?: Maybe<Scalars['Int']>;
-  message?: Maybe<Scalars['JSON']>;
-  title?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  forumId?: InputMaybe<Scalars["Int"]>;
+  message?: InputMaybe<Scalars["JSON"]>;
+  title?: InputMaybe<Scalars["String"]>;
 };
 
 /** The output of our `createTopic` mutation. */
 export type CreateTopicPayload = {
-  __typename?: 'CreateTopicPayload';
+  __typename?: "CreateTopicPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Forum` that is related to this `Topic`. */
   forum?: Maybe<Forum>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -1478,18 +1459,16 @@ export type CreateTopicPayload = {
   topicEdge?: Maybe<TopicsEdge>;
 };
 
-
 /** The output of our `createTopic` mutation. */
 export type CreateTopicPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
-
 export enum CursorType {
-  Auto = 'AUTO',
-  Crosshair = 'CROSSHAIR',
-  Default = 'DEFAULT',
-  Pointer = 'POINTER'
+  Auto = "AUTO",
+  Crosshair = "CROSSHAIR",
+  Default = "DEFAULT",
+  Pointer = "POINTER",
 }
 
 /**
@@ -1501,30 +1480,30 @@ export enum CursorType {
  * associated with a basemap.
  */
 export type DataLayer = Node & {
-  __typename?: 'DataLayer';
+  __typename?: "DataLayer";
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
-  dataSourceId: Scalars['Int'];
-  id: Scalars['Int'];
+  dataSourceId: Scalars["Int"];
+  id: Scalars["Int"];
   /** Reads a single `InteractivitySetting` that is related to this `DataLayer`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
-  interactivitySettingsId: Scalars['Int'];
+  interactivitySettingsId: Scalars["Int"];
   /**
    * JSON array of MapBox GL Style layers. Layers should not specify an id or
    * sourceId. These will be automatically generated at runtime.
    */
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  mapboxGlStyles?: Maybe<Scalars["JSON"]>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  projectId: Scalars['Int'];
+  nodeId: Scalars["ID"];
+  projectId: Scalars["Int"];
   /**
    * Determines z-ordering of layer in relation to layers in the basemap. For this
    * functionality to work, layers must be identified in the basemap configuration.
    */
   renderUnder: RenderUnderType;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
-  sourceLayer?: Maybe<Scalars['String']>;
-  spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  sourceLayer?: Maybe<Scalars["String"]>;
+  spriteIds?: Maybe<Array<Maybe<Scalars["Int"]>>>;
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites?: Maybe<Array<Sprite>>;
   /**
@@ -1532,7 +1511,7 @@ export type DataLayer = Node & {
    * is blank and this layer merely controls the display of a single sublayer when
    * making image requests.
    */
-  sublayer?: Maybe<Scalars['String']>;
+  sublayer?: Maybe<Scalars["String"]>;
   /** Reads a single `TableOfContentsItem` that is related to this `DataLayer`. */
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
   /**
@@ -1540,9 +1519,8 @@ export type DataLayer = Node & {
    * @deprecated Please use tableOfContentsItem instead
    */
   tableOfContentsItemsConnection: TableOfContentsItemsConnection;
-  zIndex: Scalars['Int'];
+  zIndex: Scalars["Int"];
 };
-
 
 /**
  * Data layers represent multiple MapBox GL Style layers tied to a single source.
@@ -1553,10 +1531,9 @@ export type DataLayer = Node & {
  * associated with a basemap.
  */
 export type DataLayerSpritesArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * Data layers represent multiple MapBox GL Style layers tied to a single source.
@@ -1567,13 +1544,13 @@ export type DataLayerSpritesArgs = {
  * associated with a basemap.
  */
 export type DataLayerTableOfContentsItemsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<TableOfContentsItemCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<TableOfContentsItemCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
 /**
@@ -1582,73 +1559,73 @@ export type DataLayerTableOfContentsItemsConnectionArgs = {
  */
 export type DataLayerCondition = {
   /** Checks for equality with the object’s `dataSourceId` field. */
-  dataSourceId?: Maybe<Scalars['Int']>;
+  dataSourceId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `interactivitySettingsId` field. */
-  interactivitySettingsId?: Maybe<Scalars['Int']>;
+  interactivitySettingsId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** An input for mutations affecting `DataLayer` */
 export type DataLayerInput = {
-  dataSourceId: Scalars['Int'];
-  id?: Maybe<Scalars['Int']>;
+  dataSourceId: Scalars["Int"];
+  id?: InputMaybe<Scalars["Int"]>;
   /**
    * JSON array of MapBox GL Style layers. Layers should not specify an id or
    * sourceId. These will be automatically generated at runtime.
    */
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
-  projectId: Scalars['Int'];
+  mapboxGlStyles?: InputMaybe<Scalars["JSON"]>;
+  projectId: Scalars["Int"];
   /**
    * Determines z-ordering of layer in relation to layers in the basemap. For this
    * functionality to work, layers must be identified in the basemap configuration.
    */
-  renderUnder?: Maybe<RenderUnderType>;
+  renderUnder?: InputMaybe<RenderUnderType>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
-  sourceLayer?: Maybe<Scalars['String']>;
-  spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  sourceLayer?: InputMaybe<Scalars["String"]>;
+  spriteIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
    * making image requests.
    */
-  sublayer?: Maybe<Scalars['String']>;
-  zIndex?: Maybe<Scalars['Int']>;
+  sublayer?: InputMaybe<Scalars["String"]>;
+  zIndex?: InputMaybe<Scalars["Int"]>;
 };
 
 /** Represents an update to a `DataLayer`. Fields that are set will be updated. */
 export type DataLayerPatch = {
-  dataSourceId?: Maybe<Scalars['Int']>;
-  id?: Maybe<Scalars['Int']>;
-  interactivitySettingsId?: Maybe<Scalars['Int']>;
+  dataSourceId?: InputMaybe<Scalars["Int"]>;
+  id?: InputMaybe<Scalars["Int"]>;
+  interactivitySettingsId?: InputMaybe<Scalars["Int"]>;
   /**
    * JSON array of MapBox GL Style layers. Layers should not specify an id or
    * sourceId. These will be automatically generated at runtime.
    */
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
-  projectId?: Maybe<Scalars['Int']>;
+  mapboxGlStyles?: InputMaybe<Scalars["JSON"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
   /**
    * Determines z-ordering of layer in relation to layers in the basemap. For this
    * functionality to work, layers must be identified in the basemap configuration.
    */
-  renderUnder?: Maybe<RenderUnderType>;
+  renderUnder?: InputMaybe<RenderUnderType>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
-  sourceLayer?: Maybe<Scalars['String']>;
-  spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  sourceLayer?: InputMaybe<Scalars["String"]>;
+  spriteIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
    * making image requests.
    */
-  sublayer?: Maybe<Scalars['String']>;
-  zIndex?: Maybe<Scalars['Int']>;
+  sublayer?: InputMaybe<Scalars["String"]>;
+  zIndex?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A connection to a list of `DataLayer` values. */
 export type DataLayersConnection = {
-  __typename?: 'DataLayersConnection';
+  __typename?: "DataLayersConnection";
   /** A list of edges which contains the `DataLayer` and cursor to aid in pagination. */
   edges: Array<DataLayersEdge>;
   /** A list of `DataLayer` objects. */
@@ -1656,31 +1633,31 @@ export type DataLayersConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `DataLayer` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `DataLayer` edge in the connection. */
 export type DataLayersEdge = {
-  __typename?: 'DataLayersEdge';
+  __typename?: "DataLayersEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `DataLayer` at the end of the edge. */
   node: DataLayer;
 };
 
 /** Methods to use when ordering `DataLayer`. */
 export enum DataLayersOrderBy {
-  DataSourceIdAsc = 'DATA_SOURCE_ID_ASC',
-  DataSourceIdDesc = 'DATA_SOURCE_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  InteractivitySettingsIdAsc = 'INTERACTIVITY_SETTINGS_ID_ASC',
-  InteractivitySettingsIdDesc = 'INTERACTIVITY_SETTINGS_ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
+  DataSourceIdAsc = "DATA_SOURCE_ID_ASC",
+  DataSourceIdDesc = "DATA_SOURCE_ID_DESC",
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  InteractivitySettingsIdAsc = "INTERACTIVITY_SETTINGS_ID_ASC",
+  InteractivitySettingsIdDesc = "INTERACTIVITY_SETTINGS_ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  ProjectIdAsc = "PROJECT_ID_ASC",
+  ProjectIdDesc = "PROJECT_ID_DESC",
 }
 
 /**
@@ -1691,9 +1668,9 @@ export enum DataLayersOrderBy {
  * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
  */
 export type DataSource = Node & {
-  __typename?: 'DataSource';
+  __typename?: "DataSource";
   /** Contains an attribution to be displayed when the map is shown to a user. */
-  attribution?: Maybe<Scalars['String']>;
+  attribution?: Maybe<Scalars["String"]>;
   /**
    * An array containing the longitude and latitude of the southwest and northeast
    * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
@@ -1701,17 +1678,17 @@ export type DataSource = Node & {
    * of the given bounds are requested by Mapbox GL. This property can also be used
    * as metadata for non-tiled sources.
    */
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  bounds?: Maybe<Array<Maybe<Scalars["BigFloat"]>>>;
   /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
-  bucketId?: Maybe<Scalars['String']>;
+  bucketId?: Maybe<Scalars["String"]>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
    * values produce fewer rendering artifacts near tile edges and slower performance.
    */
-  buffer?: Maybe<Scalars['Int']>;
+  buffer?: Maybe<Scalars["Int"]>;
   /** SEASKETCH_VECTOR sources only. Approximate size of the geojson source */
-  byteLength?: Maybe<Scalars['Int']>;
+  byteLength?: Maybe<Scalars["Int"]>;
   /**
    * GeoJSON only.
    *
@@ -1725,22 +1702,22 @@ export type DataSource = Node & {
    *   * point_count Number of original points grouped into this cluster
    *   * point_count_abbreviated An abbreviated point count
    */
-  cluster?: Maybe<Scalars['Boolean']>;
+  cluster?: Maybe<Scalars["Boolean"]>;
   /**
    * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
    * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
    */
-  clusterMaxZoom?: Maybe<Scalars['Int']>;
+  clusterMaxZoom?: Maybe<Scalars["Int"]>;
   /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
-  clusterProperties?: Maybe<Scalars['JSON']>;
+  clusterProperties?: Maybe<Scalars["JSON"]>;
   /**
    * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
    * indicates a radius equal to the width of a tile.
    */
-  clusterRadius?: Maybe<Scalars['Int']>;
+  clusterRadius?: Maybe<Scalars["Int"]>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
-  coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
-  createdAt: Scalars['Datetime'];
+  coordinates?: Maybe<Array<Maybe<Scalars["BigFloat"]>>>;
+  createdAt: Scalars["Datetime"];
   /** Reads and enables pagination through a set of `DataLayer`. */
   dataLayersConnection: DataLayersConnection;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
@@ -1750,15 +1727,15 @@ export type DataSource = Node & {
    * different class of storage that requires a temporary security credential to
    * access. Set during creation and cannot be changed.
    */
-  enhancedSecurity?: Maybe<Scalars['Boolean']>;
+  enhancedSecurity?: Maybe<Scalars["Boolean"]>;
   /**
    * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
    * the feature.id property will be auto assigned based on its index in the
    * features array, over-writing any previous values.
    */
-  generateId?: Maybe<Scalars['Boolean']>;
+  generateId?: Maybe<Scalars["Boolean"]>;
   /** Should be used as sourceId in stylesheets. */
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   /**
    * For SeaSketchVector sources, identifies whether the original source comes from
    * a direct upload or a service location like ArcGIS server
@@ -1768,51 +1745,51 @@ export type DataSource = Node & {
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
    */
-  lineMetrics?: Maybe<Scalars['Boolean']>;
+  lineMetrics?: Maybe<Scalars["Boolean"]>;
   /**
    * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
    * which tiles are available, as in the TileJSON spec. Data from tiles at the
    * maxzoom are used when displaying the map at higher zoom levels.
    */
-  maxzoom?: Maybe<Scalars['Int']>;
+  maxzoom?: Maybe<Scalars["Int"]>;
   /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
-  minzoom?: Maybe<Scalars['Int']>;
+  minzoom?: Maybe<Scalars["Int"]>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
-  objectKey?: Maybe<Scalars['UUID']>;
+  objectKey?: Maybe<Scalars["UUID"]>;
   /**
    * For SeaSketchVector sources, identifies location of original service that
    * hosted the data, if any. This can be used to update a layer with an updated
    * copy of the data source if necessary.
    */
-  originalSourceUrl?: Maybe<Scalars['String']>;
+  originalSourceUrl?: Maybe<Scalars["String"]>;
   /** Use to upload source data to s3. Must be an admin. */
-  presignedUploadUrl?: Maybe<Scalars['String']>;
-  projectId: Scalars['Int'];
+  presignedUploadUrl?: Maybe<Scalars["String"]>;
+  projectId: Scalars["Int"];
   /**
    * GeoJSON only. A property to use as a feature id (for feature state). Either a
    * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
    */
-  promoteId?: Maybe<Scalars['Boolean']>;
+  promoteId?: Maybe<Scalars["Boolean"]>;
   /**
    * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
    * querystring parameters that will be added to requests.
    */
-  queryParameters?: Maybe<Scalars['JSON']>;
+  queryParameters?: Maybe<Scalars["JSON"]>;
   /**
    * For MapBox Vector and Raster sources. Influences the y direction of the tile
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
    */
   scheme?: Maybe<TileScheme>;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
-  supportsDynamicLayers: Scalars['Boolean'];
-  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
-  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
+  supportsDynamicLayers: Scalars["Boolean"];
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
-  tileSize?: Maybe<Scalars['Int']>;
+  tileSize?: Maybe<Scalars["Int"]>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: Maybe<Array<Maybe<Scalars["String"]>>>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
-  tolerance?: Maybe<Scalars['BigFloat']>;
+  tolerance?: Maybe<Scalars["BigFloat"]>;
   /** MapBox GL source type or custom seasketch type. */
   type: DataSourceTypes;
   /**
@@ -1820,13 +1797,12 @@ export type DataSource = Node & {
    * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
    * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
    */
-  url?: Maybe<Scalars['String']>;
+  url?: Maybe<Scalars["String"]>;
   /** Video sources only. URLs to video content in order of preferred format. */
-  urls?: Maybe<Array<Maybe<Scalars['String']>>>;
+  urls?: Maybe<Array<Maybe<Scalars["String"]>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
-  useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+  useDevicePixelRatio?: Maybe<Scalars["Boolean"]>;
 };
-
 
 /**
  * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
@@ -1836,26 +1812,26 @@ export type DataSource = Node & {
  * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
  */
 export type DataSourceDataLayersConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<DataLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<DataLayerCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<DataLayersOrderBy>>;
 };
 
 export enum DataSourceImportTypes {
   /** Imported from an arcgis feature layer identified by original_source_url */
-  Arcgis = 'ARCGIS',
+  Arcgis = "ARCGIS",
   /** Uploaded directly to SeaSketch using GeoJSON or shapefile */
-  Upload = 'UPLOAD'
+  Upload = "UPLOAD",
 }
 
 /** An input for mutations affecting `DataSource` */
 export type DataSourceInput = {
   /** Contains an attribution to be displayed when the map is shown to a user. */
-  attribution?: Maybe<Scalars['String']>;
+  attribution?: InputMaybe<Scalars["String"]>;
   /**
    * An array containing the longitude and latitude of the southwest and northeast
    * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
@@ -1863,17 +1839,17 @@ export type DataSourceInput = {
    * of the given bounds are requested by Mapbox GL. This property can also be used
    * as metadata for non-tiled sources.
    */
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars["BigFloat"]>>>;
   /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
-  bucketId?: Maybe<Scalars['String']>;
+  bucketId?: InputMaybe<Scalars["String"]>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
    * values produce fewer rendering artifacts near tile edges and slower performance.
    */
-  buffer?: Maybe<Scalars['Int']>;
+  buffer?: InputMaybe<Scalars["Int"]>;
   /** SEASKETCH_VECTOR sources only. Approximate size of the geojson source */
-  byteLength?: Maybe<Scalars['Int']>;
+  byteLength?: InputMaybe<Scalars["Int"]>;
   /**
    * GeoJSON only.
    *
@@ -1887,88 +1863,88 @@ export type DataSourceInput = {
    *   * point_count Number of original points grouped into this cluster
    *   * point_count_abbreviated An abbreviated point count
    */
-  cluster?: Maybe<Scalars['Boolean']>;
+  cluster?: InputMaybe<Scalars["Boolean"]>;
   /**
    * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
    * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
    */
-  clusterMaxZoom?: Maybe<Scalars['Int']>;
+  clusterMaxZoom?: InputMaybe<Scalars["Int"]>;
   /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
-  clusterProperties?: Maybe<Scalars['JSON']>;
+  clusterProperties?: InputMaybe<Scalars["JSON"]>;
   /**
    * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
    * indicates a radius equal to the width of a tile.
    */
-  clusterRadius?: Maybe<Scalars['Int']>;
+  clusterRadius?: InputMaybe<Scalars["Int"]>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
-  coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
-  createdAt?: Maybe<Scalars['Datetime']>;
+  coordinates?: InputMaybe<Array<InputMaybe<Scalars["BigFloat"]>>>;
+  createdAt?: InputMaybe<Scalars["Datetime"]>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
-  encoding?: Maybe<RasterDemEncoding>;
+  encoding?: InputMaybe<RasterDemEncoding>;
   /**
    * SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a
    * different class of storage that requires a temporary security credential to
    * access. Set during creation and cannot be changed.
    */
-  enhancedSecurity?: Maybe<Scalars['Boolean']>;
+  enhancedSecurity?: InputMaybe<Scalars["Boolean"]>;
   /**
    * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
    * the feature.id property will be auto assigned based on its index in the
    * features array, over-writing any previous values.
    */
-  generateId?: Maybe<Scalars['Boolean']>;
+  generateId?: InputMaybe<Scalars["Boolean"]>;
   /** Should be used as sourceId in stylesheets. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /**
    * For SeaSketchVector sources, identifies whether the original source comes from
    * a direct upload or a service location like ArcGIS server
    */
-  importType?: Maybe<DataSourceImportTypes>;
+  importType?: InputMaybe<DataSourceImportTypes>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
    */
-  lineMetrics?: Maybe<Scalars['Boolean']>;
+  lineMetrics?: InputMaybe<Scalars["Boolean"]>;
   /**
    * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
    * which tiles are available, as in the TileJSON spec. Data from tiles at the
    * maxzoom are used when displaying the map at higher zoom levels.
    */
-  maxzoom?: Maybe<Scalars['Int']>;
+  maxzoom?: InputMaybe<Scalars["Int"]>;
   /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
-  minzoom?: Maybe<Scalars['Int']>;
+  minzoom?: InputMaybe<Scalars["Int"]>;
   /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
-  objectKey?: Maybe<Scalars['UUID']>;
+  objectKey?: InputMaybe<Scalars["UUID"]>;
   /**
    * For SeaSketchVector sources, identifies location of original service that
    * hosted the data, if any. This can be used to update a layer with an updated
    * copy of the data source if necessary.
    */
-  originalSourceUrl?: Maybe<Scalars['String']>;
-  projectId: Scalars['Int'];
+  originalSourceUrl?: InputMaybe<Scalars["String"]>;
+  projectId: Scalars["Int"];
   /**
    * GeoJSON only. A property to use as a feature id (for feature state). Either a
    * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
    */
-  promoteId?: Maybe<Scalars['Boolean']>;
+  promoteId?: InputMaybe<Scalars["Boolean"]>;
   /**
    * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
    * querystring parameters that will be added to requests.
    */
-  queryParameters?: Maybe<Scalars['JSON']>;
+  queryParameters?: InputMaybe<Scalars["JSON"]>;
   /**
    * For MapBox Vector and Raster sources. Influences the y direction of the tile
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
    */
-  scheme?: Maybe<TileScheme>;
+  scheme?: InputMaybe<TileScheme>;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
-  supportsDynamicLayers?: Maybe<Scalars['Boolean']>;
-  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
-  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
+  supportsDynamicLayers?: InputMaybe<Scalars["Boolean"]>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
-  tileSize?: Maybe<Scalars['Int']>;
+  tileSize?: InputMaybe<Scalars["Int"]>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
-  tolerance?: Maybe<Scalars['BigFloat']>;
+  tolerance?: InputMaybe<Scalars["BigFloat"]>;
   /** MapBox GL source type or custom seasketch type. */
   type: DataSourceTypes;
   /**
@@ -1976,23 +1952,23 @@ export type DataSourceInput = {
    * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
    * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
    */
-  url?: Maybe<Scalars['String']>;
+  url?: InputMaybe<Scalars["String"]>;
   /** Video sources only. URLs to video content in order of preferred format. */
-  urls?: Maybe<Array<Maybe<Scalars['String']>>>;
+  urls?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
-  useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+  useDevicePixelRatio?: InputMaybe<Scalars["Boolean"]>;
 };
 
 /** Represents an update to a `DataSource`. Fields that are set will be updated. */
 export type DataSourcePatch = {
   /** Contains an attribution to be displayed when the map is shown to a user. */
-  attribution?: Maybe<Scalars['String']>;
+  attribution?: InputMaybe<Scalars["String"]>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
    * values produce fewer rendering artifacts near tile edges and slower performance.
    */
-  buffer?: Maybe<Scalars['Int']>;
+  buffer?: InputMaybe<Scalars["Int"]>;
   /**
    * GeoJSON only.
    *
@@ -2006,123 +1982,122 @@ export type DataSourcePatch = {
    *   * point_count Number of original points grouped into this cluster
    *   * point_count_abbreviated An abbreviated point count
    */
-  cluster?: Maybe<Scalars['Boolean']>;
+  cluster?: InputMaybe<Scalars["Boolean"]>;
   /**
    * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
    * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
    */
-  clusterMaxZoom?: Maybe<Scalars['Int']>;
+  clusterMaxZoom?: InputMaybe<Scalars["Int"]>;
   /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
-  clusterProperties?: Maybe<Scalars['JSON']>;
+  clusterProperties?: InputMaybe<Scalars["JSON"]>;
   /**
    * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
    * indicates a radius equal to the width of a tile.
    */
-  clusterRadius?: Maybe<Scalars['Int']>;
+  clusterRadius?: InputMaybe<Scalars["Int"]>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
-  coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  coordinates?: InputMaybe<Array<InputMaybe<Scalars["BigFloat"]>>>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
-  encoding?: Maybe<RasterDemEncoding>;
+  encoding?: InputMaybe<RasterDemEncoding>;
   /**
    * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
    * the feature.id property will be auto assigned based on its index in the
    * features array, over-writing any previous values.
    */
-  generateId?: Maybe<Scalars['Boolean']>;
+  generateId?: InputMaybe<Scalars["Boolean"]>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
    */
-  lineMetrics?: Maybe<Scalars['Boolean']>;
+  lineMetrics?: InputMaybe<Scalars["Boolean"]>;
   /**
    * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
    * which tiles are available, as in the TileJSON spec. Data from tiles at the
    * maxzoom are used when displaying the map at higher zoom levels.
    */
-  maxzoom?: Maybe<Scalars['Int']>;
+  maxzoom?: InputMaybe<Scalars["Int"]>;
   /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
-  minzoom?: Maybe<Scalars['Int']>;
+  minzoom?: InputMaybe<Scalars["Int"]>;
   /**
    * GeoJSON only. A property to use as a feature id (for feature state). Either a
    * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
    */
-  promoteId?: Maybe<Scalars['Boolean']>;
+  promoteId?: InputMaybe<Scalars["Boolean"]>;
   /**
    * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
    * querystring parameters that will be added to requests.
    */
-  queryParameters?: Maybe<Scalars['JSON']>;
+  queryParameters?: InputMaybe<Scalars["JSON"]>;
   /**
    * For MapBox Vector and Raster sources. Influences the y direction of the tile
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
    */
-  scheme?: Maybe<TileScheme>;
+  scheme?: InputMaybe<TileScheme>;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
-  supportsDynamicLayers?: Maybe<Scalars['Boolean']>;
-  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
-  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
+  supportsDynamicLayers?: InputMaybe<Scalars["Boolean"]>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
-  tileSize?: Maybe<Scalars['Int']>;
+  tileSize?: InputMaybe<Scalars["Int"]>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
-  tolerance?: Maybe<Scalars['BigFloat']>;
+  tolerance?: InputMaybe<Scalars["BigFloat"]>;
   /**
    * A URL to a TileJSON resource for tiled sources. For GeoJSON or
    * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
    * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
    */
-  url?: Maybe<Scalars['String']>;
+  url?: InputMaybe<Scalars["String"]>;
   /** Video sources only. URLs to video content in order of preferred format. */
-  urls?: Maybe<Array<Maybe<Scalars['String']>>>;
+  urls?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
-  useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+  useDevicePixelRatio?: InputMaybe<Scalars["Boolean"]>;
 };
 
 export enum DataSourceTypes {
   /** Loads dynamic images for the entire viewport from arcgis server */
-  ArcgisDynamicMapserver = 'ARCGIS_DYNAMIC_MAPSERVER',
+  ArcgisDynamicMapserver = "ARCGIS_DYNAMIC_MAPSERVER",
   /** Loads vector data from arcgis server for rendering as a geojson source */
-  ArcgisVector = 'ARCGIS_VECTOR',
+  ArcgisVector = "ARCGIS_VECTOR",
   /** MapBox GL Style "geojson" source */
-  Geojson = 'GEOJSON',
+  Geojson = "GEOJSON",
   /** MapBox GL Style "image" source */
-  Image = 'IMAGE',
+  Image = "IMAGE",
   /** MapBox GL Style "raster" source */
-  Raster = 'RASTER',
+  Raster = "RASTER",
   /** MapBox GL Style "raster" source */
-  RasterDem = 'RASTER_DEM',
+  RasterDem = "RASTER_DEM",
   /** Combination of geojson and possible vector sources hosted on SeaSketch CND */
-  SeasketchVector = 'SEASKETCH_VECTOR',
+  SeasketchVector = "SEASKETCH_VECTOR",
   /** MapBox GL Style "vector" source */
-  Vector = 'VECTOR',
+  Vector = "VECTOR",
   /** MapBox GL Style "video" source */
-  Video = 'VIDEO'
+  Video = "VIDEO",
 }
 
 export type DataSourcesBucket = Node & {
-  __typename?: 'DataSourcesBucket';
-  bucket?: Maybe<Scalars['String']>;
+  __typename?: "DataSourcesBucket";
+  bucket?: Maybe<Scalars["String"]>;
   location: GeometryPoint;
-  name: Scalars['String'];
+  name: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Indicates the DataHostingStack for this region has been deleted */
-  offline: Scalars['Boolean'];
+  offline: Scalars["Boolean"];
   /** Reads and enables pagination through a set of `Project`. */
   projectsConnection: ProjectsConnection;
-  region: Scalars['String'];
+  region: Scalars["String"];
   /** Base url for this point-of-presence. */
-  url: Scalars['String'];
+  url: Scalars["String"];
 };
 
-
 export type DataSourcesBucketProjectsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<ProjectCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 /**
@@ -2131,12 +2106,12 @@ export type DataSourcesBucketProjectsConnectionArgs = {
  */
 export type DataSourcesBucketCondition = {
   /** Checks for equality with the object’s `url` field. */
-  url?: Maybe<Scalars['String']>;
+  url?: InputMaybe<Scalars["String"]>;
 };
 
 /** A connection to a list of `DataSourcesBucket` values. */
 export type DataSourcesBucketsConnection = {
-  __typename?: 'DataSourcesBucketsConnection';
+  __typename?: "DataSourcesBucketsConnection";
   /** A list of edges which contains the `DataSourcesBucket` and cursor to aid in pagination. */
   edges: Array<DataSourcesBucketsEdge>;
   /** A list of `DataSourcesBucket` objects. */
@@ -2144,47 +2119,46 @@ export type DataSourcesBucketsConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `DataSourcesBucket` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `DataSourcesBucket` edge in the connection. */
 export type DataSourcesBucketsEdge = {
-  __typename?: 'DataSourcesBucketsEdge';
+  __typename?: "DataSourcesBucketsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `DataSourcesBucket` at the end of the edge. */
   node: DataSourcesBucket;
 };
 
 /** Methods to use when ordering `DataSourcesBucket`. */
 export enum DataSourcesBucketsOrderBy {
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  UrlAsc = 'URL_ASC',
-  UrlDesc = 'URL_DESC'
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  UrlAsc = "URL_ASC",
+  UrlDesc = "URL_DESC",
 }
 
 /** A `DataSource` edge in the connection. */
 export type DataSourcesEdge = {
-  __typename?: 'DataSourcesEdge';
+  __typename?: "DataSourcesEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `DataSource` at the end of the edge. */
   node: DataSource;
 };
 
 /** Methods to use when ordering `DataSource`. */
 export enum DataSourcesOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  ProjectIdAsc = "PROJECT_ID_ASC",
+  ProjectIdDesc = "PROJECT_ID_DESC",
 }
-
 
 /** All input for the `deleteBasemapByNodeId` mutation. */
 export type DeleteBasemapByNodeIdInput = {
@@ -2192,9 +2166,9 @@ export type DeleteBasemapByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Basemap` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteBasemap` mutation. */
@@ -2203,13 +2177,13 @@ export type DeleteBasemapInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `Basemap` mutation. */
 export type DeleteBasemapPayload = {
-  __typename?: 'DeleteBasemapPayload';
+  __typename?: "DeleteBasemapPayload";
   /** The `Basemap` that was deleted by this mutation. */
   basemap?: Maybe<Basemap>;
   /** An edge for our `Basemap`. May be used by Relay 1. */
@@ -2218,8 +2192,8 @@ export type DeleteBasemapPayload = {
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedBasemapNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedBasemapNodeId?: Maybe<Scalars["ID"]>;
   /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
   /** Reads a single `Project` that is related to this `Basemap`. */
@@ -2228,10 +2202,9 @@ export type DeleteBasemapPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our delete `Basemap` mutation. */
 export type DeleteBasemapPayloadBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
 
 /** All input for the `deleteCommunityGuidelineByNodeId` mutation. */
@@ -2240,9 +2213,9 @@ export type DeleteCommunityGuidelineByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `CommunityGuideline` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteCommunityGuideline` mutation. */
@@ -2251,21 +2224,21 @@ export type DeleteCommunityGuidelineInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId: Scalars["Int"];
 };
 
 /** The output of our delete `CommunityGuideline` mutation. */
 export type DeleteCommunityGuidelinePayload = {
-  __typename?: 'DeleteCommunityGuidelinePayload';
+  __typename?: "DeleteCommunityGuidelinePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `CommunityGuideline` that was deleted by this mutation. */
   communityGuideline?: Maybe<CommunityGuideline>;
-  deletedCommunityGuidelineNodeId?: Maybe<Scalars['ID']>;
+  deletedCommunityGuidelineNodeId?: Maybe<Scalars["ID"]>;
   /** Reads a single `Project` that is related to this `CommunityGuideline`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -2278,8 +2251,8 @@ export type DeleteDataLayerByInteractivitySettingsIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  interactivitySettingsId: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  interactivitySettingsId: Scalars["Int"];
 };
 
 /** All input for the `deleteDataLayerByNodeId` mutation. */
@@ -2288,9 +2261,9 @@ export type DeleteDataLayerByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `DataLayer` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteDataLayer` mutation. */
@@ -2299,35 +2272,34 @@ export type DeleteDataLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `DataLayer` mutation. */
 export type DeleteDataLayerPayload = {
-  __typename?: 'DeleteDataLayerPayload';
+  __typename?: "DeleteDataLayerPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `DataLayer` that was deleted by this mutation. */
   dataLayer?: Maybe<DataLayer>;
   /** An edge for our `DataLayer`. May be used by Relay 1. */
   dataLayerEdge?: Maybe<DataLayersEdge>;
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
-  deletedDataLayerNodeId?: Maybe<Scalars['ID']>;
+  deletedDataLayerNodeId?: Maybe<Scalars["ID"]>;
   /** Reads a single `InteractivitySetting` that is related to this `DataLayer`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
-
 /** The output of our delete `DataLayer` mutation. */
 export type DeleteDataLayerPayloadDataLayerEdgeArgs = {
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+  orderBy?: InputMaybe<Array<DataLayersOrderBy>>;
 };
 
 /** All input for the `deleteDataSourceByNodeId` mutation. */
@@ -2336,9 +2308,9 @@ export type DeleteDataSourceByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `DataSource` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteDataSource` mutation. */
@@ -2347,32 +2319,31 @@ export type DeleteDataSourceInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** Should be used as sourceId in stylesheets. */
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `DataSource` mutation. */
 export type DeleteDataSourcePayload = {
-  __typename?: 'DeleteDataSourcePayload';
+  __typename?: "DeleteDataSourcePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `DataSource` that was deleted by this mutation. */
   dataSource?: Maybe<DataSource>;
   /** An edge for our `DataSource`. May be used by Relay 1. */
   dataSourceEdge?: Maybe<DataSourcesEdge>;
-  deletedDataSourceNodeId?: Maybe<Scalars['ID']>;
+  deletedDataSourceNodeId?: Maybe<Scalars["ID"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
-
 /** The output of our delete `DataSource` mutation. */
 export type DeleteDataSourcePayloadDataSourceEdgeArgs = {
-  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
+  orderBy?: InputMaybe<Array<DataSourcesOrderBy>>;
 };
 
 /** All input for the `deleteFormByNodeId` mutation. */
@@ -2381,9 +2352,9 @@ export type DeleteFormByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Form` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteFormBySketchClassId` mutation. */
@@ -2392,9 +2363,9 @@ export type DeleteFormBySketchClassIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** Related *SketchClass* */
-  sketchClassId: Scalars['Int'];
+  sketchClassId: Scalars["Int"];
 };
 
 /** All input for the `deleteFormBySurveyId` mutation. */
@@ -2403,9 +2374,9 @@ export type DeleteFormBySurveyIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** Related *Survey* */
-  surveyId: Scalars['Int'];
+  surveyId: Scalars["Int"];
 };
 
 /** All input for the `deleteFormElementByNodeId` mutation. */
@@ -2414,9 +2385,9 @@ export type DeleteFormElementByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `FormElement` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteFormElement` mutation. */
@@ -2425,19 +2396,19 @@ export type DeleteFormElementInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `FormElement` mutation. */
 export type DeleteFormElementPayload = {
-  __typename?: 'DeleteFormElementPayload';
+  __typename?: "DeleteFormElementPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedFormElementNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedFormElementNodeId?: Maybe<Scalars["ID"]>;
   /** The `FormElement` that was deleted by this mutation. */
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
@@ -2446,10 +2417,9 @@ export type DeleteFormElementPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our delete `FormElement` mutation. */
 export type DeleteFormElementPayloadFormElementEdgeArgs = {
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the `deleteForm` mutation. */
@@ -2458,8 +2428,8 @@ export type DeleteFormInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** All input for the `deleteFormLogicConditionByNodeId` mutation. */
@@ -2468,9 +2438,9 @@ export type DeleteFormLogicConditionByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `FormLogicCondition` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteFormLogicCondition` mutation. */
@@ -2479,19 +2449,19 @@ export type DeleteFormLogicConditionInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `FormLogicCondition` mutation. */
 export type DeleteFormLogicConditionPayload = {
-  __typename?: 'DeleteFormLogicConditionPayload';
+  __typename?: "DeleteFormLogicConditionPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedFormLogicConditionNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedFormLogicConditionNodeId?: Maybe<Scalars["ID"]>;
   /** The `FormLogicCondition` that was deleted by this mutation. */
   formLogicCondition?: Maybe<FormLogicCondition>;
   /** An edge for our `FormLogicCondition`. May be used by Relay 1. */
@@ -2500,10 +2470,9 @@ export type DeleteFormLogicConditionPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our delete `FormLogicCondition` mutation. */
 export type DeleteFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicConditionsOrderBy>>;
 };
 
 /** All input for the `deleteFormLogicRuleByNodeId` mutation. */
@@ -2512,9 +2481,9 @@ export type DeleteFormLogicRuleByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `FormLogicRule` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteFormLogicRule` mutation. */
@@ -2523,19 +2492,19 @@ export type DeleteFormLogicRuleInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `FormLogicRule` mutation. */
 export type DeleteFormLogicRulePayload = {
-  __typename?: 'DeleteFormLogicRulePayload';
+  __typename?: "DeleteFormLogicRulePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedFormLogicRuleNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedFormLogicRuleNodeId?: Maybe<Scalars["ID"]>;
   /** The `FormLogicRule` that was deleted by this mutation. */
   formLogicRule?: Maybe<FormLogicRule>;
   /** An edge for our `FormLogicRule`. May be used by Relay 1. */
@@ -2544,21 +2513,20 @@ export type DeleteFormLogicRulePayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our delete `FormLogicRule` mutation. */
 export type DeleteFormLogicRulePayloadFormLogicRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** The output of our delete `Form` mutation. */
 export type DeleteFormPayload = {
-  __typename?: 'DeleteFormPayload';
+  __typename?: "DeleteFormPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedFormNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedFormNodeId?: Maybe<Scalars["ID"]>;
   /** The `Form` that was deleted by this mutation. */
   form?: Maybe<Form>;
   /** An edge for our `Form`. May be used by Relay 1. */
@@ -2571,10 +2539,9 @@ export type DeleteFormPayload = {
   survey?: Maybe<Survey>;
 };
 
-
 /** The output of our delete `Form` mutation. */
 export type DeleteFormPayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormsOrderBy>>;
 };
 
 /** All input for the `deleteForumByNodeId` mutation. */
@@ -2583,9 +2550,9 @@ export type DeleteForumByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Forum` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteForum` mutation. */
@@ -2594,19 +2561,19 @@ export type DeleteForumInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `Forum` mutation. */
 export type DeleteForumPayload = {
-  __typename?: 'DeleteForumPayload';
+  __typename?: "DeleteForumPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedForumNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedForumNodeId?: Maybe<Scalars["ID"]>;
   /** The `Forum` that was deleted by this mutation. */
   forum?: Maybe<Forum>;
   /** An edge for our `Forum`. May be used by Relay 1. */
@@ -2617,10 +2584,9 @@ export type DeleteForumPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our delete `Forum` mutation. */
 export type DeleteForumPayloadForumEdgeArgs = {
-  orderBy?: Maybe<Array<ForumsOrderBy>>;
+  orderBy?: InputMaybe<Array<ForumsOrderBy>>;
 };
 
 /** All input for the `deleteGroupByNodeId` mutation. */
@@ -2629,9 +2595,9 @@ export type DeleteGroupByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Group` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteGroupByProjectIdAndName` mutation. */
@@ -2640,10 +2606,10 @@ export type DeleteGroupByProjectIdAndNameInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** Label for the group. */
-  name: Scalars['String'];
-  projectId: Scalars['Int'];
+  name: Scalars["String"];
+  projectId: Scalars["Int"];
 };
 
 /** All input for the `deleteGroup` mutation. */
@@ -2652,19 +2618,19 @@ export type DeleteGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `Group` mutation. */
 export type DeleteGroupPayload = {
-  __typename?: 'DeleteGroupPayload';
+  __typename?: "DeleteGroupPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedProjectGroupNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedProjectGroupNodeId?: Maybe<Scalars["ID"]>;
   /** The `Group` that was deleted by this mutation. */
   group?: Maybe<Group>;
   /** Reads a single `Project` that is related to this `Group`. */
@@ -2679,9 +2645,9 @@ export type DeleteOptionalBasemapLayerByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `OptionalBasemapLayer` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteOptionalBasemapLayer` mutation. */
@@ -2690,21 +2656,21 @@ export type DeleteOptionalBasemapLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `OptionalBasemapLayer` mutation. */
 export type DeleteOptionalBasemapLayerPayload = {
-  __typename?: 'DeleteOptionalBasemapLayerPayload';
+  __typename?: "DeleteOptionalBasemapLayerPayload";
   /** Reads a single `Basemap` that is related to this `OptionalBasemapLayer`. */
   basemap?: Maybe<Basemap>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedOptionalBasemapLayerNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedOptionalBasemapLayerNodeId?: Maybe<Scalars["ID"]>;
   /** The `OptionalBasemapLayer` that was deleted by this mutation. */
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -2717,9 +2683,9 @@ export type DeletePostByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Post` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deletePost` mutation. */
@@ -2728,19 +2694,19 @@ export type DeletePostInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `Post` mutation. */
 export type DeletePostPayload = {
-  __typename?: 'DeletePostPayload';
+  __typename?: "DeletePostPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedPostNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedPostNodeId?: Maybe<Scalars["ID"]>;
   /** The `Post` that was deleted by this mutation. */
   post?: Maybe<Post>;
   /** An edge for our `Post`. May be used by Relay 1. */
@@ -2751,10 +2717,9 @@ export type DeletePostPayload = {
   topic?: Maybe<Topic>;
 };
 
-
 /** The output of our delete `Post` mutation. */
 export type DeletePostPayloadPostEdgeArgs = {
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 /** All input for the `deleteProject` mutation. */
@@ -2763,8 +2728,8 @@ export type DeleteProjectInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId: Scalars["Int"];
 };
 
 /** All input for the `deleteProjectInviteByEmailAndProjectId` mutation. */
@@ -2773,10 +2738,10 @@ export type DeleteProjectInviteByEmailAndProjectIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** Specified by admin when invite was created. */
-  email: Scalars['Email'];
-  projectId: Scalars['Int'];
+  email: Scalars["Email"];
+  projectId: Scalars["Int"];
 };
 
 /** All input for the `deleteProjectInviteByNodeId` mutation. */
@@ -2785,9 +2750,9 @@ export type DeleteProjectInviteByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `ProjectInvite` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteProjectInviteGroupByInviteIdAndGroupId` mutation. */
@@ -2796,20 +2761,20 @@ export type DeleteProjectInviteGroupByInviteIdAndGroupIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId: Scalars['Int'];
-  inviteId: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groupId: Scalars["Int"];
+  inviteId: Scalars["Int"];
 };
 
 /** The output of our delete `ProjectInviteGroup` mutation. */
 export type DeleteProjectInviteGroupPayload = {
-  __typename?: 'DeleteProjectInviteGroupPayload';
+  __typename?: "DeleteProjectInviteGroupPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedProjectInviteGroupNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedProjectInviteGroupNodeId?: Maybe<Scalars["ID"]>;
   /** Reads a single `Group` that is related to this `ProjectInviteGroup`. */
   group?: Maybe<Group>;
   /** Reads a single `ProjectInvite` that is related to this `ProjectInviteGroup`. */
@@ -2822,10 +2787,9 @@ export type DeleteProjectInviteGroupPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our delete `ProjectInviteGroup` mutation. */
 export type DeleteProjectInviteGroupPayloadProjectInviteGroupEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 /** All input for the `deleteProjectInvite` mutation. */
@@ -2834,19 +2798,19 @@ export type DeleteProjectInviteInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `ProjectInvite` mutation. */
 export type DeleteProjectInvitePayload = {
-  __typename?: 'DeleteProjectInvitePayload';
+  __typename?: "DeleteProjectInvitePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedProjectInviteNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedProjectInviteNodeId?: Maybe<Scalars["ID"]>;
   /** The `ProjectInvite` that was deleted by this mutation. */
   projectInvite?: Maybe<ProjectInvite>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -2855,12 +2819,12 @@ export type DeleteProjectInvitePayload = {
 
 /** The output of our `deleteProject` mutation. */
 export type DeleteProjectPayload = {
-  __typename?: 'DeleteProjectPayload';
+  __typename?: "DeleteProjectPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
   dataSourcesBucket?: Maybe<DataSourcesBucket>;
   project?: Maybe<Project>;
@@ -2870,34 +2834,33 @@ export type DeleteProjectPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our `deleteProject` mutation. */
 export type DeleteProjectPayloadProjectEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the `deleteProjectsSharedBasemapByBasemapIdAndProjectId` mutation. */
 export type DeleteProjectsSharedBasemapByBasemapIdAndProjectIdInput = {
-  basemapId: Scalars['Int'];
+  basemapId: Scalars["Int"];
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId: Scalars["Int"];
 };
 
 /** The output of our delete `ProjectsSharedBasemap` mutation. */
 export type DeleteProjectsSharedBasemapPayload = {
-  __typename?: 'DeleteProjectsSharedBasemapPayload';
+  __typename?: "DeleteProjectsSharedBasemapPayload";
   /** Reads a single `Basemap` that is related to this `ProjectsSharedBasemap`. */
   basemap?: Maybe<Basemap>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedProjectsSharedBasemapNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedProjectsSharedBasemapNodeId?: Maybe<Scalars["ID"]>;
   /** The `ProjectsSharedBasemap` that was deleted by this mutation. */
   projectsSharedBasemap?: Maybe<ProjectsSharedBasemap>;
   /** An edge for our `ProjectsSharedBasemap`. May be used by Relay 1. */
@@ -2906,10 +2869,9 @@ export type DeleteProjectsSharedBasemapPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our delete `ProjectsSharedBasemap` mutation. */
 export type DeleteProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 /** All input for the `deleteSketchByNodeId` mutation. */
@@ -2918,9 +2880,9 @@ export type DeleteSketchByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Sketch` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteSketchClassByFormElementId` mutation. */
@@ -2929,9 +2891,9 @@ export type DeleteSketchClassByFormElementIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** If set, this sketch class is only for use in a survey indicated by the form_element. */
-  formElementId: Scalars['Int'];
+  formElementId: Scalars["Int"];
 };
 
 /** All input for the `deleteSketchClassByNodeId` mutation. */
@@ -2940,9 +2902,9 @@ export type DeleteSketchClassByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `SketchClass` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteSketchClass` mutation. */
@@ -2951,19 +2913,19 @@ export type DeleteSketchClassInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `SketchClass` mutation. */
 export type DeleteSketchClassPayload = {
-  __typename?: 'DeleteSketchClassPayload';
+  __typename?: "DeleteSketchClassPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedSketchClassNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedSketchClassNodeId?: Maybe<Scalars["ID"]>;
   /** Reads a single `FormElement` that is related to this `SketchClass`. */
   formElement?: Maybe<FormElement>;
   /** Reads a single `Project` that is related to this `SketchClass`. */
@@ -2976,10 +2938,9 @@ export type DeleteSketchClassPayload = {
   sketchClassEdge?: Maybe<SketchClassesEdge>;
 };
 
-
 /** The output of our delete `SketchClass` mutation. */
 export type DeleteSketchClassPayloadSketchClassEdgeArgs = {
-  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchClassesOrderBy>>;
 };
 
 /** All input for the `deleteSketchFolderByNodeId` mutation. */
@@ -2988,9 +2949,9 @@ export type DeleteSketchFolderByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `SketchFolder` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteSketchFolder` mutation. */
@@ -2999,19 +2960,19 @@ export type DeleteSketchFolderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `SketchFolder` mutation. */
 export type DeleteSketchFolderPayload = {
-  __typename?: 'DeleteSketchFolderPayload';
+  __typename?: "DeleteSketchFolderPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedSketchFolderNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedSketchFolderNodeId?: Maybe<Scalars["ID"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `SketchFolder` that was deleted by this mutation. */
@@ -3020,10 +2981,9 @@ export type DeleteSketchFolderPayload = {
   sketchFolderEdge?: Maybe<SketchFoldersEdge>;
 };
 
-
 /** The output of our delete `SketchFolder` mutation. */
 export type DeleteSketchFolderPayloadSketchFolderEdgeArgs = {
-  orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchFoldersOrderBy>>;
 };
 
 /** All input for the `deleteSketch` mutation. */
@@ -3032,23 +2992,23 @@ export type DeleteSketchInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `Sketch` mutation. */
 export type DeleteSketchPayload = {
-  __typename?: 'DeleteSketchPayload';
+  __typename?: "DeleteSketchPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   collection?: Maybe<Sketch>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   copiedFrom?: Maybe<Sketch>;
-  deletedSketchNodeId?: Maybe<Scalars['ID']>;
+  deletedSketchNodeId?: Maybe<Scalars["ID"]>;
   /** Reads a single `FormElement` that is related to this `Sketch`. */
   formElement?: Maybe<FormElement>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -3067,9 +3027,9 @@ export type DeleteSurveyByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Survey` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteSurvey` mutation. */
@@ -3078,8 +3038,8 @@ export type DeleteSurveyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** All input for the `deleteSurveyInviteByEmailAndSurveyId` mutation. */
@@ -3088,9 +3048,9 @@ export type DeleteSurveyInviteByEmailAndSurveyIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  email: Scalars['Email'];
-  surveyId: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  email: Scalars["Email"];
+  surveyId: Scalars["Int"];
 };
 
 /** All input for the `deleteSurveyInviteByEmail` mutation. */
@@ -3099,8 +3059,8 @@ export type DeleteSurveyInviteByEmailInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  email: Scalars['Email'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  email: Scalars["Email"];
 };
 
 /** All input for the `deleteSurveyInviteByNodeId` mutation. */
@@ -3109,9 +3069,9 @@ export type DeleteSurveyInviteByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `SurveyInvite` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteSurveyInvite` mutation. */
@@ -3120,19 +3080,19 @@ export type DeleteSurveyInviteInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `SurveyInvite` mutation. */
 export type DeleteSurveyInvitePayload = {
-  __typename?: 'DeleteSurveyInvitePayload';
+  __typename?: "DeleteSurveyInvitePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedSurveyInviteNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedSurveyInviteNodeId?: Maybe<Scalars["ID"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyInvite`. */
@@ -3143,10 +3103,9 @@ export type DeleteSurveyInvitePayload = {
   surveyInviteEdge?: Maybe<SurveyInvitesEdge>;
 };
 
-
 /** The output of our delete `SurveyInvite` mutation. */
 export type DeleteSurveyInvitePayloadSurveyInviteEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyInvitesOrderBy>>;
 };
 
 /** All input for the `deleteSurveyInvitedGroupBySurveyIdAndGroupId` mutation. */
@@ -3155,20 +3114,20 @@ export type DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId: Scalars['Int'];
-  surveyId: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groupId: Scalars["Int"];
+  surveyId: Scalars["Int"];
 };
 
 /** The output of our delete `SurveyInvitedGroup` mutation. */
 export type DeleteSurveyInvitedGroupPayload = {
-  __typename?: 'DeleteSurveyInvitedGroupPayload';
+  __typename?: "DeleteSurveyInvitedGroupPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedSurveyInvitedGroupNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedSurveyInvitedGroupNodeId?: Maybe<Scalars["ID"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyInvitedGroup`. */
@@ -3179,13 +3138,13 @@ export type DeleteSurveyInvitedGroupPayload = {
 
 /** The output of our delete `Survey` mutation. */
 export type DeleteSurveyPayload = {
-  __typename?: 'DeleteSurveyPayload';
+  __typename?: "DeleteSurveyPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedSurveyNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedSurveyNodeId?: Maybe<Scalars["ID"]>;
   /** Reads a single `Project` that is related to this `Survey`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -3200,9 +3159,9 @@ export type DeleteSurveyResponseByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `SurveyResponse` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteSurveyResponse` mutation. */
@@ -3211,19 +3170,19 @@ export type DeleteSurveyResponseInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `SurveyResponse` mutation. */
 export type DeleteSurveyResponsePayload = {
-  __typename?: 'DeleteSurveyResponsePayload';
+  __typename?: "DeleteSurveyResponsePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedSurveyResponseNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedSurveyResponseNodeId?: Maybe<Scalars["ID"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyResponse`. */
@@ -3234,10 +3193,9 @@ export type DeleteSurveyResponsePayload = {
   surveyResponseEdge?: Maybe<SurveyResponsesEdge>;
 };
 
-
 /** The output of our delete `SurveyResponse` mutation. */
 export type DeleteSurveyResponsePayloadSurveyResponseEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 /** All input for the `deleteTableOfContentsBranch` mutation. */
@@ -3246,18 +3204,18 @@ export type DeleteTableOfContentsBranchInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  tableOfContentsItemId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `deleteTableOfContentsBranch` mutation. */
 export type DeleteTableOfContentsBranchPayload = {
-  __typename?: 'DeleteTableOfContentsBranchPayload';
+  __typename?: "DeleteTableOfContentsBranchPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -3268,9 +3226,9 @@ export type DeleteTopicByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Topic` to be deleted. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** All input for the `deleteTopic` mutation. */
@@ -3279,19 +3237,19 @@ export type DeleteTopicInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
 };
 
 /** The output of our delete `Topic` mutation. */
 export type DeleteTopicPayload = {
-  __typename?: 'DeleteTopicPayload';
+  __typename?: "DeleteTopicPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedTopicNodeId?: Maybe<Scalars['ID']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  deletedTopicNodeId?: Maybe<Scalars["ID"]>;
   /** Reads a single `Forum` that is related to this `Topic`. */
   forum?: Maybe<Forum>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -3302,10 +3260,9 @@ export type DeleteTopicPayload = {
   topicEdge?: Maybe<TopicsEdge>;
 };
 
-
 /** The output of our delete `Topic` mutation. */
 export type DeleteTopicPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 /** All input for the `disableForumPosting` mutation. */
@@ -3314,30 +3271,29 @@ export type DisableForumPostingInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `disableForumPosting` mutation. */
 export type DisableForumPostingPayload = {
-  __typename?: 'DisableForumPostingPayload';
+  __typename?: "DisableForumPostingPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
-
 
 /**
  * Email notification preferences can be read and set by the current user session.
  * These settings cannot be accessed by other users or SeaSketch project admins.
  */
 export type EmailNotificationPreference = {
-  __typename?: 'EmailNotificationPreference';
+  __typename?: "EmailNotificationPreference";
   /**
    * Email used when registering the account in Auth0. This email cannot be
    * updated through the API, though it may be possible to do so manually by
@@ -3346,22 +3302,22 @@ export type EmailNotificationPreference = {
    * This is the email by which users will recieve transactional emails like
    * project and survey invites, and email notifications.
    */
-  canonicalEmail?: Maybe<Scalars['String']>;
+  canonicalEmail?: Maybe<Scalars["String"]>;
   /** How often users should be notified of SeaSketch project activity. */
   frequency: EmailSummaryFrequency;
   /**
    * If set, users should receive realtime notifications of responses to discussion
    * forum threads for which they are a participant.
    */
-  notifyOnReply: Scalars['Boolean'];
+  notifyOnReply: Scalars["Boolean"];
   /**
    * If selected, users should receive absolutely no email from SeaSketch. Invite
    * emails should not be sent and their status should be set to UNSUBSCRIBED.
    */
-  unsubscribeAll: Scalars['Boolean'];
+  unsubscribeAll: Scalars["Boolean"];
   /** Reads a single `User` that is related to this `EmailNotificationPreference`. */
   user?: Maybe<User>;
-  userId: Scalars['Int'];
+  userId: Scalars["Int"];
 };
 
 /**
@@ -3370,29 +3326,29 @@ export type EmailNotificationPreference = {
  */
 export type EmailNotificationPreferenceCondition = {
   /** Checks for equality with the object’s `userId` field. */
-  userId?: Maybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** Represents an update to a `EmailNotificationPreference`. Fields that are set will be updated. */
 export type EmailNotificationPreferencePatch = {
   /** How often users should be notified of SeaSketch project activity. */
-  frequency?: Maybe<EmailSummaryFrequency>;
+  frequency?: InputMaybe<EmailSummaryFrequency>;
   /**
    * If set, users should receive realtime notifications of responses to discussion
    * forum threads for which they are a participant.
    */
-  notifyOnReply?: Maybe<Scalars['Boolean']>;
+  notifyOnReply?: InputMaybe<Scalars["Boolean"]>;
   /**
    * If selected, users should receive absolutely no email from SeaSketch. Invite
    * emails should not be sent and their status should be set to UNSUBSCRIBED.
    */
-  unsubscribeAll?: Maybe<Scalars['Boolean']>;
-  userId?: Maybe<Scalars['Int']>;
+  unsubscribeAll?: InputMaybe<Scalars["Boolean"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A connection to a list of `EmailNotificationPreference` values. */
 export type EmailNotificationPreferencesConnection = {
-  __typename?: 'EmailNotificationPreferencesConnection';
+  __typename?: "EmailNotificationPreferencesConnection";
   /** A list of edges which contains the `EmailNotificationPreference` and cursor to aid in pagination. */
   edges: Array<EmailNotificationPreferencesEdge>;
   /** A list of `EmailNotificationPreference` objects. */
@@ -3400,39 +3356,39 @@ export type EmailNotificationPreferencesConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `EmailNotificationPreference` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `EmailNotificationPreference` edge in the connection. */
 export type EmailNotificationPreferencesEdge = {
-  __typename?: 'EmailNotificationPreferencesEdge';
+  __typename?: "EmailNotificationPreferencesEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `EmailNotificationPreference` at the end of the edge. */
   node: EmailNotificationPreference;
 };
 
 /** Methods to use when ordering `EmailNotificationPreference`. */
 export enum EmailNotificationPreferencesOrderBy {
-  Natural = 'NATURAL',
-  UserIdAsc = 'USER_ID_ASC',
-  UserIdDesc = 'USER_ID_DESC'
+  Natural = "NATURAL",
+  UserIdAsc = "USER_ID_ASC",
+  UserIdDesc = "USER_ID_DESC",
 }
 
 export enum EmailStatus {
-  Bounced = 'BOUNCED',
-  Complaint = 'COMPLAINT',
-  Delivered = 'DELIVERED',
-  Error = 'ERROR',
-  Queued = 'QUEUED',
-  Sent = 'SENT',
-  Unsubscribed = 'UNSUBSCRIBED'
+  Bounced = "BOUNCED",
+  Complaint = "COMPLAINT",
+  Delivered = "DELIVERED",
+  Error = "ERROR",
+  Queued = "QUEUED",
+  Sent = "SENT",
+  Unsubscribed = "UNSUBSCRIBED",
 }
 
 export enum EmailSummaryFrequency {
-  Daily = 'DAILY',
-  Never = 'NEVER',
-  Weekly = 'WEEKLY'
+  Daily = "DAILY",
+  Never = "NEVER",
+  Weekly = "WEEKLY",
 }
 
 /** All input for the `enableForumPosting` mutation. */
@@ -3441,30 +3397,30 @@ export type EnableForumPostingInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `enableForumPosting` mutation. */
 export type EnableForumPostingPayload = {
-  __typename?: 'EnableForumPostingPayload';
+  __typename?: "EnableForumPostingPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
 export enum FieldRuleOperator {
-  Contains = 'CONTAINS',
-  Equal = 'EQUAL',
-  GreaterThan = 'GREATER_THAN',
-  IsBlank = 'IS_BLANK',
-  LessThan = 'LESS_THAN',
-  NotEqual = 'NOT_EQUAL'
+  Contains = "CONTAINS",
+  Equal = "EQUAL",
+  GreaterThan = "GREATER_THAN",
+  IsBlank = "IS_BLANK",
+  LessThan = "LESS_THAN",
+  NotEqual = "NOT_EQUAL",
 }
 
 /**
@@ -3481,10 +3437,10 @@ export enum FieldRuleOperator {
  * as an option when creating new forms.
  */
 export type Form = Node & {
-  __typename?: 'Form';
+  __typename?: "Form";
   /** Lists FormElements in order for rendering */
   formElements?: Maybe<Array<FormElement>>;
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   /**
    * SeaSetch superusers can create template forms than can be used when creating
    * SketchClasses or Surveys. These templates can be created using the
@@ -3492,25 +3448,24 @@ export type Form = Node & {
    * mutations. Template forms can be listed with the root-level `templateForms`
    * query.
    */
-  isTemplate: Scalars['Boolean'];
+  isTemplate: Scalars["Boolean"];
   /** Reads and enables pagination through a set of `FormLogicRule`. */
   logicRules?: Maybe<Array<FormLogicRule>>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Reads a single `SketchClass` that is related to this `Form`. */
   sketchClass?: Maybe<SketchClass>;
   /** Related *SketchClass* */
-  sketchClassId?: Maybe<Scalars['Int']>;
+  sketchClassId?: Maybe<Scalars["Int"]>;
   /** Reads a single `Survey` that is related to this `Form`. */
   survey?: Maybe<Survey>;
   /** Related *Survey* */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: Maybe<Scalars["Int"]>;
   /** Chosen by superusers upon template creation */
-  templateName?: Maybe<Scalars['String']>;
+  templateName?: Maybe<Scalars["String"]>;
   /** Indicates which features should use this form as a template */
   templateType?: Maybe<FormTemplateType>;
 };
-
 
 /**
  * Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
@@ -3526,10 +3481,9 @@ export type Form = Node & {
  * as an option when creating new forms.
  */
 export type FormFormElementsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
@@ -3545,20 +3499,20 @@ export type FormFormElementsArgs = {
  * as an option when creating new forms.
  */
 export type FormLogicRulesArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A condition to be used against `Form` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type FormCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `isTemplate` field. */
-  isTemplate?: Maybe<Scalars['Boolean']>;
+  isTemplate?: InputMaybe<Scalars["Boolean"]>;
   /** Checks for equality with the object’s `sketchClassId` field. */
-  sketchClassId?: Maybe<Scalars['Int']>;
+  sketchClassId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `surveyId` field. */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: InputMaybe<Scalars["Int"]>;
 };
 
 /**
@@ -3571,15 +3525,15 @@ export type FormCondition = {
  * graphile-generated CRUD mutations.
  */
 export type FormElement = Node & {
-  __typename?: 'FormElement';
-  alternateLanguageSettings: Scalars['JSON'];
+  __typename?: "FormElement";
+  alternateLanguageSettings: Scalars["JSON"];
   /** Optional background color to transition the form to when this element is displayed. */
-  backgroundColor?: Maybe<Scalars['String']>;
-  backgroundHeight?: Maybe<Scalars['Int']>;
+  backgroundColor?: Maybe<Scalars["String"]>;
+  backgroundHeight?: Maybe<Scalars["Int"]>;
   /** Optional background image to display when this form_element appears. */
-  backgroundImage?: Maybe<Scalars['String']>;
-  backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
-  backgroundWidth?: Maybe<Scalars['Int']>;
+  backgroundImage?: Maybe<Scalars["String"]>;
+  backgroundPalette?: Maybe<Array<Maybe<Scalars["String"]>>>;
+  backgroundWidth?: Maybe<Scalars["Int"]>;
   /**
    * [prosemirror](https://prosemirror.net/) document representing a rich-text
    * question or informational content. Level 1 headers can be assumed to be the
@@ -3587,32 +3541,32 @@ export type FormElement = Node & {
    * administrators. Clients should provide a template that encourages this
    * convention when building forms.
    */
-  body: Scalars['JSON'];
+  body: Scalars["JSON"];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
-  componentSettings: Scalars['JSON'];
-  createdAt: Scalars['Datetime'];
+  componentSettings: Scalars["JSON"];
+  createdAt: Scalars["Datetime"];
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
    * from the first several characters of the text in FormElement.body.
    */
-  exportId?: Maybe<Scalars['String']>;
+  exportId?: Maybe<Scalars["String"]>;
   /** Form this field belongs to. */
-  formId: Scalars['Int'];
-  id: Scalars['Int'];
-  isInput?: Maybe<Scalars['Boolean']>;
+  formId: Scalars["Int"];
+  id: Scalars["Int"];
+  isInput?: Maybe<Scalars["Boolean"]>;
   /** Users must provide input for these fields before submission. */
-  isRequired: Scalars['Boolean'];
+  isRequired: Scalars["Boolean"];
   /**
    * Used only in surveys. If set, the survey will advance to the page of the
    * specified form element. If null, the survey will simply advance to the next
    * question in the list by `position`.
    */
-  jumpToId?: Maybe<Scalars['Int']>;
+  jumpToId?: Maybe<Scalars["Int"]>;
   /** Layout of image in relation to form_element content. */
   layout?: Maybe<FormElementLayout>;
   /** IDs for basemaps that should be included in the map view if a map layout is selected */
-  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  mapBasemaps?: Maybe<Array<Maybe<Scalars["Int"]>>>;
   /**
    * If using a map-based layout, can be used to set the default starting point of the map
    *
@@ -3626,17 +3580,17 @@ export type FormElement = Node & {
    * }
    * ```
    */
-  mapCameraOptions?: Maybe<Scalars['JSON']>;
+  mapCameraOptions?: Maybe<Scalars["JSON"]>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
    */
-  position: Scalars['Int'];
+  position: Scalars["Int"];
   /** Color used to style navigation controls */
-  secondaryColor?: Maybe<Scalars['String']>;
+  secondaryColor?: Maybe<Scalars["String"]>;
   /** Sketch Class to be used in conjuction with a form element that supports spatial feature input. */
   sketchClass?: Maybe<SketchClass>;
   /** Reads a single `SketchClass` that is related to this `FormElement`. */
@@ -3647,7 +3601,7 @@ export type FormElement = Node & {
    * the form unless the client implementation utilizes something like
    * FormElement.shouldDisplaySubordinateElement to control visibility.
    */
-  subordinateTo?: Maybe<Scalars['Int']>;
+  subordinateTo?: Maybe<Scalars["Int"]>;
   /** Reads and enables pagination through a set of `SurveyConsentDocument`. */
   surveyConsentDocumentsConnection: SurveyConsentDocumentsConnection;
   /**
@@ -3657,11 +3611,10 @@ export type FormElement = Node & {
    */
   textVariant: FormElementTextVariant;
   type?: Maybe<FormElementType>;
-  typeId: Scalars['String'];
-  unsplashAuthorName?: Maybe<Scalars['String']>;
-  unsplashAuthorUrl?: Maybe<Scalars['String']>;
+  typeId: Scalars["String"];
+  unsplashAuthorName?: Maybe<Scalars["String"]>;
+  unsplashAuthorUrl?: Maybe<Scalars["String"]>;
 };
-
 
 /**
  * *FormElements* represent input fields or read-only content in a form. Records contain fields to support
@@ -3673,23 +3626,23 @@ export type FormElement = Node & {
  * graphile-generated CRUD mutations.
  */
 export type FormElementSurveyConsentDocumentsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<SurveyConsentDocumentCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyConsentDocumentsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<SurveyConsentDocumentCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<SurveyConsentDocumentsOrderBy>>;
 };
 
 /** An input for mutations affecting `FormElement` */
 export type FormElementInput = {
-  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  alternateLanguageSettings?: InputMaybe<Scalars["JSON"]>;
   /** Optional background color to transition the form to when this element is displayed. */
-  backgroundColor?: Maybe<Scalars['String']>;
-  backgroundHeight?: Maybe<Scalars['Int']>;
-  backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
-  backgroundWidth?: Maybe<Scalars['Int']>;
+  backgroundColor?: InputMaybe<Scalars["String"]>;
+  backgroundHeight?: InputMaybe<Scalars["Int"]>;
+  backgroundPalette?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
+  backgroundWidth?: InputMaybe<Scalars["Int"]>;
   /**
    * [prosemirror](https://prosemirror.net/) document representing a rich-text
    * question or informational content. Level 1 headers can be assumed to be the
@@ -3697,31 +3650,31 @@ export type FormElementInput = {
    * administrators. Clients should provide a template that encourages this
    * convention when building forms.
    */
-  body: Scalars['JSON'];
+  body: Scalars["JSON"];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
-  componentSettings?: Maybe<Scalars['JSON']>;
-  createdAt?: Maybe<Scalars['Datetime']>;
+  componentSettings?: InputMaybe<Scalars["JSON"]>;
+  createdAt?: InputMaybe<Scalars["Datetime"]>;
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
    * from the first several characters of the text in FormElement.body.
    */
-  exportId?: Maybe<Scalars['String']>;
+  exportId?: InputMaybe<Scalars["String"]>;
   /** Form this field belongs to. */
-  formId: Scalars['Int'];
-  id?: Maybe<Scalars['Int']>;
+  formId: Scalars["Int"];
+  id?: InputMaybe<Scalars["Int"]>;
   /** Users must provide input for these fields before submission. */
-  isRequired?: Maybe<Scalars['Boolean']>;
+  isRequired?: InputMaybe<Scalars["Boolean"]>;
   /**
    * Used only in surveys. If set, the survey will advance to the page of the
    * specified form element. If null, the survey will simply advance to the next
    * question in the list by `position`.
    */
-  jumpToId?: Maybe<Scalars['Int']>;
+  jumpToId?: InputMaybe<Scalars["Int"]>;
   /** Layout of image in relation to form_element content. */
-  layout?: Maybe<FormElementLayout>;
+  layout?: InputMaybe<FormElementLayout>;
   /** IDs for basemaps that should be included in the map view if a map layout is selected */
-  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  mapBasemaps?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
   /**
    * If using a map-based layout, can be used to set the default starting point of the map
    *
@@ -3735,51 +3688,51 @@ export type FormElementInput = {
    * }
    * ```
    */
-  mapCameraOptions?: Maybe<Scalars['JSON']>;
+  mapCameraOptions?: InputMaybe<Scalars["JSON"]>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
    */
-  position?: Maybe<Scalars['Int']>;
+  position?: InputMaybe<Scalars["Int"]>;
   /** Color used to style navigation controls */
-  secondaryColor?: Maybe<Scalars['String']>;
+  secondaryColor?: InputMaybe<Scalars["String"]>;
   /**
    * Used for special elements like SpatialAccessPriorityInput to create a sort of
    * sub-form that the parent element controls the rendering of. Will not appear in
    * the form unless the client implementation utilizes something like
    * FormElement.shouldDisplaySubordinateElement to control visibility.
    */
-  subordinateTo?: Maybe<Scalars['Int']>;
+  subordinateTo?: InputMaybe<Scalars["Int"]>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
    * set this value based on `background_color`, though admins may wish to manually override.
    */
-  textVariant?: Maybe<FormElementTextVariant>;
-  typeId: Scalars['String'];
+  textVariant?: InputMaybe<FormElementTextVariant>;
+  typeId: Scalars["String"];
 };
 
 export enum FormElementLayout {
-  Cover = 'COVER',
-  Left = 'LEFT',
-  MapFullscreen = 'MAP_FULLSCREEN',
-  MapSidebarLeft = 'MAP_SIDEBAR_LEFT',
-  MapSidebarRight = 'MAP_SIDEBAR_RIGHT',
-  MapStacked = 'MAP_STACKED',
-  MapTop = 'MAP_TOP',
-  Right = 'RIGHT',
-  Top = 'TOP'
+  Cover = "COVER",
+  Left = "LEFT",
+  MapFullscreen = "MAP_FULLSCREEN",
+  MapSidebarLeft = "MAP_SIDEBAR_LEFT",
+  MapSidebarRight = "MAP_SIDEBAR_RIGHT",
+  MapStacked = "MAP_STACKED",
+  MapTop = "MAP_TOP",
+  Right = "RIGHT",
+  Top = "TOP",
 }
 
 /** Represents an update to a `FormElement`. Fields that are set will be updated. */
 export type FormElementPatch = {
-  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  alternateLanguageSettings?: InputMaybe<Scalars["JSON"]>;
   /** Optional background color to transition the form to when this element is displayed. */
-  backgroundColor?: Maybe<Scalars['String']>;
-  backgroundHeight?: Maybe<Scalars['Int']>;
-  backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
-  backgroundWidth?: Maybe<Scalars['Int']>;
+  backgroundColor?: InputMaybe<Scalars["String"]>;
+  backgroundHeight?: InputMaybe<Scalars["Int"]>;
+  backgroundPalette?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
+  backgroundWidth?: InputMaybe<Scalars["Int"]>;
   /**
    * [prosemirror](https://prosemirror.net/) document representing a rich-text
    * question or informational content. Level 1 headers can be assumed to be the
@@ -3787,31 +3740,31 @@ export type FormElementPatch = {
    * administrators. Clients should provide a template that encourages this
    * convention when building forms.
    */
-  body?: Maybe<Scalars['JSON']>;
+  body?: InputMaybe<Scalars["JSON"]>;
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
-  componentSettings?: Maybe<Scalars['JSON']>;
-  createdAt?: Maybe<Scalars['Datetime']>;
+  componentSettings?: InputMaybe<Scalars["JSON"]>;
+  createdAt?: InputMaybe<Scalars["Datetime"]>;
   /**
    * Column name used in csv export, property name in reporting tools. Keep stable
    * to avoid breaking reports. If null, this value will be dynamically generated
    * from the first several characters of the text in FormElement.body.
    */
-  exportId?: Maybe<Scalars['String']>;
+  exportId?: InputMaybe<Scalars["String"]>;
   /** Form this field belongs to. */
-  formId?: Maybe<Scalars['Int']>;
-  id?: Maybe<Scalars['Int']>;
+  formId?: InputMaybe<Scalars["Int"]>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Users must provide input for these fields before submission. */
-  isRequired?: Maybe<Scalars['Boolean']>;
+  isRequired?: InputMaybe<Scalars["Boolean"]>;
   /**
    * Used only in surveys. If set, the survey will advance to the page of the
    * specified form element. If null, the survey will simply advance to the next
    * question in the list by `position`.
    */
-  jumpToId?: Maybe<Scalars['Int']>;
+  jumpToId?: InputMaybe<Scalars["Int"]>;
   /** Layout of image in relation to form_element content. */
-  layout?: Maybe<FormElementLayout>;
+  layout?: InputMaybe<FormElementLayout>;
   /** IDs for basemaps that should be included in the map view if a map layout is selected */
-  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  mapBasemaps?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
   /**
    * If using a map-based layout, can be used to set the default starting point of the map
    *
@@ -3825,72 +3778,72 @@ export type FormElementPatch = {
    * }
    * ```
    */
-  mapCameraOptions?: Maybe<Scalars['JSON']>;
+  mapCameraOptions?: InputMaybe<Scalars["JSON"]>;
   /**
    * Determines order of field display. Clients should display fields in ascending
    * order. Cannot be changed individually. Use `setFormElementOrder()` mutation to
    * update.
    */
-  position?: Maybe<Scalars['Int']>;
+  position?: InputMaybe<Scalars["Int"]>;
   /** Color used to style navigation controls */
-  secondaryColor?: Maybe<Scalars['String']>;
+  secondaryColor?: InputMaybe<Scalars["String"]>;
   /**
    * Used for special elements like SpatialAccessPriorityInput to create a sort of
    * sub-form that the parent element controls the rendering of. Will not appear in
    * the form unless the client implementation utilizes something like
    * FormElement.shouldDisplaySubordinateElement to control visibility.
    */
-  subordinateTo?: Maybe<Scalars['Int']>;
+  subordinateTo?: InputMaybe<Scalars["Int"]>;
   /**
    * Indicates whether the form element should be displayed with dark or light text
    * variants to match the background color. Admin interface should automatically
    * set this value based on `background_color`, though admins may wish to manually override.
    */
-  textVariant?: Maybe<FormElementTextVariant>;
-  typeId?: Maybe<Scalars['String']>;
+  textVariant?: InputMaybe<FormElementTextVariant>;
+  typeId?: InputMaybe<Scalars["String"]>;
 };
 
 export enum FormElementTextVariant {
-  Dark = 'DARK',
-  Dynamic = 'DYNAMIC',
-  Light = 'LIGHT'
+  Dark = "DARK",
+  Dynamic = "DYNAMIC",
+  Light = "LIGHT",
 }
 
 /** Identifies the type of element in a form, including metadata about that element type. */
 export type FormElementType = Node & {
-  __typename?: 'FormElementType';
-  allowAdminUpdates: Scalars['Boolean'];
+  __typename?: "FormElementType";
+  allowAdminUpdates: Scalars["Boolean"];
   allowedLayouts?: Maybe<Array<Maybe<FormElementLayout>>>;
-  componentName: Scalars['String'];
-  isHidden: Scalars['Boolean'];
+  componentName: Scalars["String"];
+  isHidden: Scalars["Boolean"];
   /**
    * Whether the element is an input that collects information from users or
    * contains presentational content like a Welcome Message component.
    */
-  isInput: Scalars['Boolean'];
-  isRequiredForSketchClasses: Scalars['Boolean'];
-  isRequiredForSurveys: Scalars['Boolean'];
+  isInput: Scalars["Boolean"];
+  isRequiredForSketchClasses: Scalars["Boolean"];
+  isRequiredForSurveys: Scalars["Boolean"];
   /** These elements can only be added to a form once. */
-  isSingleUseOnly: Scalars['Boolean'];
+  isSingleUseOnly: Scalars["Boolean"];
   /**
    * Indicates if the element type is a spatial data input. Components that
    * implement these types are expected to render their own map (in contrast with
    * elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which
    * expect the SurveyApp component to render a map for them.
    */
-  isSpatial: Scalars['Boolean'];
+  isSpatial: Scalars["Boolean"];
   /** If true, the element type should only be added to forms related to a survey. */
-  isSurveysOnly: Scalars['Boolean'];
+  isSurveysOnly: Scalars["Boolean"];
   /**
    * Control form element deployment with feature-flags. If this flag is enabled,
    * the form element should only appear as an option for addition to superuser
    * roles. Once added to a form however, it is visible to all users. No
    * access-control is enforced other than hiding the option in the client.
    */
-  label: Scalars['String'];
+  label: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  sketchClassTemplateId?: Maybe<Scalars['Int']>;
+  nodeId: Scalars["ID"];
+  sketchClassTemplateId?: Maybe<Scalars["Int"]>;
   supportedOperators: Array<Maybe<FieldRuleOperator>>;
 };
 
@@ -3900,48 +3853,48 @@ export type FormElementType = Node & {
  */
 export type FormElementTypeCondition = {
   /** Checks for equality with the object’s `componentName` field. */
-  componentName?: Maybe<Scalars['String']>;
+  componentName?: InputMaybe<Scalars["String"]>;
   /** Checks for equality with the object’s `label` field. */
-  label?: Maybe<Scalars['String']>;
+  label?: InputMaybe<Scalars["String"]>;
 };
 
 /** Methods to use when ordering `FormElementType`. */
 export enum FormElementTypesOrderBy {
-  ComponentNameAsc = 'COMPONENT_NAME_ASC',
-  ComponentNameDesc = 'COMPONENT_NAME_DESC',
-  LabelAsc = 'LABEL_ASC',
-  LabelDesc = 'LABEL_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+  ComponentNameAsc = "COMPONENT_NAME_ASC",
+  ComponentNameDesc = "COMPONENT_NAME_DESC",
+  LabelAsc = "LABEL_ASC",
+  LabelDesc = "LABEL_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
 }
 
 /** A `FormElement` edge in the connection. */
 export type FormElementsEdge = {
-  __typename?: 'FormElementsEdge';
+  __typename?: "FormElementsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `FormElement` at the end of the edge. */
   node: FormElement;
 };
 
 /** Methods to use when ordering `FormElement`. */
 export enum FormElementsOrderBy {
-  FormIdAsc = 'FORM_ID_ASC',
-  FormIdDesc = 'FORM_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  MapBasemapsAsc = 'MAP_BASEMAPS_ASC',
-  MapBasemapsDesc = 'MAP_BASEMAPS_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+  FormIdAsc = "FORM_ID_ASC",
+  FormIdDesc = "FORM_ID_DESC",
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  MapBasemapsAsc = "MAP_BASEMAPS_ASC",
+  MapBasemapsDesc = "MAP_BASEMAPS_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
 }
 
 export enum FormLogicCommand {
-  Hide = 'HIDE',
-  Jump = 'JUMP',
-  Show = 'SHOW'
+  Hide = "HIDE",
+  Jump = "JUMP",
+  Show = "SHOW",
 }
 
 /**
@@ -3950,55 +3903,55 @@ export enum FormLogicCommand {
  * property defines how they are applied.
  */
 export type FormLogicCondition = Node & {
-  __typename?: 'FormLogicCondition';
-  id: Scalars['Int'];
+  __typename?: "FormLogicCondition";
+  id: Scalars["Int"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   operator: FieldRuleOperator;
-  ruleId: Scalars['Int'];
-  subjectId: Scalars['Int'];
-  value?: Maybe<Scalars['JSON']>;
+  ruleId: Scalars["Int"];
+  subjectId: Scalars["Int"];
+  value?: Maybe<Scalars["JSON"]>;
 };
 
 /** An input for mutations affecting `FormLogicCondition` */
 export type FormLogicConditionInput = {
-  id?: Maybe<Scalars['Int']>;
-  operator?: Maybe<FieldRuleOperator>;
-  ruleId: Scalars['Int'];
-  subjectId: Scalars['Int'];
-  value?: Maybe<Scalars['JSON']>;
+  id?: InputMaybe<Scalars["Int"]>;
+  operator?: InputMaybe<FieldRuleOperator>;
+  ruleId: Scalars["Int"];
+  subjectId: Scalars["Int"];
+  value?: InputMaybe<Scalars["JSON"]>;
 };
 
 /** Represents an update to a `FormLogicCondition`. Fields that are set will be updated. */
 export type FormLogicConditionPatch = {
-  id?: Maybe<Scalars['Int']>;
-  operator?: Maybe<FieldRuleOperator>;
-  ruleId?: Maybe<Scalars['Int']>;
-  subjectId?: Maybe<Scalars['Int']>;
-  value?: Maybe<Scalars['JSON']>;
+  id?: InputMaybe<Scalars["Int"]>;
+  operator?: InputMaybe<FieldRuleOperator>;
+  ruleId?: InputMaybe<Scalars["Int"]>;
+  subjectId?: InputMaybe<Scalars["Int"]>;
+  value?: InputMaybe<Scalars["JSON"]>;
 };
 
 /** A `FormLogicCondition` edge in the connection. */
 export type FormLogicConditionsEdge = {
-  __typename?: 'FormLogicConditionsEdge';
+  __typename?: "FormLogicConditionsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `FormLogicCondition` at the end of the edge. */
   node: FormLogicCondition;
 };
 
 /** Methods to use when ordering `FormLogicCondition`. */
 export enum FormLogicConditionsOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
 }
 
 export enum FormLogicOperator {
-  And = 'AND',
-  Or = 'OR'
+  And = "AND",
+  Or = "OR",
 }
 
 /**
@@ -4006,70 +3959,69 @@ export enum FormLogicOperator {
  * preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
  */
 export type FormLogicRule = Node & {
-  __typename?: 'FormLogicRule';
+  __typename?: "FormLogicRule";
   booleanOperator: FormLogicOperator;
   command: FormLogicCommand;
   /** Reads and enables pagination through a set of `FormLogicCondition`. */
   conditions?: Maybe<Array<FormLogicCondition>>;
-  formElementId: Scalars['Int'];
-  id: Scalars['Int'];
-  jumpToId?: Maybe<Scalars['Int']>;
+  formElementId: Scalars["Int"];
+  id: Scalars["Int"];
+  jumpToId?: Maybe<Scalars["Int"]>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  position: Scalars['Int'];
+  nodeId: Scalars["ID"];
+  position: Scalars["Int"];
 };
-
 
 /**
  * Form logic rules can be used to hide or show FormElements based on the values of
  * preceeding fields in a SketchClass. They can also define page jump logic within a Survey.
  */
 export type FormLogicRuleConditionsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
 
 /** An input for mutations affecting `FormLogicRule` */
 export type FormLogicRuleInput = {
-  booleanOperator?: Maybe<FormLogicOperator>;
+  booleanOperator?: InputMaybe<FormLogicOperator>;
   command: FormLogicCommand;
-  formElementId: Scalars['Int'];
-  id?: Maybe<Scalars['Int']>;
-  jumpToId?: Maybe<Scalars['Int']>;
-  position: Scalars['Int'];
+  formElementId: Scalars["Int"];
+  id?: InputMaybe<Scalars["Int"]>;
+  jumpToId?: InputMaybe<Scalars["Int"]>;
+  position: Scalars["Int"];
 };
 
 /** Represents an update to a `FormLogicRule`. Fields that are set will be updated. */
 export type FormLogicRulePatch = {
-  booleanOperator?: Maybe<FormLogicOperator>;
-  command?: Maybe<FormLogicCommand>;
-  formElementId?: Maybe<Scalars['Int']>;
-  id?: Maybe<Scalars['Int']>;
-  jumpToId?: Maybe<Scalars['Int']>;
-  position?: Maybe<Scalars['Int']>;
+  booleanOperator?: InputMaybe<FormLogicOperator>;
+  command?: InputMaybe<FormLogicCommand>;
+  formElementId?: InputMaybe<Scalars["Int"]>;
+  id?: InputMaybe<Scalars["Int"]>;
+  jumpToId?: InputMaybe<Scalars["Int"]>;
+  position?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A `FormLogicRule` edge in the connection. */
 export type FormLogicRulesEdge = {
-  __typename?: 'FormLogicRulesEdge';
+  __typename?: "FormLogicRulesEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `FormLogicRule` at the end of the edge. */
   node: FormLogicRule;
 };
 
 /** Methods to use when ordering `FormLogicRule`. */
 export enum FormLogicRulesOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
 }
 
 /** Represents an update to a `Form`. Fields that are set will be updated. */
 export type FormPatch = {
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /**
    * SeaSetch superusers can create template forms than can be used when creating
    * SketchClasses or Surveys. These templates can be created using the
@@ -4077,27 +4029,27 @@ export type FormPatch = {
    * mutations. Template forms can be listed with the root-level `templateForms`
    * query.
    */
-  isTemplate?: Maybe<Scalars['Boolean']>;
+  isTemplate?: InputMaybe<Scalars["Boolean"]>;
   /** Related *SketchClass* */
-  sketchClassId?: Maybe<Scalars['Int']>;
+  sketchClassId?: InputMaybe<Scalars["Int"]>;
   /** Related *Survey* */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: InputMaybe<Scalars["Int"]>;
   /** Chosen by superusers upon template creation */
-  templateName?: Maybe<Scalars['String']>;
+  templateName?: InputMaybe<Scalars["String"]>;
   /** Indicates which features should use this form as a template */
-  templateType?: Maybe<FormTemplateType>;
+  templateType?: InputMaybe<FormTemplateType>;
 };
 
 /** Indicates which features should use the form as a template */
 export enum FormTemplateType {
-  Sketches = 'SKETCHES',
-  Surveys = 'SURVEYS',
-  SurveysAndSketches = 'SURVEYS_AND_SKETCHES'
+  Sketches = "SKETCHES",
+  Surveys = "SURVEYS",
+  SurveysAndSketches = "SURVEYS_AND_SKETCHES",
 }
 
 /** A connection to a list of `Form` values. */
 export type FormsConnection = {
-  __typename?: 'FormsConnection';
+  __typename?: "FormsConnection";
   /** A list of edges which contains the `Form` and cursor to aid in pagination. */
   edges: Array<FormsEdge>;
   /** A list of `Form` objects. */
@@ -4105,31 +4057,31 @@ export type FormsConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `Form` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `Form` edge in the connection. */
 export type FormsEdge = {
-  __typename?: 'FormsEdge';
+  __typename?: "FormsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `Form` at the end of the edge. */
   node: Form;
 };
 
 /** Methods to use when ordering `Form`. */
 export enum FormsOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  IsTemplateAsc = 'IS_TEMPLATE_ASC',
-  IsTemplateDesc = 'IS_TEMPLATE_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  SketchClassIdAsc = 'SKETCH_CLASS_ID_ASC',
-  SketchClassIdDesc = 'SKETCH_CLASS_ID_DESC',
-  SurveyIdAsc = 'SURVEY_ID_ASC',
-  SurveyIdDesc = 'SURVEY_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  IsTemplateAsc = "IS_TEMPLATE_ASC",
+  IsTemplateDesc = "IS_TEMPLATE_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  SketchClassIdAsc = "SKETCH_CLASS_ID_ASC",
+  SketchClassIdDesc = "SKETCH_CLASS_ID_DESC",
+  SurveyIdAsc = "SURVEY_ID_ASC",
+  SurveyIdDesc = "SURVEY_ID_DESC",
 }
 
 /**
@@ -4138,31 +4090,30 @@ export enum FormsOrderBy {
  * posts. Only project administrators can create and configure forums.
  */
 export type Forum = Node & {
-  __typename?: 'Forum';
+  __typename?: "Forum";
   /**
    * Archived forums will only be accessible by project administrators from the
    * admin dashboard. This is an alternative to deleting a forum.
    */
-  archived?: Maybe<Scalars['Boolean']>;
+  archived?: Maybe<Scalars["Boolean"]>;
   /** Optional description of the forum to be displayed to project users. */
-  description?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  description?: Maybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** Title displayed for the forum. */
-  name: Scalars['String'];
+  name: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /**
    * Sets position of this forum in the listing. Forums should be listed by
    * position in ascending order. Set using `setForumOrder()`
    */
-  position?: Maybe<Scalars['Int']>;
+  position?: Maybe<Scalars["Int"]>;
   /** Reads a single `Project` that is related to this `Forum`. */
   project?: Maybe<Project>;
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
   /** Reads and enables pagination through a set of `Topic`. */
   topicsConnection: TopicsConnection;
 };
-
 
 /**
  * Discussion forums are the highest level organizing unit of the discussion forums
@@ -4170,21 +4121,21 @@ export type Forum = Node & {
  * posts. Only project administrators can create and configure forums.
  */
 export type ForumTopicsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<TopicCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<TopicCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 /** A condition to be used against `Forum` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ForumCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** An input for mutations affecting `Forum` */
@@ -4193,18 +4144,18 @@ export type ForumInput = {
    * Archived forums will only be accessible by project administrators from the
    * admin dashboard. This is an alternative to deleting a forum.
    */
-  archived?: Maybe<Scalars['Boolean']>;
+  archived?: InputMaybe<Scalars["Boolean"]>;
   /** Optional description of the forum to be displayed to project users. */
-  description?: Maybe<Scalars['String']>;
-  id?: Maybe<Scalars['Int']>;
+  description?: InputMaybe<Scalars["String"]>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Title displayed for the forum. */
-  name: Scalars['String'];
+  name: Scalars["String"];
   /**
    * Sets position of this forum in the listing. Forums should be listed by
    * position in ascending order. Set using `setForumOrder()`
    */
-  position?: Maybe<Scalars['Int']>;
-  projectId: Scalars['Int'];
+  position?: InputMaybe<Scalars["Int"]>;
+  projectId: Scalars["Int"];
 };
 
 /** Represents an update to a `Forum`. Fields that are set will be updated. */
@@ -4213,321 +4164,351 @@ export type ForumPatch = {
    * Archived forums will only be accessible by project administrators from the
    * admin dashboard. This is an alternative to deleting a forum.
    */
-  archived?: Maybe<Scalars['Boolean']>;
+  archived?: InputMaybe<Scalars["Boolean"]>;
   /** Optional description of the forum to be displayed to project users. */
-  description?: Maybe<Scalars['String']>;
+  description?: InputMaybe<Scalars["String"]>;
   /** Title displayed for the forum. */
-  name?: Maybe<Scalars['String']>;
+  name?: InputMaybe<Scalars["String"]>;
   /**
    * Sets position of this forum in the listing. Forums should be listed by
    * position in ascending order. Set using `setForumOrder()`
    */
-  position?: Maybe<Scalars['Int']>;
+  position?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A `Forum` edge in the connection. */
 export type ForumsEdge = {
-  __typename?: 'ForumsEdge';
+  __typename?: "ForumsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `Forum` at the end of the edge. */
   node: Forum;
 };
 
 /** Methods to use when ordering `Forum`. */
 export enum ForumsOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  ProjectIdAsc = "PROJECT_ID_ASC",
+  ProjectIdDesc = "PROJECT_ID_DESC",
 }
-
 
 /** All geography XY types implement this interface */
 export type GeographyGeometry = {
   /** Converts the object to GeoJSON */
-  geojson?: Maybe<Scalars['GeoJSON']>;
+  geojson?: Maybe<Scalars["GeoJSON"]>;
   /** Spatial reference identifier (SRID) */
-  srid: Scalars['Int'];
+  srid: Scalars["Int"];
 };
 
 /** All geography types implement this interface */
 export type GeographyInterface = {
   /** Converts the object to GeoJSON */
-  geojson?: Maybe<Scalars['GeoJSON']>;
+  geojson?: Maybe<Scalars["GeoJSON"]>;
   /** Spatial reference identifier (SRID) */
-  srid: Scalars['Int'];
+  srid: Scalars["Int"];
 };
 
-export type GeographyLineString = GeographyGeometry & GeographyInterface & {
-  __typename?: 'GeographyLineString';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  points?: Maybe<Array<Maybe<GeographyPoint>>>;
-  srid: Scalars['Int'];
-};
+export type GeographyLineString = GeographyGeometry &
+  GeographyInterface & {
+    __typename?: "GeographyLineString";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    points?: Maybe<Array<Maybe<GeographyPoint>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeographyPoint = GeographyGeometry & GeographyInterface & {
-  __typename?: 'GeographyPoint';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  latitude: Scalars['Float'];
-  longitude: Scalars['Float'];
-  srid: Scalars['Int'];
-};
+export type GeographyPoint = GeographyGeometry &
+  GeographyInterface & {
+    __typename?: "GeographyPoint";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    latitude: Scalars["Float"];
+    longitude: Scalars["Float"];
+    srid: Scalars["Int"];
+  };
 
-export type GeographyPolygon = GeographyGeometry & GeographyInterface & {
-  __typename?: 'GeographyPolygon';
-  exterior?: Maybe<GeographyLineString>;
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  interiors?: Maybe<Array<Maybe<GeographyLineString>>>;
-  srid: Scalars['Int'];
-};
+export type GeographyPolygon = GeographyGeometry &
+  GeographyInterface & {
+    __typename?: "GeographyPolygon";
+    exterior?: Maybe<GeographyLineString>;
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    interiors?: Maybe<Array<Maybe<GeographyLineString>>>;
+    srid: Scalars["Int"];
+  };
 
 /** All geometry XY types implement this interface */
 export type GeometryGeometry = {
   /** Converts the object to GeoJSON */
-  geojson?: Maybe<Scalars['GeoJSON']>;
+  geojson?: Maybe<Scalars["GeoJSON"]>;
   /** Spatial reference identifier (SRID) */
-  srid: Scalars['Int'];
+  srid: Scalars["Int"];
 };
 
-export type GeometryGeometryCollection = GeometryGeometry & GeometryInterface & {
-  __typename?: 'GeometryGeometryCollection';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  geometries?: Maybe<Array<Maybe<GeometryGeometry>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryGeometryCollection = GeometryGeometry &
+  GeometryInterface & {
+    __typename?: "GeometryGeometryCollection";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    geometries?: Maybe<Array<Maybe<GeometryGeometry>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryGeometryCollectionM = GeometryGeometryM & GeometryInterface & {
-  __typename?: 'GeometryGeometryCollectionM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  geometries?: Maybe<Array<Maybe<GeometryGeometryM>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryGeometryCollectionM = GeometryGeometryM &
+  GeometryInterface & {
+    __typename?: "GeometryGeometryCollectionM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    geometries?: Maybe<Array<Maybe<GeometryGeometryM>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryGeometryCollectionZ = GeometryGeometryZ & GeometryInterface & {
-  __typename?: 'GeometryGeometryCollectionZ';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  geometries?: Maybe<Array<Maybe<GeometryGeometryZ>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryGeometryCollectionZ = GeometryGeometryZ &
+  GeometryInterface & {
+    __typename?: "GeometryGeometryCollectionZ";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    geometries?: Maybe<Array<Maybe<GeometryGeometryZ>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryGeometryCollectionZm = GeometryGeometryZm & GeometryInterface & {
-  __typename?: 'GeometryGeometryCollectionZM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  geometries?: Maybe<Array<Maybe<GeometryGeometryZm>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryGeometryCollectionZm = GeometryGeometryZm &
+  GeometryInterface & {
+    __typename?: "GeometryGeometryCollectionZM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    geometries?: Maybe<Array<Maybe<GeometryGeometryZm>>>;
+    srid: Scalars["Int"];
+  };
 
 /** All geometry XYM types implement this interface */
 export type GeometryGeometryM = {
   /** Converts the object to GeoJSON */
-  geojson?: Maybe<Scalars['GeoJSON']>;
+  geojson?: Maybe<Scalars["GeoJSON"]>;
   /** Spatial reference identifier (SRID) */
-  srid: Scalars['Int'];
+  srid: Scalars["Int"];
 };
 
 /** All geometry XYZ types implement this interface */
 export type GeometryGeometryZ = {
   /** Converts the object to GeoJSON */
-  geojson?: Maybe<Scalars['GeoJSON']>;
+  geojson?: Maybe<Scalars["GeoJSON"]>;
   /** Spatial reference identifier (SRID) */
-  srid: Scalars['Int'];
+  srid: Scalars["Int"];
 };
 
 /** All geometry XYZM types implement this interface */
 export type GeometryGeometryZm = {
   /** Converts the object to GeoJSON */
-  geojson?: Maybe<Scalars['GeoJSON']>;
+  geojson?: Maybe<Scalars["GeoJSON"]>;
   /** Spatial reference identifier (SRID) */
-  srid: Scalars['Int'];
+  srid: Scalars["Int"];
 };
 
 /** All geometry types implement this interface */
 export type GeometryInterface = {
   /** Converts the object to GeoJSON */
-  geojson?: Maybe<Scalars['GeoJSON']>;
+  geojson?: Maybe<Scalars["GeoJSON"]>;
   /** Spatial reference identifier (SRID) */
-  srid: Scalars['Int'];
+  srid: Scalars["Int"];
 };
 
-export type GeometryLineString = GeometryGeometry & GeometryInterface & {
-  __typename?: 'GeometryLineString';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  points?: Maybe<Array<Maybe<GeometryPoint>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryLineString = GeometryGeometry &
+  GeometryInterface & {
+    __typename?: "GeometryLineString";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    points?: Maybe<Array<Maybe<GeometryPoint>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryLineStringM = GeometryGeometryM & GeometryInterface & {
-  __typename?: 'GeometryLineStringM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  points?: Maybe<Array<Maybe<GeometryPointM>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryLineStringM = GeometryGeometryM &
+  GeometryInterface & {
+    __typename?: "GeometryLineStringM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    points?: Maybe<Array<Maybe<GeometryPointM>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryLineStringZ = GeometryGeometryZ & GeometryInterface & {
-  __typename?: 'GeometryLineStringZ';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  points?: Maybe<Array<Maybe<GeometryPointZ>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryLineStringZ = GeometryGeometryZ &
+  GeometryInterface & {
+    __typename?: "GeometryLineStringZ";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    points?: Maybe<Array<Maybe<GeometryPointZ>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryLineStringZm = GeometryGeometryZm & GeometryInterface & {
-  __typename?: 'GeometryLineStringZM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  points?: Maybe<Array<Maybe<GeometryPointZm>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryLineStringZm = GeometryGeometryZm &
+  GeometryInterface & {
+    __typename?: "GeometryLineStringZM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    points?: Maybe<Array<Maybe<GeometryPointZm>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiLineString = GeometryGeometry & GeometryInterface & {
-  __typename?: 'GeometryMultiLineString';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  lines?: Maybe<Array<Maybe<GeometryLineString>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiLineString = GeometryGeometry &
+  GeometryInterface & {
+    __typename?: "GeometryMultiLineString";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    lines?: Maybe<Array<Maybe<GeometryLineString>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiLineStringM = GeometryGeometryM & GeometryInterface & {
-  __typename?: 'GeometryMultiLineStringM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  lines?: Maybe<Array<Maybe<GeometryLineStringM>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiLineStringM = GeometryGeometryM &
+  GeometryInterface & {
+    __typename?: "GeometryMultiLineStringM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    lines?: Maybe<Array<Maybe<GeometryLineStringM>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiLineStringZ = GeometryGeometryZ & GeometryInterface & {
-  __typename?: 'GeometryMultiLineStringZ';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  lines?: Maybe<Array<Maybe<GeometryLineStringZ>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiLineStringZ = GeometryGeometryZ &
+  GeometryInterface & {
+    __typename?: "GeometryMultiLineStringZ";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    lines?: Maybe<Array<Maybe<GeometryLineStringZ>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiLineStringZm = GeometryGeometryZm & GeometryInterface & {
-  __typename?: 'GeometryMultiLineStringZM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  lines?: Maybe<Array<Maybe<GeometryLineStringZm>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiLineStringZm = GeometryGeometryZm &
+  GeometryInterface & {
+    __typename?: "GeometryMultiLineStringZM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    lines?: Maybe<Array<Maybe<GeometryLineStringZm>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiPoint = GeometryGeometry & GeometryInterface & {
-  __typename?: 'GeometryMultiPoint';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  points?: Maybe<Array<Maybe<GeometryPoint>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiPoint = GeometryGeometry &
+  GeometryInterface & {
+    __typename?: "GeometryMultiPoint";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    points?: Maybe<Array<Maybe<GeometryPoint>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiPointM = GeometryGeometryM & GeometryInterface & {
-  __typename?: 'GeometryMultiPointM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  points?: Maybe<Array<Maybe<GeometryPointM>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiPointM = GeometryGeometryM &
+  GeometryInterface & {
+    __typename?: "GeometryMultiPointM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    points?: Maybe<Array<Maybe<GeometryPointM>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiPointZ = GeometryGeometryZ & GeometryInterface & {
-  __typename?: 'GeometryMultiPointZ';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  points?: Maybe<Array<Maybe<GeometryPointZ>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiPointZ = GeometryGeometryZ &
+  GeometryInterface & {
+    __typename?: "GeometryMultiPointZ";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    points?: Maybe<Array<Maybe<GeometryPointZ>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiPointZm = GeometryGeometryZm & GeometryInterface & {
-  __typename?: 'GeometryMultiPointZM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  points?: Maybe<Array<Maybe<GeometryPointZm>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiPointZm = GeometryGeometryZm &
+  GeometryInterface & {
+    __typename?: "GeometryMultiPointZM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    points?: Maybe<Array<Maybe<GeometryPointZm>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiPolygon = GeometryGeometry & GeometryInterface & {
-  __typename?: 'GeometryMultiPolygon';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  polygons?: Maybe<Array<Maybe<GeometryPolygon>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiPolygon = GeometryGeometry &
+  GeometryInterface & {
+    __typename?: "GeometryMultiPolygon";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    polygons?: Maybe<Array<Maybe<GeometryPolygon>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiPolygonM = GeometryGeometryM & GeometryInterface & {
-  __typename?: 'GeometryMultiPolygonM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  polygons?: Maybe<Array<Maybe<GeometryPolygonM>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiPolygonM = GeometryGeometryM &
+  GeometryInterface & {
+    __typename?: "GeometryMultiPolygonM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    polygons?: Maybe<Array<Maybe<GeometryPolygonM>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiPolygonZ = GeometryGeometryZ & GeometryInterface & {
-  __typename?: 'GeometryMultiPolygonZ';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  polygons?: Maybe<Array<Maybe<GeometryPolygonZ>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiPolygonZ = GeometryGeometryZ &
+  GeometryInterface & {
+    __typename?: "GeometryMultiPolygonZ";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    polygons?: Maybe<Array<Maybe<GeometryPolygonZ>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryMultiPolygonZm = GeometryGeometryZm & GeometryInterface & {
-  __typename?: 'GeometryMultiPolygonZM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  polygons?: Maybe<Array<Maybe<GeometryPolygonZm>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryMultiPolygonZm = GeometryGeometryZm &
+  GeometryInterface & {
+    __typename?: "GeometryMultiPolygonZM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    polygons?: Maybe<Array<Maybe<GeometryPolygonZm>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryPoint = GeometryGeometry & GeometryInterface & {
-  __typename?: 'GeometryPoint';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  srid: Scalars['Int'];
-  x: Scalars['Float'];
-  y: Scalars['Float'];
-};
+export type GeometryPoint = GeometryGeometry &
+  GeometryInterface & {
+    __typename?: "GeometryPoint";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    srid: Scalars["Int"];
+    x: Scalars["Float"];
+    y: Scalars["Float"];
+  };
 
-export type GeometryPointM = GeometryGeometryM & GeometryInterface & {
-  __typename?: 'GeometryPointM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  srid: Scalars['Int'];
-  x: Scalars['Float'];
-  y: Scalars['Float'];
-};
+export type GeometryPointM = GeometryGeometryM &
+  GeometryInterface & {
+    __typename?: "GeometryPointM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    srid: Scalars["Int"];
+    x: Scalars["Float"];
+    y: Scalars["Float"];
+  };
 
-export type GeometryPointZ = GeometryGeometryZ & GeometryInterface & {
-  __typename?: 'GeometryPointZ';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  srid: Scalars['Int'];
-  x: Scalars['Float'];
-  y: Scalars['Float'];
-};
+export type GeometryPointZ = GeometryGeometryZ &
+  GeometryInterface & {
+    __typename?: "GeometryPointZ";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    srid: Scalars["Int"];
+    x: Scalars["Float"];
+    y: Scalars["Float"];
+  };
 
-export type GeometryPointZm = GeometryGeometryZm & GeometryInterface & {
-  __typename?: 'GeometryPointZM';
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  srid: Scalars['Int'];
-  x: Scalars['Float'];
-  y: Scalars['Float'];
-};
+export type GeometryPointZm = GeometryGeometryZm &
+  GeometryInterface & {
+    __typename?: "GeometryPointZM";
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    srid: Scalars["Int"];
+    x: Scalars["Float"];
+    y: Scalars["Float"];
+  };
 
-export type GeometryPolygon = GeometryGeometry & GeometryInterface & {
-  __typename?: 'GeometryPolygon';
-  exterior?: Maybe<GeometryLineString>;
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  interiors?: Maybe<Array<Maybe<GeometryLineString>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryPolygon = GeometryGeometry &
+  GeometryInterface & {
+    __typename?: "GeometryPolygon";
+    exterior?: Maybe<GeometryLineString>;
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    interiors?: Maybe<Array<Maybe<GeometryLineString>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryPolygonM = GeometryGeometryM & GeometryInterface & {
-  __typename?: 'GeometryPolygonM';
-  exterior?: Maybe<GeometryLineStringM>;
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  interiors?: Maybe<Array<Maybe<GeometryLineStringM>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryPolygonM = GeometryGeometryM &
+  GeometryInterface & {
+    __typename?: "GeometryPolygonM";
+    exterior?: Maybe<GeometryLineStringM>;
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    interiors?: Maybe<Array<Maybe<GeometryLineStringM>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryPolygonZ = GeometryGeometryZ & GeometryInterface & {
-  __typename?: 'GeometryPolygonZ';
-  exterior?: Maybe<GeometryLineStringZ>;
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  interiors?: Maybe<Array<Maybe<GeometryLineStringZ>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryPolygonZ = GeometryGeometryZ &
+  GeometryInterface & {
+    __typename?: "GeometryPolygonZ";
+    exterior?: Maybe<GeometryLineStringZ>;
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    interiors?: Maybe<Array<Maybe<GeometryLineStringZ>>>;
+    srid: Scalars["Int"];
+  };
 
-export type GeometryPolygonZm = GeometryGeometryZm & GeometryInterface & {
-  __typename?: 'GeometryPolygonZM';
-  exterior?: Maybe<GeometryLineStringZm>;
-  geojson?: Maybe<Scalars['GeoJSON']>;
-  interiors?: Maybe<Array<Maybe<GeometryLineStringZm>>>;
-  srid: Scalars['Int'];
-};
+export type GeometryPolygonZm = GeometryGeometryZm &
+  GeometryInterface & {
+    __typename?: "GeometryPolygonZM";
+    exterior?: Maybe<GeometryLineStringZm>;
+    geojson?: Maybe<Scalars["GeoJSON"]>;
+    interiors?: Maybe<Array<Maybe<GeometryLineStringZm>>>;
+    srid: Scalars["Int"];
+  };
 
 /** All input for the `grantAdminAccess` mutation. */
 export type GrantAdminAccessInput = {
@@ -4535,19 +4516,19 @@ export type GrantAdminAccessInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `grantAdminAccess` mutation. */
 export type GrantAdminAccessPayload = {
-  __typename?: 'GrantAdminAccessPayload';
+  __typename?: "GrantAdminAccessPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -4561,22 +4542,21 @@ export type GrantAdminAccessPayload = {
  * free to do so.
  */
 export type Group = Node & {
-  __typename?: 'Group';
-  id: Scalars['Int'];
-  memberCount?: Maybe<Scalars['Int']>;
+  __typename?: "Group";
+  id: Scalars["Int"];
+  memberCount?: Maybe<Scalars["Int"]>;
   /** Reads and enables pagination through a set of `User`. */
   members?: Maybe<Array<User>>;
   /** Label for the group. */
-  name: Scalars['String'];
+  name: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Reads a single `Project` that is related to this `Group`. */
   project?: Maybe<Project>;
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
   /** Reads and enables pagination through a set of `ProjectInviteGroup`. */
   projectInviteGroupsByGroupIdConnection: ProjectInviteGroupsConnection;
 };
-
 
 /**
  * User groups designated by the project administrators. User groups can be used to
@@ -4587,12 +4567,11 @@ export type Group = Node & {
  * free to do so.
  */
 export type GroupMembersArgs = {
-  direction?: Maybe<SortByDirection>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<ParticipantSortBy>;
+  direction?: InputMaybe<SortByDirection>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<ParticipantSortBy>;
 };
-
 
 /**
  * User groups designated by the project administrators. User groups can be used to
@@ -4603,44 +4582,44 @@ export type GroupMembersArgs = {
  * free to do so.
  */
 export type GroupProjectInviteGroupsByGroupIdConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectInviteGroupCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<ProjectInviteGroupCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 /** An input for mutations affecting `Group` */
 export type GroupInput = {
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Label for the group. */
-  name: Scalars['String'];
-  projectId: Scalars['Int'];
+  name: Scalars["String"];
+  projectId: Scalars["Int"];
 };
 
 /** Represents an update to a `Group`. Fields that are set will be updated. */
 export type GroupPatch = {
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Label for the group. */
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  name?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** Methods to use when ordering `Group`. */
 export enum GroupsOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  ProjectIdAsc = "PROJECT_ID_ASC",
+  ProjectIdDesc = "PROJECT_ID_DESC",
 }
 
 export type InteractivitySetting = Node & {
-  __typename?: 'InteractivitySetting';
+  __typename?: "InteractivitySetting";
   /** Reads and enables pagination through a set of `Basemap`. */
   basemapsByInteractivitySettingsIdConnection: BasemapsConnection;
   cursor: CursorType;
@@ -4651,66 +4630,66 @@ export type InteractivitySetting = Node & {
    * @deprecated Please use dataLayerByInteractivitySettingsId instead
    */
   dataLayersByInteractivitySettingsIdConnection: DataLayersConnection;
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   /** Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
-  longTemplate?: Maybe<Scalars['String']>;
+  layers?: Maybe<Array<Maybe<Scalars["String"]>>>;
+  longTemplate?: Maybe<Scalars["String"]>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  shortTemplate?: Maybe<Scalars['String']>;
+  nodeId: Scalars["ID"];
+  shortTemplate?: Maybe<Scalars["String"]>;
   type: InteractivityType;
 };
 
+export type InteractivitySettingBasemapsByInteractivitySettingsIdConnectionArgs =
+  {
+    after?: InputMaybe<Scalars["Cursor"]>;
+    before?: InputMaybe<Scalars["Cursor"]>;
+    condition?: InputMaybe<BasemapCondition>;
+    first?: InputMaybe<Scalars["Int"]>;
+    last?: InputMaybe<Scalars["Int"]>;
+    offset?: InputMaybe<Scalars["Int"]>;
+    orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
+  };
 
-export type InteractivitySettingBasemapsByInteractivitySettingsIdConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<BasemapCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
-};
-
-
-export type InteractivitySettingDataLayersByInteractivitySettingsIdConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<DataLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
-};
+export type InteractivitySettingDataLayersByInteractivitySettingsIdConnectionArgs =
+  {
+    after?: InputMaybe<Scalars["Cursor"]>;
+    before?: InputMaybe<Scalars["Cursor"]>;
+    condition?: InputMaybe<DataLayerCondition>;
+    first?: InputMaybe<Scalars["Int"]>;
+    last?: InputMaybe<Scalars["Int"]>;
+    offset?: InputMaybe<Scalars["Int"]>;
+    orderBy?: InputMaybe<Array<DataLayersOrderBy>>;
+  };
 
 /** An input for mutations affecting `InteractivitySetting` */
 export type InteractivitySettingInput = {
-  cursor?: Maybe<CursorType>;
-  id?: Maybe<Scalars['Int']>;
+  cursor?: InputMaybe<CursorType>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
-  longTemplate?: Maybe<Scalars['String']>;
-  shortTemplate?: Maybe<Scalars['String']>;
-  type?: Maybe<InteractivityType>;
+  layers?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
+  longTemplate?: InputMaybe<Scalars["String"]>;
+  shortTemplate?: InputMaybe<Scalars["String"]>;
+  type?: InputMaybe<InteractivityType>;
 };
 
 /** Represents an update to a `InteractivitySetting`. Fields that are set will be updated. */
 export type InteractivitySettingPatch = {
-  cursor?: Maybe<CursorType>;
-  id?: Maybe<Scalars['Int']>;
+  cursor?: InputMaybe<CursorType>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Used only for basemap interactivity settings. Optional list of layer ids that this setting applies to. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
-  longTemplate?: Maybe<Scalars['String']>;
-  shortTemplate?: Maybe<Scalars['String']>;
-  type?: Maybe<InteractivityType>;
+  layers?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
+  longTemplate?: InputMaybe<Scalars["String"]>;
+  shortTemplate?: InputMaybe<Scalars["String"]>;
+  type?: InputMaybe<InteractivityType>;
 };
 
 export enum InteractivityType {
-  Banner = 'BANNER',
-  FixedBlock = 'FIXED_BLOCK',
-  None = 'NONE',
-  Popup = 'POPUP',
-  Tooltip = 'TOOLTIP'
+  Banner = "BANNER",
+  FixedBlock = "FIXED_BLOCK",
+  None = "NONE",
+  Popup = "POPUP",
+  Tooltip = "TOOLTIP",
 }
 
 /**
@@ -4723,28 +4702,28 @@ export enum InteractivityType {
  * wiki](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management).
  */
 export type InviteEmail = Node & {
-  __typename?: 'InviteEmail';
-  createdAt: Scalars['Datetime'];
-  error?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  __typename?: "InviteEmail";
+  createdAt: Scalars["Datetime"];
+  error?: Maybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Reads a single `ProjectInvite` that is related to this `InviteEmail`. */
   projectInvite?: Maybe<ProjectInvite>;
-  projectInviteId?: Maybe<Scalars['Int']>;
+  projectInviteId?: Maybe<Scalars["Int"]>;
   /** Updated by the mailer processes and SES notifications. */
   status: EmailStatus;
   /** Reads a single `SurveyInvite` that is related to this `InviteEmail`. */
   surveyInvite?: Maybe<SurveyInvite>;
-  surveyInviteId?: Maybe<Scalars['Int']>;
-  toAddress: Scalars['Email'];
+  surveyInviteId?: Maybe<Scalars["Int"]>;
+  toAddress: Scalars["Email"];
   /**
    * Emails contain a link with an embedded JSON Web Token that is used to authorize
    * access. These tokens have an expiration that is both embedded in the token and
    * tracked in the database. Each email has its own token and expiration.
    */
-  tokenExpiresAt?: Maybe<Scalars['Datetime']>;
-  updatedAt?: Maybe<Scalars['Datetime']>;
+  tokenExpiresAt?: Maybe<Scalars["Datetime"]>;
+  updatedAt?: Maybe<Scalars["Datetime"]>;
 };
 
 /**
@@ -4753,38 +4732,38 @@ export type InviteEmail = Node & {
  */
 export type InviteEmailCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `projectInviteId` field. */
-  projectInviteId?: Maybe<Scalars['Int']>;
+  projectInviteId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `status` field. */
-  status?: Maybe<EmailStatus>;
+  status?: InputMaybe<EmailStatus>;
   /** Checks for equality with the object’s `surveyInviteId` field. */
-  surveyInviteId?: Maybe<Scalars['Int']>;
+  surveyInviteId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** Methods to use when ordering `InviteEmail`. */
 export enum InviteEmailsOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectInviteIdAsc = 'PROJECT_INVITE_ID_ASC',
-  ProjectInviteIdDesc = 'PROJECT_INVITE_ID_DESC',
-  StatusAsc = 'STATUS_ASC',
-  StatusDesc = 'STATUS_DESC',
-  SurveyInviteIdAsc = 'SURVEY_INVITE_ID_ASC',
-  SurveyInviteIdDesc = 'SURVEY_INVITE_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  ProjectInviteIdAsc = "PROJECT_INVITE_ID_ASC",
+  ProjectInviteIdDesc = "PROJECT_INVITE_ID_DESC",
+  StatusAsc = "STATUS_ASC",
+  StatusDesc = "STATUS_DESC",
+  SurveyInviteIdAsc = "SURVEY_INVITE_ID_ASC",
+  SurveyInviteIdDesc = "SURVEY_INVITE_ID_DESC",
 }
 
 export enum InviteOrderBy {
-  Email = 'EMAIL',
-  Name = 'NAME'
+  Email = "EMAIL",
+  Name = "NAME",
 }
 
 export type InviteStat = {
-  __typename?: 'InviteStat';
-  count?: Maybe<Scalars['Int']>;
+  __typename?: "InviteStat";
+  count?: Maybe<Scalars["Int"]>;
   status?: Maybe<InviteStatus>;
 };
 
@@ -4793,21 +4772,20 @@ export type InviteStat = {
  * email service and token expiration date. See the inviteEmails relation for more details.
  */
 export enum InviteStatus {
-  Bounced = 'BOUNCED',
-  Complaint = 'COMPLAINT',
-  Confirmed = 'CONFIRMED',
-  Delivered = 'DELIVERED',
-  Error = 'ERROR',
-  Queued = 'QUEUED',
-  Sent = 'SENT',
-  SurveyInviteQueued = 'SURVEY_INVITE_QUEUED',
-  SurveyInviteSent = 'SURVEY_INVITE_SENT',
-  TokenExpired = 'TOKEN_EXPIRED',
-  Unconfirmed = 'UNCONFIRMED',
-  Unsent = 'UNSENT',
-  Unsubscribed = 'UNSUBSCRIBED'
+  Bounced = "BOUNCED",
+  Complaint = "COMPLAINT",
+  Confirmed = "CONFIRMED",
+  Delivered = "DELIVERED",
+  Error = "ERROR",
+  Queued = "QUEUED",
+  Sent = "SENT",
+  SurveyInviteQueued = "SURVEY_INVITE_QUEUED",
+  SurveyInviteSent = "SURVEY_INVITE_SENT",
+  TokenExpired = "TOKEN_EXPIRED",
+  Unconfirmed = "UNCONFIRMED",
+  Unsent = "UNSENT",
+  Unsubscribed = "UNSUBSCRIBED",
 }
-
 
 /** All input for the `joinProject` mutation. */
 export type JoinProjectInput = {
@@ -4815,18 +4793,18 @@ export type JoinProjectInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `joinProject` mutation. */
 export type JoinProjectPayload = {
-  __typename?: 'JoinProjectPayload';
+  __typename?: "JoinProjectPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -4837,18 +4815,18 @@ export type LeaveProjectInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `leaveProject` mutation. */
 export type LeaveProjectPayload = {
-  __typename?: 'LeaveProjectPayload';
+  __typename?: "LeaveProjectPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -4859,18 +4837,18 @@ export type MakeResponseDraftInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  responseId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  responseId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `makeResponseDraft` mutation. */
 export type MakeResponseDraftPayload = {
-  __typename?: 'MakeResponseDraftPayload';
+  __typename?: "MakeResponseDraftPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyResponse`. */
@@ -4880,10 +4858,9 @@ export type MakeResponseDraftPayload = {
   surveyResponseEdge?: Maybe<SurveyResponsesEdge>;
 };
 
-
 /** The output of our `makeResponseDraft` mutation. */
 export type MakeResponseDraftPayloadSurveyResponseEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 /** All input for the `makeResponsesNotPractice` mutation. */
@@ -4892,18 +4869,18 @@ export type MakeResponsesNotPracticeInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  ids?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
 };
 
 /** The output of our `makeResponsesNotPractice` mutation. */
 export type MakeResponsesNotPracticePayload = {
-  __typename?: 'MakeResponsesNotPracticePayload';
+  __typename?: "MakeResponsesNotPracticePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   surveyResponses?: Maybe<Array<SurveyResponse>>;
@@ -4915,18 +4892,18 @@ export type MakeResponsesPracticeInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  ids?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
 };
 
 /** The output of our `makeResponsesPractice` mutation. */
 export type MakeResponsesPracticePayload = {
-  __typename?: 'MakeResponsesPracticePayload';
+  __typename?: "MakeResponsesPracticePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyResponse`. */
@@ -4936,10 +4913,9 @@ export type MakeResponsesPracticePayload = {
   surveyResponseEdge?: Maybe<SurveyResponsesEdge>;
 };
 
-
 /** The output of our `makeResponsesPractice` mutation. */
 export type MakeResponsesPracticePayloadSurveyResponseEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 /** All input for the `makeSketchClass` mutation. */
@@ -4948,20 +4924,20 @@ export type MakeSketchClassInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  templateId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  name?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  templateId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `makeSketchClass` mutation. */
 export type MakeSketchClassPayload = {
-  __typename?: 'MakeSketchClassPayload';
+  __typename?: "MakeSketchClassPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `FormElement` that is related to this `SketchClass`. */
   formElement?: Maybe<FormElement>;
   /** Reads a single `Project` that is related to this `SketchClass`. */
@@ -4973,10 +4949,9 @@ export type MakeSketchClassPayload = {
   sketchClassEdge?: Maybe<SketchClassesEdge>;
 };
 
-
 /** The output of our `makeSketchClass` mutation. */
 export type MakeSketchClassPayloadSketchClassEdgeArgs = {
-  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchClassesOrderBy>>;
 };
 
 /** All input for the `makeSurvey` mutation. */
@@ -4985,20 +4960,20 @@ export type MakeSurveyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  templateId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  name?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  templateId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `makeSurvey` mutation. */
 export type MakeSurveyPayload = {
-  __typename?: 'MakeSurveyPayload';
+  __typename?: "MakeSurveyPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Project` that is related to this `Survey`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -5012,42 +4987,42 @@ export type MarkTopicAsReadInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  topicId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  topicId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `markTopicAsRead` mutation. */
 export type MarkTopicAsReadPayload = {
-  __typename?: 'MarkTopicAsReadPayload';
-  boolean?: Maybe<Scalars['Boolean']>;
+  __typename?: "MarkTopicAsReadPayload";
+  boolean?: Maybe<Scalars["Boolean"]>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
 /** All input for the `modifySurveyAnswers` mutation. */
 export type ModifySurveyAnswersInput = {
-  answers?: Maybe<Scalars['JSON']>;
+  answers?: InputMaybe<Scalars["JSON"]>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  responseIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  responseIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
 };
 
 /** The output of our `modifySurveyAnswers` mutation. */
 export type ModifySurveyAnswersPayload = {
-  __typename?: 'ModifySurveyAnswersPayload';
+  __typename?: "ModifySurveyAnswersPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   surveyResponses?: Maybe<Array<SurveyResponse>>;
@@ -5055,7 +5030,7 @@ export type ModifySurveyAnswersPayload = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type Mutation = {
-  __typename?: 'Mutation';
+  __typename?: "Mutation";
   /** Add a group to a given access control list. Must be an administrator. */
   addGroupToAcl?: Maybe<AddGroupToAclPayload>;
   addImageToSprite?: Maybe<Sprite>;
@@ -5359,7 +5334,7 @@ export type Mutation = {
    * Send a reminder email for a survey invite that has already been sent.
    * Returns the same inviteId if successful.
    */
-  sendSurveyInviteReminder?: Maybe<Scalars['Int']>;
+  sendSurveyInviteReminder?: Maybe<Scalars["Int"]>;
   setFormElementBackground: FormElement;
   /**
    * Sets the positions of all elements in a form at once. Any missing element ids from
@@ -5543,1191 +5518,1000 @@ export type Mutation = {
   uploadStyle: Basemap;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationAddGroupToAclArgs = {
   input: AddGroupToAclInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationAddImageToSpriteArgs = {
-  height: Scalars['Int'];
-  image: Scalars['Upload'];
-  pixelRatio: Scalars['Int'];
-  spriteId: Scalars['Int'];
-  width: Scalars['Int'];
+  height: Scalars["Int"];
+  image: Scalars["Upload"];
+  pixelRatio: Scalars["Int"];
+  spriteId: Scalars["Int"];
+  width: Scalars["Int"];
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationAddUserToGroupArgs = {
   input: AddUserToGroupInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationAddValidChildSketchClassArgs = {
   input: AddValidChildSketchClassInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationApproveParticipantArgs = {
   input: ApproveParticipantInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationArchiveResponsesArgs = {
   input: ArchiveResponsesInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationClearFormElementStyleArgs = {
   input: ClearFormElementStyleInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationConfirmOnboardedArgs = {
   input: ConfirmOnboardedInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationConfirmProjectInviteArgs = {
-  token: Scalars['String'];
+  token: Scalars["String"];
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationConfirmProjectInviteWithSurveyTokenArgs = {
   input: ConfirmProjectInviteWithSurveyTokenInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationConfirmProjectInviteWithVerifiedEmailArgs = {
   input: ConfirmProjectInviteWithVerifiedEmailInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCopyAppearanceArgs = {
   input: CopyAppearanceInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateBasemapArgs = {
   input: CreateBasemapInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateCommunityGuidelineArgs = {
   input: CreateCommunityGuidelineInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataLayerArgs = {
   input: CreateDataLayerInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataSourceArgs = {
   input: CreateDataSourceInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateFormElementArgs = {
   input: CreateFormElementInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateFormLogicConditionArgs = {
   input: CreateFormLogicConditionInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateFormLogicRuleArgs = {
   input: CreateFormLogicRuleInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateFormTemplateFromSketchClassArgs = {
   input: CreateFormTemplateFromSketchClassInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateFormTemplateFromSurveyArgs = {
   input: CreateFormTemplateFromSurveyInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateForumArgs = {
   input: CreateForumInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateGroupArgs = {
   input: CreateGroupInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateInteractivitySettingArgs = {
   input: CreateInteractivitySettingInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateOptionalBasemapLayerArgs = {
   input: CreateOptionalBasemapLayerInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreatePostArgs = {
   input: CreatePostInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectArgs = {
   input: CreateProjectInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectInviteGroupArgs = {
   input: CreateProjectInviteGroupInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectInvitesArgs = {
   input: CreateProjectInvitesInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectsSharedBasemapArgs = {
   input: CreateProjectsSharedBasemapInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSketchArgs = {
   input: CreateSketchInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSketchFolderArgs = {
   input: CreateSketchFolderInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSurveyInvitedGroupArgs = {
   input: CreateSurveyInvitedGroupInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSurveyInvitesArgs = {
   input: CreateSurveyInvitesInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSurveyJumpRuleArgs = {
   input: CreateSurveyJumpRuleInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSurveyResponseArgs = {
   input: CreateSurveyResponseInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateTableOfContentsItemArgs = {
   input: CreateTableOfContentsItemInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateTopicArgs = {
   input: CreateTopicInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteBasemapArgs = {
   input: DeleteBasemapInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteBasemapByNodeIdArgs = {
   input: DeleteBasemapByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteCommunityGuidelineArgs = {
   input: DeleteCommunityGuidelineInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteCommunityGuidelineByNodeIdArgs = {
   input: DeleteCommunityGuidelineByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteDataLayerArgs = {
   input: DeleteDataLayerInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteDataLayerByInteractivitySettingsIdArgs = {
   input: DeleteDataLayerByInteractivitySettingsIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteDataLayerByNodeIdArgs = {
   input: DeleteDataLayerByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteDataSourceArgs = {
   input: DeleteDataSourceInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteDataSourceByNodeIdArgs = {
   input: DeleteDataSourceByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormArgs = {
   input: DeleteFormInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormByNodeIdArgs = {
   input: DeleteFormByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormBySketchClassIdArgs = {
   input: DeleteFormBySketchClassIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormBySurveyIdArgs = {
   input: DeleteFormBySurveyIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormElementArgs = {
   input: DeleteFormElementInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormElementByNodeIdArgs = {
   input: DeleteFormElementByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormLogicConditionArgs = {
   input: DeleteFormLogicConditionInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormLogicConditionByNodeIdArgs = {
   input: DeleteFormLogicConditionByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormLogicRuleArgs = {
   input: DeleteFormLogicRuleInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteFormLogicRuleByNodeIdArgs = {
   input: DeleteFormLogicRuleByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteForumArgs = {
   input: DeleteForumInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteForumByNodeIdArgs = {
   input: DeleteForumByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteGroupArgs = {
   input: DeleteGroupInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteGroupByNodeIdArgs = {
   input: DeleteGroupByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteGroupByProjectIdAndNameArgs = {
   input: DeleteGroupByProjectIdAndNameInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteOptionalBasemapLayerArgs = {
   input: DeleteOptionalBasemapLayerInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteOptionalBasemapLayerByNodeIdArgs = {
   input: DeleteOptionalBasemapLayerByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeletePostArgs = {
   input: DeletePostInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeletePostByNodeIdArgs = {
   input: DeletePostByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteProjectArgs = {
   input: DeleteProjectInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteProjectInviteArgs = {
   input: DeleteProjectInviteInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteProjectInviteByEmailAndProjectIdArgs = {
   input: DeleteProjectInviteByEmailAndProjectIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteProjectInviteByNodeIdArgs = {
   input: DeleteProjectInviteByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteProjectInviteGroupByInviteIdAndGroupIdArgs = {
   input: DeleteProjectInviteGroupByInviteIdAndGroupIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
   input: DeleteProjectsSharedBasemapByBasemapIdAndProjectIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchArgs = {
   input: DeleteSketchInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchByNodeIdArgs = {
   input: DeleteSketchByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchClassArgs = {
   input: DeleteSketchClassInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchClassByFormElementIdArgs = {
   input: DeleteSketchClassByFormElementIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchClassByNodeIdArgs = {
   input: DeleteSketchClassByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchFolderArgs = {
   input: DeleteSketchFolderInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchFolderByNodeIdArgs = {
   input: DeleteSketchFolderByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyArgs = {
   input: DeleteSurveyInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyByNodeIdArgs = {
   input: DeleteSurveyByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyInviteArgs = {
   input: DeleteSurveyInviteInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyInviteByEmailArgs = {
   input: DeleteSurveyInviteByEmailInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyInviteByEmailAndSurveyIdArgs = {
   input: DeleteSurveyInviteByEmailAndSurveyIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyInviteByNodeIdArgs = {
   input: DeleteSurveyInviteByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyInvitedGroupBySurveyIdAndGroupIdArgs = {
   input: DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyResponseArgs = {
   input: DeleteSurveyResponseInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyResponseByNodeIdArgs = {
   input: DeleteSurveyResponseByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteTableOfContentsBranchArgs = {
   input: DeleteTableOfContentsBranchInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteTopicArgs = {
   input: DeleteTopicInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteTopicByNodeIdArgs = {
   input: DeleteTopicByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDisableForumPostingArgs = {
   input: DisableForumPostingInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationEnableForumPostingArgs = {
   input: EnableForumPostingInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationGetOrCreateSpriteArgs = {
-  height: Scalars['Int'];
-  pixelRatio: Scalars['Int'];
-  projectId: Scalars['Int'];
-  smallestImage: Scalars['Upload'];
-  type?: Maybe<Scalars['String']>;
-  width: Scalars['Int'];
+  height: Scalars["Int"];
+  pixelRatio: Scalars["Int"];
+  projectId: Scalars["Int"];
+  smallestImage: Scalars["Upload"];
+  type?: InputMaybe<Scalars["String"]>;
+  width: Scalars["Int"];
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationGrantAdminAccessArgs = {
   input: GrantAdminAccessInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationJoinProjectArgs = {
   input: JoinProjectInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationLeaveProjectArgs = {
   input: LeaveProjectInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMakeResponseDraftArgs = {
   input: MakeResponseDraftInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMakeResponsesNotPracticeArgs = {
   input: MakeResponsesNotPracticeInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMakeResponsesPracticeArgs = {
   input: MakeResponsesPracticeInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMakeSketchClassArgs = {
   input: MakeSketchClassInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMakeSurveyArgs = {
   input: MakeSurveyInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMarkTopicAsReadArgs = {
   input: MarkTopicAsReadInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationModifySurveyAnswersArgs = {
   input: ModifySurveyAnswersInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationPublishTableOfContentsArgs = {
   input: PublishTableOfContentsInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRemoveGroupFromAclArgs = {
   input: RemoveGroupFromAclInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRemoveUserFromGroupArgs = {
   input: RemoveUserFromGroupInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRemoveValidChildSketchClassArgs = {
   input: RemoveValidChildSketchClassInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRevokeAdminAccessArgs = {
   input: RevokeAdminAccessInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSendAllProjectInvitesArgs = {
   input: SendAllProjectInvitesInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSendProjectInvitesArgs = {
   input: SendProjectInvitesInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSendSurveyInviteReminderArgs = {
-  inviteId: Scalars['Int'];
+  inviteId: Scalars["Int"];
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetFormElementBackgroundArgs = {
-  backgroundColor: Scalars['String'];
-  backgroundHeight: Scalars['Int'];
-  backgroundPalette: Array<Maybe<Scalars['String']>>;
-  backgroundUrl: Scalars['String'];
-  backgroundWidth: Scalars['Int'];
-  downloadUrl: Scalars['String'];
-  id: Scalars['Int'];
-  secondaryColor: Scalars['String'];
-  unsplashAuthorName: Scalars['String'];
-  unsplashAuthorUrl: Scalars['String'];
+  backgroundColor: Scalars["String"];
+  backgroundHeight: Scalars["Int"];
+  backgroundPalette: Array<InputMaybe<Scalars["String"]>>;
+  backgroundUrl: Scalars["String"];
+  backgroundWidth: Scalars["Int"];
+  downloadUrl: Scalars["String"];
+  id: Scalars["Int"];
+  secondaryColor: Scalars["String"];
+  unsplashAuthorName: Scalars["String"];
+  unsplashAuthorUrl: Scalars["String"];
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetFormElementOrderArgs = {
   input: SetFormElementOrderInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetFormLogicRuleOrderArgs = {
   input: SetFormLogicRuleOrderInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetForumOrderArgs = {
   input: SetForumOrderInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetPostHiddenByModeratorArgs = {
   input: SetPostHiddenByModeratorInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetTopicLockedArgs = {
   input: SetTopicLockedInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetTopicStickyArgs = {
   input: SetTopicStickyInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetUserGroupsArgs = {
   input: SetUserGroupsInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationToggleAdminAccessArgs = {
   input: ToggleAdminAccessInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationToggleForumPostingBanArgs = {
   input: ToggleForumPostingBanInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationToggleResponsesPracticeArgs = {
   input: ToggleResponsesPracticeInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclArgs = {
   input: UpdateAclInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclByBasemapIdArgs = {
   input: UpdateAclByBasemapIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclByNodeIdArgs = {
   input: UpdateAclByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclBySketchClassIdArgs = {
   input: UpdateAclBySketchClassIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclByTableOfContentsItemIdArgs = {
   input: UpdateAclByTableOfContentsItemIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateBasemapArgs = {
   input: UpdateBasemapInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateBasemapByNodeIdArgs = {
   input: UpdateBasemapByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateCommunityGuidelineArgs = {
   input: UpdateCommunityGuidelineInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateCommunityGuidelineByNodeIdArgs = {
   input: UpdateCommunityGuidelineByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateDataLayerArgs = {
   input: UpdateDataLayerInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateDataLayerByInteractivitySettingsIdArgs = {
   input: UpdateDataLayerByInteractivitySettingsIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateDataLayerByNodeIdArgs = {
   input: UpdateDataLayerByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateDataSourceArgs = {
   input: UpdateDataSourceInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateDataSourceByNodeIdArgs = {
   input: UpdateDataSourceByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateEmailNotificationPreferenceByUserIdArgs = {
   input: UpdateEmailNotificationPreferenceByUserIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormArgs = {
   input: UpdateFormInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormByNodeIdArgs = {
   input: UpdateFormByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormBySketchClassIdArgs = {
   input: UpdateFormBySketchClassIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormBySurveyIdArgs = {
   input: UpdateFormBySurveyIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormElementArgs = {
   input: UpdateFormElementInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormElementByNodeIdArgs = {
   input: UpdateFormElementByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormLogicConditionArgs = {
   input: UpdateFormLogicConditionInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormLogicConditionByNodeIdArgs = {
   input: UpdateFormLogicConditionByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormLogicRuleArgs = {
   input: UpdateFormLogicRuleInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateFormLogicRuleByNodeIdArgs = {
   input: UpdateFormLogicRuleByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateForumArgs = {
   input: UpdateForumInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateForumByNodeIdArgs = {
   input: UpdateForumByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateGroupArgs = {
   input: UpdateGroupInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateGroupByNodeIdArgs = {
   input: UpdateGroupByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateGroupByProjectIdAndNameArgs = {
   input: UpdateGroupByProjectIdAndNameInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateInteractivitySettingArgs = {
   input: UpdateInteractivitySettingInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateInteractivitySettingByNodeIdArgs = {
   input: UpdateInteractivitySettingByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateMapboxSecretKeyArgs = {
   input: UpdateMapboxSecretKeyInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateOptionalBasemapLayerArgs = {
   input: UpdateOptionalBasemapLayerInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateOptionalBasemapLayerByNodeIdArgs = {
   input: UpdateOptionalBasemapLayerByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdatePostArgs = {
   input: UpdatePostInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProfileByUserIdArgs = {
   input: UpdateProfileByUserIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectArgs = {
   input: UpdateProjectInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectByNodeIdArgs = {
   input: UpdateProjectByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectBySlugArgs = {
   input: UpdateProjectBySlugInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectInviteArgs = {
   input: UpdateProjectInviteInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectInviteGroupByInviteIdAndGroupIdArgs = {
   input: UpdateProjectInviteGroupByInviteIdAndGroupIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
   input: UpdateProjectsSharedBasemapByBasemapIdAndProjectIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchArgs = {
   input: UpdateSketchInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchByNodeIdArgs = {
   input: UpdateSketchByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchClassArgs = {
   input: UpdateSketchClassInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchClassByFormElementIdArgs = {
   input: UpdateSketchClassByFormElementIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchClassByNodeIdArgs = {
   input: UpdateSketchClassByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchFolderArgs = {
   input: UpdateSketchFolderInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchFolderByNodeIdArgs = {
   input: UpdateSketchFolderByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyArgs = {
   input: UpdateSurveyInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyByNodeIdArgs = {
   input: UpdateSurveyByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyInviteArgs = {
   input: UpdateSurveyInviteInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyInviteByEmailArgs = {
   input: UpdateSurveyInviteByEmailInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyInviteByEmailAndSurveyIdArgs = {
   input: UpdateSurveyInviteByEmailAndSurveyIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyInviteByNodeIdArgs = {
   input: UpdateSurveyInviteByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyInvitedGroupsArgs = {
   input: UpdateSurveyInvitedGroupsInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyResponseArgs = {
   input: UpdateSurveyResponseInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyResponseByNodeIdArgs = {
   input: UpdateSurveyResponseByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTableOfContentsItemArgs = {
   input: UpdateTableOfContentsItemInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTableOfContentsItemByDataLayerIdArgs = {
   input: UpdateTableOfContentsItemByDataLayerIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTableOfContentsItemByNodeIdArgs = {
   input: UpdateTableOfContentsItemByNodeIdInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTableOfContentsItemChildrenArgs = {
   input: UpdateTableOfContentsItemChildrenInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTopicArgs = {
   input: UpdateTopicInput;
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTopicByNodeIdArgs = {
   input: UpdateTopicByNodeIdInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateZIndexesArgs = {
   input: UpdateZIndexesInput;
 };
 
-
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUploadConsentDocumentArgs = {
-  document: Scalars['Upload'];
-  formElementId: Scalars['Int'];
-  version: Scalars['Int'];
+  document: Scalars["Upload"];
+  formElementId: Scalars["Int"];
+  version: Scalars["Int"];
 };
-
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUploadStyleArgs = {
-  id?: Maybe<Scalars['Int']>;
-  name: Scalars['String'];
-  projectId: Scalars['Int'];
-  style: Scalars['JSON'];
-  surveysOnly?: Maybe<Scalars['Boolean']>;
-  thumb: Scalars['Upload'];
+  id?: InputMaybe<Scalars["Int"]>;
+  name: Scalars["String"];
+  projectId: Scalars["Int"];
+  style: Scalars["JSON"];
+  surveysOnly?: InputMaybe<Scalars["Boolean"]>;
+  thumb: Scalars["Upload"];
 };
 
 /** An object with a globally unique `ID`. */
 export type Node = {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
 
 /** Available only for MapBox GL Style-based basemaps. Specifies optional components of the basemap that can be shown or hidden. */
 export type OptionalBasemapLayer = Node & {
-  __typename?: 'OptionalBasemapLayer';
+  __typename?: "OptionalBasemapLayer";
   /** Reads a single `Basemap` that is related to this `OptionalBasemapLayer`. */
   basemap?: Maybe<Basemap>;
-  basemapId: Scalars['Int'];
-  defaultVisibility: Scalars['Boolean'];
-  description?: Maybe<Scalars['String']>;
+  basemapId: Scalars["Int"];
+  defaultVisibility: Scalars["Boolean"];
+  description?: Maybe<Scalars["String"]>;
   /**
    * Specify RADIO or SELECT if this option should be presented as a group of
    * options. Useful for mutually exclusive views like different years for the same
@@ -6735,16 +6519,16 @@ export type OptionalBasemapLayer = Node & {
    * species must be chosen from a list. If left null, the option will be treated as standalone.
    */
   groupType: OptionalBasemapLayersGroupType;
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   /** IDs for layers in the gl style that will be toggled by this option. */
-  layers: Array<Maybe<Scalars['String']>>;
+  layers: Array<Maybe<Scalars["String"]>>;
   /** JSON representation of a ProseMirror document with layer metadata. */
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: Maybe<Scalars["JSON"]>;
   /** Label that will be given in the UI */
-  name: Scalars['String'];
+  name: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  options?: Maybe<Scalars['JSON']>;
+  nodeId: Scalars["ID"];
+  options?: Maybe<Scalars["JSON"]>;
 };
 
 /**
@@ -6753,110 +6537,110 @@ export type OptionalBasemapLayer = Node & {
  */
 export type OptionalBasemapLayerCondition = {
   /** Checks for equality with the object’s `basemapId` field. */
-  basemapId?: Maybe<Scalars['Int']>;
+  basemapId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
 };
 
 /** An input for mutations affecting `OptionalBasemapLayer` */
 export type OptionalBasemapLayerInput = {
-  basemapId: Scalars['Int'];
-  defaultVisibility?: Maybe<Scalars['Boolean']>;
-  description?: Maybe<Scalars['String']>;
+  basemapId: Scalars["Int"];
+  defaultVisibility?: InputMaybe<Scalars["Boolean"]>;
+  description?: InputMaybe<Scalars["String"]>;
   /**
    * Specify RADIO or SELECT if this option should be presented as a group of
    * options. Useful for mutually exclusive views like different years for the same
    * dataset, or a heatmap display of density for multiple species where a single
    * species must be chosen from a list. If left null, the option will be treated as standalone.
    */
-  groupType?: Maybe<OptionalBasemapLayersGroupType>;
-  id?: Maybe<Scalars['Int']>;
+  groupType?: InputMaybe<OptionalBasemapLayersGroupType>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** IDs for layers in the gl style that will be toggled by this option. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
+  layers?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
   /** JSON representation of a ProseMirror document with layer metadata. */
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: InputMaybe<Scalars["JSON"]>;
   /** Label that will be given in the UI */
-  name: Scalars['String'];
-  options?: Maybe<Scalars['JSON']>;
+  name: Scalars["String"];
+  options?: InputMaybe<Scalars["JSON"]>;
 };
 
 /** Represents an update to a `OptionalBasemapLayer`. Fields that are set will be updated. */
 export type OptionalBasemapLayerPatch = {
-  basemapId?: Maybe<Scalars['Int']>;
-  defaultVisibility?: Maybe<Scalars['Boolean']>;
-  description?: Maybe<Scalars['String']>;
+  basemapId?: InputMaybe<Scalars["Int"]>;
+  defaultVisibility?: InputMaybe<Scalars["Boolean"]>;
+  description?: InputMaybe<Scalars["String"]>;
   /**
    * Specify RADIO or SELECT if this option should be presented as a group of
    * options. Useful for mutually exclusive views like different years for the same
    * dataset, or a heatmap display of density for multiple species where a single
    * species must be chosen from a list. If left null, the option will be treated as standalone.
    */
-  groupType?: Maybe<OptionalBasemapLayersGroupType>;
-  id?: Maybe<Scalars['Int']>;
+  groupType?: InputMaybe<OptionalBasemapLayersGroupType>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** IDs for layers in the gl style that will be toggled by this option. */
-  layers?: Maybe<Array<Maybe<Scalars['String']>>>;
+  layers?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
   /** JSON representation of a ProseMirror document with layer metadata. */
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: InputMaybe<Scalars["JSON"]>;
   /** Label that will be given in the UI */
-  name?: Maybe<Scalars['String']>;
-  options?: Maybe<Scalars['JSON']>;
+  name?: InputMaybe<Scalars["String"]>;
+  options?: InputMaybe<Scalars["JSON"]>;
 };
 
 export enum OptionalBasemapLayersGroupType {
-  None = 'NONE',
-  Radio = 'RADIO',
-  Select = 'SELECT'
+  None = "NONE",
+  Radio = "RADIO",
+  Select = "SELECT",
 }
 
 /** Methods to use when ordering `OptionalBasemapLayer`. */
 export enum OptionalBasemapLayersOrderBy {
-  BasemapIdAsc = 'BASEMAP_ID_ASC',
-  BasemapIdDesc = 'BASEMAP_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+  BasemapIdAsc = "BASEMAP_ID_ASC",
+  BasemapIdDesc = "BASEMAP_ID_DESC",
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
 }
 
 /** Information about pagination in a connection. */
 export type PageInfo = {
-  __typename?: 'PageInfo';
+  __typename?: "PageInfo";
   /** When paginating forwards, the cursor to continue. */
-  endCursor?: Maybe<Scalars['Cursor']>;
+  endCursor?: Maybe<Scalars["Cursor"]>;
   /** When paginating forwards, are there more items? */
-  hasNextPage: Scalars['Boolean'];
+  hasNextPage: Scalars["Boolean"];
   /** When paginating backwards, are there more items? */
-  hasPreviousPage: Scalars['Boolean'];
+  hasPreviousPage: Scalars["Boolean"];
   /** When paginating backwards, the cursor to continue. */
-  startCursor?: Maybe<Scalars['Cursor']>;
+  startCursor?: Maybe<Scalars["Cursor"]>;
 };
 
 export enum ParticipantSortBy {
-  Email = 'EMAIL',
-  Name = 'NAME'
+  Email = "EMAIL",
+  Name = "NAME",
 }
 
 export enum ParticipationStatus {
-  None = 'NONE',
-  ParticipantHiddenProfile = 'PARTICIPANT_HIDDEN_PROFILE',
-  ParticipantSharedProfile = 'PARTICIPANT_SHARED_PROFILE',
-  PendingApproval = 'PENDING_APPROVAL'
+  None = "NONE",
+  ParticipantHiddenProfile = "PARTICIPANT_HIDDEN_PROFILE",
+  ParticipantSharedProfile = "PARTICIPANT_SHARED_PROFILE",
+  PendingApproval = "PENDING_APPROVAL",
 }
 
 export type Post = Node & {
-  __typename?: 'Post';
-  authorId: Scalars['Int'];
+  __typename?: "Post";
+  authorId: Scalars["Int"];
   /** User Profile of the author. If a user has not shared their profile the post message will be hidden. */
   authorProfile?: Maybe<Profile>;
-  createdAt: Scalars['Datetime'];
+  createdAt: Scalars["Datetime"];
   /**
    * If set, the post has been hidden by a project admin. Contents of the post will
    * not be available to the client. Admins should update this field using
    * `setPostHiddenByModerator()`.
    */
-  hiddenByModerator: Scalars['Boolean'];
-  id: Scalars['Int'];
+  hiddenByModerator: Scalars["Boolean"];
+  id: Scalars["Int"];
   /**
    * Message contents of the post as JSON for use with DraftJS.
    *
@@ -6866,25 +6650,25 @@ export type Post = Node & {
    * Message could also be null if `hiddenByModerator` is set. In that case the
    * client should explain that the post violated the `CommunityGuidelines`, if set.
    */
-  message?: Maybe<Scalars['JSON']>;
+  message?: Maybe<Scalars["JSON"]>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Reads a single `Topic` that is related to this `Post`. */
   topic?: Maybe<Topic>;
-  topicId: Scalars['Int'];
+  topicId: Scalars["Int"];
 };
 
 /** A condition to be used against `Post` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type PostCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `topicId` field. */
-  topicId?: Maybe<Scalars['Int']>;
+  topicId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A connection to a list of `Post` values. */
 export type PostsConnection = {
-  __typename?: 'PostsConnection';
+  __typename?: "PostsConnection";
   /** A list of edges which contains the `Post` and cursor to aid in pagination. */
   edges: Array<PostsEdge>;
   /** A list of `Post` objects. */
@@ -6892,27 +6676,27 @@ export type PostsConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `Post` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `Post` edge in the connection. */
 export type PostsEdge = {
-  __typename?: 'PostsEdge';
+  __typename?: "PostsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `Post` at the end of the edge. */
   node: Post;
 };
 
 /** Methods to use when ordering `Post`. */
 export enum PostsOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  TopicIdAsc = 'TOPIC_ID_ASC',
-  TopicIdDesc = 'TOPIC_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  TopicIdAsc = "TOPIC_ID_ASC",
+  TopicIdDesc = "TOPIC_ID_DESC",
 }
 
 /**
@@ -6925,43 +6709,43 @@ export enum PostsOrderBy {
  * means of listing out all profiles in bulk.
  */
 export type Profile = {
-  __typename?: 'Profile';
-  affiliations?: Maybe<Scalars['String']>;
-  bio?: Maybe<Scalars['String']>;
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
-  nickname?: Maybe<Scalars['String']>;
-  picture?: Maybe<Scalars['String']>;
+  __typename?: "Profile";
+  affiliations?: Maybe<Scalars["String"]>;
+  bio?: Maybe<Scalars["String"]>;
+  email?: Maybe<Scalars["Email"]>;
+  fullname?: Maybe<Scalars["String"]>;
+  nickname?: Maybe<Scalars["String"]>;
+  picture?: Maybe<Scalars["String"]>;
   /** Reads a single `User` that is related to this `Profile`. */
   user?: Maybe<User>;
-  userId: Scalars['Int'];
+  userId: Scalars["Int"];
 };
 
 /** Represents an update to a `Profile`. Fields that are set will be updated. */
 export type ProfilePatch = {
-  affiliations?: Maybe<Scalars['String']>;
-  bio?: Maybe<Scalars['String']>;
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
-  nickname?: Maybe<Scalars['String']>;
-  picture?: Maybe<Scalars['Upload']>;
-  userId?: Maybe<Scalars['Int']>;
+  affiliations?: InputMaybe<Scalars["String"]>;
+  bio?: InputMaybe<Scalars["String"]>;
+  email?: InputMaybe<Scalars["Email"]>;
+  fullname?: InputMaybe<Scalars["String"]>;
+  nickname?: InputMaybe<Scalars["String"]>;
+  picture?: InputMaybe<Scalars["Upload"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A `Profile` edge in the connection. */
 export type ProfilesEdge = {
-  __typename?: 'ProfilesEdge';
+  __typename?: "ProfilesEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `Profile` at the end of the edge. */
   node: Profile;
 };
 
 /** Methods to use when ordering `Profile`. */
 export enum ProfilesOrderBy {
-  Natural = 'NATURAL',
-  UserIdAsc = 'USER_ID_ASC',
-  UserIdDesc = 'USER_ID_DESC'
+  Natural = "NATURAL",
+  UserIdAsc = "USER_ID_ASC",
+  UserIdDesc = "USER_ID_DESC",
 }
 
 /**
@@ -6969,10 +6753,10 @@ export enum ProfilesOrderBy {
  * needed to drive the application.
  */
 export type Project = Node & {
-  __typename?: 'Project';
+  __typename?: "Project";
   /** Admins can control whether a project is public, invite-only, or admins-only. */
   accessControl: ProjectAccessControlSetting;
-  adminCount?: Maybe<Scalars['Int']>;
+  adminCount?: Maybe<Scalars["Int"]>;
   /** Reads and enables pagination through a set of `User`. */
   admins?: Maybe<Array<User>>;
   /** Reads and enables pagination through a set of `Basemap`. */
@@ -6981,10 +6765,10 @@ export type Project = Node & {
   basemapsConnection: BasemapsConnection;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
-  createdAt?: Maybe<Scalars['Datetime']>;
-  creatorId: Scalars['Int'];
-  dataHostingQuota?: Maybe<Scalars['Int']>;
-  dataHostingQuotaUsed?: Maybe<Scalars['Int']>;
+  createdAt?: Maybe<Scalars["Datetime"]>;
+  creatorId: Scalars["Int"];
+  dataHostingQuota?: Maybe<Scalars["Int"]>;
+  dataHostingQuotaUsed?: Maybe<Scalars["Int"]>;
   /**
    * Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
    * in conjuction with `dataSourcesForItems` to progressively load layer information
@@ -6993,7 +6777,7 @@ export type Project = Node & {
   dataLayersForItems?: Maybe<Array<DataLayer>>;
   /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
   dataSourcesBucket?: Maybe<DataSourcesBucket>;
-  dataSourcesBucketId?: Maybe<Scalars['String']>;
+  dataSourcesBucketId?: Maybe<Scalars["String"]>;
   /**
    * Retrieve DataSources for a given set of TableOfContentsItem IDs. Should be used
    * in conjuction with `dataLayersForItems` to progressively load layer information
@@ -7001,7 +6785,7 @@ export type Project = Node & {
    */
   dataSourcesForItems?: Maybe<Array<DataSource>>;
   /** Should be a short length in order to fit in the project header. */
-  description?: Maybe<Scalars['String']>;
+  description?: Maybe<Scalars["String"]>;
   /**
    * Draft layer lists, accessible only to admins. Make edits to the layer list and
    * then use the `publishTableOfContents` mutation when it is ready for end-users.
@@ -7011,7 +6795,7 @@ export type Project = Node & {
   forums: Array<Forum>;
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   /**
    * Returns the project invitation for the current user session, if any. Will not
    * appear until the invite has been sent. The system determines the relevant
@@ -7028,40 +6812,40 @@ export type Project = Node & {
    * listing of users, groups, and invites in the user administration dashboard.
    */
   inviteCounts?: Maybe<Array<InviteStat>>;
-  inviteEmailSubject: Scalars['String'];
-  inviteEmailTemplateText: Scalars['String'];
+  inviteEmailSubject: Scalars["String"];
+  inviteEmailTemplateText: Scalars["String"];
   /** List project invites by status */
   invitesConnection: ProjectInvitesConnection;
   /**
    * Returns true if the given user is an administrator of the project. Informaiton
    * is only available administrators of the project and will otherwise always return false.
    */
-  isAdmin?: Maybe<Scalars['Boolean']>;
+  isAdmin?: Maybe<Scalars["Boolean"]>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
-  isFeatured: Scalars['Boolean'];
+  isFeatured: Scalars["Boolean"];
   /**
    * Project admins can decide whether their project will be displayed on the
    * public project listing via Query.projectsConnection.
    */
-  isListed: Scalars['Boolean'];
+  isListed: Scalars["Boolean"];
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
-  logoLink?: Maybe<Scalars['String']>;
+  logoLink?: Maybe<Scalars["String"]>;
   /**
    * URL referencing an image that will be used to represent the project. Will be
    * displayed at 48x48 pixels and must be a public url.
    */
-  logoUrl?: Maybe<Scalars['String']>;
-  mapboxPublicKey?: Maybe<Scalars['String']>;
-  mapboxSecretKey?: Maybe<Scalars['String']>;
+  logoUrl?: Maybe<Scalars["String"]>;
+  mapboxPublicKey?: Maybe<Scalars["String"]>;
+  mapboxSecretKey?: Maybe<Scalars["String"]>;
   /** List of all folders created by this user. */
   myFolders?: Maybe<Array<SketchFolder>>;
   /** A list of all sketches for this project and the current user session */
   mySketches?: Maybe<Array<Sketch>>;
-  name: Scalars['String'];
+  name: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Count of all users who have opted into participating in the project, sharing their profile with project administrators. */
-  participantCount?: Maybe<Scalars['Int']>;
+  participantCount?: Maybe<Scalars["Int"]>;
   /**
    * All users who have opted into participating in the project, sharing
    * their profile with project administrators.
@@ -7076,7 +6860,7 @@ export type Project = Node & {
    * this to determine whether `project.communityGuidelines` should be shown to the
    * user before their first post.
    */
-  sessionHasPosts?: Maybe<Scalars['Boolean']>;
+  sessionHasPosts?: Maybe<Scalars["Boolean"]>;
   /**
    * Indicates whether current session should have special access or group
    * privileges. These grants will not be active if the user does not have a
@@ -7086,12 +6870,12 @@ export type Project = Node & {
    * `email_verified` cliam paired with privileged access. If that is the case they
    * should prompt users to confirm their email address.
    */
-  sessionHasPrivilegedAccess?: Maybe<Scalars['Boolean']>;
+  sessionHasPrivilegedAccess?: Maybe<Scalars["Boolean"]>;
   /**
    * Returns true if the user has admin privileges on this project. Will return
    * true even if the session email is not verified, but permissions will not work until it is.
    */
-  sessionIsAdmin?: Maybe<Scalars['Boolean']>;
+  sessionIsAdmin?: Maybe<Scalars["Boolean"]>;
   /**
    * Invites (and related tokens) for surveys which this user has not yet responded
    * to. Details on how to handle survey invites [can be found on the
@@ -7102,10 +6886,10 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
-  slug: Scalars['String'];
+  slug: Scalars["String"];
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites: Array<Sprite>;
-  supportEmail: Scalars['String'];
+  supportEmail: Scalars["String"];
   /** Reads and enables pagination through a set of `Basemap`. */
   surveyBasemaps?: Maybe<Array<Basemap>>;
   /** Reads and enables pagination through a set of `Survey`. */
@@ -7113,7 +6897,7 @@ export type Project = Node & {
   /** Public layer list. Cannot be edited directly. */
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
   /** Number of users who have outstanding access requests. Only relevant for invite-only projects. */
-  unapprovedParticipantCount?: Maybe<Scalars['Int']>;
+  unapprovedParticipantCount?: Maybe<Scalars["Int"]>;
   /**
    * For invite-only projects. List all pending participation requests.
    *
@@ -7121,284 +6905,262 @@ export type Project = Node & {
    */
   unapprovedParticipants?: Maybe<Array<User>>;
   /** Project url will resolve to `https://seasketch.org/{slug}/` */
-  url?: Maybe<Scalars['String']>;
+  url?: Maybe<Scalars["String"]>;
   /** List of all banned users. Listing only accessible to admins. */
   usersBannedFromForums?: Maybe<Array<User>>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectAdminsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectBasemapsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectBasemapsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<BasemapCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<BasemapCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectDataLayersForItemsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  tableOfContentsItemIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  tableOfContentsItemIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectDataSourcesForItemsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  tableOfContentsItemIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  tableOfContentsItemIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectDraftTableOfContentsItemsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectForumsArgs = {
-  condition?: Maybe<ForumCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ForumsOrderBy>>;
+  condition?: InputMaybe<ForumCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<ForumsOrderBy>>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<GroupsOrderBy>>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<GroupsOrderBy>>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectInviteCountsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectInvitesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  direction?: Maybe<SortByDirection>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<InviteOrderBy>;
-  statuses?: Maybe<Array<Maybe<InviteStatus>>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  direction?: InputMaybe<SortByDirection>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<InviteOrderBy>;
+  statuses?: InputMaybe<Array<InputMaybe<InviteStatus>>>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectIsAdminArgs = {
-  userId?: Maybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectMyFoldersArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectMySketchesArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectParticipantsArgs = {
-  direction?: Maybe<SortByDirection>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<ParticipantSortBy>;
+  direction?: InputMaybe<SortByDirection>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<ParticipantSortBy>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectSessionOutstandingSurveyInvitesArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectSketchClassesArgs = {
-  condition?: Maybe<SketchClassCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+  condition?: InputMaybe<SketchClassCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<SketchClassesOrderBy>>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectSpritesArgs = {
-  condition?: Maybe<SpriteCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SpritesOrderBy>>;
+  condition?: InputMaybe<SpriteCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<SpritesOrderBy>>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectSurveyBasemapsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectSurveysArgs = {
-  condition?: Maybe<SurveyCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveysOrderBy>>;
+  condition?: InputMaybe<SurveyCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<SurveysOrderBy>>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectTableOfContentsItemsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectUnapprovedParticipantsArgs = {
-  direction?: Maybe<SortByDirection>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<ParticipantSortBy>;
+  direction?: InputMaybe<SortByDirection>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<ParticipantSortBy>;
 };
-
 
 /**
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
 export type ProjectUsersBannedFromForumsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
 
 export enum ProjectAccessControlSetting {
-  AdminsOnly = 'ADMINS_ONLY',
-  InviteOnly = 'INVITE_ONLY',
-  Public = 'PUBLIC'
+  AdminsOnly = "ADMINS_ONLY",
+  InviteOnly = "INVITE_ONLY",
+  Public = "PUBLIC",
 }
 
 export enum ProjectAccessStatus {
-  DeniedAdminsOnly = 'DENIED_ADMINS_ONLY',
-  DeniedAnon = 'DENIED_ANON',
-  DeniedEmailNotVerified = 'DENIED_EMAIL_NOT_VERIFIED',
-  DeniedNotApproved = 'DENIED_NOT_APPROVED',
-  DeniedNotRequested = 'DENIED_NOT_REQUESTED',
-  Granted = 'GRANTED',
-  ProjectDoesNotExist = 'PROJECT_DOES_NOT_EXIST'
+  DeniedAdminsOnly = "DENIED_ADMINS_ONLY",
+  DeniedAnon = "DENIED_ANON",
+  DeniedEmailNotVerified = "DENIED_EMAIL_NOT_VERIFIED",
+  DeniedNotApproved = "DENIED_NOT_APPROVED",
+  DeniedNotRequested = "DENIED_NOT_REQUESTED",
+  Granted = "GRANTED",
+  ProjectDoesNotExist = "PROJECT_DOES_NOT_EXIST",
 }
 
 /** A condition to be used against `Project` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ProjectCondition = {
   /** Checks for equality with the object’s `accessControl` field. */
-  accessControl?: Maybe<ProjectAccessControlSetting>;
+  accessControl?: InputMaybe<ProjectAccessControlSetting>;
   /** Checks for equality with the object’s `dataSourcesBucketId` field. */
-  dataSourcesBucketId?: Maybe<Scalars['String']>;
+  dataSourcesBucketId?: InputMaybe<Scalars["String"]>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `isFeatured` field. */
-  isFeatured?: Maybe<Scalars['Boolean']>;
+  isFeatured?: InputMaybe<Scalars["Boolean"]>;
   /** Checks for equality with the object’s `slug` field. */
-  slug?: Maybe<Scalars['String']>;
+  slug?: InputMaybe<Scalars["String"]>;
 };
 
 /**
@@ -7415,31 +7177,30 @@ export type ProjectCondition = {
  * can be found on the wiki.
  */
 export type ProjectInvite = Node & {
-  __typename?: 'ProjectInvite';
-  createdAt: Scalars['Datetime'];
+  __typename?: "ProjectInvite";
+  createdAt: Scalars["Datetime"];
   /** Specified by admin when invite was created. */
-  email: Scalars['Email'];
+  email: Scalars["Email"];
   /** Specified by admin when invite was created. */
-  fullname?: Maybe<Scalars['String']>;
+  fullname?: Maybe<Scalars["String"]>;
   /** Reads and enables pagination through a set of `Group`. */
   groups?: Maybe<Array<Group>>;
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   /** Reads and enables pagination through a set of `InviteEmail`. */
   inviteEmails: Array<InviteEmail>;
   /** User will be made an admin of the project if true. They will not be given special access until their email is verified. */
-  makeAdmin: Scalars['Boolean'];
+  makeAdmin: Scalars["Boolean"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  projectId: Scalars['Int'];
+  nodeId: Scalars["ID"];
+  projectId: Scalars["Int"];
   /** Reads and enables pagination through a set of `ProjectInviteGroup`. */
   projectInviteGroupsByInviteIdConnection: ProjectInviteGroupsConnection;
   status?: Maybe<InviteStatus>;
   /** Is set upon invite acceptance. */
-  userId?: Maybe<Scalars['Int']>;
+  userId?: Maybe<Scalars["Int"]>;
   /** Project invite has already been accepted. */
-  wasUsed: Scalars['Boolean'];
+  wasUsed: Scalars["Boolean"];
 };
-
 
 /**
  * Admins can invite users to their project, adding them to user groups and
@@ -7455,10 +7216,9 @@ export type ProjectInvite = Node & {
  * can be found on the wiki.
  */
 export type ProjectInviteGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * Admins can invite users to their project, adding them to user groups and
@@ -7474,12 +7234,11 @@ export type ProjectInviteGroupsArgs = {
  * can be found on the wiki.
  */
 export type ProjectInviteInviteEmailsArgs = {
-  condition?: Maybe<InviteEmailCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<InviteEmailsOrderBy>>;
+  condition?: InputMaybe<InviteEmailCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<InviteEmailsOrderBy>>;
 };
-
 
 /**
  * Admins can invite users to their project, adding them to user groups and
@@ -7495,23 +7254,23 @@ export type ProjectInviteInviteEmailsArgs = {
  * can be found on the wiki.
  */
 export type ProjectInviteProjectInviteGroupsByInviteIdConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectInviteGroupCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<ProjectInviteGroupCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 export type ProjectInviteGroup = {
-  __typename?: 'ProjectInviteGroup';
+  __typename?: "ProjectInviteGroup";
   /** Reads a single `Group` that is related to this `ProjectInviteGroup`. */
   group?: Maybe<Group>;
-  groupId: Scalars['Int'];
+  groupId: Scalars["Int"];
   /** Reads a single `ProjectInvite` that is related to this `ProjectInviteGroup`. */
   invite?: Maybe<ProjectInvite>;
-  inviteId: Scalars['Int'];
+  inviteId: Scalars["Int"];
 };
 
 /**
@@ -7520,26 +7279,26 @@ export type ProjectInviteGroup = {
  */
 export type ProjectInviteGroupCondition = {
   /** Checks for equality with the object’s `groupId` field. */
-  groupId?: Maybe<Scalars['Int']>;
+  groupId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `inviteId` field. */
-  inviteId?: Maybe<Scalars['Int']>;
+  inviteId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** An input for mutations affecting `ProjectInviteGroup` */
 export type ProjectInviteGroupInput = {
-  groupId: Scalars['Int'];
-  inviteId: Scalars['Int'];
+  groupId: Scalars["Int"];
+  inviteId: Scalars["Int"];
 };
 
 /** Represents an update to a `ProjectInviteGroup`. Fields that are set will be updated. */
 export type ProjectInviteGroupPatch = {
-  groupId?: Maybe<Scalars['Int']>;
-  inviteId?: Maybe<Scalars['Int']>;
+  groupId?: InputMaybe<Scalars["Int"]>;
+  inviteId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A connection to a list of `ProjectInviteGroup` values. */
 export type ProjectInviteGroupsConnection = {
-  __typename?: 'ProjectInviteGroupsConnection';
+  __typename?: "ProjectInviteGroupsConnection";
   /** A list of edges which contains the `ProjectInviteGroup` and cursor to aid in pagination. */
   edges: Array<ProjectInviteGroupsEdge>;
   /** A list of `ProjectInviteGroup` objects. */
@@ -7547,61 +7306,61 @@ export type ProjectInviteGroupsConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `ProjectInviteGroup` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `ProjectInviteGroup` edge in the connection. */
 export type ProjectInviteGroupsEdge = {
-  __typename?: 'ProjectInviteGroupsEdge';
+  __typename?: "ProjectInviteGroupsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `ProjectInviteGroup` at the end of the edge. */
   node: ProjectInviteGroup;
 };
 
 /** Methods to use when ordering `ProjectInviteGroup`. */
 export enum ProjectInviteGroupsOrderBy {
-  GroupIdAsc = 'GROUP_ID_ASC',
-  GroupIdDesc = 'GROUP_ID_DESC',
-  InviteIdAsc = 'INVITE_ID_ASC',
-  InviteIdDesc = 'INVITE_ID_DESC',
-  Natural = 'NATURAL'
+  GroupIdAsc = "GROUP_ID_ASC",
+  GroupIdDesc = "GROUP_ID_DESC",
+  InviteIdAsc = "INVITE_ID_ASC",
+  InviteIdDesc = "INVITE_ID_DESC",
+  Natural = "NATURAL",
 }
 
 /** An input for mutations affecting `ProjectInviteOption` */
 export type ProjectInviteOptionInput = {
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
+  email?: InputMaybe<Scalars["Email"]>;
+  fullname?: InputMaybe<Scalars["String"]>;
 };
 
 export type ProjectInviteStateSubscriptionPayload = {
-  __typename?: 'ProjectInviteStateSubscriptionPayload';
+  __typename?: "ProjectInviteStateSubscriptionPayload";
   invite?: Maybe<ProjectInvite>;
 };
 
 export type ProjectInviteTokenClaims = {
-  __typename?: 'ProjectInviteTokenClaims';
-  admin: Scalars['Boolean'];
-  email: Scalars['String'];
-  fullname?: Maybe<Scalars['String']>;
-  inviteId: Scalars['Int'];
-  projectId: Scalars['Int'];
-  projectName: Scalars['String'];
-  projectSlug: Scalars['String'];
-  wasUsed: Scalars['Boolean'];
+  __typename?: "ProjectInviteTokenClaims";
+  admin: Scalars["Boolean"];
+  email: Scalars["String"];
+  fullname?: Maybe<Scalars["String"]>;
+  inviteId: Scalars["Int"];
+  projectId: Scalars["Int"];
+  projectName: Scalars["String"];
+  projectSlug: Scalars["String"];
+  wasUsed: Scalars["Boolean"];
 };
 
 export type ProjectInviteTokenVerificationResults = {
-  __typename?: 'ProjectInviteTokenVerificationResults';
+  __typename?: "ProjectInviteTokenVerificationResults";
   claims?: Maybe<ProjectInviteTokenClaims>;
-  error?: Maybe<Scalars['String']>;
+  error?: Maybe<Scalars["String"]>;
   /** Indicates whether there is an existing account that matches the email address on the invite */
-  existingAccount?: Maybe<Scalars['Boolean']>;
+  existingAccount?: Maybe<Scalars["Boolean"]>;
 };
 
 /** A connection to a list of `ProjectInvite` values. */
 export type ProjectInvitesConnection = {
-  __typename?: 'ProjectInvitesConnection';
+  __typename?: "ProjectInvitesConnection";
   /** A list of edges which contains the `ProjectInvite` and cursor to aid in pagination. */
   edges: Array<ProjectInvitesEdge>;
   /** A list of `ProjectInvite` objects. */
@@ -7609,14 +7368,14 @@ export type ProjectInvitesConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `ProjectInvite` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `ProjectInvite` edge in the connection. */
 export type ProjectInvitesEdge = {
-  __typename?: 'ProjectInvitesEdge';
+  __typename?: "ProjectInvitesEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `ProjectInvite` at the end of the edge. */
   node: ProjectInvite;
 };
@@ -7624,34 +7383,34 @@ export type ProjectInvitesEdge = {
 /** Represents an update to a `Project`. Fields that are set will be updated. */
 export type ProjectPatch = {
   /** Admins can control whether a project is public, invite-only, or admins-only. */
-  accessControl?: Maybe<ProjectAccessControlSetting>;
-  dataSourcesBucketId?: Maybe<Scalars['String']>;
+  accessControl?: InputMaybe<ProjectAccessControlSetting>;
+  dataSourcesBucketId?: InputMaybe<Scalars["String"]>;
   /** Should be a short length in order to fit in the project header. */
-  description?: Maybe<Scalars['String']>;
-  inviteEmailSubject?: Maybe<Scalars['String']>;
-  inviteEmailTemplateText?: Maybe<Scalars['String']>;
+  description?: InputMaybe<Scalars["String"]>;
+  inviteEmailSubject?: InputMaybe<Scalars["String"]>;
+  inviteEmailTemplateText?: InputMaybe<Scalars["String"]>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
-  isFeatured?: Maybe<Scalars['Boolean']>;
+  isFeatured?: InputMaybe<Scalars["Boolean"]>;
   /**
    * Project admins can decide whether their project will be displayed on the
    * public project listing via Query.projectsConnection.
    */
-  isListed?: Maybe<Scalars['Boolean']>;
+  isListed?: InputMaybe<Scalars["Boolean"]>;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
-  logoLink?: Maybe<Scalars['String']>;
+  logoLink?: InputMaybe<Scalars["String"]>;
   /**
    * URL referencing an image that will be used to represent the project. Will be
    * displayed at 48x48 pixels and must be a public url.
    */
-  logoUrl?: Maybe<Scalars['Upload']>;
-  mapboxPublicKey?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  region?: Maybe<Scalars['GeoJSON']>;
+  logoUrl?: InputMaybe<Scalars["Upload"]>;
+  mapboxPublicKey?: InputMaybe<Scalars["String"]>;
+  name?: InputMaybe<Scalars["String"]>;
+  region?: InputMaybe<Scalars["GeoJSON"]>;
 };
 
 /** A connection to a list of `Project` values. */
 export type ProjectsConnection = {
-  __typename?: 'ProjectsConnection';
+  __typename?: "ProjectsConnection";
   /** A list of edges which contains the `Project` and cursor to aid in pagination. */
   edges: Array<ProjectsEdge>;
   /** A list of `Project` objects. */
@@ -7659,41 +7418,41 @@ export type ProjectsConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `Project` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `Project` edge in the connection. */
 export type ProjectsEdge = {
-  __typename?: 'ProjectsEdge';
+  __typename?: "ProjectsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `Project` at the end of the edge. */
   node: Project;
 };
 
 /** Methods to use when ordering `Project`. */
 export enum ProjectsOrderBy {
-  AccessControlAsc = 'ACCESS_CONTROL_ASC',
-  AccessControlDesc = 'ACCESS_CONTROL_DESC',
-  DataSourcesBucketIdAsc = 'DATA_SOURCES_BUCKET_ID_ASC',
-  DataSourcesBucketIdDesc = 'DATA_SOURCES_BUCKET_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  IsFeaturedAsc = 'IS_FEATURED_ASC',
-  IsFeaturedDesc = 'IS_FEATURED_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  SlugAsc = 'SLUG_ASC',
-  SlugDesc = 'SLUG_DESC'
+  AccessControlAsc = "ACCESS_CONTROL_ASC",
+  AccessControlDesc = "ACCESS_CONTROL_DESC",
+  DataSourcesBucketIdAsc = "DATA_SOURCES_BUCKET_ID_ASC",
+  DataSourcesBucketIdDesc = "DATA_SOURCES_BUCKET_ID_DESC",
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  IsFeaturedAsc = "IS_FEATURED_ASC",
+  IsFeaturedDesc = "IS_FEATURED_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  SlugAsc = "SLUG_ASC",
+  SlugDesc = "SLUG_DESC",
 }
 
 export type ProjectsSharedBasemap = {
-  __typename?: 'ProjectsSharedBasemap';
+  __typename?: "ProjectsSharedBasemap";
   /** Reads a single `Basemap` that is related to this `ProjectsSharedBasemap`. */
   basemap?: Maybe<Basemap>;
-  basemapId: Scalars['Int'];
-  projectId: Scalars['Int'];
+  basemapId: Scalars["Int"];
+  projectId: Scalars["Int"];
 };
 
 /**
@@ -7702,24 +7461,24 @@ export type ProjectsSharedBasemap = {
  */
 export type ProjectsSharedBasemapCondition = {
   /** Checks for equality with the object’s `basemapId` field. */
-  basemapId?: Maybe<Scalars['Int']>;
+  basemapId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** An input for mutations affecting `ProjectsSharedBasemap` */
 export type ProjectsSharedBasemapInput = {
-  basemapId: Scalars['Int'];
-  projectId: Scalars['Int'];
+  basemapId: Scalars["Int"];
+  projectId: Scalars["Int"];
 };
 
 /** Represents an update to a `ProjectsSharedBasemap`. Fields that are set will be updated. */
 export type ProjectsSharedBasemapPatch = {
-  basemapId?: Maybe<Scalars['Int']>;
-  projectId?: Maybe<Scalars['Int']>;
+  basemapId?: InputMaybe<Scalars["Int"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A connection to a list of `ProjectsSharedBasemap` values. */
 export type ProjectsSharedBasemapsConnection = {
-  __typename?: 'ProjectsSharedBasemapsConnection';
+  __typename?: "ProjectsSharedBasemapsConnection";
   /** A list of edges which contains the `ProjectsSharedBasemap` and cursor to aid in pagination. */
   edges: Array<ProjectsSharedBasemapsEdge>;
   /** A list of `ProjectsSharedBasemap` objects. */
@@ -7727,34 +7486,34 @@ export type ProjectsSharedBasemapsConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `ProjectsSharedBasemap` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `ProjectsSharedBasemap` edge in the connection. */
 export type ProjectsSharedBasemapsEdge = {
-  __typename?: 'ProjectsSharedBasemapsEdge';
+  __typename?: "ProjectsSharedBasemapsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `ProjectsSharedBasemap` at the end of the edge. */
   node: ProjectsSharedBasemap;
 };
 
 /** Methods to use when ordering `ProjectsSharedBasemap`. */
 export enum ProjectsSharedBasemapsOrderBy {
-  BasemapIdAsc = 'BASEMAP_ID_ASC',
-  BasemapIdDesc = 'BASEMAP_ID_DESC',
-  Natural = 'NATURAL'
+  BasemapIdAsc = "BASEMAP_ID_ASC",
+  BasemapIdDesc = "BASEMAP_ID_DESC",
+  Natural = "NATURAL",
 }
 
 export type PublicProjectDetail = {
-  __typename?: 'PublicProjectDetail';
+  __typename?: "PublicProjectDetail";
   accessControl?: Maybe<ProjectAccessControlSetting>;
   accessStatus?: Maybe<ProjectAccessStatus>;
-  id?: Maybe<Scalars['Int']>;
-  logoUrl?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  slug?: Maybe<Scalars['String']>;
-  supportEmail?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars["Int"]>;
+  logoUrl?: Maybe<Scalars["String"]>;
+  name?: Maybe<Scalars["String"]>;
+  slug?: Maybe<Scalars["String"]>;
+  supportEmail?: Maybe<Scalars["String"]>;
 };
 
 /** All input for the `publishTableOfContents` mutation. */
@@ -7763,18 +7522,18 @@ export type PublishTableOfContentsInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `publishTableOfContents` mutation. */
 export type PublishTableOfContentsPayload = {
-  __typename?: 'PublishTableOfContentsPayload';
+  __typename?: "PublishTableOfContentsPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
@@ -7782,7 +7541,7 @@ export type PublishTableOfContentsPayload = {
 
 /** The root query type which gives access points into the data universe. */
 export type Query = Node & {
-  __typename?: 'Query';
+  __typename?: "Query";
   acl?: Maybe<Acl>;
   aclByBasemapId?: Maybe<Acl>;
   /** Reads a single `Acl` using its globally unique `ID`. */
@@ -7801,11 +7560,11 @@ export type Query = Node & {
    *
    * We return "dev" if build cannot be determined from deployment environment.
    */
-  build: Scalars['String'];
+  build: Scalars["String"];
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
   communityGuidelineByNodeId?: Maybe<CommunityGuideline>;
-  currentUserIsSuperuser: Scalars['Boolean'];
+  currentUserIsSuperuser: Scalars["Boolean"];
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
   /** Reads a single `DataLayer` using its globally unique `ID`. */
@@ -7821,7 +7580,7 @@ export type Query = Node & {
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
-  extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  extractSpriteIds?: Maybe<Array<Maybe<Scalars["Int"]>>>;
   form?: Maybe<Form>;
   /** Reads a single `Form` using its globally unique `ID`. */
   formByNodeId?: Maybe<Form>;
@@ -7845,7 +7604,7 @@ export type Query = Node & {
   forum?: Maybe<Forum>;
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
-  getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
+  getDefaultDataSourcesBucket?: Maybe<Scalars["String"]>;
   getUnsplashPhotos: UnsplashSearchResult;
   group?: Maybe<Group>;
   /** Reads a single `Group` using its globally unique `ID`. */
@@ -7862,7 +7621,7 @@ export type Query = Node & {
   /** Fetches an object given its globally unique `ID`. */
   node?: Maybe<Node>;
   /** The root query type must be a `Node` to work well with Relay 1 mutations. This just resolves to `query`. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Reads a single `OptionalBasemapLayer` using its globally unique `ID`. */
   optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
@@ -7895,7 +7654,7 @@ export type Query = Node & {
    * which can only query top level fields if they are in a particular form.
    */
   query: Query;
-  sessionIsBannedFromPosting?: Maybe<Scalars['Boolean']>;
+  sessionIsBannedFromPosting?: Maybe<Scalars["Boolean"]>;
   sharedBasemaps?: Maybe<Basemap>;
   sketch?: Maybe<Sketch>;
   /** Reads a single `Sketch` using its globally unique `ID`. */
@@ -7966,719 +7725,616 @@ export type Query = Node & {
   verifySurveyInvite?: Maybe<SurveyInviteTokenVerificationResults>;
 };
 
-
 /** The root query type which gives access points into the data universe. */
 export type QueryAclArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryAclByBasemapIdArgs = {
-  basemapId: Scalars['Int'];
+  basemapId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryAclByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryAclBySketchClassIdArgs = {
-  sketchClassId: Scalars['Int'];
+  sketchClassId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryAclByTableOfContentsItemIdArgs = {
-  tableOfContentsItemId: Scalars['Int'];
+  tableOfContentsItemId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryBasemapArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryBasemapByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryBasemapsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<BasemapCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<BasemapCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryCommunityGuidelineArgs = {
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryCommunityGuidelineByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDataLayerArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDataLayerByInteractivitySettingsIdArgs = {
-  interactivitySettingsId: Scalars['Int'];
+  interactivitySettingsId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDataLayerByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDataSourceArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDataSourceByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDataSourcesBucketArgs = {
-  url: Scalars['String'];
+  url: Scalars["String"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDataSourcesBucketByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDataSourcesBucketsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<DataSourcesBucketCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<DataSourcesBucketsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<DataSourcesBucketCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<DataSourcesBucketsOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryEmailNotificationPreferenceByUserIdArgs = {
-  userId: Scalars['Int'];
+  userId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryEmailNotificationPreferencesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<EmailNotificationPreferenceCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<EmailNotificationPreferenceCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<EmailNotificationPreferencesOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryExtractSpriteIdsArgs = {
-  t?: Maybe<Scalars['String']>;
+  t?: InputMaybe<Scalars["String"]>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormBySketchClassIdArgs = {
-  sketchClassId: Scalars['Int'];
+  sketchClassId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormBySurveyIdArgs = {
-  surveyId: Scalars['Int'];
+  surveyId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormElementArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormElementByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormElementTypeArgs = {
-  componentName: Scalars['String'];
+  componentName: Scalars["String"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormElementTypeByLabelArgs = {
-  label: Scalars['String'];
+  label: Scalars["String"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormElementTypeByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormElementTypesArgs = {
-  condition?: Maybe<FormElementTypeCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<FormElementTypesOrderBy>>;
+  condition?: InputMaybe<FormElementTypeCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<FormElementTypesOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormLogicConditionArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormLogicConditionByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormLogicRuleArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryFormLogicRuleByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryForumArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryForumByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryGetUnsplashPhotosArgs = {
-  query: Scalars['String'];
+  query: Scalars["String"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryGroupArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryGroupByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryGroupByProjectIdAndNameArgs = {
-  name: Scalars['String'];
-  projectId: Scalars['Int'];
+  name: Scalars["String"];
+  projectId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryInteractivitySettingArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryInteractivitySettingByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryInviteEmailArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryInviteEmailByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryNodeArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryOptionalBasemapLayerArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryOptionalBasemapLayerByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryPostArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryPostByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryPostsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<PostCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<PostCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProfileByUserIdArgs = {
-  userId: Scalars['Int'];
+  userId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectAccessStatusArgs = {
-  pid?: Maybe<Scalars['Int']>;
+  pid?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectBySlugArgs = {
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteByEmailAndProjectIdArgs = {
-  email: Scalars['Email'];
-  projectId: Scalars['Int'];
+  email: Scalars["Email"];
+  projectId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteGroupByInviteIdAndGroupIdArgs = {
-  groupId: Scalars['Int'];
-  inviteId: Scalars['Int'];
+  groupId: Scalars["Int"];
+  inviteId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectInviteGroupsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectInviteGroupCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<ProjectInviteGroupCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectPublicDetailsArgs = {
-  slug?: Maybe<Scalars['String']>;
+  slug?: InputMaybe<Scalars["String"]>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<ProjectCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
-  basemapId: Scalars['Int'];
-  projectId: Scalars['Int'];
+  basemapId: Scalars["Int"];
+  projectId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectsSharedBasemapsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ProjectsSharedBasemapCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<ProjectsSharedBasemapCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySessionIsBannedFromPostingArgs = {
-  pid?: Maybe<Scalars['Int']>;
+  pid?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchClassArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchClassByFormElementIdArgs = {
-  formElementId: Scalars['Int'];
+  formElementId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchClassByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchFolderArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchFolderByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySpriteArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySpriteByMd5AndProjectIdArgs = {
-  md5: Scalars['String'];
-  projectId: Scalars['Int'];
+  md5: Scalars["String"];
+  projectId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySpriteByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySpriteImageBySpriteIdAndPixelRatioArgs = {
-  pixelRatio: Scalars['Int'];
-  spriteId: Scalars['Int'];
+  pixelRatio: Scalars["Int"];
+  spriteId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyConsentDocumentArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyConsentDocumentByFormElementIdAndVersionArgs = {
-  formElementId: Scalars['Int'];
-  version: Scalars['Int'];
+  formElementId: Scalars["Int"];
+  version: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyConsentDocumentByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyConsentDocumentsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<SurveyConsentDocumentCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyConsentDocumentsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<SurveyConsentDocumentCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<SurveyConsentDocumentsOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyInviteArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyInviteByEmailArgs = {
-  email: Scalars['Email'];
+  email: Scalars["Email"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyInviteByEmailAndSurveyIdArgs = {
-  email: Scalars['Email'];
-  surveyId: Scalars['Int'];
+  email: Scalars["Email"];
+  surveyId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyInviteByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyInvitedGroupBySurveyIdAndGroupIdArgs = {
-  groupId: Scalars['Int'];
-  surveyId: Scalars['Int'];
+  groupId: Scalars["Int"];
+  surveyId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyResponseArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyResponseByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyResponsesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<SurveyResponseCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<SurveyResponseCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTableOfContentsItemArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTableOfContentsItemByDataLayerIdArgs = {
-  dataLayerId: Scalars['Int'];
+  dataLayerId: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTableOfContentsItemByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTemplateFormsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTilebboxArgs = {
-  srid?: Maybe<Scalars['Int']>;
-  x?: Maybe<Scalars['Int']>;
-  y?: Maybe<Scalars['Int']>;
-  z?: Maybe<Scalars['Int']>;
+  srid?: InputMaybe<Scalars["Int"]>;
+  x?: InputMaybe<Scalars["Int"]>;
+  y?: InputMaybe<Scalars["Int"]>;
+  z?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTopicArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTopicByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryTopicsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<TopicCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<TopicCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryUserArgs = {
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryUserByNodeIdArgs = {
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryVerifyProjectInviteArgs = {
-  token: Scalars['String'];
+  token: Scalars["String"];
 };
-
 
 /** The root query type which gives access points into the data universe. */
 export type QueryVerifySurveyInviteArgs = {
-  token: Scalars['String'];
+  token: Scalars["String"];
 };
 
 export enum RasterDemEncoding {
-  Mapbox = 'MAPBOX',
-  Terrarium = 'TERRARIUM'
+  Mapbox = "MAPBOX",
+  Terrarium = "TERRARIUM",
 }
 
 /** All input for the `removeGroupFromAcl` mutation. */
 export type RemoveGroupFromAclInput = {
-  aclId?: Maybe<Scalars['Int']>;
+  aclId?: InputMaybe<Scalars["Int"]>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groupId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `removeGroupFromAcl` mutation. */
 export type RemoveGroupFromAclPayload = {
-  __typename?: 'RemoveGroupFromAclPayload';
+  __typename?: "RemoveGroupFromAclPayload";
   acl?: Maybe<Acl>;
   /** Reads a single `Basemap` that is related to this `Acl`. */
   basemap?: Maybe<Basemap>;
@@ -8686,7 +8342,7 @@ export type RemoveGroupFromAclPayload = {
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `SketchClass` that is related to this `Acl`. */
@@ -8701,50 +8357,50 @@ export type RemoveUserFromGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groupId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `removeUserFromGroup` mutation. */
 export type RemoveUserFromGroupPayload = {
-  __typename?: 'RemoveUserFromGroupPayload';
+  __typename?: "RemoveUserFromGroupPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
 /** All input for the `removeValidChildSketchClass` mutation. */
 export type RemoveValidChildSketchClassInput = {
-  child?: Maybe<Scalars['Int']>;
+  child?: InputMaybe<Scalars["Int"]>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  parent?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  parent?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `removeValidChildSketchClass` mutation. */
 export type RemoveValidChildSketchClassPayload = {
-  __typename?: 'RemoveValidChildSketchClassPayload';
+  __typename?: "RemoveValidChildSketchClassPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
 export enum RenderUnderType {
-  Labels = 'LABELS',
-  Land = 'LAND',
-  None = 'NONE'
+  Labels = "LABELS",
+  Land = "LAND",
+  None = "NONE",
 }
 
 /** All input for the `revokeAdminAccess` mutation. */
@@ -8753,19 +8409,19 @@ export type RevokeAdminAccessInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `revokeAdminAccess` mutation. */
 export type RevokeAdminAccessPayload = {
-  __typename?: 'RevokeAdminAccessPayload';
+  __typename?: "RevokeAdminAccessPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -8776,18 +8432,18 @@ export type SendAllProjectInvitesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `sendAllProjectInvites` mutation. */
 export type SendAllProjectInvitesPayload = {
-  __typename?: 'SendAllProjectInvitesPayload';
+  __typename?: "SendAllProjectInvitesPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   inviteEmails?: Maybe<Array<InviteEmail>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
@@ -8799,27 +8455,27 @@ export type SendProjectInvitesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  inviteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  inviteIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
 };
 
 /** The output of our `sendProjectInvites` mutation. */
 export type SendProjectInvitesPayload = {
-  __typename?: 'SendProjectInvitesPayload';
+  __typename?: "SendProjectInvitesPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   inviteEmails?: Maybe<Array<InviteEmail>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
 
 export type SendVerificationEmailResults = {
-  __typename?: 'SendVerificationEmailResults';
-  error?: Maybe<Scalars['String']>;
-  success: Scalars['Boolean'];
+  __typename?: "SendVerificationEmailResults";
+  error?: Maybe<Scalars["String"]>;
+  success: Scalars["Boolean"];
 };
 
 /** All input for the `setFormElementOrder` mutation. */
@@ -8828,18 +8484,18 @@ export type SetFormElementOrderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  elementIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  elementIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
 };
 
 /** The output of our `setFormElementOrder` mutation. */
 export type SetFormElementOrderPayload = {
-  __typename?: 'SetFormElementOrderPayload';
+  __typename?: "SetFormElementOrderPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   formElements?: Maybe<Array<FormElement>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
@@ -8851,18 +8507,18 @@ export type SetFormLogicRuleOrderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  ruleIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  ruleIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
 };
 
 /** The output of our `setFormLogicRuleOrder` mutation. */
 export type SetFormLogicRuleOrderPayload = {
-  __typename?: 'SetFormLogicRuleOrderPayload';
+  __typename?: "SetFormLogicRuleOrderPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   formLogicRules?: Maybe<Array<FormLogicRule>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
@@ -8874,18 +8530,18 @@ export type SetForumOrderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  forumIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  forumIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
 };
 
 /** The output of our `setForumOrder` mutation. */
 export type SetForumOrderPayload = {
-  __typename?: 'SetForumOrderPayload';
+  __typename?: "SetForumOrderPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   forums?: Maybe<Array<Forum>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
@@ -8897,19 +8553,19 @@ export type SetPostHiddenByModeratorInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  postId?: Maybe<Scalars['Int']>;
-  value?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  postId?: InputMaybe<Scalars["Int"]>;
+  value?: InputMaybe<Scalars["Boolean"]>;
 };
 
 /** The output of our `setPostHiddenByModerator` mutation. */
 export type SetPostHiddenByModeratorPayload = {
-  __typename?: 'SetPostHiddenByModeratorPayload';
+  __typename?: "SetPostHiddenByModeratorPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   post?: Maybe<Post>;
   /** An edge for our `Post`. May be used by Relay 1. */
   postEdge?: Maybe<PostsEdge>;
@@ -8919,10 +8575,9 @@ export type SetPostHiddenByModeratorPayload = {
   topic?: Maybe<Topic>;
 };
 
-
 /** The output of our `setPostHiddenByModerator` mutation. */
 export type SetPostHiddenByModeratorPayloadPostEdgeArgs = {
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 /** All input for the `setTopicLocked` mutation. */
@@ -8931,19 +8586,19 @@ export type SetTopicLockedInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  topicId?: Maybe<Scalars['Int']>;
-  value?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  topicId?: InputMaybe<Scalars["Int"]>;
+  value?: InputMaybe<Scalars["Boolean"]>;
 };
 
 /** The output of our `setTopicLocked` mutation. */
 export type SetTopicLockedPayload = {
-  __typename?: 'SetTopicLockedPayload';
+  __typename?: "SetTopicLockedPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Forum` that is related to this `Topic`. */
   forum?: Maybe<Forum>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -8953,10 +8608,9 @@ export type SetTopicLockedPayload = {
   topicEdge?: Maybe<TopicsEdge>;
 };
 
-
 /** The output of our `setTopicLocked` mutation. */
 export type SetTopicLockedPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 /** All input for the `setTopicSticky` mutation. */
@@ -8965,19 +8619,19 @@ export type SetTopicStickyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  topicId?: Maybe<Scalars['Int']>;
-  value?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  topicId?: InputMaybe<Scalars["Int"]>;
+  value?: InputMaybe<Scalars["Boolean"]>;
 };
 
 /** The output of our `setTopicSticky` mutation. */
 export type SetTopicStickyPayload = {
-  __typename?: 'SetTopicStickyPayload';
+  __typename?: "SetTopicStickyPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Forum` that is related to this `Topic`. */
   forum?: Maybe<Forum>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -8987,10 +8641,9 @@ export type SetTopicStickyPayload = {
   topicEdge?: Maybe<TopicsEdge>;
 };
 
-
 /** The output of our `setTopicSticky` mutation. */
 export type SetTopicStickyPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 /** All input for the `setUserGroups` mutation. */
@@ -8999,21 +8652,21 @@ export type SetUserGroupsInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groups?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groups?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `setUserGroups` mutation. */
 export type SetUserGroupsPayload = {
-  __typename?: 'SetUserGroupsPayload';
+  __typename?: "SetUserGroupsPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  integers?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: Maybe<Scalars["String"]>;
+  integers?: Maybe<Array<Maybe<Scalars["Int"]>>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -9029,24 +8682,24 @@ export type SetUserGroupsPayload = {
  * these records.
  */
 export type Sketch = Node & {
-  __typename?: 'Sketch';
-  bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
+  __typename?: "Sketch";
+  bbox?: Maybe<Array<Maybe<Scalars["Float"]>>>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   collection?: Maybe<Sketch>;
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
-  collectionId?: Maybe<Scalars['Int']>;
+  collectionId?: Maybe<Scalars["Int"]>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   copiedFrom?: Maybe<Sketch>;
   /**
    * If this Sketch started as a copy of another it is tracked here. Eventually
    * SeaSketch may have a means of visualizing how plans are iterated on over time.
    */
-  copyOf?: Maybe<Scalars['Int']>;
+  copyOf?: Maybe<Scalars["Int"]>;
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
-  folderId?: Maybe<Scalars['Int']>;
+  folderId?: Maybe<Scalars["Int"]>;
   /** Reads a single `FormElement` that is related to this `Sketch`. */
   formElement?: Maybe<FormElement>;
-  formElementId?: Maybe<Scalars['Int']>;
+  formElementId?: Maybe<Scalars["Int"]>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
@@ -9054,19 +8707,19 @@ export type Sketch = Node & {
    * service or some other optimization.
    */
   geom?: Maybe<GeometryGeometry>;
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   mercatorGeometry?: Maybe<GeometryGeometry>;
   /** User provided name for the sketch. */
-  name: Scalars['String'];
+  name: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  numVertices?: Maybe<Scalars['Int']>;
-  properties: Scalars['JSON'];
-  responseId?: Maybe<Scalars['Int']>;
+  nodeId: Scalars["ID"];
+  numVertices?: Maybe<Scalars["Int"]>;
+  properties: Scalars["JSON"];
+  responseId?: Maybe<Scalars["Int"]>;
   /** Reads a single `SketchClass` that is related to this `Sketch`. */
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
-  sketchClassId: Scalars['Int'];
+  sketchClassId: Scalars["Int"];
   /** Reads a single `User` that is related to this `Sketch`. */
   user?: Maybe<User>;
   /**
@@ -9075,12 +8728,12 @@ export type Sketch = Node & {
    */
   userGeom?: Maybe<GeometryGeometry>;
   /** Owner of the sketch. */
-  userId?: Maybe<Scalars['Int']>;
+  userId?: Maybe<Scalars["Int"]>;
 };
 
 /** Sketch Classes act as a schema for sketches drawn by users. */
 export type SketchClass = Node & {
-  __typename?: 'SketchClass';
+  __typename?: "SketchClass";
   /** Reads a single `Acl` that is related to this `SketchClass`. */
   acl?: Maybe<Acl>;
   /**
@@ -9094,63 +8747,62 @@ export type SketchClass = Node & {
    * For CHOOSE_FEATURE geometry types, this field will enable the selction of
    * multiple features.
    */
-  allowMulti: Scalars['Boolean'];
+  allowMulti: Scalars["Boolean"];
   /**
    * Whether the current user session is allowed to digitize sketches of this type.
    * Digitizing is controlled by admins via access control lists, and archived
    * sketch classes can only be digitized by admins.
    */
-  canDigitize?: Maybe<Scalars['Boolean']>;
+  canDigitize?: Maybe<Scalars["Boolean"]>;
   /** Reads a single `Form` that is related to this `SketchClass`. */
   form?: Maybe<Form>;
   /** Reads a single `FormElement` that is related to this `SketchClass`. */
   formElement?: Maybe<FormElement>;
   /** If set, this sketch class is only for use in a survey indicated by the form_element. */
-  formElementId?: Maybe<Scalars['Int']>;
+  formElementId?: Maybe<Scalars["Int"]>;
   /** Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry. */
   geometryType: SketchGeometryType;
   /** Name of the report to be displayed. */
-  geoprocessingClientName?: Maybe<Scalars['String']>;
+  geoprocessingClientName?: Maybe<Scalars["String"]>;
   /** Endpoint for the client javascript bundle. */
-  geoprocessingClientUrl?: Maybe<Scalars['String']>;
+  geoprocessingClientUrl?: Maybe<Scalars["String"]>;
   /**
    * Root endpoint of a
    * [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
    * that should be used for reporting.
    */
-  geoprocessingProjectUrl?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  geoprocessingProjectUrl?: Maybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /**
    * If set to true, (non-admin) users should not be able to digitize new features
    * using this sketch class, but they should still be able to access the sketch
    * class in order to render existing sketches of this type.
    */
-  isArchived: Scalars['Boolean'];
+  isArchived: Scalars["Boolean"];
   /**
    * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
    * render features. Sketches can be styled based on attribute data by using
    * [Expressions](https://docs.mapbox.com/help/glossary/expression/).
    */
-  mapboxGlStyle?: Maybe<Scalars['JSON']>;
+  mapboxGlStyle?: Maybe<Scalars["JSON"]>;
   /** Label chosen by project admins that is shown to users. */
-  name: Scalars['String'];
+  name: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Reads a single `Project` that is related to this `SketchClass`. */
   project?: Maybe<Project>;
   /** SketchClasses belong to a single project. */
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
   /** Number of sketches created with this sketch class */
-  sketchCount?: Maybe<Scalars['BigInt']>;
+  sketchCount?: Maybe<Scalars["BigInt"]>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
 };
 
-
 /** Sketch Classes act as a schema for sketches drawn by users. */
 export type SketchClassValidChildrenArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
 
 /**
@@ -9159,11 +8811,11 @@ export type SketchClassValidChildrenArgs = {
  */
 export type SketchClassCondition = {
   /** Checks for equality with the object’s `formElementId` field. */
-  formElementId?: Maybe<Scalars['Int']>;
+  formElementId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** Represents an update to a `SketchClass`. Fields that are set will be updated. */
@@ -9179,55 +8831,55 @@ export type SketchClassPatch = {
    * For CHOOSE_FEATURE geometry types, this field will enable the selction of
    * multiple features.
    */
-  allowMulti?: Maybe<Scalars['Boolean']>;
+  allowMulti?: InputMaybe<Scalars["Boolean"]>;
   /** Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry. */
-  geometryType?: Maybe<SketchGeometryType>;
+  geometryType?: InputMaybe<SketchGeometryType>;
   /** Name of the report to be displayed. */
-  geoprocessingClientName?: Maybe<Scalars['String']>;
+  geoprocessingClientName?: InputMaybe<Scalars["String"]>;
   /** Endpoint for the client javascript bundle. */
-  geoprocessingClientUrl?: Maybe<Scalars['String']>;
+  geoprocessingClientUrl?: InputMaybe<Scalars["String"]>;
   /**
    * Root endpoint of a
    * [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
    * that should be used for reporting.
    */
-  geoprocessingProjectUrl?: Maybe<Scalars['String']>;
+  geoprocessingProjectUrl?: InputMaybe<Scalars["String"]>;
   /**
    * If set to true, (non-admin) users should not be able to digitize new features
    * using this sketch class, but they should still be able to access the sketch
    * class in order to render existing sketches of this type.
    */
-  isArchived?: Maybe<Scalars['Boolean']>;
+  isArchived?: InputMaybe<Scalars["Boolean"]>;
   /**
    * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
    * render features. Sketches can be styled based on attribute data by using
    * [Expressions](https://docs.mapbox.com/help/glossary/expression/).
    */
-  mapboxGlStyle?: Maybe<Scalars['JSON']>;
+  mapboxGlStyle?: InputMaybe<Scalars["JSON"]>;
   /** Label chosen by project admins that is shown to users. */
-  name?: Maybe<Scalars['String']>;
+  name?: InputMaybe<Scalars["String"]>;
 };
 
 /** A `SketchClass` edge in the connection. */
 export type SketchClassesEdge = {
-  __typename?: 'SketchClassesEdge';
+  __typename?: "SketchClassesEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `SketchClass` at the end of the edge. */
   node: SketchClass;
 };
 
 /** Methods to use when ordering `SketchClass`. */
 export enum SketchClassesOrderBy {
-  FormElementIdAsc = 'FORM_ELEMENT_ID_ASC',
-  FormElementIdDesc = 'FORM_ELEMENT_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
+  FormElementIdAsc = "FORM_ELEMENT_ID_ASC",
+  FormElementIdDesc = "FORM_ELEMENT_ID_DESC",
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  ProjectIdAsc = "PROJECT_ID_ASC",
+  ProjectIdDesc = "PROJECT_ID_DESC",
 }
 
 /**
@@ -9237,132 +8889,132 @@ export enum SketchClassesOrderBy {
  * can be used by users to arbitrarily organize their Sketches.
  */
 export type SketchFolder = Node & {
-  __typename?: 'SketchFolder';
+  __typename?: "SketchFolder";
   /** The parent sketch collection, if any. Folders can only have a single parent entity. */
-  collectionId?: Maybe<Scalars['Int']>;
+  collectionId?: Maybe<Scalars["Int"]>;
   /** The parent folder, if any. */
-  folderId?: Maybe<Scalars['Int']>;
-  id: Scalars['Int'];
-  name: Scalars['String'];
+  folderId?: Maybe<Scalars["Int"]>;
+  id: Scalars["Int"];
+  name: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  projectId: Scalars['Int'];
-  userId: Scalars['Int'];
+  nodeId: Scalars["ID"];
+  projectId: Scalars["Int"];
+  userId: Scalars["Int"];
 };
 
 /** An input for mutations affecting `SketchFolder` */
 export type SketchFolderInput = {
   /** The parent sketch collection, if any. Folders can only have a single parent entity. */
-  collectionId?: Maybe<Scalars['Int']>;
+  collectionId?: InputMaybe<Scalars["Int"]>;
   /** The parent folder, if any. */
-  folderId?: Maybe<Scalars['Int']>;
-  id?: Maybe<Scalars['Int']>;
-  name: Scalars['String'];
-  projectId: Scalars['Int'];
-  userId: Scalars['Int'];
+  folderId?: InputMaybe<Scalars["Int"]>;
+  id?: InputMaybe<Scalars["Int"]>;
+  name: Scalars["String"];
+  projectId: Scalars["Int"];
+  userId: Scalars["Int"];
 };
 
 /** Represents an update to a `SketchFolder`. Fields that are set will be updated. */
 export type SketchFolderPatch = {
   /** The parent sketch collection, if any. Folders can only have a single parent entity. */
-  collectionId?: Maybe<Scalars['Int']>;
+  collectionId?: InputMaybe<Scalars["Int"]>;
   /** The parent folder, if any. */
-  folderId?: Maybe<Scalars['Int']>;
-  id?: Maybe<Scalars['Int']>;
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  folderId?: InputMaybe<Scalars["Int"]>;
+  id?: InputMaybe<Scalars["Int"]>;
+  name?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A `SketchFolder` edge in the connection. */
 export type SketchFoldersEdge = {
-  __typename?: 'SketchFoldersEdge';
+  __typename?: "SketchFoldersEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `SketchFolder` at the end of the edge. */
   node: SketchFolder;
 };
 
 /** Methods to use when ordering `SketchFolder`. */
 export enum SketchFoldersOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  UserIdAsc = 'USER_ID_ASC',
-  UserIdDesc = 'USER_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  UserIdAsc = "USER_ID_ASC",
+  UserIdDesc = "USER_ID_DESC",
 }
 
 export enum SketchGeometryType {
-  ChooseFeature = 'CHOOSE_FEATURE',
-  Collection = 'COLLECTION',
-  Linestring = 'LINESTRING',
-  Point = 'POINT',
-  Polygon = 'POLYGON'
+  ChooseFeature = "CHOOSE_FEATURE",
+  Collection = "COLLECTION",
+  Linestring = "LINESTRING",
+  Point = "POINT",
+  Polygon = "POLYGON",
 }
 
 /** An input for mutations affecting `Sketch` */
 export type SketchInput = {
-  bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
+  bbox?: InputMaybe<Array<InputMaybe<Scalars["Float"]>>>;
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
-  collectionId?: Maybe<Scalars['Int']>;
+  collectionId?: InputMaybe<Scalars["Int"]>;
   /**
    * If this Sketch started as a copy of another it is tracked here. Eventually
    * SeaSketch may have a means of visualizing how plans are iterated on over time.
    */
-  copyOf?: Maybe<Scalars['Int']>;
+  copyOf?: InputMaybe<Scalars["Int"]>;
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
-  folderId?: Maybe<Scalars['Int']>;
-  formElementId?: Maybe<Scalars['Int']>;
+  folderId?: InputMaybe<Scalars["Int"]>;
+  formElementId?: InputMaybe<Scalars["Int"]>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
    * large and complex, so it may be necessary to access them through a vector tile
    * service or some other optimization.
    */
-  geom?: Maybe<Scalars['GeoJSON']>;
-  id?: Maybe<Scalars['Int']>;
-  mercatorGeometry?: Maybe<Scalars['GeoJSON']>;
+  geom?: InputMaybe<Scalars["GeoJSON"]>;
+  id?: InputMaybe<Scalars["Int"]>;
+  mercatorGeometry?: InputMaybe<Scalars["GeoJSON"]>;
   /** User provided name for the sketch. */
-  name: Scalars['String'];
-  numVertices?: Maybe<Scalars['Int']>;
-  properties?: Maybe<Scalars['JSON']>;
-  responseId?: Maybe<Scalars['Int']>;
+  name: Scalars["String"];
+  numVertices?: InputMaybe<Scalars["Int"]>;
+  properties?: InputMaybe<Scalars["JSON"]>;
+  responseId?: InputMaybe<Scalars["Int"]>;
   /** SketchClass that defines the behavior of this type of sketch. */
-  sketchClassId: Scalars['Int'];
+  sketchClassId: Scalars["Int"];
   /**
    * Spatial feature the user directly digitized, without preprocessing. This is
    * the feature that should be used if the Sketch is later edited.
    */
-  userGeom?: Maybe<Scalars['GeoJSON']>;
+  userGeom?: InputMaybe<Scalars["GeoJSON"]>;
   /** Owner of the sketch. */
-  userId?: Maybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** Represents an update to a `Sketch`. Fields that are set will be updated. */
 export type SketchPatch = {
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
-  collectionId?: Maybe<Scalars['Int']>;
+  collectionId?: InputMaybe<Scalars["Int"]>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
    * large and complex, so it may be necessary to access them through a vector tile
    * service or some other optimization.
    */
-  geom?: Maybe<Scalars['GeoJSON']>;
+  geom?: InputMaybe<Scalars["GeoJSON"]>;
   /** User provided name for the sketch. */
-  name?: Maybe<Scalars['String']>;
+  name?: InputMaybe<Scalars["String"]>;
   /**
    * Spatial feature the user directly digitized, without preprocessing. This is
    * the feature that should be used if the Sketch is later edited.
    */
-  userGeom?: Maybe<Scalars['GeoJSON']>;
+  userGeom?: InputMaybe<Scalars["GeoJSON"]>;
 };
 
 export enum SortByDirection {
-  Asc = 'ASC',
-  Desc = 'DESC'
+  Asc = "ASC",
+  Desc = "DESC",
 }
 
 /**
@@ -9370,64 +9022,63 @@ export enum SortByDirection {
  * sprite, the actual images are in cloud storage referenced by the URL parameter.
  */
 export type Sprite = Node & {
-  __typename?: 'Sprite';
-  id: Scalars['Int'];
+  __typename?: "Sprite";
+  id: Scalars["Int"];
   /**
    * Hash of lowest-dpi image in the set (pixelRatio=1). Useful for de-duplicating
    * symbols that have been imported multiple times
    */
-  md5: Scalars['String'];
+  md5: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Reads a single `Project` that is related to this `Sprite`. */
   project?: Maybe<Project>;
   /** If unset, sprite will be available for use in all projects */
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
   /** Reads and enables pagination through a set of `SpriteImage`. */
   spriteImages: Array<SpriteImage>;
   /** Optional. Indicates whether the image is intended for use with particular GL Styles */
   type?: Maybe<SpriteType>;
 };
 
-
 /**
  * Image sprites for use in Mapbox GL Styles. The database holds metadata about the
  * sprite, the actual images are in cloud storage referenced by the URL parameter.
  */
 export type SpriteSpriteImagesArgs = {
-  condition?: Maybe<SpriteImageCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SpriteImagesOrderBy>>;
+  condition?: InputMaybe<SpriteImageCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<SpriteImagesOrderBy>>;
 };
 
 /** A condition to be used against `Sprite` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type SpriteCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `md5` field. */
-  md5?: Maybe<Scalars['String']>;
+  md5?: InputMaybe<Scalars["String"]>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 export type SpriteImage = {
-  __typename?: 'SpriteImage';
+  __typename?: "SpriteImage";
   /** Must be <= 1024 */
-  height: Scalars['Int'];
+  height: Scalars["Int"];
   /**
    * Device pixel ratio a copy of this image supports. 2x would be for "retina"
    * devices. Multiple records may point to the same sprite id, but each must have
    * a unique combination of id, pixel_ratio, and data_layer_id.
    */
-  pixelRatio: Scalars['Int'];
+  pixelRatio: Scalars["Int"];
   /** Reads a single `Sprite` that is related to this `SpriteImage`. */
   sprite?: Maybe<Sprite>;
-  spriteId: Scalars['Int'];
+  spriteId: Scalars["Int"];
   /** Supports multipart Upload operations */
-  url: Scalars['String'];
+  url: Scalars["String"];
   /** Must be <= 1024 */
-  width: Scalars['Int'];
+  width: Scalars["Int"];
 };
 
 /**
@@ -9436,38 +9087,38 @@ export type SpriteImage = {
  */
 export type SpriteImageCondition = {
   /** Checks for equality with the object’s `spriteId` field. */
-  spriteId?: Maybe<Scalars['Int']>;
+  spriteId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** Methods to use when ordering `SpriteImage`. */
 export enum SpriteImagesOrderBy {
-  Natural = 'NATURAL',
-  SpriteIdAsc = 'SPRITE_ID_ASC',
-  SpriteIdDesc = 'SPRITE_ID_DESC'
+  Natural = "NATURAL",
+  SpriteIdAsc = "SPRITE_ID_ASC",
+  SpriteIdDesc = "SPRITE_ID_DESC",
 }
 
 export enum SpriteType {
-  Fill = 'FILL',
-  Icon = 'ICON',
-  Line = 'LINE'
+  Fill = "FILL",
+  Icon = "ICON",
+  Line = "LINE",
 }
 
 /** Methods to use when ordering `Sprite`. */
 export enum SpritesOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Md5Asc = 'MD5_ASC',
-  Md5Desc = 'MD5_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Md5Asc = "MD5_ASC",
+  Md5Desc = "MD5_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  ProjectIdAsc = "PROJECT_ID_ASC",
+  ProjectIdDesc = "PROJECT_ID_DESC",
 }
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type Subscription = {
-  __typename?: 'Subscription';
+  __typename?: "Subscription";
   /**
    * Triggered when the status of a project invite changes, generally because
    * of a change in the delivery status of a related InviteEmail. Uses
@@ -9477,10 +9128,10 @@ export type Subscription = {
 };
 
 export type Survey = Node & {
-  __typename?: 'Survey';
+  __typename?: "Survey";
   /** PUBLIC or INVITE_ONLY */
   accessType: SurveyAccessType;
-  archivedResponseCount?: Maybe<Scalars['Int']>;
+  archivedResponseCount?: Maybe<Scalars["Int"]>;
   /** Reads a single `Form` that is related to this `Survey`. */
   form?: Maybe<Form>;
   /**
@@ -9490,37 +9141,37 @@ export type Survey = Node & {
   formsConnection: FormsConnection;
   /** If set, responses that originate from an IP address outside this fence will be flagged. */
   geofence?: Maybe<GeographyPolygon>;
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   /** Reads and enables pagination through a set of `Group`. */
   invitedGroups?: Maybe<Array<Group>>;
   /**
    * Disabled surveys will not be accessible to non-admins. Invite email sending will
    * be paused.
    */
-  isDisabled: Scalars['Boolean'];
-  isSpatial?: Maybe<Scalars['Boolean']>;
-  isTemplate?: Maybe<Scalars['Boolean']>;
+  isDisabled: Scalars["Boolean"];
+  isSpatial?: Maybe<Scalars["Boolean"]>;
+  isTemplate?: Maybe<Scalars["Boolean"]>;
   /**
    * If set, there can only be one response with matching contact information. The
    * app will also discourage multiple submissions from the same browser session.
    */
-  limitToSingleResponse: Scalars['Boolean'];
-  name: Scalars['String'];
+  limitToSingleResponse: Scalars["Boolean"];
+  name: Scalars["String"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  practiceResponseCount?: Maybe<Scalars['Int']>;
+  nodeId: Scalars["ID"];
+  practiceResponseCount?: Maybe<Scalars["Int"]>;
   /** Reads a single `Project` that is related to this `Survey`. */
   project?: Maybe<Project>;
-  projectId: Scalars['Int'];
-  showFacilitationOption: Scalars['Boolean'];
-  showProgress: Scalars['Boolean'];
+  projectId: Scalars["Int"];
+  showFacilitationOption: Scalars["Boolean"];
+  showProgress: Scalars["Boolean"];
   /**
    * Only applicable for public surveys. Show tools to respondants for sharing the
    * survey on social media to encourage responses.
    */
-  showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
-  submittedResponseCount?: Maybe<Scalars['Int']>;
-  supportedLanguages: Array<Maybe<Scalars['String']>>;
+  showSocialMediaButtons?: Maybe<Scalars["Boolean"]>;
+  submittedResponseCount?: Maybe<Scalars["Int"]>;
+  supportedLanguages: Array<Maybe<Scalars["String"]>>;
   /** Reads and enables pagination through a set of `SurveyInvitedGroup`. */
   surveyInvitedGroups: Array<SurveyInvitedGroup>;
   /** Reads and enables pagination through a set of `SurveyInvite`. */
@@ -9529,74 +9180,69 @@ export type Survey = Node & {
   surveyResponsesConnection: SurveyResponsesConnection;
 };
 
-
 export type SurveyFormsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<FormCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<FormsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<FormCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<FormsOrderBy>>;
 };
-
 
 export type SurveyInvitedGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 export type SurveySurveyInvitedGroupsArgs = {
-  condition?: Maybe<SurveyInvitedGroupCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyInvitedGroupsOrderBy>>;
+  condition?: InputMaybe<SurveyInvitedGroupCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<SurveyInvitedGroupsOrderBy>>;
 };
-
 
 export type SurveySurveyInvitesArgs = {
-  condition?: Maybe<SurveyInviteCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
+  condition?: InputMaybe<SurveyInviteCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<SurveyInvitesOrderBy>>;
 };
 
-
 export type SurveySurveyResponsesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<SurveyResponseCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<SurveyResponseCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 export enum SurveyAccessType {
-  InviteOnly = 'INVITE_ONLY',
-  Public = 'PUBLIC'
+  InviteOnly = "INVITE_ONLY",
+  Public = "PUBLIC",
 }
 
 /** A condition to be used against `Survey` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type SurveyCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 export type SurveyConsentDocument = Node & {
-  __typename?: 'SurveyConsentDocument';
-  createdAt: Scalars['Datetime'];
+  __typename?: "SurveyConsentDocument";
+  createdAt: Scalars["Datetime"];
   /** Reads a single `FormElement` that is related to this `SurveyConsentDocument`. */
   formElement?: Maybe<FormElement>;
-  formElementId: Scalars['Int'];
-  id: Scalars['Int'];
+  formElementId: Scalars["Int"];
+  id: Scalars["Int"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  url: Scalars['String'];
-  version: Scalars['Int'];
+  nodeId: Scalars["ID"];
+  url: Scalars["String"];
+  version: Scalars["Int"];
 };
 
 /**
@@ -9605,14 +9251,14 @@ export type SurveyConsentDocument = Node & {
  */
 export type SurveyConsentDocumentCondition = {
   /** Checks for equality with the object’s `formElementId` field. */
-  formElementId?: Maybe<Scalars['Int']>;
+  formElementId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A connection to a list of `SurveyConsentDocument` values. */
 export type SurveyConsentDocumentsConnection = {
-  __typename?: 'SurveyConsentDocumentsConnection';
+  __typename?: "SurveyConsentDocumentsConnection";
   /** A list of edges which contains the `SurveyConsentDocument` and cursor to aid in pagination. */
   edges: Array<SurveyConsentDocumentsEdge>;
   /** A list of `SurveyConsentDocument` objects. */
@@ -9620,39 +9266,39 @@ export type SurveyConsentDocumentsConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `SurveyConsentDocument` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `SurveyConsentDocument` edge in the connection. */
 export type SurveyConsentDocumentsEdge = {
-  __typename?: 'SurveyConsentDocumentsEdge';
+  __typename?: "SurveyConsentDocumentsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `SurveyConsentDocument` at the end of the edge. */
   node: SurveyConsentDocument;
 };
 
 /** Methods to use when ordering `SurveyConsentDocument`. */
 export enum SurveyConsentDocumentsOrderBy {
-  FormElementIdAsc = 'FORM_ELEMENT_ID_ASC',
-  FormElementIdDesc = 'FORM_ELEMENT_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+  FormElementIdAsc = "FORM_ELEMENT_ID_ASC",
+  FormElementIdDesc = "FORM_ELEMENT_ID_DESC",
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
 }
 
 export type SurveyInvite = Node & {
-  __typename?: 'SurveyInvite';
-  createdAt: Scalars['Datetime'];
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  __typename?: "SurveyInvite";
+  createdAt: Scalars["Datetime"];
+  email?: Maybe<Scalars["Email"]>;
+  fullname?: Maybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** Reads and enables pagination through a set of `InviteEmail`. */
   inviteEmails: Array<InviteEmail>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /**
    * Indicates the status of the invite, e.g. whether an invite email has been
    * sent, status of those emails, and whether a response has been submitted.
@@ -9660,17 +9306,16 @@ export type SurveyInvite = Node & {
   status?: Maybe<InviteStatus>;
   /** Reads a single `Survey` that is related to this `SurveyInvite`. */
   survey?: Maybe<Survey>;
-  surveyId: Scalars['Int'];
-  userId?: Maybe<Scalars['Int']>;
-  wasUsed: Scalars['Boolean'];
+  surveyId: Scalars["Int"];
+  userId?: Maybe<Scalars["Int"]>;
+  wasUsed: Scalars["Boolean"];
 };
 
-
 export type SurveyInviteInviteEmailsArgs = {
-  condition?: Maybe<InviteEmailCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<InviteEmailsOrderBy>>;
+  condition?: InputMaybe<InviteEmailCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<InviteEmailsOrderBy>>;
 };
 
 /**
@@ -9679,45 +9324,45 @@ export type SurveyInviteInviteEmailsArgs = {
  */
 export type SurveyInviteCondition = {
   /** Checks for equality with the object’s `email` field. */
-  email?: Maybe<Scalars['Email']>;
+  email?: InputMaybe<Scalars["Email"]>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `surveyId` field. */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: InputMaybe<Scalars["Int"]>;
 };
 
 export type SurveyInviteOptionsInput = {
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
+  email?: InputMaybe<Scalars["Email"]>;
+  fullname?: InputMaybe<Scalars["String"]>;
 };
 
 /** Represents an update to a `SurveyInvite`. Fields that are set will be updated. */
 export type SurveyInvitePatch = {
-  fullname?: Maybe<Scalars['String']>;
+  fullname?: InputMaybe<Scalars["String"]>;
 };
 
 export type SurveyInviteTokenClaims = {
-  __typename?: 'SurveyInviteTokenClaims';
-  email?: Maybe<Scalars['String']>;
-  fullname?: Maybe<Scalars['String']>;
-  inviteId: Scalars['Int'];
-  projectId: Scalars['Int'];
-  surveyId: Scalars['Int'];
-  wasUsed: Scalars['Boolean'];
+  __typename?: "SurveyInviteTokenClaims";
+  email?: Maybe<Scalars["String"]>;
+  fullname?: Maybe<Scalars["String"]>;
+  inviteId: Scalars["Int"];
+  projectId: Scalars["Int"];
+  surveyId: Scalars["Int"];
+  wasUsed: Scalars["Boolean"];
 };
 
 export type SurveyInviteTokenVerificationResults = {
-  __typename?: 'SurveyInviteTokenVerificationResults';
+  __typename?: "SurveyInviteTokenVerificationResults";
   claims?: Maybe<SurveyInviteTokenClaims>;
-  error?: Maybe<Scalars['String']>;
+  error?: Maybe<Scalars["String"]>;
 };
 
 export type SurveyInvitedGroup = {
-  __typename?: 'SurveyInvitedGroup';
-  groupId: Scalars['Int'];
+  __typename?: "SurveyInvitedGroup";
+  groupId: Scalars["Int"];
   /** Reads a single `Survey` that is related to this `SurveyInvitedGroup`. */
   survey?: Maybe<Survey>;
-  surveyId: Scalars['Int'];
+  surveyId: Scalars["Int"];
 };
 
 /**
@@ -9726,127 +9371,127 @@ export type SurveyInvitedGroup = {
  */
 export type SurveyInvitedGroupCondition = {
   /** Checks for equality with the object’s `groupId` field. */
-  groupId?: Maybe<Scalars['Int']>;
+  groupId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `surveyId` field. */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** An input for mutations affecting `SurveyInvitedGroup` */
 export type SurveyInvitedGroupInput = {
-  groupId: Scalars['Int'];
-  surveyId: Scalars['Int'];
+  groupId: Scalars["Int"];
+  surveyId: Scalars["Int"];
 };
 
 /** Methods to use when ordering `SurveyInvitedGroup`. */
 export enum SurveyInvitedGroupsOrderBy {
-  GroupIdAsc = 'GROUP_ID_ASC',
-  GroupIdDesc = 'GROUP_ID_DESC',
-  Natural = 'NATURAL',
-  SurveyIdAsc = 'SURVEY_ID_ASC',
-  SurveyIdDesc = 'SURVEY_ID_DESC'
+  GroupIdAsc = "GROUP_ID_ASC",
+  GroupIdDesc = "GROUP_ID_DESC",
+  Natural = "NATURAL",
+  SurveyIdAsc = "SURVEY_ID_ASC",
+  SurveyIdDesc = "SURVEY_ID_DESC",
 }
 
 /** A `SurveyInvite` edge in the connection. */
 export type SurveyInvitesEdge = {
-  __typename?: 'SurveyInvitesEdge';
+  __typename?: "SurveyInvitesEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `SurveyInvite` at the end of the edge. */
   node: SurveyInvite;
 };
 
 /** Methods to use when ordering `SurveyInvite`. */
 export enum SurveyInvitesOrderBy {
-  EmailAsc = 'EMAIL_ASC',
-  EmailDesc = 'EMAIL_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  SurveyIdAsc = 'SURVEY_ID_ASC',
-  SurveyIdDesc = 'SURVEY_ID_DESC'
+  EmailAsc = "EMAIL_ASC",
+  EmailDesc = "EMAIL_DESC",
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  SurveyIdAsc = "SURVEY_ID_ASC",
+  SurveyIdDesc = "SURVEY_ID_DESC",
 }
 
 /** Represents an update to a `Survey`. Fields that are set will be updated. */
 export type SurveyPatch = {
   /** PUBLIC or INVITE_ONLY */
-  accessType?: Maybe<SurveyAccessType>;
+  accessType?: InputMaybe<SurveyAccessType>;
   /** If set, responses that originate from an IP address outside this fence will be flagged. */
-  geofence?: Maybe<Scalars['GeoJSON']>;
-  id?: Maybe<Scalars['Int']>;
+  geofence?: InputMaybe<Scalars["GeoJSON"]>;
+  id?: InputMaybe<Scalars["Int"]>;
   /**
    * Disabled surveys will not be accessible to non-admins. Invite email sending will
    * be paused.
    */
-  isDisabled?: Maybe<Scalars['Boolean']>;
+  isDisabled?: InputMaybe<Scalars["Boolean"]>;
   /**
    * If set, there can only be one response with matching contact information. The
    * app will also discourage multiple submissions from the same browser session.
    */
-  limitToSingleResponse?: Maybe<Scalars['Boolean']>;
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  showFacilitationOption?: Maybe<Scalars['Boolean']>;
-  showProgress?: Maybe<Scalars['Boolean']>;
+  limitToSingleResponse?: InputMaybe<Scalars["Boolean"]>;
+  name?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  showFacilitationOption?: InputMaybe<Scalars["Boolean"]>;
+  showProgress?: InputMaybe<Scalars["Boolean"]>;
   /**
    * Only applicable for public surveys. Show tools to respondants for sharing the
    * survey on social media to encourage responses.
    */
-  showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
-  supportedLanguages?: Maybe<Array<Maybe<Scalars['String']>>>;
+  showSocialMediaButtons?: InputMaybe<Scalars["Boolean"]>;
+  supportedLanguages?: InputMaybe<Array<InputMaybe<Scalars["String"]>>>;
 };
 
 export type SurveyResponse = Node & {
-  __typename?: 'SurveyResponse';
-  accountEmail?: Maybe<Scalars['String']>;
-  archived: Scalars['Boolean'];
+  __typename?: "SurveyResponse";
+  accountEmail?: Maybe<Scalars["String"]>;
+  archived: Scalars["Boolean"];
   /**
    * Should be set by the client on submission and tracked by cookies or
    * localStorage. Surveys that permit only a single entry enable users to bypass
    * the limit for legitimate purposes, like entering responses on a shared computer.
    */
-  bypassedDuplicateSubmissionControl: Scalars['Boolean'];
-  createdAt: Scalars['Datetime'];
+  bypassedDuplicateSubmissionControl: Scalars["Boolean"];
+  createdAt: Scalars["Datetime"];
   /** JSON representation of responses, keyed by the form field export_id */
-  data: Scalars['JSON'];
-  id: Scalars['Int'];
+  data: Scalars["JSON"];
+  id: Scalars["Int"];
   /** Users may save their responses for later editing before submission. After submission they can no longer edit them. */
-  isDraft: Scalars['Boolean'];
+  isDraft: Scalars["Boolean"];
   /** Duplicate entries are detected by matching contact-information field values. */
-  isDuplicateEntry: Scalars['Boolean'];
+  isDuplicateEntry: Scalars["Boolean"];
   /**
    * Detected by comparing ip hashes from previous entries. IP hashes are not tied
    * to particular responses, so only the second and subsequent entries are flagged.
    */
-  isDuplicateIp: Scalars['Boolean'];
+  isDuplicateIp: Scalars["Boolean"];
   /** If true, a logged-in user entered information on behalf of another person, so userId is not as relevant. */
-  isFacilitated: Scalars['Boolean'];
-  isPractice: Scalars['Boolean'];
+  isFacilitated: Scalars["Boolean"];
+  isPractice: Scalars["Boolean"];
   /**
    * Unusual or missing user-agent headers on submissions are flagged. May indicate
    * scripting but does not necessarily imply malicious intent.
    */
-  isUnrecognizedUserAgent: Scalars['Boolean'];
-  lastUpdatedByEmail?: Maybe<Scalars['String']>;
-  lastUpdatedById?: Maybe<Scalars['Int']>;
+  isUnrecognizedUserAgent: Scalars["Boolean"];
+  lastUpdatedByEmail?: Maybe<Scalars["String"]>;
+  lastUpdatedById?: Maybe<Scalars["Int"]>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /**
    * Checked on SUBMISSION, so adding or changing a survey geofence after responses
    * have been submitted will not update values. GPS coordinates and IP addresses
    * are not stored for privacy purposes.
    */
-  outsideGeofence: Scalars['Boolean'];
+  outsideGeofence: Scalars["Boolean"];
   /** Reads a single `Survey` that is related to this `SurveyResponse`. */
   survey?: Maybe<Survey>;
-  surveyId: Scalars['Int'];
-  updatedAt?: Maybe<Scalars['Datetime']>;
+  surveyId: Scalars["Int"];
+  updatedAt?: Maybe<Scalars["Datetime"]>;
   /**
    * User account that submitted the survey. Note that if isFacilitated is set, the
    * account may not be who is represented by the response content.
    */
-  userId?: Maybe<Scalars['Int']>;
+  userId?: Maybe<Scalars["Int"]>;
 };
 
 /**
@@ -9855,27 +9500,27 @@ export type SurveyResponse = Node & {
  */
 export type SurveyResponseCondition = {
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `surveyId` field. */
-  surveyId?: Maybe<Scalars['Int']>;
+  surveyId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `userId` field. */
-  userId?: Maybe<Scalars['Int']>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** Represents an update to a `SurveyResponse`. Fields that are set will be updated. */
 export type SurveyResponsePatch = {
-  archived?: Maybe<Scalars['Boolean']>;
+  archived?: InputMaybe<Scalars["Boolean"]>;
   /** JSON representation of responses, keyed by the form field export_id */
-  data?: Maybe<Scalars['JSON']>;
+  data?: InputMaybe<Scalars["JSON"]>;
   /** Users may save their responses for later editing before submission. After submission they can no longer edit them. */
-  isDraft?: Maybe<Scalars['Boolean']>;
-  isPractice?: Maybe<Scalars['Boolean']>;
-  updatedAt?: Maybe<Scalars['Datetime']>;
+  isDraft?: InputMaybe<Scalars["Boolean"]>;
+  isPractice?: InputMaybe<Scalars["Boolean"]>;
+  updatedAt?: InputMaybe<Scalars["Datetime"]>;
 };
 
 /** A connection to a list of `SurveyResponse` values. */
 export type SurveyResponsesConnection = {
-  __typename?: 'SurveyResponsesConnection';
+  __typename?: "SurveyResponsesConnection";
   /** A list of edges which contains the `SurveyResponse` and cursor to aid in pagination. */
   edges: Array<SurveyResponsesEdge>;
   /** A list of `SurveyResponse` objects. */
@@ -9883,47 +9528,47 @@ export type SurveyResponsesConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `SurveyResponse` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `SurveyResponse` edge in the connection. */
 export type SurveyResponsesEdge = {
-  __typename?: 'SurveyResponsesEdge';
+  __typename?: "SurveyResponsesEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `SurveyResponse` at the end of the edge. */
   node: SurveyResponse;
 };
 
 /** Methods to use when ordering `SurveyResponse`. */
 export enum SurveyResponsesOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  SurveyIdAsc = 'SURVEY_ID_ASC',
-  SurveyIdDesc = 'SURVEY_ID_DESC',
-  UserIdAsc = 'USER_ID_ASC',
-  UserIdDesc = 'USER_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  SurveyIdAsc = "SURVEY_ID_ASC",
+  SurveyIdDesc = "SURVEY_ID_DESC",
+  UserIdAsc = "USER_ID_ASC",
+  UserIdDesc = "USER_ID_DESC",
 }
 
 export type SurveyTokenInfo = {
-  __typename?: 'SurveyTokenInfo';
-  projectId?: Maybe<Scalars['Int']>;
-  surveyId?: Maybe<Scalars['Int']>;
-  token?: Maybe<Scalars['String']>;
+  __typename?: "SurveyTokenInfo";
+  projectId?: Maybe<Scalars["Int"]>;
+  surveyId?: Maybe<Scalars["Int"]>;
+  token?: Maybe<Scalars["String"]>;
 };
 
 /** Methods to use when ordering `Survey`. */
 export enum SurveysOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  ProjectIdAsc = "PROJECT_ID_ASC",
+  ProjectIdDesc = "PROJECT_ID_DESC",
 }
 
 /**
@@ -9937,46 +9582,46 @@ export enum SurveysOrderBy {
  * `dataLayersAndSourcesByLayerId` query.
  */
 export type TableOfContentsItem = Node & {
-  __typename?: 'TableOfContentsItem';
+  __typename?: "TableOfContentsItem";
   /** Reads a single `Acl` that is related to this `TableOfContentsItem`. */
   acl?: Maybe<Acl>;
   /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  bounds?: Maybe<Array<Maybe<Scalars["BigFloat"]>>>;
   /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
   dataLayer?: Maybe<DataLayer>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
-  dataLayerId?: Maybe<Scalars['Int']>;
-  enableDownload: Scalars['Boolean'];
-  hideChildren: Scalars['Boolean'];
-  id: Scalars['Int'];
+  dataLayerId?: Maybe<Scalars["Int"]>;
+  enableDownload: Scalars["Boolean"];
+  hideChildren: Scalars["Boolean"];
+  id: Scalars["Int"];
   /**
    * If set, folders with this property cannot be toggled in order to activate all
    * their children. Toggles can only be used to toggle children off
    */
-  isClickOffOnly: Scalars['Boolean'];
+  isClickOffOnly: Scalars["Boolean"];
   /**
    * Identifies whether this item is part of the draft table of contents edited by
    * admin or the static public version. This property cannot be changed. Rather,
    * use the `publishTableOfContents()` mutation
    */
-  isDraft: Scalars['Boolean'];
+  isDraft: Scalars["Boolean"];
   /** If not a folder, the item is a layer-type and must have a data_layer_id */
-  isFolder: Scalars['Boolean'];
+  isFolder: Scalars["Boolean"];
   /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: Maybe<Scalars["JSON"]>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /**
    * stable_id of the parent folder, if any. This property cannot be changed
    * directly. To rearrange items into folders, use the
    * `updateTableOfContentsItemParent` mutation.
    */
-  parentStableId?: Maybe<Scalars['String']>;
-  projectId: Scalars['Int'];
+  parentStableId?: Maybe<Scalars["String"]>;
+  projectId: Scalars["Int"];
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
-  showRadioChildren: Scalars['Boolean'];
+  showRadioChildren: Scalars["Boolean"];
   /** Position in the layer list */
-  sortIndex: Scalars['Int'];
+  sortIndex: Scalars["Int"];
   /**
    * The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme)
    * should be used with a custom alphabet that excludes dashes and has a lenght of
@@ -9985,9 +9630,9 @@ export type TableOfContentsItem = Node & {
    * When published, the id primary key property of the item will change but not the
    * stable_id.
    */
-  stableId: Scalars['String'];
+  stableId: Scalars["String"];
   /** Name used in the table of contents rendering */
-  title: Scalars['String'];
+  title: Scalars["String"];
 };
 
 /**
@@ -9996,41 +9641,41 @@ export type TableOfContentsItem = Node & {
  */
 export type TableOfContentsItemCondition = {
   /** Checks for equality with the object’s `dataLayerId` field. */
-  dataLayerId?: Maybe<Scalars['Int']>;
+  dataLayerId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `isDraft` field. */
-  isDraft?: Maybe<Scalars['Boolean']>;
+  isDraft?: InputMaybe<Scalars["Boolean"]>;
   /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** An input for mutations affecting `TableOfContentsItem` */
 export type TableOfContentsItemInput = {
   /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars["BigFloat"]>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
-  dataLayerId?: Maybe<Scalars['Int']>;
-  enableDownload?: Maybe<Scalars['Boolean']>;
-  hideChildren?: Maybe<Scalars['Boolean']>;
+  dataLayerId?: InputMaybe<Scalars["Int"]>;
+  enableDownload?: InputMaybe<Scalars["Boolean"]>;
+  hideChildren?: InputMaybe<Scalars["Boolean"]>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
    * their children. Toggles can only be used to toggle children off
    */
-  isClickOffOnly?: Maybe<Scalars['Boolean']>;
+  isClickOffOnly?: InputMaybe<Scalars["Boolean"]>;
   /** If not a folder, the item is a layer-type and must have a data_layer_id */
-  isFolder?: Maybe<Scalars['Boolean']>;
+  isFolder?: InputMaybe<Scalars["Boolean"]>;
   /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: InputMaybe<Scalars["JSON"]>;
   /**
    * stable_id of the parent folder, if any. This property cannot be changed
    * directly. To rearrange items into folders, use the
    * `updateTableOfContentsItemParent` mutation.
    */
-  parentStableId?: Maybe<Scalars['String']>;
-  projectId: Scalars['Int'];
+  parentStableId?: InputMaybe<Scalars["String"]>;
+  projectId: Scalars["Int"];
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
-  showRadioChildren?: Maybe<Scalars['Boolean']>;
+  showRadioChildren?: InputMaybe<Scalars["Boolean"]>;
   /**
    * The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme)
    * should be used with a custom alphabet that excludes dashes and has a lenght of
@@ -10039,35 +9684,35 @@ export type TableOfContentsItemInput = {
    * When published, the id primary key property of the item will change but not the
    * stable_id.
    */
-  stableId: Scalars['String'];
+  stableId: Scalars["String"];
   /** Name used in the table of contents rendering */
-  title: Scalars['String'];
+  title: Scalars["String"];
 };
 
 /** Represents an update to a `TableOfContentsItem`. Fields that are set will be updated. */
 export type TableOfContentsItemPatch = {
   /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  bounds?: InputMaybe<Array<InputMaybe<Scalars["BigFloat"]>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
-  dataLayerId?: Maybe<Scalars['Int']>;
-  enableDownload?: Maybe<Scalars['Boolean']>;
-  hideChildren?: Maybe<Scalars['Boolean']>;
+  dataLayerId?: InputMaybe<Scalars["Int"]>;
+  enableDownload?: InputMaybe<Scalars["Boolean"]>;
+  hideChildren?: InputMaybe<Scalars["Boolean"]>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
    * their children. Toggles can only be used to toggle children off
    */
-  isClickOffOnly?: Maybe<Scalars['Boolean']>;
+  isClickOffOnly?: InputMaybe<Scalars["Boolean"]>;
   /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
-  metadata?: Maybe<Scalars['JSON']>;
+  metadata?: InputMaybe<Scalars["JSON"]>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
-  showRadioChildren?: Maybe<Scalars['Boolean']>;
+  showRadioChildren?: InputMaybe<Scalars["Boolean"]>;
   /** Name used in the table of contents rendering */
-  title?: Maybe<Scalars['String']>;
+  title?: InputMaybe<Scalars["String"]>;
 };
 
 /** A connection to a list of `TableOfContentsItem` values. */
 export type TableOfContentsItemsConnection = {
-  __typename?: 'TableOfContentsItemsConnection';
+  __typename?: "TableOfContentsItemsConnection";
   /** A list of edges which contains the `TableOfContentsItem` and cursor to aid in pagination. */
   edges: Array<TableOfContentsItemsEdge>;
   /** A list of `TableOfContentsItem` objects. */
@@ -10075,36 +9720,36 @@ export type TableOfContentsItemsConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `TableOfContentsItem` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `TableOfContentsItem` edge in the connection. */
 export type TableOfContentsItemsEdge = {
-  __typename?: 'TableOfContentsItemsEdge';
+  __typename?: "TableOfContentsItemsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `TableOfContentsItem` at the end of the edge. */
   node: TableOfContentsItem;
 };
 
 /** Methods to use when ordering `TableOfContentsItem`. */
 export enum TableOfContentsItemsOrderBy {
-  DataLayerIdAsc = 'DATA_LAYER_ID_ASC',
-  DataLayerIdDesc = 'DATA_LAYER_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  IsDraftAsc = 'IS_DRAFT_ASC',
-  IsDraftDesc = 'IS_DRAFT_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
+  DataLayerIdAsc = "DATA_LAYER_ID_ASC",
+  DataLayerIdDesc = "DATA_LAYER_ID_DESC",
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  IsDraftAsc = "IS_DRAFT_ASC",
+  IsDraftDesc = "IS_DRAFT_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
+  ProjectIdAsc = "PROJECT_ID_ASC",
+  ProjectIdDesc = "PROJECT_ID_DESC",
 }
 
 export enum TileScheme {
-  Tms = 'TMS',
-  Xyz = 'XYZ'
+  Tms = "TMS",
+  Xyz = "XYZ",
 }
 
 /** All input for the `toggleAdminAccess` mutation. */
@@ -10113,20 +9758,20 @@ export type ToggleAdminAccessInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `toggleAdminAccess` mutation. */
 export type ToggleAdminAccessPayload = {
-  __typename?: 'ToggleAdminAccessPayload';
-  boolean?: Maybe<Scalars['Boolean']>;
+  __typename?: "ToggleAdminAccessPayload";
+  boolean?: Maybe<Scalars["Boolean"]>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -10137,20 +9782,20 @@ export type ToggleForumPostingBanInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  userId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  userId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `toggleForumPostingBan` mutation. */
 export type ToggleForumPostingBanPayload = {
-  __typename?: 'ToggleForumPostingBanPayload';
-  boolean?: Maybe<Scalars['Boolean']>;
+  __typename?: "ToggleForumPostingBanPayload";
+  boolean?: Maybe<Scalars["Boolean"]>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -10161,42 +9806,42 @@ export type ToggleResponsesPracticeInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  isPractice?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  ids?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
+  isPractice?: InputMaybe<Scalars["Boolean"]>;
 };
 
 /** The output of our `toggleResponsesPractice` mutation. */
 export type ToggleResponsesPracticePayload = {
-  __typename?: 'ToggleResponsesPracticePayload';
+  __typename?: "ToggleResponsesPracticePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   surveyResponses?: Maybe<Array<SurveyResponse>>;
 };
 
 export type Topic = Node & {
-  __typename?: 'Topic';
-  authorId: Scalars['Int'];
+  __typename?: "Topic";
+  authorId: Scalars["Int"];
   /** User Profile of the author. If a user has not shared their profile the first post contents will be hidden. */
   authorProfile?: Maybe<Profile>;
-  createdAt: Scalars['Datetime'];
+  createdAt: Scalars["Datetime"];
   /** Reads a single `Forum` that is related to this `Topic`. */
   forum?: Maybe<Forum>;
-  forumId: Scalars['Int'];
-  id: Scalars['Int'];
+  forumId: Scalars["Int"];
+  id: Scalars["Int"];
   /**
    * Locked topics can only be posted to by project admins and will display a lock symbol.
    *
    * Can be toggled by project admins using `setTopicLocked()` mutation.
    */
-  locked: Scalars['Boolean'];
+  locked: Scalars["Boolean"];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** Reads and enables pagination through a set of `Post`. */
   postsConnection: PostsConnection;
   /**
@@ -10204,28 +9849,27 @@ export type Topic = Node & {
    *
    * Can be toggled by project admins using `setTopicSticky()` mutation.
    */
-  sticky: Scalars['Boolean'];
+  sticky: Scalars["Boolean"];
   /** Title displayed in the topics listing. Can be updated in the first 5 minutes after creation. */
-  title: Scalars['String'];
+  title: Scalars["String"];
 };
 
-
 export type TopicPostsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<PostCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<PostCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 /** A condition to be used against `Topic` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type TopicCondition = {
   /** Checks for equality with the object’s `forumId` field. */
-  forumId?: Maybe<Scalars['Int']>;
+  forumId?: InputMaybe<Scalars["Int"]>;
   /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
 };
 
 /** Represents an update to a `Topic`. Fields that are set will be updated. */
@@ -10235,20 +9879,20 @@ export type TopicPatch = {
    *
    * Can be toggled by project admins using `setTopicLocked()` mutation.
    */
-  locked?: Maybe<Scalars['Boolean']>;
+  locked?: InputMaybe<Scalars["Boolean"]>;
   /**
    * Sticky topics will be listed at the topic of the forum.
    *
    * Can be toggled by project admins using `setTopicSticky()` mutation.
    */
-  sticky?: Maybe<Scalars['Boolean']>;
+  sticky?: InputMaybe<Scalars["Boolean"]>;
   /** Title displayed in the topics listing. Can be updated in the first 5 minutes after creation. */
-  title?: Maybe<Scalars['String']>;
+  title?: InputMaybe<Scalars["String"]>;
 };
 
 /** A connection to a list of `Topic` values. */
 export type TopicsConnection = {
-  __typename?: 'TopicsConnection';
+  __typename?: "TopicsConnection";
   /** A list of edges which contains the `Topic` and cursor to aid in pagination. */
   edges: Array<TopicsEdge>;
   /** A list of `Topic` objects. */
@@ -10256,86 +9900,85 @@ export type TopicsConnection = {
   /** Information to aid in pagination. */
   pageInfo: PageInfo;
   /** The count of *all* `Topic` you could get from the connection. */
-  totalCount: Scalars['Int'];
+  totalCount: Scalars["Int"];
 };
 
 /** A `Topic` edge in the connection. */
 export type TopicsEdge = {
-  __typename?: 'TopicsEdge';
+  __typename?: "TopicsEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `Topic` at the end of the edge. */
   node: Topic;
 };
 
 /** Methods to use when ordering `Topic`. */
 export enum TopicsOrderBy {
-  ForumIdAsc = 'FORUM_ID_ASC',
-  ForumIdDesc = 'FORUM_ID_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  LastPostCreatedAtAndSticky = 'LAST_POST_CREATED_AT_AND_STICKY',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+  ForumIdAsc = "FORUM_ID_ASC",
+  ForumIdDesc = "FORUM_ID_DESC",
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  LastPostCreatedAtAndSticky = "LAST_POST_CREATED_AT_AND_STICKY",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
 }
 
-
 export type UnsplashLinks = {
-  __typename?: 'UnsplashLinks';
-  html: Scalars['String'];
+  __typename?: "UnsplashLinks";
+  html: Scalars["String"];
 };
 
 export type UnsplashPhoto = {
-  __typename?: 'UnsplashPhoto';
-  blur_hash?: Maybe<Scalars['String']>;
-  color: Scalars['String'];
-  description?: Maybe<Scalars['String']>;
-  height: Scalars['Int'];
-  id: Scalars['String'];
+  __typename?: "UnsplashPhoto";
+  blur_hash?: Maybe<Scalars["String"]>;
+  color: Scalars["String"];
+  description?: Maybe<Scalars["String"]>;
+  height: Scalars["Int"];
+  id: Scalars["String"];
   links: UnsplashPhotoLinks;
   urls: UnsplashUrls;
   user: UnsplashUser;
-  width: Scalars['Int'];
+  width: Scalars["Int"];
 };
 
 export type UnsplashPhotoLinks = {
-  __typename?: 'UnsplashPhotoLinks';
-  download_location: Scalars['String'];
+  __typename?: "UnsplashPhotoLinks";
+  download_location: Scalars["String"];
 };
 
 export type UnsplashSearchResult = {
-  __typename?: 'UnsplashSearchResult';
+  __typename?: "UnsplashSearchResult";
   results: Array<UnsplashPhoto>;
-  total: Scalars['Int'];
-  total_pages: Scalars['Int'];
+  total: Scalars["Int"];
+  total_pages: Scalars["Int"];
 };
 
 export type UnsplashUrls = {
-  __typename?: 'UnsplashUrls';
-  full: Scalars['String'];
-  raw: Scalars['String'];
-  regular: Scalars['String'];
-  small: Scalars['String'];
-  thumb: Scalars['String'];
+  __typename?: "UnsplashUrls";
+  full: Scalars["String"];
+  raw: Scalars["String"];
+  regular: Scalars["String"];
+  small: Scalars["String"];
+  thumb: Scalars["String"];
 };
 
 export type UnsplashUser = {
-  __typename?: 'UnsplashUser';
-  id: Scalars['String'];
+  __typename?: "UnsplashUser";
+  id: Scalars["String"];
   links: UnsplashLinks;
-  name: Scalars['String'];
-  username: Scalars['String'];
+  name: Scalars["String"];
+  username: Scalars["String"];
 };
 
 /** All input for the `updateAclByBasemapId` mutation. */
 export type UpdateAclByBasemapIdInput = {
-  basemapId: Scalars['Int'];
+  basemapId: Scalars["Int"];
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** An object where the defined keys will be set on the `Acl` being updated. */
   patch: AclPatch;
 };
@@ -10346,9 +9989,9 @@ export type UpdateAclByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Acl` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `Acl` being updated. */
   patch: AclPatch;
 };
@@ -10359,10 +10002,10 @@ export type UpdateAclBySketchClassIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** An object where the defined keys will be set on the `Acl` being updated. */
   patch: AclPatch;
-  sketchClassId: Scalars['Int'];
+  sketchClassId: Scalars["Int"];
 };
 
 /** All input for the `updateAclByTableOfContentsItemId` mutation. */
@@ -10371,10 +10014,10 @@ export type UpdateAclByTableOfContentsItemIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** An object where the defined keys will be set on the `Acl` being updated. */
   patch: AclPatch;
-  tableOfContentsItemId: Scalars['Int'];
+  tableOfContentsItemId: Scalars["Int"];
 };
 
 /** All input for the `updateAcl` mutation. */
@@ -10383,15 +10026,15 @@ export type UpdateAclInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `Acl` being updated. */
   patch: AclPatch;
 };
 
 /** The output of our update `Acl` mutation. */
 export type UpdateAclPayload = {
-  __typename?: 'UpdateAclPayload';
+  __typename?: "UpdateAclPayload";
   /** The `Acl` that was updated by this mutation. */
   acl?: Maybe<Acl>;
   /** Reads a single `Basemap` that is related to this `Acl`. */
@@ -10400,7 +10043,7 @@ export type UpdateAclPayload = {
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `SketchClass` that is related to this `Acl`. */
@@ -10415,9 +10058,9 @@ export type UpdateBasemapByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Basemap` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `Basemap` being updated. */
   patch: BasemapPatch;
 };
@@ -10428,15 +10071,15 @@ export type UpdateBasemapInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `Basemap` being updated. */
   patch: BasemapPatch;
 };
 
 /** The output of our update `Basemap` mutation. */
 export type UpdateBasemapPayload = {
-  __typename?: 'UpdateBasemapPayload';
+  __typename?: "UpdateBasemapPayload";
   /** The `Basemap` that was updated by this mutation. */
   basemap?: Maybe<Basemap>;
   /** An edge for our `Basemap`. May be used by Relay 1. */
@@ -10445,7 +10088,7 @@ export type UpdateBasemapPayload = {
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
   /** Reads a single `Project` that is related to this `Basemap`. */
@@ -10454,10 +10097,9 @@ export type UpdateBasemapPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our update `Basemap` mutation. */
 export type UpdateBasemapPayloadBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<BasemapsOrderBy>>;
 };
 
 /** All input for the `updateCommunityGuidelineByNodeId` mutation. */
@@ -10466,9 +10108,9 @@ export type UpdateCommunityGuidelineByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `CommunityGuideline` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `CommunityGuideline` being updated. */
   patch: CommunityGuidelinePatch;
 };
@@ -10479,20 +10121,20 @@ export type UpdateCommunityGuidelineInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** An object where the defined keys will be set on the `CommunityGuideline` being updated. */
   patch: CommunityGuidelinePatch;
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
 };
 
 /** The output of our update `CommunityGuideline` mutation. */
 export type UpdateCommunityGuidelinePayload = {
-  __typename?: 'UpdateCommunityGuidelinePayload';
+  __typename?: "UpdateCommunityGuidelinePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `CommunityGuideline` that was updated by this mutation. */
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `Project` that is related to this `CommunityGuideline`. */
@@ -10507,8 +10149,8 @@ export type UpdateDataLayerByInteractivitySettingsIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  interactivitySettingsId: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  interactivitySettingsId: Scalars["Int"];
   /** An object where the defined keys will be set on the `DataLayer` being updated. */
   patch: DataLayerPatch;
 };
@@ -10519,9 +10161,9 @@ export type UpdateDataLayerByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `DataLayer` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `DataLayer` being updated. */
   patch: DataLayerPatch;
 };
@@ -10532,20 +10174,20 @@ export type UpdateDataLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `DataLayer` being updated. */
   patch: DataLayerPatch;
 };
 
 /** The output of our update `DataLayer` mutation. */
 export type UpdateDataLayerPayload = {
-  __typename?: 'UpdateDataLayerPayload';
+  __typename?: "UpdateDataLayerPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `DataLayer` that was updated by this mutation. */
   dataLayer?: Maybe<DataLayer>;
   /** An edge for our `DataLayer`. May be used by Relay 1. */
@@ -10558,10 +10200,9 @@ export type UpdateDataLayerPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our update `DataLayer` mutation. */
 export type UpdateDataLayerPayloadDataLayerEdgeArgs = {
-  orderBy?: Maybe<Array<DataLayersOrderBy>>;
+  orderBy?: InputMaybe<Array<DataLayersOrderBy>>;
 };
 
 /** All input for the `updateDataSourceByNodeId` mutation. */
@@ -10570,9 +10211,9 @@ export type UpdateDataSourceByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `DataSource` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `DataSource` being updated. */
   patch: DataSourcePatch;
 };
@@ -10583,21 +10224,21 @@ export type UpdateDataSourceInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** Should be used as sourceId in stylesheets. */
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `DataSource` being updated. */
   patch: DataSourcePatch;
 };
 
 /** The output of our update `DataSource` mutation. */
 export type UpdateDataSourcePayload = {
-  __typename?: 'UpdateDataSourcePayload';
+  __typename?: "UpdateDataSourcePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `DataSource` that was updated by this mutation. */
   dataSource?: Maybe<DataSource>;
   /** An edge for our `DataSource`. May be used by Relay 1. */
@@ -10606,10 +10247,9 @@ export type UpdateDataSourcePayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our update `DataSource` mutation. */
 export type UpdateDataSourcePayloadDataSourceEdgeArgs = {
-  orderBy?: Maybe<Array<DataSourcesOrderBy>>;
+  orderBy?: InputMaybe<Array<DataSourcesOrderBy>>;
 };
 
 /** All input for the `updateEmailNotificationPreferenceByUserId` mutation. */
@@ -10618,20 +10258,20 @@ export type UpdateEmailNotificationPreferenceByUserIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** An object where the defined keys will be set on the `EmailNotificationPreference` being updated. */
   patch: EmailNotificationPreferencePatch;
-  userId: Scalars['Int'];
+  userId: Scalars["Int"];
 };
 
 /** The output of our update `EmailNotificationPreference` mutation. */
 export type UpdateEmailNotificationPreferencePayload = {
-  __typename?: 'UpdateEmailNotificationPreferencePayload';
+  __typename?: "UpdateEmailNotificationPreferencePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `EmailNotificationPreference` that was updated by this mutation. */
   emailNotificationPreference?: Maybe<EmailNotificationPreference>;
   /** An edge for our `EmailNotificationPreference`. May be used by Relay 1. */
@@ -10642,11 +10282,11 @@ export type UpdateEmailNotificationPreferencePayload = {
   user?: Maybe<User>;
 };
 
-
 /** The output of our update `EmailNotificationPreference` mutation. */
-export type UpdateEmailNotificationPreferencePayloadEmailNotificationPreferenceEdgeArgs = {
-  orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
-};
+export type UpdateEmailNotificationPreferencePayloadEmailNotificationPreferenceEdgeArgs =
+  {
+    orderBy?: InputMaybe<Array<EmailNotificationPreferencesOrderBy>>;
+  };
 
 /** All input for the `updateFormByNodeId` mutation. */
 export type UpdateFormByNodeIdInput = {
@@ -10654,9 +10294,9 @@ export type UpdateFormByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Form` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `Form` being updated. */
   patch: FormPatch;
 };
@@ -10667,11 +10307,11 @@ export type UpdateFormBySketchClassIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** An object where the defined keys will be set on the `Form` being updated. */
   patch: FormPatch;
   /** Related *SketchClass* */
-  sketchClassId: Scalars['Int'];
+  sketchClassId: Scalars["Int"];
 };
 
 /** All input for the `updateFormBySurveyId` mutation. */
@@ -10680,11 +10320,11 @@ export type UpdateFormBySurveyIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** An object where the defined keys will be set on the `Form` being updated. */
   patch: FormPatch;
   /** Related *Survey* */
-  surveyId: Scalars['Int'];
+  surveyId: Scalars["Int"];
 };
 
 /** All input for the `updateFormElementByNodeId` mutation. */
@@ -10693,9 +10333,9 @@ export type UpdateFormElementByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `FormElement` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `FormElement` being updated. */
   patch: FormElementPatch;
 };
@@ -10706,20 +10346,20 @@ export type UpdateFormElementInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `FormElement` being updated. */
   patch: FormElementPatch;
 };
 
 /** The output of our update `FormElement` mutation. */
 export type UpdateFormElementPayload = {
-  __typename?: 'UpdateFormElementPayload';
+  __typename?: "UpdateFormElementPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `FormElement` that was updated by this mutation. */
   formElement?: Maybe<FormElement>;
   /** An edge for our `FormElement`. May be used by Relay 1. */
@@ -10728,10 +10368,9 @@ export type UpdateFormElementPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our update `FormElement` mutation. */
 export type UpdateFormElementPayloadFormElementEdgeArgs = {
-  orderBy?: Maybe<Array<FormElementsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormElementsOrderBy>>;
 };
 
 /** All input for the `updateForm` mutation. */
@@ -10740,8 +10379,8 @@ export type UpdateFormInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `Form` being updated. */
   patch: FormPatch;
 };
@@ -10752,9 +10391,9 @@ export type UpdateFormLogicConditionByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `FormLogicCondition` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `FormLogicCondition` being updated. */
   patch: FormLogicConditionPatch;
 };
@@ -10765,20 +10404,20 @@ export type UpdateFormLogicConditionInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `FormLogicCondition` being updated. */
   patch: FormLogicConditionPatch;
 };
 
 /** The output of our update `FormLogicCondition` mutation. */
 export type UpdateFormLogicConditionPayload = {
-  __typename?: 'UpdateFormLogicConditionPayload';
+  __typename?: "UpdateFormLogicConditionPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `FormLogicCondition` that was updated by this mutation. */
   formLogicCondition?: Maybe<FormLogicCondition>;
   /** An edge for our `FormLogicCondition`. May be used by Relay 1. */
@@ -10787,10 +10426,9 @@ export type UpdateFormLogicConditionPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our update `FormLogicCondition` mutation. */
 export type UpdateFormLogicConditionPayloadFormLogicConditionEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicConditionsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicConditionsOrderBy>>;
 };
 
 /** All input for the `updateFormLogicRuleByNodeId` mutation. */
@@ -10799,9 +10437,9 @@ export type UpdateFormLogicRuleByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `FormLogicRule` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `FormLogicRule` being updated. */
   patch: FormLogicRulePatch;
 };
@@ -10812,20 +10450,20 @@ export type UpdateFormLogicRuleInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `FormLogicRule` being updated. */
   patch: FormLogicRulePatch;
 };
 
 /** The output of our update `FormLogicRule` mutation. */
 export type UpdateFormLogicRulePayload = {
-  __typename?: 'UpdateFormLogicRulePayload';
+  __typename?: "UpdateFormLogicRulePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `FormLogicRule` that was updated by this mutation. */
   formLogicRule?: Maybe<FormLogicRule>;
   /** An edge for our `FormLogicRule`. May be used by Relay 1. */
@@ -10834,20 +10472,19 @@ export type UpdateFormLogicRulePayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our update `FormLogicRule` mutation. */
 export type UpdateFormLogicRulePayloadFormLogicRuleEdgeArgs = {
-  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+  orderBy?: InputMaybe<Array<FormLogicRulesOrderBy>>;
 };
 
 /** The output of our update `Form` mutation. */
 export type UpdateFormPayload = {
-  __typename?: 'UpdateFormPayload';
+  __typename?: "UpdateFormPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `Form` that was updated by this mutation. */
   form?: Maybe<Form>;
   /** An edge for our `Form`. May be used by Relay 1. */
@@ -10860,10 +10497,9 @@ export type UpdateFormPayload = {
   survey?: Maybe<Survey>;
 };
 
-
 /** The output of our update `Form` mutation. */
 export type UpdateFormPayloadFormEdgeArgs = {
-  orderBy?: Maybe<Array<FormsOrderBy>>;
+  orderBy?: InputMaybe<Array<FormsOrderBy>>;
 };
 
 /** All input for the `updateForumByNodeId` mutation. */
@@ -10872,9 +10508,9 @@ export type UpdateForumByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Forum` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `Forum` being updated. */
   patch: ForumPatch;
 };
@@ -10885,20 +10521,20 @@ export type UpdateForumInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `Forum` being updated. */
   patch: ForumPatch;
 };
 
 /** The output of our update `Forum` mutation. */
 export type UpdateForumPayload = {
-  __typename?: 'UpdateForumPayload';
+  __typename?: "UpdateForumPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `Forum` that was updated by this mutation. */
   forum?: Maybe<Forum>;
   /** An edge for our `Forum`. May be used by Relay 1. */
@@ -10909,10 +10545,9 @@ export type UpdateForumPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our update `Forum` mutation. */
 export type UpdateForumPayloadForumEdgeArgs = {
-  orderBy?: Maybe<Array<ForumsOrderBy>>;
+  orderBy?: InputMaybe<Array<ForumsOrderBy>>;
 };
 
 /** All input for the `updateGroupByNodeId` mutation. */
@@ -10921,9 +10556,9 @@ export type UpdateGroupByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Group` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `Group` being updated. */
   patch: GroupPatch;
 };
@@ -10934,12 +10569,12 @@ export type UpdateGroupByProjectIdAndNameInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** Label for the group. */
-  name: Scalars['String'];
+  name: Scalars["String"];
   /** An object where the defined keys will be set on the `Group` being updated. */
   patch: GroupPatch;
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
 };
 
 /** All input for the `updateGroup` mutation. */
@@ -10948,20 +10583,20 @@ export type UpdateGroupInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `Group` being updated. */
   patch: GroupPatch;
 };
 
 /** The output of our update `Group` mutation. */
 export type UpdateGroupPayload = {
-  __typename?: 'UpdateGroupPayload';
+  __typename?: "UpdateGroupPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `Group` that was updated by this mutation. */
   group?: Maybe<Group>;
   /** Reads a single `Project` that is related to this `Group`. */
@@ -10976,9 +10611,9 @@ export type UpdateInteractivitySettingByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `InteractivitySetting` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `InteractivitySetting` being updated. */
   patch: InteractivitySettingPatch;
 };
@@ -10989,20 +10624,20 @@ export type UpdateInteractivitySettingInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `InteractivitySetting` being updated. */
   patch: InteractivitySettingPatch;
 };
 
 /** The output of our update `InteractivitySetting` mutation. */
 export type UpdateInteractivitySettingPayload = {
-  __typename?: 'UpdateInteractivitySettingPayload';
+  __typename?: "UpdateInteractivitySettingPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `InteractivitySetting` that was updated by this mutation. */
   interactivitySetting?: Maybe<InteractivitySetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -11015,19 +10650,19 @@ export type UpdateMapboxSecretKeyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  secret?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  secret?: InputMaybe<Scalars["String"]>;
 };
 
 /** The output of our `updateMapboxSecretKey` mutation. */
 export type UpdateMapboxSecretKeyPayload = {
-  __typename?: 'UpdateMapboxSecretKeyPayload';
+  __typename?: "UpdateMapboxSecretKeyPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
   dataSourcesBucket?: Maybe<DataSourcesBucket>;
   project?: Maybe<Project>;
@@ -11037,10 +10672,9 @@ export type UpdateMapboxSecretKeyPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our `updateMapboxSecretKey` mutation. */
 export type UpdateMapboxSecretKeyPayloadProjectEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the `updateOptionalBasemapLayerByNodeId` mutation. */
@@ -11049,9 +10683,9 @@ export type UpdateOptionalBasemapLayerByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `OptionalBasemapLayer` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `OptionalBasemapLayer` being updated. */
   patch: OptionalBasemapLayerPatch;
 };
@@ -11062,22 +10696,22 @@ export type UpdateOptionalBasemapLayerInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `OptionalBasemapLayer` being updated. */
   patch: OptionalBasemapLayerPatch;
 };
 
 /** The output of our update `OptionalBasemapLayer` mutation. */
 export type UpdateOptionalBasemapLayerPayload = {
-  __typename?: 'UpdateOptionalBasemapLayerPayload';
+  __typename?: "UpdateOptionalBasemapLayerPayload";
   /** Reads a single `Basemap` that is related to this `OptionalBasemapLayer`. */
   basemap?: Maybe<Basemap>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `OptionalBasemapLayer` that was updated by this mutation. */
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -11090,19 +10724,19 @@ export type UpdatePostInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  message?: Maybe<Scalars['JSON']>;
-  postId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  message?: InputMaybe<Scalars["JSON"]>;
+  postId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `updatePost` mutation. */
 export type UpdatePostPayload = {
-  __typename?: 'UpdatePostPayload';
+  __typename?: "UpdatePostPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   post?: Maybe<Post>;
   /** An edge for our `Post`. May be used by Relay 1. */
   postEdge?: Maybe<PostsEdge>;
@@ -11112,10 +10746,9 @@ export type UpdatePostPayload = {
   topic?: Maybe<Topic>;
 };
 
-
 /** The output of our `updatePost` mutation. */
 export type UpdatePostPayloadPostEdgeArgs = {
-  orderBy?: Maybe<Array<PostsOrderBy>>;
+  orderBy?: InputMaybe<Array<PostsOrderBy>>;
 };
 
 /** All input for the `updateProfileByUserId` mutation. */
@@ -11124,20 +10757,20 @@ export type UpdateProfileByUserIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** An object where the defined keys will be set on the `Profile` being updated. */
   patch: ProfilePatch;
-  userId: Scalars['Int'];
+  userId: Scalars["Int"];
 };
 
 /** The output of our update `Profile` mutation. */
 export type UpdateProfilePayload = {
-  __typename?: 'UpdateProfilePayload';
+  __typename?: "UpdateProfilePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `Profile` that was updated by this mutation. */
   profile?: Maybe<Profile>;
   /** An edge for our `Profile`. May be used by Relay 1. */
@@ -11148,10 +10781,9 @@ export type UpdateProfilePayload = {
   user?: Maybe<User>;
 };
 
-
 /** The output of our update `Profile` mutation. */
 export type UpdateProfilePayloadProfileEdgeArgs = {
-  orderBy?: Maybe<Array<ProfilesOrderBy>>;
+  orderBy?: InputMaybe<Array<ProfilesOrderBy>>;
 };
 
 /** All input for the `updateProjectByNodeId` mutation. */
@@ -11160,9 +10792,9 @@ export type UpdateProjectByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Project` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `Project` being updated. */
   patch: ProjectPatch;
 };
@@ -11173,11 +10805,11 @@ export type UpdateProjectBySlugInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** An object where the defined keys will be set on the `Project` being updated. */
   patch: ProjectPatch;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 };
 
 /** All input for the `updateProject` mutation. */
@@ -11186,8 +10818,8 @@ export type UpdateProjectInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `Project` being updated. */
   patch: ProjectPatch;
 };
@@ -11198,21 +10830,21 @@ export type UpdateProjectInviteGroupByInviteIdAndGroupIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId: Scalars['Int'];
-  inviteId: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groupId: Scalars["Int"];
+  inviteId: Scalars["Int"];
   /** An object where the defined keys will be set on the `ProjectInviteGroup` being updated. */
   patch: ProjectInviteGroupPatch;
 };
 
 /** The output of our update `ProjectInviteGroup` mutation. */
 export type UpdateProjectInviteGroupPayload = {
-  __typename?: 'UpdateProjectInviteGroupPayload';
+  __typename?: "UpdateProjectInviteGroupPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Group` that is related to this `ProjectInviteGroup`. */
   group?: Maybe<Group>;
   /** Reads a single `ProjectInvite` that is related to this `ProjectInviteGroup`. */
@@ -11225,10 +10857,9 @@ export type UpdateProjectInviteGroupPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our update `ProjectInviteGroup` mutation. */
 export type UpdateProjectInviteGroupPayloadProjectInviteGroupEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectInviteGroupsOrderBy>>;
 };
 
 /** All input for the `updateProjectInvite` mutation. */
@@ -11237,22 +10868,22 @@ export type UpdateProjectInviteInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  email?: Maybe<Scalars['String']>;
-  fullname?: Maybe<Scalars['String']>;
-  groups?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  inviteId?: Maybe<Scalars['Int']>;
-  makeAdmin?: Maybe<Scalars['Boolean']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  email?: InputMaybe<Scalars["String"]>;
+  fullname?: InputMaybe<Scalars["String"]>;
+  groups?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
+  inviteId?: InputMaybe<Scalars["Int"]>;
+  makeAdmin?: InputMaybe<Scalars["Boolean"]>;
 };
 
 /** The output of our `updateProjectInvite` mutation. */
 export type UpdateProjectInvitePayload = {
-  __typename?: 'UpdateProjectInvitePayload';
+  __typename?: "UpdateProjectInvitePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   projectInvite?: Maybe<ProjectInvite>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
@@ -11260,12 +10891,12 @@ export type UpdateProjectInvitePayload = {
 
 /** The output of our update `Project` mutation. */
 export type UpdateProjectPayload = {
-  __typename?: 'UpdateProjectPayload';
+  __typename?: "UpdateProjectPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
   dataSourcesBucket?: Maybe<DataSourcesBucket>;
   /** The `Project` that was updated by this mutation. */
@@ -11276,35 +10907,34 @@ export type UpdateProjectPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our update `Project` mutation. */
 export type UpdateProjectPayloadProjectEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the `updateProjectsSharedBasemapByBasemapIdAndProjectId` mutation. */
 export type UpdateProjectsSharedBasemapByBasemapIdAndProjectIdInput = {
-  basemapId: Scalars['Int'];
+  basemapId: Scalars["Int"];
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** An object where the defined keys will be set on the `ProjectsSharedBasemap` being updated. */
   patch: ProjectsSharedBasemapPatch;
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
 };
 
 /** The output of our update `ProjectsSharedBasemap` mutation. */
 export type UpdateProjectsSharedBasemapPayload = {
-  __typename?: 'UpdateProjectsSharedBasemapPayload';
+  __typename?: "UpdateProjectsSharedBasemapPayload";
   /** Reads a single `Basemap` that is related to this `ProjectsSharedBasemap`. */
   basemap?: Maybe<Basemap>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** The `ProjectsSharedBasemap` that was updated by this mutation. */
   projectsSharedBasemap?: Maybe<ProjectsSharedBasemap>;
   /** An edge for our `ProjectsSharedBasemap`. May be used by Relay 1. */
@@ -11313,10 +10943,9 @@ export type UpdateProjectsSharedBasemapPayload = {
   query?: Maybe<Query>;
 };
 
-
 /** The output of our update `ProjectsSharedBasemap` mutation. */
 export type UpdateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
-  orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+  orderBy?: InputMaybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
 /** All input for the `updateSketchByNodeId` mutation. */
@@ -11325,9 +10954,9 @@ export type UpdateSketchByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Sketch` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `Sketch` being updated. */
   patch: SketchPatch;
 };
@@ -11338,9 +10967,9 @@ export type UpdateSketchClassByFormElementIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** If set, this sketch class is only for use in a survey indicated by the form_element. */
-  formElementId: Scalars['Int'];
+  formElementId: Scalars["Int"];
   /** An object where the defined keys will be set on the `SketchClass` being updated. */
   patch: SketchClassPatch;
 };
@@ -11351,9 +10980,9 @@ export type UpdateSketchClassByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `SketchClass` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `SketchClass` being updated. */
   patch: SketchClassPatch;
 };
@@ -11364,20 +10993,20 @@ export type UpdateSketchClassInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `SketchClass` being updated. */
   patch: SketchClassPatch;
 };
 
 /** The output of our update `SketchClass` mutation. */
 export type UpdateSketchClassPayload = {
-  __typename?: 'UpdateSketchClassPayload';
+  __typename?: "UpdateSketchClassPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `FormElement` that is related to this `SketchClass`. */
   formElement?: Maybe<FormElement>;
   /** Reads a single `Project` that is related to this `SketchClass`. */
@@ -11390,10 +11019,9 @@ export type UpdateSketchClassPayload = {
   sketchClassEdge?: Maybe<SketchClassesEdge>;
 };
 
-
 /** The output of our update `SketchClass` mutation. */
 export type UpdateSketchClassPayloadSketchClassEdgeArgs = {
-  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchClassesOrderBy>>;
 };
 
 /** All input for the `updateSketchFolderByNodeId` mutation. */
@@ -11402,9 +11030,9 @@ export type UpdateSketchFolderByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `SketchFolder` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `SketchFolder` being updated. */
   patch: SketchFolderPatch;
 };
@@ -11415,20 +11043,20 @@ export type UpdateSketchFolderInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `SketchFolder` being updated. */
   patch: SketchFolderPatch;
 };
 
 /** The output of our update `SketchFolder` mutation. */
 export type UpdateSketchFolderPayload = {
-  __typename?: 'UpdateSketchFolderPayload';
+  __typename?: "UpdateSketchFolderPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `SketchFolder` that was updated by this mutation. */
@@ -11437,10 +11065,9 @@ export type UpdateSketchFolderPayload = {
   sketchFolderEdge?: Maybe<SketchFoldersEdge>;
 };
 
-
 /** The output of our update `SketchFolder` mutation. */
 export type UpdateSketchFolderPayloadSketchFolderEdgeArgs = {
-  orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+  orderBy?: InputMaybe<Array<SketchFoldersOrderBy>>;
 };
 
 /** All input for the `updateSketch` mutation. */
@@ -11449,20 +11076,20 @@ export type UpdateSketchInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `Sketch` being updated. */
   patch: SketchPatch;
 };
 
 /** The output of our update `Sketch` mutation. */
 export type UpdateSketchPayload = {
-  __typename?: 'UpdateSketchPayload';
+  __typename?: "UpdateSketchPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   collection?: Maybe<Sketch>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
@@ -11485,9 +11112,9 @@ export type UpdateSurveyByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Survey` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `Survey` being updated. */
   patch: SurveyPatch;
 };
@@ -11498,8 +11125,8 @@ export type UpdateSurveyInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `Survey` being updated. */
   patch: SurveyPatch;
 };
@@ -11510,11 +11137,11 @@ export type UpdateSurveyInviteByEmailAndSurveyIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  email: Scalars['Email'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  email: Scalars["Email"];
   /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
   patch: SurveyInvitePatch;
-  surveyId: Scalars['Int'];
+  surveyId: Scalars["Int"];
 };
 
 /** All input for the `updateSurveyInviteByEmail` mutation. */
@@ -11523,8 +11150,8 @@ export type UpdateSurveyInviteByEmailInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  email: Scalars['Email'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  email: Scalars["Email"];
   /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
   patch: SurveyInvitePatch;
 };
@@ -11535,9 +11162,9 @@ export type UpdateSurveyInviteByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `SurveyInvite` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
   patch: SurveyInvitePatch;
 };
@@ -11548,20 +11175,20 @@ export type UpdateSurveyInviteInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
   patch: SurveyInvitePatch;
 };
 
 /** The output of our update `SurveyInvite` mutation. */
 export type UpdateSurveyInvitePayload = {
-  __typename?: 'UpdateSurveyInvitePayload';
+  __typename?: "UpdateSurveyInvitePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyInvite`. */
@@ -11572,10 +11199,9 @@ export type UpdateSurveyInvitePayload = {
   surveyInviteEdge?: Maybe<SurveyInvitesEdge>;
 };
 
-
 /** The output of our update `SurveyInvite` mutation. */
 export type UpdateSurveyInvitePayloadSurveyInviteEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyInvitesOrderBy>>;
 };
 
 /** All input for the `updateSurveyInvitedGroups` mutation. */
@@ -11584,19 +11210,19 @@ export type UpdateSurveyInvitedGroupsInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  surveyId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  groupIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
+  surveyId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `updateSurveyInvitedGroups` mutation. */
 export type UpdateSurveyInvitedGroupsPayload = {
-  __typename?: 'UpdateSurveyInvitedGroupsPayload';
+  __typename?: "UpdateSurveyInvitedGroupsPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   groups?: Maybe<Array<Group>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
@@ -11604,12 +11230,12 @@ export type UpdateSurveyInvitedGroupsPayload = {
 
 /** The output of our update `Survey` mutation. */
 export type UpdateSurveyPayload = {
-  __typename?: 'UpdateSurveyPayload';
+  __typename?: "UpdateSurveyPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Project` that is related to this `Survey`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -11624,9 +11250,9 @@ export type UpdateSurveyResponseByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `SurveyResponse` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `SurveyResponse` being updated. */
   patch: SurveyResponsePatch;
 };
@@ -11637,20 +11263,20 @@ export type UpdateSurveyResponseInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `SurveyResponse` being updated. */
   patch: SurveyResponsePatch;
 };
 
 /** The output of our update `SurveyResponse` mutation. */
 export type UpdateSurveyResponsePayload = {
-  __typename?: 'UpdateSurveyResponsePayload';
+  __typename?: "UpdateSurveyResponsePayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** Reads a single `Survey` that is related to this `SurveyResponse`. */
@@ -11661,10 +11287,9 @@ export type UpdateSurveyResponsePayload = {
   surveyResponseEdge?: Maybe<SurveyResponsesEdge>;
 };
 
-
 /** The output of our update `SurveyResponse` mutation. */
 export type UpdateSurveyResponsePayloadSurveyResponseEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
+  orderBy?: InputMaybe<Array<SurveyResponsesOrderBy>>;
 };
 
 /** All input for the `updateTableOfContentsItemByDataLayerId` mutation. */
@@ -11673,9 +11298,9 @@ export type UpdateTableOfContentsItemByDataLayerIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
-  dataLayerId: Scalars['Int'];
+  dataLayerId: Scalars["Int"];
   /** An object where the defined keys will be set on the `TableOfContentsItem` being updated. */
   patch: TableOfContentsItemPatch;
 };
@@ -11686,32 +11311,32 @@ export type UpdateTableOfContentsItemByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `TableOfContentsItem` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `TableOfContentsItem` being updated. */
   patch: TableOfContentsItemPatch;
 };
 
 /** All input for the `updateTableOfContentsItemChildren` mutation. */
 export type UpdateTableOfContentsItemChildrenInput = {
-  childIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  childIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  parentId?: Maybe<Scalars['Int']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  parentId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** The output of our `updateTableOfContentsItemChildren` mutation. */
 export type UpdateTableOfContentsItemChildrenPayload = {
-  __typename?: 'UpdateTableOfContentsItemChildrenPayload';
+  __typename?: "UpdateTableOfContentsItemChildrenPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
@@ -11723,20 +11348,20 @@ export type UpdateTableOfContentsItemInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `TableOfContentsItem` being updated. */
   patch: TableOfContentsItemPatch;
 };
 
 /** The output of our update `TableOfContentsItem` mutation. */
 export type UpdateTableOfContentsItemPayload = {
-  __typename?: 'UpdateTableOfContentsItemPayload';
+  __typename?: "UpdateTableOfContentsItemPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
   dataLayer?: Maybe<DataLayer>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -11747,10 +11372,9 @@ export type UpdateTableOfContentsItemPayload = {
   tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
 };
 
-
 /** The output of our update `TableOfContentsItem` mutation. */
 export type UpdateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
-  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+  orderBy?: InputMaybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
 /** All input for the `updateTopicByNodeId` mutation. */
@@ -11759,9 +11383,9 @@ export type UpdateTopicByNodeIdInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
   /** The globally unique `ID` which will identify a single `Topic` to be updated. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /** An object where the defined keys will be set on the `Topic` being updated. */
   patch: TopicPatch;
 };
@@ -11772,20 +11396,20 @@ export type UpdateTopicInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  id: Scalars["Int"];
   /** An object where the defined keys will be set on the `Topic` being updated. */
   patch: TopicPatch;
 };
 
 /** The output of our update `Topic` mutation. */
 export type UpdateTopicPayload = {
-  __typename?: 'UpdateTopicPayload';
+  __typename?: "UpdateTopicPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   /** Reads a single `Forum` that is related to this `Topic`. */
   forum?: Maybe<Forum>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -11796,10 +11420,9 @@ export type UpdateTopicPayload = {
   topicEdge?: Maybe<TopicsEdge>;
 };
 
-
 /** The output of our update `Topic` mutation. */
 export type UpdateTopicPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
+  orderBy?: InputMaybe<Array<TopicsOrderBy>>;
 };
 
 /** All input for the `updateZIndexes` mutation. */
@@ -11808,23 +11431,22 @@ export type UpdateZIndexesInput = {
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
-  dataLayerIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  dataLayerIds?: InputMaybe<Array<InputMaybe<Scalars["Int"]>>>;
 };
 
 /** The output of our `updateZIndexes` mutation. */
 export type UpdateZIndexesPayload = {
-  __typename?: 'UpdateZIndexesPayload';
+  __typename?: "UpdateZIndexesPayload";
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
-  clientMutationId?: Maybe<Scalars['String']>;
+  clientMutationId?: Maybe<Scalars["String"]>;
   dataLayers?: Maybe<Array<DataLayer>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
-
 
 /**
  * The SeaSketch User type is quite sparse since authentication is handled by Auth0
@@ -11836,18 +11458,18 @@ export type UpdateZIndexesPayload = {
  * used to accept project invite tokens.
  */
 export type User = Node & {
-  __typename?: 'User';
+  __typename?: "User";
   /**
    * Whether the user has been banned from the forums. Use `disableForumPosting()`
    * and `enableForumPosting()` mutations to modify this state. Accessible only to admins.
    */
-  bannedFromForums?: Maybe<Scalars['Boolean']>;
+  bannedFromForums?: Maybe<Scalars["Boolean"]>;
   /**
    * Only visible to admins of projects a user has joined. Can be used for
    * identification purposes since users will not gain any access control
    * privileges until this email has been confirmed.
    */
-  canonicalEmail?: Maybe<Scalars['String']>;
+  canonicalEmail?: Maybe<Scalars["String"]>;
   /** Reads a single `EmailNotificationPreference` that is related to this `User`. */
   emailNotificationPreference?: Maybe<EmailNotificationPreference>;
   /**
@@ -11857,11 +11479,11 @@ export type User = Node & {
   emailNotificationPreferencesConnection: EmailNotificationPreferencesConnection;
   /** List of groups for the given project and user. Only available to project admins. */
   groups?: Maybe<Array<Group>>;
-  id: Scalars['Int'];
+  id: Scalars["Int"];
   /** Indicates if user is admin on the current project, indicated by the `x-ss-slug` header. */
-  isAdmin?: Maybe<Scalars['Boolean']>;
+  isAdmin?: Maybe<Scalars["Boolean"]>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   /**
    * Indicates whether the user has seen post-registration information. Can be
    * updated with `confirmOnboarded()` mutation.
@@ -11870,12 +11492,11 @@ export type User = Node & {
    * hypothetically be reset as terms of service are updated, though it may be better
    * to add a new property to track that.
    */
-  onboarded?: Maybe<Scalars['Datetime']>;
+  onboarded?: Maybe<Scalars["Datetime"]>;
   participationStatus?: Maybe<ParticipationStatus>;
   /** Reads a single `Profile` that is related to this `User`. */
   profile?: Maybe<Profile>;
 };
-
 
 /**
  * The SeaSketch User type is quite sparse since authentication is handled by Auth0
@@ -11887,15 +11508,14 @@ export type User = Node & {
  * used to accept project invite tokens.
  */
 export type UserEmailNotificationPreferencesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<EmailNotificationPreferenceCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
+  after?: InputMaybe<Scalars["Cursor"]>;
+  before?: InputMaybe<Scalars["Cursor"]>;
+  condition?: InputMaybe<EmailNotificationPreferenceCondition>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<Array<EmailNotificationPreferencesOrderBy>>;
 };
-
 
 /**
  * The SeaSketch User type is quite sparse since authentication is handled by Auth0
@@ -11907,10 +11527,9 @@ export type UserEmailNotificationPreferencesConnectionArgs = {
  * used to accept project invite tokens.
  */
 export type UserGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 };
-
 
 /**
  * The SeaSketch User type is quite sparse since authentication is handled by Auth0
@@ -11922,3975 +11541,5117 @@ export type UserGroupsArgs = {
  * used to accept project invite tokens.
  */
 export type UserParticipationStatusArgs = {
-  projectId?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
 };
 
 /** A `User` edge in the connection. */
 export type UsersEdge = {
-  __typename?: 'UsersEdge';
+  __typename?: "UsersEdge";
   /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
+  cursor?: Maybe<Scalars["Cursor"]>;
   /** The `User` at the end of the edge. */
   node: User;
 };
 
 /** Methods to use when ordering `User`. */
 export enum UsersOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+  IdAsc = "ID_ASC",
+  IdDesc = "ID_DESC",
+  Natural = "NATURAL",
+  PrimaryKeyAsc = "PRIMARY_KEY_ASC",
+  PrimaryKeyDesc = "PRIMARY_KEY_DESC",
 }
 
-export type UpdateTerrainExaggerationFragment = (
-  { __typename?: 'Basemap' }
-  & Pick<Basemap, 'terrainExaggeration'>
-);
-
-export type NewLabelsLayerFragment = (
-  { __typename?: 'Basemap' }
-  & Pick<Basemap, 'labelsLayerId'>
-);
-
-export type NewTerrainFragment = (
-  { __typename?: 'Basemap' }
-  & Pick<Basemap, 'terrainUrl' | 'terrainOptional' | 'terrainVisibilityDefault'>
-);
-
-export type NewBasemapFragment = (
-  { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'projectId' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'terrainExaggeration' | 'terrainOptional' | 'url' | 'type' | 'tileSize' | 'thumbnail' | 'terrainUrl' | 'terrainTileSize' | 'surveysOnly'>
-);
-
 export type ProjectBucketSettingQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type ProjectBucketSettingQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename: 'Project' }
-    & Pick<Project, 'id'>
-    & { dataSourcesBucket?: Maybe<(
-      { __typename?: 'DataSourcesBucket' }
-      & Pick<DataSourcesBucket, 'url' | 'region' | 'name'>
-      & { location: (
-        { __typename?: 'GeometryPoint' }
-        & Pick<GeometryPoint, 'geojson'>
-      ) }
-    )> }
-  )>, dataSourcesBucketsConnection?: Maybe<(
-    { __typename?: 'DataSourcesBucketsConnection' }
-    & { nodes: Array<(
-      { __typename?: 'DataSourcesBucket' }
-      & Pick<DataSourcesBucket, 'url' | 'name' | 'region'>
-      & { location: (
-        { __typename?: 'GeometryPoint' }
-        & Pick<GeometryPoint, 'geojson'>
-      ) }
-    )> }
-  )> }
-);
+export type ProjectBucketSettingQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename: "Project";
+    id: number;
+    dataSourcesBucket?: {
+      __typename?: "DataSourcesBucket";
+      url: string;
+      region: string;
+      name: string;
+      location: { __typename?: "GeometryPoint"; geojson?: any | null };
+    } | null;
+  } | null;
+  dataSourcesBucketsConnection?: {
+    __typename?: "DataSourcesBucketsConnection";
+    nodes: Array<{
+      __typename?: "DataSourcesBucket";
+      url: string;
+      name: string;
+      region: string;
+      location: { __typename?: "GeometryPoint"; geojson?: any | null };
+    }>;
+  } | null;
+};
 
 export type UpdateProjectStorageBucketMutationVariables = Exact<{
-  slug: Scalars['String'];
-  bucket: Scalars['String'];
+  slug: Scalars["String"];
+  bucket: Scalars["String"];
 }>;
 
+export type UpdateProjectStorageBucketMutation = {
+  __typename?: "Mutation";
+  updateProjectBySlug?: {
+    __typename?: "UpdateProjectPayload";
+    clientMutationId?: string | null;
+    project?: {
+      __typename: "Project";
+      id: number;
+      dataSourcesBucket?: {
+        __typename?: "DataSourcesBucket";
+        url: string;
+        region: string;
+        name: string;
+      } | null;
+    } | null;
+  } | null;
+};
 
-export type UpdateProjectStorageBucketMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & Pick<UpdateProjectPayload, 'clientMutationId'>
-    & { project?: Maybe<(
-      { __typename: 'Project' }
-      & Pick<Project, 'id'>
-      & { dataSourcesBucket?: Maybe<(
-        { __typename?: 'DataSourcesBucket' }
-        & Pick<DataSourcesBucket, 'url' | 'region' | 'name'>
-      )> }
-    )> }
-  )> }
-);
+export type LogicRuleEditorFormElementFragment = {
+  __typename?: "FormElement";
+  id: number;
+  body: any;
+  typeId: string;
+  formId: number;
+  jumpToId?: number | null;
+  componentSettings: any;
+  exportId?: string | null;
+  isRequired: boolean;
+  type?: {
+    __typename?: "FormElementType";
+    supportedOperators: Array<FieldRuleOperator | null>;
+    isInput: boolean;
+  } | null;
+};
 
-export type NewQueryParametersFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'queryParameters'>
-);
-
-export type UpdateHighDpiFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'useDevicePixelRatio'>
-);
-
-export type UpdateFormatFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'queryParameters'>
-);
-
-export type NewGlStyleFragment = (
-  { __typename?: 'DataLayer' }
-  & Pick<DataLayer, 'mapboxGlStyles'>
-);
-
-export type NewRenderUnderFragment = (
-  { __typename?: 'DataLayer' }
-  & Pick<DataLayer, 'renderUnder'>
-);
-
-export type NewZIndexFragment = (
-  { __typename?: 'DataLayer' }
-  & Pick<DataLayer, 'zIndex'>
-);
-
-export type NewElementFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
-  & { type?: Maybe<(
-    { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators'>
-  )> }
-);
-
-export type LogicRuleEditorFormElementFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'body' | 'typeId' | 'formId' | 'jumpToId' | 'componentSettings' | 'exportId' | 'isRequired'>
-  & { type?: Maybe<(
-    { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'supportedOperators' | 'isInput'>
-  )> }
-);
-
-export type LogicRuleEditorRuleFragment = (
-  { __typename?: 'FormLogicRule' }
-  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
-  & { conditions?: Maybe<Array<(
-    { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
-  )>> }
-);
-
-export type NewRuleFragment = (
-  { __typename?: 'FormLogicRule' }
-  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
-  & { conditions?: Maybe<Array<(
-    { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
-  )>> }
-);
-
-export type NewSurveyFragment = (
-  { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId'>
-  & { invitedGroups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
-);
-
-export type NewGroupFragment = (
-  { __typename?: 'Group' }
-  & Pick<Group, 'id' | 'projectId' | 'name'>
-);
-
-export type NewInviteEmailFragment = (
-  { __typename?: 'InviteEmail' }
-  & Pick<InviteEmail, 'id' | 'toAddress' | 'createdAt' | 'status' | 'tokenExpiresAt' | 'error' | 'updatedAt'>
-);
-
-export type NewLayerOptionsFragment = (
-  { __typename?: 'OptionalBasemapLayer' }
-  & Pick<OptionalBasemapLayer, 'options'>
-);
-
-export type UpdateAlternateLanguageSettingsFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'alternateLanguageSettings'>
-);
-
-export type UpdateComponentSettingsFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'componentSettings'>
-);
-
-export type UpdateBodyFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body'>
-);
+export type LogicRuleEditorRuleFragment = {
+  __typename?: "FormLogicRule";
+  booleanOperator: FormLogicOperator;
+  command: FormLogicCommand;
+  formElementId: number;
+  id: number;
+  jumpToId?: number | null;
+  position: number;
+  conditions?: Array<{
+    __typename?: "FormLogicCondition";
+    id: number;
+    operator: FieldRuleOperator;
+    ruleId: number;
+    subjectId: number;
+    value?: any | null;
+  }> | null;
+};
 
 export type MapboxApiKeysQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type MapboxApiKeysQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
-  )> }
-);
+export type MapboxApiKeysQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    mapboxPublicKey?: string | null;
+    mapboxSecretKey?: string | null;
+  } | null;
+};
 
 export type UpdatePublicKeyMutationVariables = Exact<{
-  id: Scalars['Int'];
-  public?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  public?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdatePublicKeyMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProject?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'mapboxPublicKey'>
-    )> }
-  )> }
-);
+export type UpdatePublicKeyMutation = {
+  __typename?: "Mutation";
+  updateProject?: {
+    __typename?: "UpdateProjectPayload";
+    project?: {
+      __typename?: "Project";
+      id: number;
+      mapboxPublicKey?: string | null;
+    } | null;
+  } | null;
+};
 
 export type UpdateSecretKeyMutationVariables = Exact<{
-  id: Scalars['Int'];
-  mapboxSecretKey?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  mapboxSecretKey?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateSecretKeyMutation = (
-  { __typename?: 'Mutation' }
-  & { updateMapboxSecretKey?: Maybe<(
-    { __typename?: 'UpdateMapboxSecretKeyPayload' }
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'mapboxSecretKey'>
-    )> }
-  )> }
-);
+export type UpdateSecretKeyMutation = {
+  __typename?: "Mutation";
+  updateMapboxSecretKey?: {
+    __typename?: "UpdateMapboxSecretKeyPayload";
+    project?: {
+      __typename?: "Project";
+      id: number;
+      mapboxSecretKey?: string | null;
+    } | null;
+  } | null;
+};
 
 export type GetAclQueryVariables = Exact<{
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
 }>;
 
-
-export type GetAclQuery = (
-  { __typename?: 'Query' }
-  & { aclByNodeId?: Maybe<(
-    { __typename?: 'Acl' }
-    & Pick<Acl, 'id' | 'nodeId' | 'type'>
-    & { groups?: Maybe<Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name' | 'memberCount'>
-    )>> }
-  )> }
-);
+export type GetAclQuery = {
+  __typename?: "Query";
+  aclByNodeId?: {
+    __typename?: "Acl";
+    id: number;
+    nodeId: string;
+    type: AccessControlListType;
+    groups?: Array<{
+      __typename?: "Group";
+      id: number;
+      name: string;
+      memberCount?: number | null;
+    }> | null;
+  } | null;
+};
 
 export type UpdateAclTypeMutationVariables = Exact<{
-  nodeId: Scalars['ID'];
+  nodeId: Scalars["ID"];
   type: AccessControlListType;
 }>;
 
-
-export type UpdateAclTypeMutation = (
-  { __typename?: 'Mutation' }
-  & { updateAclByNodeId?: Maybe<(
-    { __typename?: 'UpdateAclPayload' }
-    & { acl?: Maybe<(
-      { __typename?: 'Acl' }
-      & Pick<Acl, 'id' | 'nodeId' | 'type'>
-    )> }
-  )> }
-);
+export type UpdateAclTypeMutation = {
+  __typename?: "Mutation";
+  updateAclByNodeId?: {
+    __typename?: "UpdateAclPayload";
+    acl?: {
+      __typename?: "Acl";
+      id: number;
+      nodeId: string;
+      type: AccessControlListType;
+    } | null;
+  } | null;
+};
 
 export type AddGroupToAclMutationVariables = Exact<{
-  id: Scalars['Int'];
-  groupId: Scalars['Int'];
+  id: Scalars["Int"];
+  groupId: Scalars["Int"];
 }>;
 
-
-export type AddGroupToAclMutation = (
-  { __typename?: 'Mutation' }
-  & { addGroupToAcl?: Maybe<(
-    { __typename?: 'AddGroupToAclPayload' }
-    & { acl?: Maybe<(
-      { __typename?: 'Acl' }
-      & { groups?: Maybe<Array<(
-        { __typename?: 'Group' }
-        & Pick<Group, 'id' | 'name'>
-      )>> }
-    )> }
-  )> }
-);
+export type AddGroupToAclMutation = {
+  __typename?: "Mutation";
+  addGroupToAcl?: {
+    __typename?: "AddGroupToAclPayload";
+    acl?: {
+      __typename?: "Acl";
+      groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+    } | null;
+  } | null;
+};
 
 export type RemoveGroupFromAclMutationVariables = Exact<{
-  id: Scalars['Int'];
-  groupId: Scalars['Int'];
+  id: Scalars["Int"];
+  groupId: Scalars["Int"];
 }>;
 
-
-export type RemoveGroupFromAclMutation = (
-  { __typename?: 'Mutation' }
-  & { removeGroupFromAcl?: Maybe<(
-    { __typename?: 'RemoveGroupFromAclPayload' }
-    & { acl?: Maybe<(
-      { __typename?: 'Acl' }
-      & { groups?: Maybe<Array<(
-        { __typename?: 'Group' }
-        & Pick<Group, 'id' | 'name'>
-      )>> }
-    )> }
-  )> }
-);
+export type RemoveGroupFromAclMutation = {
+  __typename?: "Mutation";
+  removeGroupFromAcl?: {
+    __typename?: "RemoveGroupFromAclPayload";
+    acl?: {
+      __typename?: "Acl";
+      groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+    } | null;
+  } | null;
+};
 
 export type GroupsQueryVariables = Exact<{
-  projectSlug: Scalars['String'];
+  projectSlug: Scalars["String"];
 }>;
 
-
-export type GroupsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { groups: Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name' | 'memberCount'>
-    )> }
-  )> }
-);
+export type GroupsQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    groups: Array<{
+      __typename?: "Group";
+      id: number;
+      name: string;
+      memberCount?: number | null;
+    }>;
+  } | null;
+};
 
 export type CreateTableOfContentsItemMutationVariables = Exact<{
-  title: Scalars['String'];
-  stableId: Scalars['String'];
-  projectId: Scalars['Int'];
-  isFolder: Scalars['Boolean'];
-  parentStableId?: Maybe<Scalars['String']>;
-  metadata?: Maybe<Scalars['JSON']>;
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
-  dataLayerId?: Maybe<Scalars['Int']>;
+  title: Scalars["String"];
+  stableId: Scalars["String"];
+  projectId: Scalars["Int"];
+  isFolder: Scalars["Boolean"];
+  parentStableId?: InputMaybe<Scalars["String"]>;
+  metadata?: InputMaybe<Scalars["JSON"]>;
+  bounds?: InputMaybe<
+    Array<InputMaybe<Scalars["BigFloat"]>> | InputMaybe<Scalars["BigFloat"]>
+  >;
+  dataLayerId?: InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type CreateTableOfContentsItemMutation = (
-  { __typename?: 'Mutation' }
-  & { createTableOfContentsItem?: Maybe<(
-    { __typename?: 'CreateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'metadata' | 'bounds' | 'dataLayerId'>
-    )> }
-  )> }
-);
+export type CreateTableOfContentsItemMutation = {
+  __typename?: "Mutation";
+  createTableOfContentsItem?: {
+    __typename?: "CreateTableOfContentsItemPayload";
+    tableOfContentsItem?: {
+      __typename?: "TableOfContentsItem";
+      id: number;
+      title: string;
+      stableId: string;
+      projectId: number;
+      parentStableId?: string | null;
+      isClickOffOnly: boolean;
+      isDraft: boolean;
+      isFolder: boolean;
+      metadata?: any | null;
+      bounds?: Array<any | null> | null;
+      dataLayerId?: number | null;
+    } | null;
+  } | null;
+};
 
 export type CreateArcGisDynamicDataSourceMutationVariables = Exact<{
-  projectId: Scalars['Int'];
-  url: Scalars['String'];
-  attribution?: Maybe<Scalars['String']>;
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
-  queryParameters?: Maybe<Scalars['JSON']>;
+  projectId: Scalars["Int"];
+  url: Scalars["String"];
+  attribution?: InputMaybe<Scalars["String"]>;
+  bounds?: InputMaybe<
+    Array<InputMaybe<Scalars["BigFloat"]>> | InputMaybe<Scalars["BigFloat"]>
+  >;
+  queryParameters?: InputMaybe<Scalars["JSON"]>;
 }>;
 
-
-export type CreateArcGisDynamicDataSourceMutation = (
-  { __typename?: 'Mutation' }
-  & { createDataSource?: Maybe<(
-    { __typename?: 'CreateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'projectId' | 'type' | 'url'>
-    )> }
-  )> }
-);
+export type CreateArcGisDynamicDataSourceMutation = {
+  __typename?: "Mutation";
+  createDataSource?: {
+    __typename?: "CreateDataSourcePayload";
+    dataSource?: {
+      __typename?: "DataSource";
+      id: number;
+      projectId: number;
+      type: DataSourceTypes;
+      url?: string | null;
+    } | null;
+  } | null;
+};
 
 export type CreateArcGisImageSourceMutationVariables = Exact<{
-  projectId: Scalars['Int'];
-  url: Scalars['String'];
-  attribution?: Maybe<Scalars['String']>;
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
-  queryParameters?: Maybe<Scalars['JSON']>;
-  enableHighDPI?: Maybe<Scalars['Boolean']>;
-  supportsDynamicLayers: Scalars['Boolean'];
+  projectId: Scalars["Int"];
+  url: Scalars["String"];
+  attribution?: InputMaybe<Scalars["String"]>;
+  bounds?: InputMaybe<
+    Array<InputMaybe<Scalars["BigFloat"]>> | InputMaybe<Scalars["BigFloat"]>
+  >;
+  queryParameters?: InputMaybe<Scalars["JSON"]>;
+  enableHighDPI?: InputMaybe<Scalars["Boolean"]>;
+  supportsDynamicLayers: Scalars["Boolean"];
 }>;
 
-
-export type CreateArcGisImageSourceMutation = (
-  { __typename?: 'Mutation' }
-  & { createDataSource?: Maybe<(
-    { __typename?: 'CreateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'url'>
-    )> }
-  )> }
-);
+export type CreateArcGisImageSourceMutation = {
+  __typename?: "Mutation";
+  createDataSource?: {
+    __typename?: "CreateDataSourcePayload";
+    dataSource?: {
+      __typename?: "DataSource";
+      id: number;
+      url?: string | null;
+    } | null;
+  } | null;
+};
 
 export type CreateSeaSketchVectorSourceMutationVariables = Exact<{
-  projectId: Scalars['Int'];
-  attribution?: Maybe<Scalars['String']>;
-  bounds: Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>;
-  byteLength: Scalars['Int'];
-  originalSourceUrl?: Maybe<Scalars['String']>;
+  projectId: Scalars["Int"];
+  attribution?: InputMaybe<Scalars["String"]>;
+  bounds:
+    | Array<InputMaybe<Scalars["BigFloat"]>>
+    | InputMaybe<Scalars["BigFloat"]>;
+  byteLength: Scalars["Int"];
+  originalSourceUrl?: InputMaybe<Scalars["String"]>;
   importType: DataSourceImportTypes;
-  enhancedSecurity: Scalars['Boolean'];
+  enhancedSecurity: Scalars["Boolean"];
 }>;
 
-
-export type CreateSeaSketchVectorSourceMutation = (
-  { __typename?: 'Mutation' }
-  & { createDataSource?: Maybe<(
-    { __typename?: 'CreateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'projectId' | 'type' | 'url' | 'presignedUploadUrl' | 'bucketId' | 'enhancedSecurity' | 'objectKey'>
-    )> }
-  )> }
-);
+export type CreateSeaSketchVectorSourceMutation = {
+  __typename?: "Mutation";
+  createDataSource?: {
+    __typename?: "CreateDataSourcePayload";
+    dataSource?: {
+      __typename?: "DataSource";
+      id: number;
+      projectId: number;
+      type: DataSourceTypes;
+      url?: string | null;
+      presignedUploadUrl?: string | null;
+      bucketId?: string | null;
+      enhancedSecurity?: boolean | null;
+      objectKey?: any | null;
+    } | null;
+  } | null;
+};
 
 export type CreateDataLayerMutationVariables = Exact<{
-  projectId: Scalars['Int'];
-  dataSourceId: Scalars['Int'];
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
-  renderUnder?: Maybe<RenderUnderType>;
-  sublayer?: Maybe<Scalars['String']>;
+  projectId: Scalars["Int"];
+  dataSourceId: Scalars["Int"];
+  mapboxGlStyles?: InputMaybe<Scalars["JSON"]>;
+  renderUnder?: InputMaybe<RenderUnderType>;
+  sublayer?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type CreateDataLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { createDataLayer?: Maybe<(
-    { __typename?: 'CreateDataLayerPayload' }
-    & { dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'dataSourceId' | 'zIndex'>
-      & { interactivitySettings?: Maybe<(
-        { __typename?: 'InteractivitySetting' }
-        & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type'>
-      )> }
-    )> }
-  )> }
-);
+export type CreateDataLayerMutation = {
+  __typename?: "Mutation";
+  createDataLayer?: {
+    __typename?: "CreateDataLayerPayload";
+    dataLayer?: {
+      __typename?: "DataLayer";
+      id: number;
+      dataSourceId: number;
+      zIndex: number;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        cursor: CursorType;
+        id: number;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+    } | null;
+  } | null;
+};
 
 export type GetOrCreateSpriteMutationVariables = Exact<{
-  height: Scalars['Int'];
-  width: Scalars['Int'];
-  pixelRatio: Scalars['Int'];
-  projectId: Scalars['Int'];
-  smallestImage: Scalars['Upload'];
+  height: Scalars["Int"];
+  width: Scalars["Int"];
+  pixelRatio: Scalars["Int"];
+  projectId: Scalars["Int"];
+  smallestImage: Scalars["Upload"];
 }>;
 
-
-export type GetOrCreateSpriteMutation = (
-  { __typename?: 'Mutation' }
-  & { getOrCreateSprite?: Maybe<(
-    { __typename?: 'Sprite' }
-    & Pick<Sprite, 'id' | 'md5' | 'projectId' | 'type'>
-    & { spriteImages: Array<(
-      { __typename?: 'SpriteImage' }
-      & Pick<SpriteImage, 'spriteId' | 'height' | 'pixelRatio' | 'url' | 'width'>
-    )> }
-  )> }
-);
+export type GetOrCreateSpriteMutation = {
+  __typename?: "Mutation";
+  getOrCreateSprite?: {
+    __typename?: "Sprite";
+    id: number;
+    md5: string;
+    projectId: number;
+    type?: SpriteType | null;
+    spriteImages: Array<{
+      __typename?: "SpriteImage";
+      spriteId: number;
+      height: number;
+      pixelRatio: number;
+      url: string;
+      width: number;
+    }>;
+  } | null;
+};
 
 export type AddImageToSpriteMutationVariables = Exact<{
-  spriteId: Scalars['Int'];
-  width: Scalars['Int'];
-  height: Scalars['Int'];
-  pixelRatio: Scalars['Int'];
-  image: Scalars['Upload'];
+  spriteId: Scalars["Int"];
+  width: Scalars["Int"];
+  height: Scalars["Int"];
+  pixelRatio: Scalars["Int"];
+  image: Scalars["Upload"];
 }>;
 
-
-export type AddImageToSpriteMutation = (
-  { __typename?: 'Mutation' }
-  & { addImageToSprite?: Maybe<(
-    { __typename?: 'Sprite' }
-    & Pick<Sprite, 'id' | 'md5' | 'projectId' | 'type'>
-    & { spriteImages: Array<(
-      { __typename?: 'SpriteImage' }
-      & Pick<SpriteImage, 'spriteId' | 'height' | 'pixelRatio' | 'url' | 'width'>
-    )> }
-  )> }
-);
+export type AddImageToSpriteMutation = {
+  __typename?: "Mutation";
+  addImageToSprite?: {
+    __typename?: "Sprite";
+    id: number;
+    md5: string;
+    projectId: number;
+    type?: SpriteType | null;
+    spriteImages: Array<{
+      __typename?: "SpriteImage";
+      spriteId: number;
+      height: number;
+      pixelRatio: number;
+      url: string;
+      width: number;
+    }>;
+  } | null;
+};
 
 export type VerifyProjectInviteQueryVariables = Exact<{
-  token: Scalars['String'];
+  token: Scalars["String"];
 }>;
 
-
-export type VerifyProjectInviteQuery = (
-  { __typename?: 'Query' }
-  & { verifyProjectInvite?: Maybe<(
-    { __typename?: 'ProjectInviteTokenVerificationResults' }
-    & Pick<ProjectInviteTokenVerificationResults, 'error' | 'existingAccount'>
-    & { claims?: Maybe<(
-      { __typename?: 'ProjectInviteTokenClaims' }
-      & Pick<ProjectInviteTokenClaims, 'admin' | 'email' | 'fullname' | 'inviteId' | 'projectId' | 'wasUsed' | 'projectSlug'>
-    )> }
-  )> }
-);
+export type VerifyProjectInviteQuery = {
+  __typename?: "Query";
+  verifyProjectInvite?: {
+    __typename?: "ProjectInviteTokenVerificationResults";
+    error?: string | null;
+    existingAccount?: boolean | null;
+    claims?: {
+      __typename?: "ProjectInviteTokenClaims";
+      admin: boolean;
+      email: string;
+      fullname?: string | null;
+      inviteId: number;
+      projectId: number;
+      wasUsed: boolean;
+      projectSlug: string;
+    } | null;
+  } | null;
+};
 
 export type ConfirmProjectInviteMutationVariables = Exact<{
-  token: Scalars['String'];
+  token: Scalars["String"];
 }>;
 
+export type ConfirmProjectInviteMutation = {
+  __typename?: "Mutation";
+  confirmProjectInvite?: {
+    __typename?: "ProjectInviteTokenClaims";
+    admin: boolean;
+    email: string;
+    fullname?: string | null;
+    inviteId: number;
+    projectId: number;
+    projectName: string;
+    wasUsed: boolean;
+    projectSlug: string;
+  } | null;
+};
 
-export type ConfirmProjectInviteMutation = (
-  { __typename?: 'Mutation' }
-  & { confirmProjectInvite?: Maybe<(
-    { __typename?: 'ProjectInviteTokenClaims' }
-    & Pick<ProjectInviteTokenClaims, 'admin' | 'email' | 'fullname' | 'inviteId' | 'projectId' | 'projectName' | 'wasUsed' | 'projectSlug'>
-  )> }
-);
+export type ResendEmailVerificationMutationVariables = Exact<{
+  [key: string]: never;
+}>;
 
-export type ResendEmailVerificationMutationVariables = Exact<{ [key: string]: never; }>;
-
-
-export type ResendEmailVerificationMutation = (
-  { __typename?: 'Mutation' }
-  & { resendVerificationEmail: (
-    { __typename?: 'SendVerificationEmailResults' }
-    & Pick<SendVerificationEmailResults, 'success' | 'error'>
-  ) }
-);
+export type ResendEmailVerificationMutation = {
+  __typename?: "Mutation";
+  resendVerificationEmail: {
+    __typename?: "SendVerificationEmailResults";
+    success: boolean;
+    error?: string | null;
+  };
+};
 
 export type RequestInviteOnlyProjectAccessMutationVariables = Exact<{
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
 }>;
 
+export type RequestInviteOnlyProjectAccessMutation = {
+  __typename?: "Mutation";
+  joinProject?: {
+    __typename?: "JoinProjectPayload";
+    clientMutationId?: string | null;
+  } | null;
+};
 
-export type RequestInviteOnlyProjectAccessMutation = (
-  { __typename?: 'Mutation' }
-  & { joinProject?: Maybe<(
-    { __typename?: 'JoinProjectPayload' }
-    & Pick<JoinProjectPayload, 'clientMutationId'>
-  )> }
-);
-
-export type BasemapDetailsFragment = (
-  { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly'>
-  & { interactivitySettings?: Maybe<(
-    { __typename?: 'InteractivitySetting' }
-    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-  )>, optionalBasemapLayers: Array<(
-    { __typename?: 'OptionalBasemapLayer' }
-    & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
-  )> }
-);
+export type BasemapDetailsFragment = {
+  __typename?: "Basemap";
+  id: number;
+  attribution?: string | null;
+  labelsLayerId?: string | null;
+  name: string;
+  description?: string | null;
+  projectId?: number | null;
+  terrainExaggeration: any;
+  terrainMaxZoom: number;
+  terrainOptional: boolean;
+  terrainTileSize: number;
+  terrainUrl?: string | null;
+  terrainVisibilityDefault: boolean;
+  thumbnail: string;
+  tileSize: number;
+  type: BasemapType;
+  url: string;
+  surveysOnly: boolean;
+  interactivitySettings?: {
+    __typename?: "InteractivitySetting";
+    cursor: CursorType;
+    id: number;
+    layers?: Array<string | null> | null;
+    longTemplate?: string | null;
+    shortTemplate?: string | null;
+    type: InteractivityType;
+  } | null;
+  optionalBasemapLayers: Array<{
+    __typename?: "OptionalBasemapLayer";
+    basemapId: number;
+    id: number;
+    defaultVisibility: boolean;
+    description?: string | null;
+    options?: any | null;
+    groupType: OptionalBasemapLayersGroupType;
+    layers: Array<string | null>;
+    metadata?: any | null;
+    name: string;
+  }>;
+};
 
 export type GetBasemapsQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type GetBasemapsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { surveyBasemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>>, basemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>> }
-  )> }
-);
+export type GetBasemapsQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    surveyBasemaps?: Array<{
+      __typename?: "Basemap";
+      id: number;
+      attribution?: string | null;
+      labelsLayerId?: string | null;
+      name: string;
+      description?: string | null;
+      projectId?: number | null;
+      terrainExaggeration: any;
+      terrainMaxZoom: number;
+      terrainOptional: boolean;
+      terrainTileSize: number;
+      terrainUrl?: string | null;
+      terrainVisibilityDefault: boolean;
+      thumbnail: string;
+      tileSize: number;
+      type: BasemapType;
+      url: string;
+      surveysOnly: boolean;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        cursor: CursorType;
+        id: number;
+        layers?: Array<string | null> | null;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+      optionalBasemapLayers: Array<{
+        __typename?: "OptionalBasemapLayer";
+        basemapId: number;
+        id: number;
+        defaultVisibility: boolean;
+        description?: string | null;
+        options?: any | null;
+        groupType: OptionalBasemapLayersGroupType;
+        layers: Array<string | null>;
+        metadata?: any | null;
+        name: string;
+      }>;
+    }> | null;
+    basemaps?: Array<{
+      __typename?: "Basemap";
+      id: number;
+      attribution?: string | null;
+      labelsLayerId?: string | null;
+      name: string;
+      description?: string | null;
+      projectId?: number | null;
+      terrainExaggeration: any;
+      terrainMaxZoom: number;
+      terrainOptional: boolean;
+      terrainTileSize: number;
+      terrainUrl?: string | null;
+      terrainVisibilityDefault: boolean;
+      thumbnail: string;
+      tileSize: number;
+      type: BasemapType;
+      url: string;
+      surveysOnly: boolean;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        cursor: CursorType;
+        id: number;
+        layers?: Array<string | null> | null;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+      optionalBasemapLayers: Array<{
+        __typename?: "OptionalBasemapLayer";
+        basemapId: number;
+        id: number;
+        defaultVisibility: boolean;
+        description?: string | null;
+        options?: any | null;
+        groupType: OptionalBasemapLayersGroupType;
+        layers: Array<string | null>;
+        metadata?: any | null;
+        name: string;
+      }>;
+    }> | null;
+  } | null;
+};
 
 export type CreateBasemapMutationVariables = Exact<{
-  projectId?: Maybe<Scalars['Int']>;
-  name: Scalars['String'];
-  thumbnail: Scalars['Upload'];
-  tileSize?: Maybe<Scalars['Int']>;
+  projectId?: InputMaybe<Scalars["Int"]>;
+  name: Scalars["String"];
+  thumbnail: Scalars["Upload"];
+  tileSize?: InputMaybe<Scalars["Int"]>;
   type: BasemapType;
-  url: Scalars['String'];
-  surveysOnly?: Maybe<Scalars['Boolean']>;
+  url: Scalars["String"];
+  surveysOnly?: InputMaybe<Scalars["Boolean"]>;
 }>;
 
-
-export type CreateBasemapMutation = (
-  { __typename?: 'Mutation' }
-  & { createBasemap?: Maybe<(
-    { __typename?: 'CreateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )> }
-  )> }
-);
+export type CreateBasemapMutation = {
+  __typename?: "Mutation";
+  createBasemap?: {
+    __typename?: "CreateBasemapPayload";
+    basemap?: {
+      __typename?: "Basemap";
+      id: number;
+      attribution?: string | null;
+      labelsLayerId?: string | null;
+      name: string;
+      description?: string | null;
+      projectId?: number | null;
+      terrainExaggeration: any;
+      terrainMaxZoom: number;
+      terrainOptional: boolean;
+      terrainTileSize: number;
+      terrainUrl?: string | null;
+      terrainVisibilityDefault: boolean;
+      thumbnail: string;
+      tileSize: number;
+      type: BasemapType;
+      url: string;
+      surveysOnly: boolean;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        cursor: CursorType;
+        id: number;
+        layers?: Array<string | null> | null;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+      optionalBasemapLayers: Array<{
+        __typename?: "OptionalBasemapLayer";
+        basemapId: number;
+        id: number;
+        defaultVisibility: boolean;
+        description?: string | null;
+        options?: any | null;
+        groupType: OptionalBasemapLayersGroupType;
+        layers: Array<string | null>;
+        metadata?: any | null;
+        name: string;
+      }>;
+    } | null;
+  } | null;
+};
 
 export type UploadBasemapMutationVariables = Exact<{
-  projectId: Scalars['Int'];
-  name: Scalars['String'];
-  thumbnail: Scalars['Upload'];
-  existingId?: Maybe<Scalars['Int']>;
-  style: Scalars['JSON'];
-  surveysOnly?: Maybe<Scalars['Boolean']>;
+  projectId: Scalars["Int"];
+  name: Scalars["String"];
+  thumbnail: Scalars["Upload"];
+  existingId?: InputMaybe<Scalars["Int"]>;
+  style: Scalars["JSON"];
+  surveysOnly?: InputMaybe<Scalars["Boolean"]>;
 }>;
 
-
-export type UploadBasemapMutation = (
-  { __typename?: 'Mutation' }
-  & { uploadStyle: (
-    { __typename?: 'Basemap' }
-    & BasemapDetailsFragment
-  ) }
-);
+export type UploadBasemapMutation = {
+  __typename?: "Mutation";
+  uploadStyle: {
+    __typename?: "Basemap";
+    id: number;
+    attribution?: string | null;
+    labelsLayerId?: string | null;
+    name: string;
+    description?: string | null;
+    projectId?: number | null;
+    terrainExaggeration: any;
+    terrainMaxZoom: number;
+    terrainOptional: boolean;
+    terrainTileSize: number;
+    terrainUrl?: string | null;
+    terrainVisibilityDefault: boolean;
+    thumbnail: string;
+    tileSize: number;
+    type: BasemapType;
+    url: string;
+    surveysOnly: boolean;
+    interactivitySettings?: {
+      __typename?: "InteractivitySetting";
+      cursor: CursorType;
+      id: number;
+      layers?: Array<string | null> | null;
+      longTemplate?: string | null;
+      shortTemplate?: string | null;
+      type: InteractivityType;
+    } | null;
+    optionalBasemapLayers: Array<{
+      __typename?: "OptionalBasemapLayer";
+      basemapId: number;
+      id: number;
+      defaultVisibility: boolean;
+      description?: string | null;
+      options?: any | null;
+      groupType: OptionalBasemapLayersGroupType;
+      layers: Array<string | null>;
+      metadata?: any | null;
+      name: string;
+    }>;
+  };
+};
 
 export type GetBasemapQueryVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type GetBasemapQuery = (
-  { __typename?: 'Query' }
-  & { basemap?: Maybe<(
-    { __typename?: 'Basemap' }
-    & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
-    & { interactivitySettings?: Maybe<(
-      { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-    )>, optionalBasemapLayers: Array<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
-    )> }
-  )> }
-);
+export type GetBasemapQuery = {
+  __typename?: "Query";
+  basemap?: {
+    __typename?: "Basemap";
+    id: number;
+    attribution?: string | null;
+    description?: string | null;
+    labelsLayerId?: string | null;
+    name: string;
+    projectId?: number | null;
+    terrainExaggeration: any;
+    terrainMaxZoom: number;
+    terrainOptional: boolean;
+    terrainTileSize: number;
+    terrainUrl?: string | null;
+    terrainVisibilityDefault: boolean;
+    thumbnail: string;
+    tileSize: number;
+    type: BasemapType;
+    url: string;
+    interactivitySettings?: {
+      __typename?: "InteractivitySetting";
+      cursor: CursorType;
+      id: number;
+      layers?: Array<string | null> | null;
+      longTemplate?: string | null;
+      shortTemplate?: string | null;
+      type: InteractivityType;
+    } | null;
+    optionalBasemapLayers: Array<{
+      __typename?: "OptionalBasemapLayer";
+      basemapId: number;
+      defaultVisibility: boolean;
+      description?: string | null;
+      options?: any | null;
+      groupType: OptionalBasemapLayersGroupType;
+      id: number;
+      layers: Array<string | null>;
+      metadata?: any | null;
+      name: string;
+    }>;
+  } | null;
+};
 
 export type UpdateBasemapMutationVariables = Exact<{
-  id: Scalars['Int'];
-  name?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  name?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateBasemapMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'name' | 'id'>
-    )> }
-  )> }
-);
+export type UpdateBasemapMutation = {
+  __typename?: "Mutation";
+  updateBasemap?: {
+    __typename?: "UpdateBasemapPayload";
+    basemap?: { __typename?: "Basemap"; name: string; id: number } | null;
+  } | null;
+};
 
 export type UpdateBasemapUrlMutationVariables = Exact<{
-  id: Scalars['Int'];
-  url: Scalars['String'];
+  id: Scalars["Int"];
+  url: Scalars["String"];
 }>;
 
-
-export type UpdateBasemapUrlMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'url' | 'id'>
-    )> }
-  )> }
-);
+export type UpdateBasemapUrlMutation = {
+  __typename?: "Mutation";
+  updateBasemap?: {
+    __typename?: "UpdateBasemapPayload";
+    basemap?: { __typename?: "Basemap"; url: string; id: number } | null;
+  } | null;
+};
 
 export type UpdateBasemapLabelsLayerMutationVariables = Exact<{
-  id: Scalars['Int'];
-  layer?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  layer?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateBasemapLabelsLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'labelsLayerId'>
-    )> }
-  )> }
-);
+export type UpdateBasemapLabelsLayerMutation = {
+  __typename?: "Mutation";
+  updateBasemap?: {
+    __typename?: "UpdateBasemapPayload";
+    basemap?: {
+      __typename?: "Basemap";
+      id: number;
+      labelsLayerId?: string | null;
+    } | null;
+  } | null;
+};
 
 export type Toggle3dTerrainMutationVariables = Exact<{
-  id: Scalars['Int'];
-  terrainUrl?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  terrainUrl?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type Toggle3dTerrainMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'terrainUrl'>
-    )> }
-  )> }
-);
+export type Toggle3dTerrainMutation = {
+  __typename?: "Mutation";
+  updateBasemap?: {
+    __typename?: "UpdateBasemapPayload";
+    basemap?: {
+      __typename?: "Basemap";
+      id: number;
+      terrainUrl?: string | null;
+    } | null;
+  } | null;
+};
 
 export type Set3dTerrainMutationVariables = Exact<{
-  id: Scalars['Int'];
-  terrainUrl?: Maybe<Scalars['String']>;
-  terrainOptional?: Maybe<Scalars['Boolean']>;
-  terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
+  id: Scalars["Int"];
+  terrainUrl?: InputMaybe<Scalars["String"]>;
+  terrainOptional?: InputMaybe<Scalars["Boolean"]>;
+  terrainVisibilityDefault?: InputMaybe<Scalars["Boolean"]>;
 }>;
 
-
-export type Set3dTerrainMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'terrainUrl' | 'terrainVisibilityDefault' | 'terrainOptional'>
-    )> }
-  )> }
-);
+export type Set3dTerrainMutation = {
+  __typename?: "Mutation";
+  updateBasemap?: {
+    __typename?: "UpdateBasemapPayload";
+    basemap?: {
+      __typename?: "Basemap";
+      id: number;
+      terrainUrl?: string | null;
+      terrainVisibilityDefault: boolean;
+      terrainOptional: boolean;
+    } | null;
+  } | null;
+};
 
 export type UpdateTerrainExaggerationMutationVariables = Exact<{
-  id: Scalars['Int'];
-  terrainExaggeration: Scalars['BigFloat'];
+  id: Scalars["Int"];
+  terrainExaggeration: Scalars["BigFloat"];
 }>;
 
-
-export type UpdateTerrainExaggerationMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'terrainExaggeration'>
-    )> }
-  )> }
-);
+export type UpdateTerrainExaggerationMutation = {
+  __typename?: "Mutation";
+  updateBasemap?: {
+    __typename?: "UpdateBasemapPayload";
+    basemap?: {
+      __typename?: "Basemap";
+      id: number;
+      terrainExaggeration: any;
+    } | null;
+  } | null;
+};
 
 export type DeleteBasemapMutationVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type DeleteBasemapMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteBasemap?: Maybe<(
-    { __typename?: 'DeleteBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id'>
-    )> }
-  )> }
-);
+export type DeleteBasemapMutation = {
+  __typename?: "Mutation";
+  deleteBasemap?: {
+    __typename?: "DeleteBasemapPayload";
+    basemap?: { __typename?: "Basemap"; id: number } | null;
+  } | null;
+};
 
 export type OptionalLayerQueryVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type OptionalLayerQuery = (
-  { __typename?: 'Query' }
-  & { optionalBasemapLayer?: Maybe<(
-    { __typename?: 'OptionalBasemapLayer' }
-    & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
-  )> }
-);
+export type OptionalLayerQuery = {
+  __typename?: "Query";
+  optionalBasemapLayer?: {
+    __typename?: "OptionalBasemapLayer";
+    id: number;
+    basemapId: number;
+    defaultVisibility: boolean;
+    description?: string | null;
+    options?: any | null;
+    groupType: OptionalBasemapLayersGroupType;
+    layers: Array<string | null>;
+    metadata?: any | null;
+    name: string;
+  } | null;
+};
 
 export type UpdateOptionalLayerNameMutationVariables = Exact<{
-  id: Scalars['Int'];
-  name: Scalars['String'];
+  id: Scalars["Int"];
+  name: Scalars["String"];
 }>;
 
-
-export type UpdateOptionalLayerNameMutation = (
-  { __typename?: 'Mutation' }
-  & { updateOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'name'>
-    )> }
-  )> }
-);
+export type UpdateOptionalLayerNameMutation = {
+  __typename?: "Mutation";
+  updateOptionalBasemapLayer?: {
+    __typename?: "UpdateOptionalBasemapLayerPayload";
+    optionalBasemapLayer?: {
+      __typename?: "OptionalBasemapLayer";
+      id: number;
+      name: string;
+    } | null;
+  } | null;
+};
 
 export type CreateOptionalLayerMutationVariables = Exact<{
-  name: Scalars['String'];
-  basemapId: Scalars['Int'];
-  groupType?: Maybe<OptionalBasemapLayersGroupType>;
-  options?: Maybe<Scalars['JSON']>;
+  name: Scalars["String"];
+  basemapId: Scalars["Int"];
+  groupType?: InputMaybe<OptionalBasemapLayersGroupType>;
+  options?: InputMaybe<Scalars["JSON"]>;
 }>;
 
-
-export type CreateOptionalLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { createOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'CreateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
-    )> }
-  )> }
-);
+export type CreateOptionalLayerMutation = {
+  __typename?: "Mutation";
+  createOptionalBasemapLayer?: {
+    __typename?: "CreateOptionalBasemapLayerPayload";
+    optionalBasemapLayer?: {
+      __typename?: "OptionalBasemapLayer";
+      id: number;
+      basemapId: number;
+      defaultVisibility: boolean;
+      description?: string | null;
+      options?: any | null;
+      groupType: OptionalBasemapLayersGroupType;
+      layers: Array<string | null>;
+      metadata?: any | null;
+      name: string;
+    } | null;
+  } | null;
+};
 
 export type UpdateOptionalLayerMutationVariables = Exact<{
-  id: Scalars['Int'];
-  name?: Maybe<Scalars['String']>;
-  description?: Maybe<Scalars['String']>;
-  defaultVisibility?: Maybe<Scalars['Boolean']>;
-  metadata?: Maybe<Scalars['JSON']>;
+  id: Scalars["Int"];
+  name?: InputMaybe<Scalars["String"]>;
+  description?: InputMaybe<Scalars["String"]>;
+  defaultVisibility?: InputMaybe<Scalars["Boolean"]>;
+  metadata?: InputMaybe<Scalars["JSON"]>;
 }>;
 
-
-export type UpdateOptionalLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { updateOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'name' | 'description' | 'id' | 'defaultVisibility' | 'metadata'>
-    )> }
-  )> }
-);
+export type UpdateOptionalLayerMutation = {
+  __typename?: "Mutation";
+  updateOptionalBasemapLayer?: {
+    __typename?: "UpdateOptionalBasemapLayerPayload";
+    optionalBasemapLayer?: {
+      __typename?: "OptionalBasemapLayer";
+      name: string;
+      description?: string | null;
+      id: number;
+      defaultVisibility: boolean;
+      metadata?: any | null;
+    } | null;
+  } | null;
+};
 
 export type DeleteOptionalLayerMutationVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type DeleteOptionalLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'DeleteOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id'>
-    )> }
-  )> }
-);
+export type DeleteOptionalLayerMutation = {
+  __typename?: "Mutation";
+  deleteOptionalBasemapLayer?: {
+    __typename?: "DeleteOptionalBasemapLayerPayload";
+    optionalBasemapLayer?: {
+      __typename?: "OptionalBasemapLayer";
+      id: number;
+    } | null;
+  } | null;
+};
 
 export type UpdateOptionalBasemapLayerLayerListMutationVariables = Exact<{
-  id: Scalars['Int'];
-  layers?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
+  id: Scalars["Int"];
+  layers?: InputMaybe<
+    Array<InputMaybe<Scalars["String"]>> | InputMaybe<Scalars["String"]>
+  >;
 }>;
 
-
-export type UpdateOptionalBasemapLayerLayerListMutation = (
-  { __typename?: 'Mutation' }
-  & { updateOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'layers'>
-    )> }
-  )> }
-);
+export type UpdateOptionalBasemapLayerLayerListMutation = {
+  __typename?: "Mutation";
+  updateOptionalBasemapLayer?: {
+    __typename?: "UpdateOptionalBasemapLayerPayload";
+    optionalBasemapLayer?: {
+      __typename?: "OptionalBasemapLayer";
+      id: number;
+      layers: Array<string | null>;
+    } | null;
+  } | null;
+};
 
 export type UpdateOptionalBasemapLayerOptionsMutationVariables = Exact<{
-  id: Scalars['Int'];
-  options: Scalars['JSON'];
+  id: Scalars["Int"];
+  options: Scalars["JSON"];
 }>;
 
-
-export type UpdateOptionalBasemapLayerOptionsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'options'>
-    )> }
-  )> }
-);
+export type UpdateOptionalBasemapLayerOptionsMutation = {
+  __typename?: "Mutation";
+  updateOptionalBasemapLayer?: {
+    __typename?: "UpdateOptionalBasemapLayerPayload";
+    optionalBasemapLayer?: {
+      __typename?: "OptionalBasemapLayer";
+      id: number;
+      options?: any | null;
+    } | null;
+  } | null;
+};
 
 export type GetOptionalBasemapLayerQueryVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type GetOptionalBasemapLayerQuery = (
-  { __typename?: 'Query' }
-  & { optionalBasemapLayer?: Maybe<(
-    { __typename?: 'OptionalBasemapLayer' }
-    & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'name' | 'description' | 'defaultVisibility' | 'groupType' | 'layers' | 'metadata' | 'options'>
-  )> }
-);
+export type GetOptionalBasemapLayerQuery = {
+  __typename?: "Query";
+  optionalBasemapLayer?: {
+    __typename?: "OptionalBasemapLayer";
+    id: number;
+    basemapId: number;
+    name: string;
+    description?: string | null;
+    defaultVisibility: boolean;
+    groupType: OptionalBasemapLayersGroupType;
+    layers: Array<string | null>;
+    metadata?: any | null;
+    options?: any | null;
+  } | null;
+};
 
 export type GetOptionalBasemapLayerMetadataQueryVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type GetOptionalBasemapLayerMetadataQuery = (
-  { __typename?: 'Query' }
-  & { optionalBasemapLayer?: Maybe<(
-    { __typename?: 'OptionalBasemapLayer' }
-    & Pick<OptionalBasemapLayer, 'id' | 'metadata'>
-  )> }
-);
+export type GetOptionalBasemapLayerMetadataQuery = {
+  __typename?: "Query";
+  optionalBasemapLayer?: {
+    __typename?: "OptionalBasemapLayer";
+    id: number;
+    metadata?: any | null;
+  } | null;
+};
 
 export type UpdateOptionalBasemapLayerMetadataMutationVariables = Exact<{
-  id: Scalars['Int'];
-  metadata?: Maybe<Scalars['JSON']>;
+  id: Scalars["Int"];
+  metadata?: InputMaybe<Scalars["JSON"]>;
 }>;
 
-
-export type UpdateOptionalBasemapLayerMetadataMutation = (
-  { __typename?: 'Mutation' }
-  & { updateOptionalBasemapLayer?: Maybe<(
-    { __typename?: 'UpdateOptionalBasemapLayerPayload' }
-    & { optionalBasemapLayer?: Maybe<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'id' | 'metadata'>
-    )> }
-  )> }
-);
+export type UpdateOptionalBasemapLayerMetadataMutation = {
+  __typename?: "Mutation";
+  updateOptionalBasemapLayer?: {
+    __typename?: "UpdateOptionalBasemapLayerPayload";
+    optionalBasemapLayer?: {
+      __typename?: "OptionalBasemapLayer";
+      id: number;
+      metadata?: any | null;
+    } | null;
+  } | null;
+};
 
 export type UpdateInteractivitySettingsLayersMutationVariables = Exact<{
-  id: Scalars['Int'];
-  layers?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
+  id: Scalars["Int"];
+  layers?: InputMaybe<
+    Array<InputMaybe<Scalars["String"]>> | InputMaybe<Scalars["String"]>
+  >;
 }>;
 
-
-export type UpdateInteractivitySettingsLayersMutation = (
-  { __typename?: 'Mutation' }
-  & { updateInteractivitySetting?: Maybe<(
-    { __typename?: 'UpdateInteractivitySettingPayload' }
-    & { interactivitySetting?: Maybe<(
-      { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'layers' | 'id'>
-    )> }
-  )> }
-);
+export type UpdateInteractivitySettingsLayersMutation = {
+  __typename?: "Mutation";
+  updateInteractivitySetting?: {
+    __typename?: "UpdateInteractivitySettingPayload";
+    interactivitySetting?: {
+      __typename?: "InteractivitySetting";
+      layers?: Array<string | null> | null;
+      id: number;
+    } | null;
+  } | null;
+};
 
 export type MapboxKeysQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type MapboxKeysQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
-  )> }
-);
+export type MapboxKeysQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    mapboxPublicKey?: string | null;
+    mapboxSecretKey?: string | null;
+  } | null;
+};
 
 export type CreateProjectMutationVariables = Exact<{
-  name: Scalars['String'];
-  slug: Scalars['String'];
+  name: Scalars["String"];
+  slug: Scalars["String"];
 }>;
 
-
-export type CreateProjectMutation = (
-  { __typename?: 'Mutation' }
-  & { createProject?: Maybe<(
-    { __typename?: 'CreateProjectPayload' }
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'url' | 'slug'>
-    )> }
-  )> }
-);
+export type CreateProjectMutation = {
+  __typename?: "Mutation";
+  createProject?: {
+    __typename?: "CreateProjectPayload";
+    project?: {
+      __typename?: "Project";
+      id: number;
+      url?: string | null;
+      slug: string;
+    } | null;
+  } | null;
+};
 
 export type DraftTableOfContentsQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type DraftTableOfContentsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { draftTableOfContentsItems?: Maybe<Array<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren' | 'bounds' | 'sortIndex' | 'hideChildren' | 'enableDownload'>
-      & { acl?: Maybe<(
-        { __typename?: 'Acl' }
-        & Pick<Acl, 'id' | 'type'>
-      )> }
-    )>> }
-  )> }
-);
+export type DraftTableOfContentsQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    draftTableOfContentsItems?: Array<{
+      __typename?: "TableOfContentsItem";
+      id: number;
+      dataLayerId?: number | null;
+      title: string;
+      isClickOffOnly: boolean;
+      isFolder: boolean;
+      stableId: string;
+      parentStableId?: string | null;
+      showRadioChildren: boolean;
+      bounds?: Array<any | null> | null;
+      sortIndex: number;
+      hideChildren: boolean;
+      enableDownload: boolean;
+      acl?: {
+        __typename?: "Acl";
+        id: number;
+        type: AccessControlListType;
+      } | null;
+    }> | null;
+  } | null;
+};
 
 export type LayersAndSourcesForItemsQueryVariables = Exact<{
-  slug: Scalars['String'];
-  tableOfContentsItemIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  slug: Scalars["String"];
+  tableOfContentsItemIds:
+    | Array<InputMaybe<Scalars["Int"]>>
+    | InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type LayersAndSourcesForItemsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { dataSourcesForItems?: Maybe<Array<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
-    )>>, dataLayersForItems?: Maybe<Array<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
-      & { interactivitySettings?: Maybe<(
-        { __typename?: 'InteractivitySetting' }
-        & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type'>
-      )>, sprites?: Maybe<Array<(
-        { __typename?: 'Sprite' }
-        & Pick<Sprite, 'id' | 'type'>
-        & { spriteImages: Array<(
-          { __typename?: 'SpriteImage' }
-          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
-        )> }
-      )>> }
-    )>> }
-  )> }
-);
+export type LayersAndSourcesForItemsQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    dataSourcesForItems?: Array<{
+      __typename?: "DataSource";
+      attribution?: string | null;
+      bounds?: Array<any | null> | null;
+      bucketId?: string | null;
+      buffer?: number | null;
+      byteLength?: number | null;
+      cluster?: boolean | null;
+      clusterMaxZoom?: number | null;
+      clusterProperties?: any | null;
+      clusterRadius?: number | null;
+      coordinates?: Array<any | null> | null;
+      createdAt: any;
+      encoding?: RasterDemEncoding | null;
+      enhancedSecurity?: boolean | null;
+      id: number;
+      importType?: DataSourceImportTypes | null;
+      lineMetrics?: boolean | null;
+      maxzoom?: number | null;
+      minzoom?: number | null;
+      objectKey?: any | null;
+      originalSourceUrl?: string | null;
+      queryParameters?: any | null;
+      scheme?: TileScheme | null;
+      tiles?: Array<string | null> | null;
+      tileSize?: number | null;
+      tolerance?: any | null;
+      type: DataSourceTypes;
+      url?: string | null;
+      urls?: Array<string | null> | null;
+      useDevicePixelRatio?: boolean | null;
+      supportsDynamicLayers: boolean;
+    }> | null;
+    dataLayersForItems?: Array<{
+      __typename?: "DataLayer";
+      zIndex: number;
+      dataSourceId: number;
+      id: number;
+      mapboxGlStyles?: any | null;
+      renderUnder: RenderUnderType;
+      sourceLayer?: string | null;
+      sublayer?: string | null;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        id: number;
+        cursor: CursorType;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+      sprites?: Array<{
+        __typename?: "Sprite";
+        id: number;
+        type?: SpriteType | null;
+        spriteImages: Array<{
+          __typename?: "SpriteImage";
+          pixelRatio: number;
+          height: number;
+          width: number;
+          url: string;
+        }>;
+      }> | null;
+    }> | null;
+  } | null;
+};
 
 export type CreateFolderMutationVariables = Exact<{
-  title: Scalars['String'];
-  stableId: Scalars['String'];
-  projectId: Scalars['Int'];
-  parentStableId?: Maybe<Scalars['String']>;
-  isClickOffOnly?: Maybe<Scalars['Boolean']>;
-  showRadioChildren?: Maybe<Scalars['Boolean']>;
-  hideChildren?: Maybe<Scalars['Boolean']>;
+  title: Scalars["String"];
+  stableId: Scalars["String"];
+  projectId: Scalars["Int"];
+  parentStableId?: InputMaybe<Scalars["String"]>;
+  isClickOffOnly?: InputMaybe<Scalars["Boolean"]>;
+  showRadioChildren?: InputMaybe<Scalars["Boolean"]>;
+  hideChildren?: InputMaybe<Scalars["Boolean"]>;
 }>;
 
-
-export type CreateFolderMutation = (
-  { __typename?: 'Mutation' }
-  & { createTableOfContentsItem?: Maybe<(
-    { __typename?: 'CreateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'projectId' | 'parentStableId' | 'isClickOffOnly' | 'isDraft' | 'isFolder' | 'showRadioChildren' | 'sortIndex' | 'hideChildren' | 'enableDownload'>
-    )> }
-  )> }
-);
+export type CreateFolderMutation = {
+  __typename?: "Mutation";
+  createTableOfContentsItem?: {
+    __typename?: "CreateTableOfContentsItemPayload";
+    tableOfContentsItem?: {
+      __typename?: "TableOfContentsItem";
+      id: number;
+      title: string;
+      stableId: string;
+      projectId: number;
+      parentStableId?: string | null;
+      isClickOffOnly: boolean;
+      isDraft: boolean;
+      isFolder: boolean;
+      showRadioChildren: boolean;
+      sortIndex: number;
+      hideChildren: boolean;
+      enableDownload: boolean;
+    } | null;
+  } | null;
+};
 
 export type DeleteBranchMutationVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type DeleteBranchMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteTableOfContentsBranch?: Maybe<(
-    { __typename?: 'DeleteTableOfContentsBranchPayload' }
-    & Pick<DeleteTableOfContentsBranchPayload, 'clientMutationId'>
-  )> }
-);
+export type DeleteBranchMutation = {
+  __typename?: "Mutation";
+  deleteTableOfContentsBranch?: {
+    __typename?: "DeleteTableOfContentsBranchPayload";
+    clientMutationId?: string | null;
+  } | null;
+};
 
 export type UpdateTableOfContentsItemChildrenMutationVariables = Exact<{
-  id?: Maybe<Scalars['Int']>;
-  childIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  id?: InputMaybe<Scalars["Int"]>;
+  childIds: Array<InputMaybe<Scalars["Int"]>> | InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type UpdateTableOfContentsItemChildrenMutation = (
-  { __typename?: 'Mutation' }
-  & { updateTableOfContentsItemChildren?: Maybe<(
-    { __typename?: 'UpdateTableOfContentsItemChildrenPayload' }
-    & { tableOfContentsItems?: Maybe<Array<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'sortIndex' | 'parentStableId'>
-    )>> }
-  )> }
-);
+export type UpdateTableOfContentsItemChildrenMutation = {
+  __typename?: "Mutation";
+  updateTableOfContentsItemChildren?: {
+    __typename?: "UpdateTableOfContentsItemChildrenPayload";
+    tableOfContentsItems?: Array<{
+      __typename?: "TableOfContentsItem";
+      id: number;
+      sortIndex: number;
+      parentStableId?: string | null;
+    }> | null;
+  } | null;
+};
 
 export type GetFolderQueryVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type GetFolderQuery = (
-  { __typename?: 'Query' }
-  & { tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'isClickOffOnly' | 'showRadioChildren' | 'title' | 'hideChildren'>
-  )> }
-);
+export type GetFolderQuery = {
+  __typename?: "Query";
+  tableOfContentsItem?: {
+    __typename?: "TableOfContentsItem";
+    id: number;
+    bounds?: Array<any | null> | null;
+    isClickOffOnly: boolean;
+    showRadioChildren: boolean;
+    title: string;
+    hideChildren: boolean;
+  } | null;
+};
 
 export type UpdateFolderMutationVariables = Exact<{
-  id: Scalars['Int'];
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
-  isClickOffOnly?: Maybe<Scalars['Boolean']>;
-  showRadioChildren?: Maybe<Scalars['Boolean']>;
-  title?: Maybe<Scalars['String']>;
-  hideChildren?: Maybe<Scalars['Boolean']>;
+  id: Scalars["Int"];
+  bounds?: InputMaybe<
+    Array<InputMaybe<Scalars["BigFloat"]>> | InputMaybe<Scalars["BigFloat"]>
+  >;
+  isClickOffOnly?: InputMaybe<Scalars["Boolean"]>;
+  showRadioChildren?: InputMaybe<Scalars["Boolean"]>;
+  title?: InputMaybe<Scalars["String"]>;
+  hideChildren?: InputMaybe<Scalars["Boolean"]>;
 }>;
 
-
-export type UpdateFolderMutation = (
-  { __typename?: 'Mutation' }
-  & { updateTableOfContentsItem?: Maybe<(
-    { __typename?: 'UpdateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'isClickOffOnly' | 'showRadioChildren' | 'hideChildren' | 'title'>
-    )> }
-  )> }
-);
+export type UpdateFolderMutation = {
+  __typename?: "Mutation";
+  updateTableOfContentsItem?: {
+    __typename?: "UpdateTableOfContentsItemPayload";
+    tableOfContentsItem?: {
+      __typename?: "TableOfContentsItem";
+      id: number;
+      bounds?: Array<any | null> | null;
+      isClickOffOnly: boolean;
+      showRadioChildren: boolean;
+      hideChildren: boolean;
+      title: string;
+    } | null;
+  } | null;
+};
 
 export type GetLayerItemQueryVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type GetLayerItemQuery = (
-  { __typename?: 'Query' }
-  & { tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload'>
-    & { acl?: Maybe<(
-      { __typename?: 'Acl' }
-      & Pick<Acl, 'nodeId' | 'id' | 'type'>
-      & { groups?: Maybe<Array<(
-        { __typename?: 'Group' }
-        & Pick<Group, 'id' | 'name'>
-      )>> }
-    )>, dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'dataSourceId'>
-      & { sprites?: Maybe<Array<(
-        { __typename?: 'Sprite' }
-        & Pick<Sprite, 'id' | 'type'>
-        & { spriteImages: Array<(
-          { __typename?: 'SpriteImage' }
-          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
-        )> }
-      )>>, dataSource?: Maybe<(
-        { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
-      )> }
-    )> }
-  )> }
-);
+export type GetLayerItemQuery = {
+  __typename?: "Query";
+  tableOfContentsItem?: {
+    __typename?: "TableOfContentsItem";
+    id: number;
+    bounds?: Array<any | null> | null;
+    dataLayerId?: number | null;
+    metadata?: any | null;
+    parentStableId?: string | null;
+    projectId: number;
+    stableId: string;
+    title: string;
+    enableDownload: boolean;
+    acl?: {
+      __typename?: "Acl";
+      nodeId: string;
+      id: number;
+      type: AccessControlListType;
+      groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+    } | null;
+    dataLayer?: {
+      __typename?: "DataLayer";
+      id: number;
+      zIndex: number;
+      mapboxGlStyles?: any | null;
+      interactivitySettingsId: number;
+      renderUnder: RenderUnderType;
+      sourceLayer?: string | null;
+      sublayer?: string | null;
+      dataSourceId: number;
+      sprites?: Array<{
+        __typename?: "Sprite";
+        id: number;
+        type?: SpriteType | null;
+        spriteImages: Array<{
+          __typename?: "SpriteImage";
+          pixelRatio: number;
+          height: number;
+          width: number;
+          url: string;
+        }>;
+      }> | null;
+      dataSource?: {
+        __typename?: "DataSource";
+        id: number;
+        attribution?: string | null;
+        bounds?: Array<any | null> | null;
+        bucketId?: string | null;
+        buffer?: number | null;
+        byteLength?: number | null;
+        cluster?: boolean | null;
+        clusterMaxZoom?: number | null;
+        clusterProperties?: any | null;
+        clusterRadius?: number | null;
+        coordinates?: Array<any | null> | null;
+        createdAt: any;
+        encoding?: RasterDemEncoding | null;
+        enhancedSecurity?: boolean | null;
+        generateId?: boolean | null;
+        importType?: DataSourceImportTypes | null;
+        lineMetrics?: boolean | null;
+        maxzoom?: number | null;
+        minzoom?: number | null;
+        objectKey?: any | null;
+        originalSourceUrl?: string | null;
+        promoteId?: boolean | null;
+        queryParameters?: any | null;
+        scheme?: TileScheme | null;
+        tiles?: Array<string | null> | null;
+        tileSize?: number | null;
+        tolerance?: any | null;
+        type: DataSourceTypes;
+        url?: string | null;
+        urls?: Array<string | null> | null;
+        useDevicePixelRatio?: boolean | null;
+        supportsDynamicLayers: boolean;
+      } | null;
+    } | null;
+  } | null;
+};
 
 export type UpdateTableOfContentsItemMutationVariables = Exact<{
-  id: Scalars['Int'];
-  title?: Maybe<Scalars['String']>;
-  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
-  metadata?: Maybe<Scalars['JSON']>;
+  id: Scalars["Int"];
+  title?: InputMaybe<Scalars["String"]>;
+  bounds?: InputMaybe<
+    Array<InputMaybe<Scalars["BigFloat"]>> | InputMaybe<Scalars["BigFloat"]>
+  >;
+  metadata?: InputMaybe<Scalars["JSON"]>;
 }>;
 
-
-export type UpdateTableOfContentsItemMutation = (
-  { __typename?: 'Mutation' }
-  & { updateTableOfContentsItem?: Maybe<(
-    { __typename?: 'UpdateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'metadata' | 'title'>
-    )> }
-  )> }
-);
+export type UpdateTableOfContentsItemMutation = {
+  __typename?: "Mutation";
+  updateTableOfContentsItem?: {
+    __typename?: "UpdateTableOfContentsItemPayload";
+    tableOfContentsItem?: {
+      __typename?: "TableOfContentsItem";
+      id: number;
+      bounds?: Array<any | null> | null;
+      metadata?: any | null;
+      title: string;
+    } | null;
+  } | null;
+};
 
 export type UpdateEnableDownloadMutationVariables = Exact<{
-  id: Scalars['Int'];
-  enableDownload?: Maybe<Scalars['Boolean']>;
+  id: Scalars["Int"];
+  enableDownload?: InputMaybe<Scalars["Boolean"]>;
 }>;
 
-
-export type UpdateEnableDownloadMutation = (
-  { __typename?: 'Mutation' }
-  & { updateTableOfContentsItem?: Maybe<(
-    { __typename?: 'UpdateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'enableDownload'>
-    )> }
-  )> }
-);
+export type UpdateEnableDownloadMutation = {
+  __typename?: "Mutation";
+  updateTableOfContentsItem?: {
+    __typename?: "UpdateTableOfContentsItemPayload";
+    tableOfContentsItem?: {
+      __typename?: "TableOfContentsItem";
+      id: number;
+      enableDownload: boolean;
+    } | null;
+  } | null;
+};
 
 export type UpdateLayerMutationVariables = Exact<{
-  id: Scalars['Int'];
-  renderUnder?: Maybe<RenderUnderType>;
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
-  sublayer?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  renderUnder?: InputMaybe<RenderUnderType>;
+  mapboxGlStyles?: InputMaybe<Scalars["JSON"]>;
+  sublayer?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateLayerMutation = (
-  { __typename?: 'Mutation' }
-  & { updateDataLayer?: Maybe<(
-    { __typename?: 'UpdateDataLayerPayload' }
-    & { dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'renderUnder' | 'mapboxGlStyles' | 'sublayer'>
-      & { sprites?: Maybe<Array<(
-        { __typename?: 'Sprite' }
-        & Pick<Sprite, 'id' | 'type'>
-        & { spriteImages: Array<(
-          { __typename?: 'SpriteImage' }
-          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
-        )> }
-      )>> }
-    )> }
-  )> }
-);
+export type UpdateLayerMutation = {
+  __typename?: "Mutation";
+  updateDataLayer?: {
+    __typename?: "UpdateDataLayerPayload";
+    dataLayer?: {
+      __typename?: "DataLayer";
+      id: number;
+      zIndex: number;
+      renderUnder: RenderUnderType;
+      mapboxGlStyles?: any | null;
+      sublayer?: string | null;
+      sprites?: Array<{
+        __typename?: "Sprite";
+        id: number;
+        type?: SpriteType | null;
+        spriteImages: Array<{
+          __typename?: "SpriteImage";
+          pixelRatio: number;
+          height: number;
+          width: number;
+          url: string;
+        }>;
+      }> | null;
+    } | null;
+  } | null;
+};
 
 export type UpdateDataSourceMutationVariables = Exact<{
-  id: Scalars['Int'];
-  attribution?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  attribution?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateDataSourceMutation = (
-  { __typename?: 'Mutation' }
-  & { updateDataSource?: Maybe<(
-    { __typename?: 'UpdateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
-    )> }
-  )> }
-);
+export type UpdateDataSourceMutation = {
+  __typename?: "Mutation";
+  updateDataSource?: {
+    __typename?: "UpdateDataSourcePayload";
+    dataSource?: {
+      __typename?: "DataSource";
+      id: number;
+      attribution?: string | null;
+      bounds?: Array<any | null> | null;
+      bucketId?: string | null;
+      buffer?: number | null;
+      byteLength?: number | null;
+      cluster?: boolean | null;
+      clusterMaxZoom?: number | null;
+      clusterProperties?: any | null;
+      clusterRadius?: number | null;
+      coordinates?: Array<any | null> | null;
+      createdAt: any;
+      encoding?: RasterDemEncoding | null;
+      enhancedSecurity?: boolean | null;
+      generateId?: boolean | null;
+      importType?: DataSourceImportTypes | null;
+      lineMetrics?: boolean | null;
+      maxzoom?: number | null;
+      minzoom?: number | null;
+      objectKey?: any | null;
+      originalSourceUrl?: string | null;
+      promoteId?: boolean | null;
+      queryParameters?: any | null;
+      scheme?: TileScheme | null;
+      tiles?: Array<string | null> | null;
+      tileSize?: number | null;
+      tolerance?: any | null;
+      type: DataSourceTypes;
+      url?: string | null;
+      urls?: Array<string | null> | null;
+      useDevicePixelRatio?: boolean | null;
+      supportsDynamicLayers: boolean;
+    } | null;
+  } | null;
+};
 
 export type InteractivitySettingsForLayerQueryVariables = Exact<{
-  layerId: Scalars['Int'];
+  layerId: Scalars["Int"];
 }>;
 
-
-export type InteractivitySettingsForLayerQuery = (
-  { __typename?: 'Query' }
-  & { dataLayer?: Maybe<(
-    { __typename?: 'DataLayer' }
-    & Pick<DataLayer, 'id' | 'sourceLayer'>
-    & { interactivitySettings?: Maybe<(
-      { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type'>
-    )> }
-  )> }
-);
+export type InteractivitySettingsForLayerQuery = {
+  __typename?: "Query";
+  dataLayer?: {
+    __typename?: "DataLayer";
+    id: number;
+    sourceLayer?: string | null;
+    interactivitySettings?: {
+      __typename?: "InteractivitySetting";
+      cursor: CursorType;
+      id: number;
+      longTemplate?: string | null;
+      shortTemplate?: string | null;
+      type: InteractivityType;
+    } | null;
+  } | null;
+};
 
 export type UpdateInteractivitySettingsMutationVariables = Exact<{
-  id: Scalars['Int'];
-  type?: Maybe<InteractivityType>;
-  cursor?: Maybe<CursorType>;
-  longTemplate?: Maybe<Scalars['String']>;
-  shortTemplate?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  type?: InputMaybe<InteractivityType>;
+  cursor?: InputMaybe<CursorType>;
+  longTemplate?: InputMaybe<Scalars["String"]>;
+  shortTemplate?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateInteractivitySettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateInteractivitySetting?: Maybe<(
-    { __typename?: 'UpdateInteractivitySettingPayload' }
-    & { interactivitySetting?: Maybe<(
-      { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'id' | 'type' | 'cursor' | 'longTemplate' | 'shortTemplate'>
-    )> }
-  )> }
-);
+export type UpdateInteractivitySettingsMutation = {
+  __typename?: "Mutation";
+  updateInteractivitySetting?: {
+    __typename?: "UpdateInteractivitySettingPayload";
+    interactivitySetting?: {
+      __typename?: "InteractivitySetting";
+      id: number;
+      type: InteractivityType;
+      cursor: CursorType;
+      longTemplate?: string | null;
+      shortTemplate?: string | null;
+    } | null;
+  } | null;
+};
 
 export type DataSourceUrlPropertiesQueryVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type DataSourceUrlPropertiesQuery = (
-  { __typename?: 'Query' }
-  & { dataSource?: Maybe<(
-    { __typename?: 'DataSource' }
-    & Pick<DataSource, 'id' | 'type' | 'bucketId' | 'objectKey' | 'url' | 'originalSourceUrl' | 'queryParameters'>
-  )> }
-);
+export type DataSourceUrlPropertiesQuery = {
+  __typename?: "Query";
+  dataSource?: {
+    __typename?: "DataSource";
+    id: number;
+    type: DataSourceTypes;
+    bucketId?: string | null;
+    objectKey?: any | null;
+    url?: string | null;
+    originalSourceUrl?: string | null;
+    queryParameters?: any | null;
+  } | null;
+};
 
 export type UpdateZIndexesMutationVariables = Exact<{
-  dataLayerIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  dataLayerIds: Array<InputMaybe<Scalars["Int"]>> | InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type UpdateZIndexesMutation = (
-  { __typename?: 'Mutation' }
-  & { updateZIndexes?: Maybe<(
-    { __typename?: 'UpdateZIndexesPayload' }
-    & { dataLayers?: Maybe<Array<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex'>
-    )>> }
-  )> }
-);
+export type UpdateZIndexesMutation = {
+  __typename?: "Mutation";
+  updateZIndexes?: {
+    __typename?: "UpdateZIndexesPayload";
+    dataLayers?: Array<{
+      __typename?: "DataLayer";
+      id: number;
+      zIndex: number;
+    }> | null;
+  } | null;
+};
 
 export type UpdateRenderUnderTypeMutationVariables = Exact<{
-  layerId: Scalars['Int'];
-  renderUnder?: Maybe<RenderUnderType>;
+  layerId: Scalars["Int"];
+  renderUnder?: InputMaybe<RenderUnderType>;
 }>;
 
-
-export type UpdateRenderUnderTypeMutation = (
-  { __typename?: 'Mutation' }
-  & { updateDataLayer?: Maybe<(
-    { __typename?: 'UpdateDataLayerPayload' }
-    & { dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'renderUnder'>
-    )> }
-  )> }
-);
+export type UpdateRenderUnderTypeMutation = {
+  __typename?: "Mutation";
+  updateDataLayer?: {
+    __typename?: "UpdateDataLayerPayload";
+    dataLayer?: {
+      __typename?: "DataLayer";
+      id: number;
+      renderUnder: RenderUnderType;
+    } | null;
+  } | null;
+};
 
 export type UpdateQueryParametersMutationVariables = Exact<{
-  sourceId: Scalars['Int'];
-  queryParameters: Scalars['JSON'];
+  sourceId: Scalars["Int"];
+  queryParameters: Scalars["JSON"];
 }>;
 
-
-export type UpdateQueryParametersMutation = (
-  { __typename?: 'Mutation' }
-  & { updateDataSource?: Maybe<(
-    { __typename?: 'UpdateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'queryParameters'>
-    )> }
-  )> }
-);
+export type UpdateQueryParametersMutation = {
+  __typename?: "Mutation";
+  updateDataSource?: {
+    __typename?: "UpdateDataSourcePayload";
+    dataSource?: {
+      __typename?: "DataSource";
+      id: number;
+      queryParameters?: any | null;
+    } | null;
+  } | null;
+};
 
 export type UpdateEnableHighDpiRequestsMutationVariables = Exact<{
-  sourceId: Scalars['Int'];
-  useDevicePixelRatio: Scalars['Boolean'];
+  sourceId: Scalars["Int"];
+  useDevicePixelRatio: Scalars["Boolean"];
 }>;
 
-
-export type UpdateEnableHighDpiRequestsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateDataSource?: Maybe<(
-    { __typename?: 'UpdateDataSourcePayload' }
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'useDevicePixelRatio'>
-    )> }
-  )> }
-);
+export type UpdateEnableHighDpiRequestsMutation = {
+  __typename?: "Mutation";
+  updateDataSource?: {
+    __typename?: "UpdateDataSourcePayload";
+    dataSource?: {
+      __typename?: "DataSource";
+      id: number;
+      useDevicePixelRatio?: boolean | null;
+    } | null;
+  } | null;
+};
 
 export type GetMetadataQueryVariables = Exact<{
-  itemId: Scalars['Int'];
+  itemId: Scalars["Int"];
 }>;
 
-
-export type GetMetadataQuery = (
-  { __typename?: 'Query' }
-  & { tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'metadata'>
-  )> }
-);
+export type GetMetadataQuery = {
+  __typename?: "Query";
+  tableOfContentsItem?: {
+    __typename?: "TableOfContentsItem";
+    id: number;
+    metadata?: any | null;
+  } | null;
+};
 
 export type UpdateMetadataMutationVariables = Exact<{
-  itemId: Scalars['Int'];
-  metadata: Scalars['JSON'];
+  itemId: Scalars["Int"];
+  metadata: Scalars["JSON"];
 }>;
 
-
-export type UpdateMetadataMutation = (
-  { __typename?: 'Mutation' }
-  & { updateTableOfContentsItem?: Maybe<(
-    { __typename?: 'UpdateTableOfContentsItemPayload' }
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'metadata'>
-    )> }
-  )> }
-);
+export type UpdateMetadataMutation = {
+  __typename?: "Mutation";
+  updateTableOfContentsItem?: {
+    __typename?: "UpdateTableOfContentsItemPayload";
+    tableOfContentsItem?: {
+      __typename?: "TableOfContentsItem";
+      id: number;
+      metadata?: any | null;
+    } | null;
+  } | null;
+};
 
 export type ProjectHostingQuotaQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type ProjectHostingQuotaQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'dataHostingQuota' | 'dataHostingQuotaUsed'>
-  )> }
-);
+export type ProjectHostingQuotaQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    dataHostingQuota?: number | null;
+    dataHostingQuotaUsed?: number | null;
+  } | null;
+};
 
 export type InteractivitySettingsByIdQueryVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type InteractivitySettingsByIdQuery = (
-  { __typename?: 'Query' }
-  & { interactivitySetting?: Maybe<(
-    { __typename?: 'InteractivitySetting' }
-    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-  )> }
-);
+export type InteractivitySettingsByIdQuery = {
+  __typename?: "Query";
+  interactivitySetting?: {
+    __typename?: "InteractivitySetting";
+    cursor: CursorType;
+    id: number;
+    layers?: Array<string | null> | null;
+    longTemplate?: string | null;
+    shortTemplate?: string | null;
+    type: InteractivityType;
+  } | null;
+};
 
 export type PublishTableOfContentsMutationVariables = Exact<{
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
 }>;
 
+export type PublishTableOfContentsMutation = {
+  __typename?: "Mutation";
+  publishTableOfContents?: {
+    __typename?: "PublishTableOfContentsPayload";
+    tableOfContentsItems?: Array<{
+      __typename?: "TableOfContentsItem";
+      id: number;
+    }> | null;
+  } | null;
+};
 
-export type PublishTableOfContentsMutation = (
-  { __typename?: 'Mutation' }
-  & { publishTableOfContents?: Maybe<(
-    { __typename?: 'PublishTableOfContentsPayload' }
-    & { tableOfContentsItems?: Maybe<Array<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id'>
-    )>> }
-  )> }
-);
-
-export type MapEssentialsFragment = (
-  { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
-  & { basemaps?: Maybe<Array<(
-    { __typename?: 'Basemap' }
-    & BasemapDetailsFragment
-  )>>, surveyBasemaps?: Maybe<Array<(
-    { __typename?: 'Basemap' }
-    & BasemapDetailsFragment
-  )>>, region: (
-    { __typename?: 'GeometryPolygon' }
-    & Pick<GeometryPolygon, 'geojson'>
-  ) }
-);
+export type MapEssentialsFragment = {
+  __typename?: "Project";
+  id: number;
+  mapboxPublicKey?: string | null;
+  mapboxSecretKey?: string | null;
+  basemaps?: Array<{
+    __typename?: "Basemap";
+    id: number;
+    attribution?: string | null;
+    labelsLayerId?: string | null;
+    name: string;
+    description?: string | null;
+    projectId?: number | null;
+    terrainExaggeration: any;
+    terrainMaxZoom: number;
+    terrainOptional: boolean;
+    terrainTileSize: number;
+    terrainUrl?: string | null;
+    terrainVisibilityDefault: boolean;
+    thumbnail: string;
+    tileSize: number;
+    type: BasemapType;
+    url: string;
+    surveysOnly: boolean;
+    interactivitySettings?: {
+      __typename?: "InteractivitySetting";
+      cursor: CursorType;
+      id: number;
+      layers?: Array<string | null> | null;
+      longTemplate?: string | null;
+      shortTemplate?: string | null;
+      type: InteractivityType;
+    } | null;
+    optionalBasemapLayers: Array<{
+      __typename?: "OptionalBasemapLayer";
+      basemapId: number;
+      id: number;
+      defaultVisibility: boolean;
+      description?: string | null;
+      options?: any | null;
+      groupType: OptionalBasemapLayersGroupType;
+      layers: Array<string | null>;
+      metadata?: any | null;
+      name: string;
+    }>;
+  }> | null;
+  surveyBasemaps?: Array<{
+    __typename?: "Basemap";
+    id: number;
+    attribution?: string | null;
+    labelsLayerId?: string | null;
+    name: string;
+    description?: string | null;
+    projectId?: number | null;
+    terrainExaggeration: any;
+    terrainMaxZoom: number;
+    terrainOptional: boolean;
+    terrainTileSize: number;
+    terrainUrl?: string | null;
+    terrainVisibilityDefault: boolean;
+    thumbnail: string;
+    tileSize: number;
+    type: BasemapType;
+    url: string;
+    surveysOnly: boolean;
+    interactivitySettings?: {
+      __typename?: "InteractivitySetting";
+      cursor: CursorType;
+      id: number;
+      layers?: Array<string | null> | null;
+      longTemplate?: string | null;
+      shortTemplate?: string | null;
+      type: InteractivityType;
+    } | null;
+    optionalBasemapLayers: Array<{
+      __typename?: "OptionalBasemapLayer";
+      basemapId: number;
+      id: number;
+      defaultVisibility: boolean;
+      description?: string | null;
+      options?: any | null;
+      groupType: OptionalBasemapLayersGroupType;
+      layers: Array<string | null>;
+      metadata?: any | null;
+      name: string;
+    }>;
+  }> | null;
+  region: { __typename?: "GeometryPolygon"; geojson?: any | null };
+};
 
 export type GetBasemapsAndRegionQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type GetBasemapsAndRegionQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & MapEssentialsFragment
-  )> }
-);
+export type GetBasemapsAndRegionQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    mapboxPublicKey?: string | null;
+    mapboxSecretKey?: string | null;
+    basemaps?: Array<{
+      __typename?: "Basemap";
+      id: number;
+      attribution?: string | null;
+      labelsLayerId?: string | null;
+      name: string;
+      description?: string | null;
+      projectId?: number | null;
+      terrainExaggeration: any;
+      terrainMaxZoom: number;
+      terrainOptional: boolean;
+      terrainTileSize: number;
+      terrainUrl?: string | null;
+      terrainVisibilityDefault: boolean;
+      thumbnail: string;
+      tileSize: number;
+      type: BasemapType;
+      url: string;
+      surveysOnly: boolean;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        cursor: CursorType;
+        id: number;
+        layers?: Array<string | null> | null;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+      optionalBasemapLayers: Array<{
+        __typename?: "OptionalBasemapLayer";
+        basemapId: number;
+        id: number;
+        defaultVisibility: boolean;
+        description?: string | null;
+        options?: any | null;
+        groupType: OptionalBasemapLayersGroupType;
+        layers: Array<string | null>;
+        metadata?: any | null;
+        name: string;
+      }>;
+    }> | null;
+    surveyBasemaps?: Array<{
+      __typename?: "Basemap";
+      id: number;
+      attribution?: string | null;
+      labelsLayerId?: string | null;
+      name: string;
+      description?: string | null;
+      projectId?: number | null;
+      terrainExaggeration: any;
+      terrainMaxZoom: number;
+      terrainOptional: boolean;
+      terrainTileSize: number;
+      terrainUrl?: string | null;
+      terrainVisibilityDefault: boolean;
+      thumbnail: string;
+      tileSize: number;
+      type: BasemapType;
+      url: string;
+      surveysOnly: boolean;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        cursor: CursorType;
+        id: number;
+        layers?: Array<string | null> | null;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+      optionalBasemapLayers: Array<{
+        __typename?: "OptionalBasemapLayer";
+        basemapId: number;
+        id: number;
+        defaultVisibility: boolean;
+        description?: string | null;
+        options?: any | null;
+        groupType: OptionalBasemapLayersGroupType;
+        layers: Array<string | null>;
+        metadata?: any | null;
+        name: string;
+      }>;
+    }> | null;
+    region: { __typename?: "GeometryPolygon"; geojson?: any | null };
+  } | null;
+};
 
 export type OfflineSurveysQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type OfflineSurveysQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { surveys: Array<(
-      { __typename?: 'Survey' }
-      & Pick<Survey, 'id' | 'name'>
-    )> }
-  )> }
-);
+export type OfflineSurveysQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    surveys: Array<{ __typename?: "Survey"; id: number; name: string }>;
+  } | null;
+};
 
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type ProjectAccessControlSettingsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename: 'Project' }
-    & Pick<Project, 'id' | 'accessControl' | 'isListed'>
-  )> }
-);
+export type ProjectAccessControlSettingsQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename: "Project";
+    id: number;
+    accessControl: ProjectAccessControlSetting;
+    isListed: boolean;
+  } | null;
+};
 
 export type UpdateProjectAccessControlSettingsMutationVariables = Exact<{
-  slug: Scalars['String'];
-  accessControl?: Maybe<ProjectAccessControlSetting>;
-  isListed?: Maybe<Scalars['Boolean']>;
+  slug: Scalars["String"];
+  accessControl?: InputMaybe<ProjectAccessControlSetting>;
+  isListed?: InputMaybe<Scalars["Boolean"]>;
 }>;
 
+export type UpdateProjectAccessControlSettingsMutation = {
+  __typename?: "Mutation";
+  updateProjectBySlug?: {
+    __typename?: "UpdateProjectPayload";
+    clientMutationId?: string | null;
+    project?: {
+      __typename: "Project";
+      id: number;
+      accessControl: ProjectAccessControlSetting;
+      isListed: boolean;
+    } | null;
+  } | null;
+};
 
-export type UpdateProjectAccessControlSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & Pick<UpdateProjectPayload, 'clientMutationId'>
-    & { project?: Maybe<(
-      { __typename: 'Project' }
-      & Pick<Project, 'id' | 'accessControl' | 'isListed'>
-    )> }
-  )> }
-);
+export type ProjectMetadataFragment = {
+  __typename?: "Project";
+  id: number;
+  slug: string;
+  url?: string | null;
+  name: string;
+  description?: string | null;
+  logoLink?: string | null;
+  logoUrl?: string | null;
+  accessControl: ProjectAccessControlSetting;
+  sessionIsAdmin?: boolean | null;
+  isFeatured: boolean;
+  supportEmail: string;
+};
 
-export type ProjectMetadataFragment = (
-  { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail'>
-);
+export type ProjectPublicDetailsMetadataFragment = {
+  __typename?: "PublicProjectDetail";
+  id?: number | null;
+  accessControl?: ProjectAccessControlSetting | null;
+  slug?: string | null;
+  name?: string | null;
+  logoUrl?: string | null;
+  supportEmail?: string | null;
+  accessStatus?: ProjectAccessStatus | null;
+};
 
-export type ProjectPublicDetailsMetadataFragment = (
-  { __typename?: 'PublicProjectDetail' }
-  & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail' | 'accessStatus'>
-);
-
-export type ProjectMetadataMeFragFragment = (
-  { __typename?: 'User' }
-  & Pick<User, 'id'>
-  & { profile?: Maybe<(
-    { __typename?: 'Profile' }
-    & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
-  )> }
-);
+export type ProjectMetadataMeFragFragment = {
+  __typename?: "User";
+  id: number;
+  profile?: {
+    __typename?: "Profile";
+    userId: number;
+    fullname?: string | null;
+    nickname?: string | null;
+    email?: any | null;
+    picture?: string | null;
+    bio?: string | null;
+    affiliations?: string | null;
+  } | null;
+};
 
 export type ProjectMetadataQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
+export type ProjectMetadataQuery = {
+  __typename?: "Query";
+  project?: {
+    __typename?: "Project";
+    id: number;
+    slug: string;
+    url?: string | null;
+    name: string;
+    description?: string | null;
+    logoLink?: string | null;
+    logoUrl?: string | null;
+    accessControl: ProjectAccessControlSetting;
+    sessionIsAdmin?: boolean | null;
+    isFeatured: boolean;
+    supportEmail: string;
+  } | null;
+  projectPublicDetails?: {
+    __typename?: "PublicProjectDetail";
+    id?: number | null;
+    accessControl?: ProjectAccessControlSetting | null;
+    slug?: string | null;
+    name?: string | null;
+    logoUrl?: string | null;
+    supportEmail?: string | null;
+    accessStatus?: ProjectAccessStatus | null;
+  } | null;
+  me?: {
+    __typename?: "User";
+    id: number;
+    profile?: {
+      __typename?: "Profile";
+      userId: number;
+      fullname?: string | null;
+      nickname?: string | null;
+      email?: any | null;
+      picture?: string | null;
+      bio?: string | null;
+      affiliations?: string | null;
+    } | null;
+  } | null;
+};
 
-export type ProjectMetadataQuery = (
-  { __typename?: 'Query' }
-  & { project?: Maybe<(
-    { __typename?: 'Project' }
-    & ProjectMetadataFragment
-  )>, projectPublicDetails?: Maybe<(
-    { __typename?: 'PublicProjectDetail' }
-    & ProjectPublicDetailsMetadataFragment
-  )>, me?: Maybe<(
-    { __typename?: 'User' }
-    & ProjectMetadataMeFragFragment
-  )> }
-);
+export type MeQueryVariables = Exact<{ [key: string]: never }>;
 
-export type MeQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type MeQuery = (
-  { __typename?: 'Query' }
-  & { me?: Maybe<(
-    { __typename?: 'User' }
-    & Pick<User, 'id'>
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
-    )> }
-  )> }
-);
+export type MeQuery = {
+  __typename?: "Query";
+  me?: {
+    __typename?: "User";
+    id: number;
+    profile?: {
+      __typename?: "Profile";
+      userId: number;
+      fullname?: string | null;
+      nickname?: string | null;
+      email?: any | null;
+      picture?: string | null;
+      bio?: string | null;
+      affiliations?: string | null;
+    } | null;
+  } | null;
+};
 
 export type ProjectRegionQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type ProjectRegionQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename: 'Project' }
-    & Pick<Project, 'id'>
-    & { region: (
-      { __typename?: 'GeometryPolygon' }
-      & Pick<GeometryPolygon, 'geojson'>
-    ) }
-  )> }
-);
+export type ProjectRegionQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename: "Project";
+    id: number;
+    region: { __typename?: "GeometryPolygon"; geojson?: any | null };
+  } | null;
+};
 
 export type UpdateProjectRegionMutationVariables = Exact<{
-  slug: Scalars['String'];
-  region: Scalars['GeoJSON'];
+  slug: Scalars["String"];
+  region: Scalars["GeoJSON"];
 }>;
 
-
-export type UpdateProjectRegionMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & Pick<UpdateProjectPayload, 'clientMutationId'>
-    & { project?: Maybe<(
-      { __typename: 'Project' }
-      & Pick<Project, 'id'>
-      & { region: (
-        { __typename?: 'GeometryPolygon' }
-        & Pick<GeometryPolygon, 'geojson'>
-      ) }
-    )> }
-  )> }
-);
+export type UpdateProjectRegionMutation = {
+  __typename?: "Mutation";
+  updateProjectBySlug?: {
+    __typename?: "UpdateProjectPayload";
+    clientMutationId?: string | null;
+    project?: {
+      __typename: "Project";
+      id: number;
+      region: { __typename?: "GeometryPolygon"; geojson?: any | null };
+    } | null;
+  } | null;
+};
 
 export type GetProjectBySlugQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type GetProjectBySlugQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'name'>
-  )> }
-);
+export type GetProjectBySlugQuery = {
+  __typename?: "Query";
+  projectBySlug?: { __typename?: "Project"; id: number; name: string } | null;
+};
 
 export type ProjectSlugExistsQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type ProjectSlugExistsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-  )> }
-);
+export type ProjectSlugExistsQuery = {
+  __typename?: "Query";
+  projectBySlug?: { __typename?: "Project"; id: number } | null;
+};
 
 export type PublishedTableOfContentsQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type PublishedTableOfContentsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { tableOfContentsItems?: Maybe<Array<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title'>
-      & { acl?: Maybe<(
-        { __typename?: 'Acl' }
-        & Pick<Acl, 'id' | 'type'>
-      )> }
-    )>> }
-  )> }
-);
+export type PublishedTableOfContentsQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    tableOfContentsItems?: Array<{
+      __typename?: "TableOfContentsItem";
+      id: number;
+      bounds?: Array<any | null> | null;
+      dataLayerId?: number | null;
+      enableDownload: boolean;
+      hideChildren: boolean;
+      isClickOffOnly: boolean;
+      isFolder: boolean;
+      parentStableId?: string | null;
+      showRadioChildren: boolean;
+      sortIndex: number;
+      stableId: string;
+      title: string;
+      acl?: {
+        __typename?: "Acl";
+        id: number;
+        type: AccessControlListType;
+      } | null;
+    }> | null;
+  } | null;
+};
 
 export type SimpleProjectListQueryVariables = Exact<{
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  first?: InputMaybe<Scalars["Int"]>;
+  offset?: InputMaybe<Scalars["Int"]>;
 }>;
 
+export type SimpleProjectListQuery = {
+  __typename?: "Query";
+  projectsConnection?: {
+    __typename?: "ProjectsConnection";
+    nodes: Array<{
+      __typename?: "Project";
+      id: number;
+      name: string;
+      slug: string;
+      description?: string | null;
+      url?: string | null;
+    }>;
+  } | null;
+};
 
-export type SimpleProjectListQuery = (
-  { __typename?: 'Query' }
-  & { projectsConnection?: Maybe<(
-    { __typename?: 'ProjectsConnection' }
-    & { nodes: Array<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name' | 'slug' | 'description' | 'url'>
-    )> }
-  )> }
-);
-
-export type SurveyListDetailsFragment = (
-  { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
-  & { invitedGroups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
-);
+export type SurveyListDetailsFragment = {
+  __typename?: "Survey";
+  id: number;
+  accessType: SurveyAccessType;
+  showProgress: boolean;
+  isDisabled: boolean;
+  limitToSingleResponse: boolean;
+  name: string;
+  submittedResponseCount?: number | null;
+  practiceResponseCount?: number | null;
+  projectId: number;
+  isTemplate?: boolean | null;
+  showFacilitationOption: boolean;
+  supportedLanguages: Array<string | null>;
+  invitedGroups?: Array<{
+    __typename?: "Group";
+    id: number;
+    name: string;
+  }> | null;
+};
 
 export type SurveysQueryVariables = Exact<{
-  projectId: Scalars['Int'];
+  projectId: Scalars["Int"];
 }>;
 
-
-export type SurveysQuery = (
-  { __typename?: 'Query' }
-  & { project?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { surveys: Array<(
-      { __typename?: 'Survey' }
-      & SurveyListDetailsFragment
-    )> }
-  )> }
-);
+export type SurveysQuery = {
+  __typename?: "Query";
+  project?: {
+    __typename?: "Project";
+    id: number;
+    surveys: Array<{
+      __typename?: "Survey";
+      id: number;
+      accessType: SurveyAccessType;
+      showProgress: boolean;
+      isDisabled: boolean;
+      limitToSingleResponse: boolean;
+      name: string;
+      submittedResponseCount?: number | null;
+      practiceResponseCount?: number | null;
+      projectId: number;
+      isTemplate?: boolean | null;
+      showFacilitationOption: boolean;
+      supportedLanguages: Array<string | null>;
+      invitedGroups?: Array<{
+        __typename?: "Group";
+        id: number;
+        name: string;
+      }> | null;
+    }>;
+  } | null;
+};
 
 export type CreateSurveyMutationVariables = Exact<{
-  name: Scalars['String'];
-  projectId: Scalars['Int'];
-  templateId?: Maybe<Scalars['Int']>;
+  name: Scalars["String"];
+  projectId: Scalars["Int"];
+  templateId?: InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type CreateSurveyMutation = (
-  { __typename?: 'Mutation' }
-  & { makeSurvey?: Maybe<(
-    { __typename?: 'MakeSurveyPayload' }
-    & { survey?: Maybe<(
-      { __typename?: 'Survey' }
-      & SurveyListDetailsFragment
-    )> }
-  )> }
-);
+export type CreateSurveyMutation = {
+  __typename?: "Mutation";
+  makeSurvey?: {
+    __typename?: "MakeSurveyPayload";
+    survey?: {
+      __typename?: "Survey";
+      id: number;
+      accessType: SurveyAccessType;
+      showProgress: boolean;
+      isDisabled: boolean;
+      limitToSingleResponse: boolean;
+      name: string;
+      submittedResponseCount?: number | null;
+      practiceResponseCount?: number | null;
+      projectId: number;
+      isTemplate?: boolean | null;
+      showFacilitationOption: boolean;
+      supportedLanguages: Array<string | null>;
+      invitedGroups?: Array<{
+        __typename?: "Group";
+        id: number;
+        name: string;
+      }> | null;
+    } | null;
+  } | null;
+};
 
 export type SurveyByIdQueryVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
+export type SurveyByIdQuery = {
+  __typename?: "Query";
+  survey?: {
+    __typename?: "Survey";
+    isSpatial?: boolean | null;
+    id: number;
+    accessType: SurveyAccessType;
+    showProgress: boolean;
+    isDisabled: boolean;
+    limitToSingleResponse: boolean;
+    name: string;
+    submittedResponseCount?: number | null;
+    practiceResponseCount?: number | null;
+    projectId: number;
+    isTemplate?: boolean | null;
+    showFacilitationOption: boolean;
+    supportedLanguages: Array<string | null>;
+    invitedGroups?: Array<{
+      __typename?: "Group";
+      id: number;
+      name: string;
+    }> | null;
+  } | null;
+};
 
-export type SurveyByIdQuery = (
-  { __typename?: 'Query' }
-  & { survey?: Maybe<(
-    { __typename?: 'Survey' }
-    & Pick<Survey, 'isSpatial'>
-    & SurveyListDetailsFragment
-  )> }
-);
+export type AddFormElementTypeDetailsFragment = {
+  __typename?: "FormElementType";
+  componentName: string;
+  isHidden: boolean;
+  isInput: boolean;
+  isSingleUseOnly: boolean;
+  isSurveysOnly: boolean;
+  label: string;
+  supportedOperators: Array<FieldRuleOperator | null>;
+  isSpatial: boolean;
+  allowedLayouts?: Array<FormElementLayout | null> | null;
+};
 
-export type AddFormElementTypeDetailsFragment = (
-  { __typename?: 'FormElementType' }
-  & Pick<FormElementType, 'componentName' | 'isHidden' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'supportedOperators' | 'isSpatial' | 'allowedLayouts'>
-);
+export type FormElementDetailsFragment = {
+  __typename?: "FormElement";
+  body: any;
+  componentSettings: any;
+  alternateLanguageSettings: any;
+  exportId?: string | null;
+  formId: number;
+  id: number;
+  isRequired: boolean;
+  position: number;
+  jumpToId?: number | null;
+  isInput?: boolean | null;
+  typeId: string;
+  backgroundColor?: string | null;
+  secondaryColor?: string | null;
+  backgroundImage?: string | null;
+  layout?: FormElementLayout | null;
+  backgroundPalette?: Array<string | null> | null;
+  textVariant: FormElementTextVariant;
+  unsplashAuthorUrl?: string | null;
+  unsplashAuthorName?: string | null;
+  backgroundWidth?: number | null;
+  backgroundHeight?: number | null;
+  subordinateTo?: number | null;
+  mapBasemaps?: Array<number | null> | null;
+  mapCameraOptions?: any | null;
+  type?: {
+    __typename?: "FormElementType";
+    componentName: string;
+    isHidden: boolean;
+    isInput: boolean;
+    isSingleUseOnly: boolean;
+    isSurveysOnly: boolean;
+    label: string;
+    supportedOperators: Array<FieldRuleOperator | null>;
+    isSpatial: boolean;
+    allowedLayouts?: Array<FormElementLayout | null> | null;
+  } | null;
+};
 
-export type FormElementDetailsFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
-  & { type?: Maybe<(
-    { __typename?: 'FormElementType' }
-    & AddFormElementTypeDetailsFragment
-  )> }
-);
+export type SketchClassDetailsFragment = {
+  __typename?: "SketchClass";
+  id: number;
+  mapboxGlStyle?: any | null;
+  formElementId?: number | null;
+  geometryType: SketchGeometryType;
+  geoprocessingClientName?: string | null;
+  geoprocessingClientUrl?: string | null;
+  geoprocessingProjectUrl?: string | null;
+  allowMulti: boolean;
+  form?: {
+    __typename?: "Form";
+    id: number;
+    formElements?: Array<{
+      __typename?: "FormElement";
+      body: any;
+      componentSettings: any;
+      alternateLanguageSettings: any;
+      exportId?: string | null;
+      formId: number;
+      id: number;
+      isRequired: boolean;
+      position: number;
+      jumpToId?: number | null;
+      isInput?: boolean | null;
+      typeId: string;
+      backgroundColor?: string | null;
+      secondaryColor?: string | null;
+      backgroundImage?: string | null;
+      layout?: FormElementLayout | null;
+      backgroundPalette?: Array<string | null> | null;
+      textVariant: FormElementTextVariant;
+      unsplashAuthorUrl?: string | null;
+      unsplashAuthorName?: string | null;
+      backgroundWidth?: number | null;
+      backgroundHeight?: number | null;
+      subordinateTo?: number | null;
+      mapBasemaps?: Array<number | null> | null;
+      mapCameraOptions?: any | null;
+      type?: {
+        __typename?: "FormElementType";
+        componentName: string;
+        isHidden: boolean;
+        isInput: boolean;
+        isSingleUseOnly: boolean;
+        isSurveysOnly: boolean;
+        label: string;
+        supportedOperators: Array<FieldRuleOperator | null>;
+        isSpatial: boolean;
+        allowedLayouts?: Array<FormElementLayout | null> | null;
+      } | null;
+    }> | null;
+    logicRules?: Array<{
+      __typename?: "FormLogicRule";
+      booleanOperator: FormLogicOperator;
+      command: FormLogicCommand;
+      id: number;
+      jumpToId?: number | null;
+      position: number;
+      formElementId: number;
+      conditions?: Array<{
+        __typename?: "FormLogicCondition";
+        id: number;
+        operator: FieldRuleOperator;
+        value?: any | null;
+        subjectId: number;
+        ruleId: number;
+      }> | null;
+    }> | null;
+  } | null;
+};
 
-export type SketchClassDetailsFragment = (
-  { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'allowMulti'>
-  & { form?: Maybe<(
-    { __typename?: 'Form' }
-    & Pick<Form, 'id'>
-    & { formElements?: Maybe<Array<(
-      { __typename?: 'FormElement' }
-      & FormElementDetailsFragment
-    )>>, logicRules?: Maybe<Array<(
-      { __typename?: 'FormLogicRule' }
-      & LogicRuleDetailsFragment
-    )>> }
-  )> }
-);
+export type FormElementFullDetailsFragment = {
+  __typename?: "FormElement";
+  body: any;
+  componentSettings: any;
+  alternateLanguageSettings: any;
+  exportId?: string | null;
+  formId: number;
+  id: number;
+  isRequired: boolean;
+  position: number;
+  jumpToId?: number | null;
+  isInput?: boolean | null;
+  typeId: string;
+  backgroundColor?: string | null;
+  secondaryColor?: string | null;
+  backgroundImage?: string | null;
+  layout?: FormElementLayout | null;
+  backgroundPalette?: Array<string | null> | null;
+  textVariant: FormElementTextVariant;
+  unsplashAuthorUrl?: string | null;
+  unsplashAuthorName?: string | null;
+  backgroundWidth?: number | null;
+  backgroundHeight?: number | null;
+  subordinateTo?: number | null;
+  mapBasemaps?: Array<number | null> | null;
+  mapCameraOptions?: any | null;
+  sketchClass?: {
+    __typename?: "SketchClass";
+    id: number;
+    mapboxGlStyle?: any | null;
+    formElementId?: number | null;
+    geometryType: SketchGeometryType;
+    geoprocessingClientName?: string | null;
+    geoprocessingClientUrl?: string | null;
+    geoprocessingProjectUrl?: string | null;
+    allowMulti: boolean;
+    form?: {
+      __typename?: "Form";
+      id: number;
+      formElements?: Array<{
+        __typename?: "FormElement";
+        body: any;
+        componentSettings: any;
+        alternateLanguageSettings: any;
+        exportId?: string | null;
+        formId: number;
+        id: number;
+        isRequired: boolean;
+        position: number;
+        jumpToId?: number | null;
+        isInput?: boolean | null;
+        typeId: string;
+        backgroundColor?: string | null;
+        secondaryColor?: string | null;
+        backgroundImage?: string | null;
+        layout?: FormElementLayout | null;
+        backgroundPalette?: Array<string | null> | null;
+        textVariant: FormElementTextVariant;
+        unsplashAuthorUrl?: string | null;
+        unsplashAuthorName?: string | null;
+        backgroundWidth?: number | null;
+        backgroundHeight?: number | null;
+        subordinateTo?: number | null;
+        mapBasemaps?: Array<number | null> | null;
+        mapCameraOptions?: any | null;
+        type?: {
+          __typename?: "FormElementType";
+          componentName: string;
+          isHidden: boolean;
+          isInput: boolean;
+          isSingleUseOnly: boolean;
+          isSurveysOnly: boolean;
+          label: string;
+          supportedOperators: Array<FieldRuleOperator | null>;
+          isSpatial: boolean;
+          allowedLayouts?: Array<FormElementLayout | null> | null;
+        } | null;
+      }> | null;
+      logicRules?: Array<{
+        __typename?: "FormLogicRule";
+        booleanOperator: FormLogicOperator;
+        command: FormLogicCommand;
+        id: number;
+        jumpToId?: number | null;
+        position: number;
+        formElementId: number;
+        conditions?: Array<{
+          __typename?: "FormLogicCondition";
+          id: number;
+          operator: FieldRuleOperator;
+          value?: any | null;
+          subjectId: number;
+          ruleId: number;
+        }> | null;
+      }> | null;
+    } | null;
+  } | null;
+  type?: {
+    __typename?: "FormElementType";
+    componentName: string;
+    isHidden: boolean;
+    isInput: boolean;
+    isSingleUseOnly: boolean;
+    isSurveysOnly: boolean;
+    label: string;
+    supportedOperators: Array<FieldRuleOperator | null>;
+    isSpatial: boolean;
+    allowedLayouts?: Array<FormElementLayout | null> | null;
+  } | null;
+};
 
-export type FormElementFullDetailsFragment = (
-  { __typename?: 'FormElement' }
-  & { sketchClass?: Maybe<(
-    { __typename?: 'SketchClass' }
-    & SketchClassDetailsFragment
-  )> }
-  & FormElementDetailsFragment
-);
-
-export type LogicRuleDetailsFragment = (
-  { __typename?: 'FormLogicRule' }
-  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
-  & { conditions?: Maybe<Array<(
-    { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
-  )>> }
-);
+export type LogicRuleDetailsFragment = {
+  __typename?: "FormLogicRule";
+  booleanOperator: FormLogicOperator;
+  command: FormLogicCommand;
+  id: number;
+  jumpToId?: number | null;
+  position: number;
+  formElementId: number;
+  conditions?: Array<{
+    __typename?: "FormLogicCondition";
+    id: number;
+    operator: FieldRuleOperator;
+    value?: any | null;
+    subjectId: number;
+    ruleId: number;
+  }> | null;
+};
 
 export type SurveyFormEditorDetailsQueryVariables = Exact<{
-  id: Scalars['Int'];
-  slug: Scalars['String'];
+  id: Scalars["Int"];
+  slug: Scalars["String"];
 }>;
 
+export type SurveyFormEditorDetailsQuery = {
+  __typename?: "Query";
+  formElementTypes?: Array<{
+    __typename?: "FormElementType";
+    componentName: string;
+    isHidden: boolean;
+    isInput: boolean;
+    isSingleUseOnly: boolean;
+    isSurveysOnly: boolean;
+    label: string;
+    supportedOperators: Array<FieldRuleOperator | null>;
+    isSpatial: boolean;
+    allowedLayouts?: Array<FormElementLayout | null> | null;
+  }> | null;
+  survey?: {
+    __typename?: "Survey";
+    id: number;
+    accessType: SurveyAccessType;
+    showProgress: boolean;
+    isDisabled: boolean;
+    limitToSingleResponse: boolean;
+    name: string;
+    submittedResponseCount?: number | null;
+    practiceResponseCount?: number | null;
+    projectId: number;
+    isTemplate?: boolean | null;
+    showFacilitationOption: boolean;
+    supportedLanguages: Array<string | null>;
+    form?: {
+      __typename?: "Form";
+      id: number;
+      isTemplate: boolean;
+      surveyId?: number | null;
+      templateName?: string | null;
+      templateType?: FormTemplateType | null;
+      formElements?: Array<{
+        __typename?: "FormElement";
+        body: any;
+        componentSettings: any;
+        alternateLanguageSettings: any;
+        exportId?: string | null;
+        formId: number;
+        id: number;
+        isRequired: boolean;
+        position: number;
+        jumpToId?: number | null;
+        isInput?: boolean | null;
+        typeId: string;
+        backgroundColor?: string | null;
+        secondaryColor?: string | null;
+        backgroundImage?: string | null;
+        layout?: FormElementLayout | null;
+        backgroundPalette?: Array<string | null> | null;
+        textVariant: FormElementTextVariant;
+        unsplashAuthorUrl?: string | null;
+        unsplashAuthorName?: string | null;
+        backgroundWidth?: number | null;
+        backgroundHeight?: number | null;
+        subordinateTo?: number | null;
+        mapBasemaps?: Array<number | null> | null;
+        mapCameraOptions?: any | null;
+        sketchClass?: {
+          __typename?: "SketchClass";
+          id: number;
+          mapboxGlStyle?: any | null;
+          formElementId?: number | null;
+          geometryType: SketchGeometryType;
+          geoprocessingClientName?: string | null;
+          geoprocessingClientUrl?: string | null;
+          geoprocessingProjectUrl?: string | null;
+          allowMulti: boolean;
+          form?: {
+            __typename?: "Form";
+            id: number;
+            formElements?: Array<{
+              __typename?: "FormElement";
+              body: any;
+              componentSettings: any;
+              alternateLanguageSettings: any;
+              exportId?: string | null;
+              formId: number;
+              id: number;
+              isRequired: boolean;
+              position: number;
+              jumpToId?: number | null;
+              isInput?: boolean | null;
+              typeId: string;
+              backgroundColor?: string | null;
+              secondaryColor?: string | null;
+              backgroundImage?: string | null;
+              layout?: FormElementLayout | null;
+              backgroundPalette?: Array<string | null> | null;
+              textVariant: FormElementTextVariant;
+              unsplashAuthorUrl?: string | null;
+              unsplashAuthorName?: string | null;
+              backgroundWidth?: number | null;
+              backgroundHeight?: number | null;
+              subordinateTo?: number | null;
+              mapBasemaps?: Array<number | null> | null;
+              mapCameraOptions?: any | null;
+              type?: {
+                __typename?: "FormElementType";
+                componentName: string;
+                isHidden: boolean;
+                isInput: boolean;
+                isSingleUseOnly: boolean;
+                isSurveysOnly: boolean;
+                label: string;
+                supportedOperators: Array<FieldRuleOperator | null>;
+                isSpatial: boolean;
+                allowedLayouts?: Array<FormElementLayout | null> | null;
+              } | null;
+            }> | null;
+            logicRules?: Array<{
+              __typename?: "FormLogicRule";
+              booleanOperator: FormLogicOperator;
+              command: FormLogicCommand;
+              id: number;
+              jumpToId?: number | null;
+              position: number;
+              formElementId: number;
+              conditions?: Array<{
+                __typename?: "FormLogicCondition";
+                id: number;
+                operator: FieldRuleOperator;
+                value?: any | null;
+                subjectId: number;
+                ruleId: number;
+              }> | null;
+            }> | null;
+          } | null;
+        } | null;
+        type?: {
+          __typename?: "FormElementType";
+          componentName: string;
+          isHidden: boolean;
+          isInput: boolean;
+          isSingleUseOnly: boolean;
+          isSurveysOnly: boolean;
+          label: string;
+          supportedOperators: Array<FieldRuleOperator | null>;
+          isSpatial: boolean;
+          allowedLayouts?: Array<FormElementLayout | null> | null;
+        } | null;
+      }> | null;
+      logicRules?: Array<{
+        __typename?: "FormLogicRule";
+        booleanOperator: FormLogicOperator;
+        command: FormLogicCommand;
+        id: number;
+        jumpToId?: number | null;
+        position: number;
+        formElementId: number;
+        conditions?: Array<{
+          __typename?: "FormLogicCondition";
+          id: number;
+          operator: FieldRuleOperator;
+          value?: any | null;
+          subjectId: number;
+          ruleId: number;
+        }> | null;
+      }> | null;
+    } | null;
+    invitedGroups?: Array<{
+      __typename?: "Group";
+      id: number;
+      name: string;
+    }> | null;
+  } | null;
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    name: string;
+    url?: string | null;
+    region: { __typename?: "GeometryPolygon"; geojson?: any | null };
+  } | null;
+};
 
-export type SurveyFormEditorDetailsQuery = (
-  { __typename?: 'Query' }
-  & { formElementTypes?: Maybe<Array<(
-    { __typename?: 'FormElementType' }
-    & AddFormElementTypeDetailsFragment
-  )>>, survey?: Maybe<(
-    { __typename?: 'Survey' }
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id' | 'isTemplate' | 'surveyId' | 'templateName' | 'templateType'>
-      & { formElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & FormElementFullDetailsFragment
-      )>>, logicRules?: Maybe<Array<(
-        { __typename?: 'FormLogicRule' }
-        & LogicRuleDetailsFragment
-      )>> }
-    )> }
-    & SurveyListDetailsFragment
-  )>, projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'name' | 'url'>
-    & { region: (
-      { __typename?: 'GeometryPolygon' }
-      & Pick<GeometryPolygon, 'geojson'>
-    ) }
-  )> }
-);
+export type FormElementTypesQueryVariables = Exact<{ [key: string]: never }>;
 
-export type FormElementTypesQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type FormElementTypesQuery = (
-  { __typename?: 'Query' }
-  & { formElementTypes?: Maybe<Array<(
-    { __typename?: 'FormElementType' }
-    & AddFormElementTypeDetailsFragment
-  )>> }
-);
+export type FormElementTypesQuery = {
+  __typename?: "Query";
+  formElementTypes?: Array<{
+    __typename?: "FormElementType";
+    componentName: string;
+    isHidden: boolean;
+    isInput: boolean;
+    isSingleUseOnly: boolean;
+    isSurveysOnly: boolean;
+    label: string;
+    supportedOperators: Array<FieldRuleOperator | null>;
+    isSpatial: boolean;
+    allowedLayouts?: Array<FormElementLayout | null> | null;
+  }> | null;
+};
 
 export type UpdateSurveyBaseSettingsMutationVariables = Exact<{
-  id: Scalars['Int'];
-  showProgress?: Maybe<Scalars['Boolean']>;
-  showFacilitationOption?: Maybe<Scalars['Boolean']>;
-  supportedLanguages?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
+  id: Scalars["Int"];
+  showProgress?: InputMaybe<Scalars["Boolean"]>;
+  showFacilitationOption?: InputMaybe<Scalars["Boolean"]>;
+  supportedLanguages?: InputMaybe<
+    Array<InputMaybe<Scalars["String"]>> | InputMaybe<Scalars["String"]>
+  >;
 }>;
 
-
-export type UpdateSurveyBaseSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateSurvey?: Maybe<(
-    { __typename?: 'UpdateSurveyPayload' }
-    & { survey?: Maybe<(
-      { __typename?: 'Survey' }
-      & Pick<Survey, 'id' | 'showProgress' | 'showFacilitationOption' | 'supportedLanguages'>
-    )> }
-  )> }
-);
+export type UpdateSurveyBaseSettingsMutation = {
+  __typename?: "Mutation";
+  updateSurvey?: {
+    __typename?: "UpdateSurveyPayload";
+    survey?: {
+      __typename?: "Survey";
+      id: number;
+      showProgress: boolean;
+      showFacilitationOption: boolean;
+      supportedLanguages: Array<string | null>;
+    } | null;
+  } | null;
+};
 
 export type UpdateFormElementSketchClassMutationVariables = Exact<{
-  id: Scalars['Int'];
-  geometryType?: Maybe<SketchGeometryType>;
-  allowMulti?: Maybe<Scalars['Boolean']>;
-  mapboxGlStyle?: Maybe<Scalars['JSON']>;
-  geoprocessingClientName?: Maybe<Scalars['String']>;
-  geoprocessingClientUrl?: Maybe<Scalars['String']>;
-  geoprocessingProjectUrl?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  geometryType?: InputMaybe<SketchGeometryType>;
+  allowMulti?: InputMaybe<Scalars["Boolean"]>;
+  mapboxGlStyle?: InputMaybe<Scalars["JSON"]>;
+  geoprocessingClientName?: InputMaybe<Scalars["String"]>;
+  geoprocessingClientUrl?: InputMaybe<Scalars["String"]>;
+  geoprocessingProjectUrl?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateFormElementSketchClassMutation = (
-  { __typename?: 'Mutation' }
-  & { updateSketchClass?: Maybe<(
-    { __typename?: 'UpdateSketchClassPayload' }
-    & { sketchClass?: Maybe<(
-      { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'id' | 'geometryType' | 'allowMulti' | 'mapboxGlStyle' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
-    )> }
-  )> }
-);
+export type UpdateFormElementSketchClassMutation = {
+  __typename?: "Mutation";
+  updateSketchClass?: {
+    __typename?: "UpdateSketchClassPayload";
+    sketchClass?: {
+      __typename?: "SketchClass";
+      id: number;
+      geometryType: SketchGeometryType;
+      allowMulti: boolean;
+      mapboxGlStyle?: any | null;
+      geoprocessingClientName?: string | null;
+      geoprocessingClientUrl?: string | null;
+      geoprocessingProjectUrl?: string | null;
+    } | null;
+  } | null;
+};
 
 export type UpdateFormElementMutationVariables = Exact<{
-  id: Scalars['Int'];
-  isRequired?: Maybe<Scalars['Boolean']>;
-  body?: Maybe<Scalars['JSON']>;
-  exportId?: Maybe<Scalars['String']>;
-  componentSettings?: Maybe<Scalars['JSON']>;
-  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
-  jumpToId?: Maybe<Scalars['Int']>;
-  typeId?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  isRequired?: InputMaybe<Scalars["Boolean"]>;
+  body?: InputMaybe<Scalars["JSON"]>;
+  exportId?: InputMaybe<Scalars["String"]>;
+  componentSettings?: InputMaybe<Scalars["JSON"]>;
+  alternateLanguageSettings?: InputMaybe<Scalars["JSON"]>;
+  jumpToId?: InputMaybe<Scalars["Int"]>;
+  typeId?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateFormElementMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'isRequired' | 'body' | 'exportId' | 'componentSettings' | 'alternateLanguageSettings' | 'jumpToId' | 'typeId'>
-    )> }
-  )> }
-);
+export type UpdateFormElementMutation = {
+  __typename?: "Mutation";
+  updateFormElement?: {
+    __typename?: "UpdateFormElementPayload";
+    formElement?: {
+      __typename?: "FormElement";
+      id: number;
+      isRequired: boolean;
+      body: any;
+      exportId?: string | null;
+      componentSettings: any;
+      alternateLanguageSettings: any;
+      jumpToId?: number | null;
+      typeId: string;
+    } | null;
+  } | null;
+};
 
 export type UpdateComponentSettingsMutationVariables = Exact<{
-  id: Scalars['Int'];
-  componentSettings?: Maybe<Scalars['JSON']>;
+  id: Scalars["Int"];
+  componentSettings?: InputMaybe<Scalars["JSON"]>;
 }>;
 
-
-export type UpdateComponentSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'componentSettings'>
-    )> }
-  )> }
-);
+export type UpdateComponentSettingsMutation = {
+  __typename?: "Mutation";
+  updateFormElement?: {
+    __typename?: "UpdateFormElementPayload";
+    formElement?: {
+      __typename?: "FormElement";
+      id: number;
+      componentSettings: any;
+    } | null;
+  } | null;
+};
 
 export type UpdateAlternateLanguageSettingsMutationVariables = Exact<{
-  id: Scalars['Int'];
-  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  id: Scalars["Int"];
+  alternateLanguageSettings?: InputMaybe<Scalars["JSON"]>;
 }>;
 
-
-export type UpdateAlternateLanguageSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'alternateLanguageSettings'>
-    )> }
-  )> }
-);
+export type UpdateAlternateLanguageSettingsMutation = {
+  __typename?: "Mutation";
+  updateFormElement?: {
+    __typename?: "UpdateFormElementPayload";
+    formElement?: {
+      __typename?: "FormElement";
+      id: number;
+      alternateLanguageSettings: any;
+    } | null;
+  } | null;
+};
 
 export type UpdateFormElementBodyMutationVariables = Exact<{
-  id: Scalars['Int'];
-  body: Scalars['JSON'];
+  id: Scalars["Int"];
+  body: Scalars["JSON"];
 }>;
 
-
-export type UpdateFormElementBodyMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'body'>
-    )> }
-  )> }
-);
+export type UpdateFormElementBodyMutation = {
+  __typename?: "Mutation";
+  updateFormElement?: {
+    __typename?: "UpdateFormElementPayload";
+    formElement?: { __typename?: "FormElement"; id: number; body: any } | null;
+  } | null;
+};
 
 export type UpdateFormElementOrderMutationVariables = Exact<{
-  elementIds?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+  elementIds?: InputMaybe<
+    Array<InputMaybe<Scalars["Int"]>> | InputMaybe<Scalars["Int"]>
+  >;
 }>;
 
-
-export type UpdateFormElementOrderMutation = (
-  { __typename?: 'Mutation' }
-  & { setFormElementOrder?: Maybe<(
-    { __typename?: 'SetFormElementOrderPayload' }
-    & { formElements?: Maybe<Array<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'position'>
-    )>> }
-  )> }
-);
+export type UpdateFormElementOrderMutation = {
+  __typename?: "Mutation";
+  setFormElementOrder?: {
+    __typename?: "SetFormElementOrderPayload";
+    formElements?: Array<{
+      __typename?: "FormElement";
+      id: number;
+      position: number;
+    }> | null;
+  } | null;
+};
 
 export type AddFormElementMutationVariables = Exact<{
-  body: Scalars['JSON'];
-  componentSettings: Scalars['JSON'];
-  formId: Scalars['Int'];
-  componentType: Scalars['String'];
-  position?: Maybe<Scalars['Int']>;
-  exportId?: Maybe<Scalars['String']>;
-  subordinateTo?: Maybe<Scalars['Int']>;
-  isRequired: Scalars['Boolean'];
+  body: Scalars["JSON"];
+  componentSettings: Scalars["JSON"];
+  formId: Scalars["Int"];
+  componentType: Scalars["String"];
+  position?: InputMaybe<Scalars["Int"]>;
+  exportId?: InputMaybe<Scalars["String"]>;
+  subordinateTo?: InputMaybe<Scalars["Int"]>;
+  isRequired: Scalars["Boolean"];
 }>;
 
-
-export type AddFormElementMutation = (
-  { __typename?: 'Mutation' }
-  & { createFormElement?: Maybe<(
-    { __typename?: 'CreateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & FormElementFullDetailsFragment
-    )> }
-  )> }
-);
+export type AddFormElementMutation = {
+  __typename?: "Mutation";
+  createFormElement?: {
+    __typename?: "CreateFormElementPayload";
+    formElement?: {
+      __typename?: "FormElement";
+      body: any;
+      componentSettings: any;
+      alternateLanguageSettings: any;
+      exportId?: string | null;
+      formId: number;
+      id: number;
+      isRequired: boolean;
+      position: number;
+      jumpToId?: number | null;
+      isInput?: boolean | null;
+      typeId: string;
+      backgroundColor?: string | null;
+      secondaryColor?: string | null;
+      backgroundImage?: string | null;
+      layout?: FormElementLayout | null;
+      backgroundPalette?: Array<string | null> | null;
+      textVariant: FormElementTextVariant;
+      unsplashAuthorUrl?: string | null;
+      unsplashAuthorName?: string | null;
+      backgroundWidth?: number | null;
+      backgroundHeight?: number | null;
+      subordinateTo?: number | null;
+      mapBasemaps?: Array<number | null> | null;
+      mapCameraOptions?: any | null;
+      sketchClass?: {
+        __typename?: "SketchClass";
+        id: number;
+        mapboxGlStyle?: any | null;
+        formElementId?: number | null;
+        geometryType: SketchGeometryType;
+        geoprocessingClientName?: string | null;
+        geoprocessingClientUrl?: string | null;
+        geoprocessingProjectUrl?: string | null;
+        allowMulti: boolean;
+        form?: {
+          __typename?: "Form";
+          id: number;
+          formElements?: Array<{
+            __typename?: "FormElement";
+            body: any;
+            componentSettings: any;
+            alternateLanguageSettings: any;
+            exportId?: string | null;
+            formId: number;
+            id: number;
+            isRequired: boolean;
+            position: number;
+            jumpToId?: number | null;
+            isInput?: boolean | null;
+            typeId: string;
+            backgroundColor?: string | null;
+            secondaryColor?: string | null;
+            backgroundImage?: string | null;
+            layout?: FormElementLayout | null;
+            backgroundPalette?: Array<string | null> | null;
+            textVariant: FormElementTextVariant;
+            unsplashAuthorUrl?: string | null;
+            unsplashAuthorName?: string | null;
+            backgroundWidth?: number | null;
+            backgroundHeight?: number | null;
+            subordinateTo?: number | null;
+            mapBasemaps?: Array<number | null> | null;
+            mapCameraOptions?: any | null;
+            type?: {
+              __typename?: "FormElementType";
+              componentName: string;
+              isHidden: boolean;
+              isInput: boolean;
+              isSingleUseOnly: boolean;
+              isSurveysOnly: boolean;
+              label: string;
+              supportedOperators: Array<FieldRuleOperator | null>;
+              isSpatial: boolean;
+              allowedLayouts?: Array<FormElementLayout | null> | null;
+            } | null;
+          }> | null;
+          logicRules?: Array<{
+            __typename?: "FormLogicRule";
+            booleanOperator: FormLogicOperator;
+            command: FormLogicCommand;
+            id: number;
+            jumpToId?: number | null;
+            position: number;
+            formElementId: number;
+            conditions?: Array<{
+              __typename?: "FormLogicCondition";
+              id: number;
+              operator: FieldRuleOperator;
+              value?: any | null;
+              subjectId: number;
+              ruleId: number;
+            }> | null;
+          }> | null;
+        } | null;
+      } | null;
+      type?: {
+        __typename?: "FormElementType";
+        componentName: string;
+        isHidden: boolean;
+        isInput: boolean;
+        isSingleUseOnly: boolean;
+        isSurveysOnly: boolean;
+        label: string;
+        supportedOperators: Array<FieldRuleOperator | null>;
+        isSpatial: boolean;
+        allowedLayouts?: Array<FormElementLayout | null> | null;
+      } | null;
+    } | null;
+  } | null;
+};
 
 export type DeleteFormElementMutationVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type DeleteFormElementMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteFormElement?: Maybe<(
-    { __typename?: 'DeleteFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id'>
-    )> }
-  )> }
-);
+export type DeleteFormElementMutation = {
+  __typename?: "Mutation";
+  deleteFormElement?: {
+    __typename?: "DeleteFormElementPayload";
+    formElement?: { __typename?: "FormElement"; id: number } | null;
+  } | null;
+};
 
 export type UpdateFormMutationVariables = Exact<{
-  id: Scalars['Int'];
-  isTemplate?: Maybe<Scalars['Boolean']>;
-  templateName?: Maybe<Scalars['String']>;
+  id: Scalars["Int"];
+  isTemplate?: InputMaybe<Scalars["Boolean"]>;
+  templateName?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateFormMutation = (
-  { __typename?: 'Mutation' }
-  & { updateForm?: Maybe<(
-    { __typename?: 'UpdateFormPayload' }
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id' | 'isTemplate' | 'templateName'>
-    )> }
-  )> }
-);
+export type UpdateFormMutation = {
+  __typename?: "Mutation";
+  updateForm?: {
+    __typename?: "UpdateFormPayload";
+    form?: {
+      __typename?: "Form";
+      id: number;
+      isTemplate: boolean;
+      templateName?: string | null;
+    } | null;
+  } | null;
+};
 
 export type GetPhotosQueryVariables = Exact<{
-  query: Scalars['String'];
+  query: Scalars["String"];
 }>;
 
-
-export type GetPhotosQuery = (
-  { __typename?: 'Query' }
-  & { getUnsplashPhotos: (
-    { __typename?: 'UnsplashSearchResult' }
-    & { results: Array<(
-      { __typename?: 'UnsplashPhoto' }
-      & Pick<UnsplashPhoto, 'blur_hash' | 'color' | 'description' | 'height' | 'width' | 'id'>
-      & { links: (
-        { __typename?: 'UnsplashPhotoLinks' }
-        & Pick<UnsplashPhotoLinks, 'download_location'>
-      ), urls: (
-        { __typename?: 'UnsplashUrls' }
-        & Pick<UnsplashUrls, 'full' | 'raw' | 'regular' | 'small' | 'thumb'>
-      ), user: (
-        { __typename?: 'UnsplashUser' }
-        & Pick<UnsplashUser, 'id' | 'name' | 'username'>
-        & { links: (
-          { __typename?: 'UnsplashLinks' }
-          & Pick<UnsplashLinks, 'html'>
-        ) }
-      ) }
-    )> }
-  ) }
-);
+export type GetPhotosQuery = {
+  __typename?: "Query";
+  getUnsplashPhotos: {
+    __typename?: "UnsplashSearchResult";
+    results: Array<{
+      __typename?: "UnsplashPhoto";
+      blur_hash?: string | null;
+      color: string;
+      description?: string | null;
+      height: number;
+      width: number;
+      id: string;
+      links: { __typename?: "UnsplashPhotoLinks"; download_location: string };
+      urls: {
+        __typename?: "UnsplashUrls";
+        full: string;
+        raw: string;
+        regular: string;
+        small: string;
+        thumb: string;
+      };
+      user: {
+        __typename?: "UnsplashUser";
+        id: string;
+        name: string;
+        username: string;
+        links: { __typename?: "UnsplashLinks"; html: string };
+      };
+    }>;
+  };
+};
 
 export type UpdateFormElementBackgroundMutationVariables = Exact<{
-  id: Scalars['Int'];
-  backgroundColor?: Maybe<Scalars['String']>;
-  secondaryColor?: Maybe<Scalars['String']>;
-  backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
-  textVariant?: Maybe<FormElementTextVariant>;
-  layout?: Maybe<FormElementLayout>;
+  id: Scalars["Int"];
+  backgroundColor?: InputMaybe<Scalars["String"]>;
+  secondaryColor?: InputMaybe<Scalars["String"]>;
+  backgroundPalette?: InputMaybe<
+    Array<InputMaybe<Scalars["String"]>> | InputMaybe<Scalars["String"]>
+  >;
+  textVariant?: InputMaybe<FormElementTextVariant>;
+  layout?: InputMaybe<FormElementLayout>;
 }>;
 
-
-export type UpdateFormElementBackgroundMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl'>
-    )> }
-  )> }
-);
+export type UpdateFormElementBackgroundMutation = {
+  __typename?: "Mutation";
+  updateFormElement?: {
+    __typename?: "UpdateFormElementPayload";
+    formElement?: {
+      __typename?: "FormElement";
+      id: number;
+      backgroundColor?: string | null;
+      secondaryColor?: string | null;
+      backgroundImage?: string | null;
+      layout?: FormElementLayout | null;
+      backgroundPalette?: Array<string | null> | null;
+      textVariant: FormElementTextVariant;
+      unsplashAuthorName?: string | null;
+      unsplashAuthorUrl?: string | null;
+    } | null;
+  } | null;
+};
 
 export type SetFormElementBackgroundMutationVariables = Exact<{
-  id: Scalars['Int'];
-  backgroundColor: Scalars['String'];
-  secondaryColor: Scalars['String'];
-  backgroundUrl: Scalars['String'];
-  downloadUrl: Scalars['String'];
-  backgroundPalette: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
-  unsplashAuthorUrl: Scalars['String'];
-  unsplashAuthorName: Scalars['String'];
-  backgroundWidth: Scalars['Int'];
-  backgroundHeight: Scalars['Int'];
+  id: Scalars["Int"];
+  backgroundColor: Scalars["String"];
+  secondaryColor: Scalars["String"];
+  backgroundUrl: Scalars["String"];
+  downloadUrl: Scalars["String"];
+  backgroundPalette:
+    | Array<InputMaybe<Scalars["String"]>>
+    | InputMaybe<Scalars["String"]>;
+  unsplashAuthorUrl: Scalars["String"];
+  unsplashAuthorName: Scalars["String"];
+  backgroundWidth: Scalars["Int"];
+  backgroundHeight: Scalars["Int"];
 }>;
 
-
-export type SetFormElementBackgroundMutation = (
-  { __typename?: 'Mutation' }
-  & { setFormElementBackground: (
-    { __typename?: 'FormElement' }
-    & Pick<FormElement, 'id' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight'>
-  ) }
-);
+export type SetFormElementBackgroundMutation = {
+  __typename?: "Mutation";
+  setFormElementBackground: {
+    __typename?: "FormElement";
+    id: number;
+    backgroundColor?: string | null;
+    secondaryColor?: string | null;
+    backgroundImage?: string | null;
+    backgroundPalette?: Array<string | null> | null;
+    unsplashAuthorName?: string | null;
+    unsplashAuthorUrl?: string | null;
+    backgroundWidth?: number | null;
+    backgroundHeight?: number | null;
+  };
+};
 
 export type ClearFormElementStyleMutationVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type ClearFormElementStyleMutation = (
-  { __typename?: 'Mutation' }
-  & { clearFormElementStyle?: Maybe<(
-    { __typename?: 'ClearFormElementStylePayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'backgroundColor' | 'backgroundImage' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'textVariant' | 'secondaryColor' | 'layout'>
-    )> }
-  )> }
-);
+export type ClearFormElementStyleMutation = {
+  __typename?: "Mutation";
+  clearFormElementStyle?: {
+    __typename?: "ClearFormElementStylePayload";
+    formElement?: {
+      __typename?: "FormElement";
+      id: number;
+      backgroundColor?: string | null;
+      backgroundImage?: string | null;
+      backgroundPalette?: Array<string | null> | null;
+      unsplashAuthorName?: string | null;
+      unsplashAuthorUrl?: string | null;
+      textVariant: FormElementTextVariant;
+      secondaryColor?: string | null;
+      layout?: FormElementLayout | null;
+    } | null;
+  } | null;
+};
 
 export type CreateLogicRuleForSurveyMutationVariables = Exact<{
-  formElementId: Scalars['Int'];
+  formElementId: Scalars["Int"];
   operator: FieldRuleOperator;
-  jumpToId: Scalars['Int'];
+  jumpToId: Scalars["Int"];
 }>;
 
-
-export type CreateLogicRuleForSurveyMutation = (
-  { __typename?: 'Mutation' }
-  & { createSurveyJumpRule?: Maybe<(
-    { __typename?: 'CreateSurveyJumpRulePayload' }
-    & { formLogicRule?: Maybe<(
-      { __typename?: 'FormLogicRule' }
-      & Pick<FormLogicRule, 'id' | 'position' | 'booleanOperator' | 'command' | 'formElementId' | 'jumpToId'>
-      & { conditions?: Maybe<Array<(
-        { __typename?: 'FormLogicCondition' }
-        & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
-      )>> }
-    )> }
-  )> }
-);
+export type CreateLogicRuleForSurveyMutation = {
+  __typename?: "Mutation";
+  createSurveyJumpRule?: {
+    __typename?: "CreateSurveyJumpRulePayload";
+    formLogicRule?: {
+      __typename?: "FormLogicRule";
+      id: number;
+      position: number;
+      booleanOperator: FormLogicOperator;
+      command: FormLogicCommand;
+      formElementId: number;
+      jumpToId?: number | null;
+      conditions?: Array<{
+        __typename?: "FormLogicCondition";
+        id: number;
+        operator: FieldRuleOperator;
+        ruleId: number;
+        subjectId: number;
+        value?: any | null;
+      }> | null;
+    } | null;
+  } | null;
+};
 
 export type UpdateFormLogicRuleMutationVariables = Exact<{
-  id: Scalars['Int'];
-  jumpToId?: Maybe<Scalars['Int']>;
-  booleanOperator?: Maybe<FormLogicOperator>;
-  formElementId?: Maybe<Scalars['Int']>;
+  id: Scalars["Int"];
+  jumpToId?: InputMaybe<Scalars["Int"]>;
+  booleanOperator?: InputMaybe<FormLogicOperator>;
+  formElementId?: InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type UpdateFormLogicRuleMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormLogicRule?: Maybe<(
-    { __typename?: 'UpdateFormLogicRulePayload' }
-    & { formLogicRule?: Maybe<(
-      { __typename?: 'FormLogicRule' }
-      & Pick<FormLogicRule, 'id' | 'booleanOperator' | 'command' | 'jumpToId' | 'position' | 'formElementId'>
-    )> }
-  )> }
-);
+export type UpdateFormLogicRuleMutation = {
+  __typename?: "Mutation";
+  updateFormLogicRule?: {
+    __typename?: "UpdateFormLogicRulePayload";
+    formLogicRule?: {
+      __typename?: "FormLogicRule";
+      id: number;
+      booleanOperator: FormLogicOperator;
+      command: FormLogicCommand;
+      jumpToId?: number | null;
+      position: number;
+      formElementId: number;
+    } | null;
+  } | null;
+};
 
 export type UpdateLogicConditionMutationVariables = Exact<{
-  id: Scalars['Int'];
-  operator?: Maybe<FieldRuleOperator>;
-  value?: Maybe<Scalars['JSON']>;
-  subjectId?: Maybe<Scalars['Int']>;
+  id: Scalars["Int"];
+  operator?: InputMaybe<FieldRuleOperator>;
+  value?: InputMaybe<Scalars["JSON"]>;
+  subjectId?: InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type UpdateLogicConditionMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormLogicCondition?: Maybe<(
-    { __typename?: 'UpdateFormLogicConditionPayload' }
-    & { formLogicCondition?: Maybe<(
-      { __typename?: 'FormLogicCondition' }
-      & Pick<FormLogicCondition, 'id' | 'ruleId' | 'operator' | 'subjectId' | 'value'>
-    )> }
-  )> }
-);
+export type UpdateLogicConditionMutation = {
+  __typename?: "Mutation";
+  updateFormLogicCondition?: {
+    __typename?: "UpdateFormLogicConditionPayload";
+    formLogicCondition?: {
+      __typename?: "FormLogicCondition";
+      id: number;
+      ruleId: number;
+      operator: FieldRuleOperator;
+      subjectId: number;
+      value?: any | null;
+    } | null;
+  } | null;
+};
 
 export type DeleteLogicConditionMutationVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type DeleteLogicConditionMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteFormLogicCondition?: Maybe<(
-    { __typename?: 'DeleteFormLogicConditionPayload' }
-    & { formLogicCondition?: Maybe<(
-      { __typename?: 'FormLogicCondition' }
-      & Pick<FormLogicCondition, 'id' | 'ruleId'>
-    )> }
-  )> }
-);
+export type DeleteLogicConditionMutation = {
+  __typename?: "Mutation";
+  deleteFormLogicCondition?: {
+    __typename?: "DeleteFormLogicConditionPayload";
+    formLogicCondition?: {
+      __typename?: "FormLogicCondition";
+      id: number;
+      ruleId: number;
+    } | null;
+  } | null;
+};
 
 export type DeleteLogicRuleMutationVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type DeleteLogicRuleMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteFormLogicRule?: Maybe<(
-    { __typename?: 'DeleteFormLogicRulePayload' }
-    & { formLogicRule?: Maybe<(
-      { __typename?: 'FormLogicRule' }
-      & Pick<FormLogicRule, 'id' | 'formElementId'>
-    )> }
-  )> }
-);
+export type DeleteLogicRuleMutation = {
+  __typename?: "Mutation";
+  deleteFormLogicRule?: {
+    __typename?: "DeleteFormLogicRulePayload";
+    formLogicRule?: {
+      __typename?: "FormLogicRule";
+      id: number;
+      formElementId: number;
+    } | null;
+  } | null;
+};
 
 export type AddConditionMutationVariables = Exact<{
   operator: FieldRuleOperator;
-  ruleId: Scalars['Int'];
-  subjectId: Scalars['Int'];
-  value?: Maybe<Scalars['JSON']>;
+  ruleId: Scalars["Int"];
+  subjectId: Scalars["Int"];
+  value?: InputMaybe<Scalars["JSON"]>;
 }>;
 
-
-export type AddConditionMutation = (
-  { __typename?: 'Mutation' }
-  & { createFormLogicCondition?: Maybe<(
-    { __typename?: 'CreateFormLogicConditionPayload' }
-    & { formLogicCondition?: Maybe<(
-      { __typename?: 'FormLogicCondition' }
-      & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
-    )> }
-  )> }
-);
+export type AddConditionMutation = {
+  __typename?: "Mutation";
+  createFormLogicCondition?: {
+    __typename?: "CreateFormLogicConditionPayload";
+    formLogicCondition?: {
+      __typename?: "FormLogicCondition";
+      id: number;
+      operator: FieldRuleOperator;
+      ruleId: number;
+      subjectId: number;
+      value?: any | null;
+    } | null;
+  } | null;
+};
 
 export type UpdateSurveyDraftStatusMutationVariables = Exact<{
-  id: Scalars['Int'];
-  isDisabled: Scalars['Boolean'];
+  id: Scalars["Int"];
+  isDisabled: Scalars["Boolean"];
 }>;
 
-
-export type UpdateSurveyDraftStatusMutation = (
-  { __typename?: 'Mutation' }
-  & { updateSurvey?: Maybe<(
-    { __typename?: 'UpdateSurveyPayload' }
-    & { survey?: Maybe<(
-      { __typename?: 'Survey' }
-      & Pick<Survey, 'id' | 'isDisabled'>
-    )> }
-  )> }
-);
+export type UpdateSurveyDraftStatusMutation = {
+  __typename?: "Mutation";
+  updateSurvey?: {
+    __typename?: "UpdateSurveyPayload";
+    survey?: { __typename?: "Survey"; id: number; isDisabled: boolean } | null;
+  } | null;
+};
 
 export type UploadConsentDocMutationVariables = Exact<{
-  document: Scalars['Upload'];
-  formElementId: Scalars['Int'];
-  version: Scalars['Int'];
+  document: Scalars["Upload"];
+  formElementId: Scalars["Int"];
+  version: Scalars["Int"];
 }>;
 
+export type UploadConsentDocMutation = {
+  __typename?: "Mutation";
+  uploadConsentDocument: {
+    __typename?: "FormElement";
+    id: number;
+    componentSettings: any;
+  };
+};
 
-export type UploadConsentDocMutation = (
-  { __typename?: 'Mutation' }
-  & { uploadConsentDocument: (
-    { __typename?: 'FormElement' }
-    & Pick<FormElement, 'id' | 'componentSettings'>
-  ) }
-);
+export type SurveyResponseFragment = {
+  __typename?: "SurveyResponse";
+  id: number;
+  surveyId: number;
+  bypassedDuplicateSubmissionControl: boolean;
+  updatedAt?: any | null;
+  accountEmail?: string | null;
+  userId?: number | null;
+  createdAt: any;
+  data: any;
+  isDuplicateEntry: boolean;
+  isDuplicateIp: boolean;
+  isPractice: boolean;
+  isUnrecognizedUserAgent: boolean;
+  archived: boolean;
+  lastUpdatedByEmail?: string | null;
+};
 
-export type SurveyResponseFragment = (
-  { __typename?: 'SurveyResponse' }
-  & Pick<SurveyResponse, 'id' | 'surveyId' | 'bypassedDuplicateSubmissionControl' | 'updatedAt' | 'accountEmail' | 'userId' | 'createdAt' | 'data' | 'isDuplicateEntry' | 'isDuplicateIp' | 'isPractice' | 'isUnrecognizedUserAgent' | 'archived' | 'lastUpdatedByEmail'>
-);
-
-export type FormElementExtendedDetailsFragment = (
-  { __typename?: 'FormElement' }
-  & { surveyConsentDocumentsConnection: (
-    { __typename?: 'SurveyConsentDocumentsConnection' }
-    & { nodes: Array<(
-      { __typename?: 'SurveyConsentDocument' }
-      & Pick<SurveyConsentDocument, 'url' | 'version'>
-    )> }
-  ) }
-  & FormElementDetailsFragment
-);
+export type FormElementExtendedDetailsFragment = {
+  __typename?: "FormElement";
+  body: any;
+  componentSettings: any;
+  alternateLanguageSettings: any;
+  exportId?: string | null;
+  formId: number;
+  id: number;
+  isRequired: boolean;
+  position: number;
+  jumpToId?: number | null;
+  isInput?: boolean | null;
+  typeId: string;
+  backgroundColor?: string | null;
+  secondaryColor?: string | null;
+  backgroundImage?: string | null;
+  layout?: FormElementLayout | null;
+  backgroundPalette?: Array<string | null> | null;
+  textVariant: FormElementTextVariant;
+  unsplashAuthorUrl?: string | null;
+  unsplashAuthorName?: string | null;
+  backgroundWidth?: number | null;
+  backgroundHeight?: number | null;
+  subordinateTo?: number | null;
+  mapBasemaps?: Array<number | null> | null;
+  mapCameraOptions?: any | null;
+  surveyConsentDocumentsConnection: {
+    __typename?: "SurveyConsentDocumentsConnection";
+    nodes: Array<{
+      __typename?: "SurveyConsentDocument";
+      url: string;
+      version: number;
+    }>;
+  };
+  type?: {
+    __typename?: "FormElementType";
+    componentName: string;
+    isHidden: boolean;
+    isInput: boolean;
+    isSingleUseOnly: boolean;
+    isSurveysOnly: boolean;
+    label: string;
+    supportedOperators: Array<FieldRuleOperator | null>;
+    isSpatial: boolean;
+    allowedLayouts?: Array<FormElementLayout | null> | null;
+  } | null;
+};
 
 export type SurveyResponsesQueryVariables = Exact<{
-  surveyId: Scalars['Int'];
+  surveyId: Scalars["Int"];
 }>;
 
-
-export type SurveyResponsesQuery = (
-  { __typename?: 'Query' }
-  & { survey?: Maybe<(
-    { __typename?: 'Survey' }
-    & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & { formElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & FormElementExtendedDetailsFragment
-      )>>, logicRules?: Maybe<Array<(
-        { __typename?: 'FormLogicRule' }
-        & SurveyAppRuleFragment
-      )>> }
-    )>, surveyResponsesConnection: (
-      { __typename?: 'SurveyResponsesConnection' }
-      & { nodes: Array<(
-        { __typename?: 'SurveyResponse' }
-        & SurveyResponseFragment
-      )> }
-    ) }
-  )> }
-);
+export type SurveyResponsesQuery = {
+  __typename?: "Query";
+  survey?: {
+    __typename?: "Survey";
+    id: number;
+    practiceResponseCount?: number | null;
+    archivedResponseCount?: number | null;
+    submittedResponseCount?: number | null;
+    form?: {
+      __typename?: "Form";
+      formElements?: Array<{
+        __typename?: "FormElement";
+        body: any;
+        componentSettings: any;
+        alternateLanguageSettings: any;
+        exportId?: string | null;
+        formId: number;
+        id: number;
+        isRequired: boolean;
+        position: number;
+        jumpToId?: number | null;
+        isInput?: boolean | null;
+        typeId: string;
+        backgroundColor?: string | null;
+        secondaryColor?: string | null;
+        backgroundImage?: string | null;
+        layout?: FormElementLayout | null;
+        backgroundPalette?: Array<string | null> | null;
+        textVariant: FormElementTextVariant;
+        unsplashAuthorUrl?: string | null;
+        unsplashAuthorName?: string | null;
+        backgroundWidth?: number | null;
+        backgroundHeight?: number | null;
+        subordinateTo?: number | null;
+        mapBasemaps?: Array<number | null> | null;
+        mapCameraOptions?: any | null;
+        surveyConsentDocumentsConnection: {
+          __typename?: "SurveyConsentDocumentsConnection";
+          nodes: Array<{
+            __typename?: "SurveyConsentDocument";
+            url: string;
+            version: number;
+          }>;
+        };
+        type?: {
+          __typename?: "FormElementType";
+          componentName: string;
+          isHidden: boolean;
+          isInput: boolean;
+          isSingleUseOnly: boolean;
+          isSurveysOnly: boolean;
+          label: string;
+          supportedOperators: Array<FieldRuleOperator | null>;
+          isSpatial: boolean;
+          allowedLayouts?: Array<FormElementLayout | null> | null;
+        } | null;
+      }> | null;
+      logicRules?: Array<{
+        __typename?: "FormLogicRule";
+        booleanOperator: FormLogicOperator;
+        command: FormLogicCommand;
+        formElementId: number;
+        id: number;
+        jumpToId?: number | null;
+        position: number;
+        conditions?: Array<{
+          __typename?: "FormLogicCondition";
+          id: number;
+          operator: FieldRuleOperator;
+          ruleId: number;
+          subjectId: number;
+          value?: any | null;
+        }> | null;
+      }> | null;
+    } | null;
+    surveyResponsesConnection: {
+      __typename?: "SurveyResponsesConnection";
+      nodes: Array<{
+        __typename?: "SurveyResponse";
+        id: number;
+        surveyId: number;
+        bypassedDuplicateSubmissionControl: boolean;
+        updatedAt?: any | null;
+        accountEmail?: string | null;
+        userId?: number | null;
+        createdAt: any;
+        data: any;
+        isDuplicateEntry: boolean;
+        isDuplicateIp: boolean;
+        isPractice: boolean;
+        isUnrecognizedUserAgent: boolean;
+        archived: boolean;
+        lastUpdatedByEmail?: string | null;
+      }>;
+    };
+  } | null;
+};
 
 export type SurveyMapDetailsQueryVariables = Exact<{
-  surveyId: Scalars['Int'];
+  surveyId: Scalars["Int"];
 }>;
 
-
-export type SurveyMapDetailsQuery = (
-  { __typename?: 'Query' }
-  & { survey?: Maybe<(
-    { __typename?: 'Survey' }
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id'>
-      & { formElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & FormElementDetailsFragment
-      )>> }
-    )> }
-  )> }
-);
+export type SurveyMapDetailsQuery = {
+  __typename?: "Query";
+  survey?: {
+    __typename?: "Survey";
+    form?: {
+      __typename?: "Form";
+      id: number;
+      formElements?: Array<{
+        __typename?: "FormElement";
+        body: any;
+        componentSettings: any;
+        alternateLanguageSettings: any;
+        exportId?: string | null;
+        formId: number;
+        id: number;
+        isRequired: boolean;
+        position: number;
+        jumpToId?: number | null;
+        isInput?: boolean | null;
+        typeId: string;
+        backgroundColor?: string | null;
+        secondaryColor?: string | null;
+        backgroundImage?: string | null;
+        layout?: FormElementLayout | null;
+        backgroundPalette?: Array<string | null> | null;
+        textVariant: FormElementTextVariant;
+        unsplashAuthorUrl?: string | null;
+        unsplashAuthorName?: string | null;
+        backgroundWidth?: number | null;
+        backgroundHeight?: number | null;
+        subordinateTo?: number | null;
+        mapBasemaps?: Array<number | null> | null;
+        mapCameraOptions?: any | null;
+        type?: {
+          __typename?: "FormElementType";
+          componentName: string;
+          isHidden: boolean;
+          isInput: boolean;
+          isSingleUseOnly: boolean;
+          isSurveysOnly: boolean;
+          label: string;
+          supportedOperators: Array<FieldRuleOperator | null>;
+          isSpatial: boolean;
+          allowedLayouts?: Array<FormElementLayout | null> | null;
+        } | null;
+      }> | null;
+    } | null;
+  } | null;
+};
 
 export type ToggleResponsesPracticeMutationVariables = Exact<{
-  ids?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
-  isPractice?: Maybe<Scalars['Boolean']>;
+  ids?: InputMaybe<
+    Array<InputMaybe<Scalars["Int"]>> | InputMaybe<Scalars["Int"]>
+  >;
+  isPractice?: InputMaybe<Scalars["Boolean"]>;
 }>;
 
-
-export type ToggleResponsesPracticeMutation = (
-  { __typename?: 'Mutation' }
-  & { toggleResponsesPractice?: Maybe<(
-    { __typename?: 'ToggleResponsesPracticePayload' }
-    & { surveyResponses?: Maybe<Array<(
-      { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id' | 'isPractice' | 'archived' | 'lastUpdatedByEmail'>
-      & { survey?: Maybe<(
-        { __typename?: 'Survey' }
-        & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
-      )> }
-    )>> }
-  )> }
-);
+export type ToggleResponsesPracticeMutation = {
+  __typename?: "Mutation";
+  toggleResponsesPractice?: {
+    __typename?: "ToggleResponsesPracticePayload";
+    surveyResponses?: Array<{
+      __typename?: "SurveyResponse";
+      id: number;
+      isPractice: boolean;
+      archived: boolean;
+      lastUpdatedByEmail?: string | null;
+      survey?: {
+        __typename?: "Survey";
+        id: number;
+        practiceResponseCount?: number | null;
+        archivedResponseCount?: number | null;
+        submittedResponseCount?: number | null;
+      } | null;
+    }> | null;
+  } | null;
+};
 
 export type ArchiveResponsesMutationVariables = Exact<{
-  ids?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
-  makeArchived?: Maybe<Scalars['Boolean']>;
+  ids?: InputMaybe<
+    Array<InputMaybe<Scalars["Int"]>> | InputMaybe<Scalars["Int"]>
+  >;
+  makeArchived?: InputMaybe<Scalars["Boolean"]>;
 }>;
 
-
-export type ArchiveResponsesMutation = (
-  { __typename?: 'Mutation' }
-  & { archiveResponses?: Maybe<(
-    { __typename?: 'ArchiveResponsesPayload' }
-    & { surveyResponses?: Maybe<Array<(
-      { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id' | 'isPractice' | 'archived' | 'lastUpdatedByEmail'>
-      & { survey?: Maybe<(
-        { __typename?: 'Survey' }
-        & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
-      )> }
-    )>> }
-  )> }
-);
+export type ArchiveResponsesMutation = {
+  __typename?: "Mutation";
+  archiveResponses?: {
+    __typename?: "ArchiveResponsesPayload";
+    surveyResponses?: Array<{
+      __typename?: "SurveyResponse";
+      id: number;
+      isPractice: boolean;
+      archived: boolean;
+      lastUpdatedByEmail?: string | null;
+      survey?: {
+        __typename?: "Survey";
+        id: number;
+        practiceResponseCount?: number | null;
+        archivedResponseCount?: number | null;
+        submittedResponseCount?: number | null;
+      } | null;
+    }> | null;
+  } | null;
+};
 
 export type ModifyAnswersMutationVariables = Exact<{
-  responseIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
-  answers?: Maybe<Scalars['JSON']>;
+  responseIds: Array<InputMaybe<Scalars["Int"]>> | InputMaybe<Scalars["Int"]>;
+  answers?: InputMaybe<Scalars["JSON"]>;
 }>;
 
-
-export type ModifyAnswersMutation = (
-  { __typename?: 'Mutation' }
-  & { modifySurveyAnswers?: Maybe<(
-    { __typename?: 'ModifySurveyAnswersPayload' }
-    & { surveyResponses?: Maybe<Array<(
-      { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id' | 'data' | 'updatedAt' | 'lastUpdatedByEmail'>
-    )>> }
-  )> }
-);
+export type ModifyAnswersMutation = {
+  __typename?: "Mutation";
+  modifySurveyAnswers?: {
+    __typename?: "ModifySurveyAnswersPayload";
+    surveyResponses?: Array<{
+      __typename?: "SurveyResponse";
+      id: number;
+      data: any;
+      updatedAt?: any | null;
+      lastUpdatedByEmail?: string | null;
+    }> | null;
+  } | null;
+};
 
 export type CopyAppearanceMutationVariables = Exact<{
-  id: Scalars['Int'];
-  copyFrom: Scalars['Int'];
+  id: Scalars["Int"];
+  copyFrom: Scalars["Int"];
 }>;
 
-
-export type CopyAppearanceMutation = (
-  { __typename?: 'Mutation' }
-  & { copyAppearance?: Maybe<(
-    { __typename?: 'CopyAppearancePayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'backgroundImage' | 'backgroundColor' | 'secondaryColor' | 'backgroundPalette' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundHeight' | 'backgroundWidth' | 'layout' | 'textVariant'>
-    )> }
-  )> }
-);
+export type CopyAppearanceMutation = {
+  __typename?: "Mutation";
+  copyAppearance?: {
+    __typename?: "CopyAppearancePayload";
+    formElement?: {
+      __typename?: "FormElement";
+      id: number;
+      backgroundImage?: string | null;
+      backgroundColor?: string | null;
+      secondaryColor?: string | null;
+      backgroundPalette?: Array<string | null> | null;
+      unsplashAuthorName?: string | null;
+      unsplashAuthorUrl?: string | null;
+      backgroundHeight?: number | null;
+      backgroundWidth?: number | null;
+      layout?: FormElementLayout | null;
+      textVariant: FormElementTextVariant;
+    } | null;
+  } | null;
+};
 
 export type UpdateFormElementBasemapsMutationVariables = Exact<{
-  id: Scalars['Int'];
-  mapBasemaps?: Maybe<Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>>;
+  id: Scalars["Int"];
+  mapBasemaps?: InputMaybe<
+    Array<InputMaybe<Scalars["Int"]>> | InputMaybe<Scalars["Int"]>
+  >;
 }>;
 
-
-export type UpdateFormElementBasemapsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'mapBasemaps'>
-    )> }
-  )> }
-);
+export type UpdateFormElementBasemapsMutation = {
+  __typename?: "Mutation";
+  updateFormElement?: {
+    __typename?: "UpdateFormElementPayload";
+    formElement?: {
+      __typename?: "FormElement";
+      id: number;
+      mapBasemaps?: Array<number | null> | null;
+    } | null;
+  } | null;
+};
 
 export type UpdateFormElementMapCameraMutationVariables = Exact<{
-  id: Scalars['Int'];
-  mapCameraOptions?: Maybe<Scalars['JSON']>;
+  id: Scalars["Int"];
+  mapCameraOptions?: InputMaybe<Scalars["JSON"]>;
 }>;
 
-
-export type UpdateFormElementMapCameraMutation = (
-  { __typename?: 'Mutation' }
-  & { updateFormElement?: Maybe<(
-    { __typename?: 'UpdateFormElementPayload' }
-    & { formElement?: Maybe<(
-      { __typename?: 'FormElement' }
-      & Pick<FormElement, 'id' | 'mapCameraOptions'>
-    )> }
-  )> }
-);
+export type UpdateFormElementMapCameraMutation = {
+  __typename?: "Mutation";
+  updateFormElement?: {
+    __typename?: "UpdateFormElementPayload";
+    formElement?: {
+      __typename?: "FormElement";
+      id: number;
+      mapCameraOptions?: any | null;
+    } | null;
+  } | null;
+};
 
 export type AllBasemapsQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type AllBasemapsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { basemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>>, surveyBasemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & { relatedFormElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & Pick<FormElement, 'id'>
-      )>> }
-      & BasemapDetailsFragment
-    )>> }
-  )> }
-);
+export type AllBasemapsQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    basemaps?: Array<{
+      __typename?: "Basemap";
+      id: number;
+      attribution?: string | null;
+      labelsLayerId?: string | null;
+      name: string;
+      description?: string | null;
+      projectId?: number | null;
+      terrainExaggeration: any;
+      terrainMaxZoom: number;
+      terrainOptional: boolean;
+      terrainTileSize: number;
+      terrainUrl?: string | null;
+      terrainVisibilityDefault: boolean;
+      thumbnail: string;
+      tileSize: number;
+      type: BasemapType;
+      url: string;
+      surveysOnly: boolean;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        cursor: CursorType;
+        id: number;
+        layers?: Array<string | null> | null;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+      optionalBasemapLayers: Array<{
+        __typename?: "OptionalBasemapLayer";
+        basemapId: number;
+        id: number;
+        defaultVisibility: boolean;
+        description?: string | null;
+        options?: any | null;
+        groupType: OptionalBasemapLayersGroupType;
+        layers: Array<string | null>;
+        metadata?: any | null;
+        name: string;
+      }>;
+    }> | null;
+    surveyBasemaps?: Array<{
+      __typename?: "Basemap";
+      id: number;
+      attribution?: string | null;
+      labelsLayerId?: string | null;
+      name: string;
+      description?: string | null;
+      projectId?: number | null;
+      terrainExaggeration: any;
+      terrainMaxZoom: number;
+      terrainOptional: boolean;
+      terrainTileSize: number;
+      terrainUrl?: string | null;
+      terrainVisibilityDefault: boolean;
+      thumbnail: string;
+      tileSize: number;
+      type: BasemapType;
+      url: string;
+      surveysOnly: boolean;
+      relatedFormElements?: Array<{
+        __typename?: "FormElement";
+        id: number;
+      }> | null;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        cursor: CursorType;
+        id: number;
+        layers?: Array<string | null> | null;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+      optionalBasemapLayers: Array<{
+        __typename?: "OptionalBasemapLayer";
+        basemapId: number;
+        id: number;
+        defaultVisibility: boolean;
+        description?: string | null;
+        options?: any | null;
+        groupType: OptionalBasemapLayersGroupType;
+        layers: Array<string | null>;
+        metadata?: any | null;
+        name: string;
+      }>;
+    }> | null;
+  } | null;
+};
 
 export type GetFormElementQueryVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
+export type GetFormElementQuery = {
+  __typename?: "Query";
+  formElement?: {
+    __typename?: "FormElement";
+    body: any;
+    componentSettings: any;
+    alternateLanguageSettings: any;
+    exportId?: string | null;
+    formId: number;
+    id: number;
+    isRequired: boolean;
+    position: number;
+    jumpToId?: number | null;
+    isInput?: boolean | null;
+    typeId: string;
+    backgroundColor?: string | null;
+    secondaryColor?: string | null;
+    backgroundImage?: string | null;
+    layout?: FormElementLayout | null;
+    backgroundPalette?: Array<string | null> | null;
+    textVariant: FormElementTextVariant;
+    unsplashAuthorUrl?: string | null;
+    unsplashAuthorName?: string | null;
+    backgroundWidth?: number | null;
+    backgroundHeight?: number | null;
+    subordinateTo?: number | null;
+    mapBasemaps?: Array<number | null> | null;
+    mapCameraOptions?: any | null;
+    type?: {
+      __typename?: "FormElementType";
+      componentName: string;
+      isHidden: boolean;
+      isInput: boolean;
+      isSingleUseOnly: boolean;
+      isSurveysOnly: boolean;
+      label: string;
+      supportedOperators: Array<FieldRuleOperator | null>;
+      isSpatial: boolean;
+      allowedLayouts?: Array<FormElementLayout | null> | null;
+    } | null;
+  } | null;
+};
 
-export type GetFormElementQuery = (
-  { __typename?: 'Query' }
-  & { formElement?: Maybe<(
-    { __typename?: 'FormElement' }
-    & FormElementDetailsFragment
-  )> }
-);
+export type SurveyAppRuleFragment = {
+  __typename?: "FormLogicRule";
+  booleanOperator: FormLogicOperator;
+  command: FormLogicCommand;
+  formElementId: number;
+  id: number;
+  jumpToId?: number | null;
+  position: number;
+  conditions?: Array<{
+    __typename?: "FormLogicCondition";
+    id: number;
+    operator: FieldRuleOperator;
+    ruleId: number;
+    subjectId: number;
+    value?: any | null;
+  }> | null;
+};
 
-export type SurveyAppRuleFragment = (
-  { __typename?: 'FormLogicRule' }
-  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
-  & { conditions?: Maybe<Array<(
-    { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
-  )>> }
-);
+export type SurveyAppFormElementFragment = {
+  __typename?: "FormElement";
+  id: number;
+  componentSettings: any;
+  alternateLanguageSettings: any;
+  body: any;
+  isRequired: boolean;
+  isInput?: boolean | null;
+  position: number;
+  typeId: string;
+  formId: number;
+  backgroundColor?: string | null;
+  secondaryColor?: string | null;
+  backgroundImage?: string | null;
+  layout?: FormElementLayout | null;
+  textVariant: FormElementTextVariant;
+  unsplashAuthorName?: string | null;
+  unsplashAuthorUrl?: string | null;
+  backgroundWidth?: number | null;
+  backgroundHeight?: number | null;
+  jumpToId?: number | null;
+  subordinateTo?: number | null;
+  mapBasemaps?: Array<number | null> | null;
+  mapCameraOptions?: any | null;
+  type?: {
+    __typename?: "FormElementType";
+    componentName: string;
+    isInput: boolean;
+    isSingleUseOnly: boolean;
+    isSurveysOnly: boolean;
+    label: string;
+    isSpatial: boolean;
+    allowedLayouts?: Array<FormElementLayout | null> | null;
+    supportedOperators: Array<FieldRuleOperator | null>;
+    isHidden: boolean;
+  } | null;
+  sketchClass?: {
+    __typename?: "SketchClass";
+    id: number;
+    mapboxGlStyle?: any | null;
+    formElementId?: number | null;
+    geometryType: SketchGeometryType;
+    geoprocessingClientName?: string | null;
+    geoprocessingClientUrl?: string | null;
+    geoprocessingProjectUrl?: string | null;
+    allowMulti: boolean;
+    form?: {
+      __typename?: "Form";
+      id: number;
+      formElements?: Array<{
+        __typename?: "FormElement";
+        body: any;
+        componentSettings: any;
+        alternateLanguageSettings: any;
+        exportId?: string | null;
+        formId: number;
+        id: number;
+        isRequired: boolean;
+        position: number;
+        jumpToId?: number | null;
+        isInput?: boolean | null;
+        typeId: string;
+        backgroundColor?: string | null;
+        secondaryColor?: string | null;
+        backgroundImage?: string | null;
+        layout?: FormElementLayout | null;
+        backgroundPalette?: Array<string | null> | null;
+        textVariant: FormElementTextVariant;
+        unsplashAuthorUrl?: string | null;
+        unsplashAuthorName?: string | null;
+        backgroundWidth?: number | null;
+        backgroundHeight?: number | null;
+        subordinateTo?: number | null;
+        mapBasemaps?: Array<number | null> | null;
+        mapCameraOptions?: any | null;
+        type?: {
+          __typename?: "FormElementType";
+          componentName: string;
+          isHidden: boolean;
+          isInput: boolean;
+          isSingleUseOnly: boolean;
+          isSurveysOnly: boolean;
+          label: string;
+          supportedOperators: Array<FieldRuleOperator | null>;
+          isSpatial: boolean;
+          allowedLayouts?: Array<FormElementLayout | null> | null;
+        } | null;
+      }> | null;
+      logicRules?: Array<{
+        __typename?: "FormLogicRule";
+        booleanOperator: FormLogicOperator;
+        command: FormLogicCommand;
+        id: number;
+        jumpToId?: number | null;
+        position: number;
+        formElementId: number;
+        conditions?: Array<{
+          __typename?: "FormLogicCondition";
+          id: number;
+          operator: FieldRuleOperator;
+          value?: any | null;
+          subjectId: number;
+          ruleId: number;
+        }> | null;
+      }> | null;
+    } | null;
+  } | null;
+};
 
-export type SurveyAppFormElementFragment = (
-  { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
-  & { type?: Maybe<(
-    { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
-  )>, sketchClass?: Maybe<(
-    { __typename?: 'SketchClass' }
-    & SketchClassDetailsFragment
-  )> }
-);
-
-export type SurveyAppSurveyFragment = (
-  { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption' | 'supportedLanguages'>
-  & { form?: Maybe<(
-    { __typename?: 'Form' }
-    & Pick<Form, 'id'>
-    & { logicRules?: Maybe<Array<(
-      { __typename?: 'FormLogicRule' }
-      & SurveyAppRuleFragment
-    )>>, formElements?: Maybe<Array<(
-      { __typename?: 'FormElement' }
-      & SurveyAppFormElementFragment
-    )>> }
-  )> }
-);
+export type SurveyAppSurveyFragment = {
+  __typename?: "Survey";
+  id: number;
+  name: string;
+  accessType: SurveyAccessType;
+  isDisabled: boolean;
+  showProgress: boolean;
+  showFacilitationOption: boolean;
+  supportedLanguages: Array<string | null>;
+  form?: {
+    __typename?: "Form";
+    id: number;
+    logicRules?: Array<{
+      __typename?: "FormLogicRule";
+      booleanOperator: FormLogicOperator;
+      command: FormLogicCommand;
+      formElementId: number;
+      id: number;
+      jumpToId?: number | null;
+      position: number;
+      conditions?: Array<{
+        __typename?: "FormLogicCondition";
+        id: number;
+        operator: FieldRuleOperator;
+        ruleId: number;
+        subjectId: number;
+        value?: any | null;
+      }> | null;
+    }> | null;
+    formElements?: Array<{
+      __typename?: "FormElement";
+      id: number;
+      componentSettings: any;
+      alternateLanguageSettings: any;
+      body: any;
+      isRequired: boolean;
+      isInput?: boolean | null;
+      position: number;
+      typeId: string;
+      formId: number;
+      backgroundColor?: string | null;
+      secondaryColor?: string | null;
+      backgroundImage?: string | null;
+      layout?: FormElementLayout | null;
+      textVariant: FormElementTextVariant;
+      unsplashAuthorName?: string | null;
+      unsplashAuthorUrl?: string | null;
+      backgroundWidth?: number | null;
+      backgroundHeight?: number | null;
+      jumpToId?: number | null;
+      subordinateTo?: number | null;
+      mapBasemaps?: Array<number | null> | null;
+      mapCameraOptions?: any | null;
+      type?: {
+        __typename?: "FormElementType";
+        componentName: string;
+        isInput: boolean;
+        isSingleUseOnly: boolean;
+        isSurveysOnly: boolean;
+        label: string;
+        isSpatial: boolean;
+        allowedLayouts?: Array<FormElementLayout | null> | null;
+        supportedOperators: Array<FieldRuleOperator | null>;
+        isHidden: boolean;
+      } | null;
+      sketchClass?: {
+        __typename?: "SketchClass";
+        id: number;
+        mapboxGlStyle?: any | null;
+        formElementId?: number | null;
+        geometryType: SketchGeometryType;
+        geoprocessingClientName?: string | null;
+        geoprocessingClientUrl?: string | null;
+        geoprocessingProjectUrl?: string | null;
+        allowMulti: boolean;
+        form?: {
+          __typename?: "Form";
+          id: number;
+          formElements?: Array<{
+            __typename?: "FormElement";
+            body: any;
+            componentSettings: any;
+            alternateLanguageSettings: any;
+            exportId?: string | null;
+            formId: number;
+            id: number;
+            isRequired: boolean;
+            position: number;
+            jumpToId?: number | null;
+            isInput?: boolean | null;
+            typeId: string;
+            backgroundColor?: string | null;
+            secondaryColor?: string | null;
+            backgroundImage?: string | null;
+            layout?: FormElementLayout | null;
+            backgroundPalette?: Array<string | null> | null;
+            textVariant: FormElementTextVariant;
+            unsplashAuthorUrl?: string | null;
+            unsplashAuthorName?: string | null;
+            backgroundWidth?: number | null;
+            backgroundHeight?: number | null;
+            subordinateTo?: number | null;
+            mapBasemaps?: Array<number | null> | null;
+            mapCameraOptions?: any | null;
+            type?: {
+              __typename?: "FormElementType";
+              componentName: string;
+              isHidden: boolean;
+              isInput: boolean;
+              isSingleUseOnly: boolean;
+              isSurveysOnly: boolean;
+              label: string;
+              supportedOperators: Array<FieldRuleOperator | null>;
+              isSpatial: boolean;
+              allowedLayouts?: Array<FormElementLayout | null> | null;
+            } | null;
+          }> | null;
+          logicRules?: Array<{
+            __typename?: "FormLogicRule";
+            booleanOperator: FormLogicOperator;
+            command: FormLogicCommand;
+            id: number;
+            jumpToId?: number | null;
+            position: number;
+            formElementId: number;
+            conditions?: Array<{
+              __typename?: "FormLogicCondition";
+              id: number;
+              operator: FieldRuleOperator;
+              value?: any | null;
+              subjectId: number;
+              ruleId: number;
+            }> | null;
+          }> | null;
+        } | null;
+      } | null;
+    }> | null;
+  } | null;
+};
 
 export type SurveyQueryVariables = Exact<{
-  id: Scalars['Int'];
-  slug: Scalars['String'];
+  id: Scalars["Int"];
+  slug: Scalars["String"];
 }>;
 
-
-export type SurveyQuery = (
-  { __typename?: 'Query' }
-  & { projectPublicDetails?: Maybe<(
-    { __typename?: 'PublicProjectDetail' }
-    & ProjectPublicDetailsMetadataFragment
-  )>, me?: Maybe<(
-    { __typename?: 'User' }
-    & Pick<User, 'id' | 'isAdmin'>
-    & ProjectMetadataMeFragFragment
-  )>, currentProject?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'name' | 'url'>
-    & { region: (
-      { __typename?: 'GeometryPolygon' }
-      & Pick<GeometryPolygon, 'geojson'>
-    ) }
-    & MapEssentialsFragment
-    & ProjectMetadataFragment
-  )>, survey?: Maybe<(
-    { __typename?: 'Survey' }
-    & SurveyAppSurveyFragment
-  )> }
-);
+export type SurveyQuery = {
+  __typename?: "Query";
+  projectPublicDetails?: {
+    __typename?: "PublicProjectDetail";
+    id?: number | null;
+    accessControl?: ProjectAccessControlSetting | null;
+    slug?: string | null;
+    name?: string | null;
+    logoUrl?: string | null;
+    supportEmail?: string | null;
+    accessStatus?: ProjectAccessStatus | null;
+  } | null;
+  me?: {
+    __typename?: "User";
+    id: number;
+    isAdmin?: boolean | null;
+    profile?: {
+      __typename?: "Profile";
+      userId: number;
+      fullname?: string | null;
+      nickname?: string | null;
+      email?: any | null;
+      picture?: string | null;
+      bio?: string | null;
+      affiliations?: string | null;
+    } | null;
+  } | null;
+  currentProject?: {
+    __typename?: "Project";
+    id: number;
+    name: string;
+    url?: string | null;
+    mapboxPublicKey?: string | null;
+    mapboxSecretKey?: string | null;
+    slug: string;
+    description?: string | null;
+    logoLink?: string | null;
+    logoUrl?: string | null;
+    accessControl: ProjectAccessControlSetting;
+    sessionIsAdmin?: boolean | null;
+    isFeatured: boolean;
+    supportEmail: string;
+    region: { __typename?: "GeometryPolygon"; geojson?: any | null };
+    basemaps?: Array<{
+      __typename?: "Basemap";
+      id: number;
+      attribution?: string | null;
+      labelsLayerId?: string | null;
+      name: string;
+      description?: string | null;
+      projectId?: number | null;
+      terrainExaggeration: any;
+      terrainMaxZoom: number;
+      terrainOptional: boolean;
+      terrainTileSize: number;
+      terrainUrl?: string | null;
+      terrainVisibilityDefault: boolean;
+      thumbnail: string;
+      tileSize: number;
+      type: BasemapType;
+      url: string;
+      surveysOnly: boolean;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        cursor: CursorType;
+        id: number;
+        layers?: Array<string | null> | null;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+      optionalBasemapLayers: Array<{
+        __typename?: "OptionalBasemapLayer";
+        basemapId: number;
+        id: number;
+        defaultVisibility: boolean;
+        description?: string | null;
+        options?: any | null;
+        groupType: OptionalBasemapLayersGroupType;
+        layers: Array<string | null>;
+        metadata?: any | null;
+        name: string;
+      }>;
+    }> | null;
+    surveyBasemaps?: Array<{
+      __typename?: "Basemap";
+      id: number;
+      attribution?: string | null;
+      labelsLayerId?: string | null;
+      name: string;
+      description?: string | null;
+      projectId?: number | null;
+      terrainExaggeration: any;
+      terrainMaxZoom: number;
+      terrainOptional: boolean;
+      terrainTileSize: number;
+      terrainUrl?: string | null;
+      terrainVisibilityDefault: boolean;
+      thumbnail: string;
+      tileSize: number;
+      type: BasemapType;
+      url: string;
+      surveysOnly: boolean;
+      interactivitySettings?: {
+        __typename?: "InteractivitySetting";
+        cursor: CursorType;
+        id: number;
+        layers?: Array<string | null> | null;
+        longTemplate?: string | null;
+        shortTemplate?: string | null;
+        type: InteractivityType;
+      } | null;
+      optionalBasemapLayers: Array<{
+        __typename?: "OptionalBasemapLayer";
+        basemapId: number;
+        id: number;
+        defaultVisibility: boolean;
+        description?: string | null;
+        options?: any | null;
+        groupType: OptionalBasemapLayersGroupType;
+        layers: Array<string | null>;
+        metadata?: any | null;
+        name: string;
+      }>;
+    }> | null;
+  } | null;
+  survey?: {
+    __typename?: "Survey";
+    id: number;
+    name: string;
+    accessType: SurveyAccessType;
+    isDisabled: boolean;
+    showProgress: boolean;
+    showFacilitationOption: boolean;
+    supportedLanguages: Array<string | null>;
+    form?: {
+      __typename?: "Form";
+      id: number;
+      logicRules?: Array<{
+        __typename?: "FormLogicRule";
+        booleanOperator: FormLogicOperator;
+        command: FormLogicCommand;
+        formElementId: number;
+        id: number;
+        jumpToId?: number | null;
+        position: number;
+        conditions?: Array<{
+          __typename?: "FormLogicCondition";
+          id: number;
+          operator: FieldRuleOperator;
+          ruleId: number;
+          subjectId: number;
+          value?: any | null;
+        }> | null;
+      }> | null;
+      formElements?: Array<{
+        __typename?: "FormElement";
+        id: number;
+        componentSettings: any;
+        alternateLanguageSettings: any;
+        body: any;
+        isRequired: boolean;
+        isInput?: boolean | null;
+        position: number;
+        typeId: string;
+        formId: number;
+        backgroundColor?: string | null;
+        secondaryColor?: string | null;
+        backgroundImage?: string | null;
+        layout?: FormElementLayout | null;
+        textVariant: FormElementTextVariant;
+        unsplashAuthorName?: string | null;
+        unsplashAuthorUrl?: string | null;
+        backgroundWidth?: number | null;
+        backgroundHeight?: number | null;
+        jumpToId?: number | null;
+        subordinateTo?: number | null;
+        mapBasemaps?: Array<number | null> | null;
+        mapCameraOptions?: any | null;
+        type?: {
+          __typename?: "FormElementType";
+          componentName: string;
+          isInput: boolean;
+          isSingleUseOnly: boolean;
+          isSurveysOnly: boolean;
+          label: string;
+          isSpatial: boolean;
+          allowedLayouts?: Array<FormElementLayout | null> | null;
+          supportedOperators: Array<FieldRuleOperator | null>;
+          isHidden: boolean;
+        } | null;
+        sketchClass?: {
+          __typename?: "SketchClass";
+          id: number;
+          mapboxGlStyle?: any | null;
+          formElementId?: number | null;
+          geometryType: SketchGeometryType;
+          geoprocessingClientName?: string | null;
+          geoprocessingClientUrl?: string | null;
+          geoprocessingProjectUrl?: string | null;
+          allowMulti: boolean;
+          form?: {
+            __typename?: "Form";
+            id: number;
+            formElements?: Array<{
+              __typename?: "FormElement";
+              body: any;
+              componentSettings: any;
+              alternateLanguageSettings: any;
+              exportId?: string | null;
+              formId: number;
+              id: number;
+              isRequired: boolean;
+              position: number;
+              jumpToId?: number | null;
+              isInput?: boolean | null;
+              typeId: string;
+              backgroundColor?: string | null;
+              secondaryColor?: string | null;
+              backgroundImage?: string | null;
+              layout?: FormElementLayout | null;
+              backgroundPalette?: Array<string | null> | null;
+              textVariant: FormElementTextVariant;
+              unsplashAuthorUrl?: string | null;
+              unsplashAuthorName?: string | null;
+              backgroundWidth?: number | null;
+              backgroundHeight?: number | null;
+              subordinateTo?: number | null;
+              mapBasemaps?: Array<number | null> | null;
+              mapCameraOptions?: any | null;
+              type?: {
+                __typename?: "FormElementType";
+                componentName: string;
+                isHidden: boolean;
+                isInput: boolean;
+                isSingleUseOnly: boolean;
+                isSurveysOnly: boolean;
+                label: string;
+                supportedOperators: Array<FieldRuleOperator | null>;
+                isSpatial: boolean;
+                allowedLayouts?: Array<FormElementLayout | null> | null;
+              } | null;
+            }> | null;
+            logicRules?: Array<{
+              __typename?: "FormLogicRule";
+              booleanOperator: FormLogicOperator;
+              command: FormLogicCommand;
+              id: number;
+              jumpToId?: number | null;
+              position: number;
+              formElementId: number;
+              conditions?: Array<{
+                __typename?: "FormLogicCondition";
+                id: number;
+                operator: FieldRuleOperator;
+                value?: any | null;
+                subjectId: number;
+                ruleId: number;
+              }> | null;
+            }> | null;
+          } | null;
+        } | null;
+      }> | null;
+    } | null;
+  } | null;
+};
 
 export type CreateResponseMutationVariables = Exact<{
-  surveyId: Scalars['Int'];
-  isDraft: Scalars['Boolean'];
-  bypassedDuplicateSubmissionControl: Scalars['Boolean'];
-  responseData: Scalars['JSON'];
-  facilitated: Scalars['Boolean'];
-  practice: Scalars['Boolean'];
+  surveyId: Scalars["Int"];
+  isDraft: Scalars["Boolean"];
+  bypassedDuplicateSubmissionControl: Scalars["Boolean"];
+  responseData: Scalars["JSON"];
+  facilitated: Scalars["Boolean"];
+  practice: Scalars["Boolean"];
 }>;
 
-
-export type CreateResponseMutation = (
-  { __typename?: 'Mutation' }
-  & { createSurveyResponse?: Maybe<(
-    { __typename?: 'CreateSurveyResponsePayload' }
-    & Pick<CreateSurveyResponsePayload, 'clientMutationId'>
-    & { surveyResponse?: Maybe<(
-      { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id'>
-    )> }
-  )> }
-);
+export type CreateResponseMutation = {
+  __typename?: "Mutation";
+  createSurveyResponse?: {
+    __typename?: "CreateSurveyResponsePayload";
+    clientMutationId?: string | null;
+    surveyResponse?: { __typename?: "SurveyResponse"; id: number } | null;
+  } | null;
+};
 
 export type UpdateProjectNameMutationVariables = Exact<{
-  name: Scalars['String'];
-  slug: Scalars['String'];
-  clientMutationId?: Maybe<Scalars['String']>;
+  name: Scalars["String"];
+  slug: Scalars["String"];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateProjectNameMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & Pick<UpdateProjectPayload, 'clientMutationId'>
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name'>
-    )> }
-  )> }
-);
+export type UpdateProjectNameMutation = {
+  __typename?: "Mutation";
+  updateProjectBySlug?: {
+    __typename?: "UpdateProjectPayload";
+    clientMutationId?: string | null;
+    project?: { __typename?: "Project"; id: number; name: string } | null;
+  } | null;
+};
 
 export type UpdateProjectSettingsMutationVariables = Exact<{
-  slug: Scalars['String'];
-  clientMutationId?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  description?: Maybe<Scalars['String']>;
-  logoUrl?: Maybe<Scalars['Upload']>;
-  logoLink?: Maybe<Scalars['String']>;
-  isFeatured?: Maybe<Scalars['Boolean']>;
-  mapboxPublicKey?: Maybe<Scalars['String']>;
+  slug: Scalars["String"];
+  clientMutationId?: InputMaybe<Scalars["String"]>;
+  name?: InputMaybe<Scalars["String"]>;
+  description?: InputMaybe<Scalars["String"]>;
+  logoUrl?: InputMaybe<Scalars["Upload"]>;
+  logoLink?: InputMaybe<Scalars["String"]>;
+  isFeatured?: InputMaybe<Scalars["Boolean"]>;
+  mapboxPublicKey?: InputMaybe<Scalars["String"]>;
 }>;
 
-
-export type UpdateProjectSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & Pick<UpdateProjectPayload, 'clientMutationId'>
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'logoLink' | 'mapboxPublicKey' | 'mapboxSecretKey' | 'isFeatured'>
-    )> }
-  )> }
-);
+export type UpdateProjectSettingsMutation = {
+  __typename?: "Mutation";
+  updateProjectBySlug?: {
+    __typename?: "UpdateProjectPayload";
+    clientMutationId?: string | null;
+    project?: {
+      __typename?: "Project";
+      id: number;
+      name: string;
+      description?: string | null;
+      logoUrl?: string | null;
+      logoLink?: string | null;
+      mapboxPublicKey?: string | null;
+      mapboxSecretKey?: string | null;
+      isFeatured: boolean;
+    } | null;
+  } | null;
+};
 
 export type UserAdminCountsQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type UserAdminCountsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'accessControl' | 'participantCount' | 'adminCount' | 'unapprovedParticipantCount'>
-    & { inviteCounts?: Maybe<Array<(
-      { __typename?: 'InviteStat' }
-      & Pick<InviteStat, 'count' | 'status'>
-    )>>, groups: Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name' | 'memberCount'>
-    )> }
-  )> }
-);
+export type UserAdminCountsQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    accessControl: ProjectAccessControlSetting;
+    participantCount?: number | null;
+    adminCount?: number | null;
+    unapprovedParticipantCount?: number | null;
+    inviteCounts?: Array<{
+      __typename?: "InviteStat";
+      count?: number | null;
+      status?: InviteStatus | null;
+    }> | null;
+    groups: Array<{
+      __typename?: "Group";
+      id: number;
+      name: string;
+      memberCount?: number | null;
+    }>;
+  } | null;
+};
 
 export type CreateGroupMutationVariables = Exact<{
-  projectId: Scalars['Int'];
-  name: Scalars['String'];
+  projectId: Scalars["Int"];
+  name: Scalars["String"];
 }>;
 
+export type CreateGroupMutation = {
+  __typename?: "Mutation";
+  createGroup?: {
+    __typename?: "CreateGroupPayload";
+    group?: {
+      __typename?: "Group";
+      id: number;
+      name: string;
+      projectId: number;
+    } | null;
+  } | null;
+};
 
-export type CreateGroupMutation = (
-  { __typename?: 'Mutation' }
-  & { createGroup?: Maybe<(
-    { __typename?: 'CreateGroupPayload' }
-    & { group?: Maybe<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name' | 'projectId'>
-    )> }
-  )> }
-);
-
-export type ParticipantListDetailsFragment = (
-  { __typename?: 'User' }
-  & Pick<User, 'id' | 'bannedFromForums' | 'isAdmin' | 'canonicalEmail'>
-  & { profile?: Maybe<(
-    { __typename?: 'Profile' }
-    & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
-  )>, groups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
-);
+export type ParticipantListDetailsFragment = {
+  __typename?: "User";
+  id: number;
+  bannedFromForums?: boolean | null;
+  isAdmin?: boolean | null;
+  canonicalEmail?: string | null;
+  profile?: {
+    __typename?: "Profile";
+    userId: number;
+    email?: any | null;
+    fullname?: string | null;
+    nickname?: string | null;
+    picture?: string | null;
+  } | null;
+  groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+};
 
 export type ParticipantsQueryVariables = Exact<{
-  slug: Scalars['String'];
-  offset?: Maybe<Scalars['Int']>;
-  first?: Maybe<Scalars['Int']>;
+  slug: Scalars["String"];
+  offset?: InputMaybe<Scalars["Int"]>;
+  first?: InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type ParticipantsQuery = (
-  { __typename?: 'Query' }
-  & { root?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { participants?: Maybe<Array<(
-      { __typename?: 'User' }
-      & ParticipantListDetailsFragment
-    )>> }
-  )> }
-);
+export type ParticipantsQuery = {
+  __typename?: "Query";
+  root?: {
+    __typename?: "Project";
+    id: number;
+    participants?: Array<{
+      __typename?: "User";
+      id: number;
+      bannedFromForums?: boolean | null;
+      isAdmin?: boolean | null;
+      canonicalEmail?: string | null;
+      profile?: {
+        __typename?: "Profile";
+        userId: number;
+        email?: any | null;
+        fullname?: string | null;
+        nickname?: string | null;
+        picture?: string | null;
+      } | null;
+      groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+    }> | null;
+  } | null;
+};
 
 export type AdminsQueryVariables = Exact<{
-  slug: Scalars['String'];
-  offset?: Maybe<Scalars['Int']>;
-  first?: Maybe<Scalars['Int']>;
+  slug: Scalars["String"];
+  offset?: InputMaybe<Scalars["Int"]>;
+  first?: InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type AdminsQuery = (
-  { __typename?: 'Query' }
-  & { root?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { participants?: Maybe<Array<(
-      { __typename?: 'User' }
-      & ParticipantListDetailsFragment
-    )>> }
-  )> }
-);
+export type AdminsQuery = {
+  __typename?: "Query";
+  root?: {
+    __typename?: "Project";
+    id: number;
+    participants?: Array<{
+      __typename?: "User";
+      id: number;
+      bannedFromForums?: boolean | null;
+      isAdmin?: boolean | null;
+      canonicalEmail?: string | null;
+      profile?: {
+        __typename?: "Profile";
+        userId: number;
+        email?: any | null;
+        fullname?: string | null;
+        nickname?: string | null;
+        picture?: string | null;
+      } | null;
+      groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+    }> | null;
+  } | null;
+};
 
 export type GroupMembersQueryVariables = Exact<{
-  groupId: Scalars['Int'];
-  offset?: Maybe<Scalars['Int']>;
-  first?: Maybe<Scalars['Int']>;
+  groupId: Scalars["Int"];
+  offset?: InputMaybe<Scalars["Int"]>;
+  first?: InputMaybe<Scalars["Int"]>;
 }>;
 
+export type GroupMembersQuery = {
+  __typename?: "Query";
+  root?: {
+    __typename?: "Group";
+    participants?: Array<{
+      __typename?: "User";
+      id: number;
+      bannedFromForums?: boolean | null;
+      isAdmin?: boolean | null;
+      canonicalEmail?: string | null;
+      profile?: {
+        __typename?: "Profile";
+        userId: number;
+        email?: any | null;
+        fullname?: string | null;
+        nickname?: string | null;
+        picture?: string | null;
+      } | null;
+      groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+    }> | null;
+  } | null;
+};
 
-export type GroupMembersQuery = (
-  { __typename?: 'Query' }
-  & { root?: Maybe<(
-    { __typename?: 'Group' }
-    & { participants?: Maybe<Array<(
-      { __typename?: 'User' }
-      & ParticipantListDetailsFragment
-    )>> }
-  )> }
-);
-
-export type UserListDetailsFragment = (
-  { __typename?: 'User' }
-  & Pick<User, 'id' | 'isAdmin' | 'canonicalEmail' | 'bannedFromForums' | 'onboarded' | 'participationStatus'>
-  & { groups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'name' | 'id'>
-  )>>, profile?: Maybe<(
-    { __typename?: 'Profile' }
-    & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
-  )> }
-);
+export type UserListDetailsFragment = {
+  __typename?: "User";
+  id: number;
+  isAdmin?: boolean | null;
+  canonicalEmail?: string | null;
+  bannedFromForums?: boolean | null;
+  onboarded?: any | null;
+  participationStatus?: ParticipationStatus | null;
+  groups?: Array<{ __typename?: "Group"; name: string; id: number }> | null;
+  profile?: {
+    __typename?: "Profile";
+    userId: number;
+    email?: any | null;
+    fullname?: string | null;
+    nickname?: string | null;
+    picture?: string | null;
+  } | null;
+};
 
 export type UserSettingsListsQueryVariables = Exact<{
-  slug: Scalars['String'];
+  slug: Scalars["String"];
 }>;
 
-
-export type UserSettingsListsQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'accessControl'>
-    & { groups: Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'name' | 'id'>
-    )>, invitesConnection: (
-      { __typename?: 'ProjectInvitesConnection' }
-      & { nodes: Array<(
-        { __typename?: 'ProjectInvite' }
-        & InviteDetailsFragment
-      )> }
-    ), participants?: Maybe<Array<(
-      { __typename?: 'User' }
-      & UserListDetailsFragment
-    )>> }
-  )> }
-);
+export type UserSettingsListsQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    accessControl: ProjectAccessControlSetting;
+    groups: Array<{ __typename?: "Group"; name: string; id: number }>;
+    invitesConnection: {
+      __typename?: "ProjectInvitesConnection";
+      nodes: Array<{
+        __typename?: "ProjectInvite";
+        createdAt: any;
+        email: any;
+        fullname?: string | null;
+        id: number;
+        status?: InviteStatus | null;
+        makeAdmin: boolean;
+        wasUsed: boolean;
+        groups?: Array<{
+          __typename?: "Group";
+          id: number;
+          name: string;
+        }> | null;
+      }>;
+    };
+    participants?: Array<{
+      __typename?: "User";
+      id: number;
+      isAdmin?: boolean | null;
+      canonicalEmail?: string | null;
+      bannedFromForums?: boolean | null;
+      onboarded?: any | null;
+      participationStatus?: ParticipationStatus | null;
+      groups?: Array<{ __typename?: "Group"; name: string; id: number }> | null;
+      profile?: {
+        __typename?: "Profile";
+        userId: number;
+        email?: any | null;
+        fullname?: string | null;
+        nickname?: string | null;
+        picture?: string | null;
+      } | null;
+    }> | null;
+  } | null;
+};
 
 export type UserInfoQueryVariables = Exact<{
-  userId: Scalars['Int'];
-  slug: Scalars['String'];
+  userId: Scalars["Int"];
+  slug: Scalars["String"];
 }>;
 
-
-export type UserInfoQuery = (
-  { __typename?: 'Query' }
-  & { user?: Maybe<(
-    { __typename?: 'User' }
-    & Pick<User, 'id' | 'isAdmin' | 'canonicalEmail' | 'bannedFromForums' | 'onboarded' | 'participationStatus'>
-    & { emailNotificationPreference?: Maybe<(
-      { __typename?: 'EmailNotificationPreference' }
-      & Pick<EmailNotificationPreference, 'unsubscribeAll'>
-    )>, groups?: Maybe<Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'name' | 'id'>
-    )>>, profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'affiliations' | 'bio' | 'email' | 'fullname' | 'nickname' | 'picture'>
-    )> }
-  )>, projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { groups: Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'name' | 'id'>
-    )> }
-  )> }
-);
+export type UserInfoQuery = {
+  __typename?: "Query";
+  user?: {
+    __typename?: "User";
+    id: number;
+    isAdmin?: boolean | null;
+    canonicalEmail?: string | null;
+    bannedFromForums?: boolean | null;
+    onboarded?: any | null;
+    participationStatus?: ParticipationStatus | null;
+    emailNotificationPreference?: {
+      __typename?: "EmailNotificationPreference";
+      unsubscribeAll: boolean;
+    } | null;
+    groups?: Array<{ __typename?: "Group"; name: string; id: number }> | null;
+    profile?: {
+      __typename?: "Profile";
+      userId: number;
+      affiliations?: string | null;
+      bio?: string | null;
+      email?: any | null;
+      fullname?: string | null;
+      nickname?: string | null;
+      picture?: string | null;
+    } | null;
+  } | null;
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    groups: Array<{ __typename?: "Group"; name: string; id: number }>;
+  } | null;
+};
 
 export type ToggleAdminAccessMutationVariables = Exact<{
-  userId: Scalars['Int'];
-  projectId: Scalars['Int'];
+  userId: Scalars["Int"];
+  projectId: Scalars["Int"];
 }>;
 
-
-export type ToggleAdminAccessMutation = (
-  { __typename?: 'Mutation' }
-  & { toggleAdminAccess?: Maybe<(
-    { __typename?: 'ToggleAdminAccessPayload' }
-    & Pick<ToggleAdminAccessPayload, 'clientMutationId'>
-    & { isAdmin: ToggleAdminAccessPayload['boolean'] }
-  )> }
-);
+export type ToggleAdminAccessMutation = {
+  __typename?: "Mutation";
+  toggleAdminAccess?: {
+    __typename?: "ToggleAdminAccessPayload";
+    clientMutationId?: string | null;
+    isAdmin?: boolean | null;
+  } | null;
+};
 
 export type SetUserGroupsMutationVariables = Exact<{
-  userId: Scalars['Int'];
-  projectId: Scalars['Int'];
-  groupIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  userId: Scalars["Int"];
+  projectId: Scalars["Int"];
+  groupIds: Array<InputMaybe<Scalars["Int"]>> | InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type SetUserGroupsMutation = (
-  { __typename?: 'Mutation' }
-  & { setUserGroups?: Maybe<(
-    { __typename?: 'SetUserGroupsPayload' }
-    & { groupIds: SetUserGroupsPayload['integers'] }
-  )> }
-);
+export type SetUserGroupsMutation = {
+  __typename?: "Mutation";
+  setUserGroups?: {
+    __typename?: "SetUserGroupsPayload";
+    groupIds?: Array<number | null> | null;
+  } | null;
+};
 
 export type ToggleForumPostingBanMutationVariables = Exact<{
-  userId: Scalars['Int'];
-  projectId: Scalars['Int'];
+  userId: Scalars["Int"];
+  projectId: Scalars["Int"];
 }>;
 
-
-export type ToggleForumPostingBanMutation = (
-  { __typename?: 'Mutation' }
-  & { toggleForumPostingBan?: Maybe<(
-    { __typename?: 'ToggleForumPostingBanPayload' }
-    & { isBanned: ToggleForumPostingBanPayload['boolean'] }
-  )> }
-);
+export type ToggleForumPostingBanMutation = {
+  __typename?: "Mutation";
+  toggleForumPostingBan?: {
+    __typename?: "ToggleForumPostingBanPayload";
+    isBanned?: boolean | null;
+  } | null;
+};
 
 export type DeleteGroupMutationVariables = Exact<{
-  groupId: Scalars['Int'];
+  groupId: Scalars["Int"];
 }>;
 
-
-export type DeleteGroupMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteGroup?: Maybe<(
-    { __typename?: 'DeleteGroupPayload' }
-    & { group?: Maybe<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id'>
-    )> }
-  )> }
-);
+export type DeleteGroupMutation = {
+  __typename?: "Mutation";
+  deleteGroup?: {
+    __typename?: "DeleteGroupPayload";
+    group?: { __typename?: "Group"; id: number } | null;
+  } | null;
+};
 
 export type CreateProjectInvitesMutationVariables = Exact<{
-  projectId: Scalars['Int'];
-  makeAdmin: Scalars['Boolean'];
-  groupNames: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
-  userDetails: Array<Maybe<ProjectInviteOptionInput>> | Maybe<ProjectInviteOptionInput>;
-  sendEmailNow: Scalars['Boolean'];
+  projectId: Scalars["Int"];
+  makeAdmin: Scalars["Boolean"];
+  groupNames:
+    | Array<InputMaybe<Scalars["String"]>>
+    | InputMaybe<Scalars["String"]>;
+  userDetails:
+    | Array<InputMaybe<ProjectInviteOptionInput>>
+    | InputMaybe<ProjectInviteOptionInput>;
+  sendEmailNow: Scalars["Boolean"];
 }>;
 
+export type CreateProjectInvitesMutation = {
+  __typename?: "Mutation";
+  createProjectInvites?: {
+    __typename?: "CreateProjectInvitesPayload";
+    projectInvites?: Array<{
+      __typename?: "ProjectInvite";
+      createdAt: any;
+      email: any;
+      fullname?: string | null;
+      id: number;
+      status?: InviteStatus | null;
+      makeAdmin: boolean;
+      wasUsed: boolean;
+      groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+    }> | null;
+  } | null;
+};
 
-export type CreateProjectInvitesMutation = (
-  { __typename?: 'Mutation' }
-  & { createProjectInvites?: Maybe<(
-    { __typename?: 'CreateProjectInvitesPayload' }
-    & { projectInvites?: Maybe<Array<(
-      { __typename?: 'ProjectInvite' }
-      & InviteDetailsFragment
-    )>> }
-  )> }
-);
-
-export type InviteDetailsFragment = (
-  { __typename?: 'ProjectInvite' }
-  & Pick<ProjectInvite, 'createdAt' | 'email' | 'fullname' | 'id' | 'status' | 'makeAdmin' | 'wasUsed'>
-  & { groups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
-);
+export type InviteDetailsFragment = {
+  __typename?: "ProjectInvite";
+  createdAt: any;
+  email: any;
+  fullname?: string | null;
+  id: number;
+  status?: InviteStatus | null;
+  makeAdmin: boolean;
+  wasUsed: boolean;
+  groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+};
 
 export type ProjectInvitesQueryVariables = Exact<{
-  projectId: Scalars['Int'];
-  status?: Maybe<Array<Maybe<InviteStatus>> | Maybe<InviteStatus>>;
-  orderBy?: Maybe<InviteOrderBy>;
-  cursor?: Maybe<Scalars['Cursor']>;
-  limit?: Maybe<Scalars['Int']>;
+  projectId: Scalars["Int"];
+  status?: InputMaybe<
+    Array<InputMaybe<InviteStatus>> | InputMaybe<InviteStatus>
+  >;
+  orderBy?: InputMaybe<InviteOrderBy>;
+  cursor?: InputMaybe<Scalars["Cursor"]>;
+  limit?: InputMaybe<Scalars["Int"]>;
 }>;
 
+export type ProjectInvitesQuery = {
+  __typename?: "Query";
+  project?: {
+    __typename?: "Project";
+    id: number;
+    invitesConnection: {
+      __typename?: "ProjectInvitesConnection";
+      edges: Array<{
+        __typename?: "ProjectInvitesEdge";
+        node: {
+          __typename?: "ProjectInvite";
+          createdAt: any;
+          email: any;
+          fullname?: string | null;
+          id: number;
+          status?: InviteStatus | null;
+          makeAdmin: boolean;
+          wasUsed: boolean;
+          groups?: Array<{
+            __typename?: "Group";
+            id: number;
+            name: string;
+          }> | null;
+        };
+      }>;
+      pageInfo: {
+        __typename?: "PageInfo";
+        hasNextPage: boolean;
+        endCursor?: any | null;
+      };
+    };
+  } | null;
+};
 
-export type ProjectInvitesQuery = (
-  { __typename?: 'Query' }
-  & { project?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { invitesConnection: (
-      { __typename?: 'ProjectInvitesConnection' }
-      & { edges: Array<(
-        { __typename?: 'ProjectInvitesEdge' }
-        & { node: (
-          { __typename?: 'ProjectInvite' }
-          & InviteDetailsFragment
-        ) }
-      )>, pageInfo: (
-        { __typename?: 'PageInfo' }
-        & Pick<PageInfo, 'hasNextPage' | 'endCursor'>
-      ) }
-    ) }
-  )> }
-);
-
-export type InviteEmailDetailsFragment = (
-  { __typename?: 'InviteEmail' }
-  & Pick<InviteEmail, 'id' | 'toAddress' | 'createdAt' | 'status' | 'tokenExpiresAt' | 'error' | 'updatedAt'>
-);
+export type InviteEmailDetailsFragment = {
+  __typename?: "InviteEmail";
+  id: number;
+  toAddress: any;
+  createdAt: any;
+  status: EmailStatus;
+  tokenExpiresAt?: any | null;
+  error?: string | null;
+  updatedAt?: any | null;
+};
 
 export type InviteEditorModalQueryQueryVariables = Exact<{
-  inviteId: Scalars['Int'];
-  slug: Scalars['String'];
+  inviteId: Scalars["Int"];
+  slug: Scalars["String"];
 }>;
 
-
-export type InviteEditorModalQueryQuery = (
-  { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { groups: Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name'>
-    )> }
-  )>, projectInvite?: Maybe<(
-    { __typename?: 'ProjectInvite' }
-    & Pick<ProjectInvite, 'id' | 'makeAdmin' | 'email' | 'fullname' | 'status' | 'wasUsed'>
-    & { groups?: Maybe<Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name'>
-    )>>, inviteEmails: Array<(
-      { __typename?: 'InviteEmail' }
-      & InviteEmailDetailsFragment
-    )> }
-  )> }
-);
+export type InviteEditorModalQueryQuery = {
+  __typename?: "Query";
+  projectBySlug?: {
+    __typename?: "Project";
+    id: number;
+    groups: Array<{ __typename?: "Group"; id: number; name: string }>;
+  } | null;
+  projectInvite?: {
+    __typename?: "ProjectInvite";
+    id: number;
+    makeAdmin: boolean;
+    email: any;
+    fullname?: string | null;
+    status?: InviteStatus | null;
+    wasUsed: boolean;
+    groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+    inviteEmails: Array<{
+      __typename?: "InviteEmail";
+      id: number;
+      toAddress: any;
+      createdAt: any;
+      status: EmailStatus;
+      tokenExpiresAt?: any | null;
+      error?: string | null;
+      updatedAt?: any | null;
+    }>;
+  } | null;
+};
 
 export type UpdateProjectInviteMutationVariables = Exact<{
-  id: Scalars['Int'];
-  makeAdmin: Scalars['Boolean'];
-  email: Scalars['String'];
-  fullname?: Maybe<Scalars['String']>;
-  groups: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  id: Scalars["Int"];
+  makeAdmin: Scalars["Boolean"];
+  email: Scalars["String"];
+  fullname?: InputMaybe<Scalars["String"]>;
+  groups: Array<InputMaybe<Scalars["Int"]>> | InputMaybe<Scalars["Int"]>;
 }>;
 
-
-export type UpdateProjectInviteMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectInvite?: Maybe<(
-    { __typename?: 'UpdateProjectInvitePayload' }
-    & { projectInvite?: Maybe<(
-      { __typename?: 'ProjectInvite' }
-      & Pick<ProjectInvite, 'id' | 'makeAdmin' | 'email' | 'fullname'>
-      & { groups?: Maybe<Array<(
-        { __typename?: 'Group' }
-        & Pick<Group, 'id' | 'name'>
-      )>>, inviteEmails: Array<(
-        { __typename?: 'InviteEmail' }
-        & InviteEmailDetailsFragment
-      )> }
-    )> }
-  )> }
-);
+export type UpdateProjectInviteMutation = {
+  __typename?: "Mutation";
+  updateProjectInvite?: {
+    __typename?: "UpdateProjectInvitePayload";
+    projectInvite?: {
+      __typename?: "ProjectInvite";
+      id: number;
+      makeAdmin: boolean;
+      email: any;
+      fullname?: string | null;
+      groups?: Array<{ __typename?: "Group"; id: number; name: string }> | null;
+      inviteEmails: Array<{
+        __typename?: "InviteEmail";
+        id: number;
+        toAddress: any;
+        createdAt: any;
+        status: EmailStatus;
+        tokenExpiresAt?: any | null;
+        error?: string | null;
+        updatedAt?: any | null;
+      }>;
+    } | null;
+  } | null;
+};
 
 export type DeleteProjectInviteMutationVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type DeleteProjectInviteMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteProjectInvite?: Maybe<(
-    { __typename?: 'DeleteProjectInvitePayload' }
-    & { projectInvite?: Maybe<(
-      { __typename?: 'ProjectInvite' }
-      & Pick<ProjectInvite, 'id'>
-    )> }
-  )> }
-);
+export type DeleteProjectInviteMutation = {
+  __typename?: "Mutation";
+  deleteProjectInvite?: {
+    __typename?: "DeleteProjectInvitePayload";
+    projectInvite?: { __typename?: "ProjectInvite"; id: number } | null;
+  } | null;
+};
 
 export type SendInviteMutationVariables = Exact<{
-  id: Scalars['Int'];
+  id: Scalars["Int"];
 }>;
 
-
-export type SendInviteMutation = (
-  { __typename?: 'Mutation' }
-  & { sendProjectInvites?: Maybe<(
-    { __typename?: 'SendProjectInvitesPayload' }
-    & { inviteEmails?: Maybe<Array<(
-      { __typename?: 'InviteEmail' }
-      & { projectInvite?: Maybe<(
-        { __typename?: 'ProjectInvite' }
-        & Pick<ProjectInvite, 'id' | 'status'>
-      )> }
-      & InviteEmailDetailsFragment
-    )>> }
-  )> }
-);
+export type SendInviteMutation = {
+  __typename?: "Mutation";
+  sendProjectInvites?: {
+    __typename?: "SendProjectInvitesPayload";
+    inviteEmails?: Array<{
+      __typename?: "InviteEmail";
+      id: number;
+      toAddress: any;
+      createdAt: any;
+      status: EmailStatus;
+      tokenExpiresAt?: any | null;
+      error?: string | null;
+      updatedAt?: any | null;
+      projectInvite?: {
+        __typename?: "ProjectInvite";
+        id: number;
+        status?: InviteStatus | null;
+      } | null;
+    }> | null;
+  } | null;
+};
 
 export type RenameGroupMutationVariables = Exact<{
-  id: Scalars['Int'];
-  name: Scalars['String'];
+  id: Scalars["Int"];
+  name: Scalars["String"];
 }>;
 
-
-export type RenameGroupMutation = (
-  { __typename?: 'Mutation' }
-  & { updateGroup?: Maybe<(
-    { __typename?: 'UpdateGroupPayload' }
-    & { group?: Maybe<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name'>
-    )> }
-  )> }
-);
+export type RenameGroupMutation = {
+  __typename?: "Mutation";
+  updateGroup?: {
+    __typename?: "UpdateGroupPayload";
+    group?: { __typename?: "Group"; id: number; name: string } | null;
+  } | null;
+};
 
 export type SendInvitesMutationVariables = Exact<{
-  ids: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+  ids: Array<InputMaybe<Scalars["Int"]>> | InputMaybe<Scalars["Int"]>;
 }>;
 
+export type SendInvitesMutation = {
+  __typename?: "Mutation";
+  sendProjectInvites?: {
+    __typename?: "SendProjectInvitesPayload";
+    inviteEmails?: Array<{
+      __typename?: "InviteEmail";
+      projectInviteId?: number | null;
+      id: number;
+      toAddress: any;
+      createdAt: any;
+      status: EmailStatus;
+      tokenExpiresAt?: any | null;
+      error?: string | null;
+      updatedAt?: any | null;
+      projectInvite?: {
+        __typename?: "ProjectInvite";
+        id: number;
+        status?: InviteStatus | null;
+      } | null;
+    }> | null;
+  } | null;
+};
 
-export type SendInvitesMutation = (
-  { __typename?: 'Mutation' }
-  & { sendProjectInvites?: Maybe<(
-    { __typename?: 'SendProjectInvitesPayload' }
-    & { inviteEmails?: Maybe<Array<(
-      { __typename?: 'InviteEmail' }
-      & Pick<InviteEmail, 'projectInviteId'>
-      & { projectInvite?: Maybe<(
-        { __typename?: 'ProjectInvite' }
-        & Pick<ProjectInvite, 'id' | 'status'>
-      )> }
-      & InviteEmailDetailsFragment
-    )>> }
-  )> }
-);
+export type ProjectInviteEmailStatusSubscriptionSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
 
-export type ProjectInviteEmailStatusSubscriptionSubscriptionVariables = Exact<{ [key: string]: never; }>;
-
-
-export type ProjectInviteEmailStatusSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { projectInviteStateUpdated?: Maybe<(
-    { __typename?: 'ProjectInviteStateSubscriptionPayload' }
-    & { invite?: Maybe<(
-      { __typename?: 'ProjectInvite' }
-      & Pick<ProjectInvite, 'status'>
-      & { opaqueId: ProjectInvite['id'] }
-    )> }
-  )> }
-);
+export type ProjectInviteEmailStatusSubscriptionSubscription = {
+  __typename?: "Subscription";
+  projectInviteStateUpdated?: {
+    __typename?: "ProjectInviteStateSubscriptionPayload";
+    invite?: {
+      __typename?: "ProjectInvite";
+      status?: InviteStatus | null;
+      opaqueId: number;
+    } | null;
+  } | null;
+};
 
 export type UpdateProfileMutationVariables = Exact<{
-  userId: Scalars['Int'];
-  affiliations?: Maybe<Scalars['String']>;
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
-  nickname?: Maybe<Scalars['String']>;
-  picture?: Maybe<Scalars['Upload']>;
+  userId: Scalars["Int"];
+  affiliations?: InputMaybe<Scalars["String"]>;
+  email?: InputMaybe<Scalars["Email"]>;
+  fullname?: InputMaybe<Scalars["String"]>;
+  nickname?: InputMaybe<Scalars["String"]>;
+  picture?: InputMaybe<Scalars["Upload"]>;
 }>;
 
+export type UpdateProfileMutation = {
+  __typename?: "Mutation";
+  updateProfileByUserId?: {
+    __typename?: "UpdateProfilePayload";
+    profile?: {
+      __typename?: "Profile";
+      userId: number;
+      user?: {
+        __typename?: "User";
+        id: number;
+        profile?: { __typename?: "Profile"; picture?: string | null } | null;
+      } | null;
+    } | null;
+  } | null;
+};
 
-export type UpdateProfileMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProfileByUserId?: Maybe<(
-    { __typename?: 'UpdateProfilePayload' }
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'userId'>
-      & { user?: Maybe<(
-        { __typename?: 'User' }
-        & Pick<User, 'id'>
-        & { profile?: Maybe<(
-          { __typename?: 'Profile' }
-          & Pick<Profile, 'picture'>
-        )> }
-      )> }
-    )> }
-  )> }
-);
+export type UserIsSuperuserQueryVariables = Exact<{ [key: string]: never }>;
 
-export type UserIsSuperuserQueryVariables = Exact<{ [key: string]: never; }>;
+export type UserIsSuperuserQuery = {
+  __typename?: "Query";
+  currentUserIsSuperuser: boolean;
+};
 
-
-export type UserIsSuperuserQuery = (
-  { __typename?: 'Query' }
-  & Pick<Query, 'currentUserIsSuperuser'>
-);
-
-export const UpdateTerrainExaggerationFragmentDoc = /*#__PURE__*/ gql`
-    fragment UpdateTerrainExaggeration on Basemap {
-  terrainExaggeration
-}
-    `;
-export const NewLabelsLayerFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewLabelsLayer on Basemap {
-  labelsLayerId
-}
-    `;
-export const NewTerrainFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewTerrain on Basemap {
-  terrainUrl
-  terrainOptional
-  terrainVisibilityDefault
-}
-    `;
-export const NewBasemapFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewBasemap on Basemap {
-  id
-  projectId
-  attribution
-  description
-  labelsLayerId
-  name
-  terrainExaggeration
-  terrainOptional
-  url
-  type
-  tileSize
-  thumbnail
-  terrainUrl
-  terrainTileSize
-  surveysOnly
-}
-    `;
-export const NewQueryParametersFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewQueryParameters on DataSource {
-  queryParameters
-}
-    `;
-export const UpdateHighDpiFragmentDoc = /*#__PURE__*/ gql`
-    fragment UpdateHighDPI on DataSource {
-  useDevicePixelRatio
-}
-    `;
-export const UpdateFormatFragmentDoc = /*#__PURE__*/ gql`
-    fragment UpdateFormat on DataSource {
-  queryParameters
-}
-    `;
-export const NewGlStyleFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewGLStyle on DataLayer {
-  mapboxGlStyles
-}
-    `;
-export const NewRenderUnderFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewRenderUnder on DataLayer {
-  renderUnder
-}
-    `;
-export const NewZIndexFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewZIndex on DataLayer {
-  zIndex
-}
-    `;
-export const NewElementFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewElement on FormElement {
-  body
-  componentSettings
-  exportId
-  formId
-  id
-  isRequired
-  position
-  jumpToId
-  type {
-    componentName
-    isHidden
-    isInput
-    isSingleUseOnly
-    isSurveysOnly
-    label
-    supportedOperators
-  }
-  typeId
-  backgroundColor
-  secondaryColor
-  backgroundImage
-  layout
-  backgroundPalette
-  textVariant
-  unsplashAuthorUrl
-  unsplashAuthorName
-  backgroundWidth
-  backgroundHeight
-}
-    `;
 export const LogicRuleEditorFormElementFragmentDoc = /*#__PURE__*/ gql`
-    fragment LogicRuleEditorFormElement on FormElement {
-  id
-  body
-  typeId
-  formId
-  jumpToId
-  componentSettings
-  exportId
-  isRequired
-  type {
-    supportedOperators
-    isInput
+  fragment LogicRuleEditorFormElement on FormElement {
+    id
+    body
+    typeId
+    formId
+    jumpToId
+    componentSettings
+    exportId
+    isRequired
+    type {
+      supportedOperators
+      isInput
+    }
   }
-}
-    `;
+`;
 export const LogicRuleEditorRuleFragmentDoc = /*#__PURE__*/ gql`
-    fragment LogicRuleEditorRule on FormLogicRule {
-  booleanOperator
-  command
-  formElementId
-  id
-  jumpToId
-  position
-  conditions {
+  fragment LogicRuleEditorRule on FormLogicRule {
+    booleanOperator
+    command
+    formElementId
     id
-    operator
-    ruleId
-    subjectId
-    value
+    jumpToId
+    position
+    conditions {
+      id
+      operator
+      ruleId
+      subjectId
+      value
+    }
   }
-}
-    `;
-export const NewRuleFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewRule on FormLogicRule {
-  booleanOperator
-  command
-  id
-  jumpToId
-  position
-  formElementId
-  conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
-  }
-}
-    `;
-export const NewSurveyFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewSurvey on Survey {
-  id
-  accessType
-  invitedGroups {
-    id
-    name
-  }
-  isDisabled
-  limitToSingleResponse
-  name
-  submittedResponseCount
-  projectId
-}
-    `;
-export const NewGroupFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewGroup on Group {
-  id
-  projectId
-  name
-}
-    `;
-export const NewInviteEmailFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewInviteEmail on InviteEmail {
-  id
-  toAddress
-  createdAt
-  status
-  tokenExpiresAt
-  error
-  updatedAt
-}
-    `;
-export const NewLayerOptionsFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewLayerOptions on OptionalBasemapLayer {
-  options
-}
-    `;
-export const UpdateAlternateLanguageSettingsFragmentDoc = /*#__PURE__*/ gql`
-    fragment UpdateAlternateLanguageSettings on FormElement {
-  alternateLanguageSettings
-}
-    `;
-export const UpdateComponentSettingsFragmentDoc = /*#__PURE__*/ gql`
-    fragment UpdateComponentSettings on FormElement {
-  componentSettings
-}
-    `;
-export const UpdateBodyFragmentDoc = /*#__PURE__*/ gql`
-    fragment UpdateBody on FormElement {
-  body
-}
-    `;
+`;
 export const BasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment BasemapDetails on Basemap {
-  id
-  attribution
-  interactivitySettings {
-    cursor
-    id
-    layers
-    longTemplate
-    shortTemplate
-    type
-  }
-  labelsLayerId
-  name
-  optionalBasemapLayers {
-    basemapId
-    id
-    defaultVisibility
-    description
-    options
-    groupType
-    layers
-    metadata
-    name
-  }
-  description
-  projectId
-  terrainExaggeration
-  terrainMaxZoom
-  terrainOptional
-  terrainTileSize
-  terrainUrl
-  terrainVisibilityDefault
-  thumbnail
-  tileSize
-  type
-  url
-  surveysOnly
-}
-    `;
-export const MapEssentialsFragmentDoc = /*#__PURE__*/ gql`
-    fragment MapEssentials on Project {
-  id
-  basemaps {
-    ...BasemapDetails
-  }
-  surveyBasemaps {
-    ...BasemapDetails
-  }
-  region {
-    geojson
-  }
-  mapboxPublicKey
-  mapboxSecretKey
-}
-    ${BasemapDetailsFragmentDoc}`;
-export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
-    fragment ProjectMetadata on Project {
-  id
-  slug
-  url
-  name
-  description
-  logoLink
-  logoUrl
-  accessControl
-  sessionIsAdmin
-  isFeatured
-  supportEmail
-}
-    `;
-export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
-    fragment ProjectPublicDetailsMetadata on PublicProjectDetail {
-  id
-  accessControl
-  slug
-  name
-  logoUrl
-  supportEmail
-  accessStatus
-}
-    `;
-export const ProjectMetadataMeFragFragmentDoc = /*#__PURE__*/ gql`
-    fragment ProjectMetadataMeFrag on User {
-  id
-  profile {
-    userId
-    fullname
-    nickname
-    email
-    picture
-    bio
-    affiliations
-  }
-}
-    `;
-export const SurveyListDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment SurveyListDetails on Survey {
-  id
-  accessType
-  showProgress
-  invitedGroups {
-    id
-    name
-  }
-  isDisabled
-  limitToSingleResponse
-  name
-  submittedResponseCount
-  practiceResponseCount
-  projectId
-  isTemplate
-  showFacilitationOption
-  supportedLanguages
-}
-    `;
-export const AddFormElementTypeDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment AddFormElementTypeDetails on FormElementType {
-  componentName
-  isHidden
-  isInput
-  isSingleUseOnly
-  isSurveysOnly
-  label
-  supportedOperators
-  isSpatial
-  allowedLayouts
-}
-    `;
-export const FormElementDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment FormElementDetails on FormElement {
-  body
-  componentSettings
-  alternateLanguageSettings
-  exportId
-  formId
-  id
-  isRequired
-  position
-  jumpToId
-  type {
-    ...AddFormElementTypeDetails
-  }
-  isInput
-  typeId
-  backgroundColor
-  secondaryColor
-  backgroundImage
-  layout
-  backgroundPalette
-  textVariant
-  unsplashAuthorUrl
-  unsplashAuthorName
-  backgroundWidth
-  backgroundHeight
-  subordinateTo
-  mapBasemaps
-  mapCameraOptions
-}
-    ${AddFormElementTypeDetailsFragmentDoc}`;
-export const LogicRuleDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment LogicRuleDetails on FormLogicRule {
-  booleanOperator
-  command
-  id
-  jumpToId
-  position
-  formElementId
-  conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
-  }
-}
-    `;
-export const SketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment SketchClassDetails on SketchClass {
-  id
-  mapboxGlStyle
-  formElementId
-  geometryType
-  geoprocessingClientName
-  geoprocessingClientUrl
-  geoprocessingProjectUrl
-  allowMulti
-  form {
-    formElements {
-      ...FormElementDetails
-    }
-    id
-    logicRules {
-      ...LogicRuleDetails
-    }
-  }
-}
-    ${FormElementDetailsFragmentDoc}
-${LogicRuleDetailsFragmentDoc}`;
-export const FormElementFullDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment FormElementFullDetails on FormElement {
-  ...FormElementDetails
-  sketchClass {
-    ...SketchClassDetails
-  }
-}
-    ${FormElementDetailsFragmentDoc}
-${SketchClassDetailsFragmentDoc}`;
-export const SurveyResponseFragmentDoc = /*#__PURE__*/ gql`
-    fragment SurveyResponse on SurveyResponse {
-  id
-  surveyId
-  bypassedDuplicateSubmissionControl
-  updatedAt
-  accountEmail
-  userId
-  createdAt
-  data
-  isDuplicateEntry
-  isDuplicateIp
-  isPractice
-  isUnrecognizedUserAgent
-  archived
-  lastUpdatedByEmail
-}
-    `;
-export const FormElementExtendedDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment FormElementExtendedDetails on FormElement {
-  ...FormElementDetails
-  surveyConsentDocumentsConnection {
-    nodes {
-      url
-      version
-    }
-  }
-}
-    ${FormElementDetailsFragmentDoc}`;
-export const SurveyAppRuleFragmentDoc = /*#__PURE__*/ gql`
-    fragment SurveyAppRule on FormLogicRule {
-  booleanOperator
-  command
-  conditions {
-    id
-    operator
-    ruleId
-    subjectId
-    value
-  }
-  formElementId
-  id
-  jumpToId
-  position
-}
-    `;
-export const SurveyAppFormElementFragmentDoc = /*#__PURE__*/ gql`
-    fragment SurveyAppFormElement on FormElement {
-  id
-  componentSettings
-  alternateLanguageSettings
-  body
-  isRequired
-  isInput
-  position
-  typeId
-  formId
-  type {
-    componentName
-    isInput
-    isSingleUseOnly
-    isSurveysOnly
-    label
-    isSpatial
-    allowedLayouts
-    supportedOperators
-    isHidden
-  }
-  sketchClass {
-    ...SketchClassDetails
-  }
-  backgroundColor
-  secondaryColor
-  backgroundImage
-  layout
-  textVariant
-  unsplashAuthorName
-  unsplashAuthorUrl
-  backgroundWidth
-  backgroundHeight
-  jumpToId
-  subordinateTo
-  mapBasemaps
-  mapCameraOptions
-}
-    ${SketchClassDetailsFragmentDoc}`;
-export const SurveyAppSurveyFragmentDoc = /*#__PURE__*/ gql`
-    fragment SurveyAppSurvey on Survey {
-  id
-  name
-  accessType
-  isDisabled
-  showProgress
-  showFacilitationOption
-  supportedLanguages
-  form {
-    id
-    logicRules {
-      ...SurveyAppRule
-    }
-    formElements {
-      ...SurveyAppFormElement
-    }
-  }
-}
-    ${SurveyAppRuleFragmentDoc}
-${SurveyAppFormElementFragmentDoc}`;
-export const ParticipantListDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment ParticipantListDetails on User {
-  id
-  bannedFromForums
-  isAdmin
-  profile {
-    userId
-    email
-    fullname
-    nickname
-    picture
-  }
-  groups {
-    id
-    name
-  }
-  canonicalEmail
-}
-    `;
-export const UserListDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment UserListDetails on User {
-  id
-  isAdmin
-  canonicalEmail
-  bannedFromForums
-  groups {
-    name
-    id
-  }
-  onboarded
-  participationStatus
-  profile {
-    userId
-    email
-    fullname
-    nickname
-    picture
-  }
-}
-    `;
-export const InviteDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment InviteDetails on ProjectInvite {
-  createdAt
-  email
-  fullname
-  groups {
-    id
-    name
-  }
-  id
-  status
-  makeAdmin
-  wasUsed
-}
-    `;
-export const InviteEmailDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment InviteEmailDetails on InviteEmail {
-  id
-  toAddress
-  createdAt
-  status
-  tokenExpiresAt
-  error
-  updatedAt
-}
-    `;
-export const ProjectBucketSettingDocument = /*#__PURE__*/ gql`
-    query ProjectBucketSetting($slug: String!) {
-  projectBySlug(slug: $slug) {
-    __typename
-    id
-    dataSourcesBucket {
-      url
-      region
-      name
-      location {
-        geojson
-      }
-    }
-  }
-  dataSourcesBucketsConnection {
-    nodes {
-      url
-      name
-      region
-      location {
-        geojson
-      }
-    }
-  }
-}
-    `;
-export const UpdateProjectStorageBucketDocument = /*#__PURE__*/ gql`
-    mutation UpdateProjectStorageBucket($slug: String!, $bucket: String!) {
-  updateProjectBySlug(input: {slug: $slug, patch: {dataSourcesBucketId: $bucket}}) {
-    clientMutationId
-    project {
-      __typename
-      id
-      dataSourcesBucket {
-        url
-        region
-        name
-      }
-    }
-  }
-}
-    `;
-export const MapboxApiKeysDocument = /*#__PURE__*/ gql`
-    query MapboxAPIKeys($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    mapboxPublicKey
-    mapboxSecretKey
-  }
-}
-    `;
-export const UpdatePublicKeyDocument = /*#__PURE__*/ gql`
-    mutation updatePublicKey($id: Int!, $public: String) {
-  updateProject(input: {id: $id, patch: {mapboxPublicKey: $public}}) {
-    project {
-      id
-      mapboxPublicKey
-    }
-  }
-}
-    `;
-export const UpdateSecretKeyDocument = /*#__PURE__*/ gql`
-    mutation updateSecretKey($id: Int!, $mapboxSecretKey: String) {
-  updateMapboxSecretKey(input: {projectId: $id, secret: $mapboxSecretKey}) {
-    project {
-      id
-      mapboxSecretKey
-    }
-  }
-}
-    `;
-export const GetAclDocument = /*#__PURE__*/ gql`
-    query GetAcl($nodeId: ID!) {
-  aclByNodeId(nodeId: $nodeId) {
-    id
-    nodeId
-    type
-    groups {
-      id
-      name
-      memberCount
-    }
-  }
-}
-    `;
-export const UpdateAclTypeDocument = /*#__PURE__*/ gql`
-    mutation UpdateAclType($nodeId: ID!, $type: AccessControlListType!) {
-  updateAclByNodeId(input: {nodeId: $nodeId, patch: {type: $type}}) {
-    acl {
-      id
-      nodeId
-      type
-    }
-  }
-}
-    `;
-export const AddGroupToAclDocument = /*#__PURE__*/ gql`
-    mutation AddGroupToAcl($id: Int!, $groupId: Int!) {
-  addGroupToAcl(input: {aclId: $id, groupId: $groupId}) {
-    acl {
-      groups {
-        id
-        name
-      }
-    }
-  }
-}
-    `;
-export const RemoveGroupFromAclDocument = /*#__PURE__*/ gql`
-    mutation RemoveGroupFromAcl($id: Int!, $groupId: Int!) {
-  removeGroupFromAcl(input: {aclId: $id, groupId: $groupId}) {
-    acl {
-      groups {
-        id
-        name
-      }
-    }
-  }
-}
-    `;
-export const GroupsDocument = /*#__PURE__*/ gql`
-    query Groups($projectSlug: String!) {
-  projectBySlug(slug: $projectSlug) {
-    id
-    groups {
-      id
-      name
-      memberCount
-    }
-  }
-}
-    `;
-export const CreateTableOfContentsItemDocument = /*#__PURE__*/ gql`
-    mutation CreateTableOfContentsItem($title: String!, $stableId: String!, $projectId: Int!, $isFolder: Boolean!, $parentStableId: String, $metadata: JSON, $bounds: [BigFloat], $dataLayerId: Int) {
-  createTableOfContentsItem(
-    input: {tableOfContentsItem: {title: $title, stableId: $stableId, projectId: $projectId, parentStableId: $parentStableId, metadata: $metadata, bounds: $bounds, dataLayerId: $dataLayerId, isFolder: $isFolder}}
-  ) {
-    tableOfContentsItem {
-      id
-      title
-      stableId
-      projectId
-      parentStableId
-      isClickOffOnly
-      isDraft
-      isFolder
-      metadata
-      bounds
-      dataLayerId
-    }
-  }
-}
-    `;
-export const CreateArcGisDynamicDataSourceDocument = /*#__PURE__*/ gql`
-    mutation CreateArcGISDynamicDataSource($projectId: Int!, $url: String!, $attribution: String, $bounds: [BigFloat], $queryParameters: JSON) {
-  createDataSource(
-    input: {dataSource: {projectId: $projectId, type: ARCGIS_VECTOR, url: $url, attribution: $attribution, bounds: $bounds, queryParameters: $queryParameters}}
-  ) {
-    dataSource {
-      id
-      projectId
-      type
-      url
-    }
-  }
-}
-    `;
-export const CreateArcGisImageSourceDocument = /*#__PURE__*/ gql`
-    mutation CreateArcGISImageSource($projectId: Int!, $url: String!, $attribution: String, $bounds: [BigFloat], $queryParameters: JSON, $enableHighDPI: Boolean, $supportsDynamicLayers: Boolean!) {
-  createDataSource(
-    input: {dataSource: {projectId: $projectId, type: ARCGIS_DYNAMIC_MAPSERVER, url: $url, attribution: $attribution, bounds: $bounds, queryParameters: $queryParameters, useDevicePixelRatio: $enableHighDPI, supportsDynamicLayers: $supportsDynamicLayers}}
-  ) {
-    dataSource {
-      id
-      url
-    }
-  }
-}
-    `;
-export const CreateSeaSketchVectorSourceDocument = /*#__PURE__*/ gql`
-    mutation CreateSeaSketchVectorSource($projectId: Int!, $attribution: String, $bounds: [BigFloat]!, $byteLength: Int!, $originalSourceUrl: String, $importType: DataSourceImportTypes!, $enhancedSecurity: Boolean!) {
-  createDataSource(
-    input: {dataSource: {projectId: $projectId, type: SEASKETCH_VECTOR, attribution: $attribution, bounds: $bounds, byteLength: $byteLength, originalSourceUrl: $originalSourceUrl, importType: $importType, enhancedSecurity: $enhancedSecurity}}
-  ) {
-    dataSource {
-      id
-      projectId
-      type
-      url
-      presignedUploadUrl
-      bucketId
-      enhancedSecurity
-      objectKey
-    }
-  }
-}
-    `;
-export const CreateDataLayerDocument = /*#__PURE__*/ gql`
-    mutation CreateDataLayer($projectId: Int!, $dataSourceId: Int!, $mapboxGlStyles: JSON, $renderUnder: RenderUnderType, $sublayer: String) {
-  createDataLayer(
-    input: {dataLayer: {projectId: $projectId, dataSourceId: $dataSourceId, mapboxGlStyles: $mapboxGlStyles, renderUnder: $renderUnder, sublayer: $sublayer}}
-  ) {
-    dataLayer {
-      id
-      dataSourceId
-      zIndex
-      interactivitySettings {
-        cursor
-        id
-        longTemplate
-        shortTemplate
-        type
-      }
-    }
-  }
-}
-    `;
-export const GetOrCreateSpriteDocument = /*#__PURE__*/ gql`
-    mutation GetOrCreateSprite($height: Int!, $width: Int!, $pixelRatio: Int!, $projectId: Int!, $smallestImage: Upload!) {
-  getOrCreateSprite(
-    height: $height
-    pixelRatio: $pixelRatio
-    projectId: $projectId
-    smallestImage: $smallestImage
-    width: $width
-  ) {
-    id
-    md5
-    projectId
-    type
-    spriteImages {
-      spriteId
-      height
-      pixelRatio
-      url
-      width
-    }
-  }
-}
-    `;
-export const AddImageToSpriteDocument = /*#__PURE__*/ gql`
-    mutation AddImageToSprite($spriteId: Int!, $width: Int!, $height: Int!, $pixelRatio: Int!, $image: Upload!) {
-  addImageToSprite(
-    height: $height
-    width: $width
-    pixelRatio: $pixelRatio
-    spriteId: $spriteId
-    image: $image
-  ) {
-    id
-    md5
-    projectId
-    type
-    spriteImages {
-      spriteId
-      height
-      pixelRatio
-      url
-      width
-    }
-  }
-}
-    `;
-export const VerifyProjectInviteDocument = /*#__PURE__*/ gql`
-    query VerifyProjectInvite($token: String!) {
-  verifyProjectInvite(token: $token) {
-    claims {
-      admin
-      email
-      fullname
-      inviteId
-      projectId
-      wasUsed
-      projectSlug
-    }
-    error
-    existingAccount
-  }
-}
-    `;
-export const ConfirmProjectInviteDocument = /*#__PURE__*/ gql`
-    mutation ConfirmProjectInvite($token: String!) {
-  confirmProjectInvite(token: $token) {
-    admin
-    email
-    fullname
-    inviteId
-    projectId
-    projectName
-    wasUsed
-    projectSlug
-  }
-}
-    `;
-export const ResendEmailVerificationDocument = /*#__PURE__*/ gql`
-    mutation ResendEmailVerification {
-  resendVerificationEmail {
-    success
-    error
-  }
-}
-    `;
-export const RequestInviteOnlyProjectAccessDocument = /*#__PURE__*/ gql`
-    mutation RequestInviteOnlyProjectAccess($projectId: Int!) {
-  joinProject(input: {projectId: $projectId}) {
-    clientMutationId
-  }
-}
-    `;
-export const GetBasemapsDocument = /*#__PURE__*/ gql`
-    query GetBasemaps($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    surveyBasemaps {
-      ...BasemapDetails
-    }
-    basemaps {
-      ...BasemapDetails
-    }
-  }
-}
-    ${BasemapDetailsFragmentDoc}`;
-export const CreateBasemapDocument = /*#__PURE__*/ gql`
-    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean) {
-  createBasemap(
-    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly}}
-  ) {
-    basemap {
-      ...BasemapDetails
-    }
-  }
-}
-    ${BasemapDetailsFragmentDoc}`;
-export const UploadBasemapDocument = /*#__PURE__*/ gql`
-    mutation UploadBasemap($projectId: Int!, $name: String!, $thumbnail: Upload!, $existingId: Int, $style: JSON!, $surveysOnly: Boolean) {
-  uploadStyle(
-    thumb: $thumbnail
-    style: $style
-    projectId: $projectId
-    id: $existingId
-    name: $name
-    surveysOnly: $surveysOnly
-  ) {
-    ...BasemapDetails
-  }
-}
-    ${BasemapDetailsFragmentDoc}`;
-export const GetBasemapDocument = /*#__PURE__*/ gql`
-    query GetBasemap($id: Int!) {
-  basemap(id: $id) {
+  fragment BasemapDetails on Basemap {
     id
     attribution
     interactivitySettings {
@@ -15901,20 +16662,20 @@ export const GetBasemapDocument = /*#__PURE__*/ gql`
       shortTemplate
       type
     }
-    description
     labelsLayerId
     name
     optionalBasemapLayers {
       basemapId
+      id
       defaultVisibility
       description
       options
       groupType
-      id
       layers
       metadata
       name
     }
+    description
     projectId
     terrainExaggeration
     terrainMaxZoom
@@ -15926,115 +16687,967 @@ export const GetBasemapDocument = /*#__PURE__*/ gql`
     tileSize
     type
     url
+    surveysOnly
   }
-}
-    `;
-export const UpdateBasemapDocument = /*#__PURE__*/ gql`
-    mutation UpdateBasemap($id: Int!, $name: String) {
-  updateBasemap(input: {id: $id, patch: {name: $name}}) {
-    basemap {
+`;
+export const MapEssentialsFragmentDoc = /*#__PURE__*/ gql`
+  fragment MapEssentials on Project {
+    id
+    basemaps {
+      ...BasemapDetails
+    }
+    surveyBasemaps {
+      ...BasemapDetails
+    }
+    region {
+      geojson
+    }
+    mapboxPublicKey
+    mapboxSecretKey
+  }
+  ${BasemapDetailsFragmentDoc}
+`;
+export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
+  fragment ProjectMetadata on Project {
+    id
+    slug
+    url
+    name
+    description
+    logoLink
+    logoUrl
+    accessControl
+    sessionIsAdmin
+    isFeatured
+    supportEmail
+  }
+`;
+export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
+  fragment ProjectPublicDetailsMetadata on PublicProjectDetail {
+    id
+    accessControl
+    slug
+    name
+    logoUrl
+    supportEmail
+    accessStatus
+  }
+`;
+export const ProjectMetadataMeFragFragmentDoc = /*#__PURE__*/ gql`
+  fragment ProjectMetadataMeFrag on User {
+    id
+    profile {
+      userId
+      fullname
+      nickname
+      email
+      picture
+      bio
+      affiliations
+    }
+  }
+`;
+export const SurveyListDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment SurveyListDetails on Survey {
+    id
+    accessType
+    showProgress
+    invitedGroups {
+      id
+      name
+    }
+    isDisabled
+    limitToSingleResponse
+    name
+    submittedResponseCount
+    practiceResponseCount
+    projectId
+    isTemplate
+    showFacilitationOption
+    supportedLanguages
+  }
+`;
+export const AddFormElementTypeDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment AddFormElementTypeDetails on FormElementType {
+    componentName
+    isHidden
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+    supportedOperators
+    isSpatial
+    allowedLayouts
+  }
+`;
+export const FormElementDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment FormElementDetails on FormElement {
+    body
+    componentSettings
+    alternateLanguageSettings
+    exportId
+    formId
+    id
+    isRequired
+    position
+    jumpToId
+    type {
+      ...AddFormElementTypeDetails
+    }
+    isInput
+    typeId
+    backgroundColor
+    secondaryColor
+    backgroundImage
+    layout
+    backgroundPalette
+    textVariant
+    unsplashAuthorUrl
+    unsplashAuthorName
+    backgroundWidth
+    backgroundHeight
+    subordinateTo
+    mapBasemaps
+    mapCameraOptions
+  }
+  ${AddFormElementTypeDetailsFragmentDoc}
+`;
+export const LogicRuleDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment LogicRuleDetails on FormLogicRule {
+    booleanOperator
+    command
+    id
+    jumpToId
+    position
+    formElementId
+    conditions {
+      id
+      operator
+      value
+      subjectId
+      ruleId
+    }
+  }
+`;
+export const SketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment SketchClassDetails on SketchClass {
+    id
+    mapboxGlStyle
+    formElementId
+    geometryType
+    geoprocessingClientName
+    geoprocessingClientUrl
+    geoprocessingProjectUrl
+    allowMulti
+    form {
+      formElements {
+        ...FormElementDetails
+      }
+      id
+      logicRules {
+        ...LogicRuleDetails
+      }
+    }
+  }
+  ${FormElementDetailsFragmentDoc}
+  ${LogicRuleDetailsFragmentDoc}
+`;
+export const FormElementFullDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment FormElementFullDetails on FormElement {
+    ...FormElementDetails
+    sketchClass {
+      ...SketchClassDetails
+    }
+  }
+  ${FormElementDetailsFragmentDoc}
+  ${SketchClassDetailsFragmentDoc}
+`;
+export const SurveyResponseFragmentDoc = /*#__PURE__*/ gql`
+  fragment SurveyResponse on SurveyResponse {
+    id
+    surveyId
+    bypassedDuplicateSubmissionControl
+    updatedAt
+    accountEmail
+    userId
+    createdAt
+    data
+    isDuplicateEntry
+    isDuplicateIp
+    isPractice
+    isUnrecognizedUserAgent
+    archived
+    lastUpdatedByEmail
+  }
+`;
+export const FormElementExtendedDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment FormElementExtendedDetails on FormElement {
+    ...FormElementDetails
+    surveyConsentDocumentsConnection {
+      nodes {
+        url
+        version
+      }
+    }
+  }
+  ${FormElementDetailsFragmentDoc}
+`;
+export const SurveyAppRuleFragmentDoc = /*#__PURE__*/ gql`
+  fragment SurveyAppRule on FormLogicRule {
+    booleanOperator
+    command
+    conditions {
+      id
+      operator
+      ruleId
+      subjectId
+      value
+    }
+    formElementId
+    id
+    jumpToId
+    position
+  }
+`;
+export const SurveyAppFormElementFragmentDoc = /*#__PURE__*/ gql`
+  fragment SurveyAppFormElement on FormElement {
+    id
+    componentSettings
+    alternateLanguageSettings
+    body
+    isRequired
+    isInput
+    position
+    typeId
+    formId
+    type {
+      componentName
+      isInput
+      isSingleUseOnly
+      isSurveysOnly
+      label
+      isSpatial
+      allowedLayouts
+      supportedOperators
+      isHidden
+    }
+    sketchClass {
+      ...SketchClassDetails
+    }
+    backgroundColor
+    secondaryColor
+    backgroundImage
+    layout
+    textVariant
+    unsplashAuthorName
+    unsplashAuthorUrl
+    backgroundWidth
+    backgroundHeight
+    jumpToId
+    subordinateTo
+    mapBasemaps
+    mapCameraOptions
+  }
+  ${SketchClassDetailsFragmentDoc}
+`;
+export const SurveyAppSurveyFragmentDoc = /*#__PURE__*/ gql`
+  fragment SurveyAppSurvey on Survey {
+    id
+    name
+    accessType
+    isDisabled
+    showProgress
+    showFacilitationOption
+    supportedLanguages
+    form {
+      id
+      logicRules {
+        ...SurveyAppRule
+      }
+      formElements {
+        ...SurveyAppFormElement
+      }
+    }
+  }
+  ${SurveyAppRuleFragmentDoc}
+  ${SurveyAppFormElementFragmentDoc}
+`;
+export const ParticipantListDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment ParticipantListDetails on User {
+    id
+    bannedFromForums
+    isAdmin
+    profile {
+      userId
+      email
+      fullname
+      nickname
+      picture
+    }
+    groups {
+      id
+      name
+    }
+    canonicalEmail
+  }
+`;
+export const UserListDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment UserListDetails on User {
+    id
+    isAdmin
+    canonicalEmail
+    bannedFromForums
+    groups {
       name
       id
     }
-  }
-}
-    `;
-export const UpdateBasemapUrlDocument = /*#__PURE__*/ gql`
-    mutation UpdateBasemapUrl($id: Int!, $url: String!) {
-  updateBasemap(input: {id: $id, patch: {url: $url}}) {
-    basemap {
-      url
-      id
+    onboarded
+    participationStatus
+    profile {
+      userId
+      email
+      fullname
+      nickname
+      picture
     }
   }
-}
-    `;
-export const UpdateBasemapLabelsLayerDocument = /*#__PURE__*/ gql`
-    mutation UpdateBasemapLabelsLayer($id: Int!, $layer: String) {
-  updateBasemap(input: {id: $id, patch: {labelsLayerId: $layer}}) {
-    basemap {
+`;
+export const InviteDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment InviteDetails on ProjectInvite {
+    createdAt
+    email
+    fullname
+    groups {
       id
-      labelsLayerId
+      name
+    }
+    id
+    status
+    makeAdmin
+    wasUsed
+  }
+`;
+export const InviteEmailDetailsFragmentDoc = /*#__PURE__*/ gql`
+  fragment InviteEmailDetails on InviteEmail {
+    id
+    toAddress
+    createdAt
+    status
+    tokenExpiresAt
+    error
+    updatedAt
+  }
+`;
+export const ProjectBucketSettingDocument = /*#__PURE__*/ gql`
+  query ProjectBucketSetting($slug: String!) {
+    projectBySlug(slug: $slug) {
+      __typename
+      id
+      dataSourcesBucket {
+        url
+        region
+        name
+        location {
+          geojson
+        }
+      }
+    }
+    dataSourcesBucketsConnection {
+      nodes {
+        url
+        name
+        region
+        location {
+          geojson
+        }
+      }
     }
   }
-}
-    `;
-export const Toggle3dTerrainDocument = /*#__PURE__*/ gql`
-    mutation Toggle3dTerrain($id: Int!, $terrainUrl: String) {
-  updateBasemap(input: {id: $id, patch: {terrainUrl: $terrainUrl}}) {
-    basemap {
-      id
-      terrainUrl
+`;
+export const UpdateProjectStorageBucketDocument = /*#__PURE__*/ gql`
+  mutation UpdateProjectStorageBucket($slug: String!, $bucket: String!) {
+    updateProjectBySlug(
+      input: { slug: $slug, patch: { dataSourcesBucketId: $bucket } }
+    ) {
+      clientMutationId
+      project {
+        __typename
+        id
+        dataSourcesBucket {
+          url
+          region
+          name
+        }
+      }
     }
   }
-}
-    `;
-export const Set3dTerrainDocument = /*#__PURE__*/ gql`
-    mutation Set3dTerrain($id: Int!, $terrainUrl: String, $terrainOptional: Boolean, $terrainVisibilityDefault: Boolean) {
-  updateBasemap(
-    input: {id: $id, patch: {terrainUrl: $terrainUrl, terrainOptional: $terrainOptional, terrainVisibilityDefault: $terrainVisibilityDefault}}
+`;
+export const MapboxApiKeysDocument = /*#__PURE__*/ gql`
+  query MapboxAPIKeys($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      mapboxPublicKey
+      mapboxSecretKey
+    }
+  }
+`;
+export const UpdatePublicKeyDocument = /*#__PURE__*/ gql`
+  mutation updatePublicKey($id: Int!, $public: String) {
+    updateProject(input: { id: $id, patch: { mapboxPublicKey: $public } }) {
+      project {
+        id
+        mapboxPublicKey
+      }
+    }
+  }
+`;
+export const UpdateSecretKeyDocument = /*#__PURE__*/ gql`
+  mutation updateSecretKey($id: Int!, $mapboxSecretKey: String) {
+    updateMapboxSecretKey(input: { projectId: $id, secret: $mapboxSecretKey }) {
+      project {
+        id
+        mapboxSecretKey
+      }
+    }
+  }
+`;
+export const GetAclDocument = /*#__PURE__*/ gql`
+  query GetAcl($nodeId: ID!) {
+    aclByNodeId(nodeId: $nodeId) {
+      id
+      nodeId
+      type
+      groups {
+        id
+        name
+        memberCount
+      }
+    }
+  }
+`;
+export const UpdateAclTypeDocument = /*#__PURE__*/ gql`
+  mutation UpdateAclType($nodeId: ID!, $type: AccessControlListType!) {
+    updateAclByNodeId(input: { nodeId: $nodeId, patch: { type: $type } }) {
+      acl {
+        id
+        nodeId
+        type
+      }
+    }
+  }
+`;
+export const AddGroupToAclDocument = /*#__PURE__*/ gql`
+  mutation AddGroupToAcl($id: Int!, $groupId: Int!) {
+    addGroupToAcl(input: { aclId: $id, groupId: $groupId }) {
+      acl {
+        groups {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
+export const RemoveGroupFromAclDocument = /*#__PURE__*/ gql`
+  mutation RemoveGroupFromAcl($id: Int!, $groupId: Int!) {
+    removeGroupFromAcl(input: { aclId: $id, groupId: $groupId }) {
+      acl {
+        groups {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
+export const GroupsDocument = /*#__PURE__*/ gql`
+  query Groups($projectSlug: String!) {
+    projectBySlug(slug: $projectSlug) {
+      id
+      groups {
+        id
+        name
+        memberCount
+      }
+    }
+  }
+`;
+export const CreateTableOfContentsItemDocument = /*#__PURE__*/ gql`
+  mutation CreateTableOfContentsItem(
+    $title: String!
+    $stableId: String!
+    $projectId: Int!
+    $isFolder: Boolean!
+    $parentStableId: String
+    $metadata: JSON
+    $bounds: [BigFloat]
+    $dataLayerId: Int
   ) {
-    basemap {
+    createTableOfContentsItem(
+      input: {
+        tableOfContentsItem: {
+          title: $title
+          stableId: $stableId
+          projectId: $projectId
+          parentStableId: $parentStableId
+          metadata: $metadata
+          bounds: $bounds
+          dataLayerId: $dataLayerId
+          isFolder: $isFolder
+        }
+      }
+    ) {
+      tableOfContentsItem {
+        id
+        title
+        stableId
+        projectId
+        parentStableId
+        isClickOffOnly
+        isDraft
+        isFolder
+        metadata
+        bounds
+        dataLayerId
+      }
+    }
+  }
+`;
+export const CreateArcGisDynamicDataSourceDocument = /*#__PURE__*/ gql`
+  mutation CreateArcGISDynamicDataSource(
+    $projectId: Int!
+    $url: String!
+    $attribution: String
+    $bounds: [BigFloat]
+    $queryParameters: JSON
+  ) {
+    createDataSource(
+      input: {
+        dataSource: {
+          projectId: $projectId
+          type: ARCGIS_VECTOR
+          url: $url
+          attribution: $attribution
+          bounds: $bounds
+          queryParameters: $queryParameters
+        }
+      }
+    ) {
+      dataSource {
+        id
+        projectId
+        type
+        url
+      }
+    }
+  }
+`;
+export const CreateArcGisImageSourceDocument = /*#__PURE__*/ gql`
+  mutation CreateArcGISImageSource(
+    $projectId: Int!
+    $url: String!
+    $attribution: String
+    $bounds: [BigFloat]
+    $queryParameters: JSON
+    $enableHighDPI: Boolean
+    $supportsDynamicLayers: Boolean!
+  ) {
+    createDataSource(
+      input: {
+        dataSource: {
+          projectId: $projectId
+          type: ARCGIS_DYNAMIC_MAPSERVER
+          url: $url
+          attribution: $attribution
+          bounds: $bounds
+          queryParameters: $queryParameters
+          useDevicePixelRatio: $enableHighDPI
+          supportsDynamicLayers: $supportsDynamicLayers
+        }
+      }
+    ) {
+      dataSource {
+        id
+        url
+      }
+    }
+  }
+`;
+export const CreateSeaSketchVectorSourceDocument = /*#__PURE__*/ gql`
+  mutation CreateSeaSketchVectorSource(
+    $projectId: Int!
+    $attribution: String
+    $bounds: [BigFloat]!
+    $byteLength: Int!
+    $originalSourceUrl: String
+    $importType: DataSourceImportTypes!
+    $enhancedSecurity: Boolean!
+  ) {
+    createDataSource(
+      input: {
+        dataSource: {
+          projectId: $projectId
+          type: SEASKETCH_VECTOR
+          attribution: $attribution
+          bounds: $bounds
+          byteLength: $byteLength
+          originalSourceUrl: $originalSourceUrl
+          importType: $importType
+          enhancedSecurity: $enhancedSecurity
+        }
+      }
+    ) {
+      dataSource {
+        id
+        projectId
+        type
+        url
+        presignedUploadUrl
+        bucketId
+        enhancedSecurity
+        objectKey
+      }
+    }
+  }
+`;
+export const CreateDataLayerDocument = /*#__PURE__*/ gql`
+  mutation CreateDataLayer(
+    $projectId: Int!
+    $dataSourceId: Int!
+    $mapboxGlStyles: JSON
+    $renderUnder: RenderUnderType
+    $sublayer: String
+  ) {
+    createDataLayer(
+      input: {
+        dataLayer: {
+          projectId: $projectId
+          dataSourceId: $dataSourceId
+          mapboxGlStyles: $mapboxGlStyles
+          renderUnder: $renderUnder
+          sublayer: $sublayer
+        }
+      }
+    ) {
+      dataLayer {
+        id
+        dataSourceId
+        zIndex
+        interactivitySettings {
+          cursor
+          id
+          longTemplate
+          shortTemplate
+          type
+        }
+      }
+    }
+  }
+`;
+export const GetOrCreateSpriteDocument = /*#__PURE__*/ gql`
+  mutation GetOrCreateSprite(
+    $height: Int!
+    $width: Int!
+    $pixelRatio: Int!
+    $projectId: Int!
+    $smallestImage: Upload!
+  ) {
+    getOrCreateSprite(
+      height: $height
+      pixelRatio: $pixelRatio
+      projectId: $projectId
+      smallestImage: $smallestImage
+      width: $width
+    ) {
       id
+      md5
+      projectId
+      type
+      spriteImages {
+        spriteId
+        height
+        pixelRatio
+        url
+        width
+      }
+    }
+  }
+`;
+export const AddImageToSpriteDocument = /*#__PURE__*/ gql`
+  mutation AddImageToSprite(
+    $spriteId: Int!
+    $width: Int!
+    $height: Int!
+    $pixelRatio: Int!
+    $image: Upload!
+  ) {
+    addImageToSprite(
+      height: $height
+      width: $width
+      pixelRatio: $pixelRatio
+      spriteId: $spriteId
+      image: $image
+    ) {
+      id
+      md5
+      projectId
+      type
+      spriteImages {
+        spriteId
+        height
+        pixelRatio
+        url
+        width
+      }
+    }
+  }
+`;
+export const VerifyProjectInviteDocument = /*#__PURE__*/ gql`
+  query VerifyProjectInvite($token: String!) {
+    verifyProjectInvite(token: $token) {
+      claims {
+        admin
+        email
+        fullname
+        inviteId
+        projectId
+        wasUsed
+        projectSlug
+      }
+      error
+      existingAccount
+    }
+  }
+`;
+export const ConfirmProjectInviteDocument = /*#__PURE__*/ gql`
+  mutation ConfirmProjectInvite($token: String!) {
+    confirmProjectInvite(token: $token) {
+      admin
+      email
+      fullname
+      inviteId
+      projectId
+      projectName
+      wasUsed
+      projectSlug
+    }
+  }
+`;
+export const ResendEmailVerificationDocument = /*#__PURE__*/ gql`
+  mutation ResendEmailVerification {
+    resendVerificationEmail {
+      success
+      error
+    }
+  }
+`;
+export const RequestInviteOnlyProjectAccessDocument = /*#__PURE__*/ gql`
+  mutation RequestInviteOnlyProjectAccess($projectId: Int!) {
+    joinProject(input: { projectId: $projectId }) {
+      clientMutationId
+    }
+  }
+`;
+export const GetBasemapsDocument = /*#__PURE__*/ gql`
+  query GetBasemaps($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      surveyBasemaps {
+        ...BasemapDetails
+      }
+      basemaps {
+        ...BasemapDetails
+      }
+    }
+  }
+  ${BasemapDetailsFragmentDoc}
+`;
+export const CreateBasemapDocument = /*#__PURE__*/ gql`
+  mutation CreateBasemap(
+    $projectId: Int
+    $name: String!
+    $thumbnail: Upload!
+    $tileSize: Int
+    $type: BasemapType!
+    $url: String!
+    $surveysOnly: Boolean
+  ) {
+    createBasemap(
+      input: {
+        basemap: {
+          projectId: $projectId
+          name: $name
+          thumbnail: $thumbnail
+          tileSize: $tileSize
+          type: $type
+          url: $url
+          surveysOnly: $surveysOnly
+        }
+      }
+    ) {
+      basemap {
+        ...BasemapDetails
+      }
+    }
+  }
+  ${BasemapDetailsFragmentDoc}
+`;
+export const UploadBasemapDocument = /*#__PURE__*/ gql`
+  mutation UploadBasemap(
+    $projectId: Int!
+    $name: String!
+    $thumbnail: Upload!
+    $existingId: Int
+    $style: JSON!
+    $surveysOnly: Boolean
+  ) {
+    uploadStyle(
+      thumb: $thumbnail
+      style: $style
+      projectId: $projectId
+      id: $existingId
+      name: $name
+      surveysOnly: $surveysOnly
+    ) {
+      ...BasemapDetails
+    }
+  }
+  ${BasemapDetailsFragmentDoc}
+`;
+export const GetBasemapDocument = /*#__PURE__*/ gql`
+  query GetBasemap($id: Int!) {
+    basemap(id: $id) {
+      id
+      attribution
+      interactivitySettings {
+        cursor
+        id
+        layers
+        longTemplate
+        shortTemplate
+        type
+      }
+      description
+      labelsLayerId
+      name
+      optionalBasemapLayers {
+        basemapId
+        defaultVisibility
+        description
+        options
+        groupType
+        id
+        layers
+        metadata
+        name
+      }
+      projectId
+      terrainExaggeration
+      terrainMaxZoom
+      terrainOptional
+      terrainTileSize
       terrainUrl
       terrainVisibilityDefault
-      terrainOptional
+      thumbnail
+      tileSize
+      type
+      url
     }
   }
-}
-    `;
+`;
+export const UpdateBasemapDocument = /*#__PURE__*/ gql`
+  mutation UpdateBasemap($id: Int!, $name: String) {
+    updateBasemap(input: { id: $id, patch: { name: $name } }) {
+      basemap {
+        name
+        id
+      }
+    }
+  }
+`;
+export const UpdateBasemapUrlDocument = /*#__PURE__*/ gql`
+  mutation UpdateBasemapUrl($id: Int!, $url: String!) {
+    updateBasemap(input: { id: $id, patch: { url: $url } }) {
+      basemap {
+        url
+        id
+      }
+    }
+  }
+`;
+export const UpdateBasemapLabelsLayerDocument = /*#__PURE__*/ gql`
+  mutation UpdateBasemapLabelsLayer($id: Int!, $layer: String) {
+    updateBasemap(input: { id: $id, patch: { labelsLayerId: $layer } }) {
+      basemap {
+        id
+        labelsLayerId
+      }
+    }
+  }
+`;
+export const Toggle3dTerrainDocument = /*#__PURE__*/ gql`
+  mutation Toggle3dTerrain($id: Int!, $terrainUrl: String) {
+    updateBasemap(input: { id: $id, patch: { terrainUrl: $terrainUrl } }) {
+      basemap {
+        id
+        terrainUrl
+      }
+    }
+  }
+`;
+export const Set3dTerrainDocument = /*#__PURE__*/ gql`
+  mutation Set3dTerrain(
+    $id: Int!
+    $terrainUrl: String
+    $terrainOptional: Boolean
+    $terrainVisibilityDefault: Boolean
+  ) {
+    updateBasemap(
+      input: {
+        id: $id
+        patch: {
+          terrainUrl: $terrainUrl
+          terrainOptional: $terrainOptional
+          terrainVisibilityDefault: $terrainVisibilityDefault
+        }
+      }
+    ) {
+      basemap {
+        id
+        terrainUrl
+        terrainVisibilityDefault
+        terrainOptional
+      }
+    }
+  }
+`;
 export const UpdateTerrainExaggerationDocument = /*#__PURE__*/ gql`
-    mutation UpdateTerrainExaggeration($id: Int!, $terrainExaggeration: BigFloat!) {
-  updateBasemap(
-    input: {id: $id, patch: {terrainExaggeration: $terrainExaggeration}}
+  mutation UpdateTerrainExaggeration(
+    $id: Int!
+    $terrainExaggeration: BigFloat!
   ) {
-    basemap {
-      id
-      terrainExaggeration
+    updateBasemap(
+      input: { id: $id, patch: { terrainExaggeration: $terrainExaggeration } }
+    ) {
+      basemap {
+        id
+        terrainExaggeration
+      }
     }
   }
-}
-    `;
+`;
 export const DeleteBasemapDocument = /*#__PURE__*/ gql`
-    mutation DeleteBasemap($id: Int!) {
-  deleteBasemap(input: {id: $id}) {
-    basemap {
-      id
+  mutation DeleteBasemap($id: Int!) {
+    deleteBasemap(input: { id: $id }) {
+      basemap {
+        id
+      }
     }
   }
-}
-    `;
+`;
 export const OptionalLayerDocument = /*#__PURE__*/ gql`
-    query OptionalLayer($id: Int!) {
-  optionalBasemapLayer(id: $id) {
-    id
-    basemapId
-    defaultVisibility
-    description
-    options
-    groupType
-    layers
-    metadata
-    name
-  }
-}
-    `;
-export const UpdateOptionalLayerNameDocument = /*#__PURE__*/ gql`
-    mutation UpdateOptionalLayerName($id: Int!, $name: String!) {
-  updateOptionalBasemapLayer(input: {id: $id, patch: {name: $name}}) {
-    optionalBasemapLayer {
-      id
-      name
-    }
-  }
-}
-    `;
-export const CreateOptionalLayerDocument = /*#__PURE__*/ gql`
-    mutation CreateOptionalLayer($name: String!, $basemapId: Int!, $groupType: OptionalBasemapLayersGroupType, $options: JSON) {
-  createOptionalBasemapLayer(
-    input: {optionalBasemapLayer: {name: $name, basemapId: $basemapId, groupType: $groupType, options: $options}}
-  ) {
-    optionalBasemapLayer {
+  query OptionalLayer($id: Int!) {
+    optionalBasemapLayer(id: $id) {
       id
       basemapId
       defaultVisibility
@@ -16046,314 +17659,524 @@ export const CreateOptionalLayerDocument = /*#__PURE__*/ gql`
       name
     }
   }
-}
-    `;
-export const UpdateOptionalLayerDocument = /*#__PURE__*/ gql`
-    mutation UpdateOptionalLayer($id: Int!, $name: String, $description: String, $defaultVisibility: Boolean, $metadata: JSON) {
-  updateOptionalBasemapLayer(
-    input: {id: $id, patch: {name: $name, description: $description, defaultVisibility: $defaultVisibility, metadata: $metadata}}
-  ) {
-    optionalBasemapLayer {
-      name
-      description
-      id
-      defaultVisibility
-      metadata
-    }
-  }
-}
-    `;
-export const DeleteOptionalLayerDocument = /*#__PURE__*/ gql`
-    mutation DeleteOptionalLayer($id: Int!) {
-  deleteOptionalBasemapLayer(input: {id: $id}) {
-    optionalBasemapLayer {
-      id
-    }
-  }
-}
-    `;
-export const UpdateOptionalBasemapLayerLayerListDocument = /*#__PURE__*/ gql`
-    mutation UpdateOptionalBasemapLayerLayerList($id: Int!, $layers: [String]) {
-  updateOptionalBasemapLayer(input: {id: $id, patch: {layers: $layers}}) {
-    optionalBasemapLayer {
-      id
-      layers
-    }
-  }
-}
-    `;
-export const UpdateOptionalBasemapLayerOptionsDocument = /*#__PURE__*/ gql`
-    mutation UpdateOptionalBasemapLayerOptions($id: Int!, $options: JSON!) {
-  updateOptionalBasemapLayer(input: {id: $id, patch: {options: $options}}) {
-    optionalBasemapLayer {
-      id
-      options
-    }
-  }
-}
-    `;
-export const GetOptionalBasemapLayerDocument = /*#__PURE__*/ gql`
-    query GetOptionalBasemapLayer($id: Int!) {
-  optionalBasemapLayer(id: $id) {
-    id
-    basemapId
-    name
-    description
-    defaultVisibility
-    groupType
-    layers
-    metadata
-    options
-  }
-}
-    `;
-export const GetOptionalBasemapLayerMetadataDocument = /*#__PURE__*/ gql`
-    query GetOptionalBasemapLayerMetadata($id: Int!) {
-  optionalBasemapLayer(id: $id) {
-    id
-    metadata
-  }
-}
-    `;
-export const UpdateOptionalBasemapLayerMetadataDocument = /*#__PURE__*/ gql`
-    mutation UpdateOptionalBasemapLayerMetadata($id: Int!, $metadata: JSON) {
-  updateOptionalBasemapLayer(input: {id: $id, patch: {metadata: $metadata}}) {
-    optionalBasemapLayer {
-      id
-      metadata
-    }
-  }
-}
-    `;
-export const UpdateInteractivitySettingsLayersDocument = /*#__PURE__*/ gql`
-    mutation UpdateInteractivitySettingsLayers($id: Int!, $layers: [String]) {
-  updateInteractivitySetting(input: {id: $id, patch: {layers: $layers}}) {
-    interactivitySetting {
-      layers
-      id
-    }
-  }
-}
-    `;
-export const MapboxKeysDocument = /*#__PURE__*/ gql`
-    query MapboxKeys($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    mapboxPublicKey
-    mapboxSecretKey
-  }
-}
-    `;
-export const CreateProjectDocument = /*#__PURE__*/ gql`
-    mutation CreateProject($name: String!, $slug: String!) {
-  createProject(input: {name: $name, slug: $slug}) {
-    project {
-      id
-      url
-      slug
-    }
-  }
-}
-    `;
-export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
-    query DraftTableOfContents($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    draftTableOfContentsItems {
-      id
-      dataLayerId
-      title
-      acl {
-        id
-        type
-      }
-      isClickOffOnly
-      isFolder
-      stableId
-      parentStableId
-      showRadioChildren
-      bounds
-      sortIndex
-      hideChildren
-      enableDownload
-    }
-  }
-}
-    `;
-export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
-    query layersAndSourcesForItems($slug: String!, $tableOfContentsItemIds: [Int]!) {
-  projectBySlug(slug: $slug) {
-    id
-    dataSourcesForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
-      attribution
-      bounds
-      bucketId
-      buffer
-      byteLength
-      cluster
-      clusterMaxZoom
-      clusterProperties
-      clusterRadius
-      coordinates
-      createdAt
-      encoding
-      enhancedSecurity
-      id
-      importType
-      lineMetrics
-      maxzoom
-      minzoom
-      objectKey
-      originalSourceUrl
-      queryParameters
-      scheme
-      tiles
-      tileSize
-      tolerance
-      type
-      url
-      urls
-      useDevicePixelRatio
-      supportsDynamicLayers
-    }
-    dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
-      interactivitySettings {
-        id
-        cursor
-        longTemplate
-        shortTemplate
-        type
-      }
-      sprites {
-        id
-        spriteImages {
-          pixelRatio
-          height
-          width
-          url
-        }
-        type
-      }
-      zIndex
-      dataSourceId
-      id
-      mapboxGlStyles
-      renderUnder
-      sourceLayer
-      sublayer
-    }
-  }
-}
-    `;
-export const CreateFolderDocument = /*#__PURE__*/ gql`
-    mutation CreateFolder($title: String!, $stableId: String!, $projectId: Int!, $parentStableId: String, $isClickOffOnly: Boolean, $showRadioChildren: Boolean, $hideChildren: Boolean) {
-  createTableOfContentsItem(
-    input: {tableOfContentsItem: {title: $title, stableId: $stableId, projectId: $projectId, parentStableId: $parentStableId, isFolder: true, isClickOffOnly: $isClickOffOnly, showRadioChildren: $showRadioChildren, hideChildren: $hideChildren}}
-  ) {
-    tableOfContentsItem {
-      id
-      title
-      stableId
-      projectId
-      parentStableId
-      isClickOffOnly
-      isDraft
-      isFolder
-      showRadioChildren
-      isClickOffOnly
-      sortIndex
-      hideChildren
-      enableDownload
-    }
-  }
-}
-    `;
-export const DeleteBranchDocument = /*#__PURE__*/ gql`
-    mutation DeleteBranch($id: Int!) {
-  deleteTableOfContentsBranch(input: {tableOfContentsItemId: $id}) {
-    clientMutationId
-  }
-}
-    `;
-export const UpdateTableOfContentsItemChildrenDocument = /*#__PURE__*/ gql`
-    mutation UpdateTableOfContentsItemChildren($id: Int, $childIds: [Int]!) {
-  updateTableOfContentsItemChildren(input: {parentId: $id, childIds: $childIds}) {
-    tableOfContentsItems {
-      id
-      sortIndex
-      parentStableId
-    }
-  }
-}
-    `;
-export const GetFolderDocument = /*#__PURE__*/ gql`
-    query GetFolder($id: Int!) {
-  tableOfContentsItem(id: $id) {
-    id
-    bounds
-    isClickOffOnly
-    showRadioChildren
-    title
-    hideChildren
-  }
-}
-    `;
-export const UpdateFolderDocument = /*#__PURE__*/ gql`
-    mutation UpdateFolder($id: Int!, $bounds: [BigFloat], $isClickOffOnly: Boolean, $showRadioChildren: Boolean, $title: String, $hideChildren: Boolean) {
-  updateTableOfContentsItem(
-    input: {id: $id, patch: {bounds: $bounds, isClickOffOnly: $isClickOffOnly, showRadioChildren: $showRadioChildren, title: $title, hideChildren: $hideChildren}}
-  ) {
-    tableOfContentsItem {
-      id
-      bounds
-      isClickOffOnly
-      showRadioChildren
-      hideChildren
-      title
-    }
-  }
-}
-    `;
-export const GetLayerItemDocument = /*#__PURE__*/ gql`
-    query GetLayerItem($id: Int!) {
-  tableOfContentsItem(id: $id) {
-    id
-    acl {
-      nodeId
-      id
-      type
-      groups {
+`;
+export const UpdateOptionalLayerNameDocument = /*#__PURE__*/ gql`
+  mutation UpdateOptionalLayerName($id: Int!, $name: String!) {
+    updateOptionalBasemapLayer(input: { id: $id, patch: { name: $name } }) {
+      optionalBasemapLayer {
         id
         name
       }
     }
-    bounds
-    dataLayerId
-    metadata
-    parentStableId
-    projectId
-    stableId
-    title
-    enableDownload
-    dataLayer {
-      id
-      zIndex
-      mapboxGlStyles
-      interactivitySettingsId
-      renderUnder
-      sourceLayer
-      sublayer
-      sprites {
-        id
-        spriteImages {
-          pixelRatio
-          height
-          width
-          url
+  }
+`;
+export const CreateOptionalLayerDocument = /*#__PURE__*/ gql`
+  mutation CreateOptionalLayer(
+    $name: String!
+    $basemapId: Int!
+    $groupType: OptionalBasemapLayersGroupType
+    $options: JSON
+  ) {
+    createOptionalBasemapLayer(
+      input: {
+        optionalBasemapLayer: {
+          name: $name
+          basemapId: $basemapId
+          groupType: $groupType
+          options: $options
         }
-        type
       }
-      dataSourceId
+    ) {
+      optionalBasemapLayer {
+        id
+        basemapId
+        defaultVisibility
+        description
+        options
+        groupType
+        layers
+        metadata
+        name
+      }
+    }
+  }
+`;
+export const UpdateOptionalLayerDocument = /*#__PURE__*/ gql`
+  mutation UpdateOptionalLayer(
+    $id: Int!
+    $name: String
+    $description: String
+    $defaultVisibility: Boolean
+    $metadata: JSON
+  ) {
+    updateOptionalBasemapLayer(
+      input: {
+        id: $id
+        patch: {
+          name: $name
+          description: $description
+          defaultVisibility: $defaultVisibility
+          metadata: $metadata
+        }
+      }
+    ) {
+      optionalBasemapLayer {
+        name
+        description
+        id
+        defaultVisibility
+        metadata
+      }
+    }
+  }
+`;
+export const DeleteOptionalLayerDocument = /*#__PURE__*/ gql`
+  mutation DeleteOptionalLayer($id: Int!) {
+    deleteOptionalBasemapLayer(input: { id: $id }) {
+      optionalBasemapLayer {
+        id
+      }
+    }
+  }
+`;
+export const UpdateOptionalBasemapLayerLayerListDocument = /*#__PURE__*/ gql`
+  mutation UpdateOptionalBasemapLayerLayerList($id: Int!, $layers: [String]) {
+    updateOptionalBasemapLayer(input: { id: $id, patch: { layers: $layers } }) {
+      optionalBasemapLayer {
+        id
+        layers
+      }
+    }
+  }
+`;
+export const UpdateOptionalBasemapLayerOptionsDocument = /*#__PURE__*/ gql`
+  mutation UpdateOptionalBasemapLayerOptions($id: Int!, $options: JSON!) {
+    updateOptionalBasemapLayer(
+      input: { id: $id, patch: { options: $options } }
+    ) {
+      optionalBasemapLayer {
+        id
+        options
+      }
+    }
+  }
+`;
+export const GetOptionalBasemapLayerDocument = /*#__PURE__*/ gql`
+  query GetOptionalBasemapLayer($id: Int!) {
+    optionalBasemapLayer(id: $id) {
+      id
+      basemapId
+      name
+      description
+      defaultVisibility
+      groupType
+      layers
+      metadata
+      options
+    }
+  }
+`;
+export const GetOptionalBasemapLayerMetadataDocument = /*#__PURE__*/ gql`
+  query GetOptionalBasemapLayerMetadata($id: Int!) {
+    optionalBasemapLayer(id: $id) {
+      id
+      metadata
+    }
+  }
+`;
+export const UpdateOptionalBasemapLayerMetadataDocument = /*#__PURE__*/ gql`
+  mutation UpdateOptionalBasemapLayerMetadata($id: Int!, $metadata: JSON) {
+    updateOptionalBasemapLayer(
+      input: { id: $id, patch: { metadata: $metadata } }
+    ) {
+      optionalBasemapLayer {
+        id
+        metadata
+      }
+    }
+  }
+`;
+export const UpdateInteractivitySettingsLayersDocument = /*#__PURE__*/ gql`
+  mutation UpdateInteractivitySettingsLayers($id: Int!, $layers: [String]) {
+    updateInteractivitySetting(input: { id: $id, patch: { layers: $layers } }) {
+      interactivitySetting {
+        layers
+        id
+      }
+    }
+  }
+`;
+export const MapboxKeysDocument = /*#__PURE__*/ gql`
+  query MapboxKeys($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      mapboxPublicKey
+      mapboxSecretKey
+    }
+  }
+`;
+export const CreateProjectDocument = /*#__PURE__*/ gql`
+  mutation CreateProject($name: String!, $slug: String!) {
+    createProject(input: { name: $name, slug: $slug }) {
+      project {
+        id
+        url
+        slug
+      }
+    }
+  }
+`;
+export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
+  query DraftTableOfContents($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      draftTableOfContentsItems {
+        id
+        dataLayerId
+        title
+        acl {
+          id
+          type
+        }
+        isClickOffOnly
+        isFolder
+        stableId
+        parentStableId
+        showRadioChildren
+        bounds
+        sortIndex
+        hideChildren
+        enableDownload
+      }
+    }
+  }
+`;
+export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
+  query layersAndSourcesForItems(
+    $slug: String!
+    $tableOfContentsItemIds: [Int]!
+  ) {
+    projectBySlug(slug: $slug) {
+      id
+      dataSourcesForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
+        attribution
+        bounds
+        bucketId
+        buffer
+        byteLength
+        cluster
+        clusterMaxZoom
+        clusterProperties
+        clusterRadius
+        coordinates
+        createdAt
+        encoding
+        enhancedSecurity
+        id
+        importType
+        lineMetrics
+        maxzoom
+        minzoom
+        objectKey
+        originalSourceUrl
+        queryParameters
+        scheme
+        tiles
+        tileSize
+        tolerance
+        type
+        url
+        urls
+        useDevicePixelRatio
+        supportsDynamicLayers
+      }
+      dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
+        interactivitySettings {
+          id
+          cursor
+          longTemplate
+          shortTemplate
+          type
+        }
+        sprites {
+          id
+          spriteImages {
+            pixelRatio
+            height
+            width
+            url
+          }
+          type
+        }
+        zIndex
+        dataSourceId
+        id
+        mapboxGlStyles
+        renderUnder
+        sourceLayer
+        sublayer
+      }
+    }
+  }
+`;
+export const CreateFolderDocument = /*#__PURE__*/ gql`
+  mutation CreateFolder(
+    $title: String!
+    $stableId: String!
+    $projectId: Int!
+    $parentStableId: String
+    $isClickOffOnly: Boolean
+    $showRadioChildren: Boolean
+    $hideChildren: Boolean
+  ) {
+    createTableOfContentsItem(
+      input: {
+        tableOfContentsItem: {
+          title: $title
+          stableId: $stableId
+          projectId: $projectId
+          parentStableId: $parentStableId
+          isFolder: true
+          isClickOffOnly: $isClickOffOnly
+          showRadioChildren: $showRadioChildren
+          hideChildren: $hideChildren
+        }
+      }
+    ) {
+      tableOfContentsItem {
+        id
+        title
+        stableId
+        projectId
+        parentStableId
+        isClickOffOnly
+        isDraft
+        isFolder
+        showRadioChildren
+        isClickOffOnly
+        sortIndex
+        hideChildren
+        enableDownload
+      }
+    }
+  }
+`;
+export const DeleteBranchDocument = /*#__PURE__*/ gql`
+  mutation DeleteBranch($id: Int!) {
+    deleteTableOfContentsBranch(input: { tableOfContentsItemId: $id }) {
+      clientMutationId
+    }
+  }
+`;
+export const UpdateTableOfContentsItemChildrenDocument = /*#__PURE__*/ gql`
+  mutation UpdateTableOfContentsItemChildren($id: Int, $childIds: [Int]!) {
+    updateTableOfContentsItemChildren(
+      input: { parentId: $id, childIds: $childIds }
+    ) {
+      tableOfContentsItems {
+        id
+        sortIndex
+        parentStableId
+      }
+    }
+  }
+`;
+export const GetFolderDocument = /*#__PURE__*/ gql`
+  query GetFolder($id: Int!) {
+    tableOfContentsItem(id: $id) {
+      id
+      bounds
+      isClickOffOnly
+      showRadioChildren
+      title
+      hideChildren
+    }
+  }
+`;
+export const UpdateFolderDocument = /*#__PURE__*/ gql`
+  mutation UpdateFolder(
+    $id: Int!
+    $bounds: [BigFloat]
+    $isClickOffOnly: Boolean
+    $showRadioChildren: Boolean
+    $title: String
+    $hideChildren: Boolean
+  ) {
+    updateTableOfContentsItem(
+      input: {
+        id: $id
+        patch: {
+          bounds: $bounds
+          isClickOffOnly: $isClickOffOnly
+          showRadioChildren: $showRadioChildren
+          title: $title
+          hideChildren: $hideChildren
+        }
+      }
+    ) {
+      tableOfContentsItem {
+        id
+        bounds
+        isClickOffOnly
+        showRadioChildren
+        hideChildren
+        title
+      }
+    }
+  }
+`;
+export const GetLayerItemDocument = /*#__PURE__*/ gql`
+  query GetLayerItem($id: Int!) {
+    tableOfContentsItem(id: $id) {
+      id
+      acl {
+        nodeId
+        id
+        type
+        groups {
+          id
+          name
+        }
+      }
+      bounds
+      dataLayerId
+      metadata
+      parentStableId
+      projectId
+      stableId
+      title
+      enableDownload
+      dataLayer {
+        id
+        zIndex
+        mapboxGlStyles
+        interactivitySettingsId
+        renderUnder
+        sourceLayer
+        sublayer
+        sprites {
+          id
+          spriteImages {
+            pixelRatio
+            height
+            width
+            url
+          }
+          type
+        }
+        dataSourceId
+        dataSource {
+          id
+          attribution
+          bounds
+          bucketId
+          buffer
+          byteLength
+          cluster
+          clusterMaxZoom
+          clusterProperties
+          clusterRadius
+          coordinates
+          createdAt
+          encoding
+          enhancedSecurity
+          generateId
+          importType
+          lineMetrics
+          maxzoom
+          minzoom
+          objectKey
+          originalSourceUrl
+          promoteId
+          queryParameters
+          scheme
+          tiles
+          tileSize
+          tolerance
+          type
+          url
+          urls
+          useDevicePixelRatio
+          supportsDynamicLayers
+        }
+      }
+    }
+  }
+`;
+export const UpdateTableOfContentsItemDocument = /*#__PURE__*/ gql`
+  mutation UpdateTableOfContentsItem(
+    $id: Int!
+    $title: String
+    $bounds: [BigFloat]
+    $metadata: JSON
+  ) {
+    updateTableOfContentsItem(
+      input: {
+        id: $id
+        patch: { title: $title, bounds: $bounds, metadata: $metadata }
+      }
+    ) {
+      tableOfContentsItem {
+        id
+        bounds
+        metadata
+        title
+      }
+    }
+  }
+`;
+export const UpdateEnableDownloadDocument = /*#__PURE__*/ gql`
+  mutation UpdateEnableDownload($id: Int!, $enableDownload: Boolean) {
+    updateTableOfContentsItem(
+      input: { id: $id, patch: { enableDownload: $enableDownload } }
+    ) {
+      tableOfContentsItem {
+        id
+        enableDownload
+      }
+    }
+  }
+`;
+export const UpdateLayerDocument = /*#__PURE__*/ gql`
+  mutation UpdateLayer(
+    $id: Int!
+    $renderUnder: RenderUnderType
+    $mapboxGlStyles: JSON
+    $sublayer: String
+  ) {
+    updateDataLayer(
+      input: {
+        id: $id
+        patch: {
+          renderUnder: $renderUnder
+          mapboxGlStyles: $mapboxGlStyles
+          sublayer: $sublayer
+        }
+      }
+    ) {
+      dataLayer {
+        id
+        zIndex
+        renderUnder
+        mapboxGlStyles
+        sublayer
+        sprites {
+          id
+          spriteImages {
+            pixelRatio
+            height
+            width
+            url
+          }
+          type
+        }
+      }
+    }
+  }
+`;
+export const UpdateDataSourceDocument = /*#__PURE__*/ gql`
+  mutation UpdateDataSource($id: Int!, $attribution: String) {
+    updateDataSource(input: { id: $id, patch: { attribution: $attribution } }) {
       dataSource {
         id
         attribution
@@ -16390,324 +18213,255 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
       }
     }
   }
-}
-    `;
-export const UpdateTableOfContentsItemDocument = /*#__PURE__*/ gql`
-    mutation UpdateTableOfContentsItem($id: Int!, $title: String, $bounds: [BigFloat], $metadata: JSON) {
-  updateTableOfContentsItem(
-    input: {id: $id, patch: {title: $title, bounds: $bounds, metadata: $metadata}}
-  ) {
-    tableOfContentsItem {
+`;
+export const InteractivitySettingsForLayerDocument = /*#__PURE__*/ gql`
+  query InteractivitySettingsForLayer($layerId: Int!) {
+    dataLayer(id: $layerId) {
       id
-      bounds
-      metadata
-      title
-    }
-  }
-}
-    `;
-export const UpdateEnableDownloadDocument = /*#__PURE__*/ gql`
-    mutation UpdateEnableDownload($id: Int!, $enableDownload: Boolean) {
-  updateTableOfContentsItem(
-    input: {id: $id, patch: {enableDownload: $enableDownload}}
-  ) {
-    tableOfContentsItem {
-      id
-      enableDownload
-    }
-  }
-}
-    `;
-export const UpdateLayerDocument = /*#__PURE__*/ gql`
-    mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String) {
-  updateDataLayer(
-    input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer}}
-  ) {
-    dataLayer {
-      id
-      zIndex
-      renderUnder
-      mapboxGlStyles
-      sublayer
-      sprites {
+      sourceLayer
+      interactivitySettings {
+        cursor
         id
-        spriteImages {
-          pixelRatio
-          height
-          width
-          url
-        }
+        longTemplate
+        shortTemplate
         type
       }
     }
   }
-}
-    `;
-export const UpdateDataSourceDocument = /*#__PURE__*/ gql`
-    mutation UpdateDataSource($id: Int!, $attribution: String) {
-  updateDataSource(input: {id: $id, patch: {attribution: $attribution}}) {
-    dataSource {
-      id
-      attribution
-      bounds
-      bucketId
-      buffer
-      byteLength
-      cluster
-      clusterMaxZoom
-      clusterProperties
-      clusterRadius
-      coordinates
-      createdAt
-      encoding
-      enhancedSecurity
-      generateId
-      importType
-      lineMetrics
-      maxzoom
-      minzoom
-      objectKey
-      originalSourceUrl
-      promoteId
-      queryParameters
-      scheme
-      tiles
-      tileSize
-      tolerance
-      type
-      url
-      urls
-      useDevicePixelRatio
-      supportsDynamicLayers
-    }
-  }
-}
-    `;
-export const InteractivitySettingsForLayerDocument = /*#__PURE__*/ gql`
-    query InteractivitySettingsForLayer($layerId: Int!) {
-  dataLayer(id: $layerId) {
-    id
-    sourceLayer
-    interactivitySettings {
-      cursor
-      id
-      longTemplate
-      shortTemplate
-      type
-    }
-  }
-}
-    `;
+`;
 export const UpdateInteractivitySettingsDocument = /*#__PURE__*/ gql`
-    mutation UpdateInteractivitySettings($id: Int!, $type: InteractivityType, $cursor: CursorType, $longTemplate: String, $shortTemplate: String) {
-  updateInteractivitySetting(
-    input: {id: $id, patch: {type: $type, cursor: $cursor, longTemplate: $longTemplate, shortTemplate: $shortTemplate}}
+  mutation UpdateInteractivitySettings(
+    $id: Int!
+    $type: InteractivityType
+    $cursor: CursorType
+    $longTemplate: String
+    $shortTemplate: String
   ) {
-    interactivitySetting {
+    updateInteractivitySetting(
+      input: {
+        id: $id
+        patch: {
+          type: $type
+          cursor: $cursor
+          longTemplate: $longTemplate
+          shortTemplate: $shortTemplate
+        }
+      }
+    ) {
+      interactivitySetting {
+        id
+        type
+        cursor
+        longTemplate
+        shortTemplate
+      }
+    }
+  }
+`;
+export const DataSourceUrlPropertiesDocument = /*#__PURE__*/ gql`
+  query DataSourceUrlProperties($id: Int!) {
+    dataSource(id: $id) {
       id
       type
-      cursor
-      longTemplate
-      shortTemplate
-    }
-  }
-}
-    `;
-export const DataSourceUrlPropertiesDocument = /*#__PURE__*/ gql`
-    query DataSourceUrlProperties($id: Int!) {
-  dataSource(id: $id) {
-    id
-    type
-    bucketId
-    objectKey
-    url
-    originalSourceUrl
-    queryParameters
-  }
-}
-    `;
-export const UpdateZIndexesDocument = /*#__PURE__*/ gql`
-    mutation UpdateZIndexes($dataLayerIds: [Int]!) {
-  updateZIndexes(input: {dataLayerIds: $dataLayerIds}) {
-    dataLayers {
-      id
-      zIndex
-    }
-  }
-}
-    `;
-export const UpdateRenderUnderTypeDocument = /*#__PURE__*/ gql`
-    mutation UpdateRenderUnderType($layerId: Int!, $renderUnder: RenderUnderType) {
-  updateDataLayer(input: {id: $layerId, patch: {renderUnder: $renderUnder}}) {
-    dataLayer {
-      id
-      renderUnder
-    }
-  }
-}
-    `;
-export const UpdateQueryParametersDocument = /*#__PURE__*/ gql`
-    mutation UpdateQueryParameters($sourceId: Int!, $queryParameters: JSON!) {
-  updateDataSource(
-    input: {id: $sourceId, patch: {queryParameters: $queryParameters}}
-  ) {
-    dataSource {
-      id
+      bucketId
+      objectKey
+      url
+      originalSourceUrl
       queryParameters
     }
   }
-}
-    `;
-export const UpdateEnableHighDpiRequestsDocument = /*#__PURE__*/ gql`
-    mutation UpdateEnableHighDPIRequests($sourceId: Int!, $useDevicePixelRatio: Boolean!) {
-  updateDataSource(
-    input: {id: $sourceId, patch: {useDevicePixelRatio: $useDevicePixelRatio}}
-  ) {
-    dataSource {
-      id
-      useDevicePixelRatio
+`;
+export const UpdateZIndexesDocument = /*#__PURE__*/ gql`
+  mutation UpdateZIndexes($dataLayerIds: [Int]!) {
+    updateZIndexes(input: { dataLayerIds: $dataLayerIds }) {
+      dataLayers {
+        id
+        zIndex
+      }
     }
   }
-}
-    `;
-export const GetMetadataDocument = /*#__PURE__*/ gql`
-    query GetMetadata($itemId: Int!) {
-  tableOfContentsItem(id: $itemId) {
-    id
-    metadata
+`;
+export const UpdateRenderUnderTypeDocument = /*#__PURE__*/ gql`
+  mutation UpdateRenderUnderType(
+    $layerId: Int!
+    $renderUnder: RenderUnderType
+  ) {
+    updateDataLayer(
+      input: { id: $layerId, patch: { renderUnder: $renderUnder } }
+    ) {
+      dataLayer {
+        id
+        renderUnder
+      }
+    }
   }
-}
-    `;
-export const UpdateMetadataDocument = /*#__PURE__*/ gql`
-    mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
-  updateTableOfContentsItem(input: {id: $itemId, patch: {metadata: $metadata}}) {
-    tableOfContentsItem {
+`;
+export const UpdateQueryParametersDocument = /*#__PURE__*/ gql`
+  mutation UpdateQueryParameters($sourceId: Int!, $queryParameters: JSON!) {
+    updateDataSource(
+      input: { id: $sourceId, patch: { queryParameters: $queryParameters } }
+    ) {
+      dataSource {
+        id
+        queryParameters
+      }
+    }
+  }
+`;
+export const UpdateEnableHighDpiRequestsDocument = /*#__PURE__*/ gql`
+  mutation UpdateEnableHighDPIRequests(
+    $sourceId: Int!
+    $useDevicePixelRatio: Boolean!
+  ) {
+    updateDataSource(
+      input: {
+        id: $sourceId
+        patch: { useDevicePixelRatio: $useDevicePixelRatio }
+      }
+    ) {
+      dataSource {
+        id
+        useDevicePixelRatio
+      }
+    }
+  }
+`;
+export const GetMetadataDocument = /*#__PURE__*/ gql`
+  query GetMetadata($itemId: Int!) {
+    tableOfContentsItem(id: $itemId) {
       id
       metadata
     }
   }
-}
-    `;
+`;
+export const UpdateMetadataDocument = /*#__PURE__*/ gql`
+  mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
+    updateTableOfContentsItem(
+      input: { id: $itemId, patch: { metadata: $metadata } }
+    ) {
+      tableOfContentsItem {
+        id
+        metadata
+      }
+    }
+  }
+`;
 export const ProjectHostingQuotaDocument = /*#__PURE__*/ gql`
-    query ProjectHostingQuota($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    dataHostingQuota
-    dataHostingQuotaUsed
+  query ProjectHostingQuota($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      dataHostingQuota
+      dataHostingQuotaUsed
+    }
   }
-}
-    `;
+`;
 export const InteractivitySettingsByIdDocument = /*#__PURE__*/ gql`
-    query InteractivitySettingsById($id: Int!) {
-  interactivitySetting(id: $id) {
-    cursor
-    id
-    layers
-    longTemplate
-    shortTemplate
-    type
+  query InteractivitySettingsById($id: Int!) {
+    interactivitySetting(id: $id) {
+      cursor
+      id
+      layers
+      longTemplate
+      shortTemplate
+      type
+    }
   }
-}
-    `;
+`;
 export const PublishTableOfContentsDocument = /*#__PURE__*/ gql`
-    mutation PublishTableOfContents($projectId: Int!) {
-  publishTableOfContents(input: {projectId: $projectId}) {
-    tableOfContentsItems {
-      id
+  mutation PublishTableOfContents($projectId: Int!) {
+    publishTableOfContents(input: { projectId: $projectId }) {
+      tableOfContentsItems {
+        id
+      }
     }
   }
-}
-    `;
+`;
 export const GetBasemapsAndRegionDocument = /*#__PURE__*/ gql`
-    query GetBasemapsAndRegion($slug: String!) {
-  projectBySlug(slug: $slug) {
-    ...MapEssentials
-  }
-}
-    ${MapEssentialsFragmentDoc}`;
-export const OfflineSurveysDocument = /*#__PURE__*/ gql`
-    query OfflineSurveys($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    surveys {
-      id
-      name
+  query GetBasemapsAndRegion($slug: String!) {
+    projectBySlug(slug: $slug) {
+      ...MapEssentials
     }
   }
-}
-    `;
-export const ProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
-    query ProjectAccessControlSettings($slug: String!) {
-  projectBySlug(slug: $slug) {
-    __typename
-    id
-    accessControl
-    isListed
+  ${MapEssentialsFragmentDoc}
+`;
+export const OfflineSurveysDocument = /*#__PURE__*/ gql`
+  query OfflineSurveys($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      surveys {
+        id
+        name
+      }
+    }
   }
-}
-    `;
-export const UpdateProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
-    mutation updateProjectAccessControlSettings($slug: String!, $accessControl: ProjectAccessControlSetting, $isListed: Boolean) {
-  updateProjectBySlug(
-    input: {slug: $slug, patch: {accessControl: $accessControl, isListed: $isListed}}
-  ) {
-    clientMutationId
-    project {
+`;
+export const ProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
+  query ProjectAccessControlSettings($slug: String!) {
+    projectBySlug(slug: $slug) {
       __typename
       id
       accessControl
       isListed
     }
   }
-}
-    `;
+`;
+export const UpdateProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
+  mutation updateProjectAccessControlSettings(
+    $slug: String!
+    $accessControl: ProjectAccessControlSetting
+    $isListed: Boolean
+  ) {
+    updateProjectBySlug(
+      input: {
+        slug: $slug
+        patch: { accessControl: $accessControl, isListed: $isListed }
+      }
+    ) {
+      clientMutationId
+      project {
+        __typename
+        id
+        accessControl
+        isListed
+      }
+    }
+  }
+`;
 export const ProjectMetadataDocument = /*#__PURE__*/ gql`
-    query ProjectMetadata($slug: String!) {
-  project: projectBySlug(slug: $slug) {
-    ...ProjectMetadata
+  query ProjectMetadata($slug: String!) {
+    project: projectBySlug(slug: $slug) {
+      ...ProjectMetadata
+    }
+    projectPublicDetails(slug: $slug) {
+      ...ProjectPublicDetailsMetadata
+    }
+    me {
+      ...ProjectMetadataMeFrag
+    }
   }
-  projectPublicDetails(slug: $slug) {
-    ...ProjectPublicDetailsMetadata
-  }
-  me {
-    ...ProjectMetadataMeFrag
-  }
-}
-    ${ProjectMetadataFragmentDoc}
-${ProjectPublicDetailsMetadataFragmentDoc}
-${ProjectMetadataMeFragFragmentDoc}`;
+  ${ProjectMetadataFragmentDoc}
+  ${ProjectPublicDetailsMetadataFragmentDoc}
+  ${ProjectMetadataMeFragFragmentDoc}
+`;
 export const MeDocument = /*#__PURE__*/ gql`
-    query Me {
-  me {
-    id
-    profile {
-      userId
-      fullname
-      nickname
-      email
-      picture
-      bio
-      affiliations
+  query Me {
+    me {
+      id
+      profile {
+        userId
+        fullname
+        nickname
+        email
+        picture
+        bio
+        affiliations
+      }
     }
   }
-}
-    `;
+`;
 export const ProjectRegionDocument = /*#__PURE__*/ gql`
-    query ProjectRegion($slug: String!) {
-  projectBySlug(slug: $slug) {
-    __typename
-    id
-    region {
-      geojson
-    }
-  }
-}
-    `;
-export const UpdateProjectRegionDocument = /*#__PURE__*/ gql`
-    mutation UpdateProjectRegion($slug: String!, $region: GeoJSON!) {
-  updateProjectBySlug(input: {slug: $slug, patch: {region: $region}}) {
-    clientMutationId
-    project {
+  query ProjectRegion($slug: String!) {
+    projectBySlug(slug: $slug) {
       __typename
       id
       region {
@@ -16715,362 +18469,597 @@ export const UpdateProjectRegionDocument = /*#__PURE__*/ gql`
       }
     }
   }
-}
-    `;
-export const GetProjectBySlugDocument = /*#__PURE__*/ gql`
-    query GetProjectBySlug($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    name
-  }
-}
-    `;
-export const ProjectSlugExistsDocument = /*#__PURE__*/ gql`
-    query ProjectSlugExists($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-  }
-}
-    `;
-export const PublishedTableOfContentsDocument = /*#__PURE__*/ gql`
-    query PublishedTableOfContents($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    tableOfContentsItems {
-      id
-      acl {
+`;
+export const UpdateProjectRegionDocument = /*#__PURE__*/ gql`
+  mutation UpdateProjectRegion($slug: String!, $region: GeoJSON!) {
+    updateProjectBySlug(input: { slug: $slug, patch: { region: $region } }) {
+      clientMutationId
+      project {
+        __typename
         id
-        type
-      }
-      bounds
-      dataLayerId
-      enableDownload
-      hideChildren
-      isClickOffOnly
-      isFolder
-      parentStableId
-      showRadioChildren
-      sortIndex
-      stableId
-      title
-    }
-  }
-}
-    `;
-export const SimpleProjectListDocument = /*#__PURE__*/ gql`
-    query SimpleProjectList($first: Int, $offset: Int) {
-  projectsConnection(first: $first, offset: $offset) {
-    nodes {
-      id
-      name
-      slug
-      description
-      url
-    }
-  }
-}
-    `;
-export const SurveysDocument = /*#__PURE__*/ gql`
-    query Surveys($projectId: Int!) {
-  project(id: $projectId) {
-    id
-    surveys {
-      ...SurveyListDetails
-    }
-  }
-}
-    ${SurveyListDetailsFragmentDoc}`;
-export const CreateSurveyDocument = /*#__PURE__*/ gql`
-    mutation CreateSurvey($name: String!, $projectId: Int!, $templateId: Int) {
-  makeSurvey(input: {projectId: $projectId, name: $name, templateId: $templateId}) {
-    survey {
-      ...SurveyListDetails
-    }
-  }
-}
-    ${SurveyListDetailsFragmentDoc}`;
-export const SurveyByIdDocument = /*#__PURE__*/ gql`
-    query SurveyById($id: Int!) {
-  survey(id: $id) {
-    ...SurveyListDetails
-    isSpatial
-  }
-}
-    ${SurveyListDetailsFragmentDoc}`;
-export const SurveyFormEditorDetailsDocument = /*#__PURE__*/ gql`
-    query SurveyFormEditorDetails($id: Int!, $slug: String!) {
-  formElementTypes {
-    ...AddFormElementTypeDetails
-  }
-  survey(id: $id) {
-    ...SurveyListDetails
-    form {
-      id
-      isTemplate
-      surveyId
-      templateName
-      templateType
-      formElements {
-        ...FormElementFullDetails
-      }
-      logicRules {
-        ...LogicRuleDetails
-      }
-    }
-  }
-  projectBySlug(slug: $slug) {
-    id
-    name
-    url
-    region {
-      geojson
-    }
-  }
-}
-    ${AddFormElementTypeDetailsFragmentDoc}
-${SurveyListDetailsFragmentDoc}
-${FormElementFullDetailsFragmentDoc}
-${LogicRuleDetailsFragmentDoc}`;
-export const FormElementTypesDocument = /*#__PURE__*/ gql`
-    query FormElementTypes {
-  formElementTypes {
-    ...AddFormElementTypeDetails
-  }
-}
-    ${AddFormElementTypeDetailsFragmentDoc}`;
-export const UpdateSurveyBaseSettingsDocument = /*#__PURE__*/ gql`
-    mutation UpdateSurveyBaseSettings($id: Int!, $showProgress: Boolean, $showFacilitationOption: Boolean, $supportedLanguages: [String]) {
-  updateSurvey(
-    input: {id: $id, patch: {showProgress: $showProgress, showFacilitationOption: $showFacilitationOption, supportedLanguages: $supportedLanguages}}
-  ) {
-    survey {
-      id
-      showProgress
-      showFacilitationOption
-      supportedLanguages
-    }
-  }
-}
-    `;
-export const UpdateFormElementSketchClassDocument = /*#__PURE__*/ gql`
-    mutation UpdateFormElementSketchClass($id: Int!, $geometryType: SketchGeometryType, $allowMulti: Boolean, $mapboxGlStyle: JSON, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
-  updateSketchClass(
-    input: {id: $id, patch: {geometryType: $geometryType, allowMulti: $allowMulti, mapboxGlStyle: $mapboxGlStyle, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
-  ) {
-    sketchClass {
-      id
-      geometryType
-      allowMulti
-      mapboxGlStyle
-      geoprocessingClientName
-      geoprocessingClientUrl
-      geoprocessingProjectUrl
-    }
-  }
-}
-    `;
-export const UpdateFormElementDocument = /*#__PURE__*/ gql`
-    mutation UpdateFormElement($id: Int!, $isRequired: Boolean, $body: JSON, $exportId: String, $componentSettings: JSON, $alternateLanguageSettings: JSON, $jumpToId: Int, $typeId: String) {
-  updateFormElement(
-    input: {id: $id, patch: {isRequired: $isRequired, body: $body, exportId: $exportId, componentSettings: $componentSettings, jumpToId: $jumpToId, typeId: $typeId, alternateLanguageSettings: $alternateLanguageSettings}}
-  ) {
-    formElement {
-      id
-      isRequired
-      body
-      exportId
-      componentSettings
-      alternateLanguageSettings
-      jumpToId
-      typeId
-    }
-  }
-}
-    `;
-export const UpdateComponentSettingsDocument = /*#__PURE__*/ gql`
-    mutation UpdateComponentSettings($id: Int!, $componentSettings: JSON) {
-  updateFormElement(
-    input: {id: $id, patch: {componentSettings: $componentSettings}}
-  ) {
-    formElement {
-      id
-      componentSettings
-    }
-  }
-}
-    `;
-export const UpdateAlternateLanguageSettingsDocument = /*#__PURE__*/ gql`
-    mutation UpdateAlternateLanguageSettings($id: Int!, $alternateLanguageSettings: JSON) {
-  updateFormElement(
-    input: {id: $id, patch: {alternateLanguageSettings: $alternateLanguageSettings}}
-  ) {
-    formElement {
-      id
-      alternateLanguageSettings
-    }
-  }
-}
-    `;
-export const UpdateFormElementBodyDocument = /*#__PURE__*/ gql`
-    mutation UpdateFormElementBody($id: Int!, $body: JSON!) {
-  updateFormElement(input: {id: $id, patch: {body: $body}}) {
-    formElement {
-      id
-      body
-    }
-  }
-}
-    `;
-export const UpdateFormElementOrderDocument = /*#__PURE__*/ gql`
-    mutation UpdateFormElementOrder($elementIds: [Int]) {
-  setFormElementOrder(input: {elementIds: $elementIds}) {
-    formElements {
-      id
-      position
-    }
-  }
-}
-    `;
-export const AddFormElementDocument = /*#__PURE__*/ gql`
-    mutation AddFormElement($body: JSON!, $componentSettings: JSON!, $formId: Int!, $componentType: String!, $position: Int, $exportId: String, $subordinateTo: Int, $isRequired: Boolean!) {
-  createFormElement(
-    input: {formElement: {body: $body, componentSettings: $componentSettings, formId: $formId, isRequired: $isRequired, typeId: $componentType, position: $position, exportId: $exportId, subordinateTo: $subordinateTo}}
-  ) {
-    formElement {
-      ...FormElementFullDetails
-    }
-  }
-}
-    ${FormElementFullDetailsFragmentDoc}`;
-export const DeleteFormElementDocument = /*#__PURE__*/ gql`
-    mutation DeleteFormElement($id: Int!) {
-  deleteFormElement(input: {id: $id}) {
-    formElement {
-      id
-    }
-  }
-}
-    `;
-export const UpdateFormDocument = /*#__PURE__*/ gql`
-    mutation UpdateForm($id: Int!, $isTemplate: Boolean, $templateName: String) {
-  updateForm(
-    input: {id: $id, patch: {isTemplate: $isTemplate, templateName: $templateName}}
-  ) {
-    form {
-      id
-      isTemplate
-      templateName
-    }
-  }
-}
-    `;
-export const GetPhotosDocument = /*#__PURE__*/ gql`
-    query GetPhotos($query: String!) {
-  getUnsplashPhotos(query: $query) {
-    results {
-      blur_hash
-      color
-      description
-      height
-      width
-      id
-      links {
-        download_location
-      }
-      urls {
-        full
-        raw
-        regular
-        small
-        thumb
-      }
-      user {
-        id
-        name
-        username
-        links {
-          html
+        region {
+          geojson
         }
       }
     }
   }
-}
-    `;
+`;
+export const GetProjectBySlugDocument = /*#__PURE__*/ gql`
+  query GetProjectBySlug($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      name
+    }
+  }
+`;
+export const ProjectSlugExistsDocument = /*#__PURE__*/ gql`
+  query ProjectSlugExists($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+    }
+  }
+`;
+export const PublishedTableOfContentsDocument = /*#__PURE__*/ gql`
+  query PublishedTableOfContents($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      tableOfContentsItems {
+        id
+        acl {
+          id
+          type
+        }
+        bounds
+        dataLayerId
+        enableDownload
+        hideChildren
+        isClickOffOnly
+        isFolder
+        parentStableId
+        showRadioChildren
+        sortIndex
+        stableId
+        title
+      }
+    }
+  }
+`;
+export const SimpleProjectListDocument = /*#__PURE__*/ gql`
+  query SimpleProjectList($first: Int, $offset: Int) {
+    projectsConnection(first: $first, offset: $offset) {
+      nodes {
+        id
+        name
+        slug
+        description
+        url
+      }
+    }
+  }
+`;
+export const SurveysDocument = /*#__PURE__*/ gql`
+  query Surveys($projectId: Int!) {
+    project(id: $projectId) {
+      id
+      surveys {
+        ...SurveyListDetails
+      }
+    }
+  }
+  ${SurveyListDetailsFragmentDoc}
+`;
+export const CreateSurveyDocument = /*#__PURE__*/ gql`
+  mutation CreateSurvey($name: String!, $projectId: Int!, $templateId: Int) {
+    makeSurvey(
+      input: { projectId: $projectId, name: $name, templateId: $templateId }
+    ) {
+      survey {
+        ...SurveyListDetails
+      }
+    }
+  }
+  ${SurveyListDetailsFragmentDoc}
+`;
+export const SurveyByIdDocument = /*#__PURE__*/ gql`
+  query SurveyById($id: Int!) {
+    survey(id: $id) {
+      ...SurveyListDetails
+      isSpatial
+    }
+  }
+  ${SurveyListDetailsFragmentDoc}
+`;
+export const SurveyFormEditorDetailsDocument = /*#__PURE__*/ gql`
+  query SurveyFormEditorDetails($id: Int!, $slug: String!) {
+    formElementTypes {
+      ...AddFormElementTypeDetails
+    }
+    survey(id: $id) {
+      ...SurveyListDetails
+      form {
+        id
+        isTemplate
+        surveyId
+        templateName
+        templateType
+        formElements {
+          ...FormElementFullDetails
+        }
+        logicRules {
+          ...LogicRuleDetails
+        }
+      }
+    }
+    projectBySlug(slug: $slug) {
+      id
+      name
+      url
+      region {
+        geojson
+      }
+    }
+  }
+  ${AddFormElementTypeDetailsFragmentDoc}
+  ${SurveyListDetailsFragmentDoc}
+  ${FormElementFullDetailsFragmentDoc}
+  ${LogicRuleDetailsFragmentDoc}
+`;
+export const FormElementTypesDocument = /*#__PURE__*/ gql`
+  query FormElementTypes {
+    formElementTypes {
+      ...AddFormElementTypeDetails
+    }
+  }
+  ${AddFormElementTypeDetailsFragmentDoc}
+`;
+export const UpdateSurveyBaseSettingsDocument = /*#__PURE__*/ gql`
+  mutation UpdateSurveyBaseSettings(
+    $id: Int!
+    $showProgress: Boolean
+    $showFacilitationOption: Boolean
+    $supportedLanguages: [String]
+  ) {
+    updateSurvey(
+      input: {
+        id: $id
+        patch: {
+          showProgress: $showProgress
+          showFacilitationOption: $showFacilitationOption
+          supportedLanguages: $supportedLanguages
+        }
+      }
+    ) {
+      survey {
+        id
+        showProgress
+        showFacilitationOption
+        supportedLanguages
+      }
+    }
+  }
+`;
+export const UpdateFormElementSketchClassDocument = /*#__PURE__*/ gql`
+  mutation UpdateFormElementSketchClass(
+    $id: Int!
+    $geometryType: SketchGeometryType
+    $allowMulti: Boolean
+    $mapboxGlStyle: JSON
+    $geoprocessingClientName: String
+    $geoprocessingClientUrl: String
+    $geoprocessingProjectUrl: String
+  ) {
+    updateSketchClass(
+      input: {
+        id: $id
+        patch: {
+          geometryType: $geometryType
+          allowMulti: $allowMulti
+          mapboxGlStyle: $mapboxGlStyle
+          geoprocessingClientName: $geoprocessingClientName
+          geoprocessingClientUrl: $geoprocessingClientUrl
+          geoprocessingProjectUrl: $geoprocessingProjectUrl
+        }
+      }
+    ) {
+      sketchClass {
+        id
+        geometryType
+        allowMulti
+        mapboxGlStyle
+        geoprocessingClientName
+        geoprocessingClientUrl
+        geoprocessingProjectUrl
+      }
+    }
+  }
+`;
+export const UpdateFormElementDocument = /*#__PURE__*/ gql`
+  mutation UpdateFormElement(
+    $id: Int!
+    $isRequired: Boolean
+    $body: JSON
+    $exportId: String
+    $componentSettings: JSON
+    $alternateLanguageSettings: JSON
+    $jumpToId: Int
+    $typeId: String
+  ) {
+    updateFormElement(
+      input: {
+        id: $id
+        patch: {
+          isRequired: $isRequired
+          body: $body
+          exportId: $exportId
+          componentSettings: $componentSettings
+          jumpToId: $jumpToId
+          typeId: $typeId
+          alternateLanguageSettings: $alternateLanguageSettings
+        }
+      }
+    ) {
+      formElement {
+        id
+        isRequired
+        body
+        exportId
+        componentSettings
+        alternateLanguageSettings
+        jumpToId
+        typeId
+      }
+    }
+  }
+`;
+export const UpdateComponentSettingsDocument = /*#__PURE__*/ gql`
+  mutation UpdateComponentSettings($id: Int!, $componentSettings: JSON) {
+    updateFormElement(
+      input: { id: $id, patch: { componentSettings: $componentSettings } }
+    ) {
+      formElement {
+        id
+        componentSettings
+      }
+    }
+  }
+`;
+export const UpdateAlternateLanguageSettingsDocument = /*#__PURE__*/ gql`
+  mutation UpdateAlternateLanguageSettings(
+    $id: Int!
+    $alternateLanguageSettings: JSON
+  ) {
+    updateFormElement(
+      input: {
+        id: $id
+        patch: { alternateLanguageSettings: $alternateLanguageSettings }
+      }
+    ) {
+      formElement {
+        id
+        alternateLanguageSettings
+      }
+    }
+  }
+`;
+export const UpdateFormElementBodyDocument = /*#__PURE__*/ gql`
+  mutation UpdateFormElementBody($id: Int!, $body: JSON!) {
+    updateFormElement(input: { id: $id, patch: { body: $body } }) {
+      formElement {
+        id
+        body
+      }
+    }
+  }
+`;
+export const UpdateFormElementOrderDocument = /*#__PURE__*/ gql`
+  mutation UpdateFormElementOrder($elementIds: [Int]) {
+    setFormElementOrder(input: { elementIds: $elementIds }) {
+      formElements {
+        id
+        position
+      }
+    }
+  }
+`;
+export const AddFormElementDocument = /*#__PURE__*/ gql`
+  mutation AddFormElement(
+    $body: JSON!
+    $componentSettings: JSON!
+    $formId: Int!
+    $componentType: String!
+    $position: Int
+    $exportId: String
+    $subordinateTo: Int
+    $isRequired: Boolean!
+  ) {
+    createFormElement(
+      input: {
+        formElement: {
+          body: $body
+          componentSettings: $componentSettings
+          formId: $formId
+          isRequired: $isRequired
+          typeId: $componentType
+          position: $position
+          exportId: $exportId
+          subordinateTo: $subordinateTo
+        }
+      }
+    ) {
+      formElement {
+        ...FormElementFullDetails
+      }
+    }
+  }
+  ${FormElementFullDetailsFragmentDoc}
+`;
+export const DeleteFormElementDocument = /*#__PURE__*/ gql`
+  mutation DeleteFormElement($id: Int!) {
+    deleteFormElement(input: { id: $id }) {
+      formElement {
+        id
+      }
+    }
+  }
+`;
+export const UpdateFormDocument = /*#__PURE__*/ gql`
+  mutation UpdateForm($id: Int!, $isTemplate: Boolean, $templateName: String) {
+    updateForm(
+      input: {
+        id: $id
+        patch: { isTemplate: $isTemplate, templateName: $templateName }
+      }
+    ) {
+      form {
+        id
+        isTemplate
+        templateName
+      }
+    }
+  }
+`;
+export const GetPhotosDocument = /*#__PURE__*/ gql`
+  query GetPhotos($query: String!) {
+    getUnsplashPhotos(query: $query) {
+      results {
+        blur_hash
+        color
+        description
+        height
+        width
+        id
+        links {
+          download_location
+        }
+        urls {
+          full
+          raw
+          regular
+          small
+          thumb
+        }
+        user {
+          id
+          name
+          username
+          links {
+            html
+          }
+        }
+      }
+    }
+  }
+`;
 export const UpdateFormElementBackgroundDocument = /*#__PURE__*/ gql`
-    mutation UpdateFormElementBackground($id: Int!, $backgroundColor: String, $secondaryColor: String, $backgroundPalette: [String], $textVariant: FormElementTextVariant, $layout: FormElementLayout) {
-  updateFormElement(
-    input: {id: $id, patch: {backgroundColor: $backgroundColor, secondaryColor: $secondaryColor, backgroundPalette: $backgroundPalette, textVariant: $textVariant, layout: $layout}}
+  mutation UpdateFormElementBackground(
+    $id: Int!
+    $backgroundColor: String
+    $secondaryColor: String
+    $backgroundPalette: [String]
+    $textVariant: FormElementTextVariant
+    $layout: FormElementLayout
   ) {
-    formElement {
-      id
-      backgroundColor
-      secondaryColor
-      backgroundImage
-      layout
-      backgroundPalette
-      textVariant
-      unsplashAuthorName
-      unsplashAuthorUrl
+    updateFormElement(
+      input: {
+        id: $id
+        patch: {
+          backgroundColor: $backgroundColor
+          secondaryColor: $secondaryColor
+          backgroundPalette: $backgroundPalette
+          textVariant: $textVariant
+          layout: $layout
+        }
+      }
+    ) {
+      formElement {
+        id
+        backgroundColor
+        secondaryColor
+        backgroundImage
+        layout
+        backgroundPalette
+        textVariant
+        unsplashAuthorName
+        unsplashAuthorUrl
+      }
     }
   }
-}
-    `;
+`;
 export const SetFormElementBackgroundDocument = /*#__PURE__*/ gql`
-    mutation SetFormElementBackground($id: Int!, $backgroundColor: String!, $secondaryColor: String!, $backgroundUrl: String!, $downloadUrl: String!, $backgroundPalette: [String]!, $unsplashAuthorUrl: String!, $unsplashAuthorName: String!, $backgroundWidth: Int!, $backgroundHeight: Int!) {
-  setFormElementBackground(
-    backgroundColor: $backgroundColor
-    secondaryColor: $secondaryColor
-    backgroundPalette: $backgroundPalette
-    backgroundUrl: $backgroundUrl
-    downloadUrl: $downloadUrl
-    id: $id
-    unsplashAuthorName: $unsplashAuthorName
-    unsplashAuthorUrl: $unsplashAuthorUrl
-    backgroundHeight: $backgroundHeight
-    backgroundWidth: $backgroundWidth
+  mutation SetFormElementBackground(
+    $id: Int!
+    $backgroundColor: String!
+    $secondaryColor: String!
+    $backgroundUrl: String!
+    $downloadUrl: String!
+    $backgroundPalette: [String]!
+    $unsplashAuthorUrl: String!
+    $unsplashAuthorName: String!
+    $backgroundWidth: Int!
+    $backgroundHeight: Int!
   ) {
-    id
-    backgroundColor
-    secondaryColor
-    backgroundImage
-    backgroundPalette
-    unsplashAuthorName
-    unsplashAuthorUrl
-    backgroundWidth
-    backgroundHeight
-  }
-}
-    `;
-export const ClearFormElementStyleDocument = /*#__PURE__*/ gql`
-    mutation clearFormElementStyle($id: Int!) {
-  clearFormElementStyle(input: {formElementId: $id}) {
-    formElement {
+    setFormElementBackground(
+      backgroundColor: $backgroundColor
+      secondaryColor: $secondaryColor
+      backgroundPalette: $backgroundPalette
+      backgroundUrl: $backgroundUrl
+      downloadUrl: $downloadUrl
+      id: $id
+      unsplashAuthorName: $unsplashAuthorName
+      unsplashAuthorUrl: $unsplashAuthorUrl
+      backgroundHeight: $backgroundHeight
+      backgroundWidth: $backgroundWidth
+    ) {
       id
       backgroundColor
+      secondaryColor
       backgroundImage
       backgroundPalette
       unsplashAuthorName
       unsplashAuthorUrl
-      textVariant
-      secondaryColor
-      layout
+      backgroundWidth
+      backgroundHeight
     }
   }
-}
-    `;
+`;
+export const ClearFormElementStyleDocument = /*#__PURE__*/ gql`
+  mutation clearFormElementStyle($id: Int!) {
+    clearFormElementStyle(input: { formElementId: $id }) {
+      formElement {
+        id
+        backgroundColor
+        backgroundImage
+        backgroundPalette
+        unsplashAuthorName
+        unsplashAuthorUrl
+        textVariant
+        secondaryColor
+        layout
+      }
+    }
+  }
+`;
 export const CreateLogicRuleForSurveyDocument = /*#__PURE__*/ gql`
-    mutation createLogicRuleForSurvey($formElementId: Int!, $operator: FieldRuleOperator!, $jumpToId: Int!) {
-  createSurveyJumpRule(
-    input: {formElementId: $formElementId, booleanOperator: OR, jumpToId: $jumpToId, operator: $operator}
+  mutation createLogicRuleForSurvey(
+    $formElementId: Int!
+    $operator: FieldRuleOperator!
+    $jumpToId: Int!
   ) {
-    formLogicRule {
-      id
-      position
-      booleanOperator
-      command
-      formElementId
-      jumpToId
-      conditions {
+    createSurveyJumpRule(
+      input: {
+        formElementId: $formElementId
+        booleanOperator: OR
+        jumpToId: $jumpToId
+        operator: $operator
+      }
+    ) {
+      formLogicRule {
+        id
+        position
+        booleanOperator
+        command
+        formElementId
+        jumpToId
+        conditions {
+          id
+          operator
+          ruleId
+          subjectId
+          value
+        }
+      }
+    }
+  }
+`;
+export const UpdateFormLogicRuleDocument = /*#__PURE__*/ gql`
+  mutation UpdateFormLogicRule(
+    $id: Int!
+    $jumpToId: Int
+    $booleanOperator: FormLogicOperator
+    $formElementId: Int
+  ) {
+    updateFormLogicRule(
+      input: {
+        id: $id
+        patch: {
+          jumpToId: $jumpToId
+          booleanOperator: $booleanOperator
+          formElementId: $formElementId
+        }
+      }
+    ) {
+      formLogicRule {
+        id
+        booleanOperator
+        command
+        jumpToId
+        position
+        formElementId
+      }
+    }
+  }
+`;
+export const UpdateLogicConditionDocument = /*#__PURE__*/ gql`
+  mutation UpdateLogicCondition(
+    $id: Int!
+    $operator: FieldRuleOperator
+    $value: JSON
+    $subjectId: Int
+  ) {
+    updateFormLogicCondition(
+      input: {
+        id: $id
+        patch: { operator: $operator, value: $value, subjectId: $subjectId }
+      }
+    ) {
+      formLogicCondition {
+        id
+        ruleId
+        operator
+        subjectId
+        value
+      }
+    }
+  }
+`;
+export const DeleteLogicConditionDocument = /*#__PURE__*/ gql`
+  mutation DeleteLogicCondition($id: Int!) {
+    deleteFormLogicCondition(input: { id: $id }) {
+      formLogicCondition {
+        id
+        ruleId
+      }
+    }
+  }
+`;
+export const DeleteLogicRuleDocument = /*#__PURE__*/ gql`
+  mutation DeleteLogicRule($id: Int!) {
+    deleteFormLogicRule(input: { id: $id }) {
+      formLogicRule {
+        id
+        formElementId
+      }
+    }
+  }
+`;
+export const AddConditionDocument = /*#__PURE__*/ gql`
+  mutation AddCondition(
+    $operator: FieldRuleOperator!
+    $ruleId: Int!
+    $subjectId: Int!
+    $value: JSON
+  ) {
+    createFormLogicCondition(
+      input: {
+        formLogicCondition: {
+          operator: $operator
+          ruleId: $ruleId
+          subjectId: $subjectId
+          value: $value
+        }
+      }
+    ) {
+      formLogicCondition {
         id
         operator
         ruleId
@@ -17079,818 +19068,844 @@ export const CreateLogicRuleForSurveyDocument = /*#__PURE__*/ gql`
       }
     }
   }
-}
-    `;
-export const UpdateFormLogicRuleDocument = /*#__PURE__*/ gql`
-    mutation UpdateFormLogicRule($id: Int!, $jumpToId: Int, $booleanOperator: FormLogicOperator, $formElementId: Int) {
-  updateFormLogicRule(
-    input: {id: $id, patch: {jumpToId: $jumpToId, booleanOperator: $booleanOperator, formElementId: $formElementId}}
-  ) {
-    formLogicRule {
-      id
-      booleanOperator
-      command
-      jumpToId
-      position
-      formElementId
-    }
-  }
-}
-    `;
-export const UpdateLogicConditionDocument = /*#__PURE__*/ gql`
-    mutation UpdateLogicCondition($id: Int!, $operator: FieldRuleOperator, $value: JSON, $subjectId: Int) {
-  updateFormLogicCondition(
-    input: {id: $id, patch: {operator: $operator, value: $value, subjectId: $subjectId}}
-  ) {
-    formLogicCondition {
-      id
-      ruleId
-      operator
-      subjectId
-      value
-    }
-  }
-}
-    `;
-export const DeleteLogicConditionDocument = /*#__PURE__*/ gql`
-    mutation DeleteLogicCondition($id: Int!) {
-  deleteFormLogicCondition(input: {id: $id}) {
-    formLogicCondition {
-      id
-      ruleId
-    }
-  }
-}
-    `;
-export const DeleteLogicRuleDocument = /*#__PURE__*/ gql`
-    mutation DeleteLogicRule($id: Int!) {
-  deleteFormLogicRule(input: {id: $id}) {
-    formLogicRule {
-      id
-      formElementId
-    }
-  }
-}
-    `;
-export const AddConditionDocument = /*#__PURE__*/ gql`
-    mutation AddCondition($operator: FieldRuleOperator!, $ruleId: Int!, $subjectId: Int!, $value: JSON) {
-  createFormLogicCondition(
-    input: {formLogicCondition: {operator: $operator, ruleId: $ruleId, subjectId: $subjectId, value: $value}}
-  ) {
-    formLogicCondition {
-      id
-      operator
-      ruleId
-      subjectId
-      value
-    }
-  }
-}
-    `;
+`;
 export const UpdateSurveyDraftStatusDocument = /*#__PURE__*/ gql`
-    mutation UpdateSurveyDraftStatus($id: Int!, $isDisabled: Boolean!) {
-  updateSurvey(input: {id: $id, patch: {isDisabled: $isDisabled}}) {
-    survey {
-      id
-      isDisabled
+  mutation UpdateSurveyDraftStatus($id: Int!, $isDisabled: Boolean!) {
+    updateSurvey(input: { id: $id, patch: { isDisabled: $isDisabled } }) {
+      survey {
+        id
+        isDisabled
+      }
     }
   }
-}
-    `;
+`;
 export const UploadConsentDocDocument = /*#__PURE__*/ gql`
-    mutation UploadConsentDoc($document: Upload!, $formElementId: Int!, $version: Int!) {
-  uploadConsentDocument(
-    document: $document
-    formElementId: $formElementId
-    version: $version
+  mutation UploadConsentDoc(
+    $document: Upload!
+    $formElementId: Int!
+    $version: Int!
   ) {
-    id
-    componentSettings
-  }
-}
-    `;
-export const SurveyResponsesDocument = /*#__PURE__*/ gql`
-    query SurveyResponses($surveyId: Int!) {
-  survey(id: $surveyId) {
-    form {
-      formElements {
-        ...FormElementExtendedDetails
-      }
-      logicRules {
-        ...SurveyAppRule
-      }
-    }
-    id
-    practiceResponseCount
-    archivedResponseCount
-    submittedResponseCount
-    surveyResponsesConnection {
-      nodes {
-        ...SurveyResponse
-      }
-    }
-  }
-}
-    ${FormElementExtendedDetailsFragmentDoc}
-${SurveyAppRuleFragmentDoc}
-${SurveyResponseFragmentDoc}`;
-export const SurveyMapDetailsDocument = /*#__PURE__*/ gql`
-    query SurveyMapDetails($surveyId: Int!) {
-  survey(id: $surveyId) {
-    form {
-      formElements {
-        ...FormElementDetails
-      }
-      id
-    }
-  }
-}
-    ${FormElementDetailsFragmentDoc}`;
-export const ToggleResponsesPracticeDocument = /*#__PURE__*/ gql`
-    mutation toggleResponsesPractice($ids: [Int], $isPractice: Boolean) {
-  toggleResponsesPractice(input: {ids: $ids, isPractice: $isPractice}) {
-    surveyResponses {
-      id
-      isPractice
-      archived
-      lastUpdatedByEmail
-      survey {
-        id
-        practiceResponseCount
-        archivedResponseCount
-        submittedResponseCount
-      }
-    }
-  }
-}
-    `;
-export const ArchiveResponsesDocument = /*#__PURE__*/ gql`
-    mutation archiveResponses($ids: [Int], $makeArchived: Boolean) {
-  archiveResponses(input: {ids: $ids, makeArchived: $makeArchived}) {
-    surveyResponses {
-      id
-      isPractice
-      archived
-      lastUpdatedByEmail
-      survey {
-        id
-        practiceResponseCount
-        archivedResponseCount
-        submittedResponseCount
-      }
-    }
-  }
-}
-    `;
-export const ModifyAnswersDocument = /*#__PURE__*/ gql`
-    mutation modifyAnswers($responseIds: [Int]!, $answers: JSON) {
-  modifySurveyAnswers(input: {responseIds: $responseIds, answers: $answers}) {
-    surveyResponses {
-      id
-      data
-      updatedAt
-      lastUpdatedByEmail
-    }
-  }
-}
-    `;
-export const CopyAppearanceDocument = /*#__PURE__*/ gql`
-    mutation copyAppearance($id: Int!, $copyFrom: Int!) {
-  copyAppearance(input: {formElementId: $id, copyFromId: $copyFrom}) {
-    formElement {
-      id
-      backgroundImage
-      backgroundColor
-      secondaryColor
-      backgroundPalette
-      unsplashAuthorName
-      unsplashAuthorUrl
-      backgroundHeight
-      backgroundWidth
-      layout
-      textVariant
-    }
-  }
-}
-    `;
-export const UpdateFormElementBasemapsDocument = /*#__PURE__*/ gql`
-    mutation updateFormElementBasemaps($id: Int!, $mapBasemaps: [Int]) {
-  updateFormElement(input: {id: $id, patch: {mapBasemaps: $mapBasemaps}}) {
-    formElement {
-      id
-      mapBasemaps
-    }
-  }
-}
-    `;
-export const UpdateFormElementMapCameraDocument = /*#__PURE__*/ gql`
-    mutation updateFormElementMapCamera($id: Int!, $mapCameraOptions: JSON) {
-  updateFormElement(
-    input: {id: $id, patch: {mapCameraOptions: $mapCameraOptions}}
-  ) {
-    formElement {
-      id
-      mapCameraOptions
-    }
-  }
-}
-    `;
-export const AllBasemapsDocument = /*#__PURE__*/ gql`
-    query AllBasemaps($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    basemaps {
-      ...BasemapDetails
-    }
-    surveyBasemaps {
-      ...BasemapDetails
-      relatedFormElements {
-        id
-      }
-    }
-  }
-}
-    ${BasemapDetailsFragmentDoc}`;
-export const GetFormElementDocument = /*#__PURE__*/ gql`
-    query GetFormElement($id: Int!) {
-  formElement(id: $id) {
-    ...FormElementDetails
-  }
-}
-    ${FormElementDetailsFragmentDoc}`;
-export const SurveyDocument = /*#__PURE__*/ gql`
-    query Survey($id: Int!, $slug: String!) {
-  projectPublicDetails(slug: $slug) {
-    ...ProjectPublicDetailsMetadata
-  }
-  me {
-    id
-    isAdmin
-    ...ProjectMetadataMeFrag
-  }
-  currentProject: projectBySlug(slug: $slug) {
-    id
-    name
-    url
-    ...MapEssentials
-    region {
-      geojson
-    }
-    ...ProjectMetadata
-  }
-  survey(id: $id) {
-    ...SurveyAppSurvey
-  }
-}
-    ${ProjectPublicDetailsMetadataFragmentDoc}
-${ProjectMetadataMeFragFragmentDoc}
-${MapEssentialsFragmentDoc}
-${ProjectMetadataFragmentDoc}
-${SurveyAppSurveyFragmentDoc}`;
-export const CreateResponseDocument = /*#__PURE__*/ gql`
-    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!) {
-  createSurveyResponse(
-    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice}
-  ) {
-    clientMutationId
-    surveyResponse {
-      id
-    }
-  }
-}
-    `;
-export const UpdateProjectNameDocument = /*#__PURE__*/ gql`
-    mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
-  updateProjectBySlug(
-    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name}}
-  ) {
-    clientMutationId
-    project {
-      id
-      name
-    }
-  }
-}
-    `;
-export const UpdateProjectSettingsDocument = /*#__PURE__*/ gql`
-    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String) {
-  updateProjectBySlug(
-    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey}}
-  ) {
-    clientMutationId
-    project {
-      id
-      name
-      description
-      logoUrl
-      logoLink
-      mapboxPublicKey
-      mapboxSecretKey
-      isFeatured
-    }
-  }
-}
-    `;
-export const UserAdminCountsDocument = /*#__PURE__*/ gql`
-    query UserAdminCounts($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    accessControl
-    participantCount
-    adminCount
-    inviteCounts {
-      count
-      status
-    }
-    groups {
-      id
-      name
-      memberCount
-    }
-    unapprovedParticipantCount
-  }
-}
-    `;
-export const CreateGroupDocument = /*#__PURE__*/ gql`
-    mutation CreateGroup($projectId: Int!, $name: String!) {
-  createGroup(input: {group: {name: $name, projectId: $projectId}}) {
-    group {
-      id
-      name
-      projectId
-    }
-  }
-}
-    `;
-export const ParticipantsDocument = /*#__PURE__*/ gql`
-    query Participants($slug: String!, $offset: Int, $first: Int) {
-  root: projectBySlug(slug: $slug) {
-    id
-    participants(offset: $offset, first: $first) {
-      ...ParticipantListDetails
-    }
-  }
-}
-    ${ParticipantListDetailsFragmentDoc}`;
-export const AdminsDocument = /*#__PURE__*/ gql`
-    query Admins($slug: String!, $offset: Int, $first: Int) {
-  root: projectBySlug(slug: $slug) {
-    id
-    participants: admins(offset: $offset, first: $first) {
-      ...ParticipantListDetails
-    }
-  }
-}
-    ${ParticipantListDetailsFragmentDoc}`;
-export const GroupMembersDocument = /*#__PURE__*/ gql`
-    query GroupMembers($groupId: Int!, $offset: Int, $first: Int) {
-  root: group(id: $groupId) {
-    participants: members(offset: $offset, first: $first) {
-      ...ParticipantListDetails
-    }
-  }
-}
-    ${ParticipantListDetailsFragmentDoc}`;
-export const UserSettingsListsDocument = /*#__PURE__*/ gql`
-    query UserSettingsLists($slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    groups {
-      name
-      id
-    }
-    invitesConnection {
-      nodes {
-        ...InviteDetails
-      }
-    }
-    participants {
-      ...UserListDetails
-    }
-    accessControl
-  }
-}
-    ${InviteDetailsFragmentDoc}
-${UserListDetailsFragmentDoc}`;
-export const UserInfoDocument = /*#__PURE__*/ gql`
-    query UserInfo($userId: Int!, $slug: String!) {
-  user(id: $userId) {
-    id
-    isAdmin
-    canonicalEmail
-    bannedFromForums
-    emailNotificationPreference {
-      unsubscribeAll
-    }
-    groups {
-      name
-      id
-    }
-    onboarded
-    participationStatus
-    profile {
-      userId
-      affiliations
-      bio
-      email
-      fullname
-      nickname
-      picture
-    }
-  }
-  projectBySlug(slug: $slug) {
-    id
-    groups {
-      name
-      id
-    }
-  }
-}
-    `;
-export const ToggleAdminAccessDocument = /*#__PURE__*/ gql`
-    mutation toggleAdminAccess($userId: Int!, $projectId: Int!) {
-  toggleAdminAccess(input: {projectId: $projectId, userId: $userId}) {
-    clientMutationId
-    isAdmin: boolean
-  }
-}
-    `;
-export const SetUserGroupsDocument = /*#__PURE__*/ gql`
-    mutation setUserGroups($userId: Int!, $projectId: Int!, $groupIds: [Int]!) {
-  setUserGroups(
-    input: {userId: $userId, projectId: $projectId, groups: $groupIds}
-  ) {
-    groupIds: integers
-  }
-}
-    `;
-export const ToggleForumPostingBanDocument = /*#__PURE__*/ gql`
-    mutation toggleForumPostingBan($userId: Int!, $projectId: Int!) {
-  toggleForumPostingBan(input: {userId: $userId, projectId: $projectId}) {
-    isBanned: boolean
-  }
-}
-    `;
-export const DeleteGroupDocument = /*#__PURE__*/ gql`
-    mutation deleteGroup($groupId: Int!) {
-  deleteGroup(input: {id: $groupId}) {
-    group {
-      id
-    }
-  }
-}
-    `;
-export const CreateProjectInvitesDocument = /*#__PURE__*/ gql`
-    mutation createProjectInvites($projectId: Int!, $makeAdmin: Boolean!, $groupNames: [String]!, $userDetails: [ProjectInviteOptionInput]!, $sendEmailNow: Boolean!) {
-  createProjectInvites(
-    input: {projectId: $projectId, makeAdmin: $makeAdmin, groupNames: $groupNames, projectInviteOptions: $userDetails, sendEmailNow: $sendEmailNow}
-  ) {
-    projectInvites {
-      ...InviteDetails
-    }
-  }
-}
-    ${InviteDetailsFragmentDoc}`;
-export const ProjectInvitesDocument = /*#__PURE__*/ gql`
-    query ProjectInvites($projectId: Int!, $status: [InviteStatus], $orderBy: InviteOrderBy, $cursor: Cursor, $limit: Int) {
-  project(id: $projectId) {
-    id
-    invitesConnection(
-      statuses: $status
-      orderBy: $orderBy
-      after: $cursor
-      first: $limit
+    uploadConsentDocument(
+      document: $document
+      formElementId: $formElementId
+      version: $version
     ) {
-      edges {
-        node {
+      id
+      componentSettings
+    }
+  }
+`;
+export const SurveyResponsesDocument = /*#__PURE__*/ gql`
+  query SurveyResponses($surveyId: Int!) {
+    survey(id: $surveyId) {
+      form {
+        formElements {
+          ...FormElementExtendedDetails
+        }
+        logicRules {
+          ...SurveyAppRule
+        }
+      }
+      id
+      practiceResponseCount
+      archivedResponseCount
+      submittedResponseCount
+      surveyResponsesConnection {
+        nodes {
+          ...SurveyResponse
+        }
+      }
+    }
+  }
+  ${FormElementExtendedDetailsFragmentDoc}
+  ${SurveyAppRuleFragmentDoc}
+  ${SurveyResponseFragmentDoc}
+`;
+export const SurveyMapDetailsDocument = /*#__PURE__*/ gql`
+  query SurveyMapDetails($surveyId: Int!) {
+    survey(id: $surveyId) {
+      form {
+        formElements {
+          ...FormElementDetails
+        }
+        id
+      }
+    }
+  }
+  ${FormElementDetailsFragmentDoc}
+`;
+export const ToggleResponsesPracticeDocument = /*#__PURE__*/ gql`
+  mutation toggleResponsesPractice($ids: [Int], $isPractice: Boolean) {
+    toggleResponsesPractice(input: { ids: $ids, isPractice: $isPractice }) {
+      surveyResponses {
+        id
+        isPractice
+        archived
+        lastUpdatedByEmail
+        survey {
+          id
+          practiceResponseCount
+          archivedResponseCount
+          submittedResponseCount
+        }
+      }
+    }
+  }
+`;
+export const ArchiveResponsesDocument = /*#__PURE__*/ gql`
+  mutation archiveResponses($ids: [Int], $makeArchived: Boolean) {
+    archiveResponses(input: { ids: $ids, makeArchived: $makeArchived }) {
+      surveyResponses {
+        id
+        isPractice
+        archived
+        lastUpdatedByEmail
+        survey {
+          id
+          practiceResponseCount
+          archivedResponseCount
+          submittedResponseCount
+        }
+      }
+    }
+  }
+`;
+export const ModifyAnswersDocument = /*#__PURE__*/ gql`
+  mutation modifyAnswers($responseIds: [Int]!, $answers: JSON) {
+    modifySurveyAnswers(
+      input: { responseIds: $responseIds, answers: $answers }
+    ) {
+      surveyResponses {
+        id
+        data
+        updatedAt
+        lastUpdatedByEmail
+      }
+    }
+  }
+`;
+export const CopyAppearanceDocument = /*#__PURE__*/ gql`
+  mutation copyAppearance($id: Int!, $copyFrom: Int!) {
+    copyAppearance(input: { formElementId: $id, copyFromId: $copyFrom }) {
+      formElement {
+        id
+        backgroundImage
+        backgroundColor
+        secondaryColor
+        backgroundPalette
+        unsplashAuthorName
+        unsplashAuthorUrl
+        backgroundHeight
+        backgroundWidth
+        layout
+        textVariant
+      }
+    }
+  }
+`;
+export const UpdateFormElementBasemapsDocument = /*#__PURE__*/ gql`
+  mutation updateFormElementBasemaps($id: Int!, $mapBasemaps: [Int]) {
+    updateFormElement(
+      input: { id: $id, patch: { mapBasemaps: $mapBasemaps } }
+    ) {
+      formElement {
+        id
+        mapBasemaps
+      }
+    }
+  }
+`;
+export const UpdateFormElementMapCameraDocument = /*#__PURE__*/ gql`
+  mutation updateFormElementMapCamera($id: Int!, $mapCameraOptions: JSON) {
+    updateFormElement(
+      input: { id: $id, patch: { mapCameraOptions: $mapCameraOptions } }
+    ) {
+      formElement {
+        id
+        mapCameraOptions
+      }
+    }
+  }
+`;
+export const AllBasemapsDocument = /*#__PURE__*/ gql`
+  query AllBasemaps($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      basemaps {
+        ...BasemapDetails
+      }
+      surveyBasemaps {
+        ...BasemapDetails
+        relatedFormElements {
+          id
+        }
+      }
+    }
+  }
+  ${BasemapDetailsFragmentDoc}
+`;
+export const GetFormElementDocument = /*#__PURE__*/ gql`
+  query GetFormElement($id: Int!) {
+    formElement(id: $id) {
+      ...FormElementDetails
+    }
+  }
+  ${FormElementDetailsFragmentDoc}
+`;
+export const SurveyDocument = /*#__PURE__*/ gql`
+  query Survey($id: Int!, $slug: String!) {
+    projectPublicDetails(slug: $slug) {
+      ...ProjectPublicDetailsMetadata
+    }
+    me {
+      id
+      isAdmin
+      ...ProjectMetadataMeFrag
+    }
+    currentProject: projectBySlug(slug: $slug) {
+      id
+      name
+      url
+      ...MapEssentials
+      region {
+        geojson
+      }
+      ...ProjectMetadata
+    }
+    survey(id: $id) {
+      ...SurveyAppSurvey
+    }
+  }
+  ${ProjectPublicDetailsMetadataFragmentDoc}
+  ${ProjectMetadataMeFragFragmentDoc}
+  ${MapEssentialsFragmentDoc}
+  ${ProjectMetadataFragmentDoc}
+  ${SurveyAppSurveyFragmentDoc}
+`;
+export const CreateResponseDocument = /*#__PURE__*/ gql`
+  mutation CreateResponse(
+    $surveyId: Int!
+    $isDraft: Boolean!
+    $bypassedDuplicateSubmissionControl: Boolean!
+    $responseData: JSON!
+    $facilitated: Boolean!
+    $practice: Boolean!
+  ) {
+    createSurveyResponse(
+      input: {
+        surveyId: $surveyId
+        draft: $isDraft
+        responseData: $responseData
+        bypassedSubmissionControl: $bypassedDuplicateSubmissionControl
+        facilitated: $facilitated
+        practice: $practice
+      }
+    ) {
+      clientMutationId
+      surveyResponse {
+        id
+      }
+    }
+  }
+`;
+export const UpdateProjectNameDocument = /*#__PURE__*/ gql`
+  mutation UpdateProjectName(
+    $name: String!
+    $slug: String!
+    $clientMutationId: String
+  ) {
+    updateProjectBySlug(
+      input: {
+        slug: $slug
+        clientMutationId: $clientMutationId
+        patch: { name: $name }
+      }
+    ) {
+      clientMutationId
+      project {
+        id
+        name
+      }
+    }
+  }
+`;
+export const UpdateProjectSettingsDocument = /*#__PURE__*/ gql`
+  mutation UpdateProjectSettings(
+    $slug: String!
+    $clientMutationId: String
+    $name: String
+    $description: String
+    $logoUrl: Upload
+    $logoLink: String
+    $isFeatured: Boolean
+    $mapboxPublicKey: String
+  ) {
+    updateProjectBySlug(
+      input: {
+        slug: $slug
+        clientMutationId: $clientMutationId
+        patch: {
+          name: $name
+          description: $description
+          logoUrl: $logoUrl
+          logoLink: $logoLink
+          isFeatured: $isFeatured
+          mapboxPublicKey: $mapboxPublicKey
+        }
+      }
+    ) {
+      clientMutationId
+      project {
+        id
+        name
+        description
+        logoUrl
+        logoLink
+        mapboxPublicKey
+        mapboxSecretKey
+        isFeatured
+      }
+    }
+  }
+`;
+export const UserAdminCountsDocument = /*#__PURE__*/ gql`
+  query UserAdminCounts($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      accessControl
+      participantCount
+      adminCount
+      inviteCounts {
+        count
+        status
+      }
+      groups {
+        id
+        name
+        memberCount
+      }
+      unapprovedParticipantCount
+    }
+  }
+`;
+export const CreateGroupDocument = /*#__PURE__*/ gql`
+  mutation CreateGroup($projectId: Int!, $name: String!) {
+    createGroup(input: { group: { name: $name, projectId: $projectId } }) {
+      group {
+        id
+        name
+        projectId
+      }
+    }
+  }
+`;
+export const ParticipantsDocument = /*#__PURE__*/ gql`
+  query Participants($slug: String!, $offset: Int, $first: Int) {
+    root: projectBySlug(slug: $slug) {
+      id
+      participants(offset: $offset, first: $first) {
+        ...ParticipantListDetails
+      }
+    }
+  }
+  ${ParticipantListDetailsFragmentDoc}
+`;
+export const AdminsDocument = /*#__PURE__*/ gql`
+  query Admins($slug: String!, $offset: Int, $first: Int) {
+    root: projectBySlug(slug: $slug) {
+      id
+      participants: admins(offset: $offset, first: $first) {
+        ...ParticipantListDetails
+      }
+    }
+  }
+  ${ParticipantListDetailsFragmentDoc}
+`;
+export const GroupMembersDocument = /*#__PURE__*/ gql`
+  query GroupMembers($groupId: Int!, $offset: Int, $first: Int) {
+    root: group(id: $groupId) {
+      participants: members(offset: $offset, first: $first) {
+        ...ParticipantListDetails
+      }
+    }
+  }
+  ${ParticipantListDetailsFragmentDoc}
+`;
+export const UserSettingsListsDocument = /*#__PURE__*/ gql`
+  query UserSettingsLists($slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
+      groups {
+        name
+        id
+      }
+      invitesConnection {
+        nodes {
           ...InviteDetails
         }
       }
-      pageInfo {
-        hasNextPage
-        endCursor
+      participants {
+        ...UserListDetails
+      }
+      accessControl
+    }
+  }
+  ${InviteDetailsFragmentDoc}
+  ${UserListDetailsFragmentDoc}
+`;
+export const UserInfoDocument = /*#__PURE__*/ gql`
+  query UserInfo($userId: Int!, $slug: String!) {
+    user(id: $userId) {
+      id
+      isAdmin
+      canonicalEmail
+      bannedFromForums
+      emailNotificationPreference {
+        unsubscribeAll
+      }
+      groups {
+        name
+        id
+      }
+      onboarded
+      participationStatus
+      profile {
+        userId
+        affiliations
+        bio
+        email
+        fullname
+        nickname
+        picture
+      }
+    }
+    projectBySlug(slug: $slug) {
+      id
+      groups {
+        name
+        id
       }
     }
   }
-}
-    ${InviteDetailsFragmentDoc}`;
-export const InviteEditorModalQueryDocument = /*#__PURE__*/ gql`
-    query InviteEditorModalQuery($inviteId: Int!, $slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    groups {
-      id
-      name
+`;
+export const ToggleAdminAccessDocument = /*#__PURE__*/ gql`
+  mutation toggleAdminAccess($userId: Int!, $projectId: Int!) {
+    toggleAdminAccess(input: { projectId: $projectId, userId: $userId }) {
+      clientMutationId
+      isAdmin: boolean
     }
   }
-  projectInvite(id: $inviteId) {
-    id
-    makeAdmin
-    email
-    fullname
-    status
-    groups {
-      id
-      name
-    }
-    wasUsed
-    inviteEmails {
-      ...InviteEmailDetails
+`;
+export const SetUserGroupsDocument = /*#__PURE__*/ gql`
+  mutation setUserGroups($userId: Int!, $projectId: Int!, $groupIds: [Int]!) {
+    setUserGroups(
+      input: { userId: $userId, projectId: $projectId, groups: $groupIds }
+    ) {
+      groupIds: integers
     }
   }
-}
-    ${InviteEmailDetailsFragmentDoc}`;
-export const UpdateProjectInviteDocument = /*#__PURE__*/ gql`
-    mutation UpdateProjectInvite($id: Int!, $makeAdmin: Boolean!, $email: String!, $fullname: String, $groups: [Int]!) {
-  updateProjectInvite(
-    input: {inviteId: $id, makeAdmin: $makeAdmin, email: $email, groups: $groups, fullname: $fullname}
+`;
+export const ToggleForumPostingBanDocument = /*#__PURE__*/ gql`
+  mutation toggleForumPostingBan($userId: Int!, $projectId: Int!) {
+    toggleForumPostingBan(input: { userId: $userId, projectId: $projectId }) {
+      isBanned: boolean
+    }
+  }
+`;
+export const DeleteGroupDocument = /*#__PURE__*/ gql`
+  mutation deleteGroup($groupId: Int!) {
+    deleteGroup(input: { id: $groupId }) {
+      group {
+        id
+      }
+    }
+  }
+`;
+export const CreateProjectInvitesDocument = /*#__PURE__*/ gql`
+  mutation createProjectInvites(
+    $projectId: Int!
+    $makeAdmin: Boolean!
+    $groupNames: [String]!
+    $userDetails: [ProjectInviteOptionInput]!
+    $sendEmailNow: Boolean!
   ) {
-    projectInvite {
+    createProjectInvites(
+      input: {
+        projectId: $projectId
+        makeAdmin: $makeAdmin
+        groupNames: $groupNames
+        projectInviteOptions: $userDetails
+        sendEmailNow: $sendEmailNow
+      }
+    ) {
+      projectInvites {
+        ...InviteDetails
+      }
+    }
+  }
+  ${InviteDetailsFragmentDoc}
+`;
+export const ProjectInvitesDocument = /*#__PURE__*/ gql`
+  query ProjectInvites(
+    $projectId: Int!
+    $status: [InviteStatus]
+    $orderBy: InviteOrderBy
+    $cursor: Cursor
+    $limit: Int
+  ) {
+    project(id: $projectId) {
       id
-      makeAdmin
+      invitesConnection(
+        statuses: $status
+        orderBy: $orderBy
+        after: $cursor
+        first: $limit
+      ) {
+        edges {
+          node {
+            ...InviteDetails
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+  ${InviteDetailsFragmentDoc}
+`;
+export const InviteEditorModalQueryDocument = /*#__PURE__*/ gql`
+  query InviteEditorModalQuery($inviteId: Int!, $slug: String!) {
+    projectBySlug(slug: $slug) {
+      id
       groups {
         id
         name
       }
+    }
+    projectInvite(id: $inviteId) {
+      id
+      makeAdmin
       email
       fullname
+      status
+      groups {
+        id
+        name
+      }
+      wasUsed
       inviteEmails {
         ...InviteEmailDetails
       }
     }
   }
-}
-    ${InviteEmailDetailsFragmentDoc}`;
-export const DeleteProjectInviteDocument = /*#__PURE__*/ gql`
-    mutation DeleteProjectInvite($id: Int!) {
-  deleteProjectInvite(input: {id: $id}) {
-    projectInvite {
-      id
-    }
-  }
-}
-    `;
-export const SendInviteDocument = /*#__PURE__*/ gql`
-    mutation SendInvite($id: Int!) {
-  sendProjectInvites(input: {inviteIds: [$id]}) {
-    inviteEmails {
-      ...InviteEmailDetails
-      projectInvite {
-        id
-        status
-      }
-    }
-  }
-}
-    ${InviteEmailDetailsFragmentDoc}`;
-export const RenameGroupDocument = /*#__PURE__*/ gql`
-    mutation RenameGroup($id: Int!, $name: String!) {
-  updateGroup(input: {id: $id, patch: {name: $name}}) {
-    group {
-      id
-      name
-    }
-  }
-}
-    `;
-export const SendInvitesDocument = /*#__PURE__*/ gql`
-    mutation SendInvites($ids: [Int]!) {
-  sendProjectInvites(input: {inviteIds: $ids}) {
-    inviteEmails {
-      ...InviteEmailDetails
-      projectInviteId
-      projectInvite {
-        id
-        status
-      }
-    }
-  }
-}
-    ${InviteEmailDetailsFragmentDoc}`;
-export const ProjectInviteEmailStatusSubscriptionDocument = /*#__PURE__*/ gql`
-    subscription ProjectInviteEmailStatusSubscription {
-  projectInviteStateUpdated {
-    invite {
-      opaqueId: id
-      status
-    }
-  }
-}
-    `;
-export const UpdateProfileDocument = /*#__PURE__*/ gql`
-    mutation UpdateProfile($userId: Int!, $affiliations: String, $email: Email, $fullname: String, $nickname: String, $picture: Upload) {
-  updateProfileByUserId(
-    input: {userId: $userId, patch: {affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
+  ${InviteEmailDetailsFragmentDoc}
+`;
+export const UpdateProjectInviteDocument = /*#__PURE__*/ gql`
+  mutation UpdateProjectInvite(
+    $id: Int!
+    $makeAdmin: Boolean!
+    $email: String!
+    $fullname: String
+    $groups: [Int]!
   ) {
-    profile {
-      userId
-      user {
+    updateProjectInvite(
+      input: {
+        inviteId: $id
+        makeAdmin: $makeAdmin
+        email: $email
+        groups: $groups
+        fullname: $fullname
+      }
+    ) {
+      projectInvite {
         id
-        profile {
-          picture
+        makeAdmin
+        groups {
+          id
+          name
+        }
+        email
+        fullname
+        inviteEmails {
+          ...InviteEmailDetails
         }
       }
     }
   }
-}
-    `;
+  ${InviteEmailDetailsFragmentDoc}
+`;
+export const DeleteProjectInviteDocument = /*#__PURE__*/ gql`
+  mutation DeleteProjectInvite($id: Int!) {
+    deleteProjectInvite(input: { id: $id }) {
+      projectInvite {
+        id
+      }
+    }
+  }
+`;
+export const SendInviteDocument = /*#__PURE__*/ gql`
+  mutation SendInvite($id: Int!) {
+    sendProjectInvites(input: { inviteIds: [$id] }) {
+      inviteEmails {
+        ...InviteEmailDetails
+        projectInvite {
+          id
+          status
+        }
+      }
+    }
+  }
+  ${InviteEmailDetailsFragmentDoc}
+`;
+export const RenameGroupDocument = /*#__PURE__*/ gql`
+  mutation RenameGroup($id: Int!, $name: String!) {
+    updateGroup(input: { id: $id, patch: { name: $name } }) {
+      group {
+        id
+        name
+      }
+    }
+  }
+`;
+export const SendInvitesDocument = /*#__PURE__*/ gql`
+  mutation SendInvites($ids: [Int]!) {
+    sendProjectInvites(input: { inviteIds: $ids }) {
+      inviteEmails {
+        ...InviteEmailDetails
+        projectInviteId
+        projectInvite {
+          id
+          status
+        }
+      }
+    }
+  }
+  ${InviteEmailDetailsFragmentDoc}
+`;
+export const ProjectInviteEmailStatusSubscriptionDocument = /*#__PURE__*/ gql`
+  subscription ProjectInviteEmailStatusSubscription {
+    projectInviteStateUpdated {
+      invite {
+        opaqueId: id
+        status
+      }
+    }
+  }
+`;
+export const UpdateProfileDocument = /*#__PURE__*/ gql`
+  mutation UpdateProfile(
+    $userId: Int!
+    $affiliations: String
+    $email: Email
+    $fullname: String
+    $nickname: String
+    $picture: Upload
+  ) {
+    updateProfileByUserId(
+      input: {
+        userId: $userId
+        patch: {
+          affiliations: $affiliations
+          email: $email
+          fullname: $fullname
+          nickname: $nickname
+          picture: $picture
+        }
+      }
+    ) {
+      profile {
+        userId
+        user {
+          id
+          profile {
+            picture
+          }
+        }
+      }
+    }
+  }
+`;
 export const UserIsSuperuserDocument = /*#__PURE__*/ gql`
-    query UserIsSuperuser {
-  currentUserIsSuperuser
-}
-    `;
+  query UserIsSuperuser {
+    currentUserIsSuperuser
+  }
+`;
 export const namedOperations = {
   Query: {
-    ProjectBucketSetting: 'ProjectBucketSetting',
-    MapboxAPIKeys: 'MapboxAPIKeys',
-    GetAcl: 'GetAcl',
-    Groups: 'Groups',
-    VerifyProjectInvite: 'VerifyProjectInvite',
-    GetBasemaps: 'GetBasemaps',
-    GetBasemap: 'GetBasemap',
-    OptionalLayer: 'OptionalLayer',
-    GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
-    GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
-    MapboxKeys: 'MapboxKeys',
-    DraftTableOfContents: 'DraftTableOfContents',
-    layersAndSourcesForItems: 'layersAndSourcesForItems',
-    GetFolder: 'GetFolder',
-    GetLayerItem: 'GetLayerItem',
-    InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',
-    DataSourceUrlProperties: 'DataSourceUrlProperties',
-    GetMetadata: 'GetMetadata',
-    ProjectHostingQuota: 'ProjectHostingQuota',
-    InteractivitySettingsById: 'InteractivitySettingsById',
-    GetBasemapsAndRegion: 'GetBasemapsAndRegion',
-    OfflineSurveys: 'OfflineSurveys',
-    ProjectAccessControlSettings: 'ProjectAccessControlSettings',
-    ProjectMetadata: 'ProjectMetadata',
-    Me: 'Me',
-    ProjectRegion: 'ProjectRegion',
-    GetProjectBySlug: 'GetProjectBySlug',
-    ProjectSlugExists: 'ProjectSlugExists',
-    PublishedTableOfContents: 'PublishedTableOfContents',
-    SimpleProjectList: 'SimpleProjectList',
-    Surveys: 'Surveys',
-    SurveyById: 'SurveyById',
-    SurveyFormEditorDetails: 'SurveyFormEditorDetails',
-    FormElementTypes: 'FormElementTypes',
-    GetPhotos: 'GetPhotos',
-    SurveyResponses: 'SurveyResponses',
-    SurveyMapDetails: 'SurveyMapDetails',
-    AllBasemaps: 'AllBasemaps',
-    GetFormElement: 'GetFormElement',
-    Survey: 'Survey',
-    UserAdminCounts: 'UserAdminCounts',
-    Participants: 'Participants',
-    Admins: 'Admins',
-    GroupMembers: 'GroupMembers',
-    UserSettingsLists: 'UserSettingsLists',
-    UserInfo: 'UserInfo',
-    ProjectInvites: 'ProjectInvites',
-    InviteEditorModalQuery: 'InviteEditorModalQuery',
-    UserIsSuperuser: 'UserIsSuperuser'
+    ProjectBucketSetting: "ProjectBucketSetting",
+    MapboxAPIKeys: "MapboxAPIKeys",
+    GetAcl: "GetAcl",
+    Groups: "Groups",
+    VerifyProjectInvite: "VerifyProjectInvite",
+    GetBasemaps: "GetBasemaps",
+    GetBasemap: "GetBasemap",
+    OptionalLayer: "OptionalLayer",
+    GetOptionalBasemapLayer: "GetOptionalBasemapLayer",
+    GetOptionalBasemapLayerMetadata: "GetOptionalBasemapLayerMetadata",
+    MapboxKeys: "MapboxKeys",
+    DraftTableOfContents: "DraftTableOfContents",
+    layersAndSourcesForItems: "layersAndSourcesForItems",
+    GetFolder: "GetFolder",
+    GetLayerItem: "GetLayerItem",
+    InteractivitySettingsForLayer: "InteractivitySettingsForLayer",
+    DataSourceUrlProperties: "DataSourceUrlProperties",
+    GetMetadata: "GetMetadata",
+    ProjectHostingQuota: "ProjectHostingQuota",
+    InteractivitySettingsById: "InteractivitySettingsById",
+    GetBasemapsAndRegion: "GetBasemapsAndRegion",
+    OfflineSurveys: "OfflineSurveys",
+    ProjectAccessControlSettings: "ProjectAccessControlSettings",
+    ProjectMetadata: "ProjectMetadata",
+    Me: "Me",
+    ProjectRegion: "ProjectRegion",
+    GetProjectBySlug: "GetProjectBySlug",
+    ProjectSlugExists: "ProjectSlugExists",
+    PublishedTableOfContents: "PublishedTableOfContents",
+    SimpleProjectList: "SimpleProjectList",
+    Surveys: "Surveys",
+    SurveyById: "SurveyById",
+    SurveyFormEditorDetails: "SurveyFormEditorDetails",
+    FormElementTypes: "FormElementTypes",
+    GetPhotos: "GetPhotos",
+    SurveyResponses: "SurveyResponses",
+    SurveyMapDetails: "SurveyMapDetails",
+    AllBasemaps: "AllBasemaps",
+    GetFormElement: "GetFormElement",
+    Survey: "Survey",
+    UserAdminCounts: "UserAdminCounts",
+    Participants: "Participants",
+    Admins: "Admins",
+    GroupMembers: "GroupMembers",
+    UserSettingsLists: "UserSettingsLists",
+    UserInfo: "UserInfo",
+    ProjectInvites: "ProjectInvites",
+    InviteEditorModalQuery: "InviteEditorModalQuery",
+    UserIsSuperuser: "UserIsSuperuser",
   },
   Mutation: {
-    UpdateProjectStorageBucket: 'UpdateProjectStorageBucket',
-    updatePublicKey: 'updatePublicKey',
-    updateSecretKey: 'updateSecretKey',
-    UpdateAclType: 'UpdateAclType',
-    AddGroupToAcl: 'AddGroupToAcl',
-    RemoveGroupFromAcl: 'RemoveGroupFromAcl',
-    CreateTableOfContentsItem: 'CreateTableOfContentsItem',
-    CreateArcGISDynamicDataSource: 'CreateArcGISDynamicDataSource',
-    CreateArcGISImageSource: 'CreateArcGISImageSource',
-    CreateSeaSketchVectorSource: 'CreateSeaSketchVectorSource',
-    CreateDataLayer: 'CreateDataLayer',
-    GetOrCreateSprite: 'GetOrCreateSprite',
-    AddImageToSprite: 'AddImageToSprite',
-    ConfirmProjectInvite: 'ConfirmProjectInvite',
-    ResendEmailVerification: 'ResendEmailVerification',
-    RequestInviteOnlyProjectAccess: 'RequestInviteOnlyProjectAccess',
-    CreateBasemap: 'CreateBasemap',
-    UploadBasemap: 'UploadBasemap',
-    UpdateBasemap: 'UpdateBasemap',
-    UpdateBasemapUrl: 'UpdateBasemapUrl',
-    UpdateBasemapLabelsLayer: 'UpdateBasemapLabelsLayer',
-    Toggle3dTerrain: 'Toggle3dTerrain',
-    Set3dTerrain: 'Set3dTerrain',
-    UpdateTerrainExaggeration: 'UpdateTerrainExaggeration',
-    DeleteBasemap: 'DeleteBasemap',
-    UpdateOptionalLayerName: 'UpdateOptionalLayerName',
-    CreateOptionalLayer: 'CreateOptionalLayer',
-    UpdateOptionalLayer: 'UpdateOptionalLayer',
-    DeleteOptionalLayer: 'DeleteOptionalLayer',
-    UpdateOptionalBasemapLayerLayerList: 'UpdateOptionalBasemapLayerLayerList',
-    UpdateOptionalBasemapLayerOptions: 'UpdateOptionalBasemapLayerOptions',
-    UpdateOptionalBasemapLayerMetadata: 'UpdateOptionalBasemapLayerMetadata',
-    UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
-    CreateProject: 'CreateProject',
-    CreateFolder: 'CreateFolder',
-    DeleteBranch: 'DeleteBranch',
-    UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
-    UpdateFolder: 'UpdateFolder',
-    UpdateTableOfContentsItem: 'UpdateTableOfContentsItem',
-    UpdateEnableDownload: 'UpdateEnableDownload',
-    UpdateLayer: 'UpdateLayer',
-    UpdateDataSource: 'UpdateDataSource',
-    UpdateInteractivitySettings: 'UpdateInteractivitySettings',
-    UpdateZIndexes: 'UpdateZIndexes',
-    UpdateRenderUnderType: 'UpdateRenderUnderType',
-    UpdateQueryParameters: 'UpdateQueryParameters',
-    UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
-    UpdateMetadata: 'UpdateMetadata',
-    PublishTableOfContents: 'PublishTableOfContents',
-    updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
-    UpdateProjectRegion: 'UpdateProjectRegion',
-    CreateSurvey: 'CreateSurvey',
-    UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
-    UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',
-    UpdateFormElement: 'UpdateFormElement',
-    UpdateComponentSettings: 'UpdateComponentSettings',
-    UpdateAlternateLanguageSettings: 'UpdateAlternateLanguageSettings',
-    UpdateFormElementBody: 'UpdateFormElementBody',
-    UpdateFormElementOrder: 'UpdateFormElementOrder',
-    AddFormElement: 'AddFormElement',
-    DeleteFormElement: 'DeleteFormElement',
-    UpdateForm: 'UpdateForm',
-    UpdateFormElementBackground: 'UpdateFormElementBackground',
-    SetFormElementBackground: 'SetFormElementBackground',
-    clearFormElementStyle: 'clearFormElementStyle',
-    createLogicRuleForSurvey: 'createLogicRuleForSurvey',
-    UpdateFormLogicRule: 'UpdateFormLogicRule',
-    UpdateLogicCondition: 'UpdateLogicCondition',
-    DeleteLogicCondition: 'DeleteLogicCondition',
-    DeleteLogicRule: 'DeleteLogicRule',
-    AddCondition: 'AddCondition',
-    UpdateSurveyDraftStatus: 'UpdateSurveyDraftStatus',
-    UploadConsentDoc: 'UploadConsentDoc',
-    toggleResponsesPractice: 'toggleResponsesPractice',
-    archiveResponses: 'archiveResponses',
-    modifyAnswers: 'modifyAnswers',
-    copyAppearance: 'copyAppearance',
-    updateFormElementBasemaps: 'updateFormElementBasemaps',
-    updateFormElementMapCamera: 'updateFormElementMapCamera',
-    CreateResponse: 'CreateResponse',
-    UpdateProjectName: 'UpdateProjectName',
-    UpdateProjectSettings: 'UpdateProjectSettings',
-    CreateGroup: 'CreateGroup',
-    toggleAdminAccess: 'toggleAdminAccess',
-    setUserGroups: 'setUserGroups',
-    toggleForumPostingBan: 'toggleForumPostingBan',
-    deleteGroup: 'deleteGroup',
-    createProjectInvites: 'createProjectInvites',
-    UpdateProjectInvite: 'UpdateProjectInvite',
-    DeleteProjectInvite: 'DeleteProjectInvite',
-    SendInvite: 'SendInvite',
-    RenameGroup: 'RenameGroup',
-    SendInvites: 'SendInvites',
-    UpdateProfile: 'UpdateProfile'
+    UpdateProjectStorageBucket: "UpdateProjectStorageBucket",
+    updatePublicKey: "updatePublicKey",
+    updateSecretKey: "updateSecretKey",
+    UpdateAclType: "UpdateAclType",
+    AddGroupToAcl: "AddGroupToAcl",
+    RemoveGroupFromAcl: "RemoveGroupFromAcl",
+    CreateTableOfContentsItem: "CreateTableOfContentsItem",
+    CreateArcGISDynamicDataSource: "CreateArcGISDynamicDataSource",
+    CreateArcGISImageSource: "CreateArcGISImageSource",
+    CreateSeaSketchVectorSource: "CreateSeaSketchVectorSource",
+    CreateDataLayer: "CreateDataLayer",
+    GetOrCreateSprite: "GetOrCreateSprite",
+    AddImageToSprite: "AddImageToSprite",
+    ConfirmProjectInvite: "ConfirmProjectInvite",
+    ResendEmailVerification: "ResendEmailVerification",
+    RequestInviteOnlyProjectAccess: "RequestInviteOnlyProjectAccess",
+    CreateBasemap: "CreateBasemap",
+    UploadBasemap: "UploadBasemap",
+    UpdateBasemap: "UpdateBasemap",
+    UpdateBasemapUrl: "UpdateBasemapUrl",
+    UpdateBasemapLabelsLayer: "UpdateBasemapLabelsLayer",
+    Toggle3dTerrain: "Toggle3dTerrain",
+    Set3dTerrain: "Set3dTerrain",
+    UpdateTerrainExaggeration: "UpdateTerrainExaggeration",
+    DeleteBasemap: "DeleteBasemap",
+    UpdateOptionalLayerName: "UpdateOptionalLayerName",
+    CreateOptionalLayer: "CreateOptionalLayer",
+    UpdateOptionalLayer: "UpdateOptionalLayer",
+    DeleteOptionalLayer: "DeleteOptionalLayer",
+    UpdateOptionalBasemapLayerLayerList: "UpdateOptionalBasemapLayerLayerList",
+    UpdateOptionalBasemapLayerOptions: "UpdateOptionalBasemapLayerOptions",
+    UpdateOptionalBasemapLayerMetadata: "UpdateOptionalBasemapLayerMetadata",
+    UpdateInteractivitySettingsLayers: "UpdateInteractivitySettingsLayers",
+    CreateProject: "CreateProject",
+    CreateFolder: "CreateFolder",
+    DeleteBranch: "DeleteBranch",
+    UpdateTableOfContentsItemChildren: "UpdateTableOfContentsItemChildren",
+    UpdateFolder: "UpdateFolder",
+    UpdateTableOfContentsItem: "UpdateTableOfContentsItem",
+    UpdateEnableDownload: "UpdateEnableDownload",
+    UpdateLayer: "UpdateLayer",
+    UpdateDataSource: "UpdateDataSource",
+    UpdateInteractivitySettings: "UpdateInteractivitySettings",
+    UpdateZIndexes: "UpdateZIndexes",
+    UpdateRenderUnderType: "UpdateRenderUnderType",
+    UpdateQueryParameters: "UpdateQueryParameters",
+    UpdateEnableHighDPIRequests: "UpdateEnableHighDPIRequests",
+    UpdateMetadata: "UpdateMetadata",
+    PublishTableOfContents: "PublishTableOfContents",
+    updateProjectAccessControlSettings: "updateProjectAccessControlSettings",
+    UpdateProjectRegion: "UpdateProjectRegion",
+    CreateSurvey: "CreateSurvey",
+    UpdateSurveyBaseSettings: "UpdateSurveyBaseSettings",
+    UpdateFormElementSketchClass: "UpdateFormElementSketchClass",
+    UpdateFormElement: "UpdateFormElement",
+    UpdateComponentSettings: "UpdateComponentSettings",
+    UpdateAlternateLanguageSettings: "UpdateAlternateLanguageSettings",
+    UpdateFormElementBody: "UpdateFormElementBody",
+    UpdateFormElementOrder: "UpdateFormElementOrder",
+    AddFormElement: "AddFormElement",
+    DeleteFormElement: "DeleteFormElement",
+    UpdateForm: "UpdateForm",
+    UpdateFormElementBackground: "UpdateFormElementBackground",
+    SetFormElementBackground: "SetFormElementBackground",
+    clearFormElementStyle: "clearFormElementStyle",
+    createLogicRuleForSurvey: "createLogicRuleForSurvey",
+    UpdateFormLogicRule: "UpdateFormLogicRule",
+    UpdateLogicCondition: "UpdateLogicCondition",
+    DeleteLogicCondition: "DeleteLogicCondition",
+    DeleteLogicRule: "DeleteLogicRule",
+    AddCondition: "AddCondition",
+    UpdateSurveyDraftStatus: "UpdateSurveyDraftStatus",
+    UploadConsentDoc: "UploadConsentDoc",
+    toggleResponsesPractice: "toggleResponsesPractice",
+    archiveResponses: "archiveResponses",
+    modifyAnswers: "modifyAnswers",
+    copyAppearance: "copyAppearance",
+    updateFormElementBasemaps: "updateFormElementBasemaps",
+    updateFormElementMapCamera: "updateFormElementMapCamera",
+    CreateResponse: "CreateResponse",
+    UpdateProjectName: "UpdateProjectName",
+    UpdateProjectSettings: "UpdateProjectSettings",
+    CreateGroup: "CreateGroup",
+    toggleAdminAccess: "toggleAdminAccess",
+    setUserGroups: "setUserGroups",
+    toggleForumPostingBan: "toggleForumPostingBan",
+    deleteGroup: "deleteGroup",
+    createProjectInvites: "createProjectInvites",
+    UpdateProjectInvite: "UpdateProjectInvite",
+    DeleteProjectInvite: "DeleteProjectInvite",
+    SendInvite: "SendInvite",
+    RenameGroup: "RenameGroup",
+    SendInvites: "SendInvites",
+    UpdateProfile: "UpdateProfile",
   },
   Subscription: {
-    ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
+    ProjectInviteEmailStatusSubscription:
+      "ProjectInviteEmailStatusSubscription",
   },
   Fragment: {
-    UpdateTerrainExaggeration: 'UpdateTerrainExaggeration',
-    NewLabelsLayer: 'NewLabelsLayer',
-    NewTerrain: 'NewTerrain',
-    NewBasemap: 'NewBasemap',
-    NewQueryParameters: 'NewQueryParameters',
-    UpdateHighDPI: 'UpdateHighDPI',
-    UpdateFormat: 'UpdateFormat',
-    NewGLStyle: 'NewGLStyle',
-    NewRenderUnder: 'NewRenderUnder',
-    NewZIndex: 'NewZIndex',
-    NewElement: 'NewElement',
-    LogicRuleEditorFormElement: 'LogicRuleEditorFormElement',
-    LogicRuleEditorRule: 'LogicRuleEditorRule',
-    NewRule: 'NewRule',
-    NewSurvey: 'NewSurvey',
-    NewGroup: 'NewGroup',
-    NewInviteEmail: 'NewInviteEmail',
-    NewLayerOptions: 'NewLayerOptions',
-    UpdateAlternateLanguageSettings: 'UpdateAlternateLanguageSettings',
-    UpdateComponentSettings: 'UpdateComponentSettings',
-    UpdateBody: 'UpdateBody',
-    BasemapDetails: 'BasemapDetails',
-    MapEssentials: 'MapEssentials',
-    ProjectMetadata: 'ProjectMetadata',
-    ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
-    ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
-    SurveyListDetails: 'SurveyListDetails',
-    AddFormElementTypeDetails: 'AddFormElementTypeDetails',
-    FormElementDetails: 'FormElementDetails',
-    SketchClassDetails: 'SketchClassDetails',
-    FormElementFullDetails: 'FormElementFullDetails',
-    LogicRuleDetails: 'LogicRuleDetails',
-    SurveyResponse: 'SurveyResponse',
-    FormElementExtendedDetails: 'FormElementExtendedDetails',
-    SurveyAppRule: 'SurveyAppRule',
-    SurveyAppFormElement: 'SurveyAppFormElement',
-    SurveyAppSurvey: 'SurveyAppSurvey',
-    ParticipantListDetails: 'ParticipantListDetails',
-    UserListDetails: 'UserListDetails',
-    InviteDetails: 'InviteDetails',
-    InviteEmailDetails: 'InviteEmailDetails'
-  }
-}
+    LogicRuleEditorFormElement: "LogicRuleEditorFormElement",
+    LogicRuleEditorRule: "LogicRuleEditorRule",
+    BasemapDetails: "BasemapDetails",
+    MapEssentials: "MapEssentials",
+    ProjectMetadata: "ProjectMetadata",
+    ProjectPublicDetailsMetadata: "ProjectPublicDetailsMetadata",
+    ProjectMetadataMeFrag: "ProjectMetadataMeFrag",
+    SurveyListDetails: "SurveyListDetails",
+    AddFormElementTypeDetails: "AddFormElementTypeDetails",
+    FormElementDetails: "FormElementDetails",
+    SketchClassDetails: "SketchClassDetails",
+    FormElementFullDetails: "FormElementFullDetails",
+    LogicRuleDetails: "LogicRuleDetails",
+    SurveyResponse: "SurveyResponse",
+    FormElementExtendedDetails: "FormElementExtendedDetails",
+    SurveyAppRule: "SurveyAppRule",
+    SurveyAppFormElement: "SurveyAppFormElement",
+    SurveyAppSurvey: "SurveyAppSurvey",
+    ParticipantListDetails: "ParticipantListDetails",
+    UserListDetails: "UserListDetails",
+    InviteDetails: "InviteDetails",
+    InviteEmailDetails: "InviteEmailDetails",
+  },
+};

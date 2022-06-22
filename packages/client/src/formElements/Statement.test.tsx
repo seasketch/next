@@ -2,7 +2,8 @@
 import React from "react";
 import fromMarkdown from "./fromMarkdown";
 import Statement from "./Statement";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = fromMarkdown(`
 # Welcome to the Survey
@@ -14,6 +15,7 @@ Enjoy your stay!
 test("Component renders with custom body", async () => {
   render(
     <Statement
+      {...commonFormElementArgs}
       body={body}
       id={1}
       onChange={() => null}

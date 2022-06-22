@@ -7,10 +7,11 @@ import ProfileContextMenu from "./ProfileContextMenu";
 export default function ProfileControl() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const { loginWithRedirect } = useAuth0();
-  const { t, i18n } = useTranslation(["nav"]);
-  const handleDocumentClick = useCallback(() => setProfileModalOpen(false), [
-    setProfileModalOpen,
-  ]);
+  const { t } = useTranslation(["nav"]);
+  const handleDocumentClick = useCallback(
+    () => setProfileModalOpen(false),
+    [setProfileModalOpen]
+  );
 
   useEffect(() => {
     if (profileModalOpen) {

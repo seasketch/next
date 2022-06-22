@@ -1,11 +1,12 @@
-import React, { useContext, useEffect } from "react";
+import React, { ReactNode, useContext, useEffect } from "react";
 import { AdminMobileHeaderContext } from "./AdminMobileHeaderContext";
-import { useMediaQuery } from "beautiful-react-hooks";
+import useMediaQuery from "beautiful-react-hooks/useMediaQuery";
 
 // @ts-ignore
 const PhoneAccessGate: React.FunctionComponent<{
   heading?: string;
   message?: string;
+  children?: ReactNode;
 }> = ({ heading, message, children }) => {
   const { setState: setHeaderState } = useContext(AdminMobileHeaderContext);
   const isPhone = useMediaQuery("(max-width: 767px)");

@@ -1,12 +1,32 @@
-import { ApolloClient } from "@apollo/client";
 import { canonicalStringify } from "@apollo/client/cache";
 import { DocumentNode, OperationDefinitionNode } from "graphql";
 import localforage from "localforage";
 import debounce from "lodash.debounce";
-import ServiceWorkerWindow, { MESSAGE_TYPES } from "../ServiceWorkerWindow";
-import { ByArgsStrategy, Strategy } from "./strategies";
+import { MESSAGE_TYPES } from "../ServiceWorkerWindow";
 
-// TODO: clear cache on logout
+declare const self: ServiceWorkerGlobalScope;
+
+type StrategyBase = {
+  query: DocumentNode;
+  queryName: string;
+  swr?: boolean;
+};
+
+type StaticStrategy = {
+  type: "static";
+} & StrategyBase;
+
+type LRUStrategy = {
+  type: "lru";
+  limit: number;
+} & StrategyBase;
+
+type ByArgsStrategy = {
+  type: "byArgs";
+  key: string;
+} & StrategyBase;
+
+type Strategy = StaticStrategy | LRUStrategy | ByArgsStrategy;
 
 const STRATEGY_ARGS_KEY = `graphql-query-cache-strategy-args`;
 const ENABLED_KEY = `graphql-query-cache-enabled`;
@@ -35,19 +55,13 @@ export class GraphqlQueryCache {
   endpoint: string;
   strategies: Strategy[];
   strategyArgs: { [key: string]: string[] } = {};
-  apolloClient: ApolloClient<any>;
   private enabled?: boolean;
   cachePruningDebounceInterval = process.env.NODE_ENV === "test" ? 1 : 500;
 
-  constructor(
-    endpoint: string,
-    strategies: Strategy[],
-    apolloClient: ApolloClient<any>
-  ) {
+  constructor(endpoint: string, strategies: Strategy[]) {
     this.restoreEnabledState();
     this.endpoint = endpoint;
     this.strategies = strategies;
-    this.apolloClient = apolloClient;
     // Validate strategy configuration
     const strategiesByKey: { [key: string]: Strategy } = {};
     const strategiesById: { [id: string]: Strategy } = {};
@@ -72,42 +86,6 @@ export class GraphqlQueryCache {
     }
     // Pull serialized configuration from localforage
     this.updateStrategyArgs();
-    // Setup swr event listeners
-    import("../../generated/graphql").then((graphql) => {
-      navigator.serviceWorker.addEventListener("message", async (e) => {
-        if (
-          e.data.type &&
-          e.data.type === MESSAGE_TYPES.GRAPHQL_CACHE_REVALIDATION &&
-          e.data.queryName &&
-          e.data.variables
-        ) {
-          const { queryName, variables } = e.data as {
-            queryName: string;
-            variables: any;
-          };
-          const docs = graphql as unknown as {
-            [key: string]: DocumentNode;
-          };
-          if (`${queryName}Document` in docs) {
-            const query = docs[`${queryName}Document`];
-            const cacheKey = this.makeCacheKey(queryName, variables);
-            const response = await caches.match(cacheKey);
-            if (response) {
-              const { data } = await response.json();
-              if (data) {
-                apolloClient.cache.writeQuery({
-                  query,
-                  data,
-                  variables,
-                });
-              }
-            }
-          } else {
-            throw new Error(`Unrecognized query ${queryName}`);
-          }
-        }
-      });
-    });
   }
 
   get enabledByDefault() {
@@ -128,18 +106,6 @@ export class GraphqlQueryCache {
       const enabled = await localforage.getItem<boolean>(ENABLED_KEY);
       this.enabled = enabled || this.enabledByDefault;
       return this.enabled;
-    }
-  }
-
-  /**
-   * Enable or disable the cache
-   * @param enabled Boolean
-   */
-  async setEnabled(enabled: boolean) {
-    this.enabled = enabled;
-    localforage.setItem(ENABLED_KEY, enabled);
-    if ("serviceWorker" in navigator) {
-      ServiceWorkerWindow.updateGraphqlQueryCacheStrategyEnabled(enabled);
     }
   }
 
@@ -170,24 +136,6 @@ export class GraphqlQueryCache {
   }
 
   /**
-   * Retrieve the settings for a strategy identified by the `key` option
-   *
-   * @param key Key specified when constructing the strategy
-   * @returns any
-   */
-  getStrategyArgs(key: string) {
-    const strategy = this.strategies.find((s) => isByArgs(s) && s.key === key);
-    if (!strategy) {
-      throw new Error(`Could not find strategy with key=${key}`);
-    }
-    if (Array.isArray(this.strategyArgs[key])) {
-      return this.strategyArgs[key].map((args) => JSON.parse(args));
-    } else {
-      return [];
-    }
-  }
-
-  /**
    * Sets argument values for a strategy identified by the `key` option.
    *
    * Example usage
@@ -211,9 +159,6 @@ export class GraphqlQueryCache {
     }
     this.strategyArgs[key] = values.map((v) => canonicalStringify(v));
     await localforage.setItem(STRATEGY_ARGS_KEY, this.strategyArgs);
-    if ("serviceWorker" in navigator) {
-      ServiceWorkerWindow.updateGraphqlQueryCacheStrategyArgs();
-    }
   }
 
   /**
@@ -244,6 +189,132 @@ export class GraphqlQueryCache {
         return s.queryName === operationName;
       }
     });
+  }
+
+  /**
+   * Can be used by event.respondWith in a ServiceWorker to intercept requests
+   * and provide cached responses. In case the request does not match any known
+   * strategies it will simply respond with an unmodified network fetch.
+   *
+   * If a strategy employs the swr flag, it will kick off the revalidation and
+   * cache update process.
+   *
+   * @param url URL object (parsed in service worker fetch handler)
+   * @param event FetchEvent
+   * @returns Promise<Response>
+   */
+  async handleRequest(url: URL, event: FetchEvent): Promise<Response> {
+    if (!(await this.isEnabled())) {
+      return fetch(event.request);
+    }
+    if (event.request.headers.get("content-type") !== "application/json") {
+      // multipart form data mutation or query
+      return fetch(event.request);
+    }
+    const { operationName, variables, query } = (await event.request
+      .clone()
+      .json()) as {
+      operationName: string;
+      variables?: any;
+      query: string;
+    };
+    const strategies = this.matchingStrategies(operationName, variables);
+    if (strategies.length && query && query.trim().slice(0, 5) === "query") {
+      const cacheReq = this.makeCacheKey(operationName, variables);
+      const cached = await this.matchCache(cacheReq, strategies);
+      if (cached) {
+        this.putToCaches(strategies, cacheReq, cached.clone()).then(() => {
+          if (strategies.find((s) => s.swr === true)) {
+            this.swr(event.request, cacheReq, variables, strategies);
+          }
+        });
+        return cached;
+      } else {
+        const response = await fetch(event.request);
+        this.putToCaches(strategies, cacheReq, response.clone());
+        return response;
+      }
+    } else {
+      try {
+        // If an unrelated operation, just pass it along normally
+        const response = await fetch(event.request);
+        return response;
+      } catch (e) {
+        // This is will fail only due to a network error, such as being offline
+        // or a CORS issue
+        // TODO: notify client they could be offline
+        return new Response("Failed to fetch", { status: 500 });
+      }
+    }
+  }
+
+  /**
+   * Implements the revalidation component of stale-while-revalidate. SWR means
+   * that first requests are responded to with cached data (if available), then
+   * a request is made in the background to update the cache with the most up to
+   * date information. The swr function running in ServiceWorker notifies the
+   * main window client via postMessage when a cache has been revalidated, and
+   * it will update the Apollo cache.
+   *
+   * Using swr means cached data is immediately displayed in the client, then
+   * updated as soon as the revalidation request is fetched.
+   *
+   * @param request Original fetch request
+   * @param cacheKey Request that acts as the cache key
+   * @param variables Variables included in graphql request (as plain object)
+   * @param strategies Array of impacted strategies
+   */
+  private async swr(
+    request: Request,
+    cacheKey: Request,
+    variables: any,
+    strategies: Strategy[]
+  ) {
+    try {
+      const queryName = strategies[0].queryName;
+      // 1) fetch in background
+      const response = await fetch(request);
+      if (response.ok) {
+        // 2) update caches for each strategy (all with same query, regardless of swr flag)
+        // make sure to await this operation so the cache is ready for
+        await this.putToCaches(strategies, cacheKey, response);
+        // 3) signal to main window that cache has been updated
+        const clients = await self.clients.matchAll({ type: "window" });
+        for (const client of clients) {
+          client.postMessage({
+            type: MESSAGE_TYPES.GRAPHQL_CACHE_REVALIDATION,
+            queryName,
+            variables,
+          });
+        }
+      }
+    } catch (e) {
+      // Not necessary to do anything if offline
+      // TODO: consider notifying the related client that the user may be
+      // offline, or if it's a server error show a toast message
+    }
+  }
+
+  /**
+   * For each given strategy, updates the cache with the latest response. Uses
+   * `deleteAndPut` which effectively makes each cache an LRU queue.
+   *
+   * @param strategies Strategy[] Strategies to be updated
+   * @param cacheReq Request that acts as a cache key
+   * @param response Response from server
+   * @returns
+   */
+  private async putToCaches(
+    strategies: Strategy[],
+    cacheReq: Request,
+    response: Response
+  ) {
+    return Promise.all(
+      strategies.map(async (strategy) => {
+        const cache = await this.openCache(strategy);
+        return this.deleteAndPut(cache, cacheReq, response);
+      })
+    ).then(this.debouncedPruneCaches);
   }
 
   // This will effectively make each cache an lru queue since
@@ -280,6 +351,16 @@ export class GraphqlQueryCache {
       })
     );
   }
+
+  /**
+   * Happens after request handling, when caches have already been populated.
+   * Used to make sure each cache is under any entry limits.
+   */
+  private debouncedPruneCaches = debounce(
+    this.pruneCaches,
+    this.cachePruningDebounceInterval,
+    { maxWait: this.cachePruningDebounceInterval }
+  ).bind(this);
 
   /**
    * Returns the first cached response found in the given strategies. Use as
@@ -450,6 +531,132 @@ export class GraphqlQueryCache {
  */
 function isByArgs(strategy: Strategy): strategy is ByArgsStrategy {
   return strategy.type === "byArgs";
+}
+
+/**
+ * Static cache strategies will store a single cached response for a given query
+ * Not particularly useful for queries that have variables, unless the same vars
+ * are always used.
+ *
+ * @param query DocumentNode GraphQL query document
+ * @param options.swr Boolean Whether to enable stale-while-revalidate for this cache
+ * @returns
+ */
+export function staticStrategy(
+  query: DocumentNode,
+  options?: { swr?: boolean }
+): StaticStrategy {
+  options = options || { swr: false };
+  options.swr = options.swr || false;
+  return {
+    type: "static",
+    query,
+    queryName: operationName(query),
+    swr: options.swr,
+  };
+}
+
+/**
+ * Stores results of queries up to the given entry `limit`, after which the
+ * least-recently-used entries will be removed to make space for new entries.
+ *
+ * Useful for working with queries that will be called with different variables
+ *
+ * @param query DocumentNode GraphQL query document
+ * @param limit Integer Number of cache entries to store
+ * @param options.swr Boolean Whether to enable stale-while-revalidate for this cache
+ * @returns
+ */
+export function lruStrategy(
+  query: DocumentNode,
+  limit: number,
+  options?: { swr?: boolean }
+): LRUStrategy {
+  options = options || { swr: false };
+  options.swr = options.swr || false;
+  return {
+    type: "lru",
+    query,
+    queryName: operationName(query),
+    limit,
+    swr: options.swr,
+  };
+}
+
+/**
+ * Caches the given query if variables match those set using `setStrategyArgs()`
+ *
+ * Example query:
+ *
+ * ```graphql
+ * query ProjectBySlug($slug: String!) {
+ *   projectBySlug(slug: $slug) {
+ *     id
+ *     name
+ *   }
+ * }
+ * ```
+ *
+ * With following strategy you could cache certain projects for offline use.
+ *
+ * ```typescript
+ *
+ * const graphqlQueryCache = new GraphqlQueryCache("https://...", [
+ *   byArgsStrategy(
+ *     namedOperations.Query.ProjectsBySlug,
+ *     "selected-offline-projects",
+ *     {swr: true}
+ *   );
+ * ]);
+ *
+ * graphqlQueryCache.setStrategyArgs("selected-offline-projects", [
+ *   {slug: "maldives"},
+ *   {slug: "azores"}
+ * ]);
+ * ```
+ *
+ * In this way the user could be enabled to cache specific data they need for
+ * offline use.
+ *
+ * @param query DocumentNode GraphQL query document
+ * @param key String Used to identify strategy for providing arguments. Must be unique.
+ * @param options.swr Boolean Whether to enable stale-while-revalidate for this cache
+ * @returns
+ */
+export function byArgsStrategy(
+  query: DocumentNode,
+  key: string,
+  options?: { swr?: boolean }
+): ByArgsStrategy {
+  options = options || { swr: false };
+  options.swr = options.swr || false;
+  return {
+    type: "byArgs",
+    query,
+    queryName: operationName(query),
+    key,
+    swr: options.swr,
+  };
+}
+
+/**
+ * Extracts the first operation name from a given DocumentNode. Assumes only
+ * a single operation per request, which is typical when using Apollo though
+ * usage of plugins to consolidate queries into a single request would pose
+ * problems.
+ *
+ * @param doc DocumentNode Graphql query document
+ * @returns
+ */
+function operationName(doc: DocumentNode): string {
+  const op = doc.definitions.find(
+    (d: any) => d.kind === "OperationDefinition"
+  ) as OperationDefinitionNode | undefined;
+  if (op?.name) {
+    return op.name.value;
+  } else {
+    throw new Error("Could not find OperationDefinition");
+  }
 }
 
 function getGqlString(doc: DocumentNode) {

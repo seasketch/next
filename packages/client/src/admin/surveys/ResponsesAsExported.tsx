@@ -1,27 +1,19 @@
-import { useMemo, useState, useEffect } from "react";
-import { Trans, useTranslation } from "react-i18next";
-import { getAnswers, getDataForExport } from "../../formElements/ExportUtils";
-import { sortFormElements } from "../../formElements/sortFormElements";
+import { useMemo } from "react";
+import { getDataForExport } from "../../formElements/ExportUtils";
 import {
   FormElementDetailsFragment,
   SurveyAppRuleFragment,
   SurveyResponseFragment,
-  useSurveyResponsesQuery,
 } from "../../generated/graphql";
 import {
   useTable,
   useSortBy,
-  useBlockLayout,
   useFlexLayout,
   useResizeColumns,
   Row,
   Column,
   useGlobalFilter,
 } from "react-table";
-import { ChevronDownIcon, UploadIcon } from "@heroicons/react/outline";
-import DownloadIcon from "../../components/DownloadIcon";
-import Papa from "papaparse";
-import ExportResponsesModal from "./ExportResponsesModal";
 
 function valueFormatter(accessor: string) {
   return (row: any): string => {
@@ -49,10 +41,9 @@ interface Props {
 export default function ResponsesAsExported(props: Props) {
   const { rows: rowData, columns: exportColumnNames } = useMemo(() => {
     return getDataForExport(props.responses, props.formElements, props.rules);
-  }, [props.responses]);
+  }, [props.formElements, props.responses, props.rules]);
 
   const columns = useMemo<Column[]>(() => {
-    let columns: string[] = [];
     return [
       {
         Header: "id",
@@ -106,15 +97,8 @@ export default function ResponsesAsExported(props: Props) {
     useResizeColumns
   );
 
-  const {
-    getTableProps,
-    getTableBodyProps,
-    headerGroups,
-    rows,
-    prepareRow,
-    resetResizing,
-    setGlobalFilter,
-  } = tableInstance;
+  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
+    tableInstance;
 
   return (
     <div

@@ -1,10 +1,5 @@
-import {
-  FormElement,
-  FormElementFullDetailsFragment,
-  FormElementType,
-  Maybe,
-} from "../../generated/graphql";
-import { collectHeaders, collectQuestion, collectText } from "./collectText";
+import { FormElementFullDetailsFragment } from "../../generated/graphql";
+import { collectHeaders, collectQuestion } from "./collectText";
 import {
   DragDropContext,
   Draggable,
@@ -15,10 +10,8 @@ import {
 import Spinner from "../../components/Spinner";
 import { CSSProperties, useState } from "react";
 import { components } from "../../formElements";
-import { defaultFormElementIcon } from "../../formElements/FormElement";
 import { sortFormElements } from "../../formElements/sortFormElements";
 import { Trans, useTranslation } from "react-i18next";
-import Button from "../../components/Button";
 import AddFormElementButton from "./AddFormElementButton";
 import { useHistory } from "react-router-dom";
 
@@ -171,7 +164,6 @@ export default function SortableFormElementList(props: Props) {
       >
         <Droppable droppableId="droppable">
           {(provided, snapshot) => {
-            const isDragging = snapshot.isDraggingOver;
             return (
               <div
                 className="space-y-2"

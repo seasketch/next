@@ -1,6 +1,5 @@
 import { getLayout } from "../formElements/FormElement";
 import {
-  FormElement,
   FormElementDetailsFragment,
   FormElementLayout,
 } from "../generated/graphql";

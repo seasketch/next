@@ -1,18 +1,17 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { GeoJSONSource, LngLatLike, Map } from "mapbox-gl";
+import { LngLatLike, Map } from "mapbox-gl";
 import { useEffect, useRef, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
-import { Feature, FeatureCollection, Point } from "geojson";
-import { useMediaQuery } from "beautiful-react-hooks";
+import { Feature, FeatureCollection } from "geojson";
+import useMediaQuery from "beautiful-react-hooks/useMediaQuery";
 import DrawPoint from "./DrawPoint";
 import DirectSelect from "./DirectSelect";
 import SimpleSelect from "./SimpleSelect";
 import getKinks from "@turf/kinks";
 import styles from "./styles";
-import debounce from "lodash.debounce";
 import UnfinishedFeatureSelect from "./UnfinishedFeatureSelect";
 
 function hasKinks(feature?: Feature<any>) {
@@ -82,9 +81,8 @@ export default function useMapboxGLDraw(
   const drawMode = glDrawMode(isSmall, geometryType);
   const [state, _setState] = useState(DigitizingState.NO_SELECTION);
   const [disabled, setDisabled] = useState(false);
-  const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
-    null
-  );
+  const [dragTarget, setDragTarget] =
+    useState<DigitizingDragTarget | null>(null);
   const [selection, setSelection] = useState<null | Feature<any>>(null);
   const handlerState = useRef<{
     draw?: MapboxDraw;
@@ -240,7 +238,6 @@ export default function useMapboxGLDraw(
           }
         },
         handleKinks: function (e: { hasKinks: boolean }) {
-          const mode = handlerState.current.draw?.getMode() as string;
           setSelfIntersects(e.hasKinks);
         },
       };
@@ -254,6 +251,7 @@ export default function useMapboxGLDraw(
       // map.on("draw.delete", handlers.delete);
       map.on("draw.modechange", handlers.modeChange);
       map.on("draw.selectionchange", handlers.selectionChange);
+      const currentRef = handlerState.current;
       return () => {
         if (map && draw) {
           try {
@@ -261,7 +259,7 @@ export default function useMapboxGLDraw(
           } catch (e) {
             console.warn("exception thrown when removing draw control");
           }
-          handlerState.current.draw = undefined;
+          currentRef.draw = undefined;
           setDraw(null);
           map.off("draw.create", handlers.create);
           map.off("draw.update", handlers.update);
@@ -274,7 +272,16 @@ export default function useMapboxGLDraw(
         }
       };
     }
-  }, [map, geometryType, disabled]);
+  }, [
+    map,
+    geometryType,
+    disabled,
+    initialValue,
+    isSmall,
+    selfIntersects,
+    onCancelNewShape,
+    state,
+  ]);
 
   useEffect(() => {
     if (disabled) {

@@ -1,15 +1,15 @@
 /* eslint-disable i18next/no-literal-string */
-import React from "react";
-import fromMarkdown from "./fromMarkdown";
 import ThankYou, { ThankYouProps } from "./ThankYou";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { MemoryRouter, Router, useHistory } from "react-router";
+import { render, screen, waitFor } from "@testing-library/react";
+import { Router } from "react-router";
 import { createMemoryHistory } from "history";
 import { SurveyContext } from "./FormElement";
 import { TestSurveyContextValue } from "./testContext";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = ThankYou.defaultBody;
 const makeArgs = (componentSettings: ThankYouProps) => ({
+  ...commonFormElementArgs,
   id: 1,
   body,
   onChange: jest.fn(),
@@ -20,12 +20,6 @@ const makeArgs = (componentSettings: ThankYouProps) => ({
     ...ThankYou.defaultProps!.componentSettings,
     ...componentSettings,
   },
-  projectName: "Project A",
-  projectUrl: "https://example.com/a",
-  surveyUrl: "https://example.com/a/surveys/1",
-  surveySupportsFacilitation: true,
-  isFacilitatedResponse: false,
-  alternateLanguageSettings: {},
 });
 
 test("Component renders with custom body", async () => {

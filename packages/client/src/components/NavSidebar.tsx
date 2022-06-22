@@ -1,16 +1,6 @@
 import React, { ReactNode } from "react";
-import { Trans } from "react-i18next";
 import Badge from "./Badge";
-import Button from "./Button";
-import {
-  Link,
-  NavLink,
-  Route,
-  Switch,
-  useParams,
-  useRouteMatch,
-} from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
+import { NavLink } from "react-router-dom";
 
 export interface NavSidebarItem {
   label: string;
@@ -51,7 +41,11 @@ export default function NavSidebar(props: NavSidebarProps) {
         </div>
       )}
       {props.items.map((item) => (
-        <NavSidebarItem key={item.label} item={item} animate={props.animate} />
+        <NavSidebarItemComp
+          key={item.label}
+          item={item}
+          animate={props.animate}
+        />
       ))}
 
       <div className="flex-1 min-h-0">
@@ -63,7 +57,7 @@ export default function NavSidebar(props: NavSidebarProps) {
   );
 }
 
-function NavSidebarItem({
+function NavSidebarItemComp({
   item,
   animate,
 }: {

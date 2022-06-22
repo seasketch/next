@@ -7,10 +7,7 @@ import { MouseEventHandler, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { SurveyContext } from "../formElements/FormElement";
-import {
-  FormElementLayout,
-  SurveyAppFormElementFragment,
-} from "../generated/graphql";
+import { SurveyAppFormElementFragment } from "../generated/graphql";
 import { SurveyStyleContext } from "./appearance";
 import LanguageSelector from "./LanguageSelector";
 import { SurveyPagingState } from "./paging";

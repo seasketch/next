@@ -4,6 +4,7 @@ interface WarningProps {
   disabled?: boolean;
   className?: string;
   level?: "info" | "warning" | "error";
+  children?: ReactNode;
 }
 
 const Warning: FunctionComponent<WarningProps> = ({

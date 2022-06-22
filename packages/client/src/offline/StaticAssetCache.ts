@@ -228,7 +228,7 @@ class StaticAssetCache {
    * @returns
    */
   async hasFile(entry: string | PrecacheEntry) {
-    const [url, cacheKey] = this.cacheKeyForEntry(entry);
+    const cacheKey = this.cacheKeyForEntry(entry)[1];
     const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
     const match = await cache.match(cacheKey);
     return match;

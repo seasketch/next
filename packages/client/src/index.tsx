@@ -1,4 +1,3 @@
-import "./wdyr";
 import React, { Suspense, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
@@ -24,7 +23,6 @@ import * as Sentry from "@sentry/react";
 import { Integrations } from "@sentry/tracing";
 import { createBrowserHistory } from "history";
 import SW from "./offline/ServiceWorkerWindow";
-import { namedOperations } from "./generated/graphql";
 import { GraphqlQueryCache } from "./offline/GraphqlQueryCache";
 import { strategies } from "./offline/GraphqlQueryCache/strategies";
 import { GraphqlQueryCacheContext } from "./offline/GraphqlQueryCache/useGraphqlQueryCache";
@@ -64,7 +62,7 @@ function Auth0ProviderWithRouter(props: any) {
     <Auth0Provider
       {...props}
       onRedirectCallback={(appState) => {
-        if (appState.returnTo) {
+        if (appState?.returnTo) {
           history.replace(appState.returnTo);
         } else {
           history.replace("/");
@@ -79,21 +77,11 @@ function Auth0ProviderWithRouter(props: any) {
 }
 
 function ApolloProviderWithToken(props: any) {
-  const {
-    getAccessTokenSilently,
-    getAccessTokenWithPopup,
-    user,
-    isAuthenticated,
-  } = useAuth0();
-  const [
-    client,
-    setClient,
-  ] = useState<ApolloClient<NormalizedCacheObject> | null>(null);
-  const [
-    graphqlQueryCache,
-    setGraphqlQueryCache,
-  ] = useState<GraphqlQueryCache>();
-  const { Survey, ProjectMetadata, SimpleProjectList } = namedOperations.Query;
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const [client, setClient] =
+    useState<ApolloClient<NormalizedCacheObject> | null>(null);
+  const [graphqlQueryCache, setGraphqlQueryCache] =
+    useState<GraphqlQueryCache>();
 
   const httpLink = createUploadLink({
     uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!,
@@ -198,6 +186,7 @@ function ApolloProviderWithToken(props: any) {
     }
 
     init().catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (client && graphqlQueryCache) {

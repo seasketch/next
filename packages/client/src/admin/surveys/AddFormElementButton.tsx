@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { components } from "../../formElements";
-import { defaultFormElementIcon } from "../../formElements/FormElement";
 import {
   FormElementLayout,
   FormElementTextVariant,
@@ -38,7 +37,7 @@ export default function AddFormElementButton({
   const { t } = useTranslation("admin:surveys");
   const [menuOpen, setMenuOpen] = useState(false);
   const onError = useGlobalErrorHandler();
-  const [addFormElement, addFormElementState] = useAddFormElementMutation({
+  const [addFormElement] = useAddFormElementMutation({
     onError,
   });
 

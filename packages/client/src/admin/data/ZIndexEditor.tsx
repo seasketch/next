@@ -36,12 +36,14 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
     let setting = RenderUnderType.Labels;
     if (item.children) {
       for (const child of item.children as TreeItem[]) {
+        // @ts-ignore
         setting = layerLookup.current[child.id].renderUnder;
         if (setting === RenderUnderType.None) {
           return setting;
         }
       }
     } else {
+      // @ts-ignore
       setting = layerLookup.current[item.id].renderUnder;
     }
     return setting;
@@ -67,9 +69,11 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
               (s) => s.id === layer.dataSourceId
             );
             const parentId = "source" + layer.dataSourceId;
+            // @ts-ignore
             let parent = items.find((i) => i.id === parentId);
             if (!parent) {
               parent = {
+                // @ts-ignore
                 id: parentId,
                 title: t("Image Service"),
 
@@ -81,18 +85,23 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
                 zIndex: 999999999,
                 children: [],
               };
+              // @ts-ignore
               items.push(parent);
             }
             parent!.children = [
+              // @ts-ignore
               ...(parent.children! as TreeItem[]),
               {
+                // @ts-ignore
                 id: item.dataLayerId,
                 title: item.title,
                 zIndex: layer.zIndex,
                 preventDrag: source?.supportsDynamicLayers === false,
               },
             ];
+            // @ts-ignore
             if (layer.zIndex < parent.zIndex) {
+              // @ts-ignore
               parent.zIndex = layer.zIndex;
             }
             // if (layer.renderUnder === RenderUnderType.Labels) {
@@ -102,6 +111,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
             // }
           } else {
             items.push({
+              // @ts-ignore
               id: item.dataLayerId,
               title: item.title,
               // title: item.title + `(${item.dataLayerId})`,
@@ -125,6 +135,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
         ) {
           return -1;
         } else {
+          // @ts-ignore
           return a.zIndex - b.zIndex;
         }
       });
@@ -134,8 +145,10 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
           items = [
             ...items.slice(0, index),
             {
+              // @ts-ignore
               id: "labels",
               title: t("Basemap Labels"),
+              // @ts-ignore
               zIndex: item.zIndex - 0.5,
               preventDrag: true,
               isBasemapLayer: true,
@@ -145,8 +158,10 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
           break;
         } else if (items.indexOf(item) === items.length - 1) {
           items.push({
+            // @ts-ignore
             id: "labels",
             title: t("Basemap Labels"),
+            // @ts-ignore
             zIndex: item.zIndex + 0.5,
             preventDrag: true,
             isBasemapLayer: true,
@@ -157,7 +172,13 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
 
       setTreeState(items);
     }
-  }, [props.dataLayers, props.tableOfContentsItems]);
+  }, [
+    expandedItems,
+    props.dataLayers,
+    props.dataSources,
+    props.tableOfContentsItems,
+    t,
+  ]);
 
   const onChange = (treeData: TreeItem[]) => {
     let currentIndex = 0;
@@ -166,17 +187,22 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
     let underLabels = false;
     const expandedIds: number[] = [];
     for (const item of treeData) {
+      // @ts-ignore
       if (item.id === "labels") {
         underLabels = true;
       } else {
         if (item.children) {
           if (item.expanded) {
+            // @ts-ignore
             expandedIds.push(item.id);
           }
           for (const child of item.children as TreeItem[]) {
+            // @ts-ignore
             zIndexes[child.id] = currentIndex++;
+            // @ts-ignore
             layerIdsInOrder.push(child.id);
             if (child.expanded) {
+              // @ts-ignore
               expandedIds.push(child.id);
             }
             if (
@@ -187,6 +213,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
             ) {
               updateRenderUnder({
                 variables: {
+                  // @ts-ignore
                   layerId: child.id,
                   renderUnder: underLabels
                     ? RenderUnderType.Labels
@@ -194,6 +221,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
                 },
               });
               client.writeFragment({
+                // @ts-ignore
                 id: `DataLayer:${child.id}`,
                 fragment: gql`
                   fragment NewRenderUnder on DataLayer {
@@ -211,12 +239,14 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
             }
           }
         } else {
+          // @ts-ignore
           zIndexes[item.id] = currentIndex++;
+          // @ts-ignore
           layerIdsInOrder.push(item.id);
           if (item.expanded) {
+            // @ts-ignore
             expandedIds.push(item.id);
           }
-          const lyr = layerLookup.current[item.id];
           if (
             (underLabels &&
               lookupRenderUnder(item) !== RenderUnderType.Labels) ||
@@ -224,6 +254,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
           ) {
             updateRenderUnder({
               variables: {
+                // @ts-ignore
                 layerId: item.id,
                 renderUnder: underLabels
                   ? RenderUnderType.Labels
@@ -231,6 +262,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
               },
             });
             client.writeFragment({
+              // @ts-ignore
               id: `DataLayer:${item.id}`,
               fragment: gql`
                 fragment NewRenderUnder on DataLayer {
@@ -280,6 +312,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
       <SortableTree
         treeData={treeState || []}
         onChange={onChange}
+        // @ts-ignore
         getNodeKey={(data) => data.node.id}
         isVirtualized={false}
         // onVisibilityToggle={(data) => {
@@ -289,6 +322,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
         canDrop={(data) => {
           if (!data.prevParent && data.nextParent) {
             return false;
+            // @ts-ignore
           } else if (data.prevParent?.id !== data.nextParent?.id) {
             return false;
           } else {
@@ -296,25 +330,31 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
           }
         }}
         canDrag={(data) =>
+          // @ts-ignore
           !data.node.preventDrag &&
           (!data.parentNode || data.parentNode.children!.length > 1)
         }
         generateNodeProps={(data) => {
           const visible =
+            // @ts-ignore
             layerStates[data.node.id] && layerStates[data.node.id].visible;
           return {
+            // @ts-ignore
             className: data.node.isBasemapLayer ? "basemap" : "",
             buttons:
               !data.node.children && data.node.title !== t("Basemap Labels")
                 ? [
                     <VisibilityCheckbox
                       visibility={visible}
+                      // @ts-ignore
                       id={data.node.id}
                       disabled={false}
                       onClick={() => {
                         if (visible) {
+                          // @ts-ignore
                           manager?.hideLayers([data.node.id]);
                         } else {
+                          // @ts-ignore
                           manager?.showLayers([data.node.id]);
                         }
                       }}

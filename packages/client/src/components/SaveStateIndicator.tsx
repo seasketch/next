@@ -22,7 +22,7 @@ export default function SaveStateIndicator({
     } else if (state !== "SAVED") {
       setShowSaved(true);
     }
-  }, [state]);
+  }, [showSaved, state]);
   if (!called) {
     return null;
   } else {

@@ -9,7 +9,6 @@ import {
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
-import useBreadcrumbs from "use-react-router-breadcrumbs";
 import { Trans } from "react-i18next";
 import UserSettingsSidebarSkeleton from "./users/UserSettingsSidebarSkeleton";
 import AdminMobileHeader, {
@@ -19,8 +18,6 @@ import AdminMobileHeader, {
 import PhoneAccessGate from "./PhoneAccessGate";
 import { useAuth0 } from "@auth0/auth0-react";
 import Spinner from "../components/Spinner";
-import EditBasemapPage from "./data/EditBasemapPage";
-import { useProjectMetadataQuery } from "../generated/graphql";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 const LazyBasicSettings = React.lazy(
@@ -218,33 +215,12 @@ export default function AdminApp() {
     },
   ];
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [
-    mobileHeaderState,
-    setMobileHeaderState,
-  ] = useState<AdminMobileHeaderState>({});
+  const [mobileHeaderState, setMobileHeaderState] =
+    useState<AdminMobileHeaderState>({});
 
-  const routeConfig = [
-    ...sections,
-    ...[
-      {
-        breadcrumb: "Add Data",
-        path: "/admin/data/add-data",
-      },
-      {
-        breadcrumb: "ArcGIS Server",
-        path: "/admin/data/add-data/arcgis",
-      },
-    ],
-  ]
-    .map((section) => ({
-      ...section,
-      path: `/:slug${section.path}`,
-    }))
-    .filter((route) => route.breadcrumb !== "Settings");
   let { path } = useRouteMatch();
-  const breadcrumbs = useBreadcrumbs(routeConfig, { disableDefaults: true });
 
-  const { data, loading, error } = useCurrentProjectMetadata();
+  const { data } = useCurrentProjectMetadata();
 
   if (data && data.project?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;

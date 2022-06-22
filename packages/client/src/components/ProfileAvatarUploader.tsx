@@ -4,15 +4,13 @@ import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import ProfilePhoto from "../admin/users/ProfilePhoto";
 import { useMeQuery, useUpdateProfileMutation } from "../generated/graphql";
-import ProjectAppSidebar from "../projects/ProjectAppSidebar";
-import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import Button from "./Button";
 import { useGlobalErrorHandler } from "./GlobalErrorHandler";
 
 export default function ProfileAvatarUploader() {
   const auth0 = useAuth0();
   const onError = useGlobalErrorHandler();
-  const { data, loading, error } = useMeQuery({
+  const { data } = useMeQuery({
     fetchPolicy: "cache-and-network",
     onError,
   });
@@ -20,7 +18,7 @@ export default function ProfileAvatarUploader() {
   const { t } = useTranslation();
 
   const onDrop = useCallback(
-    (acceptedFiles) => {
+    (acceptedFiles: File[]) => {
       if (!data?.me) {
         throw new Error(
           "currentProjectMetadataQuery did not complete or does not contain user id"
@@ -36,7 +34,7 @@ export default function ProfileAvatarUploader() {
     [data?.me, mutate]
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+  const { getRootProps, isDragActive } = useDropzone({ onDrop });
 
   return (
     <>

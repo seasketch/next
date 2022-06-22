@@ -1,4 +1,3 @@
-import React from "react";
 import InputBlock from "../../components/InputBlock";
 import Select from "react-select";
 
@@ -34,7 +33,7 @@ export default function GroupMultiSelect({
           menuPortalTarget={document.body}
           menuPosition="absolute"
           menuPlacement="auto"
-          onChange={(v, e) => {
+          onChange={(v) => {
             onChange(
               v.map(({ value }) => groups.find((g) => g.value === value)!)
             );

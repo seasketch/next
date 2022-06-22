@@ -2,10 +2,12 @@
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import Rating, { RatingProps } from "./Rating";
+import { commonFormElementArgs } from "./testHelpers";
 
 const body = questionBodyFromMarkdown(`# How do you like SeaSketch?
 `);
 const makeArgs = (componentSettings: RatingProps) => ({
+  ...commonFormElementArgs,
   id: 1,
   body,
   onChange: jest.fn(),

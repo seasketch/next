@@ -1,6 +1,5 @@
 import { MutationResult } from "@apollo/client";
 import React, { ReactNode, useEffect, useState } from "react";
-import Spinner from "./Spinner";
 
 interface RadioItem<T> {
   value: T;
@@ -33,7 +32,7 @@ export default function RadioGroup<T>(props: RadioGroupProps<T>) {
     } else if (state !== "SAVED") {
       setShowSaved(true);
     }
-  }, [state]);
+  }, [showSaved, state]);
 
   return (
     <fieldset className={props.className}>
@@ -174,7 +173,7 @@ export function MutableRadioGroup<T>(
     if (!props.mutationStatus.loading && props.value !== state) {
       setState(props.value);
     }
-  }, [props.value, props.mutationStatus]);
+  }, [props.value, props.mutationStatus, state]);
 
   return (
     <form>

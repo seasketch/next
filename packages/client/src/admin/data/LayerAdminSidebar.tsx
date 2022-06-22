@@ -1,13 +1,7 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import Button from "../../components/Button";
 import SegmentControl from "../../components/SegmentControl";
 import useSegmentState from "../../components/useSegmentState";
 import BaseMapEditor from "./BasemapEditor";
 import TableOfContentsEditor from "./TableOfContentsEditor";
-
-interface LayerAdminSidebarProps {}
-type Segment = "Maps" | "Overlay Layers";
 
 export default function LayerAdminSidebar() {
   const [selectedTab, setSelectedTab, segments] = useSegmentState({

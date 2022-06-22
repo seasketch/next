@@ -15,7 +15,7 @@ import { ClientCacheManagerContext } from "./ClientCacheManager";
 export default function OfflineSurveySelection() {
   const slug = window.location.pathname.split("/")[1];
   const context = useContext(ClientCacheManagerContext);
-  const { data, loading, error } = useOfflineSurveysQuery({
+  const { data } = useOfflineSurveysQuery({
     variables: { slug },
   });
   const { t } = useTranslation("offline");
@@ -34,7 +34,8 @@ export default function OfflineSurveySelection() {
     if (context) {
       context.updateCacheSizes();
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context?.updateCacheSizes]);
   return (
     <Card>
       <Header>

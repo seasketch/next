@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Modal from "../../components/Modal";
-import { useTranslation, Trans } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import TextInput from "../../components/TextInput";
 import Button from "../../components/Button";
 import { useCreateGroupMutation } from "../../generated/graphql";

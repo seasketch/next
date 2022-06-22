@@ -1,4 +1,4 @@
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 import { FormElementBody, FormElementComponent } from "./FormElement";
 import fromMarkdown from "./fromMarkdown";
 
@@ -6,7 +6,6 @@ import fromMarkdown from "./fromMarkdown";
  * Displays a rich text section
  */
 const Statement: FormElementComponent<{}> = (props) => {
-  const { t } = useTranslation("admin:surveys");
   return (
     <div className="mb-5">
       <FormElementBody

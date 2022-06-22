@@ -20,7 +20,6 @@ import {
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import { LinkIcon } from "@heroicons/react/outline";
-import TextInput from "../components/TextInput";
 import Button from "../components/Button";
 import { useContext } from "react";
 import { Link } from "react-router-dom";

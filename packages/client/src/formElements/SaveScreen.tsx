@@ -3,27 +3,22 @@ import {
   SaveAsIcon,
   StatusOfflineIcon,
 } from "@heroicons/react/outline";
-import { useOnlineState } from "beautiful-react-hooks";
+import useOnlineState from "beautiful-react-hooks/useOnlineState";
 import { GraphQLError } from "graphql";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import IndeterminantLoadingBar from "../admin/surveys/IndeterminantLoadingBar";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
-import Spinner from "../components/Spinner";
 import SurveyButton from "../surveys/SurveyButton";
-import {
-  FormElementBody,
-  FormElementComponent,
-  SurveyContext,
-} from "./FormElement";
+import { FormElementComponent, SurveyContext } from "./FormElement";
 import fromMarkdown from "./fromMarkdown";
-import LoadingDots from "./LoadingDots";
 
 const SaveScreen: FormElementComponent<{}> = (props) => {
   const { t } = useTranslation("surveys");
   const isOnline = useOnlineState();
   const surveyContext = useContext(SurveyContext);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [wasOffline, setWasOffline] = useState(!isOnline);
   const [errors, setErrors] = useState<null | GraphQLError>(null);
   const [saving, setSaving] = useState(false);
@@ -70,7 +65,7 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
     }
   }
 
-  useEffect(save, []);
+  useEffect(save, [isOnline, props, surveyContext]);
 
   return (
     <>

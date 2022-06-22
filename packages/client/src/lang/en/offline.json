@@ -1,6 +1,14 @@
 {
+  "Cache Status": "Cache Status",
+  "Clear cache": "Clear cache",
+  "Data Caching setting must be set higher to enable offline support.": "Data Caching setting must be set higher to enable offline support.",
   "Offline Surveys": "Offline Surveys",
+  "Reload cache": "Reload cache",
   "SeaSketch can cache selected surveys for use offline in the field. You will need to make sure that Data Caching is set to \"Improved Performance\" or higher to enable this functionality.": "SeaSketch can cache selected surveys for use offline in the field. You will need to make sure that Data Caching is set to \"Improved Performance\" or higher to enable this functionality.",
-  "documentCount": " documents",
-  "documentCount_plural": "documentCount_plural"
+  "documentCount": "{{count}} documents",
+  "documentCount_plural": "documentCount_plural",
+  "imageCount": "{{count}} images",
+  "imageCount_plural": "imageCount_plural",
+  "questionCount": "{{count}} questions",
+  "questionCount_plural": "questionCount_plural"
 }

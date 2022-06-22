@@ -1,10 +1,6 @@
-import { useAuth0 } from "@auth0/auth0-react";
 import { UserCircleIcon } from "@heroicons/react/solid";
-import { AnimatePresence, motion } from "framer-motion";
 import { useContext, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
@@ -13,7 +9,6 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
-  SurveyButtonFooterPortalContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -54,7 +49,7 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
       setVal(newVal);
       props.onChange(newVal, !validate(newVal, context.isFacilitatedResponse));
     }
-  }, [context.bestName]);
+  }, [context.bestName, context.isFacilitatedResponse, props, val]);
 
   return (
     <>

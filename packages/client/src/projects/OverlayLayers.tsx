@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
-import MetadataModal from "../dataLayers/MetadataModal";
+import { useState, useEffect, useContext } from "react";
 import TableOfContents, {
   ClientTableOfContentsItem,
   createBoundsRecursive,
@@ -25,7 +24,7 @@ export default function OverlayLayers({
   }>("overlays-expansion-state", {});
   useEffect(() => {
     setNodes(nestItems(items, expansionState));
-  }, [items]);
+  }, [expansionState, items]);
 
   return (
     <div className="mt-3">
@@ -38,7 +37,7 @@ export default function OverlayLayers({
       <TableOfContents
         nodes={nodes}
         onChange={(n) => setNodes(n)}
-        onVisibilityToggle={(data) => {
+        onVisibilityToggle={(data: any) => {
           setExpansionState((prev) => {
             return {
               ...prev,

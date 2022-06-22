@@ -23,6 +23,7 @@ export default function ArcGISServiceMetadata(
         <a
           className="underline"
           target="_blank"
+          rel="noreferrer"
           href={`https://epsg.io/${
             mapServerInfo.spatialReference.latestWkid ||
             mapServerInfo.spatialReference.wkid
@@ -50,6 +51,7 @@ export default function ArcGISServiceMetadata(
         <a
           className="underline"
           target="_blank"
+          rel="noreferrer"
           href={`https://epsg.io/${
             mapServerInfo.spatialReference.latestWkid ||
             mapServerInfo.spatialReference.wkid

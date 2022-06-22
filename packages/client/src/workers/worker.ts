@@ -1,5 +1,6 @@
-import gzipSize from "gzip-size";
+import pako from "pako";
 
-export function gzippedSize(data: string): number {
-  return gzipSize.sync(data);
+export function gzippedSize(data: string) {
+  const output = pako.deflate(new TextEncoder().encode(data));
+  return output.byteLength;
 }
