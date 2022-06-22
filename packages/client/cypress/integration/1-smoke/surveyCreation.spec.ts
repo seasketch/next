@@ -551,6 +551,10 @@ describe("Survey creation smoke test", () => {
             });
           });
         });
+        cy.getLocalStorage("surveyId").then((id) => {
+          console.log(id)
+          cy.setLocalStorage("surveyId", id)
+        });
         //cy.getLocalStorage("scale bar").then((unfocusedScale) => {
         //  cy.get('.mapboxgl-ctrl-scale')
         //    .should('be.visible')
@@ -980,64 +984,64 @@ describe("Survey creation smoke test", () => {
         cy.viewport(device)
         cy.get("textarea").type("My general comments.")
       })
-      //it(`Records the correct response - ${device}`, () => {
-      //  cy.viewport(device)
-      //  cy.contains("Complete Submission").as('completeSubmission')
-      //  cy.get('@completeSubmission').should('be.visible').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //  })
-      //  cy.wait("@createResponse").then((req) => {
-      //    const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
-      ////    expect (surveyResponseId).to.not.equal(null)
-      ////    cy.restoreLocalStorage()
-      ////    cy.getLocalStorage("access_token").then((token) => {
-      ////      console.log(token)
-      ////      cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
-      ////        const data = resp.query.surveyResponse.data
-      ////        const responseAry = []
-      ////        Object.entries(data).forEach(([, value]) => {
-      ////          responseAry.push(value)
-      ////        })
-      ////        const sketchIds = []
-      ////        Object.entries(responseAry[4].collection).forEach(([, value]) => {
-      ////          sketchIds.push(value)
-      ////        })
-      ////        expect(responseAry.length).to.eq(11)
-      ////        sketchIds.forEach((id) => {
-      ////         cy.getSketch(id, token).then((sketch) => {
-      ////           expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
-      ////         })
-      ////        })
-      ////        expect (responseAry[0].name).to.eq('Test User 1')
-      ////        expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
-      ////        expect (responseAry[2][0]).to.eq('N')
-      //        expect (responseAry[3][0]).to.eq('Kudafari')
-      //        expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
-      //        expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
-      //        expect (responseAry[5]).to.eq(3)
-      //        expect (responseAry[6]).to.eq("Queen Ann's Revenge")
-      //        expect (responseAry[7]).to.eq(true)
-      //        expect (responseAry[8]).to.eq(30)
-      //        expect (responseAry[9][0]).to.eq("Female")
-      //        expect (responseAry[10]).to.eq("My general comments.")
-      //        });
-      //      });
-      //    });
-      //    cy.contains('Thank You')
-      //      .should('be.visible')
-      //      //if (device != "iphone-5") {
-      //      //  cy.restoreLocalStorage()
-      //      //  cy.getLocalStorage('slug').then((slug) => {
-      //      //    cy.getLocalStorage('surveyId').then((id) => {
-      //      //      cy.visit(`${slug}/surveys/${id}`)
-      //      //      console.log(id)
-      //      //      console.log(slug)
-      //      //    })
-////
-      //      //  })
-      //      //}
-      //    console.log(device)
-      // });
-      }) ;
-  })//
-  })//
+      it(`Records the correct response - ${device}`, () => {
+        cy.viewport(device)
+        cy.contains("Complete Submission").as('completeSubmission')
+        cy.get('@completeSubmission').should('be.visible').then(($btn) => {
+          {$btn.trigger('click')}
+        });
+        cy.wait("@createResponse").then((req) => {
+          const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
+          expect (surveyResponseId).to.not.equal(null)
+          cy.restoreLocalStorage()
+          cy.getLocalStorage("access_token").then((token) => {
+            cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
+              const data = resp.query.surveyResponse.data
+              const responseAry = []
+              Object.entries(data).forEach(([, value]) => {
+                responseAry.push(value)
+              });
+              const sketchIds = []
+              Object.entries(responseAry[4].collection).forEach(([, value]) => {
+                sketchIds.push(value)
+              });
+              expect(responseAry.length).to.eq(11)
+              sketchIds.forEach((id) => {
+               cy.getSketch(id, token).then((sketch) => {
+                 expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
+               });
+              });
+              expect (responseAry[0].name).to.eq('Test User 1')
+              expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
+              expect (responseAry[2][0]).to.eq('N')
+              expect (responseAry[3][0]).to.eq('Kudafari')
+              expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
+              expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
+              expect (responseAry[5]).to.eq(3)
+              expect (responseAry[6]).to.eq("Queen Ann's Revenge")
+              expect (responseAry[7]).to.eq(true)
+              expect (responseAry[8]).to.eq(30)
+              expect (responseAry[9][0]).to.eq("Female")
+              expect (responseAry[10]).to.eq("My general comments.")
+              });
+           // });
+          });
+          cy.contains('Thank You')
+            .should('be.visible')
+            //if (device != "iphone-5") {
+            //  cy.restoreLocalStorage()
+            //  cy.getLocalStorage('slug').then((slug) => {
+            //    cy.getLocalStorage('surveyId').then((id) => {
+            //      cy.visit(`${slug}/surveys/${id}`)
+            //      console.log(id)
+            //      console.log(slug)
+            //    })
+//
+            //  })
+            //}
+          console.log(device)
+       });
+      });
+    });
+  });
+});
