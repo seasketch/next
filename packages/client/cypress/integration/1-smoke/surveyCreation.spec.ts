@@ -494,16 +494,17 @@ describe("Survey creation smoke test", () => {
         cy.get('[role="switch"]').as('scaleSwitch').then(($switch) => {
           expect ($switch.attr('aria-checked')).to.equal(`false`)
           {$switch.trigger('click')}
-          expect ($switch.attr('aria-checked')).to.equal(`false`)
         })
-
+        cy.get('@scaleSwitch').then(($switch) => {
+          expect ($switch.attr('aria-checked')).to.equal(`true`)
+        });
         cy.get('.mapboxgl-ctrl-scale')
-          .should('be.visible')
+          .should('be.visible');
           //.as("scaleBar").then((scaleBar) => {
           //  cy.setLocalStorage("scale bar", scaleBar.html())
           //  cy.saveLocalStorage()
           //})
-      })
+      });
       it (`Renders the correct basemap - ${device}`, () => {
         cy.viewport(device)
         cy.contains('Maldives Light').as('maldivesLightBasemap')
@@ -950,7 +951,7 @@ describe("Survey creation smoke test", () => {
         });
         cy.get('button').contains('Next').click()
       });
-    //
+    ////
       it(`Can answer additional questions - ${device}`, () => {
         cy.viewport(device)
         cy.contains('additional')
@@ -980,13 +981,13 @@ describe("Survey creation smoke test", () => {
         cy.get("textarea").type("My general comments.")
       })
       //it(`Records the correct response - ${device}`, () => {
-      ////  cy.viewport(device)
-      ////  cy.contains("Complete Submission").as('completeSubmission')
-      ////  cy.get('@completeSubmission').should('be.visible').then(($btn) => {
-      ////    {$btn.trigger('click')}
-      ////  })
-      ////  cy.wait("@createResponse").then((req) => {
-      ////    const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
+      //  cy.viewport(device)
+      //  cy.contains("Complete Submission").as('completeSubmission')
+      //  cy.get('@completeSubmission').should('be.visible').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  })
+      //  cy.wait("@createResponse").then((req) => {
+      //    const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
       ////    expect (surveyResponseId).to.not.equal(null)
       ////    cy.restoreLocalStorage()
       ////    cy.getLocalStorage("access_token").then((token) => {
