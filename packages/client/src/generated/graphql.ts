@@ -7807,6 +7807,12 @@ export type Query = Node & {
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
   communityGuidelineByNodeId?: Maybe<CommunityGuideline>;
+  /** @deprecated Use projectBySlug() instead */
+  currentProject?: Maybe<Project>;
+  /** @deprecated Use project_access_status(slug) instead */
+  currentProjectAccessStatus?: Maybe<ProjectAccessStatus>;
+  /** @deprecated Use projectPublicDetails(slug) instead */
+  currentProjectPublicDetails?: Maybe<PublicProjectDetail>;
   currentUserIsSuperuser: Scalars['Boolean'];
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;

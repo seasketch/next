@@ -4425,6 +4425,133 @@ Must have write permission for the specified forum. Create a new discussion topi
 
 
 --
+-- Name: current_project(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.current_project() RETURNS public.projects
+    LANGUAGE sql STABLE
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  SELECT
+    *
+  FROM
+    projects
+  WHERE
+    id = nullif (current_setting('session.project_id', TRUE), '')::integer
+$$;
+
+
+--
+-- Name: FUNCTION current_project(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.current_project() IS '@deprecated Use projectBySlug() instead';
+
+
+--
+-- Name: current_project_access_status(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.current_project_access_status() RETURNS public.project_access_status
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      access_control_setting project_access_control_setting;
+      approved_request boolean;
+      uid int;
+      admin_bit boolean;
+      pid int;
+      email_verified boolean;
+    begin
+      select nullif (current_setting('session.project_id', TRUE), '')::integer into pid;
+      select nullif (current_setting('session.user_id', TRUE), '')::integer into 
+      uid;
+      select is_admin(pid, uid) into admin_bit;
+      if current_setting('session.email_verified', TRUE) = 'true' then
+        email_verified = true;
+      else
+        email_verified = false;
+      end if;
+      SELECT
+        access_control
+      into
+        access_control_setting
+      FROM
+        projects
+      WHERE
+        id = pid;
+      if access_control_setting is null then
+        return 'PROJECT_DOES_NOT_EXIST'::project_access_status;
+      end if;
+      if session_has_project_access(pid) then
+        return 'GRANTED'::project_access_status;
+      end if;
+      if uid is null then
+        return 'DENIED_ANON'::project_access_status;
+      end if;
+      if access_control_setting = 'admins_only'::project_access_control_setting then
+        if admin_bit and email_verified = false then
+          return 'DENIED_EMAIL_NOT_VERIFIED'::project_access_status;
+        else
+          return 'DENIED_ADMINS_ONLY'::project_access_status;
+        end if;
+      end if;
+      -- access control setting must be invite_only
+      select 
+        approved into approved_request 
+      from 
+        project_participants 
+      where 
+        user_id = uid and project_id = pid;
+      if approved_request is null then
+        return 'DENIED_NOT_REQUESTED'::project_access_status;
+      elsif approved_request is false then
+        return 'DENIED_NOT_APPROVED'::project_access_status;
+      elsif email_verified is false then
+        return 'DENIED_EMAIL_NOT_VERIFIED'::project_access_status;
+      end if;
+      raise exception 'Unknown reason for denying project access. userid = %, project_id = %', uid, pid;
+    end;
+$$;
+
+
+--
+-- Name: FUNCTION current_project_access_status(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.current_project_access_status() IS '@deprecated Use project_access_status(slug) instead';
+
+
+--
+-- Name: current_project_public_details(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.current_project_public_details() RETURNS public.public_project_details
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    id,
+    name,
+    slug,
+    logo_url,
+    access_control,
+    support_email,
+    project_access_status(id) as access_status
+  FROM
+    projects
+  WHERE
+    id = nullif (current_setting('session.project_id', TRUE), '')::integer
+$$;
+
+
+--
+-- Name: FUNCTION current_project_public_details(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.current_project_public_details() IS '@deprecated Use projectPublicDetails(slug) instead';
+
+
+--
 -- Name: data_hosting_quota_left(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -16076,6 +16203,30 @@ GRANT UPDATE(locked) ON TABLE public.topics TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION current_project(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.current_project() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.current_project() TO anon;
+
+
+--
+-- Name: FUNCTION current_project_access_status(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.current_project_access_status() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.current_project_access_status() TO anon;
+
+
+--
+-- Name: FUNCTION current_project_public_details(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.current_project_public_details() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.current_project_public_details() TO anon;
 
 
 --
