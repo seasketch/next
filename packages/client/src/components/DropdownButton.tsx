@@ -20,6 +20,7 @@ interface DropdownButtonProps {
   options: DropdownOption[];
   className?: string;
   small?: boolean;
+  buttonClassName?: string;
 }
 
 export default function DropdownButton({
@@ -27,6 +28,7 @@ export default function DropdownButton({
   label,
   options,
   className,
+  buttonClassName,
   small,
 }: DropdownButtonProps) {
   return (
@@ -40,7 +42,8 @@ export default function DropdownButton({
           className={classNames(
             small ? "px-2 py-0.5" : "px-4 py-2",
             "inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm bg-white text-sm font-medium text-gray-700  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-primary-500",
-            disabled ? "opacity-50 cursor-default" : "hover:bg-gray-50"
+            disabled ? "opacity-50 cursor-default" : "hover:bg-gray-50",
+            buttonClassName
           )}
         >
           {label}

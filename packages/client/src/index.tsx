@@ -22,6 +22,7 @@ import Spinner from "./components/Spinner";
 import * as Sentry from "@sentry/react";
 import { Integrations } from "@sentry/tracing";
 import { createBrowserHistory } from "history";
+import SW from "./offline/ServiceWorkerWindow";
 
 const history = createBrowserHistory();
 
@@ -178,7 +179,28 @@ ReactDOM.render(
   document.getElementById("root")
 );
 
-// If you want your app to work offline and load faster, you can change
-// unregister() to register() below. Note this comes with some pitfalls.
-// Learn more about service workers: https://bit.ly/CRA-PWA
-serviceWorkerRegistration.unregister();
+async function checkBuild(event: string) {
+  const build = await SW.getSWBuild();
+  if (
+    process.env.NODE_ENV === "production" &&
+    build !== process.env.REACT_APP_BUILD
+  ) {
+    // eslint-disable-next-line i18next/no-literal-string
+    Sentry.captureMessage(`Client and ServiceWorker builds do not match`, {
+      extra: {
+        SWBuild: build,
+        ClientBuild: process.env.REACT_APP_BUILD,
+        event,
+      },
+    });
+  }
+}
+
+serviceWorkerRegistration.register({
+  onSuccess: async (registration) => {
+    checkBuild("onSuccess");
+  },
+  onUpdate: (registration) => {
+    checkBuild("onUpdate");
+  },
+});

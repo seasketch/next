@@ -28,6 +28,7 @@ import * as Sentry from "@sentry/node";
 import { print as printGraphql } from "graphql";
 import SentryPlugin from "./plugins/sentryPlugin";
 import UploadStylePlugin from "./plugins/uploadStylePlugin";
+import IsSuperuserPlugin from "./plugins/IsSuperuserPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -61,6 +62,7 @@ export default function graphileOptions(): PostGraphileOptions {
       UnsplashPlugin,
       ConsentDocumentPlugin,
       UploadStylePlugin,
+      IsSuperuserPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

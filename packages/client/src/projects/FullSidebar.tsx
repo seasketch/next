@@ -201,7 +201,7 @@ export default function FullSidebar({
                   </svg>
                 }
                 label={t("Account Settings")}
-                onClick={() => history.push("./account-settings")}
+                onClick={() => history.push("/account-settings")}
               />
               <a
                 target="_blank"
