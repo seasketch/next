@@ -525,40 +525,40 @@ describe("Survey creation smoke test", () => {
         cy.contains('Maldives Light')
           .should('not.have.class', 'font-semibold')
       })
-      it(`Shows option to focus on location - ${device}`, () => {
-        cy.viewport(device)
-        cy.restoreLocalStorage()
-        cy.getLocalStorage("surveyId").then((id) => {
-          console.log(id)
-          cy.setLocalStorage("surveyId", id)
-        });
-        cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
-          cy.setLocalStorage("lat", `${center["lat"]}`)
-          cy.setLocalStorage("long", `${center["lng"]}`)
-          
-          cy.saveLocalStorage();
-          cy.get('h4').contains('Focus on location').click();
-        });
-      });
-      it(`Focuses on location - ${device}`, () => {
-        cy.viewport(device)
-        cy.restoreLocalStorage()
-        cy.getLocalStorage('lat').then((lat) => {
-          cy.getLocalStorage('long').then((lng) => {
-            cy.window().its('mapContext.map.transform._center').then((coords) => {
-              expect (coords["lat"]).to.not.equal(lat)
-              expect (coords["lng"]).to.not.equal(lng)
-            });
-          });
-        });
-        cy.getLocalStorage("scale bar").then((unfocusedScale) => {
-          cy.get('.mapboxgl-ctrl-scale')
-            .should('be.visible')
-            .then((focusedScale) => {
-              expect (focusedScale.html()).to.not.equal(unfocusedScale)
-          })
-        })
-      });
+      //it(`Shows option to focus on location - ${device}`, () => {
+      //  cy.viewport(device)
+      //  cy.restoreLocalStorage()
+      //  cy.getLocalStorage("surveyId").then((id) => {
+      //    console.log(id)
+      //    cy.setLocalStorage("surveyId", id)
+      //  });
+      //  cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
+      //    cy.setLocalStorage("lat", `${center["lat"]}`)
+      //    cy.setLocalStorage("long", `${center["lng"]}`)
+      //    
+      //    cy.saveLocalStorage();
+      //    cy.get('h4').contains('Focus on location').click();
+      //  });
+      //});
+      //it(`Focuses on location - ${device}`, () => {
+      //  cy.viewport(device)
+      //  cy.restoreLocalStorage()
+      //  cy.getLocalStorage('lat').then((lat) => {
+      //    cy.getLocalStorage('long').then((lng) => {
+      //      cy.window().its('mapContext.map.transform._center').then((coords) => {
+      //        expect (coords["lat"]).to.not.equal(lat)
+      //        expect (coords["lng"]).to.not.equal(lng)
+      //      });
+      //    });
+      //  });
+      //  cy.getLocalStorage("scale bar").then((unfocusedScale) => {
+      //    cy.get('.mapboxgl-ctrl-scale')
+      //      .should('be.visible')
+      //      .then((focusedScale) => {
+      //        expect (focusedScale.html()).to.not.equal(unfocusedScale)
+      //    })
+      //  })
+      //});
       it(`Renders sector specific attributes - Fisheries - Commercial, Tuna - ${device}`, () => {
         cy.viewport(device)
         cy.get('img').then((imgs) => {
