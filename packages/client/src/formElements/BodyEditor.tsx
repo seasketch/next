@@ -67,10 +67,8 @@ export default function BodyEditor({
   }
 
   const [update, updateState] = useUpdateFormElementBodyMutation();
-  const [
-    updateComponentSettings,
-    updateComponentSettingsState,
-  ] = useUpdateComponentSettingsMutation();
+  const [updateComponentSettings, updateComponentSettingsState] =
+    useUpdateComponentSettingsMutation();
   const [
     updateAlternateLanguageSettings,
     updateAlternateLanguageSettingsState,
@@ -86,7 +84,7 @@ export default function BodyEditor({
   );
 
   useEffect(() => {
-    const doc = body ? Node.fromJSON(schema, body) : null;
+    const doc = body ? Node.fromJSON(schema, body) : undefined;
     const view = new EditorView(root.current!, {
       state: EditorState.create({
         schema,

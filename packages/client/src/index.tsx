@@ -50,7 +50,7 @@ function Auth0ProviderWithRouter(props: any) {
     <Auth0Provider
       {...props}
       onRedirectCallback={(appState) => {
-        if (appState.returnTo) {
+        if (appState?.returnTo) {
           history.replace(appState.returnTo);
         } else {
           history.replace("/");

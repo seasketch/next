@@ -1,6 +1,6 @@
 import { defaultMarkdownParser } from "prosemirror-markdown";
 export default function fromMarkdown(md: string) {
-  return defaultMarkdownParser.parse(md).toJSON();
+  return defaultMarkdownParser.parse(md)?.toJSON();
 }
 
 type NodeType = {
@@ -10,7 +10,7 @@ type NodeType = {
 };
 
 export function questionBodyFromMarkdown(md: string) {
-  const json = defaultMarkdownParser.parse(md).toJSON();
+  const json = defaultMarkdownParser.parse(md)?.toJSON();
   const visit = (node: NodeType) => {
     for (const child of node.content || []) {
       visit(child);
