@@ -1,8 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
 import React from "react";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { ProjectAccessGate } from "./ProjectAccessGate";
-import { MockedProvider } from "@apollo/client/testing";
 import { useAuth0 } from "@auth0/auth0-react";
 import {
   AccessGranted,

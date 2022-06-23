@@ -1,8 +1,4 @@
-import {
-  FetchPolicy,
-  QueryOptions,
-  WatchQueryFetchPolicy,
-} from "@apollo/client";
+import { FetchPolicy, WatchQueryFetchPolicy } from "@apollo/client";
 import { useParams } from "react-router-dom";
 import { useProjectMetadataQuery } from "./generated/graphql";
 
@@ -11,5 +7,5 @@ export default function useCurrentProjectMetadata(opts?: {
   onError?: (err: Error) => void;
 }) {
   const { slug } = useParams<{ slug: string }>();
-  return useProjectMetadataQuery({ variables: { slug } });
+  return useProjectMetadataQuery({ variables: { slug }, ...opts });
 }

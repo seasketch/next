@@ -29,6 +29,7 @@ import { Persist } from "formik-persist";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import ProfileAvatarUploader from "../components/ProfileAvatarUploader";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import { useParams } from "react-router-dom";
 
 interface ProfileFormValues {
   fullname: string;
@@ -47,10 +48,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
     onError,
   });
   const { t } = useTranslation();
-  const [
-    resendVerification,
-    resendVerificationState,
-  ] = useResendEmailVerificationMutation();
+  const [resendVerification, resendVerificationState] =
+    useResendEmailVerificationMutation();
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [madeRequest, setMadeRequest] = useState(false);
   // const [reverseTransition, setReverseTransition] = useState(false);
@@ -84,6 +83,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
   );
   let status: ProjectAccessStatus | null =
     data?.projectPublicDetails?.accessStatus || null;
+
   // status = ProjectAccessStatus.DeniedNotRequested;
   // status = ProjectAccessStatus.DeniedNotApproved;
   if (loading) {
@@ -504,12 +504,10 @@ export const ProfileForm = ({
   const [updateProfile, updateProfileState] = useUpdateProfileMutation({
     onError,
   });
-  const [
-    requestAccess,
-    requestAccessState,
-  ] = useRequestInviteOnlyProjectAccessMutation({
-    onError,
-  });
+  const [requestAccess, requestAccessState] =
+    useRequestInviteOnlyProjectAccessMutation({
+      onError,
+    });
 
   return (
     <DialogContainer

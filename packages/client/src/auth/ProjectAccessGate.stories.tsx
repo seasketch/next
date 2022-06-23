@@ -2,48 +2,53 @@ import React from "react";
 import { Story, Meta } from "@storybook/react/types-6-0";
 import { ProfileForm, ProjectAccessGate } from "./ProjectAccessGate";
 import { MockedProvider } from "@apollo/client/testing";
-import { Auth0Provider, Auth0Context } from "@auth0/auth0-react";
+import { Auth0Context } from "@auth0/auth0-react";
 import {
   ProjectAccessControlSetting,
   ProjectAccessStatus,
   ProjectMetadataDocument,
 } from "../generated/graphql";
-import { InMemoryCache } from "@apollo/client";
-import ProjectAppSidebar from "../projects/ProjectAppSidebar";
 import { createMemoryHistory } from "history";
-import { Router } from "react-router-dom";
+import { Route, Router } from "react-router-dom";
 
 export default {
   title: "ProjectAccessGate",
   component: ProjectAccessGate,
 } as Meta;
 
-const projectPublicDetails = {
+const projectCommonDetails = {
   id: 123,
   accessControl: ProjectAccessControlSetting.Public,
   slug: "cburt",
   name: "Chad's Project",
   logoUrl: "",
   supportEmail: "chad@underbluewaters.net",
+};
+
+const projectPublicDetails = {
+  __typename: "PublicProjectDetail",
+  ...projectCommonDetails,
   accessStatus: ProjectAccessStatus.Granted,
 };
 const project = {
+  ...projectCommonDetails,
+  __typename: "Project",
   url: "https://seasketch.org/cburt",
   logoLink: "",
   description: "",
   sessionIsAdmin: false,
   isFeatured: true,
-  ...projectPublicDetails,
-  supportEmail: undefined,
 };
 
 const mockedProjectMetadata = {
   data: {
     project: { ...project },
-    projectPublicDetails,
+    projectPublicDetails: { ...projectPublicDetails },
     me: {
+      __typename: "User",
       id: 123,
       profile: {
+        __typename: "UserProfile",
         userId: 123,
         fullname: "Chad Burt",
         nickname: "underbluewaters",
@@ -52,48 +57,57 @@ const mockedProjectMetadata = {
         bio: "",
         affiliations: "UCSB",
       },
-      isAdmin: false,
     },
   },
 };
 
 const Template: Story<{ metadata: any; delay?: number }> = (props) => {
   const history = createMemoryHistory();
-  const url = "/cburt/foo";
+  const url = "/cburt/app";
   history.push(url);
+  const response = {
+    data: {
+      ...props.metadata.data,
+    },
+  };
   return (
     <div style={{ width: "100%" }}>
-      <Router history={history}>
-        <Auth0Context.Provider
-          // @ts-ignore
-          value={{
-            isAuthenticated: false,
-            user: undefined,
-          }}
-        >
-          <MockedProvider
-            mocks={[
-              {
-                request: {
-                  query: ProjectMetadataDocument,
+      <Auth0Context.Provider
+        // @ts-ignore
+        value={{
+          isAuthenticated: false,
+          user: undefined,
+        }}
+      >
+        <MockedProvider
+          addTypename={false}
+          mocks={[
+            {
+              request: {
+                query: ProjectMetadataDocument,
+                variables: {
+                  slug: "cburt",
                 },
-                result: () => {
-                  return props.metadata;
-                },
-                delay: props.delay,
-                // error: new Error("Hi!"),
               },
-            ]}
-          >
-            <ProjectAccessGate>
-              <h1>Project Name: {props.metadata.data.project?.name}</h1>
-              <p>
-                This gated content would be replaced with the full application.
-              </p>
-            </ProjectAccessGate>
-          </MockedProvider>
-        </Auth0Context.Provider>
-      </Router>
+              result: response,
+              delay: props.delay,
+              // error: new Error("Hi!"),
+            },
+          ]}
+        >
+          <Router history={history}>
+            <Route path="/:slug/app">
+              <ProjectAccessGate>
+                <h1>Project Name: {props.metadata.data.project?.name}</h1>
+                <p>
+                  This gated content would be replaced with the full
+                  application.
+                </p>
+              </ProjectAccessGate>
+            </Route>
+          </Router>
+        </MockedProvider>
+      </Auth0Context.Provider>
     </div>
   );
 };
@@ -102,9 +116,14 @@ export const Loading = () => (
   <Template metadata={mockedProjectMetadata} delay={9999999} />
 );
 
-export const AccessGranted = () => (
-  <Template metadata={mockedProjectMetadata} />
-);
+export const AccessGranted = () => {
+  const data = {
+    data: {
+      ...mockedProjectMetadata.data,
+    },
+  };
+  return <Template metadata={data} />;
+};
 
 export const Error404 = () => (
   <Template
@@ -112,6 +131,7 @@ export const Error404 = () => (
       data: {
         ...mockedProjectMetadata.data,
         project: null,
+        projectPublicDetails: null,
       },
     }}
   />
