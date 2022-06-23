@@ -187,19 +187,15 @@ export default function CreateBasemapModal({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   const onError = useGlobalErrorHandler();
-  const [
-    updateInteractivity,
-    updateInteractivityState,
-  ] = useUpdateInteractivitySettingsMutation({
-    onError,
-  });
+  const [updateInteractivity, updateInteractivityState] =
+    useUpdateInteractivitySettingsMutation({
+      onError,
+    });
 
-  const [
-    updateLayers,
-    updateLayersState,
-  ] = useUpdateInteractivitySettingsLayersMutation({
-    onError,
-  });
+  const [updateLayers, updateLayersState] =
+    useUpdateInteractivitySettingsLayersMutation({
+      onError,
+    });
   const mapboxStyleInfo = useMapboxStyle(
     state.type === BasemapType.Mapbox ? state.url : undefined
   );
