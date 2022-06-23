@@ -1141,7 +1141,7 @@ Cypress.Commands.add("createFormLogicRules", (formId: number, fixtureAlias: stri
     return cy
     .query(
       gql`
-        query CypressGetForm($formId: Int!) {
+        query CypressGetFormElements($formId: Int!) {
           form (id: $formId) {
             formElements {
               id, 
