@@ -39,6 +39,7 @@
   "Document Label": "Document Label",
   "Done": "Done",
   "Draft": "Draft",
+  "Drag and Drop your style JSON here. Uploaded styles will be be publicly hosted but their locations will be unlisted.": "Drag and Drop your style JSON here. Uploaded styles will be be publicly hosted but their locations will be unlisted.",
   "Drag and drop new documents here to <2>upload a new version</2>. SeaSketch will record the exact version each user agrees to.": "Drag and drop new documents here to <2>upload a new version</2>. SeaSketch will record the exact version each user agrees to.",
   "Drag and drop to sort.": "Drag and drop to sort.",
   "Drag and drop your full data use agreement here.": "Drag and drop your full data use agreement here.",
@@ -147,6 +148,7 @@
   "To support multiple languages, each option must specify a label and a value for all languages!": "To support multiple languages, each option must specify a label and a value for all languages!",
   "Try Kelp, Coral Reef, Atoll, Santa Barbara Ocean...": "Try Kelp, Coral Reef, Atoll, Santa Barbara Ocean...",
   "Uploading document...": "Uploading document...",
+  "Uploading style...": "Uploading style...",
   "Use the map on the left to draw a new extent, or <2>cancel</2>": "Use the map on the left to draw a new extent, or <2>cancel</2>",
   "Values do not match between different translations!": "Values do not match between different translations!",
   "View responses": "View responses",
@@ -158,5 +160,8 @@
   "always skipped": "always skipped",
   "click to download": "click to download",
   "edit": "edit",
+  "response": "response",
+  "responses": "responses",
+  "select all": "select all",
   "skipped": "skipped"
 }
