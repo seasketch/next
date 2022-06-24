@@ -98,7 +98,7 @@ export default function OfflineSurveySelection() {
                     />
                   </td>
                   <td className="whitespace-nowrap py-4 px-3 text-sm text-gray-500">
-                    {survey.name}
+                    <span className="truncate w-80 block">{survey.name}</span>
                   </td>
                 </tr>
               ))}
