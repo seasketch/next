@@ -2,10 +2,9 @@ name: Create Staging Deployment (Client-only)
 on: workflow_dispatch
 jobs:
   deploy_client:
-    name: Deploy Client
+    name: Deploy Staging Client
     runs-on: ubuntu-latest
     timeout-minutes: 8
-    if: github.event.inputs.force == 'true' || needs.detect_changes.outputs.client == 'true'
     concurrency: staging_client
     environment:
       name: staging_client
