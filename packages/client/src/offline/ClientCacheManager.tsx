@@ -1,7 +1,5 @@
 import { useApolloClient } from "@apollo/client";
-import { useAuth0 } from "@auth0/auth0-react";
 import localforage from "localforage";
-import { identity } from "lodash";
 import {
   createContext,
   ReactNode,
@@ -10,8 +8,11 @@ import {
   useState,
 } from "react";
 import { cloudfrontToSameOrigin, ConsentProps } from "../formElements/Consent";
-import { namedOperations, SurveyDocument } from "../generated/graphql";
-import { FormElementDetailsFragment } from "../generated/queries";
+import {
+  namedOperations,
+  SurveyDocument,
+  FormElementDetailsFragment,
+} from "../generated/graphql";
 import getSlug from "../getSlug";
 import { sleep } from "../sleep";
 import { srcVariants } from "../surveys/ImagePreloader";
@@ -21,10 +22,9 @@ import {
   ClientCacheSettings,
   CLIENT_CACHE_SETTINGS_KEY,
 } from "./ClientCacheSettings";
-import { getCacheSize, GraphqlQueryCache } from "./GraphqlQueryCache";
+import { getCacheSize, GraphqlQueryCache } from "./GraphqlQueryCache/main";
 import {
   offlineSurveyChoiceStrategy,
-  strategies,
   surveyLRUStrategy,
 } from "./GraphqlQueryCache/strategies";
 import useGraphqlQueryCache from "./GraphqlQueryCache/useGraphqlQueryCache";
@@ -99,9 +99,8 @@ export interface ClientCacheContextValue {
   populateOfflineSurveyAssets: (clearFirst: boolean) => Promise<void>;
 }
 
-export const ClientCacheManagerContext = createContext<
-  ClientCacheContextValue | undefined
->(undefined);
+export const ClientCacheManagerContext =
+  createContext<ClientCacheContextValue | undefined>(undefined);
 
 const defaultCacheSetting = ClientCacheSettings.find(
   (l) => l.id === "default"
@@ -142,13 +141,14 @@ export function ClientCacheManagerProvider({
     });
   }, []);
 
-  const [storageStats, setStorageStats] = useState<
-    | {
-        estimate?: StorageEstimate;
-        error?: string;
-      }
-    | undefined
-  >();
+  const [storageStats, setStorageStats] =
+    useState<
+      | {
+          estimate?: StorageEstimate;
+          error?: string;
+        }
+      | undefined
+    >();
 
   const updateStorageStats = useCallback(async () => {
     if ("storage" in navigator && "estimate" in navigator.storage) {
@@ -193,7 +193,7 @@ export function ClientCacheManagerProvider({
         bytes: mapboxTiles.bytes,
         tileCount: mapboxTiles.keys,
       },
-      selectedSurveyIds: strategyArgs.map((args) => args.id),
+      selectedSurveyIds: strategyArgs.map((args: { id: number }) => args.id),
       offlineSurveys: {
         assets: [],
         fractionCached: 0,
@@ -257,9 +257,11 @@ export function ClientCacheManagerProvider({
         (await graphqlQueryCache.getStrategyArgs(
           offlineSurveyChoiceStrategy.key
         )) || [];
-      const enabled = Boolean(args.find((arg) => arg.id === id));
+      const enabled = Boolean(
+        args.find((arg: { id: number }) => arg.id === id)
+      );
       if (enabled) {
-        args = args.filter((arg) => arg.id !== id);
+        args = args.filter((arg: { id: number }) => arg.id !== id);
       } else {
         args.push({ id, slug: getSlug() });
       }
@@ -271,7 +273,7 @@ export function ClientCacheManagerProvider({
         if (prev) {
           return {
             ...prev,
-            selectedSurveyIds: args.map((arg) => arg.id),
+            selectedSurveyIds: args.map((arg: { id: number }) => arg.id),
           };
         } else {
           return undefined;

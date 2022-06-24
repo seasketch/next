@@ -25,7 +25,7 @@ import { Integrations } from "@sentry/tracing";
 import { createBrowserHistory } from "history";
 import SW from "./offline/ServiceWorkerWindow";
 import { namedOperations } from "./generated/graphql";
-import { GraphqlQueryCache } from "./offline/GraphqlQueryCache";
+import { GraphqlQueryCache } from "./offline/GraphqlQueryCache/main";
 import { strategies } from "./offline/GraphqlQueryCache/strategies";
 import { GraphqlQueryCacheContext } from "./offline/GraphqlQueryCache/useGraphqlQueryCache";
 
@@ -85,14 +85,10 @@ function ApolloProviderWithToken(props: any) {
     user,
     isAuthenticated,
   } = useAuth0();
-  const [
-    client,
-    setClient,
-  ] = useState<ApolloClient<NormalizedCacheObject> | null>(null);
-  const [
-    graphqlQueryCache,
-    setGraphqlQueryCache,
-  ] = useState<GraphqlQueryCache>();
+  const [client, setClient] =
+    useState<ApolloClient<NormalizedCacheObject> | null>(null);
+  const [graphqlQueryCache, setGraphqlQueryCache] =
+    useState<GraphqlQueryCache>();
   const { Survey, ProjectMetadata, SimpleProjectList } = namedOperations.Query;
 
   const httpLink = createUploadLink({

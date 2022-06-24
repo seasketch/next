@@ -2,7 +2,7 @@ import {
   ProjectMetadataDocument,
   SurveyDocument,
 } from "../../generated/queries";
-import { byArgsStrategy, lruStrategy } from ".";
+import { byArgsStrategy, lruStrategy } from "./shared";
 
 export const OFFLINE_SURVEYS_KEY = "selected-offline-surveys";
 

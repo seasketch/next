@@ -11,7 +11,6 @@ export async function handler(event: FetchEvent): Promise<Response> {
         const url = `https://${
           process.env.REACT_APP_CLOUDFRONT_DOCS_DISTRO
         }.cloudfront.net${new URL(event.request.url).pathname}`;
-        console.log("url", url);
         return fetch(url);
       } else {
         return fetch(event.request.url);

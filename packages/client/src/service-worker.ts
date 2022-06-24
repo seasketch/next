@@ -1,8 +1,7 @@
 /// <reference lib="webworker" />
-/* eslint-disable no-restricted-globals */
-import { clientsClaim, skipWaiting } from "workbox-core";
+import { clientsClaim } from "workbox-core";
 import { PrecacheEntry } from "workbox-precaching/_types";
-import { GraphqlQueryCache } from "./offline/GraphqlQueryCache";
+import { GraphqlQueryCache } from "./offline/GraphqlQueryCache/sw";
 import { MESSAGE_TYPES } from "./offline/ServiceWorkerWindow";
 import StaticAssetCache from "./offline/StaticAssetCache";
 import { strategies } from "./offline/GraphqlQueryCache/strategies";

@@ -2,12 +2,8 @@
 import { DocumentNode, gql } from "@apollo/client";
 import { OperationDefinitionNode } from "graphql";
 import localforage from "localforage";
-import {
-  byArgsStrategy,
-  GraphqlQueryCache,
-  lruStrategy,
-  staticStrategy,
-} from ".";
+import { byArgsStrategy, lruStrategy, staticStrategy } from "./shared";
+import { GraphqlQueryCache } from "./sw";
 import { SurveyDocument } from "../../generated/graphql";
 import { ProjectMetadataDocument } from "../../generated/queries";
 // @ts-ignore
@@ -64,10 +60,10 @@ function createFetchRequestAndResponse(json: any, responseData: any) {
   fetch.mockImplementation((e: any) => {
     return Promise.resolve(createResponse(responseData));
   });
-  return ({
+  return {
     type: "fetch",
     request: createMockRequest(json),
-  } as unknown) as FetchEvent;
+  } as unknown as FetchEvent;
 }
 
 async function mockGqlRequest(
