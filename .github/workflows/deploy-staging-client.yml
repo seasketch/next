@@ -2,7 +2,7 @@ name: Create Staging Deployment (Client-only)
 on: workflow_dispatch
 jobs:
   deploy_client:
-    name: Deploy Client
+    name: Deploy Staging Client
     runs-on: ubuntu-latest
     timeout-minutes: 8
     concurrency: staging_client
