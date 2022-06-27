@@ -1,8 +1,11 @@
 export async function handler(event: FetchEvent): Promise<Response> {
+  console.warn(`SurveyAssetCache: handle request ${event.request.url}`);
   return match(event.request).then((r) => {
     if (r) {
+      console.warn(`SurveyAssetCache: cache hit ${event.request.url}`);
       return r;
     } else {
+      console.warn(`SurveyAssetCache: cache miss ${event.request.url}`);
       if (
         /consentDocs/.test(event.request.url.toString()) &&
         process.env.REACT_APP_CLOUDFRONT_DOCS_DISTRO
@@ -31,6 +34,7 @@ export async function match(request: Request | string) {
   const keys = (await caches.keys()).filter((key) =>
     /offline-surveys/.test(key)
   );
+  console.warn(`SurveyAssetCache: checking ${keys}`);
   for (const key of keys) {
     const cache = await caches.open(key);
     const match = cache.match(request);
