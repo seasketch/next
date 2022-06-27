@@ -109,11 +109,11 @@ const drawPolygon = () => {
     const el = ary[0]
     return el
   }).as('el');
-  cy.get('@el').click(300,300)        
-    .click(300, 100)
-    .click(100, 100)
-    .click(100, 300)
-    .dblclick(300, 300)
+  cy.get('@el').click(100,100)     
+    .click(50, 100)
+    .click(50, 50)
+    .click(100, 50)
+    .dblclick(100, 100)
 };
 
 const drawInvalidPolygon = () => {
@@ -126,11 +126,11 @@ const drawInvalidPolygon = () => {
     const el = ary[0]
     return el
   }).as('el');
-  cy.get('@el').click(300,300)        
-    .click(100, 300)
-    .click(150, 200)
+  cy.get('@el').click(100, 200)        
+    .click(100, 100)
+    .click(200, 200)
     .click(50, 200)
-    .dblclick(300, 300)
+    .dblclick(100, 200)
 };
 
 const drawSecondPolygon = () => {
@@ -143,14 +143,14 @@ const drawSecondPolygon = () => {
     const el = ary[0]
     return el
   }).as('el');
-  cy.get('@el').click(250,250)     
-    .click(50, 250)
+  cy.get('@el').click(100,100)     
+    .click(50, 100)
     .click(50, 50)
-    .click(250, 50)
-    .dblclick(250, 250)
+    .click(100, 50)
+    .dblclick(100, 100)
 };
 
-const devices: any = ["iphone-x"]//iphone-x"]//, "iphone-5"]// "macbook-15", "ipad-2"];
+const devices: any = ["iphone-x", "iphone-5", "ipad-2",  "macbook-15"]//]//, "ipad-2",]//, "macbook-15"]//, ]//, "macbook-15", "ipad-2"]//, "iphone-5"]//, "iphone-5"]// "macbook-15", "ipad-2"];
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -361,8 +361,11 @@ describe("Survey creation smoke test", () => {
     devices.forEach((device) => {
       it("Can visit the survey", () => {
         cy.viewport(device)
-        cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
-        cy.get('.select-none').should('be.visible').then(($btn) => {
+        //iphone-x
+        if (device === "iphone-x") {
+          cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
+        }
+        cy.get('[name="Begin Survey"]').should('be.visible').then(($btn) => {
           {$btn.trigger('click')}
         });
       });
@@ -461,7 +464,7 @@ describe("Survey creation smoke test", () => {
           })
         })
         //polygon path for mobile devices
-        if (device === "iphone-x") {
+        if (device === "iphone-x" || device === "iphone-5") {
           cy.get('[data-cy="button-begin"]')
             .should('exist')
             .and('be.visible')
@@ -473,7 +476,12 @@ describe("Survey creation smoke test", () => {
           cy.get('[role="progressbar"]')
             .should('not.exist')
           drawPolygon()
-        } 
+        } else {
+          waitOnMapbox(5)
+          cy.get('[role="progressbar"]')
+            .should('not.exist')
+          drawPolygon()
+        }
       })
       it(`Can view basemap selector - ${device}`, () => {
         cy.viewport(device)
@@ -568,7 +576,7 @@ describe("Survey creation smoke test", () => {
         cy.get('img').then((imgs) => {
           imgs[0].click()
         })
-        if (device === "iphone-x") {
+        if (device === "iphone-5" || device === "iphone-x") {
           cy.get('[data-cy="button-done"]')
             .should('exist')
             .and('be.visible')
@@ -577,13 +585,13 @@ describe("Survey creation smoke test", () => {
             //cy.get('@doneBtn').then(($btn) => {
             //  {$btn.trigger('click')}
             //})
-          
+          cy.get('button').then((btn) => {
+            if(btn.text().includes('Done')) {
+              cy.get('button').contains('Done').click()
+            }
+          });
         }
-        cy.get('button').then((btn) => {
-          if(btn.text().includes('Done')) {
-            cy.get('button').contains('Done').click()
-          }
-        });
+        
         cy.get('h1').contains('Area Name')
           .should('exist')
           .and('be.visible');
@@ -634,7 +642,8 @@ describe("Survey creation smoke test", () => {
           console.log($el)
           {$el.trigger('click')}
         });
-        cy.get('@finishSector').should('not.exist')
+        cy.get('@finishSector')
+          .should('not.exist')
         //if (device === "iphone-x") {
         //  cy.get('button').contains('New Shape')
         //    .should('be.visible')
@@ -666,35 +675,30 @@ describe("Survey creation smoke test", () => {
         })
         cy.get('button').contains('Next sector')
           .should('not.exist')
-        if (device === "iphone-x") {
+        if (device === "iphone-x" || device === "iphone-5") {
           cy.get('[data-cy="button-begin"]')
             .should('exist')
             .and('be.visible')
             .as('beginBtn').then(($btn) => {
               {$btn.trigger('click')}
             })
-          //waitOnMapbox(3)
           cy.get('[role="progressbar"]')
-          .should('not.exist')
-          drawPolygon()
+            .should('not.exist')
+            drawPolygon()
           cy.get('[data-cy="button-done"]').as('doneBtn')
             .should('exist')
             .and('be.visible')
             .click()
+        } else {
+          waitOnMapbox(3)
+          cy.get('[role="progressbar"]')
+            .should('not.exist')
+          cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
+            .should('exist')
+            .and('be.visible')
+          drawPolygon()
         }
       });
-    //
-      //// 
-      ////  //cy.get('button').contains('Next sector').should('not.exist')
-      ////  //waitOnMapbox(3)
-      ////  //cy.get('[role="progressbar"]')
-      ////  //    .should('not.exist')
-      ////  //cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
-      ////  //  .should('exist')
-      ////  //  .and('be.visible')
-      //////
-      ////  //drawPolygon()
-      ////})
       it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device)
         cy.get('button').then(($button) => {
@@ -706,14 +710,18 @@ describe("Survey creation smoke test", () => {
         });
         cy.get('button').contains('Done')
           .should('not.exist')
-        cy.get('.mapboxgl-ctrl-scale')
+        if (device === "iphone-5" || device ==="iphone-x") {
+          cy.get('.mapboxgl-ctrl-scale')
           //.should('not.exist')
           .should('not.be.visible')
-        cy.contains('Fisheries')
-          .should('not.exist')
+          cy.contains('Fisheries')
+            .should('not.exist')
         //cy.get('img[alt="Satellite map preview')
         //  .should('not.exist')
 
+        }
+        
+        
         cy.contains('Area Name')
           .should('exist')
           .and('be.visible')
@@ -734,7 +742,7 @@ describe("Survey creation smoke test", () => {
         cy.get('[title="Jigging"]').click()
         cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!")
         cy.contains('Save').click()
-      })//////
+      })////////
       it(`Errors when invalid polygon is drawn - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device)
         cy.contains("Save").should('not.exist')
@@ -802,7 +810,7 @@ describe("Survey creation smoke test", () => {
       });
       it(`Can draw second shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device)
-        if (device !== "iphone-x") {
+        if (device === "macbook-15" || device === "ipad-2") {
           cy.contains('New Shape').as('newShape');
           cy.get('@newShape').then(($btn) => {
             {$btn.trigger('click')}
@@ -824,7 +832,7 @@ describe("Survey creation smoke test", () => {
             .and('be.visible');
         }
         drawSecondPolygon();
-        if (device === "iphone-x") {
+        if (device === "iphone-x" || device === "iphone-5") {
           console.log('yes iphone-x') 
           cy.get('[data-cy="button-done"]').as('doneBtn')
             .should('exist')
@@ -895,24 +903,16 @@ describe("Survey creation smoke test", () => {
       })
       it(`Can input number of people reflected in response - ${device}`, () => {
         cy.viewport(device)
-        //cy.get('button').contains('Next Question').as('nextQuestionBtn')
-        //  .should('be.visible')
-        //  .and('exist')
-        //  .then(($btn) => {
-        //    {$btn.trigger('click')}
-        //  })
+        
         cy.get('[data-question="yes"]').contains('Please indicate how many people are reflected in this response')
-          .should('be.visible')
-          .and('exist')
+          .should('exist')
+          .and('be.visible')
         cy.get('input[type="number"]').as('numberInput')
           .should('exist');
-        cy.log('A user can use navigation arrows to skip question')
+        cy.log('A user can skip question')
         cy.get('@numberInput').then(($input) => {
           expect ($input.val()).to.equal('0')
         })
-        cy.get('a[title="Next Question"]').click()
-        cy.contains('vessel')
-        cy.get('a[title="Previous Question"]').click()
         cy.contains('response')
         cy.log('A user can input number by typing')
         cy.get('@numberInput').type('4').then(($input) => {
@@ -931,7 +931,12 @@ describe("Survey creation smoke test", () => {
         cy.get('@numberInput').then(($input) => {
           expect ($input.val()).to.equal('3');
         });
-        cy.get('button').contains('Next').click()
+        cy.get('button').contains('Next').as('nextQuestionBtn')
+          .should('exist')
+          //.and('be.visible')
+          .then(($btn) => {
+            {$btn.trigger('click')}
+          });
       });
       it(`Can input name or number of vessel - ${device}`, () => {
         cy.viewport(device)
@@ -955,7 +960,7 @@ describe("Survey creation smoke test", () => {
         });
         cy.get('button').contains('Next').click()
       });
-    ////
+    //////
       it(`Can answer additional questions - ${device}`, () => {
         cy.viewport(device)
         cy.contains('additional')
@@ -968,7 +973,11 @@ describe("Survey creation smoke test", () => {
       })
       it(`Can input age - ${device}`, () => {
         cy.viewport(device)
+        cy.contains('willing')
+          .should('not.exist')
         cy.contains("Your age")
+          .should('exist')
+          .and('be.visible')
         cy.get('input').clear().type("30")
         cy.contains('Next').as('nextBtn');
         cy.get('@nextBtn').then(($btn) => {
@@ -983,65 +992,73 @@ describe("Survey creation smoke test", () => {
       it(`Can add comments - ${device}`, () => {
         cy.viewport(device)
         cy.get("textarea").type("My general comments.")
-      })
-      it(`Records the correct response - ${device}`, () => {
-        cy.viewport(device)
         cy.contains("Complete Submission").as('completeSubmission')
         cy.get('@completeSubmission').should('be.visible').then(($btn) => {
           {$btn.trigger('click')}
-        });
-        cy.wait("@createResponse").then((req) => {
-          const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
-          expect (surveyResponseId).to.not.equal(null)
-          cy.restoreLocalStorage()
-          cy.getLocalStorage("access_token").then((token) => {
-            cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
-              const data = resp.query.surveyResponse.data
-              const responseAry = []
-              Object.entries(data).forEach(([, value]) => {
-                responseAry.push(value)
-              });
-              const sketchIds = []
-              Object.entries(responseAry[4].collection).forEach(([, value]) => {
-                sketchIds.push(value)
-              });
-              expect(responseAry.length).to.eq(11)
-              sketchIds.forEach((id) => {
-               cy.getSketch(id, token).then((sketch) => {
-                 expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
-               });
-              });
-              expect (responseAry[0].name).to.eq('Test User 1')
-              expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
-              expect (responseAry[2][0]).to.eq('N')
-              expect (responseAry[3][0]).to.eq('Kudafari')
-              expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
-              expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
-              expect (responseAry[5]).to.eq(3)
-              expect (responseAry[6]).to.eq("Queen Ann's Revenge")
-              expect (responseAry[7]).to.eq(true)
-              expect (responseAry[8]).to.eq(30)
-              expect (responseAry[9][0]).to.eq("Female")
-              expect (responseAry[10]).to.eq("My general comments.")
-              });
-           // });
-          });
-          cy.contains('Thank You')
+        })
+        cy.contains('General Comments')
+          .should('not.exist')
+        
+        if (device === "iphone-x" || device === "iphone-5" || device === "ipad-2") {
+          cy.wait("@createResponse").its('response.statusCode').should('eq', 200)
+          //cy.contains('Submitting')
+          //  .should('not.be.visible', {timeout:10000})
+          //
+          cy.get('h1').contains('Thank You')
             .should('be.visible')
-            //if (device != "iphone-5") {
-            //  cy.restoreLocalStorage()
-            //  cy.getLocalStorage('slug').then((slug) => {
-            //    cy.getLocalStorage('surveyId').then((id) => {
-            //      cy.visit(`${slug}/surveys/${id}`)
-            //      console.log(id)
-            //      console.log(slug)
-            //    })
+          cy.get('button').contains('Submit Another Response')
+            .should('exist')
+            .click()
+        }
+        //   //cy.restoreLocalStorage()
+        //   //cy.getLocalStorage('slug').then((slug) => {
+        //   //   cy.getLocalStorage('surveyId').then((id) => {
+        //   //     cy.visit(`${slug}/surveys/${id}`)
+        //   //     console.log(id)
+        //   //     console.log(slug)
+        //   //   })
+        //   // })
+        //}
+      })
+    })//
+  })////
+      //////it('Records the correct response ', () => {
+      //////  cy.wait("@createResponse").then((req) => {
+      //////    const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
+      //////    expect (surveyResponseId).to.not.equal(null)
+      //////    cy.restoreLocalStorage()
+      //////    cy.getLocalStorage("access_token").then((token) => {
+      //////      cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
+      ////////        const data = resp.query.surveyResponse.data
+      ////        const responseAry = []
+      //        Object.entries(data).forEach(([, value]) => {
+      //          responseAry.push(value)
+      //        });
+      //        const sketchIds = []
+      //        Object.entries(responseAry[4].collection).forEach(([, value]) => {
+      //          sketchIds.push(value)
+      //        });
+      //        expect(responseAry.length).to.eq(11)
+      //        sketchIds.forEach((id) => {
+      //         cy.getSketch(id, token).then((sketch) => {
+      //           expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
+      //         });
+      //        });
+      //        expect (responseAry[0].name).to.eq('Test User 1')
+      //        expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
+      //        expect (responseAry[2][0]).to.eq('N')
+      //        expect (responseAry[3][0]).to.eq('Kudafari')
+      //        expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
+      //        expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
+      //        expect (responseAry[5]).to.eq(3)
+      //        expect (responseAry[6]).to.eq("Queen Ann's Revenge")
+      //        expect (responseAry[7]).to.eq(true)
+      //        expect (responseAry[8]).to.eq(30)
+      //        expect (responseAry[9][0]).to.eq("Female")
+      //        expect (responseAry[10]).to.eq("My general comments.")
+      //      })
+      //    })
+      //  })
+      //})
 //
-            //  })
-            //}
-          console.log(device)
-       });
-      });
-    });
-  });
-});
+  })//
