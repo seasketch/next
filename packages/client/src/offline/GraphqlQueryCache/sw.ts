@@ -88,10 +88,15 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
    * @returns Promise<Response>
    */
   async handleRequest(url: URL, event: FetchEvent): Promise<Response> {
+    console.warn(`GraphqlQueryCache: handle request ${url}`);
     if (!(await this.isEnabled())) {
+      console.warn(`GraphqlQueryCache: Not enabled ${url}`);
       return fetch(event.request);
     }
     if (event.request.headers.get("content-type") !== "application/json") {
+      console.warn(`GraphqlQueryCache: Not application/json ${url}`, [
+        ...event.request.headers.keys(),
+      ]);
       // multipart form data mutation or query
       return fetch(event.request);
     }
@@ -121,6 +126,7 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
     } else {
       try {
         // If an unrelated operation, just pass it along normally
+        console.warn(`GraphqlQueryCache: Unrelated operation ${url}`);
         const response = await fetch(event.request);
         return response;
       } catch (e) {
