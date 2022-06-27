@@ -34,13 +34,12 @@ export async function match(request: Request | string) {
   const keys = (await caches.keys()).filter((key) =>
     /offline-surveys/.test(key)
   );
-  console.warn(`SurveyAssetCache: checking ${keys}`);
+  console.warn(`SurveyAssetCache: checking ${request.url} ${keys}`);
   for (const key of keys) {
     const cache = await caches.open(key);
-    const match = cache.match(request);
+    const match = await cache.match(request);
     if (match) {
       return match;
-      break;
     }
   }
   return undefined;
