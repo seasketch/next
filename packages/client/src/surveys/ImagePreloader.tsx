@@ -34,7 +34,7 @@ export default function ImagePreloader({
             return (
               <link
                 key={el.backgroundImage}
-                rel="preload"
+                rel="prefetch"
                 as="image"
                 href={el.backgroundImage + "&w=1280&auto=format,compress"}
                 // @ts-ignore
