@@ -44,6 +44,7 @@ if (process.env.SENTRY_DSN) {
     // of transactions for performance monitoring.
     // We recommend adjusting this value in production
     tracesSampleRate: 1.0,
+    environment: process.env.REACT_APP_SENTRY_ENV || "production",
   });
 
   // RequestHandler creates a separate execution context using domains, so that every

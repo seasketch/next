@@ -12,5 +12,6 @@ declare namespace NodeJS {
     REACT_APP_GRAPHQL_ENDPOINT: string;
     REACT_APP_CLOUDFRONT_DOCS_DISTRO: string;
     REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE_BY_DEFAULT?: string;
+    REACT_APP_SENTRY_ENV?: string;
   }
 }
