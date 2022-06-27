@@ -1,8 +1,10 @@
 /* eslint-disable i18next/no-literal-string */
+import { ExternalLinkIcon } from "@heroicons/react/outline";
 import { CogIcon } from "@heroicons/react/solid";
 import bytes from "bytes";
 import { useContext, useEffect, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import Badge from "../components/Badge";
 import { Card, Header } from "../components/CenteredCardListLayout";
 import DropdownButton from "../components/DropdownButton";
@@ -58,8 +60,39 @@ export default function OfflineSurveySelection() {
         </Warning>
       ) : null}
       {data && context?.cacheSizes ? (
-        <div className="inline-block min-w-full py-2 align-middle">
-          <table className="min-w-full divide-y divide-gray-300 mb-2">
+        <div className="inline-block w-full py-2 align-middle">
+          <div className="mb-4">
+            {surveys.map((survey) => (
+              <div key={survey.id} className="w-full flex">
+                <div className="text-gray-900 text-center p-2 mr-2 items-center">
+                  <input
+                    checked={
+                      context.cacheSizes?.selectedSurveyIds.indexOf(
+                        survey.id
+                      ) !== -1
+                    }
+                    className="cursor-pointer"
+                    type="checkbox"
+                    id={`survey-${survey.id}`}
+                    onChange={async (e) => {
+                      e.stopPropagation();
+                      await context.toggleSurveyOfflineSupport(survey.id, slug);
+                      context.populateOfflineSurveyAssets(false);
+                    }}
+                  />
+                </div>
+                <div className="truncate flex-1 text-sm text-gray-500 items-center flex">
+                  <label htmlFor={`survey-${survey.id}`}>{survey.name}</label>
+                </div>
+                <div className="flex items-center">
+                  <Link target="_blank" to={`/${slug}/surveys/${survey.id}`}>
+                    <ExternalLinkIcon className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* <table className="min-w-full divide-y divide-gray-300 mb-2">
             <thead>
               <tr>
                 <th
@@ -103,7 +136,7 @@ export default function OfflineSurveySelection() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table> */}
           {context?.cacheSizes && (
             <div>
               <h4 className="flex items-center">
