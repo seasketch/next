@@ -52,7 +52,6 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
    * @returns
    */
   isGraphqlRequest(request: Request) {
-    console.warn(request.url, this.endpoint);
     return request.method === "POST" && request.url === this.endpoint;
   }
 
@@ -89,15 +88,10 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
    * @returns Promise<Response>
    */
   async handleRequest(url: URL, event: FetchEvent): Promise<Response> {
-    console.warn(`GraphqlQueryCache: handle request ${url}`);
     if (!(await this.isEnabled())) {
-      console.warn(`GraphqlQueryCache: Not enabled ${url}`);
       return fetch(event.request);
     }
     if (event.request.headers.get("content-type") !== "application/json") {
-      console.warn(`GraphqlQueryCache: Not application/json ${url}`, [
-        ...event.request.headers.keys(),
-      ]);
       // multipart form data mutation or query
       return fetch(event.request);
     }
@@ -127,7 +121,6 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
     } else {
       try {
         // If an unrelated operation, just pass it along normally
-        console.warn(`GraphqlQueryCache: Unrelated operation ${url}`);
         const response = await fetch(event.request);
         return response;
       } catch (e) {
@@ -277,9 +270,6 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
       }
       const hash = hashCode(str);
       if (hashes[id] !== hash) {
-        console.warn(
-          `caches for ${id} must be invalidated due to query change`
-        );
         hashes[id] = hash;
         caches.delete(id);
         changes = true;
