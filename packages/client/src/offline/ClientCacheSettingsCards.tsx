@@ -132,11 +132,11 @@ export function CacheSettingCards() {
             {label(ClientCacheSettings[ClientCacheSettings.length - 1].id)}
           </div>
         </div>
-        <p className="text-sm text-gray-800 py-2 mt-2">
+        <div className="text-sm text-gray-800 py-2 mt-2">
           {description(level.id)}
-        </p>
+        </div>
         {context?.storageEstimate && (
-          <p
+          <div
             className={`text-sm text-gray-500 mt-1 ${
               quotaPercent > 0.75 && "text-red-800"
             }`}
@@ -157,7 +157,7 @@ export function CacheSettingCards() {
             >
               {t("Cache Details")}
             </button>
-          </p>
+          </div>
         )}
         {detailsOpen && context && (
           <ClientCacheDetailsModal

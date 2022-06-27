@@ -39,7 +39,7 @@ function CacheProgress({
         ></div>
       </div>
       <div className="flex text-sm text-gray-500">
-        <p className="flex-1">{description}</p>
+        <div className="flex-1">{description}</div>
         {loading && (
           <div className="overflow-visible h-5 w-1">
             <Spinner className="" />
