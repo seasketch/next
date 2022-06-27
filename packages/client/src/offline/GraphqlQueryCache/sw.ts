@@ -52,6 +52,7 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
    * @returns
    */
   isGraphqlRequest(request: Request) {
+    console.warn(request.url, this.endpoint);
     return request.method === "POST" && request.url === this.endpoint;
   }
 
