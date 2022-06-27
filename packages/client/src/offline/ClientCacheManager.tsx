@@ -131,16 +131,6 @@ export function ClientCacheManagerProvider({
     [setState]
   );
 
-  useEffect(() => {
-    updateStorageStats();
-    localforage.getItem(CLIENT_CACHE_SETTINGS_KEY).then((value) => {
-      const setting = ClientCacheSettings.find(
-        (setting) => setting.id === value
-      );
-      setState(setting || defaultCacheSetting);
-    });
-  }, []);
-
   const [storageStats, setStorageStats] =
     useState<
       | {
@@ -172,43 +162,15 @@ export function ClientCacheManagerProvider({
     }
   }, [setStorageStats]);
 
-  const updateCacheInformation = useCallback(async () => {
-    if (!graphqlQueryCache) {
-      throw new Error("GraphqlQueryCache not set");
-    }
-    setUpdatingCacheSizes(true);
-    // Map tiles - TODO: update when proper custom cache is added
-    const mapboxTiles = await getCacheSize("mapbox-tiles");
-    // static assets
-    const staticAssetState = await staticAssetCache.getState();
-    const queries = await graphqlQueryCache.getState();
-    const strategyArgs = await graphqlQueryCache.getStrategyArgs(
-      offlineSurveyChoiceStrategy.key
-    );
-    setUpdatingCacheSizes(false);
-    const stats = {
-      queries,
-      staticAssets: staticAssetState,
-      mapTiles: {
-        bytes: mapboxTiles.bytes,
-        tileCount: mapboxTiles.keys,
-      },
-      selectedSurveyIds: strategyArgs.map((args: { id: number }) => args.id),
-      offlineSurveys: {
-        assets: [],
-        fractionCached: 0,
-        documents: 0,
-        images: 0,
-        queries: 0,
-        questions: 0,
-        loading: true,
-      },
-    } as CacheInformation;
-    setCacheInfo(stats);
-    await updateStorageStats();
-    await updateOfflineSurveyCacheInfoForProject(getSlug());
-    return stats;
-  }, []);
+  useEffect(() => {
+    updateStorageStats();
+    localforage.getItem(CLIENT_CACHE_SETTINGS_KEY).then((value) => {
+      const setting = ClientCacheSettings.find(
+        (setting) => setting.id === value
+      );
+      setState(setting || defaultCacheSetting);
+    });
+  }, [updateStorageStats]);
 
   const populateCache = useCallback(async () => {
     staticAssetCache
@@ -233,7 +195,7 @@ export function ClientCacheManagerProvider({
         });
         updateStorageStats();
       });
-  }, [staticAssetCache]);
+  }, [updateStorageStats]);
 
   const clearStaticAssetCache = useCallback(async () => {
     await staticAssetCache.clearCache();
@@ -242,47 +204,11 @@ export function ClientCacheManagerProvider({
     setCacheInfo((prev) =>
       prev ? { ...prev, staticAssets: cacheState } : undefined
     );
-  }, [staticAssetCache]);
+  }, [updateStorageStats]);
 
   const reloadStaticAssetCache = useCallback(() => {
     clearStaticAssetCache().then(() => setTimeout(() => populateCache(), 200));
-  }, [staticAssetCache]);
-
-  const toggleSurveyOfflineSupport = useCallback(
-    async (id: number, slug: string) => {
-      if (!graphqlQueryCache) {
-        throw new Error("GraphqlQueryCache not set");
-      }
-      let args =
-        (await graphqlQueryCache.getStrategyArgs(
-          offlineSurveyChoiceStrategy.key
-        )) || [];
-      const enabled = Boolean(
-        args.find((arg: { id: number }) => arg.id === id)
-      );
-      if (enabled) {
-        args = args.filter((arg: { id: number }) => arg.id !== id);
-      } else {
-        args.push({ id, slug: getSlug() });
-      }
-      await graphqlQueryCache.setStrategyArgs(
-        offlineSurveyChoiceStrategy.key,
-        args
-      );
-      setCacheInfo((prev) => {
-        if (prev) {
-          return {
-            ...prev,
-            selectedSurveyIds: args.map((arg: { id: number }) => arg.id),
-          };
-        } else {
-          return undefined;
-        }
-      });
-      updateOfflineSurveyCacheInfoForProject(slug);
-    },
-    [graphqlQueryCache]
-  );
+  }, [clearStaticAssetCache, populateCache]);
 
   const getAssetsForSelectedSurveys = useCallback(async () => {
     if (!graphqlQueryCache) {
@@ -343,20 +269,19 @@ export function ClientCacheManagerProvider({
         for (const element of elements) {
           if (element.backgroundImage) {
             for (const src of srcVariants(element.backgroundImage)) {
-              if (assets.find((img) => img.url === src)) {
-                break;
+              if (!assets.find((img) => img.url === src)) {
+                const cachedResponse = await SurveyAssetCache.match(src);
+                assets.push({
+                  cached: !!cachedResponse,
+                  url: src,
+                  slug: variables.slug,
+                  surveyId: variables.id,
+                  type: "unsplash-image",
+                  bytes: cachedResponse
+                    ? (await cachedResponse.blob()).size
+                    : undefined,
+                });
               }
-              const cachedResponse = await SurveyAssetCache.match(src);
-              assets.push({
-                cached: !!cachedResponse,
-                url: src,
-                slug: variables.slug,
-                surveyId: variables.id,
-                type: "unsplash-image",
-                bytes: cachedResponse
-                  ? (await cachedResponse.blob()).size
-                  : undefined,
-              });
             }
           }
           // TODO: add rich text content when it's supported
@@ -429,8 +354,86 @@ export function ClientCacheManagerProvider({
         return [];
       }
     },
-    [graphqlQueryCache]
+    [getAssetsForSelectedSurveys, graphqlQueryCache]
   );
+
+  const toggleSurveyOfflineSupport = useCallback(
+    async (id: number, slug: string) => {
+      if (!graphqlQueryCache) {
+        throw new Error("GraphqlQueryCache not set");
+      }
+      let args =
+        (await graphqlQueryCache.getStrategyArgs(
+          offlineSurveyChoiceStrategy.key
+        )) || [];
+      const enabled = Boolean(
+        args.find((arg: { id: number }) => arg.id === id)
+      );
+      if (enabled) {
+        args = args.filter((arg: { id: number }) => arg.id !== id);
+      } else {
+        args.push({ id, slug: getSlug() });
+      }
+      await graphqlQueryCache.setStrategyArgs(
+        offlineSurveyChoiceStrategy.key,
+        args
+      );
+      setCacheInfo((prev) => {
+        if (prev) {
+          return {
+            ...prev,
+            selectedSurveyIds: args.map((arg: { id: number }) => arg.id),
+          };
+        } else {
+          return undefined;
+        }
+      });
+      updateOfflineSurveyCacheInfoForProject(slug);
+    },
+    [graphqlQueryCache, updateOfflineSurveyCacheInfoForProject]
+  );
+
+  const updateCacheInformation = useCallback(async () => {
+    if (!graphqlQueryCache) {
+      throw new Error("GraphqlQueryCache not set");
+    }
+    setUpdatingCacheSizes(true);
+    // Map tiles - TODO: update when proper custom cache is added
+    const mapboxTiles = await getCacheSize("mapbox-tiles");
+    // static assets
+    const staticAssetState = await staticAssetCache.getState();
+    const queries = await graphqlQueryCache.getState();
+    const strategyArgs = await graphqlQueryCache.getStrategyArgs(
+      offlineSurveyChoiceStrategy.key
+    );
+    setUpdatingCacheSizes(false);
+    const stats = {
+      queries,
+      staticAssets: staticAssetState,
+      mapTiles: {
+        bytes: mapboxTiles.bytes,
+        tileCount: mapboxTiles.keys,
+      },
+      selectedSurveyIds: strategyArgs.map((args: { id: number }) => args.id),
+      offlineSurveys: {
+        assets: [],
+        fractionCached: 0,
+        documents: 0,
+        images: 0,
+        queries: 0,
+        questions: 0,
+        loading: true,
+      },
+    } as CacheInformation;
+    setCacheInfo(stats);
+    await updateStorageStats();
+    await updateOfflineSurveyCacheInfoForProject(getSlug());
+    return stats;
+  }, [
+    graphqlQueryCache,
+    updateOfflineSurveyCacheInfoForProject,
+    updateStorageStats,
+  ]);
 
   const clearOfflineSurveyAssets = useCallback(async () => {
     if (!graphqlQueryCache) {
@@ -581,7 +584,7 @@ export function ClientCacheManagerProvider({
         throw new Error("GraphqlQueryCache not set");
       }
     },
-    [graphqlQueryCache]
+    [clearOfflineSurveyAssets, getAssetsForSelectedSurveys, graphqlQueryCache]
   );
 
   return (
