@@ -150,7 +150,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["iphone-x", "iphone-5", "ipad-2",  "macbook-15"]//]//, "ipad-2",]//, "macbook-15"]//, ]//, "macbook-15", "ipad-2"]//, "iphone-5"]//, "iphone-5"]// "macbook-15", "ipad-2"];
+const devices: any = ["iphone-x", "iphone-5", "ipad-2",  "macbook-15"]//, ]//]//, "ipad-2",]//, "macbook-15"]//, ]//, "macbook-15", "ipad-2"]//, "iphone-5"]//, "iphone-5"]// "macbook-15", "ipad-2"];
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -413,6 +413,14 @@ describe("Survey creation smoke test", () => {
       });
       it(`Cannot advance until island selection is made - ${device}`, () => {
         cy.viewport(device)
+        cy.restoreLocalStorage()
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.getLocalStorage("surveyId").then((id) => {
+            cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/7/`);
+          })
+        })
+        cy.contains("Which Atoll do you reside on?")
+          .should('not.exist')
         cy.contains('Which island of N atoll do you reside on?')
         cy.contains('Lhohi')
         cy.get('[title = "Next Question"]')
@@ -472,12 +480,12 @@ describe("Survey creation smoke test", () => {
           cy.get('@beginBtn').then(($btn) => {
             {$btn.trigger('click')}
           })
-          waitOnMapbox(5)
+          waitOnMapbox(4)
           cy.get('[role="progressbar"]')
             .should('not.exist')
           drawPolygon()
         } else {
-          waitOnMapbox(5)
+          waitOnMapbox(4)
           cy.get('[role="progressbar"]')
             .should('not.exist')
           drawPolygon()
@@ -690,7 +698,7 @@ describe("Survey creation smoke test", () => {
             .and('be.visible')
             .click()
         } else {
-          waitOnMapbox(3)
+          waitOnMapbox(4)
           cy.get('[role="progressbar"]')
             .should('not.exist')
           cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
@@ -947,6 +955,12 @@ describe("Survey creation smoke test", () => {
         cy.get('input').as('vesselInput')
           .should('be.empty')
         cy.get('button').contains('Skip Question').click()
+        cy.restoreLocalStorage()
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.getLocalStorage('surveyId').then((id) => {
+            cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28/`);
+          })
+        })
         cy.contains('willing')
           .should('exist')
           .and('be.visible')
@@ -973,6 +987,12 @@ describe("Survey creation smoke test", () => {
       })
       it(`Can input age - ${device}`, () => {
         cy.viewport(device)
+        cy.restoreLocalStorage()
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.getLocalStorage('surveyId').then((id) => {
+            cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/29/`);
+          })
+        })
         cy.contains('willing')
           .should('not.exist')
         cy.contains("Your age")
@@ -1030,7 +1050,7 @@ describe("Survey creation smoke test", () => {
       //////    cy.getLocalStorage("access_token").then((token) => {
       //////      cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
       ////////        const data = resp.query.surveyResponse.data
-      ////        const responseAry = []
+      //////        const responseAry = []
       //        Object.entries(data).forEach(([, value]) => {
       //          responseAry.push(value)
       //        });
