@@ -3460,6 +3460,40 @@ export type EnableForumPostingPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `enableOfflineSupport` mutation. */
+export type EnableOfflineSupportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  enable?: Maybe<Scalars['Boolean']>;
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `enableOfflineSupport` mutation. */
+export type EnableOfflineSupportPayload = {
+  __typename?: 'EnableOfflineSupportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `enableOfflineSupport` mutation. */
+export type EnableOfflineSupportPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
 export enum FieldRuleOperator {
   Contains = 'CONTAINS',
   Equal = 'EQUAL',
@@ -5292,6 +5326,7 @@ export type Mutation = {
   disableForumPosting?: Maybe<DisableForumPostingPayload>;
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
+  enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
   /**
    * Use to create new sprites. If an existing sprite in the database for this
    * project has a matching md5 hash no new Sprite will be created.
@@ -6105,6 +6140,12 @@ export type MutationDisableForumPostingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationEnableForumPostingArgs = {
   input: EnableForumPostingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationEnableOfflineSupportArgs = {
+  input: EnableOfflineSupportInput;
 };
 
 
@@ -7046,6 +7087,7 @@ export type Project = Node & {
    * public project listing via Query.projectsConnection.
    */
   isListed: Scalars['Boolean'];
+  isOfflineEnabled?: Maybe<Scalars['Boolean']>;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
   logoLink?: Maybe<Scalars['String']>;
   /**
@@ -9489,6 +9531,8 @@ export type Survey = Node & {
   /** PUBLIC or INVITE_ONLY */
   accessType: SurveyAccessType;
   archivedResponseCount?: Maybe<Scalars['Int']>;
+  /** Reads and enables pagination through a set of `Basemap`. */
+  basemaps?: Maybe<Array<Basemap>>;
   /** Reads a single `Form` that is related to this `Survey`. */
   form?: Maybe<Form>;
   /**
@@ -9535,6 +9579,12 @@ export type Survey = Node & {
   surveyInvites: Array<SurveyInvite>;
   /** Reads and enables pagination through a set of `SurveyResponse`. */
   surveyResponsesConnection: SurveyResponsesConnection;
+};
+
+
+export type SurveyBasemapsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -13383,6 +13433,30 @@ export type OfflineSurveysQuery = (
   )> }
 );
 
+export type OfflineSurveyMapsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type OfflineSurveyMapsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'mapboxPublicKey' | 'id'>
+    & { surveys: Array<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id' | 'name'>
+      & { form?: Maybe<(
+        { __typename?: 'Form' }
+        & Pick<Form, 'id'>
+      )>, basemaps?: Maybe<Array<(
+        { __typename?: 'Basemap' }
+        & BasemapDetailsFragment
+      )>> }
+    )> }
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13417,7 +13491,7 @@ export type UpdateProjectAccessControlSettingsMutation = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled'>
 );
 
 export type ProjectPublicDetailsMetadataFragment = (
@@ -14356,6 +14430,23 @@ export type GetFormElementQuery = (
   )> }
 );
 
+export type UpdateOfflineEnabledMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  enabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateOfflineEnabledMutation = (
+  { __typename?: 'Mutation' }
+  & { enableOfflineSupport?: Maybe<(
+    { __typename?: 'EnableOfflineSupportPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'isOfflineEnabled'>
+    )> }
+  )> }
+);
+
 export type SurveyAppRuleFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
@@ -14380,7 +14471,10 @@ export type SurveyAppFormElementFragment = (
 export type SurveyAppSurveyFragment = (
   { __typename?: 'Survey' }
   & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption' | 'supportedLanguages'>
-  & { form?: Maybe<(
+  & { basemaps?: Maybe<Array<(
+    { __typename?: 'Basemap' }
+    & BasemapDetailsFragment
+  )>>, form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
     & { logicRules?: Maybe<Array<(
@@ -15237,6 +15331,7 @@ export const ProjectMetadataFragmentDoc = gql`
   sessionIsAdmin
   isFeatured
   supportEmail
+  isOfflineEnabled
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = gql`
@@ -15471,6 +15566,9 @@ export const SurveyAppSurveyFragmentDoc = gql`
   showProgress
   showFacilitationOption
   supportedLanguages
+  basemaps {
+    ...BasemapDetails
+  }
   form {
     id
     logicRules {
@@ -15481,7 +15579,8 @@ export const SurveyAppSurveyFragmentDoc = gql`
     }
   }
 }
-    ${SurveyAppRuleFragmentDoc}
+    ${BasemapDetailsFragmentDoc}
+${SurveyAppRuleFragmentDoc}
 ${SurveyAppFormElementFragmentDoc}`;
 export const ParticipantListDetailsFragmentDoc = gql`
     fragment ParticipantListDetails on User {
@@ -18635,6 +18734,52 @@ export function useOfflineSurveysLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type OfflineSurveysQueryHookResult = ReturnType<typeof useOfflineSurveysQuery>;
 export type OfflineSurveysLazyQueryHookResult = ReturnType<typeof useOfflineSurveysLazyQuery>;
 export type OfflineSurveysQueryResult = Apollo.QueryResult<OfflineSurveysQuery, OfflineSurveysQueryVariables>;
+export const OfflineSurveyMapsDocument = gql`
+    query OfflineSurveyMaps($slug: String!) {
+  projectBySlug(slug: $slug) {
+    mapboxPublicKey
+    id
+    surveys {
+      id
+      name
+      form {
+        id
+      }
+      basemaps {
+        ...BasemapDetails
+      }
+    }
+  }
+}
+    ${BasemapDetailsFragmentDoc}`;
+
+/**
+ * __useOfflineSurveyMapsQuery__
+ *
+ * To run a query within a React component, call `useOfflineSurveyMapsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOfflineSurveyMapsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOfflineSurveyMapsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useOfflineSurveyMapsQuery(baseOptions: Apollo.QueryHookOptions<OfflineSurveyMapsQuery, OfflineSurveyMapsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OfflineSurveyMapsQuery, OfflineSurveyMapsQueryVariables>(OfflineSurveyMapsDocument, options);
+      }
+export function useOfflineSurveyMapsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OfflineSurveyMapsQuery, OfflineSurveyMapsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OfflineSurveyMapsQuery, OfflineSurveyMapsQueryVariables>(OfflineSurveyMapsDocument, options);
+        }
+export type OfflineSurveyMapsQueryHookResult = ReturnType<typeof useOfflineSurveyMapsQuery>;
+export type OfflineSurveyMapsLazyQueryHookResult = ReturnType<typeof useOfflineSurveyMapsLazyQuery>;
+export type OfflineSurveyMapsQueryResult = Apollo.QueryResult<OfflineSurveyMapsQuery, OfflineSurveyMapsQueryVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -20640,6 +20785,43 @@ export function useGetFormElementLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type GetFormElementQueryHookResult = ReturnType<typeof useGetFormElementQuery>;
 export type GetFormElementLazyQueryHookResult = ReturnType<typeof useGetFormElementLazyQuery>;
 export type GetFormElementQueryResult = Apollo.QueryResult<GetFormElementQuery, GetFormElementQueryVariables>;
+export const UpdateOfflineEnabledDocument = gql`
+    mutation UpdateOfflineEnabled($projectId: Int!, $enabled: Boolean!) {
+  enableOfflineSupport(input: {projectId: $projectId, enable: $enabled}) {
+    project {
+      id
+      isOfflineEnabled
+    }
+  }
+}
+    `;
+export type UpdateOfflineEnabledMutationFn = Apollo.MutationFunction<UpdateOfflineEnabledMutation, UpdateOfflineEnabledMutationVariables>;
+
+/**
+ * __useUpdateOfflineEnabledMutation__
+ *
+ * To run a mutation, you first call `useUpdateOfflineEnabledMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateOfflineEnabledMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateOfflineEnabledMutation, { data, loading, error }] = useUpdateOfflineEnabledMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      enabled: // value for 'enabled'
+ *   },
+ * });
+ */
+export function useUpdateOfflineEnabledMutation(baseOptions?: Apollo.MutationHookOptions<UpdateOfflineEnabledMutation, UpdateOfflineEnabledMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateOfflineEnabledMutation, UpdateOfflineEnabledMutationVariables>(UpdateOfflineEnabledDocument, options);
+      }
+export type UpdateOfflineEnabledMutationHookResult = ReturnType<typeof useUpdateOfflineEnabledMutation>;
+export type UpdateOfflineEnabledMutationResult = Apollo.MutationResult<UpdateOfflineEnabledMutation>;
+export type UpdateOfflineEnabledMutationOptions = Apollo.BaseMutationOptions<UpdateOfflineEnabledMutation, UpdateOfflineEnabledMutationVariables>;
 export const SurveyDocument = gql`
     query Survey($id: Int!, $slug: String!) {
   projectPublicDetails(slug: $slug) {
@@ -21782,6 +21964,7 @@ export const namedOperations = {
     InteractivitySettingsById: 'InteractivitySettingsById',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
+    OfflineSurveyMaps: 'OfflineSurveyMaps',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
     ProjectMetadata: 'ProjectMetadata',
     Me: 'Me',
@@ -21890,6 +22073,7 @@ export const namedOperations = {
     copyAppearance: 'copyAppearance',
     updateFormElementBasemaps: 'updateFormElementBasemaps',
     updateFormElementMapCamera: 'updateFormElementMapCamera',
+    UpdateOfflineEnabled: 'UpdateOfflineEnabled',
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',

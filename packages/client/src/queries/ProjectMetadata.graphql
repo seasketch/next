@@ -10,6 +10,7 @@ fragment ProjectMetadata on Project {
   sessionIsAdmin
   isFeatured
   supportEmail
+  isOfflineEnabled
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {

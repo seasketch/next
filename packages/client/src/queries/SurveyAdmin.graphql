@@ -787,3 +787,12 @@ query GetFormElement($id: Int!) {
     ...FormElementDetails
   }
 }
+
+mutation UpdateOfflineEnabled($projectId: Int!, $enabled: Boolean!) {
+  enableOfflineSupport(input: { projectId: $projectId, enable: $enabled }) {
+    project {
+      id
+      isOfflineEnabled
+    }
+  }
+}

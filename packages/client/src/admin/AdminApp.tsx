@@ -37,6 +37,12 @@ const LazyUserSettings = React.lazy(
 const LazySurveyAdmin = React.lazy(
   () => import(/* webpackChunkName: "AdminSurveys" */ "./surveys/SurveyAdmin")
 );
+const LazyOfflineAdmin = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminOffline" */ "../offline/AdminOfflineSettingsPage"
+    )
+);
 
 interface Section {
   breadcrumb: string;
@@ -49,6 +55,8 @@ const iconClassName =
 
 export default function AdminApp() {
   const { slug } = useParams<{ slug: string }>();
+  const { data, loading, error } = useCurrentProjectMetadata();
+
   const { t } = useTranslation(["admin"]);
   const sections: Section[] = [
     {
@@ -216,12 +224,34 @@ export default function AdminApp() {
       ),
       path: "/admin/surveys",
     },
+    ...(data?.project?.isOfflineEnabled
+      ? [
+          {
+            breadcrumb: "Offline Support",
+            icon: (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={iconClassName}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"
+                />
+              </svg>
+            ),
+            path: "/admin/offline",
+          },
+        ]
+      : []),
   ];
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [
-    mobileHeaderState,
-    setMobileHeaderState,
-  ] = useState<AdminMobileHeaderState>({});
+  const [mobileHeaderState, setMobileHeaderState] =
+    useState<AdminMobileHeaderState>({});
 
   const routeConfig = [
     ...sections,
@@ -243,8 +273,6 @@ export default function AdminApp() {
     .filter((route) => route.breadcrumb !== "Settings");
   let { path } = useRouteMatch();
   const breadcrumbs = useBreadcrumbs(routeConfig, { disableDefaults: true });
-
-  const { data, loading, error } = useCurrentProjectMetadata();
 
   if (data && data.project?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;
@@ -323,6 +351,11 @@ export default function AdminApp() {
                   <LazySurveyAdmin />
                 </React.Suspense>
               </Route>
+              <Route path={`${path}/offline/:subpath?`}>
+                <React.Suspense fallback={<Spinner />}>
+                  <LazyOfflineAdmin />
+                </React.Suspense>
+              </Route>
             </Switch>
             {/* <!-- Replace with your content --> */}
             {/* <!-- /End replace --> */}
@@ -379,7 +412,7 @@ function SidebarContents(props: {
               exact
               key={section.path}
               to={`/${props.slug}${section.path}`}
-              activeClassName="bg-primary-700 text-white"
+              activeClassName="bg-primary-600 text-white"
               className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-100 rounded-md hover:text-white hover:bg-primary-600 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75"
             >
               {section.icon}

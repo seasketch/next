@@ -19,18 +19,21 @@ interface SidebarButtonProps {
   sidebarOpen?: boolean;
 }
 
-const curry = (icon: ReactNode) => (
-  props: Pick<
-    SidebarButtonProps,
-    | "className"
-    | "onClick"
-    | "tabIndex"
-    | "tooltip"
-    | "href"
-    | "anySidebarOpen"
-    | "sidebarOpen"
-  >
-) => <SidebarButton {...props} icon={icon} />;
+const curry =
+  (icon: ReactNode) =>
+  (
+    props: Pick<
+      SidebarButtonProps,
+      | "className"
+      | "onClick"
+      | "tabIndex"
+      | "tooltip"
+      | "href"
+      | "anySidebarOpen"
+      | "sidebarOpen"
+    >
+  ) =>
+    <SidebarButton {...props} icon={icon} />;
 
 export default function SidebarButton(props: SidebarButtonProps) {
   const [hovered, setHovered] = useState(false);
@@ -72,7 +75,7 @@ export default function SidebarButton(props: SidebarButtonProps) {
             animate={{
               opacity: 1,
               scale: 1,
-              transition: { delay: props.anySidebarOpen ? 1 : 0.2 },
+              transition: { delay: props.anySidebarOpen ? 0.5 : 0.2 },
             }}
             exit={{ opacity: 0, transition: { duration: 0.1 } }}
             className="absolute left-14 z-0 top-1 bg-black px-2 py-1 rounded overflow-visible whitespace-nowrap pointer-events-none select-none"

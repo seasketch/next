@@ -1,0 +1,16 @@
+query OfflineSurveyMaps($slug: String!) {
+  projectBySlug(slug: $slug) {
+    mapboxPublicKey
+    id
+    surveys {
+      id
+      name
+      form {
+        id
+      }
+      basemaps {
+        ...BasemapDetails
+      }
+    }
+  }
+}
