@@ -150,7 +150,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["iphone-x", "iphone-5", "ipad-2",  "macbook-15"]//, ]//]//, "ipad-2",]//, "macbook-15"]//, ]//, "macbook-15", "ipad-2"]//, "iphone-5"]//, "iphone-5"]// "macbook-15", "ipad-2"];
+const devices: any = ["iphone-x", "iphone-5", "ipad-2",  "macbook-15"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -480,12 +480,12 @@ describe("Survey creation smoke test", () => {
           cy.get('@beginBtn').then(($btn) => {
             {$btn.trigger('click')}
           })
-          waitOnMapbox(4)
+          waitOnMapbox(5)
           cy.get('[role="progressbar"]')
             .should('not.exist')
           drawPolygon()
         } else {
-          waitOnMapbox(4)
+          waitOnMapbox(5)
           cy.get('[role="progressbar"]')
             .should('not.exist')
           drawPolygon()
@@ -690,6 +690,11 @@ describe("Survey creation smoke test", () => {
             .as('beginBtn').then(($btn) => {
               {$btn.trigger('click')}
             })
+            //cy.get('svg').then((svg) => {
+            //    while (svg.hasClass('animate-spin')) {
+            //      waitOnMapbox(1)
+            //    }
+            //  })
           cy.get('[role="progressbar"]')
             .should('not.exist')
             drawPolygon()
@@ -698,7 +703,17 @@ describe("Survey creation smoke test", () => {
             .and('be.visible')
             .click()
         } else {
-          waitOnMapbox(4)
+          waitOnMapbox(5)
+          //cy.get('svg').then((svg) => {
+          //  if (device !== "ipad-2") {
+          //    while (svg.hasClass('animate-spin')) {
+          //      waitOnMapbox(1)
+          //    }
+          //  } else {
+          //    //wait
+          //  }
+          // 
+          //})
           cy.get('[role="progressbar"]')
             .should('not.exist')
           cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
