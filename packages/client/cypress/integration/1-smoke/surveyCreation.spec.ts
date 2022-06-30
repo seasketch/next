@@ -150,7 +150,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = [ "iphone-5"]//, "iphone-5", "ipad-2",  "macbook-15"]//
+const devices: any = [ "macbook-15"]//, "iphone-5", "ipad-2",  "macbook-15"]//
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -362,7 +362,7 @@ describe("Survey creation smoke test", () => {
       it("Can visit the survey", () => {
         cy.viewport(device)
         //iphone-x
-        if (device === "iphone-5") {
+        if (device === "macbook-15") {
           cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
         }
       });
@@ -384,7 +384,7 @@ describe("Survey creation smoke test", () => {
           expect ($switch.attr('aria-checked')).to.equal(`true`)
           {$switch.trigger('click')}
         });
-        if (device === "ipad-2") {
+        if (device === "ipad-2" || device === "macbook-15") {
           cy.get('body').click(100, 100)
         } else {
           cy.get('body').click()
