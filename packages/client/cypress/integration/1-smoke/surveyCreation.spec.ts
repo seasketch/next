@@ -150,7 +150,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["iphone-x", "iphone-5", "ipad-2",  "macbook-15"]//
+const devices: any = [ "ipad-2"]//, "iphone-5", "ipad-2",  "macbook-15"]//
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -362,7 +362,7 @@ describe("Survey creation smoke test", () => {
       it("Can visit the survey", () => {
         cy.viewport(device)
         //iphone-x
-        if (device === "iphone-x") {
+        if (device === "ipad-2") {
           cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
         }
       });
@@ -384,7 +384,13 @@ describe("Survey creation smoke test", () => {
           expect ($switch.attr('aria-checked')).to.equal(`true`)
           {$switch.trigger('click')}
         });
-        cy.get('body').click()
+        if (device === "ipad-2") {
+          cy.get('body').click(100, 100)
+        } else {
+          cy.get('body').click()
+        }
+        cy.get('[role="dialog"]')
+          .should('not.exist')
         cy.get('[name="Begin Survey"]').should('be.visible').then(($btn) => {
           {$btn.trigger('click')}
         });
@@ -1068,8 +1074,8 @@ describe("Survey creation smoke test", () => {
       ////////        const data = resp.query.surveyResponse.data
       //////        const responseAry = []
       ////        Object.entries(data).forEach(([, value]) => {
-      ////          responseAry.push(value)
-      //        });
+      //////          responseAry.push(value)
+      ////        });
       //        const sketchIds = []
       //        Object.entries(responseAry[4].collection).forEach(([, value]) => {
       //          sketchIds.push(value)
