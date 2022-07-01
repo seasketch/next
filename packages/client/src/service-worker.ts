@@ -6,6 +6,14 @@ import { MESSAGE_TYPES } from "./offline/ServiceWorkerWindow";
 import StaticAssetCache from "./offline/StaticAssetCache";
 import { strategies } from "./offline/GraphqlQueryCache/strategies";
 import * as SurveyAssetCache from "./offline/SurveyAssetCache";
+import LRUCache from "mnemonist/lru-cache-with-delete";
+import {
+  isSimulatorUrl,
+  MapTileCacheCalculator,
+  OfflineTileSettings,
+} from "./offline/MapTileCache";
+
+const MapTileCache = new MapTileCacheCalculator();
 
 const graphqlQueryCache = new GraphqlQueryCache(
   process.env.REACT_APP_GRAPHQL_ENDPOINT,
@@ -20,6 +28,10 @@ clientsClaim();
 
 const MANIFEST = self.__WB_MANIFEST;
 const staticAssetCache = new StaticAssetCache(MANIFEST);
+
+const offlineTileSimulatorSettings = new LRUCache<string, OfflineTileSettings>(
+  5
+);
 
 self.addEventListener("install", (event) => {
   // Ensure stale query data that no longer matches application code are removed
@@ -55,6 +67,30 @@ self.addEventListener("message", (event) => {
     event.data.type === MESSAGE_TYPES.UPDATE_GRAPHQL_CACHE_ENABLED
   ) {
     graphqlQueryCache.restoreEnabledState();
+  } else if (
+    event.data &&
+    event.data.type === MESSAGE_TYPES.ENABLE_OFFLINE_TILE_SIMULATOR
+  ) {
+    var sourceId = (event.source as any).id as string;
+    if (sourceId) {
+      console.warn(
+        "Enabling offline tile simulator. Tile requests will be intercepted and blocked if not in offline tileset settings.",
+        event.data.settings,
+        sourceId
+      );
+      offlineTileSimulatorSettings.set(sourceId, event.data.settings);
+      event.ports[0].postMessage(true);
+    }
+  } else if (
+    event.data &&
+    event.data.type === MESSAGE_TYPES.DISABLE_OFFLINE_TILE_SIMULATOR
+  ) {
+    console.warn("Disabling offline tile simulator.");
+    var sourceId = (event.source as any).id as string;
+    if (sourceId) {
+      offlineTileSimulatorSettings.delete(sourceId);
+    }
+    event.ports[0].postMessage(false);
   }
 });
 
@@ -79,5 +115,12 @@ self.addEventListener("fetch", (event) => {
     (/consentDocs/.test(url.pathname) && url.host === self.location.host)
   ) {
     event.respondWith(SurveyAssetCache.handler(event));
+  } else if (isSimulatorUrl(url)) {
+    const settings = offlineTileSimulatorSettings.get(event.clientId);
+    if (settings) {
+      event.respondWith(
+        MapTileCache.handleSimulatorRequest(url, event, settings)
+      );
+    }
   }
 });

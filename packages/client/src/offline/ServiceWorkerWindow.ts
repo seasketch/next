@@ -1,5 +1,6 @@
 import { PrecacheEntry } from "workbox-precaching/_types";
 import { Workbox } from "workbox-window";
+import { OfflineTileSettings } from "./MapTileCache";
 
 export const MESSAGE_TYPES = {
   GET_MANIFEST: "GET_MANIFEST",
@@ -8,6 +9,8 @@ export const MESSAGE_TYPES = {
   GRAPHQL_CACHE_REVALIDATION: "GRAPHQL_CACHE_REVALIDATION",
   UPDATE_GRAPHQL_CACHE_ENABLED: "UPDATE_GRAPHQL_CACHE_ENABLED",
   SKIP_WAITING: "SKIP_WAITING",
+  ENABLE_OFFLINE_TILE_SIMULATOR: "ENABLE_OFFLINE_TILE_SIMULATOR",
+  DISABLE_OFFLINE_TILE_SIMULATOR: "DISABLE_OFFLINE_TILE_SIMULATOR",
 };
 
 /**
@@ -80,6 +83,19 @@ class ServiceWorkerWindow {
   skipWaiting() {
     this.wb.messageSW({
       type: MESSAGE_TYPES.SKIP_WAITING,
+    });
+  }
+
+  enableOfflineTileSimulator(settings: OfflineTileSettings) {
+    return this.wb.messageSW({
+      type: MESSAGE_TYPES.ENABLE_OFFLINE_TILE_SIMULATOR,
+      settings,
+    });
+  }
+
+  disableOfflineTileSimulator() {
+    return this.wb.messageSW({
+      type: MESSAGE_TYPES.DISABLE_OFFLINE_TILE_SIMULATOR,
     });
   }
 }

@@ -7,7 +7,7 @@ import { GraphqlQueryCache } from "./sw";
 import { SurveyDocument } from "../../generated/graphql";
 import { ProjectMetadataDocument } from "../../generated/queries";
 // @ts-ignore
-import { Cache, CacheStorage, caches } from "cache-polyfill";
+import { caches } from "cache-polyfill";
 require("fake-indexeddb/auto");
 
 global.caches = caches;

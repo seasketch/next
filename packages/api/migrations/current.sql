@@ -21,7 +21,7 @@ create or replace function surveys_basemaps(survey surveys)
     select * from basemaps where id = any(select distinct(unnest(array_cat(
       (select array_agg(c) from (
         select unnest(map_basemaps) from form_elements where form_id = (
-          select id from forms where survey_id = survey.id)
+          select id from forms where survey_id = survey.id) and layout = any('{MAP_STACKED,MAP_SIDEBAR_LEFT,MAP_SIDEBAR_RIGHT,MAP_FULLSCREEN,MAP_TOP}')
         ) as dt(c)
       ),
       (select array_agg(basemaps) from (
@@ -35,3 +35,5 @@ create or replace function surveys_basemaps(survey surveys)
 grant execute on function surveys_basemaps to anon;
 
 comment on function surveys_basemaps is '@simpleCollections only';
+
+alter table basemaps add column if not exists is_offline_enabled boolean not null default false;

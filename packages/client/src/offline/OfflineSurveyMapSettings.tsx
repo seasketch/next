@@ -1,19 +1,29 @@
-import { useMemo } from "react";
+import { flatten } from "lodash";
+import {
+  AnySourceData,
+  RasterDemSource,
+  RasterSource,
+  VectorSource,
+} from "mapbox-gl";
+import { useEffect, useMemo, useState } from "react";
 import { Trans as T } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
+import Badge from "../components/Badge";
 import Button from "../components/Button";
 import CenteredCardListLayout, {
   Card,
   Header,
 } from "../components/CenteredCardListLayout";
+import EnabledToggleButton from "../components/EnabledToggleButton";
 import Spinner from "../components/Spinner";
 import {
   BasemapDetailsFragment,
-  useOfflineSurveyMapsLazyQuery,
   useOfflineSurveyMapsQuery,
+  useToggleOfflineBasemapSupportMutation,
+  useUpdateBasemapMutation,
 } from "../generated/graphql";
 import getSlug from "../getSlug";
-import { useStyleSources } from "./mapboxApiHelpers";
+import { getSources, useStyleSources } from "./mapboxApiHelpers";
 
 const Trans = (props: any) => <T ns="admin:offline" {...props} />;
 
@@ -62,7 +72,56 @@ export default function OfflineSurveyMapSettings() {
         });
       }
     }
-    return detailsBySurveys;
+    for (const detail of detailsBySurveys) {
+      detail.basemaps = detail.basemaps.sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+    }
+    return detailsBySurveys.sort((a, b) => b.surveys.length - a.surveys.length);
+  }, [data]);
+
+  const [dataSources, setDataSources] = useState<
+    (RasterSource | RasterDemSource | VectorSource)[]
+  >([]);
+
+  useEffect(() => {
+    const basemaps: { [id: number]: BasemapDetailsFragment } = {};
+    for (const survey of data?.projectBySlug?.surveys || []) {
+      for (const basemap of survey.basemaps || []) {
+        if (basemap.isOfflineEnabled) {
+          basemaps[basemap.id] = basemap;
+        }
+      }
+    }
+    Promise.all(
+      Object.values(basemaps).map(({ url }) =>
+        getSources(
+          url,
+          data!.projectBySlug!.mapboxPublicKey ||
+            process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
+        )
+      )
+    ).then((sources) => {
+      const flattenedSources = flatten(sources);
+      const uniqueSources: {
+        [url: string]: RasterSource | RasterDemSource | VectorSource;
+      } = {};
+      for (const source of flattenedSources) {
+        if (
+          source.type === "raster" ||
+          source.type === "raster-dem" ||
+          source.type === "vector"
+        ) {
+          const url = source.tiles ? source.tiles[0] : source.url;
+          if (url) {
+            uniqueSources[url] = source;
+          }
+        } else {
+          // can't do anything with that source
+        }
+      }
+      setDataSources(Object.values(uniqueSources));
+    });
   }, [data]);
 
   return (
@@ -78,7 +137,8 @@ export default function OfflineSurveyMapSettings() {
               on each machine to be used in the field. Online maps may consist
               of millions of tiles and hundreds of gigabytes of data. Using the
               setting below, administrators can specify a subset of the map data
-              that will need to be downloaded for offline use.
+              that is feasible to download for offline use. This feature
+              currently support vector and raster tiles hosted on Mapbox.
             </Trans>
           </p>
           {loading ? (
@@ -108,6 +168,38 @@ export default function OfflineSurveyMapSettings() {
             })
           )}
         </Card>
+        <Card>
+          <Header>
+            <Trans>Data Sources and Tile Packages</Trans>
+          </Header>
+          <p className="text-sm text-gray-500 py-2">
+            <Trans>
+              Based on the selection above and the tiling settings for each
+              basemap, SeaSketch identifies the data sources that will need to
+              be cached. Note that some basemaps may share data sources which
+              can reduce cache sizes.
+            </Trans>
+          </p>
+          <p className="text-sm text-gray-500 pb-2">
+            <Trans>
+              Each source will need to be turned into a "tile package" before it
+              is available for download. These tile packages can be regenerated
+              whenever maps are updated, and users can choose when to download
+              the new tile package. Tile packages may also be downloaded and
+              distributed to authorized users via portable usb drives.
+            </Trans>
+          </p>
+          {dataSources.map((source) => {
+            return (
+              <div
+                className="text-sm truncate"
+                title={source.url || source.tiles![0]}
+              >
+                {source.url || source.tiles![0]}
+              </div>
+            );
+          })}
+        </Card>
       </CenteredCardListLayout>
     </div>
   );
@@ -121,22 +213,78 @@ function MapItem({
   mapboxApiKey: string;
 }) {
   const { sources, loading, error } = useStyleSources(map.url, mapboxApiKey);
+  const [mutate, mutationState] = useToggleOfflineBasemapSupportMutation();
 
+  const isMapboxHosted = /mapbox:/.test(map.url);
   return (
-    <div className="flex py-2 items-center h-24">
+    <div
+      className={`flex py-2 items-center h-24 ${
+        !isMapboxHosted && "opacity-50 pointer-events-none"
+      }`}
+    >
       <img
         src={map.thumbnail}
         className="w-20 h-20 rounded"
         alt={`${map.name} preview`}
       />
       <div className="px-2 flex-1 h-full">
-        <h4 className="text-base">{map.name}</h4>
-
+        <h4 className="text-base truncate">{map.name}</h4>
         {loading && <Spinner />}
-        {sources && sources.map((s) => s.type).join(", ")}
         {error}
+        {sources &&
+          (isMapboxHosted ? (
+            <div className="text-sm">
+              <h5 className="text-sm text-gray-500">
+                <Trans>Source types</Trans>
+              </h5>
+              <div className="text-gray-500 space-x-1 overflow-hidden whitespace-nowrap">
+                {sources.map((s) => (
+                  <Badge>{s.type}</Badge>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm">
+              <Trans>
+                Only supported for Mapbox-hosted basemaps currently.
+              </Trans>
+            </div>
+          ))}
       </div>
-      <Button label={<Trans>Enable</Trans>} />
+      {map.isOfflineEnabled && (
+        <Link
+          className="underline mx-4"
+          to={`/${getSlug()}/edit-basemap/${map.id}`}
+        >
+          <Trans>Tiling Settings</Trans>
+        </Link>
+      )}
+
+      <EnabledToggleButton
+        small
+        enabled={map.isOfflineEnabled}
+        onClick={() => {
+          mutate({
+            variables: {
+              id: map.id,
+              enable: !map.isOfflineEnabled,
+            },
+            optimisticResponse: (data) => {
+              return {
+                __typename: "Mutation",
+                updateBasemap: {
+                  __typename: "UpdateBasemapPayload",
+                  basemap: {
+                    __typename: "Basemap",
+                    id: data.id,
+                    isOfflineEnabled: data.enable,
+                  },
+                },
+              };
+            },
+          });
+        }}
+      />
     </div>
   );
 }

@@ -239,6 +239,7 @@ export type Basemap = Node & {
    * project which will only be used in surveys.
    */
   isDisabled: Scalars['Boolean'];
+  isOfflineEnabled: Scalars['Boolean'];
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
@@ -334,6 +335,7 @@ export type BasemapInput = {
    * project which will only be used in surveys.
    */
   isDisabled?: Maybe<Scalars['Boolean']>;
+  isOfflineEnabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
@@ -385,6 +387,7 @@ export type BasemapPatch = {
    * project which will only be used in surveys.
    */
   isDisabled?: Maybe<Scalars['Boolean']>;
+  isOfflineEnabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
@@ -12524,7 +12527,7 @@ export type RequestInviteOnlyProjectAccessMutation = (
 
 export type BasemapDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly'>
+  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'isOfflineEnabled'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -13451,6 +13454,44 @@ export type OfflineSurveyMapsQuery = (
         { __typename?: 'Basemap' }
         & BasemapDetailsFragment
       )>> }
+    )> }
+  )> }
+);
+
+export type ToggleOfflineBasemapSupportMutationVariables = Exact<{
+  id: Scalars['Int'];
+  enable: Scalars['Boolean'];
+}>;
+
+
+export type ToggleOfflineBasemapSupportMutation = (
+  { __typename?: 'Mutation' }
+  & { updateBasemap?: Maybe<(
+    { __typename?: 'UpdateBasemapPayload' }
+    & { basemap?: Maybe<(
+      { __typename?: 'Basemap' }
+      & Pick<Basemap, 'id' | 'isOfflineEnabled'>
+    )> }
+  )> }
+);
+
+export type BasemapOfflineSettingsQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type BasemapOfflineSettingsQuery = (
+  { __typename?: 'Query' }
+  & { basemap?: Maybe<(
+    { __typename?: 'Basemap' }
+    & Pick<Basemap, 'id' | 'name'>
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id'>
+      & { region: (
+        { __typename?: 'GeometryPolygon' }
+        & Pick<GeometryPolygon, 'geojson'>
+      ) }
     )> }
   )> }
 );
@@ -15298,6 +15339,7 @@ export const BasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
   type
   url
   surveysOnly
+  isOfflineEnabled
 }
     `;
 export const MapEssentialsFragmentDoc = /*#__PURE__*/ gql`
@@ -16759,6 +16801,30 @@ export const OfflineSurveyMapsDocument = /*#__PURE__*/ gql`
   }
 }
     ${BasemapDetailsFragmentDoc}`;
+export const ToggleOfflineBasemapSupportDocument = /*#__PURE__*/ gql`
+    mutation ToggleOfflineBasemapSupport($id: Int!, $enable: Boolean!) {
+  updateBasemap(input: {id: $id, patch: {isOfflineEnabled: $enable}}) {
+    basemap {
+      id
+      isOfflineEnabled
+    }
+  }
+}
+    `;
+export const BasemapOfflineSettingsDocument = /*#__PURE__*/ gql`
+    query BasemapOfflineSettings($id: Int!) {
+  basemap(id: $id) {
+    id
+    name
+    project {
+      id
+      region {
+        geojson
+      }
+    }
+  }
+}
+    `;
 export const ProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -17857,6 +17923,7 @@ export const namedOperations = {
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     OfflineSurveyMaps: 'OfflineSurveyMaps',
+    BasemapOfflineSettings: 'BasemapOfflineSettings',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
     ProjectMetadata: 'ProjectMetadata',
     Me: 'Me',
@@ -17935,6 +18002,7 @@ export const namedOperations = {
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
+    ToggleOfflineBasemapSupport: 'ToggleOfflineBasemapSupport',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSurvey: 'CreateSurvey',

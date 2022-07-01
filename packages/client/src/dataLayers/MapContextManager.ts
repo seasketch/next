@@ -9,9 +9,10 @@ import mapboxgl, {
   LngLatBoundsLike,
   MapboxOptions,
   AnySourceImpl,
+  AnySourceData,
+  AnyLayer,
+  VectorSource,
 } from "mapbox-gl";
-// @ts-ignore
-import * as spec from "@mapbox/mapbox-gl-style-spec";
 import {
   createContext,
   Dispatch,
@@ -43,7 +44,10 @@ import bytes from "bytes";
 import { urlTemplateForArcGISDynamicSource } from "./sourceTypes/ArcGISDynamicMapServiceSource";
 import bbox from "@turf/bbox";
 import { useParams } from "react-router";
+import { OfflineTileSettings } from "../offline/MapTileCache";
+import ServiceWorkerWindow from "../offline/ServiceWorkerWindow";
 
+// TODO: we're not using project settings for this yet
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 
 interface LayerState {
@@ -301,6 +305,15 @@ class MapContextManager {
       maxPitch: 70,
       optimizeForTerrain: true,
       logoPosition: "bottom-right",
+      transformRequest: (url, resoureType) => {
+        if (
+          this.internalState.offlineTileSimulatorActive &&
+          /api\.mapbox\./.test(url)
+        ) {
+          url = url.replace("api.mapbox.com", "api.mapbox-offline.com");
+        }
+        return { url };
+      },
     };
     if (this.initialCameraOptions) {
       mapOptions = {
@@ -571,8 +584,8 @@ class MapContextManager {
             }
           : {}),
         prefersTerrainEnabled: this.internalState.prefersTerrainEnabled,
-        basemapOptionalLayerStatePreferences: this.internalState
-          .basemapOptionalLayerStatePreferences,
+        basemapOptionalLayerStatePreferences:
+          this.internalState.basemapOptionalLayerStatePreferences,
       };
       window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
     }
@@ -592,7 +605,7 @@ class MapContextManager {
 
   private updateStyleInfinitLoopDetector = 0;
 
-  private async updateStyle() {
+  async updateStyle() {
     if (this.map && this.internalState.ready) {
       this.updateStyleInfinitLoopDetector = 0;
       const { style, sprites } = await this.getComputedStyle();
@@ -732,9 +745,8 @@ class MapContextManager {
         };
       } else {
         // @ts-ignore
-        baseStyle.sources![
-          baseStyle.terrain?.source || "terrain-source"
-        ] = newSource;
+        baseStyle.sources![baseStyle.terrain?.source || "terrain-source"] =
+          newSource;
       }
 
       // @ts-ignore
@@ -932,7 +944,13 @@ class MapContextManager {
         }
       }
     }
-    baseStyle.layers = [...underLabels, ...overLabels];
+
+    baseStyle.sources = {
+      ...baseStyle.sources,
+      ...this.dynamicDataSources,
+    };
+
+    baseStyle.layers = [...underLabels, ...overLabels, ...this.dynamicLayers];
 
     // Evaluate any basemap optional layers
     // value is whether to toggle
@@ -993,6 +1011,15 @@ class MapContextManager {
         return layer;
       }
     });
+
+    if (this.internalState.offlineTileSimulatorActive) {
+      // find and update composite source
+      const composite = baseStyle.sources["composite"] as VectorSource;
+      if (composite?.url && /^mapbox:/.test(composite.url)) {
+        // @ts-ignore
+        // composite.url = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8,seasketch.dskwrmxn,seasketch.6672zknn,seasketch.6yh2wu12,seasketch.82q84d6r,seasketch.9zvvkm9d,seasketch.ckyp9o0hl65b020o8j7u4putw-0oi0y,seasketch.azores_bathy,mapbox-public.bathymetry,seasketch.526fkzz1,mapbox.country-boundaries-v1,seasketch.cniiyc48,mapbox.mapbox-terrain-v2/13/8176/4513.vector.pbf?sku=101Fa7O74OJnQ&access_token=${process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!}`;
+      }
+    }
 
     return { style: baseStyle, sprites };
   }
@@ -1334,6 +1361,96 @@ class MapContextManager {
       }
     }
   }
+
+  private dynamicDataSources: { [id: string]: AnySourceData } = {};
+  private dynamicLayers: AnyLayer[] = [];
+
+  /**
+   * Add a data source directly to the map. Don't use the direct mapbox-gl
+   * methods or your source will disappear whenever the manager resets the map
+   * style using the product of getComputedStyle().
+   * @param id
+   * @param source
+   */
+  addSource(id: string, source: AnySourceData) {
+    this.dynamicDataSources[id] = source;
+    this.debouncedUpdateStyle();
+  }
+
+  removeSource(id: string) {
+    delete this.dynamicDataSources[id];
+    this.debouncedUpdateStyle();
+  }
+
+  /**
+   * 
+   * Add a layer directly to the map. Don't use the direct mapbox-gl 
+   * methods or your source will disappear whenever the manager resets the map
+   * style using the product of getComputedStyle().
+
+   * @param layer 
+   */
+  addLayer(layer: AnyLayer) {
+    const idx = this.dynamicLayers.findIndex((l) => l.id === layer.id);
+    if (idx > -1) {
+      this.dynamicLayers[idx] = layer;
+    } else {
+      this.dynamicLayers.push(layer);
+    }
+    this.debouncedUpdateStyle();
+  }
+
+  removeLayer(id: string) {
+    this.dynamicLayers = this.dynamicLayers.filter((lyr) => lyr.id !== id);
+    this.debouncedUpdateStyle();
+  }
+
+  async enableOfflineTileSimulator(settings: OfflineTileSettings) {
+    const enabled = await ServiceWorkerWindow.enableOfflineTileSimulator(
+      settings
+    );
+    if (!enabled) {
+      throw new Error("Invalid response from service worker");
+    }
+    this.setState((prev) => ({
+      ...prev,
+      offlineTileSimulatorActive: true,
+    }));
+    this.updateStyle();
+    // Using a bunch of undocumented private apis here. See:
+    // https://github.com/mapbox/mapbox-gl-js/issues/2633#issuecomment-518622682
+    // TODO: This seems to be out of date with new version of mapbox-gl-js
+    // @ts-ignore
+    const sourceCaches = this.map?.style?._sourceCaches;
+    await window.caches.delete("mapbox-tiles");
+    if (sourceCaches) {
+      const cache = sourceCaches["other:composite"];
+      if (cache) {
+        cache.clearTiles();
+        // @ts-ignore
+        cache.update(this.map.transform);
+        this.map?.triggerRepaint();
+        this.map?.resize();
+        this.map?.triggerRepaint();
+        const center = this.map!.getCenter()!;
+        center.lat = center.lat * 1.0000001;
+        this.map!.setCenter(center);
+        this.map?.triggerRepaint();
+      }
+    }
+  }
+
+  async disableOfflineTileSimulator() {
+    const enabled = await ServiceWorkerWindow.disableOfflineTileSimulator();
+    if (enabled) {
+      throw new Error("Invalid response from service worker");
+    }
+    this.setState((prev) => ({
+      ...prev,
+      offlineTileSimulatorActive: false,
+    }));
+    this.updateStyle();
+  }
 }
 
 export default MapContextManager;
@@ -1360,6 +1477,7 @@ export interface MapContextInterface {
   basemapOptionalLayerStates: { [layerName: string]: any };
   basemapOptionalLayerStatePreferences?: { [layerName: string]: any };
   showScale?: boolean;
+  offlineTileSimulatorActive?: boolean;
 }
 
 interface MapContextOptions {

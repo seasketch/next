@@ -82,9 +82,8 @@ export default function useMapboxGLDraw(
   const drawMode = glDrawMode(isSmall, geometryType);
   const [state, _setState] = useState(DigitizingState.NO_SELECTION);
   const [disabled, setDisabled] = useState(false);
-  const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
-    null
-  );
+  const [dragTarget, setDragTarget] =
+    useState<DigitizingDragTarget | null>(null);
   const [selection, setSelection] = useState<null | Feature<any>>(null);
   const handlerState = useRef<{
     draw?: MapboxDraw;

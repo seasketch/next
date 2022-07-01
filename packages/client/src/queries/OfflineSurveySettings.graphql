@@ -14,3 +14,25 @@ query OfflineSurveyMaps($slug: String!) {
     }
   }
 }
+
+mutation ToggleOfflineBasemapSupport($id: Int!, $enable: Boolean!) {
+  updateBasemap(input: { id: $id, patch: { isOfflineEnabled: $enable } }) {
+    basemap {
+      id
+      isOfflineEnabled
+    }
+  }
+}
+
+query BasemapOfflineSettings($id: Int!) {
+  basemap(id: $id) {
+    id
+    name
+    project {
+      id
+      region {
+        geojson
+      }
+    }
+  }
+}

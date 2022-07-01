@@ -1,5 +1,4 @@
 import { CameraOptions } from "mapbox-gl";
-import { useParams } from "react-router-dom";
 import BasemapEditorPanel from "./BasemapEditorPanel";
 
 export default function EditBasemapPage({

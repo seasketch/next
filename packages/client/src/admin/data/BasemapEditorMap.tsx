@@ -15,15 +15,9 @@ export default function BasemapEditorPanelMap({
   const basemapIds = useMemo(() => {
     return [basemap.id];
   }, [basemap]);
-  const essentials = useMapEssentials({
-    filterBasemapIds: basemapIds,
-    cameraOptions,
-  });
   return (
     <div className="w-full h-full">
-      <MapContext.Provider value={essentials.mapContext}>
-        <MapboxMap className="w-full h-full" />
-      </MapContext.Provider>
+      <MapboxMap className="w-full h-full" />
     </div>
   );
 }
