@@ -392,10 +392,12 @@ export default function useMapboxGLDraw(
   }
 
   function setCollection(collection: FeatureCollection<any>) {
-    handlerState.current.draw?.set(collection);
-    setState(DigitizingState.NO_SELECTION);
-    setSelfIntersects(false);
-    handlerState.current.draw?.changeMode("simple_select");
+    if (handlerState.current.draw) {
+      handlerState.current.draw?.set(collection);
+      setState(DigitizingState.NO_SELECTION);
+      setSelfIntersects(false);
+      handlerState.current.draw?.changeMode("simple_select");
+    }
   }
 
   function resetFeature(feature: Feature<any>) {

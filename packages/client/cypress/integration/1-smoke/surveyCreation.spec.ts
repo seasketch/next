@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 /* eslint-disable cypress/no-unnecessary-waiting */
+//this is for iphone-5
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
 import { verify } from "crypto";
@@ -12,10 +13,6 @@ const FormData = require('form-data');
 const fetch = require('node-fetch');
 
 const basemapNames = ["Maldives Light", "Satellite"];
-
-const handleClick = (event) => {
-  console.log(event)
-}
 
 const basemaps = {
   "Maldives Light": {
@@ -150,7 +147,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["iphone-x", "ipad-2", "macbook-15"]//, "iphone-5",]//
+const devices: any = ["iphone-5"]//"iphone-x", "ipad-2", "macbook-15"]//, ]//]//, "iphone-5",]//
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -346,7 +343,6 @@ describe("Survey creation smoke test", () => {
       cy.restoreLocalStorage()
       cy.getLocalStorage("surveyId").then((id) => {
         surveyId = parseInt(id)
-        console.log(surveyId)
         //cy.getLocalStorage("responseId").then((responseId) => {
         //  cy.deleteResponse
         //})
@@ -362,7 +358,7 @@ describe("Survey creation smoke test", () => {
       it("Can visit the survey", () => {
         cy.viewport(device)
         //iphone-x
-        if (device === "iphone-x") {
+        if (device === "iphone-5") {
           cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
         }
       });
@@ -466,7 +462,6 @@ describe("Survey creation smoke test", () => {
         cy.viewport(device)
         cy.get('[type = "button"]').then(($btn) => {
           if ($btn.html() === "Next") {
-            console.log($btn.html())
             //{$btn.trigger('click')}
           } 
         })
@@ -552,7 +547,6 @@ describe("Survey creation smoke test", () => {
         cy.viewport(device)
         cy.restoreLocalStorage()
         cy.getLocalStorage("surveyId").then((id) => {
-          console.log(id)
           cy.setLocalStorage("surveyId", id)
         });
         cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
@@ -575,7 +569,6 @@ describe("Survey creation smoke test", () => {
           });
         });
         cy.getLocalStorage("surveyId").then((id) => {
-          console.log(id)
           cy.setLocalStorage("surveyId", id)
         });
         //cy.getLocalStorage("scale bar").then((unfocusedScale) => {
@@ -654,7 +647,6 @@ describe("Survey creation smoke test", () => {
             .should('be.visible')
         }
         cy.get("button").contains('Finish Sector').as('finishSector').should('be.visible').then(($el) => {
-          console.log($el)
           {$el.trigger('click')}
         });
         cy.get('@finishSector')
@@ -680,9 +672,7 @@ describe("Survey creation smoke test", () => {
             ary.push(t.innerText)
           })
           if (ary.includes('Next sector')) {
-            console.log("true")
             cy.get('button').contains('Next sector').then(($btn) => {
-              console.log($btn)
               {$btn.trigger('click')}
 
             })
@@ -863,7 +853,6 @@ describe("Survey creation smoke test", () => {
         }
         drawSecondPolygon();
         if (device === "iphone-x" || device === "iphone-5") {
-          console.log('yes iphone-x') 
           cy.get('[data-cy="button-done"]').as('doneBtn')
             .should('exist')
             .and('be.visible')
@@ -1040,67 +1029,54 @@ describe("Survey creation smoke test", () => {
         })
         cy.contains('General Comments')
           .should('not.exist')
-        
+      })
+      it(`Records the correct response - ${device} `, () => {
+        cy.wait("@createResponse").then((req) => {
+          expect (req.response.statusCode).to.eq(200)
+          console.log(req)
+          const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
+          expect (surveyResponseId).to.not.equal(null)
+          cy.restoreLocalStorage()
+          cy.getLocalStorage("access_token").then((token) => {
+            cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
+            const data = resp.query.surveyResponse.data
+            const responseAry = []
+            Object.entries(data).forEach(([, value]) => {
+                responseAry.push(value)
+            });
+              const sketchIds = []
+              Object.entries(responseAry[4].collection).forEach(([, value]) => {
+                sketchIds.push(value)
+              });
+              expect(responseAry.length).to.eq(11)
+              sketchIds.forEach((id) => {
+               cy.getSketch(id, token).then((sketch) => {
+                 expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
+               });
+              });
+              expect (responseAry[0].name).to.eq('Test User 1')
+              expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
+              expect (responseAry[2][0]).to.eq('N')
+              expect (responseAry[3][0]).to.eq('Kudafari')
+              expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
+              expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
+              expect (responseAry[5]).to.eq(3)
+              expect (responseAry[6]).to.eq("Queen Ann's Revenge")
+              expect (responseAry[7]).to.eq(true)
+              expect (responseAry[8]).to.eq(30)
+              expect (responseAry[9][0]).to.eq("Female")
+              expect (responseAry[10]).to.eq("My general comments.")
+            });
+          });
+        });
         if (device === "iphone-x" || device === "iphone-5" || device === "ipad-2") {
-          cy.wait("@createResponse").its('response.statusCode').should('eq', 200)
-          //cy.contains('Submitting')
-          //  .should('not.be.visible', {timeout:10000})
-          //
           cy.get('h1').contains('Thank You')
             .should('be.visible')
           cy.get('button').contains('Submit Another Response')
             .should('exist')
             .click()
-        }
-        //   //cy.restoreLocalStorage()
-        //   //cy.getLocalStorage('slug').then((slug) => {
-        //   //   cy.getLocalStorage('surveyId').then((id) => {
-        //   //     cy.visit(`${slug}/surveys/${id}`)
-        //   //     console.log(id)
-        //   //     console.log(slug)
-        //   //   })
-        //   // })
-        //}
-      })
-    })//
-  })////
-      //////it('Records the correct response ', () => {
-      //////  cy.wait("@createResponse").then((req) => {
-      //////    const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
-      //////    expect (surveyResponseId).to.not.equal(null)
-      //////    cy.restoreLocalStorage()
-      //////    cy.getLocalStorage("access_token").then((token) => {
-      //////      cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
-      ////////        const data = resp.query.surveyResponse.data
-      //////        const responseAry = []
-      ////        Object.entries(data).forEach(([, value]) => {
-      //////          responseAry.push(value)
-      ////        });
-      //        const sketchIds = []
-      //        Object.entries(responseAry[4].collection).forEach(([, value]) => {
-      //          sketchIds.push(value)
-      //        });
-      //        expect(responseAry.length).to.eq(11)
-      //        sketchIds.forEach((id) => {
-      //         cy.getSketch(id, token).then((sketch) => {
-      //           expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
-      //         });
-      //        });
-      //        expect (responseAry[0].name).to.eq('Test User 1')
-      //        expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
-      //        expect (responseAry[2][0]).to.eq('N')
-      //        expect (responseAry[3][0]).to.eq('Kudafari')
-      //        expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
-      //        expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
-      //        expect (responseAry[5]).to.eq(3)
-      //        expect (responseAry[6]).to.eq("Queen Ann's Revenge")
-      //        expect (responseAry[7]).to.eq(true)
-      //        expect (responseAry[8]).to.eq(30)
-      //        expect (responseAry[9][0]).to.eq("Female")
-      //        expect (responseAry[10]).to.eq("My general comments.")
-      //      })
-      //    })
-      //  })
-      //})
-//
-  })//
+          }
+        });
+      });
+    });
+  });
