@@ -5,7 +5,8 @@ import bboxPolygon from "@turf/bbox-polygon";
 import { VectorDataSource } from "../VectorDataSource";
 import splitGeojson from "geojson-antimeridian-cut";
 import { cleanCoords } from "../workers/utils";
-import { Style, VectorSourceImpl } from "mapbox-gl";
+import { AnySourceData, Style, VectorSourceImpl } from "mapbox-gl";
+import { urlEncode } from "@sentry/utils";
 type OsmLandFeature = Feature<Polygon, { gid: number }>;
 
 export type SimpleOfflineTileSettings = {
@@ -157,115 +158,116 @@ export class MapTileCacheCalculator {
       cachedTileCount: 0,
       cacheNames: [],
     };
-    if (!style.sources?.composite) {
-      throw new Error(
-        "MapTileCache currently only supports mapbox-hosted maps with a single composite source."
-      );
+    const sources: { type: "mapbox"; url: string }[] = [];
+    for (const source of Object.values(style.sources)) {
+      const cacheName = this.cacheNameForSource(source);
+      const url = this.urlForSource(source);
+      sources.push({
+        type: "mapbox",
+        // cache: await caches.open(cacheName),
+        url,
+      });
+      status.cacheNames.push(cacheName);
     }
-    const sources: { type: "mapbox"; cache: Cache; url: string }[] = [];
-    const cacheName = this.cacheNameForSource(basemapId, "composite");
-    sources.push({
-      type: "mapbox",
-      cache: await caches.open(cacheName),
-      url: (style.sources!["composite"] as VectorSourceImpl).url!,
-    });
-    status.cacheNames.push(cacheName);
     await this.traverseOfflineTiles(settings, async (tile, stop) => {
-      for (const { cache, type, url } of sources) {
+      for (const { type, url } of sources) {
         status.totalTiles++;
-        if (type === "mapbox") {
-          const cachedResponse = await cache.match(
-            this.tileUrlForMapBoxVectorSource(url, tile)
-          );
-          if (cachedResponse) {
-            status.cachedTileCount++;
-            status.bytes += (await cachedResponse.blob()).size;
-          }
-        }
       }
     });
+    // status.totalTiles = status.totalTiles * Object.values(sources).length;
     return status;
   }
 
-  async populateCache(
-    settings: OfflineTileSettings,
-    basemapId: number,
-    style: Style,
-    accessToken: string
-  ) {
-    const status: OfflineTileCacheStatus = {
-      bytes: 0,
-      totalTiles: await this.countChildTiles(settings),
-      cachedTileCount: 0,
-      cacheNames: [],
-    };
-    if (!style.sources?.composite) {
-      throw new Error(
-        "MapTileCache currently only supports mapbox-hosted maps with a single composite source."
-      );
-    }
-    const sources: { type: "mapbox"; cache: Cache; url: string }[] = [];
-    const cacheName = this.cacheNameForSource(basemapId, "composite");
-    status.cacheNames.push(cacheName);
-    sources.push({
-      type: "mapbox",
-      cache: await caches.open(cacheName),
-      url: (style.sources!["composite"] as VectorSourceImpl).url!,
-    });
-    let batch: string[] = [];
-    await this.traverseOfflineTiles(settings, async (tile, stop) => {
-      for (const { cache, type, url } of sources) {
-        if (type === "mapbox") {
-          const tileUrl = this.tileUrlForMapBoxVectorSource(url, tile);
-          const cachedResponse = await cache.match(tileUrl);
-          if (cachedResponse) {
-            status.cachedTileCount++;
-            status.bytes += (await cachedResponse.blob()).size;
-            return;
-          } else {
-            batch.push(tileUrl + "?access_token=" + accessToken);
-            if (batch.length >= 30) {
-              try {
-                await Promise.all(
-                  batch.map((url) => this.fetchTile(url, cache))
-                );
-                status.cachedTileCount += batch.length;
-                batch = [];
-                // console.log(status.cachedTileCount / status.totalTiles);
-                return;
-              } catch (e) {
-                console.error(e);
-                stop();
-                throw e;
-              }
-            }
-          }
-        }
-      }
-    });
-    return status;
-  }
+  // async populateCache(
+  //   settings: OfflineTileSettings,
+  //   basemapId: number,
+  //   style: Style,
+  //   accessToken: string
+  // ) {
+  //   const status: OfflineTileCacheStatus = {
+  //     bytes: 0,
+  //     totalTiles: await this.countChildTiles(settings),
+  //     cachedTileCount: 0,
+  //     cacheNames: [],
+  //   };
+  //   if (!style.sources?.composite) {
+  //     throw new Error(
+  //       "MapTileCache currently only supports mapbox-hosted maps with a single composite source."
+  //     );
+  //   }
+  //   const sources: { type: "mapbox"; cache: Cache; url: string }[] = [];
+  //   const cacheName = this.cacheNameForSource(basemapId, "composite");
+  //   status.cacheNames.push(cacheName);
+  //   sources.push({
+  //     type: "mapbox",
+  //     cache: await caches.open(cacheName),
+  //     url: (style.sources!["composite"] as VectorSourceImpl).url!,
+  //   });
+  //   let batch: string[] = [];
+  //   await this.traverseOfflineTiles(settings, async (tile, stop) => {
+  //     for (const { cache, type, url } of sources) {
+  //       if (type === "mapbox") {
+  //         const tileUrl = this.tileUrlForMapBoxVectorSource(url, tile);
+  //         const cachedResponse = await cache.match(tileUrl);
+  //         if (cachedResponse) {
+  //           status.cachedTileCount++;
+  //           status.bytes += (await cachedResponse.blob()).size;
+  //           return;
+  //         } else {
+  //           batch.push(tileUrl + "?access_token=" + accessToken);
+  //           if (batch.length >= 30) {
+  //             try {
+  //               await Promise.all(
+  //                 batch.map((url) => this.fetchTile(url, cache))
+  //               );
+  //               status.cachedTileCount += batch.length;
+  //               batch = [];
+  //               // console.log(status.cachedTileCount / status.totalTiles);
+  //               return;
+  //             } catch (e) {
+  //               console.error(e);
+  //               stop();
+  //               throw e;
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //   });
+  //   return status;
+  // }
 
-  private async fetchTile(url: string, cache: Cache) {
-    const clone = new URL(url);
-    clone.searchParams.delete("access_token");
-    const cacheKey = clone.toString();
-    if (!(await cache.match(cacheKey))) {
-      // console.log("no match", cacheKey);
-      const response = await fetch(url.toString());
-      if (response.ok) {
-        await cache.put(cacheKey, response);
-      } else {
-        throw new Error(`Error fetching tile: ${response.statusText}`);
-      }
-    } else {
-      // console.log("in cache already");
-    }
-  }
+  // private async fetchTile(url: string, cache: Cache) {
+  //   const clone = new URL(url);
+  //   clone.searchParams.delete("access_token");
+  //   const cacheKey = clone.toString();
+  //   if (!(await cache.match(cacheKey))) {
+  //     // console.log("no match", cacheKey);
+  //     const response = await fetch(url.toString());
+  //     if (response.ok) {
+  //       await cache.put(cacheKey, response);
+  //     } else {
+  //       throw new Error(`Error fetching tile: ${response.statusText}`);
+  //     }
+  //   } else {
+  //     // console.log("in cache already");
+  //   }
+  // }
 
-  private cacheNameForSource(basemapId: number, sourceId: string) {
+  private cacheNameForSource(source: AnySourceData) {
     // eslint-disable-next-line i18next/no-literal-string
-    return `basemaps-${basemapId}-${sourceId}`;
+    return `data-source-${encodeURIComponent(this.urlForSource(source))}`;
+  }
+
+  private urlForSource(source: AnySourceData) {
+    switch (source.type) {
+      case "vector":
+      case "raster":
+      case "raster-dem":
+        return source.tiles ? source.tiles[0] : source.url!;
+      default:
+        throw new Error(`Source of type ${source.type} not supported`);
+    }
   }
 
   tileUrlForMapBoxVectorSource(mapboxProtocolUrl: string, tile: number[]) {

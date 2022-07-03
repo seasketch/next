@@ -444,17 +444,6 @@ export default function BasemapEditorPanel({
                 />
               </div>
             )}
-            {superuser && !createOptionOpen && (
-              <div className="my-5">
-                <h5 className="block text-sm font-medium leading-5 text-gray-700">
-                  <Trans ns={["admin"]}>Offline Settings</Trans>
-                  <BasemapOfflineSettings
-                    className="my-5"
-                    basemapId={basemap.id}
-                  />
-                </h5>
-              </div>
-            )}
           </div>
         )}
         {showMap && basemap && (

@@ -1424,19 +1424,20 @@ class MapContextManager {
     const sourceCaches = this.map?.style?._sourceCaches;
     await window.caches.delete("mapbox-tiles");
     if (sourceCaches) {
-      const cache = sourceCaches["other:composite"];
-      if (cache) {
+      // const cache = sourceCaches["other:composite"];
+      for (const cache of Object.values(sourceCaches)) {
+        // @ts-ignore
         cache.clearTiles();
         // @ts-ignore
         cache.update(this.map.transform);
-        this.map?.triggerRepaint();
-        this.map?.resize();
-        this.map?.triggerRepaint();
-        const center = this.map!.getCenter()!;
-        center.lat = center.lat * 1.0000001;
-        this.map!.setCenter(center);
-        this.map?.triggerRepaint();
       }
+      this.map?.triggerRepaint();
+      this.map?.resize();
+      this.map?.triggerRepaint();
+      const center = this.map!.getCenter()!;
+      center.lat = center.lat * 1.0000001;
+      this.map!.setCenter(center);
+      this.map?.triggerRepaint();
     }
   }
 

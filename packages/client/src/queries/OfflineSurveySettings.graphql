@@ -10,6 +10,7 @@ query OfflineSurveyMaps($slug: String!) {
       }
       basemaps {
         ...BasemapDetails
+        useDefaultOfflineTileSettings
       }
     }
   }
@@ -24,14 +25,71 @@ mutation ToggleOfflineBasemapSupport($id: Int!, $enable: Boolean!) {
   }
 }
 
-query BasemapOfflineSettings($id: Int!) {
+fragment OfflineTileSettings on OfflineTileSetting {
+  id
+  projectId
+  basemapId
+  maxZ
+  maxShorelineZ
+  region {
+    geojson
+  }
+}
+
+query BasemapOfflineSettings($id: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    mapboxPublicKey
+    region {
+      geojson
+    }
+    offlineTileSettings {
+      ...OfflineTileSettings
+    }
+  }
+
   basemap(id: $id) {
     id
     name
+    url
+    isOfflineEnabled
+    useDefaultOfflineTileSettings
     project {
       id
       region {
         geojson
+      }
+    }
+  }
+}
+
+mutation UpdateBasemapOfflineTileSettings(
+  $projectId: Int!
+  $maxZ: Int!
+  $maxShorelineZ: Int
+  $basemapId: Int!
+  $useDefault: Boolean!
+) {
+  updateBasemapOfflineTileSettings(
+    input: {
+      basemapId: $basemapId
+      maxShorelineZ: $maxShorelineZ
+      maxZ: $maxZ
+      projectId: $projectId
+      useDefault: $useDefault
+    }
+  ) {
+    offlineTileSetting {
+      id
+      basemap {
+        id
+        useDefaultOfflineTileSettings
+      }
+      project {
+        id
+        offlineTileSettings {
+          ...OfflineTileSettings
+        }
       }
     }
   }

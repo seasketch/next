@@ -2,7 +2,11 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import InputBlock from "../components/InputBlock";
-import { useBasemapOfflineSettingsQuery } from "../generated/graphql";
+import {
+  OfflineTileSettingsFragment,
+  useBasemapOfflineSettingsQuery,
+  useUpdateBasemapOfflineTileSettingsMutation,
+} from "../generated/graphql";
 import tilebelt from "@mapbox/tilebelt";
 import {
   BBox,
@@ -14,7 +18,7 @@ import {
 } from "geojson";
 import Spinner from "../components/Spinner";
 import MapContextManager, { MapContext } from "../dataLayers/MapContextManager";
-import { GeoJSONSource, MapboxEvent, MapWheelEvent } from "mapbox-gl";
+import { MapboxEvent, MapWheelEvent } from "mapbox-gl";
 import debounce from "lodash.debounce";
 import splitGeojson from "geojson-antimeridian-cut";
 import { cleanCoords } from "../workers/utils";
@@ -23,9 +27,15 @@ import {
   OfflineTileCacheStatus,
   OfflineTileSettings,
 } from "./MapTileCache";
-import Button from "../components/Button";
-import mapboxgl from "mapbox-gl";
 import bytes from "bytes";
+import getSlug from "../getSlug";
+import Switch from "../components/Switch";
+import { useCallback } from "react";
+import { useDebouncedFn } from "beautiful-react-hooks";
+import RadioGroup from "../components/RadioGroup";
+import { useMapboxStyle } from "../useMapboxStyle";
+import { useStyleSources } from "./mapboxApiHelpers";
+import Badge from "../components/Badge";
 
 let worker: any;
 let Calculator: MapTileCacheCalculator;
@@ -112,29 +122,121 @@ type Settings = {
   maxShorelineZ?: number;
   projectRegion?: Feature<Polygon | MultiPolygon>;
   detailedShoreline: boolean;
+  useDefault: boolean;
 };
 
 export default function BasemapOfflineSettings({
   basemapId,
-  className,
 }: {
   basemapId: number;
-  className?: string;
 }) {
   const { t } = useTranslation("admin:basemaps");
   const onError = useGlobalErrorHandler();
-  const { data, loading, error } = useBasemapOfflineSettingsQuery({
+  const { data } = useBasemapOfflineSettingsQuery({
     variables: {
       id: basemapId,
+      slug: getSlug(),
     },
     onError,
   });
+  const [mutate, mutationState] = useUpdateBasemapOfflineTileSettingsMutation();
 
-  const [settings, setSettings] = useState<Settings>({
-    maxZ: 9,
-    maxShorelineZ: 11,
-    detailedShoreline: true,
-  });
+  const projectSettings: Omit<OfflineTileSettingsFragment, "id"> | null =
+    useMemo(() => {
+      if (!data?.projectBySlug) {
+        return null;
+      } else {
+        let projectSetting: Omit<OfflineTileSettingsFragment, "id"> =
+          data.projectBySlug.offlineTileSettings.find(
+            (s) => s.basemapId === null
+          ) || {
+            maxZ: 11,
+            maxShorelineZ: 14,
+            projectId: data.projectBySlug.id,
+            region: {
+              geojson: splitGeojson(
+                cleanCoords(
+                  data.projectBySlug.region.geojson
+                ) as Feature<Polygon>
+              ),
+            },
+          };
+        return projectSetting;
+      }
+    }, [data]);
+
+  const basemapSettings: Omit<OfflineTileSettingsFragment, "id"> | null =
+    useMemo(() => {
+      if (!data?.projectBySlug || !data?.basemap) {
+        return null;
+      } else {
+        const basemapSettings = data.projectBySlug.offlineTileSettings.find(
+          (s) => s.basemapId === basemapId
+        );
+        return basemapSettings || null;
+      }
+    }, [data, basemapId]);
+
+  const [settings, setSettings] = useState<Settings | null>(null);
+
+  useEffect(() => {
+    if (settings === null && data?.basemap && projectSettings) {
+      const dbSettings = data.basemap.useDefaultOfflineTileSettings
+        ? projectSettings
+        : basemapSettings || projectSettings;
+      setSettings({
+        detailedShoreline: Boolean(dbSettings.maxShorelineZ),
+        maxZ: dbSettings.maxZ,
+        maxShorelineZ: dbSettings.maxShorelineZ || undefined,
+        projectRegion: dbSettings.region.geojson,
+        useDefault: data.basemap.useDefaultOfflineTileSettings,
+      });
+    }
+  }, [settings, setSettings, projectSettings, basemapSettings, data?.basemap]);
+
+  const dataSources = useStyleSources(
+    data?.basemap?.url,
+    data?.projectBySlug?.mapboxPublicKey ||
+      process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
+  );
+
+  const debouncedMutate = useDebouncedFn(
+    (
+      basemapId: number,
+      projectId: number,
+      maxZ: number,
+      useDefault: boolean,
+      maxShorelineZ: number | null
+    ) => {
+      mutate({
+        variables: {
+          basemapId,
+          projectId,
+          maxZ,
+          useDefault,
+          maxShorelineZ,
+        },
+      });
+    },
+    250,
+    { trailing: true },
+    [mutate]
+  );
+
+  useEffect(() => {
+    if (settings && basemapId && data?.projectBySlug?.id) {
+      debouncedMutate(
+        basemapId,
+        data.projectBySlug.id,
+        settings.maxZ,
+        settings.useDefault,
+        settings.detailedShoreline
+          ? settings.maxShorelineZ || settings.maxZ + 1
+          : null
+      );
+    }
+  }, [settings, basemapId, data?.projectBySlug?.id]);
+
   const [z, setZ] = useState<number>(0);
   const [viewport, setViewport] = useState<BBox>();
   const [stats, setStats] = useState<
@@ -143,20 +245,16 @@ export default function BasemapOfflineSettings({
     } & Partial<OfflineTileCacheStatus>
   >({ calculating: true });
   const [simulate, setSimulate] = useState(false);
-  const [showTiles, setShowTiles] = useState(false);
+  const [showTiles, setShowTiles] = useState(true);
 
   const mapContext = useContext(MapContext);
 
   function settingsToOfflineSettings(settings: Settings): OfflineTileSettings {
-    if (!settings.projectRegion) {
-      throw new Error("projectRegion must be set");
-    }
-    if (settings.detailedShoreline === true) {
+    if (settings.detailedShoreline) {
       return {
         maxZ: settings.maxZ,
         region: settings.projectRegion!,
         maxShorelineZ: Math.max(settings.maxShorelineZ!, settings.maxZ),
-        levelOfDetail: 0,
       };
     } else {
       return {
@@ -167,28 +265,6 @@ export default function BasemapOfflineSettings({
   }
 
   const abortController = useRef<AbortController>(new AbortController());
-
-  useEffect(() => {
-    if (data?.basemap?.project?.region.geojson) {
-      setSettings((prev) => {
-        if (data?.basemap?.project?.region.geojson) {
-          return {
-            ...prev,
-            projectRegion: splitGeojson(
-              cleanCoords(
-                data.basemap.project.region.geojson
-              ) as Feature<Polygon>
-            ),
-          };
-        } else {
-          return {
-            ...prev,
-            projectRegion: undefined,
-          };
-        }
-      });
-    }
-  }, [data?.basemap?.project?.region.geojson]);
 
   useEffect(() => {
     if (data?.basemap?.project?.region.geojson && mapContext.manager) {
@@ -206,7 +282,7 @@ export default function BasemapOfflineSettings({
   }, [data?.basemap?.project?.region.geojson, mapContext.manager]);
 
   useEffect(() => {
-    if (mapContext.manager) {
+    if (mapContext.manager && settings) {
       if (simulate) {
         mapContext.manager.enableOfflineTileSimulator(
           settingsToOfflineSettings(settings)
@@ -257,7 +333,7 @@ export default function BasemapOfflineSettings({
     if (
       mapContext.manager?.map &&
       data?.basemap?.project?.region.geojson &&
-      settings.projectRegion &&
+      settings?.projectRegion &&
       showTiles
     ) {
       const region = data.basemap.project.region.geojson;
@@ -334,7 +410,11 @@ export default function BasemapOfflineSettings({
     viewport,
     simulate,
     showTiles,
+    mapContext.manager,
+    data?.basemap?.project?.region.geojson,
   ]);
+
+  const style = useMapboxStyle(data?.basemap?.url);
 
   useEffect(() => {
     (async () => {
@@ -342,9 +422,10 @@ export default function BasemapOfflineSettings({
         abortController.current.abort();
       }
       if (
-        settings.projectRegion &&
+        settings?.projectRegion &&
         data?.basemap?.id &&
-        mapContext.manager?.map
+        mapContext.manager?.map &&
+        style.data
       ) {
         abortController.current = new AbortController();
         setStats((prev) => ({ calculating: true }));
@@ -352,7 +433,7 @@ export default function BasemapOfflineSettings({
         Calculator.cacheStatusForMap(
           settingsToOfflineSettings(settings),
           data?.basemap?.id,
-          mapContext.manager.map.getStyle()
+          style.data
         ).then((status) => {
           if (!ac.signal.aborted) {
             setStats((prev) => ({ ...status, calculating: false }));
@@ -360,31 +441,79 @@ export default function BasemapOfflineSettings({
         });
       }
     })();
-  }, [settings, data?.basemap?.id, mapContext?.manager?.map]);
+  }, [settings, data?.basemap?.id, mapContext?.manager?.map, style.data]);
+
+  if (!settings) {
+    return <Spinner />;
+  }
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-4`}>
+      <h2 className="text-xl">{data?.basemap?.name}</h2>
+      {dataSources.sources?.length && (
+        <div className="mb-5 pb-5 border-b">
+          <h3>{t("Data Sources")}</h3>
+          {dataSources.sources.map((source) => (
+            <div className="flex mt-1 space-x-2">
+              <Badge>{source.type}</Badge>
+              {/* @ts-ignore */}
+              <span className="truncate text-sm" title={source.url}>
+                {source.type === "vector" && source.url}
+                {source.type === "raster" && source.url}
+                {source.type === "raster-dem" && source.url}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       <InputBlock
         input={
-          <input
-            type="checkbox"
-            checked={simulate}
-            onClick={() => setSimulate((prev) => !simulate)}
-          />
+          <Switch isToggled={simulate} onClick={(val) => setSimulate(val)} />
         }
         title={t("Simulate offline settings on the map")}
       />
       <InputBlock
         input={
-          <input
-            type="checkbox"
-            checked={showTiles}
-            onClick={() => setShowTiles((prev) => !showTiles)}
-          />
+          <Switch isToggled={showTiles} onClick={(v) => setShowTiles(v)} />
         }
         title={t("Show cached tile outlines")}
       />
 
+      <RadioGroup
+        className="mt-5"
+        legend={t("Tiling Settings")}
+        value={settings.useDefault}
+        items={[
+          {
+            label: t("Use project defaults"),
+            value: true,
+            description: t(
+              "Use project-wide settings to create tile packages for this basemap. Any changes to tiling settings will also impact all other basemaps using these default settings"
+            ),
+          },
+          {
+            label: t("Use map-specific settings"),
+            value: false,
+            description: t(
+              "Configure custom tiling settings that apply to just this basemap. This can be useful for specifying a higher level of detail that the defaults for particular maps."
+            ),
+          },
+        ]}
+        onChange={(value) => {
+          const newSettings =
+            value === true
+              ? projectSettings!
+              : basemapSettings || projectSettings!;
+          setSettings((prev) => ({
+            ...prev,
+            detailedShoreline: Boolean(newSettings.maxShorelineZ),
+            maxZ: newSettings.maxZ,
+            maxShorelineZ: newSettings.maxShorelineZ || undefined,
+            projectRegion: newSettings.region.geojson,
+            useDefault: value,
+          }));
+        }}
+      />
       <InputBlock
         title={t("Max Zoom")}
         input={
@@ -395,28 +524,43 @@ export default function BasemapOfflineSettings({
               value={settings.maxZ}
               min="8"
               max="16"
-              onChange={(e) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  maxZ: parseInt(e.target.value),
-                }))
-              }
+              onChange={(e) => {
+                setSettings((prev) => {
+                  const value = parseInt(e.target.value);
+                  let maxShorelineZ = prev?.maxShorelineZ;
+                  if (prev?.maxShorelineZ && value >= prev?.maxShorelineZ) {
+                    maxShorelineZ = value + 1;
+                  }
+                  if (value !== prev?.maxZ) {
+                    return {
+                      ...prev!,
+                      maxZ: value,
+                      maxShorelineZ,
+                    };
+                  } else {
+                    return prev;
+                  }
+                });
+              }}
             />
           </span>
         }
       />
       <InputBlock
         input={
-          <input
-            type="checkbox"
-            checked={settings.detailedShoreline}
-            onClick={(e) =>
+          <Switch
+            isToggled={settings.detailedShoreline}
+            onClick={(v) => {
               setSettings((prev) => ({
-                ...prev,
-                // @ts-ignore
-                detailedShoreline: e.target.checked,
-              }))
-            }
+                ...prev!,
+                detailedShoreline: v,
+                maxShorelineZ:
+                  settings.maxShorelineZ &&
+                  settings.maxShorelineZ > settings.maxZ
+                    ? settings.maxShorelineZ
+                    : settings.maxZ + 1,
+              }));
+            }}
           />
         }
         title={t("Cache higher detail near shore")}
@@ -429,15 +573,25 @@ export default function BasemapOfflineSettings({
             <span className="text-sm px-2">{settings.maxShorelineZ}</span>
             <input
               type="range"
-              value={settings.maxShorelineZ}
+              value={settings.maxShorelineZ || 0}
               min="8"
               max="16"
-              onChange={(e) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  maxShorelineZ: parseInt(e.target.value),
-                }))
-              }
+              onChange={(e) => {
+                setSettings((prev) => {
+                  let value = parseInt(e.target.value);
+                  if (value <= prev!.maxZ) {
+                    value = prev!.maxZ + 1;
+                  }
+                  if (value !== prev?.maxShorelineZ) {
+                    return {
+                      ...prev!,
+                      maxShorelineZ: value,
+                    };
+                  } else {
+                    return prev;
+                  }
+                });
+              }}
             />
           </span>
         }
@@ -449,7 +603,15 @@ export default function BasemapOfflineSettings({
         </span>
       </div>
       <div className="flex items-center">
-        <h4 className="flex-1">{t("Estimated MapBox fees per Download")}</h4>
+        <h4 className="flex-1">{t("Estimated tile package size")}</h4>
+        <span>
+          {stats.calculating ? <Spinner /> : bytes(stats.totalTiles! * 10000)}
+        </span>
+      </div>
+      <div className="flex items-center">
+        <h4 className="flex-1">
+          {t("MapBox fees to generate package (w/o free tier)")}
+        </h4>
         <span>
           {stats.calculating ? (
             <Spinner />
@@ -458,58 +620,9 @@ export default function BasemapOfflineSettings({
           )}
         </span>
       </div>
-      <div className="flex items-center">
-        <h4 className="flex-1">{t("Cached Tiles")}</h4>
-        <span>
-          {stats.calculating ? (
-            <Spinner />
-          ) : (
-            `${stats.cachedTileCount?.toLocaleString()}/${stats.totalTiles?.toLocaleString()} (${bytes(
-              stats.bytes || 0
-            )})`
-          )}
-        </span>
-      </div>
-      <Button
-        label={t("Populate tile cache")}
-        onClick={async () => {
-          const style = mapContext.manager?.map?.getStyle();
-          if (style) {
-            const status = await Calculator.populateCache(
-              settingsToOfflineSettings(settings),
-              data!.basemap!.id,
-              style,
-              mapboxgl.accessToken
-            );
-            setStats({ calculating: false, ...status });
-          }
-        }}
-      />
     </div>
   );
 }
-
-const downloadURL = (data: string, fileName: string) => {
-  const a = document.createElement("a");
-  a.href = data;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.style.display = "none";
-  a.click();
-  a.remove();
-};
-
-const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
-  const blob = new Blob([data], {
-    type: mimeType,
-  });
-
-  const url = window.URL.createObjectURL(blob);
-
-  downloadURL(url, fileName);
-
-  setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-};
 
 function tileToFeatures(tile: number[]): [Feature<Polygon>, Feature<Point>] {
   const polygon = tilebelt.tileToGeoJSON(tile);

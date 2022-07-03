@@ -18,7 +18,10 @@ export async function getSources(styleUrl: string, mapboxApiKey: string) {
   }
 }
 
-export function useStyleSources(styleUrl: string, mapboxApiKey: string) {
+export function useStyleSources(
+  styleUrl: string | null | undefined,
+  mapboxApiKey: string
+) {
   const [state, setState] = useState<{
     sources?: AnySourceData[];
     loading: boolean;
@@ -27,17 +30,21 @@ export function useStyleSources(styleUrl: string, mapboxApiKey: string) {
     loading: true,
   });
   useEffect(() => {
-    setState({ loading: true });
-    getSources(styleUrl, mapboxApiKey)
-      .then((sources) => {
-        setState({
-          loading: false,
-          sources,
+    if (!styleUrl) {
+      setState({ loading: false, sources: [] });
+    } else {
+      setState({ loading: true });
+      getSources(styleUrl, mapboxApiKey)
+        .then((sources) => {
+          setState({
+            loading: false,
+            sources,
+          });
+        })
+        .catch((e) => {
+          setState({ loading: false, error: e.toString() });
         });
-      })
-      .catch((e) => {
-        setState({ loading: false, error: e.toString() });
-      });
+    }
   }, [mapboxApiKey, styleUrl]);
   return state;
 }

@@ -37,8 +37,12 @@ export default function OfflineSurveyMapSettings() {
   });
 
   const surveyBasemaps = useMemo(() => {
-    const details: { basemap: BasemapDetailsFragment; surveys: string[] }[] =
-      [];
+    const details: {
+      basemap: BasemapDetailsFragment & {
+        useDefaultOfflineTileSettings: boolean;
+      };
+      surveys: string[];
+    }[] = [];
     for (const survey of data?.projectBySlug?.surveys || []) {
       for (const basemap of survey.basemaps || []) {
         const existing = details.find((d) => d.basemap.id === basemap.id);
@@ -57,7 +61,9 @@ export default function OfflineSurveyMapSettings() {
     const detailsBySurveys: {
       surveys: string[];
       id: string;
-      basemaps: BasemapDetailsFragment[];
+      basemaps: (BasemapDetailsFragment & {
+        useDefaultOfflineTileSettings: boolean;
+      })[];
     }[] = [];
     for (const detail of details) {
       const id = detail.surveys.join("-");
@@ -85,7 +91,11 @@ export default function OfflineSurveyMapSettings() {
   >([]);
 
   useEffect(() => {
-    const basemaps: { [id: number]: BasemapDetailsFragment } = {};
+    const basemaps: {
+      [id: number]: BasemapDetailsFragment & {
+        useDefaultOfflineTileSettings: boolean;
+      };
+    } = {};
     for (const survey of data?.projectBySlug?.surveys || []) {
       for (const basemap of survey.basemaps || []) {
         if (basemap.isOfflineEnabled) {
@@ -192,6 +202,7 @@ export default function OfflineSurveyMapSettings() {
           {dataSources.map((source) => {
             return (
               <div
+                key={source.id || source.url || source.tiles![0]}
                 className="text-sm truncate"
                 title={source.url || source.tiles![0]}
               >
@@ -209,7 +220,9 @@ function MapItem({
   map,
   mapboxApiKey,
 }: {
-  map: BasemapDetailsFragment;
+  map: BasemapDetailsFragment & {
+    useDefaultOfflineTileSettings: boolean;
+  };
   mapboxApiKey: string;
 }) {
   const { sources, loading, error } = useStyleSources(map.url, mapboxApiKey);
@@ -238,8 +251,8 @@ function MapItem({
                 <Trans>Source types</Trans>
               </h5>
               <div className="text-gray-500 space-x-1 overflow-hidden whitespace-nowrap">
-                {sources.map((s) => (
-                  <Badge>{s.type}</Badge>
+                {sources.map((s, i) => (
+                  <Badge key={s.type + i}>{s.type}</Badge>
                 ))}
               </div>
             </div>
@@ -254,9 +267,16 @@ function MapItem({
       {map.isOfflineEnabled && (
         <Link
           className="underline mx-4"
-          to={`/${getSlug()}/edit-basemap/${map.id}`}
+          to={`/${getSlug()}/admin/offline/basemap/${map.id}?returnToUrl=${
+            window.location.pathname
+          }`}
         >
           <Trans>Tiling Settings</Trans>
+          {map.useDefaultOfflineTileSettings ? (
+            <Trans>(default)</Trans>
+          ) : (
+            <Trans>(custom)</Trans>
+          )}
         </Link>
       )}
 

@@ -248,6 +248,8 @@ export type Basemap = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Reads and enables pagination through a set of `OfflineTileSetting`. */
+  offlineTileSettings: Array<OfflineTileSetting>;
   /** Reads and enables pagination through a set of `OptionalBasemapLayer`. */
   optionalBasemapLayers: Array<OptionalBasemapLayer>;
   /** Reads a single `Project` that is related to this `Basemap`. */
@@ -285,6 +287,15 @@ export type Basemap = Node & {
    * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
    */
   url: Scalars['String'];
+  useDefaultOfflineTileSettings: Scalars['Boolean'];
+};
+
+
+export type BasemapOfflineTileSettingsArgs = {
+  condition?: Maybe<OfflineTileSettingCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OfflineTileSettingsOrderBy>>;
 };
 
 
@@ -371,6 +382,7 @@ export type BasemapInput = {
    * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
    */
   url: Scalars['String'];
+  useDefaultOfflineTileSettings?: Maybe<Scalars['Boolean']>;
 };
 
 /** Represents an update to a `Basemap`. Fields that are set will be updated. */
@@ -423,6 +435,7 @@ export type BasemapPatch = {
    * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
    */
   url?: Maybe<Scalars['String']>;
+  useDefaultOfflineTileSettings?: Maybe<Scalars['Boolean']>;
 };
 
 /** SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style. */
@@ -1027,6 +1040,35 @@ export type CreateInteractivitySettingPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** The `InteractivitySetting` that was created by this mutation. */
   interactivitySetting?: Maybe<InteractivitySetting>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the create `OfflineTileSetting` mutation. */
+export type CreateOfflineTileSettingInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OfflineTileSetting` to be created by this mutation. */
+  offlineTileSetting: OfflineTileSettingInput;
+};
+
+/** The output of our create `OfflineTileSetting` mutation. */
+export type CreateOfflineTileSettingPayload = {
+  __typename?: 'CreateOfflineTileSettingPayload';
+  /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OfflineTileSetting` that was created by this mutation. */
+  offlineTileSetting?: Maybe<OfflineTileSetting>;
+  /** Reads a single `Project` that is related to this `OfflineTileSetting`. */
+  project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -2673,6 +2715,57 @@ export type DeleteGroupPayload = {
   /** The `Group` that was deleted by this mutation. */
   group?: Maybe<Group>;
   /** Reads a single `Project` that is related to this `Group`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `deleteOfflineTileSettingByNodeId` mutation. */
+export type DeleteOfflineTileSettingByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `OfflineTileSetting` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteOfflineTileSettingByProjectIdAndBasemapId` mutation. */
+export type DeleteOfflineTileSettingByProjectIdAndBasemapIdInput = {
+  basemapId: Scalars['Int'];
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+};
+
+/** All input for the `deleteOfflineTileSetting` mutation. */
+export type DeleteOfflineTileSettingInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `OfflineTileSetting` mutation. */
+export type DeleteOfflineTileSettingPayload = {
+  __typename?: 'DeleteOfflineTileSettingPayload';
+  /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedOfflineTileSettingNodeId?: Maybe<Scalars['ID']>;
+  /** The `OfflineTileSetting` that was deleted by this mutation. */
+  offlineTileSetting?: Maybe<OfflineTileSetting>;
+  /** Reads a single `Project` that is related to this `OfflineTileSetting`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
@@ -5165,6 +5258,8 @@ export type Mutation = {
   createGroup?: Maybe<CreateGroupPayload>;
   /** Creates a single `InteractivitySetting`. */
   createInteractivitySetting?: Maybe<CreateInteractivitySettingPayload>;
+  /** Creates a single `OfflineTileSetting`. */
+  createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
   /**
@@ -5260,6 +5355,12 @@ export type Mutation = {
   deleteGroupByNodeId?: Maybe<DeleteGroupPayload>;
   /** Deletes a single `Group` using a unique key. */
   deleteGroupByProjectIdAndName?: Maybe<DeleteGroupPayload>;
+  /** Deletes a single `OfflineTileSetting` using a unique key. */
+  deleteOfflineTileSetting?: Maybe<DeleteOfflineTileSettingPayload>;
+  /** Deletes a single `OfflineTileSetting` using its globally unique id. */
+  deleteOfflineTileSettingByNodeId?: Maybe<DeleteOfflineTileSettingPayload>;
+  /** Deletes a single `OfflineTileSetting` using a unique key. */
+  deleteOfflineTileSettingByProjectIdAndBasemapId?: Maybe<DeleteOfflineTileSettingPayload>;
   /** Deletes a single `OptionalBasemapLayer` using a unique key. */
   deleteOptionalBasemapLayer?: Maybe<DeleteOptionalBasemapLayerPayload>;
   /** Deletes a single `OptionalBasemapLayer` using its globally unique id. */
@@ -5455,6 +5556,7 @@ export type Mutation = {
   updateBasemap?: Maybe<UpdateBasemapPayload>;
   /** Updates a single `Basemap` using its globally unique id and a patch. */
   updateBasemapByNodeId?: Maybe<UpdateBasemapPayload>;
+  updateBasemapOfflineTileSettings?: Maybe<UpdateBasemapOfflineTileSettingsPayload>;
   /** Updates a single `CommunityGuideline` using a unique key and a patch. */
   updateCommunityGuideline?: Maybe<UpdateCommunityGuidelinePayload>;
   /** Updates a single `CommunityGuideline` using its globally unique id and a patch. */
@@ -5506,6 +5608,12 @@ export type Mutation = {
   /** Updates a single `InteractivitySetting` using its globally unique id and a patch. */
   updateInteractivitySettingByNodeId?: Maybe<UpdateInteractivitySettingPayload>;
   updateMapboxSecretKey?: Maybe<UpdateMapboxSecretKeyPayload>;
+  /** Updates a single `OfflineTileSetting` using a unique key and a patch. */
+  updateOfflineTileSetting?: Maybe<UpdateOfflineTileSettingPayload>;
+  /** Updates a single `OfflineTileSetting` using its globally unique id and a patch. */
+  updateOfflineTileSettingByNodeId?: Maybe<UpdateOfflineTileSettingPayload>;
+  /** Updates a single `OfflineTileSetting` using a unique key and a patch. */
+  updateOfflineTileSettingByProjectIdAndBasemapId?: Maybe<UpdateOfflineTileSettingPayload>;
   /** Updates a single `OptionalBasemapLayer` using a unique key and a patch. */
   updateOptionalBasemapLayer?: Maybe<UpdateOptionalBasemapLayerPayload>;
   /** Updates a single `OptionalBasemapLayer` using its globally unique id and a patch. */
@@ -5729,6 +5837,12 @@ export type MutationCreateGroupArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateInteractivitySettingArgs = {
   input: CreateInteractivitySettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOfflineTileSettingArgs = {
+  input: CreateOfflineTileSettingInput;
 };
 
 
@@ -5957,6 +6071,24 @@ export type MutationDeleteGroupByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteGroupByProjectIdAndNameArgs = {
   input: DeleteGroupByProjectIdAndNameInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteOfflineTileSettingArgs = {
+  input: DeleteOfflineTileSettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteOfflineTileSettingByNodeIdArgs = {
+  input: DeleteOfflineTileSettingByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteOfflineTileSettingByProjectIdAndBasemapIdArgs = {
+  input: DeleteOfflineTileSettingByProjectIdAndBasemapIdInput;
 };
 
 
@@ -6389,6 +6521,12 @@ export type MutationUpdateBasemapByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateBasemapOfflineTileSettingsArgs = {
+  input: UpdateBasemapOfflineTileSettingsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateCommunityGuidelineArgs = {
   input: UpdateCommunityGuidelineInput;
 };
@@ -6541,6 +6679,24 @@ export type MutationUpdateInteractivitySettingByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateMapboxSecretKeyArgs = {
   input: UpdateMapboxSecretKeyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateOfflineTileSettingArgs = {
+  input: UpdateOfflineTileSettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateOfflineTileSettingByNodeIdArgs = {
+  input: UpdateOfflineTileSettingByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateOfflineTileSettingByProjectIdAndBasemapIdArgs = {
+  input: UpdateOfflineTileSettingByProjectIdAndBasemapIdInput;
 };
 
 
@@ -6765,6 +6921,68 @@ export type Node = {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
 };
+
+export type OfflineTileSetting = Node & {
+  __typename?: 'OfflineTileSetting';
+  /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
+  basemap?: Maybe<Basemap>;
+  basemapId?: Maybe<Scalars['Int']>;
+  id: Scalars['Int'];
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `OfflineTileSetting`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  region: GeometryPolygon;
+};
+
+/**
+ * A condition to be used against `OfflineTileSetting` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type OfflineTileSettingCondition = {
+  /** Checks for equality with the object’s `basemapId` field. */
+  basemapId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `OfflineTileSetting` */
+export type OfflineTileSettingInput = {
+  basemapId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ?: Maybe<Scalars['Int']>;
+  projectId: Scalars['Int'];
+  region: Scalars['GeoJSON'];
+};
+
+/** Represents an update to a `OfflineTileSetting`. Fields that are set will be updated. */
+export type OfflineTileSettingPatch = {
+  basemapId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+  region?: Maybe<Scalars['GeoJSON']>;
+};
+
+/** Methods to use when ordering `OfflineTileSetting`. */
+export enum OfflineTileSettingsOrderBy {
+  BasemapIdAsc = 'BASEMAP_ID_ASC',
+  BasemapIdDesc = 'BASEMAP_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
 
 /** Available only for MapBox GL Style-based basemaps. Specifies optional components of the basemap that can be shown or hidden. */
 export type OptionalBasemapLayer = Node & {
@@ -7107,6 +7325,8 @@ export type Project = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Reads and enables pagination through a set of `OfflineTileSetting`. */
+  offlineTileSettings: Array<OfflineTileSetting>;
   /** Count of all users who have opted into participating in the project, sharing their profile with project administrators. */
   participantCount?: Maybe<Scalars['Int']>;
   /**
@@ -7316,6 +7536,18 @@ export type ProjectMyFoldersArgs = {
 export type ProjectMySketchesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectOfflineTileSettingsArgs = {
+  condition?: Maybe<OfflineTileSettingCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OfflineTileSettingsOrderBy>>;
 };
 
 
@@ -7916,6 +8148,12 @@ export type Query = Node & {
   node?: Maybe<Node>;
   /** The root query type must be a `Node` to work well with Relay 1 mutations. This just resolves to `query`. */
   nodeId: Scalars['ID'];
+  offlineTileSetting?: Maybe<OfflineTileSetting>;
+  /** Reads a single `OfflineTileSetting` using its globally unique `ID`. */
+  offlineTileSettingByNodeId?: Maybe<OfflineTileSetting>;
+  offlineTileSettingByProjectIdAndBasemapId?: Maybe<OfflineTileSetting>;
+  /** Reads a set of `OfflineTileSetting`. */
+  offlineTileSettings?: Maybe<Array<OfflineTileSetting>>;
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Reads a single `OptionalBasemapLayer` using its globally unique `ID`. */
   optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
@@ -8315,6 +8553,34 @@ export type QueryInviteEmailByNodeIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryNodeArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTileSettingArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTileSettingByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTileSettingByProjectIdAndBasemapIdArgs = {
+  basemapId: Scalars['Int'];
+  projectId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTileSettingsArgs = {
+  condition?: Maybe<OfflineTileSettingCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OfflineTileSettingsOrderBy>>;
 };
 
 
@@ -10495,6 +10761,37 @@ export type UpdateBasemapInput = {
   patch: BasemapPatch;
 };
 
+/** All input for the `updateBasemapOfflineTileSettings` mutation. */
+export type UpdateBasemapOfflineTileSettingsInput = {
+  basemapId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+  useDefault?: Maybe<Scalars['Boolean']>;
+};
+
+/** The output of our `updateBasemapOfflineTileSettings` mutation. */
+export type UpdateBasemapOfflineTileSettingsPayload = {
+  __typename?: 'UpdateBasemapOfflineTileSettingsPayload';
+  /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  offlineTileSetting?: Maybe<OfflineTileSetting>;
+  /** Reads a single `Project` that is related to this `OfflineTileSetting`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** The output of our update `Basemap` mutation. */
 export type UpdateBasemapPayload = {
   __typename?: 'UpdateBasemapPayload';
@@ -11102,6 +11399,62 @@ export type UpdateMapboxSecretKeyPayload = {
 /** The output of our `updateMapboxSecretKey` mutation. */
 export type UpdateMapboxSecretKeyPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+/** All input for the `updateOfflineTileSettingByNodeId` mutation. */
+export type UpdateOfflineTileSettingByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `OfflineTileSetting` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `OfflineTileSetting` being updated. */
+  patch: OfflineTileSettingPatch;
+};
+
+/** All input for the `updateOfflineTileSettingByProjectIdAndBasemapId` mutation. */
+export type UpdateOfflineTileSettingByProjectIdAndBasemapIdInput = {
+  basemapId: Scalars['Int'];
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** An object where the defined keys will be set on the `OfflineTileSetting` being updated. */
+  patch: OfflineTileSettingPatch;
+  projectId: Scalars['Int'];
+};
+
+/** All input for the `updateOfflineTileSetting` mutation. */
+export type UpdateOfflineTileSettingInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `OfflineTileSetting` being updated. */
+  patch: OfflineTileSettingPatch;
+};
+
+/** The output of our update `OfflineTileSetting` mutation. */
+export type UpdateOfflineTileSettingPayload = {
+  __typename?: 'UpdateOfflineTileSettingPayload';
+  /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OfflineTileSetting` that was updated by this mutation. */
+  offlineTileSetting?: Maybe<OfflineTileSetting>;
+  /** Reads a single `Project` that is related to this `OfflineTileSetting`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `updateOptionalBasemapLayerByNodeId` mutation. */
@@ -13454,6 +13807,7 @@ export type OfflineSurveyMapsQuery = (
         & Pick<Form, 'id'>
       )>, basemaps?: Maybe<Array<(
         { __typename?: 'Basemap' }
+        & Pick<Basemap, 'useDefaultOfflineTileSettings'>
         & BasemapDetailsFragment
       )>> }
     )> }
@@ -13477,16 +13831,36 @@ export type ToggleOfflineBasemapSupportMutation = (
   )> }
 );
 
+export type OfflineTileSettingsFragment = (
+  { __typename?: 'OfflineTileSetting' }
+  & Pick<OfflineTileSetting, 'id' | 'projectId' | 'basemapId' | 'maxZ' | 'maxShorelineZ'>
+  & { region: (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  ) }
+);
+
 export type BasemapOfflineSettingsQueryVariables = Exact<{
   id: Scalars['Int'];
+  slug: Scalars['String'];
 }>;
 
 
 export type BasemapOfflineSettingsQuery = (
   { __typename?: 'Query' }
-  & { basemap?: Maybe<(
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'mapboxPublicKey'>
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ), offlineTileSettings: Array<(
+      { __typename?: 'OfflineTileSetting' }
+      & OfflineTileSettingsFragment
+    )> }
+  )>, basemap?: Maybe<(
     { __typename?: 'Basemap' }
-    & Pick<Basemap, 'id' | 'name'>
+    & Pick<Basemap, 'id' | 'name' | 'url' | 'isOfflineEnabled' | 'useDefaultOfflineTileSettings'>
     & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id'>
@@ -13494,6 +13868,37 @@ export type BasemapOfflineSettingsQuery = (
         { __typename?: 'GeometryPolygon' }
         & Pick<GeometryPolygon, 'geojson'>
       ) }
+    )> }
+  )> }
+);
+
+export type UpdateBasemapOfflineTileSettingsMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  maxZ: Scalars['Int'];
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  basemapId: Scalars['Int'];
+  useDefault: Scalars['Boolean'];
+}>;
+
+
+export type UpdateBasemapOfflineTileSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateBasemapOfflineTileSettings?: Maybe<(
+    { __typename?: 'UpdateBasemapOfflineTileSettingsPayload' }
+    & { offlineTileSetting?: Maybe<(
+      { __typename?: 'OfflineTileSetting' }
+      & Pick<OfflineTileSetting, 'id'>
+      & { basemap?: Maybe<(
+        { __typename?: 'Basemap' }
+        & Pick<Basemap, 'id' | 'useDefaultOfflineTileSettings'>
+      )>, project?: Maybe<(
+        { __typename?: 'Project' }
+        & Pick<Project, 'id'>
+        & { offlineTileSettings: Array<(
+          { __typename?: 'OfflineTileSetting' }
+          & OfflineTileSettingsFragment
+        )> }
+      )> }
     )> }
   )> }
 );
@@ -15360,6 +15765,18 @@ export const MapEssentialsFragmentDoc = gql`
   mapboxSecretKey
 }
     ${BasemapDetailsFragmentDoc}`;
+export const OfflineTileSettingsFragmentDoc = gql`
+    fragment OfflineTileSettings on OfflineTileSetting {
+  id
+  projectId
+  basemapId
+  maxZ
+  maxShorelineZ
+  region {
+    geojson
+  }
+}
+    `;
 export const ProjectMetadataFragmentDoc = gql`
     fragment ProjectMetadata on Project {
   id
@@ -18789,6 +19206,7 @@ export const OfflineSurveyMapsDocument = gql`
       }
       basemaps {
         ...BasemapDetails
+        useDefaultOfflineTileSettings
       }
     }
   }
@@ -18860,10 +19278,23 @@ export type ToggleOfflineBasemapSupportMutationHookResult = ReturnType<typeof us
 export type ToggleOfflineBasemapSupportMutationResult = Apollo.MutationResult<ToggleOfflineBasemapSupportMutation>;
 export type ToggleOfflineBasemapSupportMutationOptions = Apollo.BaseMutationOptions<ToggleOfflineBasemapSupportMutation, ToggleOfflineBasemapSupportMutationVariables>;
 export const BasemapOfflineSettingsDocument = gql`
-    query BasemapOfflineSettings($id: Int!) {
+    query BasemapOfflineSettings($id: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    mapboxPublicKey
+    region {
+      geojson
+    }
+    offlineTileSettings {
+      ...OfflineTileSettings
+    }
+  }
   basemap(id: $id) {
     id
     name
+    url
+    isOfflineEnabled
+    useDefaultOfflineTileSettings
     project {
       id
       region {
@@ -18872,7 +19303,7 @@ export const BasemapOfflineSettingsDocument = gql`
     }
   }
 }
-    `;
+    ${OfflineTileSettingsFragmentDoc}`;
 
 /**
  * __useBasemapOfflineSettingsQuery__
@@ -18887,6 +19318,7 @@ export const BasemapOfflineSettingsDocument = gql`
  * const { data, loading, error } = useBasemapOfflineSettingsQuery({
  *   variables: {
  *      id: // value for 'id'
+ *      slug: // value for 'slug'
  *   },
  * });
  */
@@ -18901,6 +19333,57 @@ export function useBasemapOfflineSettingsLazyQuery(baseOptions?: Apollo.LazyQuer
 export type BasemapOfflineSettingsQueryHookResult = ReturnType<typeof useBasemapOfflineSettingsQuery>;
 export type BasemapOfflineSettingsLazyQueryHookResult = ReturnType<typeof useBasemapOfflineSettingsLazyQuery>;
 export type BasemapOfflineSettingsQueryResult = Apollo.QueryResult<BasemapOfflineSettingsQuery, BasemapOfflineSettingsQueryVariables>;
+export const UpdateBasemapOfflineTileSettingsDocument = gql`
+    mutation UpdateBasemapOfflineTileSettings($projectId: Int!, $maxZ: Int!, $maxShorelineZ: Int, $basemapId: Int!, $useDefault: Boolean!) {
+  updateBasemapOfflineTileSettings(
+    input: {basemapId: $basemapId, maxShorelineZ: $maxShorelineZ, maxZ: $maxZ, projectId: $projectId, useDefault: $useDefault}
+  ) {
+    offlineTileSetting {
+      id
+      basemap {
+        id
+        useDefaultOfflineTileSettings
+      }
+      project {
+        id
+        offlineTileSettings {
+          ...OfflineTileSettings
+        }
+      }
+    }
+  }
+}
+    ${OfflineTileSettingsFragmentDoc}`;
+export type UpdateBasemapOfflineTileSettingsMutationFn = Apollo.MutationFunction<UpdateBasemapOfflineTileSettingsMutation, UpdateBasemapOfflineTileSettingsMutationVariables>;
+
+/**
+ * __useUpdateBasemapOfflineTileSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateBasemapOfflineTileSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateBasemapOfflineTileSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateBasemapOfflineTileSettingsMutation, { data, loading, error }] = useUpdateBasemapOfflineTileSettingsMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      maxZ: // value for 'maxZ'
+ *      maxShorelineZ: // value for 'maxShorelineZ'
+ *      basemapId: // value for 'basemapId'
+ *      useDefault: // value for 'useDefault'
+ *   },
+ * });
+ */
+export function useUpdateBasemapOfflineTileSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateBasemapOfflineTileSettingsMutation, UpdateBasemapOfflineTileSettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateBasemapOfflineTileSettingsMutation, UpdateBasemapOfflineTileSettingsMutationVariables>(UpdateBasemapOfflineTileSettingsDocument, options);
+      }
+export type UpdateBasemapOfflineTileSettingsMutationHookResult = ReturnType<typeof useUpdateBasemapOfflineTileSettingsMutation>;
+export type UpdateBasemapOfflineTileSettingsMutationResult = Apollo.MutationResult<UpdateBasemapOfflineTileSettingsMutation>;
+export type UpdateBasemapOfflineTileSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateBasemapOfflineTileSettingsMutation, UpdateBasemapOfflineTileSettingsMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -22166,6 +22649,7 @@ export const namedOperations = {
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
     ToggleOfflineBasemapSupport: 'ToggleOfflineBasemapSupport',
+    UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSurvey: 'CreateSurvey',
@@ -22240,6 +22724,7 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',
     MapEssentials: 'MapEssentials',
+    OfflineTileSettings: 'OfflineTileSettings',
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
