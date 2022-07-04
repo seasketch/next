@@ -26,9 +26,8 @@ export class PublicUploadsStack extends cdk.Stack {
     super(scope, id, props);
     this.bucket = new s3.Bucket(this, "PublicUploads", {
       publicReadAccess: true,
-      // TODO: Change to retain when in production so we don't lose any user data
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      autoDeleteObjects: false,
       // Versioning will help prevent any data loss due to overwriting
       versioned: true,
       cors: [
