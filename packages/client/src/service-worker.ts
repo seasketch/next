@@ -9,11 +9,11 @@ import * as SurveyAssetCache from "./offline/SurveyAssetCache";
 import LRUCache from "mnemonist/lru-cache-with-delete";
 import {
   isSimulatorUrl,
-  MapTileCacheCalculator,
+  MapTileCache,
   OfflineTileSettings,
 } from "./offline/MapTileCache";
 
-const MapTileCache = new MapTileCacheCalculator();
+const mapTileCache = new MapTileCache();
 
 const graphqlQueryCache = new GraphqlQueryCache(
   process.env.REACT_APP_GRAPHQL_ENDPOINT,
@@ -119,7 +119,7 @@ self.addEventListener("fetch", (event) => {
     const settings = offlineTileSimulatorSettings.get(event.clientId);
     if (settings) {
       event.respondWith(
-        MapTileCache.handleSimulatorRequest(url, event, settings)
+        mapTileCache.handleSimulatorRequest(url, event, settings)
       );
     }
   }

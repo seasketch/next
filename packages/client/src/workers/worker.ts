@@ -1,4 +1,4 @@
-import { MapTileCacheCalculator } from "../offline/MapTileCache";
+import { MapTileCache } from "../offline/MapTileCache";
 import pako from "pako";
 
 export function gzippedSize(data: string) {
@@ -6,4 +6,4 @@ export function gzippedSize(data: string) {
   return output.byteLength;
 }
 
-export const mapTileCacheCalculator = new MapTileCacheCalculator();
+export const mapTileCache = new MapTileCache();

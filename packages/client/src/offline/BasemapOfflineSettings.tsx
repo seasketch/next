@@ -23,14 +23,13 @@ import debounce from "lodash.debounce";
 import splitGeojson from "geojson-antimeridian-cut";
 import { cleanCoords } from "../workers/utils";
 import {
-  MapTileCacheCalculator,
+  MapTileCache,
   OfflineTileCacheStatus,
   OfflineTileSettings,
 } from "./MapTileCache";
 import bytes from "bytes";
 import getSlug from "../getSlug";
 import Switch from "../components/Switch";
-import { useCallback } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import RadioGroup from "../components/RadioGroup";
 import { useMapboxStyle } from "../useMapboxStyle";
@@ -38,13 +37,13 @@ import { useStyleSources } from "./mapboxApiHelpers";
 import Badge from "../components/Badge";
 
 let worker: any;
-let Calculator: MapTileCacheCalculator;
+let Calculator: MapTileCache;
 if (process.env.NODE_ENV === "test") {
   worker = { getChildTiles: () => 0 };
 } else {
   import("../workers/index").then((mod) => {
     worker = new mod.default();
-    Calculator = worker.mapTileCacheCalculator as MapTileCacheCalculator;
+    Calculator = worker.mapTileCache as MapTileCache;
   });
 }
 

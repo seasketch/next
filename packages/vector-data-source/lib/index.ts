@@ -116,7 +116,7 @@ export interface Node {
   children?: Node[];
 }
 
-class RBushIndex extends RBush<Feature> {
+class RBushIndex extends RBush<any> {
   toBBox(feature: Feature) {
     const [minX, minY, maxX, maxY] = feature.bbox!;
     return { minX, minY, maxX, maxY };

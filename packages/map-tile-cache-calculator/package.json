@@ -1,0 +1,42 @@
+{
+  "name": "@seasketch/map-tile-cache-calculator",
+  "version": "1.0.0",
+  "description": "Traverses and calculates tiles needed for offline caching in a given area, considering overlap with land",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next#readme",
+  "license": "BSD-3-Clause",
+  "main": "dist/bundled.js",
+  "module": "dist/map-tile-cache-calculator.js",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1",
+    "build": "tsc && esbuild --bundle --platform=node --format=cjs src/map-tile-cache-calculator.ts > dist/bundled.js && cp ./dist/map-tile-cache-calculator.d.ts ./dist/bundled.d.ts",
+    "install": "npm run build"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "dependencies": {
+    "@mapbox/tilebelt": "^1.0.2",
+    "@seasketch/vector-data-source": "^1.0.0",
+    "@turf/boolean-intersects": "^6.5.0",
+    "@types/geojson": "^7946.0.8",
+    "@types/mapbox__tilebelt": "^1.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.14.48"
+  }
+}

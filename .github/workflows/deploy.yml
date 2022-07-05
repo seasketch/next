@@ -155,6 +155,7 @@ jobs:
           COMMIT: ${{ needs.detect_changes.outputs.build_label }}
           UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
         run: |
           cdk deploy -e SeaSketchGraphQLServer
   deploy_client:
