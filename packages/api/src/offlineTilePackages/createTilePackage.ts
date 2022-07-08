@@ -11,7 +11,7 @@ import { Google, googleToTile } from "global-mercator";
 import fs from "fs";
 import S3 from "aws-sdk/clients/s3";
 import zlib from "zlib";
-const s3Stream = require("s3-upload-stream")(new S3());
+import Bottleneck from "bottleneck";
 
 const calculator = new MapTileCacheCalculator(
   "https://d3p1dsef9f0gjr.cloudfront.net/"
@@ -38,6 +38,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
     maxZ: number;
     maxShorelineZ: number;
     accessToken?: string;
+    sourceType: "raster" | "raster-dem" | "vector";
   }[] = (
     await client.query(
       `
@@ -50,7 +51,8 @@ export async function createTilePackage(packageId: string, client: DBClient) {
         ST_AsGeoJSON(offline_tile_packages.region) as "region",
         max_z as "maxZ",
         max_shoreline_z as "maxShorelineZ",
-        projects.mapbox_public_key as "accessToken"
+        projects.mapbox_public_key as "accessToken",
+        source_type as "sourceType"
       from
         offline_tile_packages
       inner join
@@ -87,9 +89,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
       try {
         const { fd, path, cleanup } = await file({
           postfix: ".mbtiles",
-          keep: true,
         });
-        console.log(path);
         const db = await open({
           filename: path,
           driver: sqlite3.Database,
@@ -105,7 +105,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
         ]);
         await db.run(`INSERT INTO metadata (name, value) VALUES (?, ?)`, [
           "format",
-          "pbf",
+          result.sourceType === "vector" ? "pbf" : "webp",
         ]);
         // SHOULD content
         await db.run(`INSERT INTO metadata (name, value) VALUES (?, ?)`, [
@@ -152,28 +152,33 @@ export async function createTilePackage(packageId: string, client: DBClient) {
           result.id,
         ]);
 
-        // Tileset Metadata
-        // https://github.com/mapbox/mbtiles-spec/blob/master/1.3/spec.md#vector-tileset-metadata
-        if (!result.isMapboxHosted) {
-          throw new Error(
-            "Only mapbox-hosted sources are supported at this time"
-          );
-        }
         const parts = result.dataSourceUrl.replace(/\/$/, "").split("/");
         const sourcesList = parts[parts.length - 1];
-        const response = await fetch(
-          `${result.dataSourceUrl.replace(/\/$/, "")}.json?access_token=${
+
+        if (result.sourceType === "vector") {
+          // Vector Tileset Metadata
+          // https://github.com/mapbox/mbtiles-spec/blob/master/1.3/spec.md#vector-tileset-metadata
+          if (!result.isMapboxHosted) {
+            throw new Error(
+              "Only mapbox-hosted sources are supported at this time"
+            );
+          }
+          const url = `${baseUrlForMapBoxSource(sourcesList).replace(
+            /\/$/,
+            ""
+          )}.json?access_token=${
             result.accessToken || process.env.MAPBOX_ACCESS_TOKEN
-          }`
-        );
-        const json = await response.json();
-        if (!("vector_layers" in json)) {
-          throw new Error("Could not find vector_layers in response json");
+          }`;
+          const response = await fetch(url);
+          const json = await response.json();
+          if (!("vector_layers" in json)) {
+            throw new Error("Could not find vector_layers in response json");
+          }
+          await db.run(`INSERT INTO metadata (name, value) VALUES (?, ?)`, [
+            "json",
+            JSON.stringify({ vector_layers: json.vector_layers }),
+          ]);
         }
-        await db.run(`INSERT INTO metadata (name, value) VALUES (?, ?)`, [
-          "json",
-          JSON.stringify({ vector_layers: json.vector_layers }),
-        ]);
 
         // Tiles
         // https://github.com/mapbox/mbtiles-spec/blob/master/1.3/spec.md#tiles
@@ -183,12 +188,48 @@ export async function createTilePackage(packageId: string, client: DBClient) {
         await db.run(
           `CREATE UNIQUE INDEX tile_index on tiles (zoom_level, tile_column, tile_row);`
         );
-        console.log("sources list", sourcesList);
         if (!sourcesList.length) {
           throw new Error(`Sources list blank`);
         }
         let failuresWithoutSuccess = 0;
         let tilesProcessed = 0;
+
+        async function addTile(tile: number[]) {
+          const url =
+            result.sourceType === "vector"
+              ? tileUrlForMapBoxVectorSource(
+                  sourcesList,
+                  tile,
+                  result.accessToken || process.env.MAPBOX_ACCESS_TOKEN!
+                )
+              : tileUrlForMapBoxRasterSource(
+                  sourcesList,
+                  tile,
+                  result.accessToken || process.env.MAPBOX_ACCESS_TOKEN!
+                );
+          client.query(
+            `update offline_tile_packages set tiles_fetched = $2 where id = $1`,
+            [packageId, tilesProcessed++]
+          );
+          const response = await fetch(url);
+          if (response.ok) {
+            failuresWithoutSuccess = 0;
+            const bin = await response.arrayBuffer();
+            await db.run(
+              `INSERT into tiles (tile_column, tile_row, zoom_level, tile_data) values (?, ?, ?, ?)`,
+              [...googleToTile(tile as Google), new Uint8Array(bin)]
+            );
+          } else {
+            failuresWithoutSuccess++;
+            if (failuresWithoutSuccess > 20) {
+              throw new Error(
+                `Failed to retrieve tiles ${failuresWithoutSuccess} times without any successes. Last message = ${await response.text()}`
+              );
+            }
+          }
+        }
+
+        const tiles: number[][] = [];
         await calculator.traverseOfflineTiles(
           {
             levelOfDetail: 1,
@@ -197,47 +238,34 @@ export async function createTilePackage(packageId: string, client: DBClient) {
             region,
           },
           async (tile, stop) => {
-            const url = tileUrlForMapBoxVectorSource(
-              sourcesList,
-              tile,
-              result.accessToken || process.env.MAPBOX_ACCESS_TOKEN!
-            );
-            const response = await fetch(url);
-            client.query(
-              `update offline_tile_packages set tiles_fetched = $2 where id = $1`,
-              [packageId, tilesProcessed++]
-            );
-            if (response.ok) {
-              failuresWithoutSuccess = 0;
-              const bin = await response.arrayBuffer();
-              await db.run(
-                `INSERT into tiles (tile_column, tile_row, zoom_level, tile_data) values (?, ?, ?, ?)`,
-                [...googleToTile(tile as Google), new Uint8Array(bin)]
-              );
-            } else {
-              failuresWithoutSuccess++;
-              if (failuresWithoutSuccess > 20) {
-                stop();
-                throw new Error(
-                  `Failed to retrieve tiles ${failuresWithoutSuccess} times without any successes. Last message = ${await response.text()}`
-                );
-              }
-            }
+            tiles.push(tile);
           }
         );
+
+        const limiter = new Bottleneck({
+          minTime: 50,
+          maxConcurrent: 20,
+        });
+
+        await Promise.all(tiles.map((tile) => limiter.schedule(addTile, tile)));
+
         await db.close();
         const stats = fs.statSync(path);
         await client.query(
           `update offline_tile_packages set status = 'UPLOADING', bytes = $2, tiles_fetched = $3 where id = $1`,
           [packageId, stats.size, tilesProcessed++]
         );
-        const { location } = await uploadMBTiles(path, result.id);
-        console.log(location);
+        const location = await uploadMBTiles(path, result.id);
         await client.query(
           `update offline_tile_packages set status = 'COMPLETE' where id = $1`,
           [packageId]
         );
-        // await cleanup();
+        // Delete older tile packages with the same project_id and data_source_url
+        await client.query(
+          `delete from offline_tile_packages where data_source_url = $1 and project_id = $2 and id != $3`,
+          [result.dataSourceUrl, result.projectId, result.id]
+        );
+        cleanup();
       } catch (e: any) {
         await client.query(
           `update offline_tile_packages set status = 'FAILED', error = $2 where id = $1`,
@@ -253,7 +281,11 @@ export async function createTilePackage(packageId: string, client: DBClient) {
   }
 }
 
-function tileUrlForMapBoxVectorSource(
+export function baseUrlForMapBoxSource(sourcesList: string) {
+  return `https://api.mapbox.com/v4/${sourcesList}`;
+}
+
+export function tileUrlForMapBoxVectorSource(
   sourcesList: string,
   tile: number[],
   accessToken: string
@@ -261,63 +293,33 @@ function tileUrlForMapBoxVectorSource(
   return `https://api.mapbox.com/v4/${sourcesList}/${tile[Z]}/${tile[X]}/${tile[Y]}.vector.pbf?access_token=${accessToken}`;
 }
 
+export function tileUrlForMapBoxRasterSource(
+  sourcesList: string,
+  tile: number[],
+  accessToken: string
+) {
+  return `https://api.mapbox.com/v4/${sourcesList}/${tile[Z]}/${tile[X]}/${tile[Y]}@2x.webp?access_token=${accessToken}`;
+}
+
 export function objectKeyForTilePackageId(id: string) {
   return `${id}.mbtiles`;
 }
 
 async function uploadMBTiles(path: string, id: string) {
-  return new Promise<{
-    location: string;
-    Bucket: string;
-    Key: string;
-    ETag: string;
-  }>((resolve, reject) => {
+  return new Promise<string>(async (resolve, reject) => {
     var read = fs.createReadStream(path);
-    // var compress = zlib.createGzip();
-    var upload = s3Stream.upload({
-      Bucket: process.env.TILE_PACKAGES_BUCKET,
-      Key: objectKeyForTilePackageId(id),
-    });
-
-    // Optional configuration
-    upload.maxPartSize(20971520); // 20 MB
-    upload.concurrentParts(5);
-
-    // Handle errors.
-    upload.on("error", function (error: Error) {
-      reject(error);
-    });
-
-    //     /* Handle progress. Example details object:
-    //    { ETag: '"f9ef956c83756a80ad62f54ae5e7d34b"',
-    //      PartNumber: 5,
-    //      receivedSize: 29671068,
-    //      uploadedSize: 29671068 }
-    // */
-    //     upload.on("part", function (details) {
-    //       console.log(details);
-    //     });
-    // TODO: Add upload progress
-    /* Handle upload completion. Example details object:
-   { Location: 'https://bucketName.s3.amazonaws.com/filename.ext',
-     Bucket: 'bucketName',
-     Key: 'filename.ext',
-     ETag: '"bf2acbedf84207d696c8da7dbb205b9f-5"' }
-*/
-    upload.on(
-      "uploaded",
-      function (details: {
-        location: string;
-        Bucket: string;
-        Key: string;
-        ETag: string;
-      }) {
-        resolve(details);
-      }
-    );
-
-    // Pipe the incoming filestream through compression, and up to S3.
-    read.pipe(upload);
+    var compress = zlib.createGzip();
+    var response = await s3
+      .upload({
+        Bucket: process.env.TILE_PACKAGES_BUCKET!,
+        Key: objectKeyForTilePackageId(id),
+        Body: read.pipe(compress),
+        ContentType: "application/vnd.mapbox-vector-tile",
+        ContentEncoding: "gzip",
+        CacheControl: "max-age=31536000",
+      })
+      .promise();
+    resolve(response.Location);
   });
 }
 

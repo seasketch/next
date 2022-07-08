@@ -29,6 +29,9 @@ import { schemeTableau10 } from "d3-scale-chromatic";
 import OfflineSurveySelection from "./OfflineSurveySelection";
 import { useParams } from "react-router-dom";
 import useProjectId from "../useProjectId";
+import ErrorBoundaryFallback from "../components/ErrorBoundaryFallback";
+import { useProjectMetadataQuery } from "../generated/graphql";
+import getSlug from "../getSlug";
 
 function label(id: string) {
   switch (id) {
@@ -83,6 +86,11 @@ export function CacheSettingCards() {
 
   const context = useContext(ClientCacheManagerContext);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const { data } = useProjectMetadataQuery({
+    variables: {
+      slug: getSlug(),
+    },
+  });
 
   const level = context?.level || defaultCacheSetting;
   const quotaPercent =
@@ -168,7 +176,17 @@ export function CacheSettingCards() {
           />
         )}
       </Card>
-      <OfflineSurveySelection />
+      {data?.project?.isOfflineEnabled && (
+        <ErrorBoundaryFallback
+          title={
+            <Trans ns="offline">
+              Failed to render offline settings. Is ServiceWorker enabled?
+            </Trans>
+          }
+        >
+          <OfflineSurveySelection />
+        </ErrorBoundaryFallback>
+      )}
     </>
   );
 }

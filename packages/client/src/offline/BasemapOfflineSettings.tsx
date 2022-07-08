@@ -35,6 +35,14 @@ import RadioGroup from "../components/RadioGroup";
 import { useMapboxStyle } from "../useMapboxStyle";
 import { useStyleSources } from "./mapboxApiHelpers";
 import Badge from "../components/Badge";
+import { OfflineTileSettingsForCalculationFragment } from "../generated/queries";
+import { urlForSource } from "./OfflineSurveyMapSettings";
+
+export const defaultOfflineTilingSettings: OfflineTileSettingsForCalculationFragment =
+  {
+    maxZ: 11,
+    maxShorelineZ: 14,
+  };
 
 let worker: any;
 let Calculator: MapTileCache;
@@ -149,8 +157,7 @@ export default function BasemapOfflineSettings({
           data.projectBySlug.offlineTileSettings.find(
             (s) => s.basemapId === null
           ) || {
-            maxZ: 11,
-            maxShorelineZ: 14,
+            ...defaultOfflineTilingSettings,
             projectId: data.projectBySlug.id,
             region: {
               geojson: splitGeojson(
@@ -162,7 +169,7 @@ export default function BasemapOfflineSettings({
           };
         return projectSetting;
       }
-    }, [data]);
+    }, [data?.projectBySlug]);
 
   const basemapSettings: Omit<OfflineTileSettingsFragment, "id"> | null =
     useMemo(() => {
@@ -222,8 +229,15 @@ export default function BasemapOfflineSettings({
     [mutate]
   );
 
+  const mounted = useRef(false);
+
   useEffect(() => {
     if (settings && basemapId && data?.projectBySlug?.id) {
+      // Prevent saving of setting on mount. Wait until user interaction
+      if (mounted.current === false) {
+        mounted.current = true;
+        return;
+      }
       debouncedMutate(
         basemapId,
         data.projectBySlug.id,
@@ -234,7 +248,7 @@ export default function BasemapOfflineSettings({
           : null
       );
     }
-  }, [settings, basemapId, data?.projectBySlug?.id]);
+  }, [settings]);
 
   const [z, setZ] = useState<number>(0);
   const [viewport, setViewport] = useState<BBox>();
@@ -320,7 +334,7 @@ export default function BasemapOfflineSettings({
       mapContext.manager.map.on("move", debouncedListener);
       return () => {
         if (mapContext?.manager?.map) {
-          mapContext.manager.map.off("zoom", listener);
+          mapContext.manager.map.off("zoom", debouncedListener);
           mapContext.manager.map.off("drag", debouncedListener);
           mapContext.manager.map.off("move", debouncedListener);
         }
@@ -453,7 +467,7 @@ export default function BasemapOfflineSettings({
         <div className="mb-5 pb-5 border-b">
           <h3>{t("Data Sources")}</h3>
           {dataSources.sources.map((source) => (
-            <div className="flex mt-1 space-x-2">
+            <div key={urlForSource(source)} className="flex mt-1 space-x-2">
               <Badge>{source.type}</Badge>
               {/* @ts-ignore */}
               <span className="truncate text-sm" title={source.url}>
@@ -604,7 +618,7 @@ export default function BasemapOfflineSettings({
       <div className="flex items-center">
         <h4 className="flex-1">{t("Estimated tile package size")}</h4>
         <span>
-          {stats.calculating ? <Spinner /> : bytes(stats.totalTiles! * 10000)}
+          {stats.calculating ? <Spinner /> : bytes(stats.totalTiles! * 40000)}
         </span>
       </div>
       <div className="flex items-center">

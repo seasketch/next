@@ -1,7 +1,51 @@
+fragment OfflineTilePackageDetails on OfflineTilePackage {
+  id
+  bytes
+  projectId
+  region {
+    geojson
+  }
+  sourceType
+  jobStatus
+  tilesFetched
+  totalTiles
+  createdAt
+  jobErrors
+  dataSourceUrl
+  isMapboxHosted
+  maxZ
+  maxShorelineZ
+  presignedUrl
+}
+
+fragment OfflineBasemapDetails on Basemap {
+  ...BasemapDetails
+  useDefaultOfflineTileSettings
+  offlineTileSettings {
+    basemapId
+    id
+    maxShorelineZ
+    maxZ
+  }
+}
+
+fragment OfflineTileSettingsForCalculation on OfflineTileSetting {
+  maxShorelineZ
+  maxZ
+}
+
 query OfflineSurveyMaps($slug: String!) {
   projectBySlug(slug: $slug) {
+    region {
+      geojson
+    }
     mapboxPublicKey
     id
+    offlineTileSettings {
+      maxShorelineZ
+      maxZ
+      basemapId
+    }
     surveys {
       id
       name
@@ -9,8 +53,12 @@ query OfflineSurveyMaps($slug: String!) {
         id
       }
       basemaps {
-        ...BasemapDetails
-        useDefaultOfflineTileSettings
+        ...OfflineBasemapDetails
+      }
+    }
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
       }
     }
   }
@@ -79,12 +127,9 @@ mutation UpdateBasemapOfflineTileSettings(
       useDefault: $useDefault
     }
   ) {
-    offlineTileSetting {
+    basemap {
       id
-      basemap {
-        id
-        useDefaultOfflineTileSettings
-      }
+      useDefaultOfflineTileSettings
       project {
         id
         offlineTileSettings {
@@ -92,5 +137,41 @@ mutation UpdateBasemapOfflineTileSettings(
         }
       }
     }
+  }
+}
+
+mutation generateOfflineTilePackage(
+  $dataSourceUrl: String!
+  $projectId: Int!
+  $maxZ: Int!
+  $maxShorelineZ: Int
+  $sourceType: OfflineTilePackageSourceType
+) {
+  generateOfflineTilePackage(
+    input: {
+      dataSourceUrl: $dataSourceUrl
+      projectId: $projectId
+      maxZ: $maxZ
+      maxShorelineZ: $maxShorelineZ
+      sourceType: $sourceType
+    }
+  ) {
+    offlineTilePackage {
+      ...OfflineTilePackageDetails
+    }
+  }
+}
+
+mutation deleteTilePackage($id: UUID!) {
+  deleteOfflineTilePackage(input: { id: $id }) {
+    offlineTilePackage {
+      id
+    }
+  }
+}
+
+query getTilePackage($id: UUID!) {
+  offlineTilePackage(id: $id) {
+    ...OfflineTilePackageDetails
   }
 }

@@ -31,9 +31,7 @@ class ServiceWorkerWindow {
     } else {
       this.wb = {
         messageSW: (message: object) => {
-          throw new Error(
-            "ServiceWorkerWindow can only be used from main context"
-          );
+          throw new Error("ServiceWorker not available");
         },
       };
     }

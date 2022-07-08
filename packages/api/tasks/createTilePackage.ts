@@ -6,10 +6,5 @@ export default async (payload: { packageId: string }, helpers: Helpers) => {
   helpers.logger.info(`Creating tile package: ${packageId}`);
   await helpers.withPgClient(async (client) => {
     await createTilePackage(packageId, client);
-    await sleep(2000);
   });
 };
-
-function sleep(time: number) {
-  return new Promise((resolve) => setTimeout(resolve, time));
-}

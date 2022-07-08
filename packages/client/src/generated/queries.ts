@@ -2718,6 +2718,39 @@ export type DeleteGroupPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `deleteOfflineTilePackage` mutation. */
+export type DeleteOfflineTilePackageInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['UUID']>;
+};
+
+/** The output of our `deleteOfflineTilePackage` mutation. */
+export type DeleteOfflineTilePackagePayload = {
+  __typename?: 'DeleteOfflineTilePackagePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  offlineTilePackage?: Maybe<OfflineTilePackage>;
+  /** An edge for our `OfflineTilePackage`. May be used by Relay 1. */
+  offlineTilePackageEdge?: Maybe<OfflineTilePackagesEdge>;
+  /** Reads a single `Project` that is related to this `OfflineTilePackage`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `deleteOfflineTilePackage` mutation. */
+export type DeleteOfflineTilePackagePayloadOfflineTilePackageEdgeArgs = {
+  orderBy?: Maybe<Array<OfflineTilePackagesOrderBy>>;
+};
+
 /** All input for the `deleteOfflineTileSettingByNodeId` mutation. */
 export type DeleteOfflineTileSettingByNodeIdInput = {
   /**
@@ -4375,6 +4408,43 @@ export enum ForumsOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
+/** All input for the `generateOfflineTilePackage` mutation. */
+export type GenerateOfflineTilePackageInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataSourceUrl?: Maybe<Scalars['String']>;
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+  sourceType?: Maybe<OfflineTilePackageSourceType>;
+};
+
+/** The output of our `generateOfflineTilePackage` mutation. */
+export type GenerateOfflineTilePackagePayload = {
+  __typename?: 'GenerateOfflineTilePackagePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  offlineTilePackage?: Maybe<OfflineTilePackage>;
+  /** An edge for our `OfflineTilePackage`. May be used by Relay 1. */
+  offlineTilePackageEdge?: Maybe<OfflineTilePackagesEdge>;
+  /** Reads a single `Project` that is related to this `OfflineTilePackage`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `generateOfflineTilePackage` mutation. */
+export type GenerateOfflineTilePackagePayloadOfflineTilePackageEdgeArgs = {
+  orderBy?: Maybe<Array<OfflineTilePackagesOrderBy>>;
+};
+
 
 /** All geography XY types implement this interface */
 export type GeographyGeometry = {
@@ -5353,6 +5423,7 @@ export type Mutation = {
   deleteGroupByNodeId?: Maybe<DeleteGroupPayload>;
   /** Deletes a single `Group` using a unique key. */
   deleteGroupByProjectIdAndName?: Maybe<DeleteGroupPayload>;
+  deleteOfflineTilePackage?: Maybe<DeleteOfflineTilePackagePayload>;
   /** Deletes a single `OfflineTileSetting` using a unique key. */
   deleteOfflineTileSetting?: Maybe<DeleteOfflineTileSettingPayload>;
   /** Deletes a single `OfflineTileSetting` using its globally unique id. */
@@ -5429,6 +5500,7 @@ export type Mutation = {
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
   enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
+  generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   /**
    * Use to create new sprites. If an existing sprite in the database for this
    * project has a matching md5 hash no new Sprite will be created.
@@ -6073,6 +6145,12 @@ export type MutationDeleteGroupByProjectIdAndNameArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteOfflineTilePackageArgs = {
+  input: DeleteOfflineTilePackageInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteOfflineTileSettingArgs = {
   input: DeleteOfflineTileSettingInput;
 };
@@ -6279,6 +6357,12 @@ export type MutationEnableForumPostingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationEnableOfflineSupportArgs = {
   input: EnableOfflineSupportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGenerateOfflineTilePackageArgs = {
+  input: GenerateOfflineTilePackageInput;
 };
 
 
@@ -6920,6 +7004,92 @@ export type Node = {
   nodeId: Scalars['ID'];
 };
 
+export type OfflineTilePackage = Node & {
+  __typename?: 'OfflineTilePackage';
+  bytes: Scalars['Int'];
+  createdAt: Scalars['Datetime'];
+  dataSourceUrl: Scalars['String'];
+  /** @deprecated Use jobErrors instead */
+  error?: Maybe<Scalars['String']>;
+  id: Scalars['UUID'];
+  isMapboxHosted: Scalars['Boolean'];
+  jobErrors?: Maybe<Scalars['String']>;
+  jobStatus?: Maybe<OfflineTilePackageStatus>;
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Can be used to download a tilepackage (if permitted) */
+  presignedUrl: Scalars['String'];
+  /** Reads a single `Project` that is related to this `OfflineTilePackage`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  region: GeometryPolygon;
+  sourceType: OfflineTilePackageSourceType;
+  /** @deprecated Use jobStatus instead */
+  status: OfflineTilePackageStatus;
+  tilesFetched: Scalars['Int'];
+  totalTiles: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `OfflineTilePackage` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type OfflineTilePackageCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['UUID']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+export enum OfflineTilePackageSourceType {
+  Raster = 'RASTER',
+  RasterDem = 'RASTER_DEM',
+  Vector = 'VECTOR'
+}
+
+export enum OfflineTilePackageStatus {
+  Complete = 'COMPLETE',
+  Failed = 'FAILED',
+  Generating = 'GENERATING',
+  Queued = 'QUEUED',
+  Uploading = 'UPLOADING'
+}
+
+/** A connection to a list of `OfflineTilePackage` values. */
+export type OfflineTilePackagesConnection = {
+  __typename?: 'OfflineTilePackagesConnection';
+  /** A list of edges which contains the `OfflineTilePackage` and cursor to aid in pagination. */
+  edges: Array<OfflineTilePackagesEdge>;
+  /** A list of `OfflineTilePackage` objects. */
+  nodes: Array<OfflineTilePackage>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `OfflineTilePackage` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `OfflineTilePackage` edge in the connection. */
+export type OfflineTilePackagesEdge = {
+  __typename?: 'OfflineTilePackagesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `OfflineTilePackage` at the end of the edge. */
+  node: OfflineTilePackage;
+};
+
+/** Methods to use when ordering `OfflineTilePackage`. */
+export enum OfflineTilePackagesOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
 export type OfflineTileSetting = Node & {
   __typename?: 'OfflineTileSetting';
   /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
@@ -7323,6 +7493,8 @@ export type Project = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Reads and enables pagination through a set of `OfflineTilePackage`. */
+  offlineTilePackagesConnection: OfflineTilePackagesConnection;
   /** Reads and enables pagination through a set of `OfflineTileSetting`. */
   offlineTileSettings: Array<OfflineTileSetting>;
   /** Count of all users who have opted into participating in the project, sharing their profile with project administrators. */
@@ -7534,6 +7706,21 @@ export type ProjectMyFoldersArgs = {
 export type ProjectMySketchesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectOfflineTilePackagesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<OfflineTilePackageCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OfflineTilePackagesOrderBy>>;
 };
 
 
@@ -8146,6 +8333,11 @@ export type Query = Node & {
   node?: Maybe<Node>;
   /** The root query type must be a `Node` to work well with Relay 1 mutations. This just resolves to `query`. */
   nodeId: Scalars['ID'];
+  offlineTilePackage?: Maybe<OfflineTilePackage>;
+  /** Reads a single `OfflineTilePackage` using its globally unique `ID`. */
+  offlineTilePackageByNodeId?: Maybe<OfflineTilePackage>;
+  /** Reads and enables pagination through a set of `OfflineTilePackage`. */
+  offlineTilePackagesConnection?: Maybe<OfflineTilePackagesConnection>;
   offlineTileSetting?: Maybe<OfflineTileSetting>;
   /** Reads a single `OfflineTileSetting` using its globally unique `ID`. */
   offlineTileSettingByNodeId?: Maybe<OfflineTileSetting>;
@@ -8551,6 +8743,30 @@ export type QueryInviteEmailByNodeIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryNodeArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTilePackageArgs = {
+  id: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTilePackageByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTilePackagesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<OfflineTilePackageCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OfflineTilePackagesOrderBy>>;
 };
 
 
@@ -10776,18 +10992,26 @@ export type UpdateBasemapOfflineTileSettingsInput = {
 /** The output of our `updateBasemapOfflineTileSettings` mutation. */
 export type UpdateBasemapOfflineTileSettingsPayload = {
   __typename?: 'UpdateBasemapOfflineTileSettingsPayload';
-  /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
   basemap?: Maybe<Basemap>;
+  /** An edge for our `Basemap`. May be used by Relay 1. */
+  basemapEdge?: Maybe<BasemapsEdge>;
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  offlineTileSetting?: Maybe<OfflineTileSetting>;
-  /** Reads a single `Project` that is related to this `OfflineTileSetting`. */
+  /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
+  interactivitySettings?: Maybe<InteractivitySetting>;
+  /** Reads a single `Project` that is related to this `Basemap`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateBasemapOfflineTileSettings` mutation. */
+export type UpdateBasemapOfflineTileSettingsPayloadBasemapEdgeArgs = {
+  orderBy?: Maybe<Array<BasemapsOrderBy>>;
 };
 
 /** The output of our update `Basemap` mutation. */
@@ -13787,6 +14011,30 @@ export type OfflineSurveysQuery = (
   )> }
 );
 
+export type OfflineTilePackageDetailsFragment = (
+  { __typename?: 'OfflineTilePackage' }
+  & Pick<OfflineTilePackage, 'id' | 'bytes' | 'projectId' | 'sourceType' | 'jobStatus' | 'tilesFetched' | 'totalTiles' | 'createdAt' | 'jobErrors' | 'dataSourceUrl' | 'isMapboxHosted' | 'maxZ' | 'maxShorelineZ' | 'presignedUrl'>
+  & { region: (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  ) }
+);
+
+export type OfflineBasemapDetailsFragment = (
+  { __typename?: 'Basemap' }
+  & Pick<Basemap, 'useDefaultOfflineTileSettings'>
+  & { offlineTileSettings: Array<(
+    { __typename?: 'OfflineTileSetting' }
+    & Pick<OfflineTileSetting, 'basemapId' | 'id' | 'maxShorelineZ' | 'maxZ'>
+  )> }
+  & BasemapDetailsFragment
+);
+
+export type OfflineTileSettingsForCalculationFragment = (
+  { __typename?: 'OfflineTileSetting' }
+  & Pick<OfflineTileSetting, 'maxShorelineZ' | 'maxZ'>
+);
+
 export type OfflineSurveyMapsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13797,7 +14045,13 @@ export type OfflineSurveyMapsQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'mapboxPublicKey' | 'id'>
-    & { surveys: Array<(
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ), offlineTileSettings: Array<(
+      { __typename?: 'OfflineTileSetting' }
+      & Pick<OfflineTileSetting, 'maxShorelineZ' | 'maxZ' | 'basemapId'>
+    )>, surveys: Array<(
       { __typename?: 'Survey' }
       & Pick<Survey, 'id' | 'name'>
       & { form?: Maybe<(
@@ -13805,10 +14059,15 @@ export type OfflineSurveyMapsQuery = (
         & Pick<Form, 'id'>
       )>, basemaps?: Maybe<Array<(
         { __typename?: 'Basemap' }
-        & Pick<Basemap, 'useDefaultOfflineTileSettings'>
-        & BasemapDetailsFragment
+        & OfflineBasemapDetailsFragment
       )>> }
-    )> }
+    )>, offlineTilePackagesConnection: (
+      { __typename?: 'OfflineTilePackagesConnection' }
+      & { nodes: Array<(
+        { __typename?: 'OfflineTilePackage' }
+        & OfflineTilePackageDetailsFragment
+      )> }
+    ) }
   )> }
 );
 
@@ -13883,13 +14142,10 @@ export type UpdateBasemapOfflineTileSettingsMutation = (
   { __typename?: 'Mutation' }
   & { updateBasemapOfflineTileSettings?: Maybe<(
     { __typename?: 'UpdateBasemapOfflineTileSettingsPayload' }
-    & { offlineTileSetting?: Maybe<(
-      { __typename?: 'OfflineTileSetting' }
-      & Pick<OfflineTileSetting, 'id'>
-      & { basemap?: Maybe<(
-        { __typename?: 'Basemap' }
-        & Pick<Basemap, 'id' | 'useDefaultOfflineTileSettings'>
-      )>, project?: Maybe<(
+    & { basemap?: Maybe<(
+      { __typename?: 'Basemap' }
+      & Pick<Basemap, 'id' | 'useDefaultOfflineTileSettings'>
+      & { project?: Maybe<(
         { __typename?: 'Project' }
         & Pick<Project, 'id'>
         & { offlineTileSettings: Array<(
@@ -13898,6 +14154,55 @@ export type UpdateBasemapOfflineTileSettingsMutation = (
         )> }
       )> }
     )> }
+  )> }
+);
+
+export type GenerateOfflineTilePackageMutationVariables = Exact<{
+  dataSourceUrl: Scalars['String'];
+  projectId: Scalars['Int'];
+  maxZ: Scalars['Int'];
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  sourceType?: Maybe<OfflineTilePackageSourceType>;
+}>;
+
+
+export type GenerateOfflineTilePackageMutation = (
+  { __typename?: 'Mutation' }
+  & { generateOfflineTilePackage?: Maybe<(
+    { __typename?: 'GenerateOfflineTilePackagePayload' }
+    & { offlineTilePackage?: Maybe<(
+      { __typename?: 'OfflineTilePackage' }
+      & OfflineTilePackageDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteTilePackageMutationVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type DeleteTilePackageMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteOfflineTilePackage?: Maybe<(
+    { __typename?: 'DeleteOfflineTilePackagePayload' }
+    & { offlineTilePackage?: Maybe<(
+      { __typename?: 'OfflineTilePackage' }
+      & Pick<OfflineTilePackage, 'id'>
+    )> }
+  )> }
+);
+
+export type GetTilePackageQueryVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type GetTilePackageQuery = (
+  { __typename?: 'Query' }
+  & { offlineTilePackage?: Maybe<(
+    { __typename?: 'OfflineTilePackage' }
+    & OfflineTilePackageDetailsFragment
   )> }
 );
 
@@ -15763,6 +16068,45 @@ export const MapEssentialsFragmentDoc = /*#__PURE__*/ gql`
   mapboxSecretKey
 }
     ${BasemapDetailsFragmentDoc}`;
+export const OfflineTilePackageDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment OfflineTilePackageDetails on OfflineTilePackage {
+  id
+  bytes
+  projectId
+  region {
+    geojson
+  }
+  sourceType
+  jobStatus
+  tilesFetched
+  totalTiles
+  createdAt
+  jobErrors
+  dataSourceUrl
+  isMapboxHosted
+  maxZ
+  maxShorelineZ
+  presignedUrl
+}
+    `;
+export const OfflineBasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment OfflineBasemapDetails on Basemap {
+  ...BasemapDetails
+  useDefaultOfflineTileSettings
+  offlineTileSettings {
+    basemapId
+    id
+    maxShorelineZ
+    maxZ
+  }
+}
+    ${BasemapDetailsFragmentDoc}`;
+export const OfflineTileSettingsForCalculationFragmentDoc = /*#__PURE__*/ gql`
+    fragment OfflineTileSettingsForCalculation on OfflineTileSetting {
+  maxShorelineZ
+  maxZ
+}
+    `;
 export const OfflineTileSettingsFragmentDoc = /*#__PURE__*/ gql`
     fragment OfflineTileSettings on OfflineTileSetting {
   id
@@ -17203,8 +17547,16 @@ export const OfflineSurveysDocument = /*#__PURE__*/ gql`
 export const OfflineSurveyMapsDocument = /*#__PURE__*/ gql`
     query OfflineSurveyMaps($slug: String!) {
   projectBySlug(slug: $slug) {
+    region {
+      geojson
+    }
     mapboxPublicKey
     id
+    offlineTileSettings {
+      maxShorelineZ
+      maxZ
+      basemapId
+    }
     surveys {
       id
       name
@@ -17212,13 +17564,18 @@ export const OfflineSurveyMapsDocument = /*#__PURE__*/ gql`
         id
       }
       basemaps {
-        ...BasemapDetails
-        useDefaultOfflineTileSettings
+        ...OfflineBasemapDetails
+      }
+    }
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
       }
     }
   }
 }
-    ${BasemapDetailsFragmentDoc}`;
+    ${OfflineBasemapDetailsFragmentDoc}
+${OfflineTilePackageDetailsFragmentDoc}`;
 export const ToggleOfflineBasemapSupportDocument = /*#__PURE__*/ gql`
     mutation ToggleOfflineBasemapSupport($id: Int!, $enable: Boolean!) {
   updateBasemap(input: {id: $id, patch: {isOfflineEnabled: $enable}}) {
@@ -17261,12 +17618,9 @@ export const UpdateBasemapOfflineTileSettingsDocument = /*#__PURE__*/ gql`
   updateBasemapOfflineTileSettings(
     input: {basemapId: $basemapId, maxShorelineZ: $maxShorelineZ, maxZ: $maxZ, projectId: $projectId, useDefault: $useDefault}
   ) {
-    offlineTileSetting {
+    basemap {
       id
-      basemap {
-        id
-        useDefaultOfflineTileSettings
-      }
+      useDefaultOfflineTileSettings
       project {
         id
         offlineTileSettings {
@@ -17277,6 +17631,33 @@ export const UpdateBasemapOfflineTileSettingsDocument = /*#__PURE__*/ gql`
   }
 }
     ${OfflineTileSettingsFragmentDoc}`;
+export const GenerateOfflineTilePackageDocument = /*#__PURE__*/ gql`
+    mutation generateOfflineTilePackage($dataSourceUrl: String!, $projectId: Int!, $maxZ: Int!, $maxShorelineZ: Int, $sourceType: OfflineTilePackageSourceType) {
+  generateOfflineTilePackage(
+    input: {dataSourceUrl: $dataSourceUrl, projectId: $projectId, maxZ: $maxZ, maxShorelineZ: $maxShorelineZ, sourceType: $sourceType}
+  ) {
+    offlineTilePackage {
+      ...OfflineTilePackageDetails
+    }
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
+export const DeleteTilePackageDocument = /*#__PURE__*/ gql`
+    mutation deleteTilePackage($id: UUID!) {
+  deleteOfflineTilePackage(input: {id: $id}) {
+    offlineTilePackage {
+      id
+    }
+  }
+}
+    `;
+export const GetTilePackageDocument = /*#__PURE__*/ gql`
+    query getTilePackage($id: UUID!) {
+  offlineTilePackage(id: $id) {
+    ...OfflineTilePackageDetails
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
 export const ProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -18376,6 +18757,7 @@ export const namedOperations = {
     OfflineSurveys: 'OfflineSurveys',
     OfflineSurveyMaps: 'OfflineSurveyMaps',
     BasemapOfflineSettings: 'BasemapOfflineSettings',
+    getTilePackage: 'getTilePackage',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
     ProjectMetadata: 'ProjectMetadata',
     Me: 'Me',
@@ -18456,6 +18838,8 @@ export const namedOperations = {
     PublishTableOfContents: 'PublishTableOfContents',
     ToggleOfflineBasemapSupport: 'ToggleOfflineBasemapSupport',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
+    generateOfflineTilePackage: 'generateOfflineTilePackage',
+    deleteTilePackage: 'deleteTilePackage',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSurvey: 'CreateSurvey',
@@ -18530,6 +18914,9 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',
     MapEssentials: 'MapEssentials',
+    OfflineTilePackageDetails: 'OfflineTilePackageDetails',
+    OfflineBasemapDetails: 'OfflineBasemapDetails',
+    OfflineTileSettingsForCalculation: 'OfflineTileSettingsForCalculation',
     OfflineTileSettings: 'OfflineTileSettings',
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',

@@ -3229,6 +3229,40 @@ type DeleteGroupPayload {
   query: Query
 }
 
+"""All input for the `deleteOfflineTilePackage` mutation."""
+input DeleteOfflineTilePackageInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: UUID
+}
+
+"""The output of our `deleteOfflineTilePackage` mutation."""
+type DeleteOfflineTilePackagePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  offlineTilePackage: OfflineTilePackage
+
+  """An edge for our `OfflineTilePackage`. May be used by Relay 1."""
+  offlineTilePackageEdge(
+    """The method to use when ordering `OfflineTilePackage`."""
+    orderBy: [OfflineTilePackagesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OfflineTilePackagesEdge
+
+  """Reads a single `Project` that is related to this `OfflineTilePackage`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `deleteOfflineTileSettingByNodeId` mutation."""
 input DeleteOfflineTileSettingByNodeIdInput {
   """
@@ -5196,6 +5230,44 @@ enum ForumsOrderBy {
   PROJECT_ID_DESC
 }
 
+"""All input for the `generateOfflineTilePackage` mutation."""
+input GenerateOfflineTilePackageInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  dataSourceUrl: String
+  maxShorelineZ: Int
+  maxZ: Int
+  projectId: Int
+  sourceType: OfflineTilePackageSourceType
+}
+
+"""The output of our `generateOfflineTilePackage` mutation."""
+type GenerateOfflineTilePackagePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  offlineTilePackage: OfflineTilePackage
+
+  """An edge for our `OfflineTilePackage`. May be used by Relay 1."""
+  offlineTilePackageEdge(
+    """The method to use when ordering `OfflineTilePackage`."""
+    orderBy: [OfflineTilePackagesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OfflineTilePackagesEdge
+
+  """Reads a single `Project` that is related to this `OfflineTilePackage`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All geography XY types implement this interface"""
 interface GeographyGeometry {
   """Converts the object to GeoJSON"""
@@ -6632,6 +6704,12 @@ type Mutation {
     """
     input: DeleteGroupByProjectIdAndNameInput!
   ): DeleteGroupPayload
+  deleteOfflineTilePackage(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteOfflineTilePackageInput!
+  ): DeleteOfflineTilePackagePayload
 
   """Deletes a single `OfflineTileSetting` using a unique key."""
   deleteOfflineTileSetting(
@@ -6919,6 +6997,12 @@ type Mutation {
     """
     input: EnableOfflineSupportInput!
   ): EnableOfflineSupportPayload
+  generateOfflineTilePackage(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: GenerateOfflineTilePackageInput!
+  ): GenerateOfflineTilePackagePayload
 
   """
   Use to create new sprites. If an existing sprite in the database for this
@@ -7853,6 +7937,101 @@ interface Node {
   nodeId: ID!
 }
 
+type OfflineTilePackage implements Node {
+  bytes: Int!
+  createdAt: Datetime!
+  dataSourceUrl: String!
+  error: String @deprecated(reason: "Use jobErrors instead")
+  id: UUID!
+  isMapboxHosted: Boolean!
+  jobErrors: String
+  jobStatus: OfflineTilePackageStatus
+  maxShorelineZ: Int
+  maxZ: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Can be used to download a tilepackage (if permitted)"""
+  presignedUrl: String!
+
+  """Reads a single `Project` that is related to this `OfflineTilePackage`."""
+  project: Project
+  projectId: Int!
+  region: GeometryPolygon!
+  sourceType: OfflineTilePackageSourceType!
+  status: OfflineTilePackageStatus! @deprecated(reason: "Use jobStatus instead")
+  tilesFetched: Int!
+  totalTiles: Int!
+}
+
+"""
+A condition to be used against `OfflineTilePackage` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input OfflineTilePackageCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+}
+
+"""A connection to a list of `OfflineTilePackage` values."""
+type OfflineTilePackagesConnection {
+  """
+  A list of edges which contains the `OfflineTilePackage` and cursor to aid in pagination.
+  """
+  edges: [OfflineTilePackagesEdge!]!
+
+  """A list of `OfflineTilePackage` objects."""
+  nodes: [OfflineTilePackage!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `OfflineTilePackage` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `OfflineTilePackage` edge in the connection."""
+type OfflineTilePackagesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `OfflineTilePackage` at the end of the edge."""
+  node: OfflineTilePackage!
+}
+
+"""Methods to use when ordering `OfflineTilePackage`."""
+enum OfflineTilePackagesOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+}
+
+enum OfflineTilePackageSourceType {
+  RASTER
+  RASTER_DEM
+  VECTOR
+}
+
+enum OfflineTilePackageStatus {
+  COMPLETE
+  FAILED
+  GENERATING
+  QUEUED
+  UPLOADING
+}
+
 type OfflineTileSetting implements Node {
   """Reads a single `Basemap` that is related to this `OfflineTileSetting`."""
   basemap: Basemap
@@ -8469,6 +8648,35 @@ type Project implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """Reads and enables pagination through a set of `OfflineTilePackage`."""
+  offlineTilePackagesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OfflineTilePackageCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `OfflineTilePackage`."""
+    orderBy: [OfflineTilePackagesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OfflineTilePackagesConnection!
 
   """Reads and enables pagination through a set of `OfflineTileSetting`."""
   offlineTileSettings(
@@ -9393,6 +9601,44 @@ type Query implements Node {
   The root query type must be a `Node` to work well with Relay 1 mutations. This just resolves to `query`.
   """
   nodeId: ID!
+  offlineTilePackage(id: UUID!): OfflineTilePackage
+
+  """Reads a single `OfflineTilePackage` using its globally unique `ID`."""
+  offlineTilePackageByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `OfflineTilePackage`.
+    """
+    nodeId: ID!
+  ): OfflineTilePackage
+
+  """Reads and enables pagination through a set of `OfflineTilePackage`."""
+  offlineTilePackagesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OfflineTilePackageCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `OfflineTilePackage`."""
+    orderBy: [OfflineTilePackagesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OfflineTilePackagesConnection
   offlineTileSetting(id: Int!): OfflineTileSetting
 
   """Reads a single `OfflineTileSetting` using its globally unique `ID`."""
@@ -12053,17 +12299,26 @@ input UpdateBasemapOfflineTileSettingsInput {
 
 """The output of our `updateBasemapOfflineTileSettings` mutation."""
 type UpdateBasemapOfflineTileSettingsPayload {
-  """Reads a single `Basemap` that is related to this `OfflineTileSetting`."""
   basemap: Basemap
+
+  """An edge for our `Basemap`. May be used by Relay 1."""
+  basemapEdge(
+    """The method to use when ordering `Basemap`."""
+    orderBy: [BasemapsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): BasemapsEdge
 
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  offlineTileSetting: OfflineTileSetting
 
-  """Reads a single `Project` that is related to this `OfflineTileSetting`."""
+  """
+  Reads a single `InteractivitySetting` that is related to this `Basemap`.
+  """
+  interactivitySettings: InteractivitySetting
+
+  """Reads a single `Project` that is related to this `Basemap`."""
   project: Project
 
   """
