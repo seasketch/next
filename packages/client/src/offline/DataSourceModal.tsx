@@ -190,12 +190,12 @@ export default function DataSourceModal({
                   );
             return (
               <Link
+                key={map.id}
                 to={`./offline/basemap/${
                   map.id
                 }?returnToUrl=${encodeURIComponent(window.location.pathname)}`}
               >
                 <div
-                  key={map.id}
                   className="inline-flex mr-2 w-16 h-16 rounded bg-contain text-center items-center justify-center text-white"
                   style={{
                     backgroundImage: `url("${map.thumbnail}")`,
