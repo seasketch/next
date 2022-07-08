@@ -393,7 +393,6 @@ export default function useMapboxGLDraw(
 
   function setCollection(collection: FeatureCollection<any>) {
     if (handlerState.current.draw) {
-      console.log(collection)
       try {
         handlerState.current.draw?.set(collection);
         setState(DigitizingState.NO_SELECTION);
