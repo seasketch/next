@@ -32,6 +32,7 @@ import useProjectId from "../useProjectId";
 import ErrorBoundaryFallback from "../components/ErrorBoundaryFallback";
 import { useProjectMetadataQuery } from "../generated/graphql";
 import getSlug from "../getSlug";
+import { ErrorBoundary } from "@sentry/react";
 
 function label(id: string) {
   switch (id) {
@@ -177,15 +178,19 @@ export function CacheSettingCards() {
         )}
       </Card>
       {data?.project?.isOfflineEnabled && (
-        <ErrorBoundaryFallback
-          title={
-            <Trans ns="offline">
-              Failed to render offline settings. Is ServiceWorker enabled?
-            </Trans>
+        <ErrorBoundary
+          fallback={
+            <ErrorBoundaryFallback
+              title={
+                <Trans ns="offline">
+                  Failed to render offline settings. Is ServiceWorker enabled?
+                </Trans>
+              }
+            />
           }
         >
           <OfflineSurveySelection />
-        </ErrorBoundaryFallback>
+        </ErrorBoundary>
       )}
     </>
   );
