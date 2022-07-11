@@ -662,7 +662,7 @@ describe("Survey creation smoke test", () => {
         let ary = []
         cy.get('button').then(($btn) => {
           console.log($btn)
-        //  //@ts-ignore
+          //@ts-ignore
           $btn.toArray().forEach((t) => {
             ary.push(t.innerText)
           })
@@ -679,22 +679,26 @@ describe("Survey creation smoke test", () => {
       it(`Can draw a polygon - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device)
         //cy.intercept('http://localhost:3000/static/js/*').as('static')
-        //let ary = []
-        //cy.get('button').then(($btn) => {
+        //cy.contains('Next sector').click()
+        let ary = []
+        cy.get('button').then(($btn) => {
         //  console.log($btn)
-        ////  //@ts-ignore
-        //  $btn.toArray().forEach((t) => {
-        //    ary.push(t.innerText)
-        //  })
-        //  if (ary.includes('Next sector')) {
-        //    cy.get('button').contains('Next sector').then(($btn) => {
-        //      {$btn.trigger('click')}
-//
-        //    })
-        //  }
-        //})
-        //cy.get('button').contains('Next sector')
-        //  .should('not.exist')
+       //
+        $btn.toArray().forEach((t) => {
+          ary.push(t.innerText)
+        })
+        console.log(ary)
+        if (ary.includes('Next sector')) {
+          console.log('true')
+          cy.get('button').contains('Next sector')
+            .should('be.visible')
+            .then(($btn) => {
+              {$btn.trigger('click')}
+            })
+          }
+        })
+        cy.get('button').contains('Next sector')
+          .should('not.exist')
         if (device === "iphone-x" || device === "iphone-5") {
           Cypress.on('uncaught:exception', (err, runnable) => {
             // returning false here prevents Cypress from
@@ -713,6 +717,8 @@ describe("Survey creation smoke test", () => {
             .as('beginBtn').then(($btn) => {
               {$btn.trigger('click')}
             })
+            //cy.get('@beginBtn')
+            //  .should('not.exist')
             waitOnMapbox(2)
             //cy.get('svg').then((svg) => {
             //    while (svg.hasClass('animate-spin')) {
