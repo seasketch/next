@@ -381,11 +381,11 @@ describe("Survey creation smoke test", () => {
           expect ($switch.attr('aria-checked')).to.equal(`true`)
           {$switch.trigger('click')}
         });
-        if (device === "ipad-2" || device === "macbook-15") {
-          cy.get('body').click(100, 100)
-        } else {
-          cy.get('body').click()
-        }
+        //if (device === "ipad-2" || device === "macbook-15") {
+        //  cy.get('body').click(100, 100)
+        //} else {
+          cy.get('body').click('bottom')
+        //}
         cy.get('[role="dialog"]')
           .should('not.exist')
         cy.get('[name="Begin Survey"]').should('be.visible').then(($btn) => {
@@ -659,14 +659,6 @@ describe("Survey creation smoke test", () => {
         //    .should('be.visible')
         //    .click()
         //}
-        cy.contains("Next sector").as("nextSector")
-        cy.get('@nextSector').then(($btn) => {
-          {$btn.trigger('click')}
-        });
-      });
-      it(`Can draw a polygon - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
-        cy.viewport(device)
-        cy.intercept('http://localhost:3000/static/js/*').as('static')
         let ary = []
         cy.get('button').then(($btn) => {
           console.log($btn)
@@ -676,11 +668,31 @@ describe("Survey creation smoke test", () => {
           })
           if (ary.includes('Next sector')) {
             cy.get('button').contains('Next sector').then(($btn) => {
+              expect ($btn).to.exist
+              //expect ($btn).to.be.visible({timeout: 10000})
               {$btn.trigger('click')}
 
             })
           }
         })
+      });
+      it(`Can draw a polygon - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+        cy.viewport(device)
+        //cy.intercept('http://localhost:3000/static/js/*').as('static')
+        //let ary = []
+        //cy.get('button').then(($btn) => {
+        //  console.log($btn)
+        ////  //@ts-ignore
+        //  $btn.toArray().forEach((t) => {
+        //    ary.push(t.innerText)
+        //  })
+        //  if (ary.includes('Next sector')) {
+        //    cy.get('button').contains('Next sector').then(($btn) => {
+        //      {$btn.trigger('click')}
+//
+        //    })
+        //  }
+        //})
         //cy.get('button').contains('Next sector')
         //  .should('not.exist')
         if (device === "iphone-x" || device === "iphone-5") {
@@ -688,11 +700,11 @@ describe("Survey creation smoke test", () => {
             // returning false here prevents Cypress from
             // failing the test
             if (err) {
+              //waitOnMapbox(3)
               console.log(err)
-              console.log(runnable)
-              cy.wait('@static')
+              return false
             }
-            return false
+            
           })
           
           cy.get('[data-cy="button-begin"]')
