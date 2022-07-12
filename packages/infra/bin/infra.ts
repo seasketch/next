@@ -12,6 +12,7 @@ import { RedisStack } from "../lib/RedisStack";
 import { GraphQLStack } from "../lib/GraphQLStack";
 import { Vpc } from "@aws-cdk/aws-ec2";
 import { MailerLambdaStack } from "../lib/MailerLambdaStack";
+import { OfflineTilePackageBucketStack } from "../lib/OfflineTilePackageUploadStack";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasket.ch";
@@ -45,6 +46,7 @@ const allowedCorsDomains = [
   "http://localhost:3000",
   "https://seasketch.org",
   "https://www.seasketch.org",
+  "https://staging.seasket.ch",
 ];
 
 const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploads", {
@@ -52,6 +54,16 @@ const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploads", {
   maintenanceRole: maintenance.taskRole,
   allowedCorsDomains,
 });
+
+const tilePackages = new OfflineTilePackageBucketStack(
+  app,
+  "SeaSketchOfflineTilePackagesBucket",
+  {
+    env,
+    maintenanceRole: maintenance.taskRole,
+    allowedCorsDomains,
+  }
+);
 
 const dataHostDbUpdater = new DataHostDbUpdaterStack(
   app,
@@ -126,6 +138,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   vpc: db.vpc,
   redisHost: redis.cluster.attrRedisEndpointAddress,
   emailSource: SES_EMAIL_SOURCE,
+  tilePackagesBucket: tilePackages.bucket,
 });
 
 new MailerLambdaStack(app, "SeaSketchMailers", {

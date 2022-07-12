@@ -65,7 +65,7 @@
     "@types/react-gravatar": "^2.6.8",
     "@types/react-router-dom": "^5.1.5",
     "@types/react-select": "^4.0.15",
-    "@types/react-sortable-tree": "^0.3.12",
+    "@types/react-sortable-tree": "0.3.12",
     "@types/react-table": "^7.7.9",
     "@types/react-virtualized-auto-sizer": "^1.0.0",
     "@types/react-window": "^1.8.2",
@@ -166,6 +166,7 @@
     "workbox-routing": "^5.1.4",
     "workbox-strategies": "^5.1.4",
     "workbox-streams": "^5.1.4",
+    "workbox-webpack-plugin": "^6.5.3",
     "worker-loader": "^2.0.0"
   },
   "scripts": {

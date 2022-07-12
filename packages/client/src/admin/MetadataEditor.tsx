@@ -46,7 +46,7 @@ export default function MetadataEditor({
     if (!loading) {
       const doc = startingDocument
         ? Node.fromJSON(schema, startingDocument)
-        : null;
+        : undefined;
       if (doc) {
         setOriginalDoc(doc);
       }

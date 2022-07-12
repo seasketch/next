@@ -26,6 +26,7 @@ export class GraphQLStack extends cdk.Stack {
       vpc: IVpc;
       securityGroup: ISecurityGroup;
       uploadsBucket: Bucket;
+      tilePackagesBucket: Bucket;
       uploadsUrl: string;
       redisHost: string;
       emailSource: string;
@@ -85,6 +86,7 @@ export class GraphQLStack extends cdk.Stack {
             PUBLIC_S3_BUCKET: props.uploadsBucket.bucketName,
             PUBLIC_UPLOADS_DOMAIN: props.uploadsUrl,
             S3_REGION: props.uploadsBucket.env.region,
+            TILE_PACKAGES_BUCKET: props.tilePackagesBucket.bucketName,
             HOST,
             REDIS_HOST: props.redisHost,
             SES_EMAIL_SOURCE: props.emailSource,
@@ -159,5 +161,6 @@ export class GraphQLStack extends cdk.Stack {
       })
     );
     props.uploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
+    props.tilePackagesBucket.grantReadWrite(service.taskDefinition.taskRole);
   }
 }

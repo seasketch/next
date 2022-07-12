@@ -11,7 +11,9 @@ i18n
       namespace: string,
       callback: (errorValue: unknown, translations: null | any) => void
     ) {
-      import(`./lang/${language}/${namespace}.json`)
+      import(
+        /* webpackChunkName: "lang" */ `./lang/${language}/${namespace}.json`
+      )
         .then((resources) => {
           callback(null, resources);
         })

@@ -27,3 +27,10 @@ aws s3 cp build/index.html $S3_BUCKET/index.html \
   --cache-control max-age=0,no-cache,no-store,must-revalidate \
   --content-type text/html \
   --acl public-read
+
+echo "Uploading service-worker.js"
+aws s3 cp build/service-worker.js $S3_BUCKET/service-worker.js \
+  --metadata-directive REPLACE \
+  --cache-control max-age=300 \
+  --content-type text/javascript \
+  --acl public-read
